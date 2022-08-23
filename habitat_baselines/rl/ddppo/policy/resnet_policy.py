@@ -52,7 +52,7 @@ class PointNavResNetPolicy(NetPolicy):
         policy_config: Config = None,
         aux_loss_config: Optional[Config] = None,
         fuse_keys: Optional[List[str]] = None,
-        **kwargs
+        **kwargs,
     ):
         if policy_config is not None:
             discrete_actions = (
@@ -90,6 +90,7 @@ class PointNavResNetPolicy(NetPolicy):
         config: Config,
         observation_space: spaces.Dict,
         action_space,
+        **kwargs,
     ):
         return cls(
             observation_space=observation_space,

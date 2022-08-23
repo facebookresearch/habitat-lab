@@ -1,80 +1,118 @@
-start:
-    precondition: []
-    state:
-        art_states:
-            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
-            "fridge_:0000": [0,0]
-        robo:
-            pos: 'rnd'
+objects:
+  - name: any_targets|0
+    expr_type: rigid_obj_type
+  - name: TARGET_any_targets|0
+    expr_type: goal_type
+  - name: any_targets|1
+    expr_type: rigid_obj_type
+  - name: TARGET_any_targets|1
+    expr_type: goal_type
+  - name: any_targets|2
+    expr_type: rigid_obj_type
+  - name: TARGET_any_targets|2
+    expr_type: goal_type
+  - name: any_targets|3
+    expr_type: rigid_obj_type
+  - name: TARGET_any_targets|3
+    expr_type: goal_type
+  - name: any_targets|4
+    expr_type: rigid_obj_type
+  - name: TARGET_any_targets|4
+    expr_type: goal_type
+  - name: ROBOT_0
+    expr_type: robot_type
+
+
+init:
+  - closed_fridge(fridge_push_point)
+
+
 goal:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "at(any_targets|2,TARGET_any_targets|2)"
-    - "at(any_targets|3,TARGET_any_targets|3)"
-    - "at(any_targets|4,TARGET_any_targets|4)"
-    - "not_holding()"
+  expr_type: AND
+  sub_exprs:
+    - at(any_targets|0,TARGET_any_targets|0)
+    - at(any_targets|1,TARGET_any_targets|1)
+    - at(any_targets|2,TARGET_any_targets|2)
+    - at(any_targets|3,TARGET_any_targets|3)
+    - at(any_targets|4,TARGET_any_targets|4)
+    - not_holding(ROBOT_0)
+
 stage_goals:
   stage_0_5:
-    - "holding(any_targets|0)"
+    expr_type: AND
+    sub_exprs:
+      - holding(any_targets|0, ROBOT_0)
   stage_1:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "not_holding()"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - not_holding(ROBOT_0)
   stage_1_5:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "holding(any_targets|1)"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - holding(any_targets|1, ROBOT_0)
   stage_2:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "not_holding()"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+      - not_holding(ROBOT_0)
   stage_2_5:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "holding(any_targets|2)"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+      - holding(any_targets|2, ROBOT_0)
   stage_3:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "at(any_targets|2,TARGET_any_targets|2)"
-    - "not_holding()"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+      - at(any_targets|2,TARGET_any_targets|2)
+      - not_holding(ROBOT_0)
   stage_3_5:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "at(any_targets|2,TARGET_any_targets|2)"
-    - "holding(any_targets|3)"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+      - at(any_targets|2,TARGET_any_targets|2)
+      - holding(any_targets|3, ROBOT_0)
   stage_4:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "at(any_targets|2,TARGET_any_targets|2)"
-    - "at(any_targets|3,TARGET_any_targets|3)"
-    - "not_holding()"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+      - at(any_targets|2,TARGET_any_targets|2)
+      - at(any_targets|3,TARGET_any_targets|3)
+      - not_holding(ROBOT_0)
   stage_4_5:
-    - "at(any_targets|0,TARGET_any_targets|0)"
-    - "at(any_targets|1,TARGET_any_targets|1)"
-    - "at(any_targets|2,TARGET_any_targets|2)"
-    - "at(any_targets|3,TARGET_any_targets|3)"
-    - "at(any_targets|4,TARGET_any_targets|4)"
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+      - at(any_targets|2,TARGET_any_targets|2)
+      - at(any_targets|3,TARGET_any_targets|3)
+      - at(any_targets|4,TARGET_any_targets|4)
 
 solution:
-    - "nav(any_targets|0)"
-    - "pick(any_targets|0)"
-    - "nav(TARGET_any_targets|0)"
-    - "place(any_targets|0,TARGET_any_targets|0)"
-
-    - "nav(any_targets|1)"
-    - "pick(any_targets|1)"
-    - "nav(TARGET_any_targets|1)"
-    - "place(any_targets|1,TARGET_any_targets|1)"
-
-    - "nav(any_targets|2)"
-    - "pick(any_targets|2)"
-    - "nav(TARGET_any_targets|2)"
-    - "place(any_targets|2,TARGET_any_targets|2)"
-
-    - "nav(any_targets|3)"
-    - "pick(any_targets|3)"
-    - "nav(TARGET_any_targets|3)"
-    - "place(any_targets|3,TARGET_any_targets|3)"
-
-    - "nav(any_targets|4)"
-    - "pick(any_targets|4)"
-    - "nav(TARGET_any_targets|4)"
-    - "place(any_targets|4,TARGET_any_targets|4)"
+  - nav(any_targets|0, ROBOT_0)
+  - pick(any_targets|0, ROBOT_0)
+  - nav(TARGET_any_targets|0, ROBOT_0)
+  - place(any_targets|0,TARGET_any_targets|0, ROBOT_0)
+  - nav(any_targets|1, ROBOT_0)
+  - pick(any_targets|1, ROBOT_0)
+  - nav(TARGET_any_targets|1, ROBOT_0)
+  - place(any_targets|1,TARGET_any_targets|1, ROBOT_0)
+  - nav(any_targets|2, ROBOT_0)
+  - pick(any_targets|2, ROBOT_0)
+  - nav(TARGET_any_targets|2, ROBOT_0)
+  - place(any_targets|2,TARGET_any_targets|2, ROBOT_0)
+  - nav(any_targets|3, ROBOT_0)
+  - pick(any_targets|3, ROBOT_0)
+  - nav(TARGET_any_targets|3, ROBOT_0)
+  - place(any_targets|3,TARGET_any_targets|3, ROBOT_0)
+  - nav(any_targets|4, ROBOT_0)
+  - pick(any_targets|4, ROBOT_0)
+  - nav(TARGET_any_targets|4, ROBOT_0)
+  - place(any_targets|4,TARGET_any_targets|4, ROBOT_0)

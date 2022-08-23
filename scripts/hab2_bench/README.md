@@ -12,7 +12,7 @@ First install habitat-sim and habitat-lab with support for Bullet physics as des
 - Download the benchmark assets: python -m habitat_sim.utils.datasets_download --uids hab2_bench_assets
 - Setup the benchmark episode:
    - copy the pre-generated episode from the dataset cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
-   - or generate a new episode: python habitat/datasets/rearrange/rearrange_generator.py --run --config habitat/datasets/rearrange/configs/bench_config.yaml --num-episodes 1 --out data/ep_datasets/bench_scene.json.gz
+   - or generate a new episode: python habitat/datasets/rearrange/run_episode_generator.py --run --config habitat/datasets/rearrange/configs/bench_config.yaml --num-episodes 1 --out data/ep_datasets/bench_scene.json.gz
 - Run the benchmark: bash scripts/hab2_bench/bench_runner.sh
 - Plot the results: python scripts/hab2_bench/plot_bench.py
 

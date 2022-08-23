@@ -11,7 +11,7 @@ import numpy as np
 
 import habitat
 from habitat.core.simulator import Observations
-from habitat.tasks.rearrange.actions import ArmEEAction
+from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import EEPositionSensor
 from habitat_baselines.motion_planning.motion_plan import MotionPlanner
 from habitat_baselines.motion_planning.robot_target import RobotTarget

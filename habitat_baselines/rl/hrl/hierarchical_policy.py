@@ -4,6 +4,7 @@ from typing import Dict
 import gym.spaces as spaces
 import torch
 
+from habitat.core.spaces import ActionSpace
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.high_level_policy import (  # noqa: F401.
@@ -20,6 +21,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     SkillPolicy,
     WaitSkillPolicy,
 )
+from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions
 
@@ -31,7 +33,7 @@ class HierarchicalPolicy(Policy):
         config,
         full_config,
         observation_space: spaces.Space,
-        action_space: spaces.Space,
+        action_space: ActionSpace,
         num_envs: int,
     ):
         super().__init__()
@@ -53,7 +55,11 @@ class HierarchicalPolicy(Policy):
 
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
-                skill_config, observation_space, action_space, self._num_envs
+                skill_config,
+                observation_space,
+                action_space,
+                self._num_envs,
+                full_config,
             )
             self._skills[i] = skill_policy
             self._name_to_idx[skill_id] = i
@@ -73,15 +79,9 @@ class HierarchicalPolicy(Policy):
             num_envs,
             self._name_to_idx,
         )
-        self._stop_action_idx = 0
-        found = False
-        for k in action_space:
-            if k == "REARRANGE_STOP":
-                found = True
-                break
-            self._stop_action_idx += get_num_actions(action_space[k])
-        if not found:
-            raise ValueError(f"Could not find STOP action in {action_space}")
+        self._stop_action_idx, _ = find_action_range(
+            action_space, "REARRANGE_STOP"
+        )
 
     def eval(self):
         pass
@@ -216,11 +216,18 @@ class HierarchicalPolicy(Policy):
         )
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space):
+    def from_config(
+        cls,
+        config,
+        observation_space,
+        action_space,
+        orig_action_space,
+        **kwargs,
+    ):
         return cls(
             config.RL.POLICY,
             config,
             observation_space,
-            action_space,
+            orig_action_space,
             config.NUM_ENVIRONMENTS,
         )

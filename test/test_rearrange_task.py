@@ -4,16 +4,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import gc
+import itertools
 import json
+import os
 import os.path as osp
 import time
 from glob import glob
 
 import pytest
+import torch
 import yaml
 
 import habitat
-import habitat.datasets.rearrange.rearrange_generator as rr_gen
+import habitat.datasets.rearrange.run_episode_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
@@ -24,6 +28,8 @@ from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat_baselines.config.default import get_config as baselines_get_config
+from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
+from habitat_baselines.run import run_exp
 
 CFG_TEST = "configs/tasks/rearrange/pick.yaml"
 GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
@@ -106,9 +112,8 @@ def test_rearrange_tasks(test_cfg_path):
         return
 
     config = get_config(test_cfg_path)
-    env = habitat.Env(config=config)
 
-    with env:
+    with habitat.Env(config=config) as env:
         for _ in range(5):
             env.reset()
 
@@ -126,26 +131,28 @@ def test_composite_tasks(test_cfg_path):
     if not osp.isfile(test_cfg_path):
         return
 
-    config = get_config(test_cfg_path)
+    config = get_config(test_cfg_path, ["SIMULATOR.CONCUR_RENDER", False])
     if "TASK_SPEC" not in config.TASK:
         return
 
-    env = habitat.Env(config=config)
-    if not isinstance(env.task, CompositeTask):
-        return
+    with habitat.Env(config=config) as env:
+        if not isinstance(env.task, CompositeTask):
+            return
 
-    pddl_path = osp.join(
-        config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
-    )
-    with open(pddl_path, "r") as f:
-        domain = yaml.safe_load(f)
-    n_stages = len(domain["solution"])
+        pddl_path = osp.join(
+            config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
+        )
+        with open(pddl_path, "r") as f:
+            domain = yaml.safe_load(f)
+        if "solution" not in domain:
+            return
+        n_stages = len(domain["solution"])
 
-    for task_idx in range(n_stages):
-        env.reset()
-        env.task.jump_to_node(task_idx, env.current_episode)
-        env.step(env.action_space.sample())
-        env.reset()
+        for task_idx in range(n_stages):
+            env.reset()
+            env.task.jump_to_node(task_idx, env.current_episode)
+            env.step(env.action_space.sample())
+            env.reset()
 
 
 # NOTE: set 'debug_visualization' = True to produce videos showing receptacles and final simulation state
@@ -170,3 +177,30 @@ def test_rearrange_episode_generator(
     logger.info(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
     )
+
+
+@pytest.mark.parametrize(
+    "test_cfg_path,mode",
+    list(
+        itertools.product(
+            glob("habitat_baselines/config/tp_srl_test/*"),
+            ["eval"],
+        )
+    ),
+)
+def test_tp_srl(test_cfg_path, mode):
+    # For testing with world_size=1
+    os.environ["MAIN_PORT"] = str(find_free_port())
+
+    run_exp(
+        test_cfg_path,
+        mode,
+        ["EVAL.SPLIT", "train"],
+    )
+
+    # Needed to destroy the trainer
+    gc.collect()
+
+    # Deinit processes group
+    if torch.distributed.is_initialized():
+        torch.distributed.destroy_process_group()

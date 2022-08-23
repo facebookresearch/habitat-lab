@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
+from copy import deepcopy
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Union
 
 import magnum as mn
@@ -88,6 +90,27 @@ class Receptacle(ABC):
         Add one or more visualization objects to the simulation to represent the Receptacle. Return and forget the added objects for external management.
         """
         return []
+
+
+class OnTopOfReceptacle(Receptacle):
+    def __init__(self, name: str, places: List[str]):
+        super().__init__(name)
+        self._places = places
+
+    def set_episode_data(self, episode_data):
+        self.episode_data = episode_data
+
+    def sample_uniform_local(
+        self, sample_region_scale: float = 1.0
+    ) -> mn.Vector3:
+        return mn.Vector3(0.0, 0.1, 0.0)
+
+    def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
+        targ_T = list(self.episode_data["sampled_targets"].values())[0]
+        # sampled_obj = self.episode_data["sampled_objects"][self._places[0]][0]
+        # return sampled_obj.transformation
+
+        return mn.Matrix4([[targ_T[j][i] for j in range(4)] for i in range(4)])
 
 
 class AABBReceptacle(Receptacle):
@@ -403,3 +426,62 @@ def find_receptacles(
         )
 
     return receptacles
+
+
+@dataclass
+class ReceptacleSet:
+    name: str
+    included_object_substrings: List[str]
+    excluded_object_substrings: List[str]
+    included_receptacle_substrings: List[str]
+    excluded_receptacle_substrings: List[str]
+    is_on_top_of_sampler: bool = False
+
+
+class ReceptacleTracker:
+    def __init__(
+        self,
+        max_objects_per_receptacle,
+        receptacle_sets: Dict[str, ReceptacleSet],
+    ):
+        self._receptacle_counts = dict(max_objects_per_receptacle)
+        self._receptacle_sets = {
+            k: deepcopy(v) for k, v in receptacle_sets.items()
+        }
+
+    @property
+    def recep_sets(self) -> Dict[str, ReceptacleSet]:
+        return self._receptacle_sets
+
+    def inc_count(self, recep_name):
+        if recep_name in self._receptacle_counts:
+            self._receptacle_counts[recep_name] += 1
+
+    def update_receptacle_tracking(self, new_receptacle: Receptacle):
+        recep_name = new_receptacle.name
+        if recep_name not in self._receptacle_counts:
+            return False
+        self._receptacle_counts[recep_name] -= 1
+        if self._receptacle_counts[recep_name] < 0:
+            raise ValueError(f"Receptacle count for {recep_name} is invalid")
+        if self._receptacle_counts[recep_name] == 0:
+            for receptacle_set in self._receptacle_sets.values():
+                # Exclude this receptacle from appearing in the future.
+                if (
+                    recep_name
+                    not in receptacle_set.excluded_receptacle_substrings
+                ):
+                    receptacle_set.excluded_receptacle_substrings.append(
+                        recep_name
+                    )
+                if recep_name in receptacle_set.included_receptacle_substrings:
+                    recep_idx = (
+                        receptacle_set.included_receptacle_substrings.index(
+                            recep_name
+                        )
+                    )
+                    del receptacle_set.included_receptacle_substrings[
+                        recep_idx
+                    ]
+            return True
+        return False

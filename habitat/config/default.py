@@ -59,18 +59,18 @@ _C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
 # -----------------------------------------------------------------------------
 # # REARRANGE TASK
 # -----------------------------------------------------------------------------
-_C.TASK.MAX_COLLISIONS = -1.0
 _C.TASK.COUNT_OBJ_COLLISIONS = True
 _C.TASK.COUNT_ROBOT_OBJ_COLLS = False
 _C.TASK.SETTLE_STEPS = 5
 _C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = True
+_C.TASK.CONSTRAINT_VIOLATION_DROPS_OBJECT = False
 _C.TASK.FORCE_REGENERATE = (
     False  # Forced to regenerate the starts even if they are already cached.
 )
 _C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
 _C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
-_C.TASK.USING_SUBTASKS = False
+_C.TASK.GFX_REPLAY_DIR = "data/replays"
 _C.TASK.DEBUG_GOAL_POINT = True
 _C.TASK.RENDER_TARGET = True
 _C.TASK.EE_SAMPLE_FACTOR = 0.2
@@ -80,8 +80,9 @@ _C.TASK.BASE_ANGLE_NOISE = 0.15
 _C.TASK.BASE_NOISE = 0.05
 _C.TASK.SPAWN_REGION_SCALE = 0.2
 _C.TASK.JOINT_MAX_IMPULSE = -1.0
-_C.TASK.DESIRED_RESTING_POSITION = []
+_C.TASK.DESIRED_RESTING_POSITION = [0.5, 0.0, 1.0]
 _C.TASK.USE_MARKER_T = True
+_C.TASK.CACHE_ROBOT_INIT = False
 _C.TASK.SUCCESS_STATE = 0.0
 # Measurements for composite tasks.
 _C.TASK.REWARD_MEASUREMENT = ""
@@ -94,18 +95,12 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # # COMPOSITE TASK CONFIG
 # -----------------------------------------------------------------------------
 _C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
-_C.TASK.TASK_SPEC = "nav_pick"
+_C.TASK.TASK_SPEC = ""
 # PDDL domain params
-_C.TASK.PDDL_DOMAIN_DEF = (
-    "configs/tasks/rearrange/pddl/replica_cad_domain.yaml"
-)
+_C.TASK.PDDL_DOMAIN_DEF = "replica_cad"
 _C.TASK.OBJ_SUCC_THRESH = 0.3
 _C.TASK.ART_SUCC_THRESH = 0.15
-_C.TASK.SINGLE_EVAL_NODE = -1
-_C.TASK.LIMIT_TASK_NODE = -1  # delete
-_C.TASK.LIMIT_TASK_LEN_SCALING = 0.0  # delete
-_C.TASK.DEBUG_SKIP_TO_NODE = -1
-_C.TASK.SKIP_NODES = ["move_obj"]
+_C.TASK.ROBOT_AT_THRESH = 2.0
 _C.TASK.FILTER_NAV_TO_TASKS = []
 # -----------------------------------------------------------------------------
 # # ACTIONS
@@ -151,18 +146,39 @@ _C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.0125
 _C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
 _C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
 _C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
-_C.TASK.ACTIONS.ARM_ACTION.ORACLE_GRASP = False
+_C.TASK.ACTIONS.ARM_ACTION.AGENT = None
 _C.TASK.ACTIONS.BASE_VELOCITY = CN()
 _C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
-_C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 12.0
-_C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 12.0
+_C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 10.0
+_C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 10.0
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_DYN_SLIDE = True
 _C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
+_C.TASK.ACTIONS.BASE_VELOCITY.AGENT = None
 _C.TASK.ACTIONS.REARRANGE_STOP = CN()
 _C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
+# -----------------------------------------------------------------------------
+# Oracle navigation action
+# This action takes as input a discrete ID which refers to an object in the
+# PDDL domain. The oracle navigation controller then computes the actions to
+# navigate to that desired object.
+# -----------------------------------------------------------------------------
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION = CN()
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TYPE = "OracleNavAction"
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TURN_VELOCITY = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.FORWARD_VELOCITY = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TURN_THRESH = 0.1
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.DIST_THRESH = 0.2
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.AGENT = None
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.LIN_SPEED = 10.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ANG_SPEED = 10.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_LIN_SPEED = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_ANG_SPEED = 1.0
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_DYN_SLIDE = True
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.END_ON_STOP = False
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_BACK = True
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
 # -----------------------------------------------------------------------------
@@ -301,6 +317,11 @@ _C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
     "TargetOrGoalStartPointGoalSensor"
 )
 # -----------------------------------------------------------------------------
+# COMPOSITE SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GLOBAL_PREDICATE_SENSOR = CN()
+_C.TASK.GLOBAL_PREDICATE_SENSOR.TYPE = "GlobalPredicatesSensor"
+# -----------------------------------------------------------------------------
 # TARGET START GPS/COMPASS SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.TARGET_START_GPS_COMPASS_SENSOR = CN()
@@ -390,6 +411,7 @@ _C.TASK.ROBOT_FORCE.MIN_FORCE = 20.0
 _C.TASK.FORCE_TERMINATE = CN()
 _C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
 _C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
+_C.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
 
 _C.TASK.ROBOT_COLLS = CN()
 _C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
@@ -404,6 +426,9 @@ _C.TASK.ART_OBJ_AT_DESIRED_STATE = CN()
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.TYPE = "ArtObjAtDesiredState"
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.USE_ABSOLUTE_DISTANCE = True
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.SUCCESS_DIST_THRESHOLD = 0.05
+
+_C.TASK.GFX_REPLAY_MEASURE = CN()
+_C.TASK.GFX_REPLAY_MEASURE.TYPE = "GfxReplayMeasure"
 
 _C.TASK.EE_DIST_TO_MARKER = CN()
 _C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
@@ -559,8 +584,11 @@ _C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
 # -----------------------------------------------------------------------------
 _C.TASK.COMPOSITE_NODE_IDX = CN()
 _C.TASK.COMPOSITE_NODE_IDX.TYPE = "CompositeNodeIdx"
+_C.TASK.COMPOSITE_STAGE_GOALS = CN()
+_C.TASK.COMPOSITE_STAGE_GOALS.TYPE = "CompositeStageGoals"
 _C.TASK.COMPOSITE_SUCCESS = CN()
 _C.TASK.COMPOSITE_SUCCESS.TYPE = "CompositeSuccess"
+_C.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = True
 _C.TASK.COMPOSITE_REWARD = CN()
 _C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
 _C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
@@ -569,7 +597,6 @@ _C.TASK.DOES_WANT_TERMINATE = CN()
 _C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
 _C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
-# -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # # EQA TASK
 # -----------------------------------------------------------------------------
@@ -643,23 +670,19 @@ _C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
 _C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
 _C.SIMULATOR.DEFAULT_AGENT_ID = 0
 _C.SIMULATOR.DEBUG_RENDER = False
+_C.SIMULATOR.DEBUG_RENDER_ROBOT = False
+_C.SIMULATOR.KINEMATIC_MODE = False
 # If in render mode a visualization of the rearrangement goal position should
 # also be displayed.
 _C.SIMULATOR.DEBUG_RENDER_GOAL = True
 _C.SIMULATOR.ROBOT_JOINT_START_NOISE = 0.0
 # Rearrange Agent Setup
-_C.SIMULATOR.ARM_REST = [0.6, 0.0, 0.9]
 _C.SIMULATOR.CTRL_FREQ = 120.0
 _C.SIMULATOR.AC_FREQ_RATIO = 4
-_C.SIMULATOR.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-_C.SIMULATOR.ROBOT_TYPE = "FetchRobot"
-_C.SIMULATOR.EE_LINK_NAME = None
 _C.SIMULATOR.LOAD_OBJS = False
 # Rearrange Agent Grasping
 _C.SIMULATOR.HOLD_THRESH = 0.09
 _C.SIMULATOR.GRASP_IMPULSE = 1000.0
-# ROBOT
-_C.SIMULATOR.IK_ARM_URDF = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
@@ -790,6 +813,12 @@ _C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 _C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
 _C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
 _C.SIMULATOR.AGENT_0.START_ROTATION = [0, 0, 0, 1]
+_C.SIMULATOR.AGENT_0.JOINT_START_NOISE = 0.0
+_C.SIMULATOR.AGENT_0.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+_C.SIMULATOR.AGENT_0.ROBOT_TYPE = "FetchRobot"
+_C.SIMULATOR.AGENT_0.IK_ARM_URDF = (
+    "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+)
 _C.SIMULATOR.AGENTS = ["AGENT_0"]
 # -----------------------------------------------------------------------------
 # SIMULATOR HABITAT_SIM_V0
@@ -812,6 +841,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
 _C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
+_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = False
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------

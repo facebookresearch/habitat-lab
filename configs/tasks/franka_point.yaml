@@ -3,6 +3,8 @@ ENVIRONMENT:
 SIMULATOR:
   AGENT_0:
     SENSORS: ['RGB_SENSOR']
+    ROBOT_URDF: ./data/robots/franka_panda/panda_arm.urdf
+    ROBOT_TYPE: "FrankaRobot"
   HABITAT_SIM_V0:
     GPU_DEVICE_ID: 0
   RGB_SENSOR:
@@ -11,8 +13,6 @@ SIMULATOR:
   DEPTH_SENSOR:
     WIDTH: 256
     HEIGHT: 256
-  ROBOT_URDF: ./data/robots/franka_panda/panda_arm.urdf
-  ROBOT_TYPE: "FrankaRobot"
 TASK:
   TYPE: Nav-v0
 
