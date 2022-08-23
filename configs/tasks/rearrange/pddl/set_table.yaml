@@ -1,39 +1,59 @@
-start:
-    precondition: []
-    state:
-        art_states:
-            "kitchen_counter_:0000": [0,0,0,0,0,0,0]
-            "fridge_:0000": [0,0]
-        robo:
-            pos: 'rnd'
+objects:
+  - name: bowl_target|0
+    expr_type: rigid_obj_type
+  - name: TARGET_bowl_target|0
+    expr_type: goal_type
+  - name: fruit_target|1
+    expr_type: rigid_obj_type
+  - name: TARGET_fruit_target|1
+    expr_type: goal_type
+  - name: ROBOT_0
+    expr_type: robot_type
+
+init:
+  - closed_fridge(fridge_push_point)
+  - closed_cab(cab_push_point_4)
+  - closed_cab(cab_push_point_5)
+  - closed_cab(cab_push_point_6)
+  - closed_cab(cab_push_point_7)
 
 goal:
-    - "at(bowl_target|0,TARGET_bowl_target|0)"
-    - "at(fruit_target|1,TARGET_fruit_target|1)"
-    - "not_holding()"
+  expr_type: AND
+  sub_exprs:
+    - at(bowl_target|0,TARGET_bowl_target|0)
+    - at(fruit_target|1,TARGET_fruit_target|1)
+    - not_holding(ROBOT_0)
 stage_goals:
   stage_0_5:
-    - "holding(bowl_target|0)"
+    expr_type: AND
+    sub_exprs:
+      - holding(bowl_target|0, ROBOT_0)
   stage_1:
-    - "at(bowl_target|0,TARGET_bowl_target|0)"
-    - "not_holding()"
+    expr_type: AND
+    sub_exprs:
+    - at(bowl_target|0,TARGET_bowl_target|0)
+    - not_holding(ROBOT_0)
   stage_1_5:
-    - "at(bowl_target|0,TARGET_bowl_target|0)"
-    - "holding(fruit_target|1)"
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - holding(fruit_target|1, ROBOT_0)
   stage_2:
-    - "at(bowl_target|0,TARGET_bowl_target|0)"
-    - "at(fruit_target|1,TARGET_fruit_target|1)"
+    expr_type: AND
+    sub_exprs:
+      - at(bowl_target|0,TARGET_bowl_target|0)
+      - at(fruit_target|1,TARGET_fruit_target|1)
 
 solution:
-    - "nav_to_receptacle(MARKER_cab_push_point_5,bowl_target|0)"
-    - "open_cab(MARKER_cab_push_point_5,bowl_target|0)"
-    - "pick(bowl_target|0)"
-    - "nav(TARGET_bowl_target|0)"
-    - "place(bowl_target|0,TARGET_bowl_target|0)"
+    - nav_to_receptacle(cab_push_point_5,bowl_target|0, ROBOT_0)
+    - open_cab(cab_push_point_5,bowl_target|0, ROBOT_0)
+    - pick(bowl_target|0, ROBOT_0)
+    - nav(TARGET_bowl_target|0, ROBOT_0)
+    - place(bowl_target|0,TARGET_bowl_target|0, ROBOT_0)
 
-    - "nav_to_receptacle(MARKER_fridge_push_point,fruit_target|1)"
-    - "open_fridge(fruit_target|1)"
-    - "nav(fruit_target|1)"
-    - "pick(fruit_target|1)"
-    - "nav(TARGET_fruit_target|1)"
-    - "place(fruit_target|1,TARGET_fruit_target|1)"
+    - nav_to_receptacle(fridge_push_point,fruit_target|1, ROBOT_0)
+    - open_fridge(fridge_push_point, fruit_target|1, ROBOT_0)
+    - nav(fruit_target|1, ROBOT_0)
+    - pick(fruit_target|1, ROBOT_0)
+    - nav(TARGET_fruit_target|1, ROBOT_0)
+    - place(fruit_target|1,TARGET_fruit_target|1, ROBOT_0)

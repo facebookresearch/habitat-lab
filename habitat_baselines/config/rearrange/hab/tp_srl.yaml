@@ -1,57 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick.yaml
-TASK_CONFIG:
-  TASK:
-    REWARD_MEASURE: "composite_reward"
-    SUCCESS_MEASURE: "composite_success"
-    SUCCESS_REWARD: 100.0
-    SLACK_REWARD: -0.01
-    USING_SUBTASKS: True
-    SENSORS:
-      - TARGET_START_SENSOR
-      - GOAL_SENSOR
-      - JOINT_SENSOR
-      - IS_HOLDING_SENSOR
-      - END_EFFECTOR_SENSOR
-      - RELATIVE_RESTING_POS_SENSOR
-      - TARGET_START_POINT_GOAL_SENSOR
-      - NAV_TO_SKILL_SENSOR
-      - MARKER_REL_POS_SENSOR
-      - ART_JOINT_SENSOR
-      # Needed to replace the TARGET_START_POINT_GOAL_SENSOR
-      - TARGET_START_GPS_COMPASS_SENSOR
-      - TARGET_GOAL_GPS_COMPASS_SENSOR
-    MEASUREMENTS:
-      - OBJECT_TO_GOAL_DISTANCE
-      - ROBOT_FORCE
-      - FORCE_TERMINATE
-      - ROBOT_COLLS
-      - END_EFFECTOR_TO_REST_DISTANCE
-      - END_EFFECTOR_TO_OBJECT_DISTANCE
-      - OBJ_AT_GOAL
-      - ROT_DIST_TO_GOAL
-      - DIST_TO_GOAL
-      - BAD_CALLED_TERMINATE
-      - NAV_TO_POS_SUCC
-      - REARRANGE_NAV_TO_OBJ_SUCCESS
-      - REARRANGE_NAV_TO_OBJ_REWARD
-      - PICK_SUCCESS
-      - PICK_REWARD
-      - PLACE_SUCCESS
-      - PLACE_REWARD
-      - COMPOSITE_NODE_IDX
-      - DOES_WANT_TERMINATE
-      - COMPOSITE_SUCCESS
-      - COMPOSITE_BAD_CALLED_TERMINATE
-      - COMPOSITE_REWARD
-      - NUM_STEPS
-      - DID_VIOLATE_HOLD_CONSTRAINT
-      - EE_DIST_TO_MARKER
-      - ART_OBJ_AT_DESIRED_STATE
-      - ART_OBJ_STATE
-      - ART_OBJ_SUCCESS
-      - ART_OBJ_REWARD
-      - MOVE_OBJECTS_REWARD
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick_nav_place.yaml
 TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
@@ -61,21 +9,21 @@ VIDEO_DIR: "video_dir"
 VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
+VIDEO_RENDER_VIEWS:
+  - "THIRD_RGB_SENSOR"
+SENSORS: ["HEAD_DEPTH_SENSOR"]
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+EVAL_CKPT_PATH_DIR: ""
 NUM_ENVIRONMENTS: 1
 WRITER_TYPE: 'tb'
-# Visual sensors to include
-SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
 FORCE_TORCH_SINGLE_THREADED: True
-EVAL_KEYS_TO_INCLUDE_IN_NAME: ['composite_reward', 'force', 'composite_success']
+EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'composite_success']
 EVAL:
-  SPLIT: "val"
   USE_CKPT_CONFIG: False
   SHOULD_LOAD_CKPT: False
 
@@ -84,6 +32,11 @@ RL:
       name: "HierarchicalPolicy"
       high_level_policy:
         name: "GtHighLevelPolicy"
+      OBS_TRANSFORMS:
+        ENABLED_TRANSFORMS: ['AddVirtualKeys']
+        ADD_VIRTUAL_KEYS:
+          "nav_to_skill": 8
+          "object_to_agent_gps_compass": 2
       DEFINED_SKILLS:
         NN_OPEN_CAB:
           skill_name: "ArtObjSkillPolicy"
@@ -92,17 +45,6 @@ RL:
           AT_RESTING_THRESHOLD: 0.15
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
-          MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
-          FORCE_END_ON_TIMEOUT: True
-
-        NN_CLOSE_CAB:
-          skill_name: "ArtObjSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
-          OBS_SKILL_INPUTS: []
-          LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
           FORCE_END_ON_TIMEOUT: True
@@ -118,12 +60,23 @@ RL:
           START_ZONE_RADIUS: 0.3
           FORCE_END_ON_TIMEOUT: True
 
+        NN_CLOSE_CAB:
+          skill_name: "ArtObjSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          AT_RESTING_THRESHOLD: 0.2
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: "data/models/close_cab.pth"
+          MAX_SKILL_STEPS: 200
+          START_ZONE_RADIUS: 0.3
+          FORCE_END_ON_TIMEOUT: True
+
         NN_CLOSE_FRIDGE:
           skill_name: "ArtObjSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
-          OBS_SKILL_INPUTS: []
+          AT_RESTING_THRESHOLD: 0.2
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
           START_ZONE_RADIUS: 0.3
@@ -173,17 +126,17 @@ RL:
           FORCE_END_ON_TIMEOUT: False
 
       USE_SKILLS:
-        open_cab: "NN_OPEN_CAB"
-        close_cab: "NN_CLOSE_CAB"
-        open_fridge: "NN_OPEN_FRIDGE"
-        close_fridge: "NN_CLOSE_FRIDGE"
+        # Uncomment if you are also using these skills
+        # open_cab: "NN_OPEN_CAB"
+        # open_fridge: "NN_OPEN_FRIDGE"
+        # close_cab: "NN_OPEN_CAB"
+        # close_fridge: "NN_OPEN_FRIDGE"
         pick: "NN_PICK"
         place: "NN_PLACE"
         nav: "NN_NAV"
         nav_to_receptacle: "NN_NAV"
+        wait: "WAIT_SKILL"
         reset_arm: "RESET_ARM_SKILL"
-
-
 
   PPO:
     # ppo params
@@ -228,6 +181,6 @@ RL:
     reset_critic: False
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2

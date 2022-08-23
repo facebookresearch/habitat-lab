@@ -13,6 +13,8 @@ import os
 from collections import defaultdict
 from typing import Dict, Optional
 
+from tqdm import tqdm
+
 from habitat.config.default import get_config
 from habitat.core.agent import Agent
 from habitat.core.env import Env
@@ -131,6 +133,8 @@ class Benchmark:
         agg_metrics: Dict = defaultdict(float)
 
         count_episodes = 0
+
+        pbar = tqdm(total=num_episodes)
         while count_episodes < num_episodes:
             observations = self._env.reset()
             agent.reset()
@@ -147,6 +151,7 @@ class Benchmark:
                 else:
                     agg_metrics[m] += v
             count_episodes += 1
+            pbar.update(1)
 
         avg_metrics = {k: v / count_episodes for k, v in agg_metrics.items()}
 

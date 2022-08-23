@@ -1,12 +1,14 @@
+from collections import OrderedDict
+
 import gym.spaces as spaces
 import numpy as np
 import torch
 
-from habitat.config import Config as CN
 from habitat.core.spaces import ActionSpace
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.utils.common import get_num_actions
 
@@ -113,34 +115,31 @@ class NnSkillPolicy(SkillPolicy):
         return full_action, rnn_hidden_states
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, batch_size):
+    def from_config(
+        cls, config, observation_space, action_space, batch_size, full_config
+    ):
         # Load the wrap policy from file
         if len(config.LOAD_CKPT_FILE) == 0:
-            raise ValueError(
-                f"Skill {config.skill_name}: Need to specify LOAD_CKPT_FILE"
-            )
-
-        ckpt_dict = torch.load(config.LOAD_CKPT_FILE, map_location="cpu")
-        policy = baseline_registry.get_policy(config.name)
-        policy_cfg = ckpt_dict["config"]
-
-        if "GYM" not in policy_cfg.TASK_CONFIG:
-            # Support loading legacy policies
-            # TODO: Remove this eventually and drop support for policies
-            # trained on older version of codebase.
-            policy_cfg.defrost()
-            policy_cfg.TASK_CONFIG.GYM = CN()
-            policy_cfg.TASK_CONFIG.GYM.OBS_KEYS = list(
-                set(
-                    policy_cfg.RL.POLICY.include_visual_keys
-                    + policy_cfg.RL.GYM_OBS_KEYS
+            ckpt_dict = {}
+            policy_cfg = get_config(config.FORCE_CONFIG_FILE)
+        else:
+            try:
+                ckpt_dict = torch.load(
+                    config.LOAD_CKPT_FILE, map_location="cpu"
                 )
-            )
-            policy_cfg.freeze()
+            except FileNotFoundError as e:
+                raise FileNotFoundError(
+                    "Could not load neural network weights for skill."
+                ) from e
+
+            policy_cfg = ckpt_dict["config"]
+        policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
-            {k: observation_space.spaces[k] for k in expected_obs_keys}
+            OrderedDict(
+                [(k, observation_space.spaces[k]) for k in expected_obs_keys]
+            )
         )
 
         for k in config.OBS_SKILL_INPUTS:
@@ -152,10 +151,12 @@ class NnSkillPolicy(SkillPolicy):
         )
 
         filtered_action_space = ActionSpace(
-            {
-                k: action_space[k]
-                for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
-            }
+            OrderedDict(
+                [
+                    (k, action_space[k])
+                    for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+                ]
+            )
         )
 
         if "ARM_ACTION" in filtered_action_space.spaces and (
@@ -177,19 +178,19 @@ class NnSkillPolicy(SkillPolicy):
         actor_critic = policy.from_config(
             policy_cfg, filtered_obs_space, filtered_action_space
         )
+        if len(ckpt_dict) > 0:
+            try:
+                actor_critic.load_state_dict(
+                    {  # type: ignore
+                        k[len("actor_critic.") :]: v
+                        for k, v in ckpt_dict["state_dict"].items()
+                    }
+                )
 
-        try:
-            actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in ckpt_dict["state_dict"].items()
-                }
-            )
-
-        except Exception as e:
-            raise ValueError(
-                f"Could not load checkpoint for skill {config.skill_name} from {config.LOAD_CKPT_FILE}"
-            ) from e
+            except Exception as e:
+                raise ValueError(
+                    f"Could not load checkpoint for skill {config.skill_name} from {config.LOAD_CKPT_FILE}"
+                ) from e
 
         return cls(
             actor_critic,

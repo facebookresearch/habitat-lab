@@ -98,6 +98,7 @@ class PointNavResNetPolicy(NetPolicy):
         config: Config,
         observation_space: spaces.Dict,
         action_space,
+        **kwargs,
     ):
         return cls(
             observation_space=observation_space,

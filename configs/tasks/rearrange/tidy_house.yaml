@@ -2,8 +2,11 @@ GYM:
     AUTO_NAME: TidyHouse
     OBS_KEYS:
     - robot_head_depth
+    - relative_resting_position
     - obj_start_sensor
+    - obj_goal_sensor
     - obj_start_gps_compass
+    - obj_goal_gps_compass
     - joint
     - is_holding
 ENVIRONMENT:
@@ -20,26 +23,17 @@ TASK:
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
-    DESIRED_RESTING_POSITION:
-    - 0.5
-    - 0.0
-    - 1.0
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
     TASK_SPEC: tidy_house
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
+    PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
-    SINGLE_EVAL_NODE: -1
-    DEBUG_SKIP_TO_NODE: -1
-    SKIP_NODES:
-    - move_obj
     TARGET_START_SENSOR:
         TYPE: TargetStartSensor
         GOAL_FORMAT: CARTESIAN
@@ -58,6 +52,7 @@ TASK:
     IS_HOLDING_SENSOR:
         TYPE: IsHoldingSensor
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
     - GOAL_SENSOR
     - JOINT_SENSOR
@@ -83,6 +78,7 @@ TASK:
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
+    - COMPOSITE_STAGE_GOALS
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
@@ -108,34 +104,6 @@ TASK:
     - ARM_ACTION
     - BASE_VELOCITY
     - REARRANGE_STOP
-    USING_SUBTASKS: false
-    MOVE_OBJECTS_REWARD:
-        TYPE: MoveObjectsReward
-        PICK_REWARD: 1.0
-        SUCCESS_DIST: 0.15
-        SINGLE_REARRANGE_REWARD: 1.0
-        DIST_REWARD: 1.0
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
-    NAV_TO_POS_SUCC:
-        SUCCESS_DISTANCE: 0.2
-        TYPE: NavToPosSucc
-    PLACE_SUCCESS:
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-        TYPE: PlaceSuccess
-    PICK_SUCCESS:
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-        TYPE: RearrangePickSuccess
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"
@@ -151,19 +119,12 @@ SIMULATOR:
     AUTO_SLEEP: true
     AGENT_0:
         HEIGHT: 1.5
-        IS_SET_START_STATE: false
         RADIUS: 0.3
         SENSORS:
         - HEAD_DEPTH_SENSOR
-        START_POSITION:
-        - 0
-        - 0
-        - 0
-        START_ROTATION:
-        - 0
-        - 0
-        - 0
-        - 1
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        ROBOT_TYPE: FetchRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -182,10 +143,6 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    ARM_REST:
-    - 0.6
-    - 0.0
-    - 0.9
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
@@ -195,23 +152,5 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: FetchRobot
-    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION:
-        - 0.0
-        - 0.0
-        - 0.0
-        POSITION:
-        - 0
-        - 1.25
-        - 0
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0

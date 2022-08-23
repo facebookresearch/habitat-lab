@@ -169,6 +169,8 @@ class VERTrainer(PPOTrainer):
         action_space = init_reports[0]["act_space"]
 
         self.policy_action_space = action_space
+        self.orig_policy_action_space = None
+
         [
             ew.set_action_plugin(
                 build_action_plugin_from_policy_action_space(

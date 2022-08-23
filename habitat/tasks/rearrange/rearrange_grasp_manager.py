@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -17,6 +17,7 @@ from habitat_sim.physics import (
     CollisionGroups,
     ManagedRigidObject,
     RigidConstraintSettings,
+    RigidConstraintType,
 )
 
 
@@ -25,11 +26,7 @@ class RearrangeGraspManager:
     Manages the agent grasping onto rigid objects and the links of articulated objects.
     """
 
-    def __init__(
-        self,
-        sim,
-        config: Config,
-    ) -> None:
+    def __init__(self, sim, config: Config, robot) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
         :param config: The task's "SIMULATOR" subconfig node. Defines grasping parameters.
@@ -38,8 +35,10 @@ class RearrangeGraspManager:
         self._snapped_obj_id: Optional[int] = None
         self._snapped_marker_id: Optional[str] = None
         self._snap_constraints: List[int] = []
+        self._keep_T: Optional[mn.Matrix4] = None
         self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
+        self._managed_robot = robot
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
@@ -57,13 +56,14 @@ class RearrangeGraspManager:
 
         self.desnap(True)
         self._leave_info = None
+        self._vis_info: List[Any] = []
 
     def is_violating_hold_constraint(self) -> bool:
         """
         Returns true if the object is too far away from the gripper, meaning
         the agent violated the hold constraint.
         """
-        ee_pos = self._sim.robot.ee_transform.translation
+        ee_pos = self._managed_robot.ee_transform.translation
         if self._snapped_obj_id is not None and (
             np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
             >= self._config.HOLD_THRESH
@@ -93,18 +93,24 @@ class RearrangeGraspManager:
         Used to wait for a dropped object to clear the end effector's proximity before re-activating collisions between them.
         """
         if self._leave_info is not None:
-            ee_pos = self._sim.robot.ee_transform.translation
+            ee_pos = self._managed_robot.ee_transform.translation
             rigid_obj = self._leave_info[0]
             dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
                 rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._leave_info = None
+        if (
+            self._sim.habitat_config.KINEMATIC_MODE
+            and self._snapped_obj_id is not None
+        ):
+            self.update_object_to_grasp()
 
     def desnap(self, force=False) -> None:
         """Removes any hold constraints currently active. Removes hold constraints for regular and articulated objects.
 
         :param force: If True, reset the collision group of the now released object immediately instead of waiting for its distance from the end effector to reach a threshold.
         """
+        self._vis_info = []
         if len(self._snap_constraints) == 0:
             # No constraints to unsnap
             self._snapped_obj_id = None
@@ -130,7 +136,7 @@ class RearrangeGraspManager:
 
         self._snapped_obj_id = None
         self._snapped_marker_id = None
-        self._sim.robot.close_gripper()
+        self._managed_robot.close_gripper()
 
     @property
     def snap_idx(self) -> Optional[int]:
@@ -165,6 +171,7 @@ class RearrangeGraspManager:
 
         :param marker_name: The name/id of the marker.
         """
+
         if marker_name == self._snapped_marker_id:
             return
 
@@ -175,23 +182,29 @@ class RearrangeGraspManager:
             )
 
         marker = self._sim.get_marker(marker_name)
+        self._snapped_marker_id = marker_name
+        self._managed_robot.open_gripper()
+        if self._sim.habitat_config.KINEMATIC_MODE:
+            return
+
         self._snap_constraints = [
             self.create_hold_constraint(
+                RigidConstraintType.PointToPoint,
                 mn.Vector3(0.0, 0.0, 0.0),
                 mn.Vector3(*marker.offset_position),
                 marker.ao_parent.object_id,
                 marker.link_id,
             ),
         ]
-        self._snapped_marker_id = marker_name
-        self._sim.robot.open_gripper()
 
     def create_hold_constraint(
         self,
+        constraint_type,
         pivot_in_link: mn.Vector3,
         pivot_in_obj: mn.Vector3,
         obj_id_b: int,
         link_id_b: Optional[int] = None,
+        rotation_lock_b: Optional[mn.Matrix3] = None,
     ) -> int:
         """Create a new rigid point-to-point (ball joint) constraint between the robot and an object.
 
@@ -203,24 +216,77 @@ class RearrangeGraspManager:
         :return: The id of the newly created constraint or -1 if failed.
         """
         c = RigidConstraintSettings()
-        c.object_id_a = self._sim.robot.get_robot_sim_id()
-        c.link_id_a = self._sim.robot.ee_link_id
+        c.object_id_a = self._managed_robot.get_robot_sim_id()
+        c.link_id_a = self._managed_robot.ee_link_id
         c.object_id_b = obj_id_b
         if link_id_b is not None:
             c.link_id_b = link_id_b
         c.pivot_a = pivot_in_link
         c.pivot_b = pivot_in_obj
+        c.frame_a = mn.Matrix3.identity_init()
+        if rotation_lock_b is not None:
+            c.frame_b = rotation_lock_b
         c.max_impulse = self._config.GRASP_IMPULSE
+        c.constraint_type = constraint_type
+
+        if constraint_type == RigidConstraintType.Fixed:
+            # we set the link frame to object rotation in link space (objR -> world -> link)
+            link_node = self._managed_robot.sim_obj.get_link_scene_node(
+                self._managed_robot.ee_link_id
+            )
+            link_frame_world_space = (
+                link_node.absolute_transformation().rotation()
+            )
+
+            object_frame_world_space = (
+                self._sim.get_rigid_object_manager()
+                .get_object_by_id(obj_id_b)
+                .transformation.rotation()
+            )
+            c.frame_a = link_frame_world_space.inverted().__matmul__(
+                object_frame_world_space
+            )
+            # NOTE: object frame is default identity because using it instead is unstable
+            self._vis_info.append((pivot_in_obj, obj_id_b))
+
         return self._sim.create_rigid_constraint(c)
+
+    def update_debug(self) -> None:
+        """
+        Creates visualizations for grasp points.
+        """
+        for i, (local_pivot, obj_id) in enumerate(self._vis_info):
+            rom = self._sim.get_rigid_object_manager()
+            obj = rom.get_object_by_id(obj_id)
+            pivot_pos = obj.transformation.transform_point(local_pivot)
+            self._sim.viz_ids[i] = self._sim.visualize_position(
+                pivot_pos,
+                self._sim.viz_ids[i],
+                r=0.02,
+            )
 
     def update_object_to_grasp(self) -> None:
         """
         Kinematically update held object to be within robot's grasp.
         """
-        self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
+        rel_T = self._keep_T
+        if rel_T is None:
+            rel_T = mn.Matrix4.identity_init()
 
-    def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
-        """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
+        self.snap_rigid_obj.transformation = (
+            self._managed_robot.ee_transform @ rel_T
+        )
+
+    def snap_to_obj(
+        self,
+        snap_obj_id: int,
+        force: bool = True,
+        should_open_gripper=True,
+        rel_pos: Optional[mn.Vector3] = None,
+        keep_T: Optional[mn.Matrix4] = None,
+    ) -> None:
+        """Attempt to grasp an object, snapping/constraining it to the robot's
+        end effector with 3 ball-joint constraints forming a fixed frame.
 
         :param snap_obj_id: The id of the object to be constrained to the end effector.
         :param force: Will kinematically snap the object to the robot's end-effector, even if
@@ -241,31 +307,36 @@ class RearrangeGraspManager:
             # Set the transformation to be in the robot's hand already.
             self.update_object_to_grasp()
 
+        self._managed_robot.open_gripper()
+
+        if self._sim.habitat_config.KINEMATIC_MODE:
+            return
+
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.
         self.snap_rigid_obj.override_collision_group(
             CollisionGroups.UserGroup7
         )
 
+        self._keep_T = keep_T
+
+        # Get object transform in EE frame
+        if rel_pos is None:
+            rel_pos = mn.Vector3.zero_init()
+
         self._snap_constraints = [
             self.create_hold_constraint(
-                mn.Vector3(0.1, 0, 0),
-                mn.Vector3(0, 0, 0),
-                self._snapped_obj_id,
-            ),
-            self.create_hold_constraint(
-                mn.Vector3(0.0, 0, 0),
-                mn.Vector3(-0.1, 0, 0),
-                self._snapped_obj_id,
-            ),
-            self.create_hold_constraint(
-                mn.Vector3(0.1, 0.0, 0.1),
-                mn.Vector3(0.0, 0.0, 0.1),
-                self._snapped_obj_id,
+                RigidConstraintType.Fixed,
+                # link pivot is the object in link space
+                pivot_in_link=rel_pos,
+                # object pivot is local origin
+                pivot_in_obj=mn.Vector3.zero_init(),
+                obj_id_b=self._snapped_obj_id,
             ),
         ]
 
-        self._sim.robot.open_gripper()
+        if should_open_gripper:
+            self._managed_robot.open_gripper()
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")

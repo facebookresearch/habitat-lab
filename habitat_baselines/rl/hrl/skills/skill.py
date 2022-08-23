@@ -136,7 +136,9 @@ class SkillPolicy(Policy):
         )
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, batch_size):
+    def from_config(
+        cls, config, observation_space, action_space, batch_size, full_config
+    ):
         return cls(config, action_space, batch_size)
 
     def act(

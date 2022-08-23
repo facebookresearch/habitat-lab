@@ -1,6 +1,12 @@
 GYM:
     AUTO_NAME: "NavPick"
-    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'obj_start_gps_compass', 'joint', 'is_holding']
+    OBS_KEYS:
+    - robot_head_depth
+    - relative_resting_position
+    - obj_start_sensor
+    - obj_start_gps_compass
+    - joint
+    - is_holding
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500
 DATASET:
@@ -17,54 +23,22 @@ TASK:
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: True
 
-    MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
-    USING_SUBTASKS: False
-    DESIRED_RESTING_POSITION:
-    - 0.5
-    - 0.0
-    - 1.0
     CONSTRAINT_VIOLATION_ENDS_EPISODE: False
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
     TASK_SPEC: nav_pick
-    PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
-    OBJ_SUCC_THRESH: 0.3
-    ART_SUCC_THRESH: 0.15
-    SINGLE_EVAL_NODE: -1
-    DEBUG_SKIP_TO_NODE: -1
-    SKIP_NODES:
-    - move_obj
-    TARGET_START_SENSOR:
-        TYPE: TargetStartSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: GoalSensor
-        GOAL_FORMAT: CARTESIAN
-        DIMENSIONALITY: 3
-    JOINT_SENSOR:
-        TYPE: JointSensor
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
-    TARGET_START_GPS_COMPASS_SENSOR:
-        TYPE: TargetStartGpsCompassSensor
-    TARGET_GOAL_GPS_COMPASS_SENSOR:
-        TYPE: TargetGoalGpsCompassSensor
+    PDDL_DOMAIN_DEF: replica_cad
     SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
-    - GOAL_SENSOR
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - TARGET_START_GPS_COMPASS_SENSOR
-    - TARGET_GOAL_GPS_COMPASS_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
@@ -83,24 +57,6 @@ TASK:
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
-    # Overrides for measurements that are not used in monolithic RL but are
-    # used in TP-SRL
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: True
-        HEURISTIC_STOP: False
-        MUST_CALL_STOP: False
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE
@@ -113,6 +69,7 @@ TASK:
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
+    - COMPOSITE_STAGE_GOALS
 
     ACTIONS:
         ARM_ACTION:
@@ -167,6 +124,9 @@ SIMULATOR:
         - 0
         - 0
         - 1
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        ROBOT_TYPE: FetchRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -185,10 +145,6 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    ARM_REST:
-    - 0.6
-    - 0.0
-    - 0.9
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
@@ -198,23 +154,5 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: FetchRobot
-    IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION:
-        - 0.0
-        - 0.0
-        - 0.0
-        POSITION:
-        - 0
-        - 1.25
-        - 0
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
     TYPE: RearrangeSim-v0

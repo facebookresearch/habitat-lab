@@ -37,6 +37,7 @@ class RearrangeEpisode(Episode):
     markers: Dict[str, Tuple[str, Tuple]] = {}
     target_receptacles: List[Tuple[str, int]] = []
     goal_receptacles: List[Tuple[str, int]] = []
+    name_to_receptacle: Dict[str, str] = {}
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")

@@ -109,15 +109,15 @@ class GaussianNet(nn.Module):
         super().__init__()
 
         self.action_activation = config.action_activation
-        self.use_log_std = config.use_log_std
         self.use_softplus = config.use_softplus
+        self.use_log_std = config.use_log_std
         use_std_param = config.use_std_param
         self.clamp_std = config.clamp_std
 
         if self.use_log_std:
             self.min_std = config.min_log_std
             self.max_std = config.max_log_std
-            std_init = 0.0  # initialize std value so that exp(std) ~ 1
+            std_init = config.log_std_init
         elif self.use_softplus:
             inv_softplus = lambda x: math.log(math.exp(x) - 1)
             self.min_std = inv_softplus(config.min_std)
