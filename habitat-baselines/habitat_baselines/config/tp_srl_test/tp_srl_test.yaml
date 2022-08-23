@@ -38,7 +38,7 @@ RL:
           LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 200
           FORCE_END_ON_TIMEOUT: True
-          FORCE_CONFIG_FILE: "habitat_baselines/config/rearrange/ddppo_pick.yaml"
+          FORCE_CONFIG_FILE: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml"
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"
@@ -49,7 +49,7 @@ RL:
           LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 200
           FORCE_END_ON_TIMEOUT: True
-          FORCE_CONFIG_FILE: "habitat_baselines/config/rearrange/ddppo_place.yaml"
+          FORCE_CONFIG_FILE: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml"
 
         NN_NAV:
           skill_name: "NavSkillPolicy"
@@ -62,7 +62,7 @@ RL:
           LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: False
-          FORCE_CONFIG_FILE: "habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml"
+          FORCE_CONFIG_FILE: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml"
 
         WAIT_SKILL:
           skill_name: "WaitSkillPolicy"

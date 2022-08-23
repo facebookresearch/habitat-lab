@@ -106,7 +106,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/tasks/rearrange/*"),
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
@@ -190,7 +190,7 @@ def test_rearrange_episode_generator(
     "test_cfg_path,mode",
     list(
         itertools.product(
-            glob("habitat_baselines/config/tp_srl_test/*"),
+            glob("habitat-baselines/habitat_baselines/config/tp_srl_test/*"),
             ["eval"],
         )
     ),
