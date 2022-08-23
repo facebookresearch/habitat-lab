@@ -9,14 +9,19 @@ scene_sets:
   -
     name: "scene_train_split"
     included_substrings:
-      - "sc0_staging"
-      - "sc1_staging"
-      - "sc2_staging"
+      - "v3_sc0_staging"
+      - "v3_sc1_staging"
+      - "v3_sc2_staging"
     excluded_substrings: []
   -
     name: "scene_val_split"
     included_substrings:
       - "v3_sc3_staging"
+    excluded_substrings: []
+  -
+    name: "scene_test_split"
+    included_substrings:
+      - "v3_sc4_staging"
     excluded_substrings: []
 
 object_sets:

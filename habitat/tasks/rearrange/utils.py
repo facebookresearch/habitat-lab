@@ -58,11 +58,6 @@ def get_match_link(coll, name):
     return None
 
 
-def swap_axes(x):
-    x[1], x[2] = x[2], x[1]
-    return x
-
-
 @attr.s(auto_attribs=True, kw_only=True)
 class CollisionDetails:
     obj_scene_colls: int = 0
@@ -96,13 +91,15 @@ def rearrange_collision(
     ignore_names: Optional[List[str]] = None,
     ignore_base: bool = True,
     get_extra_coll_data: bool = False,
+    agent_idx: Optional[int] = None,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
-    robot_model = sim.robot
+    robot_model = sim.get_robot_data(agent_idx).robot
+    grasp_mgr = sim.get_robot_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
     robot_id = robot_model.get_robot_sim_id()
     added_objs = sim.scene_obj_ids
-    snapped_obj_id = sim.grasp_mgr.snap_idx
+    snapped_obj_id = grasp_mgr.snap_idx
 
     def should_keep(x):
         if ignore_base:
@@ -258,7 +255,7 @@ class CacheHelper:
 
 
 def batch_transform_point(
-    points: np.ndarray, transform_matrix: mn.Matrix4, dtype
+    points: np.ndarray, transform_matrix: mn.Matrix4, dtype=np.float32
 ) -> np.ndarray:
     transformed_points = []
     for point in points:
@@ -352,6 +349,38 @@ class IkHelper:
         :param targ_ee: 3D target position in the ROBOT BASE coordinate frame
         """
         js = p.calculateInverseKinematics(
-            self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
+            self.robo_id,
+            self.pb_link_idx,
+            targ_ee,
+            physicsClientId=self.pc_id,
         )
         return js[: self._arm_len]
+
+
+class UsesRobotInterface:
+    """
+    For sensors or actions that are robot specific. Used to split actions and
+    sensors between multiple robots.
+    """
+
+    def __init__(self, *args, **kwargs):
+        # This init call is necessary for using this class with `Measure`.
+        super().__init__(*args, **kwargs)
+        self.robot_id = None
+
+
+def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
+    """
+    Writes the all replay frames to a file for later replay. Filename is of the
+    form 'episodeX.replay.json' where `X` is the episode ID.
+    """
+
+    os.makedirs(task_config.GFX_REPLAY_DIR, exist_ok=True)
+    # A gfx-replay list of keyframes for the episode. This is a JSON string that
+    # should be saved to a file; the file can be read by visualization tools
+    # (e.g. import into Blender for screenshots and videos).
+    filepath = osp.join(
+        task_config.GFX_REPLAY_DIR, f"episode{ep_id}.replay.json"
+    )
+    with open(filepath, "w") as text_file:
+        text_file.write(gfx_keyframe_str)

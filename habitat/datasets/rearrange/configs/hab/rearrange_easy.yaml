@@ -1,0 +1,153 @@
+---
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/configs"
+scene_sets:
+  -
+    name: "scene_train_split"
+    included_substrings:
+      - "v3_sc0_staging"
+      - "v3_sc1_staging"
+      - "v3_sc2_staging"
+    excluded_substrings: []
+  -
+    name: "scene_val_split"
+    included_substrings:
+      - "v3_sc3_staging"
+    excluded_substrings: []
+  -
+    name: "scene_test_split"
+    included_substrings:
+      - "v3_sc4_staging"
+    excluded_substrings: []
+
+object_sets:
+  -
+    name: "hab2"
+    included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "011_banana.object_config.json"
+      - "012_strawberry.object_config.json"
+      - "013_apple.object_config.json"
+      - "014_lemon.object_config.json"
+      - "015_peach.object_config.json"
+      - "016_pear.object_config.json"
+      - "017_orange.object_config.json"
+      - "018_plum.object_config.json"
+      - "021_bleach_cleanser.object_config.json"
+      - "024_bowl.object_config.json"
+      - "025_mug.object_config.json"
+      - "026_sponge.object_config.json"
+    excluded_substrings: []
+receptacle_sets:
+  -
+    name: "hab2"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_aabb_Chr1_Top1_frl_apartment_chair_01"
+      - "receptacle_aabb_Tbl1_Top1_frl_apartment_table_01"
+      - "receptacle_aabb_Tbl2_Top1_frl_apartment_table_02"
+      - "receptacle_aabb_TvStnd1_Top1_frl_apartment_tvstand"
+      - "receptacle_aabb_sink_kitchen_counter"
+      - "receptacle_aabb_counter_right_kitchen_counter"
+      - "receptacle_aabb_counter_left_kitchen_counter"
+      - "receptacle_aabb_Sofa_frl_apartment_sofa"
+
+      # Inside of articulated objects. (But the receptacles are never shut)
+      - "receptacle_aabb_middle_topfrl_apartment_refrigerator"
+      - "receptacle_aabb_drawer_left_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_middle_top_frl_apartment_kitchen_counter"
+      - "receptacle_aabb_drawer_right_top_frl_apartment_kitchen_counter"
+
+    excluded_receptacle_substrings: []
+
+max_objects_per_receptacle:
+  - ["receptacle_aabb_Chr1_Top1_frl_apartment_chair_01", 2]
+  - ["receptacle_aabb_sink_kitchen_counter", 2]
+
+scene_sampler:
+  type: "subset"
+  params:
+    scene_sets: ["scene_train_split", "scene_val_split", "scene_test_split"]
+
+object_samplers:
+  -
+    name: "any_targets"
+    type: "uniform"
+    params:
+      object_sets: ["hab2"]
+      receptacle_sets: ["hab2"]
+      num_samples: [30, 30]
+      orientation_sampling: "up"
+
+object_target_samplers:
+  -
+    name: "goal0"
+    type: "uniform"
+    params:
+      object_samplers: ["any_targets"]
+      receptacle_sets: ["hab2"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+
+ao_state_samplers:
+  -
+    name: "open_fridge_cab"
+    type: "composite"
+    params:
+      -
+        ao_handle: "fridge"
+        joint_states:
+          - ["top_door", 1.5, 1.5]
+        should_sample_all_joints: True
+      -
+        ao_handle: "counter"
+        joint_states:
+          - ["drawer1_top", 0.5, 0.5]
+          - ["drawer1_bottom", 0.5, 0.5]
+          - ["drawer2_top", 0.5, 0.5]
+          - ["drawer2_middle", 0.5, 0.5]
+          - ["drawer2_bottom", 0.5, 0.5]
+          - ["drawer3", 0.5, 0.5]
+          - ["drawer4", 0.5, 0.5]
+
+markers:
+  - name: "cab_push_point_7"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer1_top"
+      object: "kitchen_counter_:0000"
+  - name: "cab_push_point_6"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer2_top"
+      object: "kitchen_counter_:0000"
+  - name: "cab_push_point_5"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer3"
+      object: "kitchen_counter_:0000"
+  - name: "cab_push_point_4"
+    type: "articulated_object"
+    params:
+      offset: [0.3,0.0,0]
+      link: "drawer4"
+      object: "kitchen_counter_:0000"
+  - name: "fridge_push_point"
+    type: "articulated_object"
+    params:
+      offset: [0.10,-0.62,0.2]
+      link: "top_door"
+      object: "fridge_:0000"

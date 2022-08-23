@@ -66,6 +66,7 @@ GET_METRICS_NAME = "get_metrics"
 CURRENT_EPISODE_NAME = "current_episode"
 NUMBER_OF_EPISODE_NAME = "number_of_episodes"
 ACTION_SPACE_NAME = "action_space"
+ORIG_ACTION_SPACE_NAME = "original_action_space"
 OBSERVATION_SPACE_NAME = "observation_space"
 
 
@@ -203,6 +204,13 @@ class VectorEnv:
         self.action_spaces = [
             read_fn() for read_fn in self._connection_read_fns
         ]
+
+        for write_fn in self._connection_write_fns:
+            write_fn((CALL_COMMAND, (ORIG_ACTION_SPACE_NAME, None)))
+        self.orig_action_spaces = [
+            read_fn() for read_fn in self._connection_read_fns
+        ]
+
         for write_fn in self._connection_write_fns:
             write_fn((CALL_COMMAND, (NUMBER_OF_EPISODE_NAME, None)))
         self.number_of_episodes = [

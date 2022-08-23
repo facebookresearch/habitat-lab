@@ -26,6 +26,7 @@ _C.TRAINER_NAME = "ppo"
 _C.SIMULATOR_GPU_ID = 0
 _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
+_C.VIDEO_RENDER_VIEWS = []
 _C.TENSORBOARD_DIR = "tb"
 _C.WRITER_TYPE = "tb"
 _C.VIDEO_DIR = "video_dir"
@@ -111,6 +112,7 @@ _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
 _C.RL.POLICY.ACTION_DIST = CN()
 _C.RL.POLICY.ACTION_DIST.use_log_std = True
 _C.RL.POLICY.ACTION_DIST.use_softplus = False
+_C.RL.POLICY.ACTION_DIST.log_std_init = 0.0
 # If True, the std will be a parameter not conditioned on state
 _C.RL.POLICY.ACTION_DIST.use_std_param = False
 # If True, the std will be clamped to the specified min and max std values
@@ -121,6 +123,7 @@ _C.RL.POLICY.ACTION_DIST.min_log_std = -5
 _C.RL.POLICY.ACTION_DIST.max_log_std = 2
 # For continuous action distributions (including gaussian):
 _C.RL.POLICY.ACTION_DIST.action_activation = "tanh"  # ['tanh', '']
+_C.RL.POLICY.ACTION_DIST.scheduled_std = False
 # -----------------------------------------------------------------------------
 # OBS_TRANSFORMS CONFIG
 # -----------------------------------------------------------------------------
@@ -134,17 +137,38 @@ _C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH = 512
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = [
+    "BACK",
+    "DOWN",
+    "FRONT",
+    "LEFT",
+    "RIGHT",
+    "UP",
+]
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.WIDTH = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.FOV = 180
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.PARAMS = (0.2, 0.2, 0.2)
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = [
+    "BACK",
+    "DOWN",
+    "FRONT",
+    "LEFT",
+    "RIGHT",
+    "UP",
+]
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.HEIGHT = 256
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.WIDTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = list()
+_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = [
+    "BACK",
+    "DOWN",
+    "FRONT",
+    "LEFT",
+    "RIGHT",
+    "UP",
+]
 # -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
@@ -174,6 +198,24 @@ _C.RL.PPO.use_clipped_value_loss = True
 # policy inference time during rollout generation
 # Not that this does not change the memory requirements
 _C.RL.PPO.use_double_buffered_sampler = False
+# -----------------------------------------------------------------------------
+# Variable Experience Rollout (VER)
+# -----------------------------------------------------------------------------
+_C.RL.VER = CN()
+_C.RL.VER.variable_experience = True
+_C.RL.VER.num_inference_workers = 2
+_C.RL.VER.overlap_rollouts_and_learn = False
+# -----------------------------------------------------------------------------
+# Auxiliary Losses
+# -----------------------------------------------------------------------------
+_C.RL.auxiliary_losses = CN()
+_C.RL.auxiliary_losses.enabled = []
+# Action-Conditional Contrastive Predictive Coding Loss
+_C.RL.auxiliary_losses.cpca = CN()
+_C.RL.auxiliary_losses.cpca.k = 20
+_C.RL.auxiliary_losses.cpca.time_subsample = 6
+_C.RL.auxiliary_losses.cpca.future_subsample = 2
+_C.RL.auxiliary_losses.cpca.loss_scale = 0.1
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------

@@ -122,11 +122,20 @@ class BaseTrainer:
             ), "Must specify a directory for storing videos on disk"
 
         with get_writer(self.config, flush_secs=self.flush_secs) as writer:
-            if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
-                # evaluate singe checkpoint
-                proposed_index = get_checkpoint_id(
-                    self.config.EVAL_CKPT_PATH_DIR
-                )
+            if (
+                os.path.isfile(self.config.EVAL_CKPT_PATH_DIR)
+                or not self.config.EVAL.SHOULD_LOAD_CKPT
+            ):
+                # evaluate single checkpoint. If `SHOULD_LOAD_CKPT=False` then
+                # the `EVAL_CKPT_PATH_DIR` will be ignored.
+
+                if self.config.EVAL.SHOULD_LOAD_CKPT:
+                    proposed_index = get_checkpoint_id(
+                        self.config.EVAL_CKPT_PATH_DIR
+                    )
+                else:
+                    proposed_index = None
+
                 if proposed_index is not None:
                     ckpt_idx = proposed_index
                 else:
