@@ -84,16 +84,26 @@ class RLTaskEnv(habitat.RLEnv):
 
 @habitat.registry.register_env(name="GymRegistryEnv")
 class GymRegistryEnv(gym.Wrapper):
+    """
+    A registered environment that wraps a gym environment to be
+    used with habitat-baselines
+    """
+
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
-        for dependency in config["ENV_TASK_DEPENDENCIES"]:
+        for dependency in config["ENV_TASK_GYM_DEPENDENCIES"]:
             importlib.import_module(dependency)
-            env_name = config["ENV_TASK_ID"]
+            env_name = config["ENV_TASK_GYM_ID"]
         gym_env = gym.make(env_name)
         super().__init__(gym_env)
 
 
 @habitat.registry.register_env(name="GymHabitatEnv")
 class GymHabitatEnv(gym.Wrapper):
+    """
+    A registered environment that wraps a RLTaskEnv with the HabGymWrapper
+    to use the default gym API.
+    """
+
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
         base_env = RLTaskEnv(config=config, dataset=dataset)
         env = HabGymWrapper(base_env)

@@ -914,8 +914,13 @@ _C.GYM.DESIRED_GOAL_KEYS = []
 # To use a gym environment from the registry, use the GymRegistryEnv.
 # Any other environment needs to be created and registered.
 _C.ENV_TASK = "GymHabitatEnv"
-_C.ENV_TASK_DEPENDENCIES = []
-_C.ENV_TASK_ID = ""
+# The dependencies for launching the GymRegistryEnv environments.
+# modules listed here will be imported prior to making the environment with
+# gym.make()
+_C.ENV_TASK_GYM_DEPENDENCIES = []
+# The key of the gym environment in the registry to use in GymRegistryEnv
+# for example: `Cartpole-v0`
+_C.ENV_TASK_GYM_ID = ""
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------

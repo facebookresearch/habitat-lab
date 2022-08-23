@@ -100,6 +100,70 @@ def test_trainers(config_path, num_updates, trainer_name):
 
 
 @pytest.mark.skipif(
+    int(os.environ.get("TEST_BASELINE_SMALL", 0)) == 0,
+    reason="Full training tests did not run. Need `export TEST_BASELINE_SMALL=1",
+)
+@pytest.mark.skipif(
+    not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.parametrize(
+    "config_path,num_updates",
+    [
+        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+    ],
+)
+@pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
+@pytest.mark.parametrize("env_key", ["CartPole-v0"])
+def test_trainers_gym_registry(
+    config_path, num_updates, trainer_name, env_key
+):
+    # Remove the checkpoints from previous tests
+    for f in glob.glob("data/test_checkpoints/test_training/*"):
+        os.remove(f)
+    # Setup the training
+    config = get_config(
+        config_path,
+        [
+            "NUM_UPDATES",
+            num_updates,
+            "TOTAL_NUM_STEPS",
+            -1.0,
+            "CHECKPOINT_FOLDER",
+            "data/test_checkpoints/test_training",
+            "TRAINER_NAME",
+            trainer_name,
+            # Overwrite the gym_environment
+            "TASK_CONFIG.ENV_TASK",
+            "GymRegistryEnv",
+            "TASK_CONFIG.ENV_TASK_GYM_DEPENDENCIES",
+            ["pygame"],
+            "TASK_CONFIG.ENV_TASK_GYM_ID",
+            env_key,
+        ],
+    )
+    random.seed(config.TASK_CONFIG.SEED)
+    np.random.seed(config.TASK_CONFIG.SEED)
+    torch.manual_seed(config.TASK_CONFIG.SEED)
+    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    torch.backends.cudnn.deterministic = True
+    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+        torch.set_num_threads(1)
+
+    assert config.TRAINER_NAME in (
+        "ddppo",
+        "ver",
+    ), "This test can only be used with ddppo/ver trainer"
+
+    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
+    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer = trainer_init(config)
+
+    # Train
+    trainer.train()
+    # Training should complete without raising an error.
+
+
+@pytest.mark.skipif(
     int(os.environ.get("TEST_BASELINE_LARGE", 0)) == 0,
     reason="Full training tests did not run. Need `export TEST_BASELINE_LARGE=1",
 )

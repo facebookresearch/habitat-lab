@@ -138,7 +138,7 @@ jobs:
                 . activate habitat
                 pip install -U pip
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
-                pip install pytest-sugar cython
+                pip install pytest-sugar cython pygame
               fi
       - run:
           name: Install pytorch

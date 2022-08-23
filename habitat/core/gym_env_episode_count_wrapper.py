@@ -37,6 +37,13 @@ class EnvCountEpisodeWrapper(Wrapper):
                 start_rotation=[],
             )
 
+    @property
+    def original_action_space(self) -> spaces.space:
+        if self._has_number_episode:
+            return self.env.original_action_space
+        else:
+            return self.action_space
+
     def step(self, action: ActType) -> Tuple[ObsType, float, bool, dict]:
         """Steps through the environment with action."""
         o, r, done, i = self.env.step(action)
