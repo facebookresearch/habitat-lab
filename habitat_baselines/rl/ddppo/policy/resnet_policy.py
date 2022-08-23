@@ -64,14 +64,6 @@ class PointNavResNetPolicy(NetPolicy):
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
-        if discrete_actions:
-            assert isinstance(
-                action_space, spaces.Discrete
-            ), f"Current action distribution can only be used with Disrete actions space, but action space was {action_space}"
-        else:
-            assert isinstance(
-                action_space, spaces.Box
-            ), f"Current action distribution can only be used with Box actions space, but action space was {action_space}"
 
         super().__init__(
             PointNavResNetNet(
