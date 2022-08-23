@@ -208,9 +208,9 @@ class Registry(metaclass=Singleton):
                 If None will use the name of the class.
 
         """
-        from habitat.core.env import RLEnv
+        from gym import Env
 
-        return cls._register_impl("env", to_register, name, assert_type=RLEnv)
+        return cls._register_impl("env", to_register, name, assert_type=Env)
 
     @classmethod
     def _get_impl(cls, _type: str, name: str) -> Type:

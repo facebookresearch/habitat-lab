@@ -880,9 +880,12 @@ _C.GYM.DESIRED_GOAL_KEYS = []
 # -----------------------------------------------------------------------------
 # Task
 # -----------------------------------------------------------------------------
-# Uless another RLEnv is implemented and registered, the default task is
-# should be RLTaskEnv. RLTaskEnv works for both Navigation and Rearrange.
-_C.ENV_TASK = "RLTaskEnv"
+# GymHabitatEnv works for all Habitat tasks, including Navigation and Rearrange.
+# To use a gym environment from the registry, use the GymRegistryEnv.
+# Any other environment needs to be created and registered.
+_C.ENV_TASK = "GymHabitatEnv"
+_C.ENV_TASK_DEPENDENCIES = []
+_C.ENV_TASK_ID = ""
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
