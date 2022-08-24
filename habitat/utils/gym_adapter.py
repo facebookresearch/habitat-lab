@@ -244,15 +244,9 @@ class HabGymWrapper(gym.Env):
     def number_of_episodes(self) -> int:
         return self._env.number_of_episodes
 
-    def current_episode(self, all_info: bool = False) -> int:
-        """
-        Returns the current episode of the environment.
-        :param all_info: If true, all of the information in the episode
-        will be provided. Otherwise, only episode_id and scene_id will
-        be included
-        :return: The BaseEpisode object for the current episode
-        """
-        return self._env.current_episode(all_info)
+    @property
+    def current_episode(self) -> int:
+        return self._env.current_episode
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
         obs, reward, done, info = self._env.step(action=action)

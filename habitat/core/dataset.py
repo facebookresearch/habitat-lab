@@ -36,24 +36,13 @@ from habitat.core.utils import not_none_validator
 ALL_SCENES_MASK = "*"
 
 
-@attr.s(auto_attribs=True)
-class BaseEpisode:
-    """
-    Base class for episode specification that includes only the episode_id
-    and scene id. This class allows passing the minimum required episode
-    information to identify the episode (unique key) to the habitat baseline process, thus saving evaluation time.
-    :property episode_id: id of episode in the dataset, usually episode number.
-    :property scene_id: id of scene in dataset.
-    """
-
-    episode_id: str = attr.ib(default=None, validator=not_none_validator)
-    scene_id: str = attr.ib(default=None, validator=not_none_validator)
-
-
 @attr.s(auto_attribs=True, kw_only=True)
-class Episode(BaseEpisode):
+class Episode:
     r"""Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode.
+
+    :property episode_id: id of episode in the dataset, usually episode number.
+    :property scene_id: id of scene in dataset.
     :property start_position: list of length 3 for cartesian coordinates
         :py:`(x, y, z)`.
     :property start_rotation: list of length 4 for (x, y, z, w) elements
@@ -63,6 +52,9 @@ class Episode(BaseEpisode):
 
     This information is provided by a :ref:`Dataset` instance.
     """
+
+    episode_id: str = attr.ib(default=None, validator=not_none_validator)
+    scene_id: str = attr.ib(default=None, validator=not_none_validator)
     # path to the SceneDataset config file
     scene_dataset_config: str = attr.ib(
         default="default", validator=not_none_validator
