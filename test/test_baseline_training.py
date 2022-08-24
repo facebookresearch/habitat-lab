@@ -23,6 +23,13 @@ try:
 except ImportError:
     baseline_installed = False
 
+try:
+    import pygame  # noqa: F401
+
+    pygame_installed = True
+except ImportError:
+    pygame_installed = False
+
 
 def setup_function(test_trainers):
     # Download the needed datasets
@@ -105,6 +112,9 @@ def test_trainers(config_path, num_updates, trainer_name):
 )
 @pytest.mark.skipif(
     not baseline_installed, reason="baseline sub-module not installed"
+)
+@pytest.mark.skipif(
+    not pygame_installed, reason="pygame sub-module not installed"
 )
 @pytest.mark.parametrize(
     "config_path,num_updates",
