@@ -14,6 +14,8 @@ import attr
 import numpy as np
 
 from habitat import Config, RLEnv, logger, make_dataset
+from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
+from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.utils.gym_definitions import make_gym_from_config
 from habitat_baselines.common.tensor_dict import NDArrayDict, TensorDict
 from habitat_baselines.rl.ver.queue import BatchedQueue
@@ -105,7 +107,9 @@ class EnvironmentWorkerProcess(ProcessBase):
 
     def start(self):
         assert self.env is None
-        self.env = make_gym_from_config(self.env_config)
+        self.env = EnvCountEpisodeWrapper(
+            EnvObsDictWrapper(make_gym_from_config(self.env_config))
+        )
 
         self.response_queue.put(
             dict(

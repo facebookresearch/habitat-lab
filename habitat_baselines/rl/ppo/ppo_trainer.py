@@ -988,6 +988,9 @@ class PPOTrainer(BaseRLTrainer):
                 number_of_eval_episodes = total_num_eps
             else:
                 assert evals_per_ep == 1
+        assert (
+            number_of_eval_episodes > 0
+        ), "You must specify a number of evaluation episodes with TEST_EPISODE_COUNT"
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self.actor_critic.eval()

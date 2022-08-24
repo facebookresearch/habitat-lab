@@ -9,13 +9,13 @@ import os.path as osp
 from glob import glob
 from typing import Any, List, Optional
 
+import gym
 from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
 from habitat.config.default import Config
 from habitat.core.environments import get_env_class
-from habitat.utils.gym_adapter import HabGymWrapper
 from habitat.utils.render_wrapper import HabRenderWrapper
 
 HABLAB_INSTALL_PATH = "HABLAB_BASE_CFG_PATH"
@@ -38,7 +38,7 @@ def _get_env_name(cfg: Config) -> Optional[str]:
     return cfg["ENV_TASK"]
 
 
-def make_gym_from_config(config: Config) -> HabRenderWrapper:
+def make_gym_from_config(config: Config) -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """
@@ -48,19 +48,17 @@ def make_gym_from_config(config: Config) -> HabRenderWrapper:
     env_class = get_env_class(env_class_name)
     assert (
         env_class is not None
-    ), "No environment class was found, you need to specify it with ENV_TASK"
-    env = habitat.utils.env_utils.make_env_fn(
+    ), f"No environment class with name `{env_class_name}` was found, you need to specify a valid one with ENV_TASK"
+    return habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
-    env = HabGymWrapper(env)
-    return env
 
 
 def _make_habitat_gym_env(
     cfg_file_path: str,
     override_options: List[Any] = None,
     use_render_mode: bool = False,
-):
+) -> gym.Env:
     if override_options is None:
         override_options = []
 
@@ -78,17 +76,9 @@ def _make_habitat_gym_env(
 
     # Re-loading the config since we modified the override_options
     config = habitat.get_config(cfg_file_path, override_options)
-
-    env_class_name = _get_env_name(config)
-    env_class = get_env_class(env_class_name)
-
-    env = habitat.utils.env_utils.make_env_fn(
-        env_class=env_class, config=config
-    )
-    env = HabGymWrapper(env)
+    env = make_gym_from_config(config)
     if use_render_mode:
         env = HabRenderWrapper(env)
-
     return env
 
 
