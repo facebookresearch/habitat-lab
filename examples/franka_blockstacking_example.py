@@ -14,7 +14,6 @@ from habitat.core.logging import logger
 
 SENSOR_KEY = "rgb"
 CONFIG_FILE = "configs/tasks/franka_point.yaml"
-BLOCK_CONFIGS_PATH = "data/test_assets/objects/nested_box"
 BLOCK_LOC_RANGE = 2.0
 BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
 
@@ -24,14 +23,21 @@ def example(render):
 
     with habitat.Env(config=habitat.get_config(CONFIG_FILE)) as env:
         logger.info("Environment creation successful")
+
         obj_templates_mgr = env.sim.get_object_template_manager()
         rigid_obj_mgr = env.sim.get_rigid_object_manager()
 
+        cube_handle = obj_templates_mgr.get_template_handles("cubeSolid")[0]
+        cube_template_cpy = obj_templates_mgr.get_template_by_handle(
+            cube_handle
+        )
+        cube_template_cpy.scale = np.array([0.2, 0.2, 0.2])
+        obj_templates_mgr.register_template(
+            cube_template_cpy, "my_scaled_cube"
+        )
+
         for _ in range(6):
-            block_template_id = obj_templates_mgr.load_configs(
-                BLOCK_CONFIGS_PATH
-            )[0]
-            obj = rigid_obj_mgr.add_object_by_template_id(block_template_id)
+            obj = rigid_obj_mgr.add_object_by_template_handle("my_scaled_cube")
             offset = (np.random.random(3) * 2 - 1) * BLOCK_LOC_RANGE
             offset[1] = 0  #  no change in z
             obj.translation = BLOCK_LOC_CENTER + offset
