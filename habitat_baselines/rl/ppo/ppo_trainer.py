@@ -1120,7 +1120,7 @@ class PPOTrainer(BaseRLTrainer):
                         write_gfx_replay(
                             gfx_str,
                             self.config.TASK_CONFIG.TASK,
-                            current_episodes[i].episode_id,
+                            current_episodes_info[i].episode_id,
                         )
 
             not_done_masks = not_done_masks.to(device=self.device)
