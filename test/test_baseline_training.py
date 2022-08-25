@@ -143,7 +143,10 @@ def test_trainers(config_path, num_updates, trainer_name):
 @pytest.mark.parametrize(
     "config_path,num_updates",
     [
-        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+        (
+            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            3,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
