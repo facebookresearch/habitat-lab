@@ -47,7 +47,6 @@ class PointNavResNetPolicy(NetPolicy):
         rnn_type: str = "GRU",
         resnet_baseplanes: int = 32,
         backbone: str = "resnet18",
-        normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: Config = None,
         aux_loss_config: Optional[Config] = None,
@@ -74,7 +73,6 @@ class PointNavResNetPolicy(NetPolicy):
                 rnn_type=rnn_type,
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
-                normalize_visual_inputs=normalize_visual_inputs,
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
@@ -99,7 +97,6 @@ class PointNavResNetPolicy(NetPolicy):
             rnn_type=config.RL.DDPPO.rnn_type,
             num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
             backbone=config.RL.DDPPO.backbone,
-            normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
             aux_loss_config=config.RL.auxiliary_losses,
@@ -115,38 +112,44 @@ class ResNetEncoder(nn.Module):
         ngroups: int = 32,
         spatial_size: int = 128,
         make_backbone=None,
-        normalize_visual_inputs: bool = False,
     ):
         super().__init__()
 
         # Determine which visual observations are present
-        self.rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
-        self.depth_keys = [k for k in observation_space.spaces if "depth" in k]
-
-        # Count total # of channels for rgb and for depth
-        self._n_input_rgb, self._n_input_depth = [
-            # sum() returns 0 for an empty list
-            sum(observation_space.spaces[k].shape[2] for k in keys)
-            for keys in [self.rgb_keys, self.depth_keys]
+        self.visual_keys = [
+            k
+            for k, v in observation_space.spaces.items()
+            if len(v.shape) > 1
+            and k != ImageGoalSensor.cls_uuid
+            and "debug" not in k
         ]
+        self.key_needs_rescaling = {k: None for k in self.visual_keys}
+        for k, v in observation_space.spaces.items():
+            if v.dtype == np.uint8:
+                self.key_needs_rescaling[k] = 1.0 / v.high.max()
 
-        if normalize_visual_inputs:
+        # Count total # of channels
+        self._n_input_channels = sum(
+            observation_space.spaces[k].shape[2] for k in self.visual_keys
+        )
+
+        if self._n_input_channels > 0:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
-                self._n_input_depth + self._n_input_rgb
+                self._n_input_channels
             )
         else:
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
-            all_keys = self.rgb_keys + self.depth_keys
             spatial_size_h = (
-                observation_space.spaces[all_keys[0]].shape[0] // 2
+                observation_space.spaces[self.visual_keys[0]].shape[0] // 2
             )
             spatial_size_w = (
-                observation_space.spaces[all_keys[0]].shape[1] // 2
+                observation_space.spaces[self.visual_keys[0]].shape[1] // 2
             )
-            input_channels = self._n_input_depth + self._n_input_rgb
-            self.backbone = make_backbone(input_channels, baseplanes, ngroups)
+            self.backbone = make_backbone(
+                self._n_input_channels, baseplanes, ngroups
+            )
 
             final_spatial_h = int(
                 np.ceil(spatial_size_h * self.backbone.final_spatial_compress)
@@ -181,7 +184,7 @@ class ResNetEncoder(nn.Module):
 
     @property
     def is_blind(self):
-        return self._n_input_rgb + self._n_input_depth == 0
+        return self._n_input_channels == 0
 
     def layer_init(self):
         for layer in self.modules():
@@ -197,20 +200,15 @@ class ResNetEncoder(nn.Module):
             return None
 
         cnn_input = []
-        for k in self.rgb_keys:
-            rgb_observations = observations[k]
+        for k in self.visual_keys:
+            obs_k = observations[k]
             # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            rgb_observations = rgb_observations.permute(0, 3, 1, 2)
-            rgb_observations = (
-                rgb_observations.float() / 255.0
-            )  # normalize RGB
-            cnn_input.append(rgb_observations)
-
-        for k in self.depth_keys:
-            depth_observations = observations[k]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
-            depth_observations = depth_observations.permute(0, 3, 1, 2)
-            cnn_input.append(depth_observations)
+            obs_k = obs_k.permute(0, 3, 1, 2)
+            if self.key_needs_rescaling[k] is not None:
+                obs_k = (
+                    obs_k.float() * self.key_needs_rescaling[k]
+                )  # normalize
+            cnn_input.append(obs_k)
 
         x = torch.cat(cnn_input, dim=1)
         x = F.avg_pool2d(x, 2)
@@ -237,7 +235,6 @@ class PointNavResNetNet(Net):
         rnn_type: str,
         backbone,
         resnet_baseplanes,
-        normalize_visual_inputs: bool,
         fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
@@ -357,7 +354,6 @@ class PointNavResNetNet(Net):
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
-                normalize_visual_inputs=normalize_visual_inputs,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -388,7 +384,6 @@ class PointNavResNetNet(Net):
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
-            normalize_visual_inputs=normalize_visual_inputs,
         )
 
         if not self.visual_encoder.is_blind:
