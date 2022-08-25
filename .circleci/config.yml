@@ -200,6 +200,17 @@ jobs:
                 wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
                 unzip habitat-test-scenes.zip
                 rm habitat-test-scenes.zip
+                cd -
+              fi
+              if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
+              then
+                cd habitat-sim/data/
+                mkdir robots
+                cd robots
+                wget https://dl.fbaipublicfiles.com/polymetis/franka_panda.zip
+                unzip franka_panda.zip
+                rm franka_panda.zip
+                cd -
               fi
       - run:
           name: Download coda scene
