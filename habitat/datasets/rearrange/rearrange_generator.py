@@ -454,12 +454,12 @@ class RearrangeEpisodeGenerator:
         }
 
         ep_scene_handle = self.generate_scene()
-        # scene_base_dir = osp.dirname(osp.dirname(ep_scene_handle))
-        # scene_name = ep_scene_handle.split(".")[0]
-        # navmesh_path = osp.join(
-        #     scene_base_dir, "navmeshes", scene_name + ".navmesh"
-        # )
-        # self.sim.pathfinder.load_nav_mesh(navmesh_path)
+        scene_base_dir = osp.dirname(osp.dirname(ep_scene_handle))
+        scene_name = ep_scene_handle.split(".")[0]
+        navmesh_path = osp.join(
+            scene_base_dir, "navmeshes", scene_name + ".navmesh"
+        )
+        self.sim.pathfinder.load_nav_mesh(navmesh_path)
 
         self._get_object_target_samplers()
         target_numbers = {

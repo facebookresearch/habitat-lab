@@ -10,11 +10,6 @@ TASK:
     TYPE: RearrangeEmptyTask-v0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
-    DESIRED_RESTING_POSITION: [0.5, 0.0, 1.0]
-
-    # Reach task config
-    RENDER_TARGET: True
-    EE_SAMPLE_FACTOR: 0.8
 
     # In radians
     BASE_ANGLE_NOISE: 0.0
@@ -43,8 +38,8 @@ TASK:
             EE_CTRL_LIM: 0.015
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
-            LIN_SPEED: 15.0
-            ANG_SPEED: 15.0
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: True
             END_ON_STOP: False
             ALLOW_BACK: True
@@ -58,6 +53,8 @@ TASK:
         - EMPTY
 
 SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
     GRASP_IMPULSE: 1000.0
     HOLD_THRESH: 0.09
@@ -86,7 +83,7 @@ SIMULATOR:
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: False
+        ALLOW_SLIDING: True
         ENABLE_PHYSICS: True
         GPU_DEVICE_ID: 0
         GPU_GPU: False

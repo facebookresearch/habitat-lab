@@ -301,20 +301,14 @@ class RearrangeSim(HabitatSim):
 
     def _load_navmesh(self):
         scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
-        base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
+        base_dir = osp.dirname(self.active_dataset)
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        if osp.exists(navmesh_path):
-            self.pathfinder.load_nav_mesh(navmesh_path)
-        else:
-            navmesh_settings = habitat_sim.NavMeshSettings()
-            navmesh_settings.agent_height = self.habitat_config.AGENT_0.HEIGHT
-            navmesh_settings.agent_radius = self.habitat_config.AGENT_0.RADIUS
-            navmesh_settings.agent_max_climb = 0.2
-            navmesh_settings.agent_max_slope = 45
-            self.recompute_navmesh(
-                self.pathfinder, navmesh_settings, include_static_objects=True
+        if not osp.exists(navmesh_path):
+            rearrange_logger.warning(
+                f"Cannot load navmesh path {navmesh_path}"
             )
+        self.pathfinder.load_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
