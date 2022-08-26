@@ -220,13 +220,11 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             obs_k = observation[sensor_name]
             if not isinstance(obs_k, np.ndarray):
                 obs_k = obs_k.cpu().numpy()
-            if obs_k.dtype == np.float:  # type: ignore
+            if obs_k.dtype != np.uint8:
                 obs_k = obs_k * 255.0
                 obs_k = obs_k.astype(np.uint8)
-            if len(obs_k.shape) == 2:
-                obs_k = obs_k.squeeze()
             if obs_k.shape[2] == 1:
-                obs_k = np.stack([obs_k for _ in range(3)], axis=2)
+                obs_k = np.concatenate([obs_k for _ in range(3)], axis=2)
             render_obs_images.append(obs_k)
 
     assert (
