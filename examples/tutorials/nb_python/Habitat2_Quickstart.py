@@ -235,7 +235,7 @@ class TargetStartSensor(Sensor):
             self._task.target_object_index
         ]
         relative_start_pos = T_inv.transform_point(start_pos)
-        return relative_start_pos
+        return np.asarray(relative_start_pos)
 
 
 @registry.register_measure
