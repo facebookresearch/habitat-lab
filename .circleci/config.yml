@@ -175,7 +175,7 @@ jobs:
           command: |
               if [ ! -d ./habitat-sim ]
               then
-                git clone --branch laikh/franka_download_nodir https://github.com/laikhtewari/habitat-sim.git --recursive
+                git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               fi
               # while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
@@ -204,6 +204,7 @@ jobs:
               fi
               if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
               then
+                . activate habitat
                 python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
               fi
       - run:
