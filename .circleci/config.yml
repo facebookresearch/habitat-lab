@@ -204,13 +204,9 @@ jobs:
               fi
               if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
               then
-                cd habitat-sim/data/
-                mkdir robots
-                cd robots
-                wget https://dl.fbaipublicfiles.com/polymetis/franka_panda.zip
-                unzip franka_panda.zip
-                rm franka_panda.zip
-                cd -
+                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+                . activate habitat
+                python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
               fi
       - run:
           name: Download coda scene
