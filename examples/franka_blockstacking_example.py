@@ -16,6 +16,8 @@ SENSOR_KEY = "rgb"
 CONFIG_FILE = "configs/tasks/franka_point.yaml"
 BLOCK_LOC_RANGE = 2.0
 BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
+BLOCK_SCALE = 0.2
+NUM_BLOCKS = 6
 
 
 def example(render):
@@ -31,12 +33,12 @@ def example(render):
         cube_template_cpy = obj_templates_mgr.get_template_by_handle(
             cube_handle
         )
-        cube_template_cpy.scale = np.array([0.2, 0.2, 0.2])
+        cube_template_cpy.scale = np.array([BLOCK_SCALE] * 3)
         obj_templates_mgr.register_template(
             cube_template_cpy, "my_scaled_cube"
         )
 
-        for _ in range(6):
+        for _ in range(NUM_BLOCKS):
             obj = rigid_obj_mgr.add_object_by_template_handle("my_scaled_cube")
             offset = (np.random.random(3) * 2 - 1) * BLOCK_LOC_RANGE
             offset[1] = 0  #  no change in z
