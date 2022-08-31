@@ -18,6 +18,8 @@ BLOCK_LOC_RANGE = 2.0
 BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
 BLOCK_SCALE = 0.2
 NUM_BLOCKS = 6
+UNIFORM_SCALE = 2
+UNIFORM_OFFSET = UNIFORM_SCALE / 2
 
 
 def example(render):
@@ -40,9 +42,14 @@ def example(render):
 
         for _ in range(NUM_BLOCKS):
             obj = rigid_obj_mgr.add_object_by_template_handle("my_scaled_cube")
-            offset = (np.random.random(3) * 2 - 1) * BLOCK_LOC_RANGE
+
+            # blocks placed around BLOCK_LOC_CENTER with uniform distribution and range BLOCK_LOC_RANGE
+            offset = (
+                np.random.random(3) * UNIFORM_SCALE - UNIFORM_OFFSET
+            ) * BLOCK_LOC_RANGE
             offset[1] = 0  #  no change in z
             obj.translation = BLOCK_LOC_CENTER + offset
+
         logger.info("Blocks added to environment")
 
         observations = env.reset()  # noqa: F841
