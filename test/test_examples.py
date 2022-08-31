@@ -87,3 +87,24 @@ def test_rearrange_example_modules(args):
 )
 def test_static_franka_example(args):
     run_main_subproc(args)
+
+
+@pytest.mark.skipif(
+    not osp.exists("configs/tasks/franka_point.yaml")
+    or not osp.exists("data/test_assets/objects/nested_box.glb")
+    or not osp.exists(
+        "data/test_assets/objects/nested_box.object_config.json"
+    ),
+    reason="Requires the franka point config and box data files",
+)
+@pytest.mark.parametrize(
+    "args",
+    [
+        (
+            "examples/franka_blockstacking_example.py",
+            "--no-render",
+        ),
+    ],
+)
+def test_franka_blockstack_example(args):
+    run_main_subproc(args)
