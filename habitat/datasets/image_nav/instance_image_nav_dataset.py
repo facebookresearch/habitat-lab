@@ -29,7 +29,7 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
     """Class that loads an Instance Image Navigation dataset."""
 
     goals: Dict[str, InstanceImageGoal]
-    episodes: List[InstanceImageGoalNavEpisode] = []  # type: ignore
+    episodes: List[InstanceImageGoalNavEpisode] = []  # type: ignore[assignment]
 
     def __init__(self, config: Optional[Config] = None) -> None:
         self.goals = {}
@@ -37,7 +37,7 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
 
     def to_json(self) -> str:
         for i in range(len(self.episodes)):
-            self.episodes[i].goals = []
+            self.episodes[i].goals.clear()
 
         result = DatasetFloatJSONEncoder().encode(self)
 
@@ -53,12 +53,12 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
         g = InstanceImageGoal(**serialized_goal)
 
         for vidx, view in enumerate(g.view_points):
-            view_location = ObjectViewLocation(**view)  # type: ignore
-            view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
+            view_location = ObjectViewLocation(**view)  # type: ignore[arg-type]
+            view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore[arg-type]
             g.view_points[vidx] = view_location
 
         for iidx, params in enumerate(g.image_goals):
-            g.image_goals[iidx] = InstanceImageParameters(**params)  # type: ignore
+            g.image_goals[iidx] = InstanceImageParameters(**params)  # type: ignore[arg-type]
 
         return g
 
@@ -87,4 +87,4 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
                 episode.scene_id = os.path.join(scenes_dir, episode.scene_id)
 
             episode.goals = [self.goals[episode.goal_key]]
-            self.episodes.append(episode)  # type: ignore [attr-defined]
+            self.episodes.append(episode)  # type: ignore[attr-defined]
