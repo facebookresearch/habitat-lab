@@ -68,8 +68,7 @@ class Env:
         """
 
         assert config.is_frozen(), (
-            "Freeze the config before creating the "
-            "environment, use config.freeze()."
+            "Freeze the config before creating the " "environment, use config.freeze()."
         )
         self._config = config
         self._dataset = dataset
@@ -118,9 +117,7 @@ class Env:
             }
         )
         self.action_space = self._task.action_space
-        self._max_episode_seconds = (
-            self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
-        )
+        self._max_episode_seconds = self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
         self._max_episode_steps = self._config.ENVIRONMENT.MAX_EPISODE_STEPS
         self._elapsed_steps = 0
         self._episode_start_time: Optional[float] = None
@@ -129,13 +126,10 @@ class Env:
     def _setup_episode_iterator(self):
         assert self._dataset is not None
         iter_option_dict = {
-            k.lower(): v
-            for k, v in self._config.ENVIRONMENT.ITERATOR_OPTIONS.items()
+            k.lower(): v for k, v in self._config.ENVIRONMENT.ITERATOR_OPTIONS.items()
         }
         iter_option_dict["seed"] = self._config.SEED
-        self._episode_iterator = self._dataset.get_episode_iterator(
-            **iter_option_dict
-        )
+        self._episode_iterator = self._dataset.get_episode_iterator(**iter_option_dict)
 
     @property
     def current_episode(self) -> Episode:
@@ -162,17 +156,11 @@ class Env:
 
     @property
     def episodes(self) -> List[Episode]:
-        return (
-            self._dataset.episodes
-            if self._dataset
-            else cast(List[Episode], [])
-        )
+        return self._dataset.episodes if self._dataset else cast(List[Episode], [])
 
     @episodes.setter
     def episodes(self, episodes: List[Episode]) -> None:
-        assert (
-            len(episodes) > 0
-        ), "Environment doesn't accept empty episodes list."
+        assert len(episodes) > 0, "Environment doesn't accept empty episodes list."
         assert (
             self._dataset is not None
         ), "Environment must have a dataset to set episodes"
@@ -235,11 +223,20 @@ class Env:
         if self._current_episode is not None:
             self._current_episode._shortest_path_cache = None
 
-        if (
-            self._episode_iterator is not None
-            and self._episode_from_iter_on_reset
-        ):
+        if self._episode_iterator is not None and self._episode_from_iter_on_reset:
             self._current_episode = next(self._episode_iterator)
+        # ###############
+        # # HACK DEBUG
+        # ###############
+        # search_id = "60"
+        # self._current_episode = None
+        # for ep in self._dataset.episodes:
+        #     if ep.episode_id == search_id:
+        #         self._current_episode = ep
+        #         break
+        # if self._current_episode is None:
+        #     raise ValueError("Could not match episodes")
+        # ###############
 
         # This is always set to true after a reset that way
         # on the next reset an new episode is taken (if possible)
@@ -269,9 +266,7 @@ class Env:
         ):
             self.episode_iterator.step_taken()
 
-    def step(
-        self, action: Union[int, str, Dict[str, Any]], **kwargs
-    ) -> Observations:
+    def step(self, action: Union[int, str, Dict[str, Any]], **kwargs) -> Observations:
         r"""Perform an action in the environment and return observations.
 
         :param action: action (belonging to :ref:`action_space`) to be
@@ -296,9 +291,7 @@ class Env:
         if isinstance(action, (str, int, np.integer)):
             action = {"action": action}
 
-        observations = self.task.step(
-            action=action, episode=self.current_episode
-        )
+        observations = self.task.step(action=action, episode=self.current_episode)
 
         self._task.measurements.update_measures(
             episode=self.current_episode,
@@ -362,9 +355,7 @@ class RLEnv(gym.Env):
 
     _env: Env
 
-    def __init__(
-        self, config: Config, dataset: Optional[Dataset] = None
-    ) -> None:
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None) -> None:
         """Constructor
 
         :param config: config to construct :ref:`Env`

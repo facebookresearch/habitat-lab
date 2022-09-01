@@ -1,19 +1,17 @@
 stage_goals:
   stage_0_5:
-    - "holding(hab2|0)"
+    - "holding(any_targets|0)"
   stage_1:
-    - "at(hab2|0,TARGET_hab2|0)"
+    - "at(any_targets|0,TARGET_any_targets|0)"
 start:
     precondition: []
-    state:
-        robo:
-            pos: 'rnd'
+    state: {}
 
 goal:
-  - "at(hab2|0,TARGET_hab2|0)"
+  - "at(any_targets|0,TARGET_any_targets|0)"
 
 solution:
-    - "nav(hab2|0)"
-    - "pick(hab2|0)"
-    - "nav(TARGET_hab2|0)"
-    - "place(hab2|0,TARGET_hab2|0)"
+    - "nav(any_targets|0)"
+    - "pick(any_targets|0)"
+    - "nav(TARGET_any_targets|0)"
+    - "place(any_targets|0,TARGET_any_targets|0)"

@@ -141,7 +141,7 @@ class TargetStartGpsCompassSensor(PositionGpsCompassSensor):
         return TargetStartGpsCompassSensor.cls_uuid
 
     def _get_positions(self) -> np.ndarray:
-        return self._sim.get_target_objs_start()[0]
+        return self._sim.get_target_objs_start()[:1]
 
 
 @registry.register_sensor
@@ -153,7 +153,7 @@ class TargetGoalGpsCompassSensor(PositionGpsCompassSensor):
 
     def _get_positions(self) -> np.ndarray:
         _, pos = self._sim.get_targets()
-        return pos[0]
+        return pos[:1]
 
 
 @registry.register_sensor

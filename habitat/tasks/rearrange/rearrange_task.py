@@ -8,6 +8,7 @@ import copy
 from typing import Any, Dict, List, Union
 
 import numpy as np
+import magnum as mn
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -18,6 +19,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
+import json
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
@@ -54,6 +56,18 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
+        if "START_CACHE" in self._config:
+            with open(self._config.START_CACHE, "r") as f:
+                ep_data = json.load(f)
+                eps = ep_data["episodeSet"]["episodes"]
+
+                self._ep_starts = [
+                    (ep["agentStartPos"], ep["agentStartYaw"]) for ep in eps
+                ]
+                self._ep_targ_pos = [ep["targetObjGoalPos"] for ep in eps]
+                self._cur_ep_cache_starts = 0
+        else:
+            self._ep_starts = None
 
     @property
     def targ_idx(self):
@@ -84,7 +98,20 @@ class RearrangeTask(NavigationTask):
             for action_instance in self.actions.values():
                 action_instance.reset(episode=episode, task=self)
             self._is_episode_active = True
-            self._sim.set_robot_base_to_random_point()
+            if self._ep_starts is not None:
+                start_pos, start_rot = self._ep_starts[
+                    self._cur_ep_cache_starts
+                ]
+                check_pos = self._ep_targ_pos[self._cur_ep_cache_starts]
+                valid_y = self._sim.pathfinder.get_random_navigable_point()[1]
+                self._sim.robot.base_pos = mn.Vector3(
+                    [start_pos[0], valid_y, start_pos[1]]
+                )
+                self._sim.robot.base_rot = start_rot
+
+                print(f"{check_pos} versus {self._sim.get_targets()[1][0]}")
+            else:
+                self._sim.set_robot_base_to_random_point()
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

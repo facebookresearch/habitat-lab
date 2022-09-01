@@ -45,9 +45,7 @@ cv2 = try_cv2_import()
 
 
 class CustomFixedCategorical(torch.distributions.Categorical):  # type: ignore
-    def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
-    ) -> Tensor:
+    def sample(self, sample_shape: Size = torch.Size()) -> Tensor:  # noqa: B008
         return super().sample(sample_shape).unsqueeze(-1)
 
     def log_probs(self, actions: Tensor) -> Tensor:
@@ -78,9 +76,7 @@ class CategoricalNet(nn.Module):
 
 
 class CustomNormal(torch.distributions.normal.Normal):
-    def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
-    ) -> Tensor:
+    def sample(self, sample_shape: Size = torch.Size()) -> Tensor:  # noqa: B008
         return super().rsample(sample_shape)
 
     def log_probs(self, actions) -> Tensor:
@@ -158,16 +154,10 @@ class NormalAndCategoricalDistribution(torch.distributions.Distribution):
         categorical_logits_1,
     ):
         self._gaussian = CustomNormal(gaussian_mean, gaussian_std)
-        self._categorical_0 = CustomFixedCategorical(
-            logits=categorical_logits_0
-        )
-        self._categorical_1 = CustomFixedCategorical(
-            logits=categorical_logits_1
-        )
+        self._categorical_0 = CustomFixedCategorical(logits=categorical_logits_0)
+        self._categorical_1 = CustomFixedCategorical(logits=categorical_logits_1)
 
-    def sample(
-        self, sample_shape: Size = torch.Size()  # noqa: B008
-    ) -> Tensor:
+    def sample(self, sample_shape: Size = torch.Size()) -> Tensor:  # noqa: B008
         return torch.cat(
             [
                 self._categorical_0.sample(sample_shape),
@@ -215,9 +205,7 @@ class NormalAndCategoricalNet(nn.Module):
             self.min_std = config.min_std
             self.max_std = config.max_std
 
-        self.mu = nn.Linear(
-            num_inputs, NormalAndCategoricalDistribution.NUM_CONTINUOUS
-        )
+        self.mu = nn.Linear(num_inputs, NormalAndCategoricalDistribution.NUM_CONTINUOUS)
         self.std = nn.Linear(
             num_inputs, NormalAndCategoricalDistribution.NUM_CONTINUOUS
         )
@@ -299,11 +287,7 @@ class ObservationBatchingCache:
         cache = torch.empty(
             num_obs, *sensor.size(), dtype=sensor.dtype, device=sensor.device
         )
-        if (
-            device is not None
-            and device.type == "cuda"
-            and cache.device.type == "cpu"
-        ):
+        if device is not None and device.type == "cuda" and cache.device.type == "cpu":
             cache = cache.pin_memory()
 
         if cache.device.type == "cpu":
@@ -436,9 +420,7 @@ def poll_checkpoint_folder(
     assert os.path.isdir(checkpoint_folder), (
         f"invalid checkpoint folder " f"path {checkpoint_folder}"
     )
-    models_paths = list(
-        filter(os.path.isfile, glob.glob(checkpoint_folder + "/*"))
-    )
+    models_paths = list(filter(os.path.isfile, glob.glob(checkpoint_folder + "/*")))
     models_paths.sort(key=os.path.getmtime)
     ind = previous_ckpt_ind + 1
     if ind < len(models_paths):
@@ -477,16 +459,11 @@ def generate_video(
         return
 
     metric_strs = []
-    if (
-        keys_to_include_in_name is not None
-        and len(keys_to_include_in_name) > 0
-    ):
+    if keys_to_include_in_name is not None and len(keys_to_include_in_name) > 0:
         use_metrics_k = [
             k
             for k in metrics
-            if any(
-                to_include_k in k for to_include_k in keys_to_include_in_name
-            )
+            if any(to_include_k in k for to_include_k in keys_to_include_in_name)
         ]
     else:
         use_metrics_k = list(metrics.keys())
@@ -494,23 +471,17 @@ def generate_video(
     for k in use_metrics_k:
         metric_strs.append(f"{k}={metrics[k]:.2f}")
 
-    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
-        metric_strs
-    )
+    video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(metric_strs)
     if "disk" in video_option:
         assert video_dir is not None
-        images_to_video(
-            images, video_dir, video_name, fps=fps, verbose=verbose
-        )
+        images_to_video(images, video_dir, video_name, fps=fps, verbose=verbose)
     if "tensorboard" in video_option:
         tb_writer.add_video_from_np_images(
             f"episode{episode_id}", checkpoint_idx, images, fps=fps
         )
 
 
-def tensor_to_depth_images(
-    tensor: Union[torch.Tensor, List]
-) -> List[np.ndarray]:
+def tensor_to_depth_images(tensor: Union[torch.Tensor, List]) -> List[np.ndarray]:
     r"""Converts tensor (or list) of n image tensors to list of n images.
     Args:
         tensor: tensor containing n image tensors
@@ -770,9 +741,7 @@ def get_num_actions(action_space) -> int:
     return num_actions
 
 
-def action_array_to_dict(
-    action_space, action: torch.Tensor, clip: bool = True
-):
+def action_array_to_dict(action_space, action: torch.Tensor, clip: bool = True):
     """We naively assume that all actions are 1D (len(shape) == 1)"""
 
     # Assume that the action space only has one root SimulatorTaskAction
@@ -795,9 +764,7 @@ def action_array_to_dict(
     for action_name, action_length in action_name_to_lengths.items():
         action_values = action[action_offset : action_offset + action_length]
         if clip:
-            action_values = np.clip(
-                action_values.detach().cpu().numpy(), -1.0, 1.0
-            )
+            action_values = np.clip(action_values.detach().cpu().numpy(), -1.0, 1.0)
         action_args[action_name] = action_values
         action_offset += action_length
 
