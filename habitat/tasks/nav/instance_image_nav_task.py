@@ -127,7 +127,7 @@ class InstanceImageGoalSensor(RGBSensor):
             .image_goals[0]
             .image_dimensions
         )
-        return spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.int64)
+        return spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.uint8)
 
     def _get_instance_image_goal(
         self, img_params: InstanceImageParameters
