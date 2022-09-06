@@ -432,6 +432,8 @@ class PointNavResNetNet(Net):
         x = []
         aux_loss_state = {}
         if not self.is_blind:
+            # We CANNOT use observations.get() here because self.visual_encoder(observations)
+            # is an expensive operation. Therefore, we need `# noqa: SIM401`
             if (  # noqa: SIM401
                 PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
                 in observations
