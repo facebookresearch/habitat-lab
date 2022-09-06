@@ -99,6 +99,7 @@ class BaseTrainer:
 
         with get_writer(self.config, flush_secs=self.flush_secs) as writer:
             episode_success_histogram = {}
+            episode_success_history = []
             if os.path.isfile(self.config.EVAL_CKPT_PATH_DIR):
                 # evaluate singe checkpoint
                 proposed_index = get_checkpoint_id(
@@ -137,18 +138,47 @@ class BaseTrainer:
                             episode_success_histogram[k][0] + v,
                             episode_success_histogram[k][1] + 1,
                         )
-                    print(
-                        "====================================================="
-                    )
-                    print(
-                        f"Episode success historgram at ckpt {prev_ckpt_ind}: "
-                    )
-                    print(episode_success_histogram)
+                    episode_success_history += [
+                        (
+                            prev_ckpt_ind,
+                            sum(v for v in success_counter.values())
+                            / len(success_counter),
+                        )
+                    ]
+
+                    history_string = "=====================================================\n"
+                    history_string += f"Episode success historgram at ckpt {prev_ckpt_ind}: \n"
                     for k, v in episode_success_histogram.items():
-                        print(k, " : ", v[0], " / ", v[1])
-                    print(
-                        "====================================================="
-                    )
+                        history_string += f"{k} : {v[0]} / {v[1]} \n"
+                    history_string += "Episode success history: \n"
+                    for v in episode_success_history:
+                        history_string += f"ckpt : {v[0]} : {v[1]*100}%\n"
+
+                    print(history_string)
+                    with open(
+                        self.config.EVAL_CKPT_PATH_DIR
+                        + "/hirtory_of_success.log",
+                        "w",
+                    ) as f:
+                        f.write(history_string)
+                        f.close()
+                    # print(
+                    #     "====================================================="
+                    # )
+                    # print(
+                    #     f"Episode success historgram at ckpt {prev_ckpt_ind}: "
+                    # )
+                    # print(episode_success_histogram)
+                    # for k, v in episode_success_histogram.items():
+                    #     print(k, " : ", v[0], " / ", v[1])
+                    # print(
+                    #     f"Episode success history: "
+                    # )
+                    # for v in episode_success_history:
+                    #     print(f"ckpt : {v[0]} : {v[1]*100}%")
+                    # print(
+                    #     "====================================================="
+                    # )
 
     def _eval_checkpoint(
         self,

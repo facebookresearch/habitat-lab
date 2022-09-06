@@ -654,7 +654,38 @@ class BatchedEnv:
                 self.infos[b] = {}
                 continue
 
-            end_episode_action = actions[(b + 1) * self.action_dim - 1] > 0.0
+            continuous_action_norm = actions[
+                b * self.action_dim : (b + 1) * self.action_dim
+            ]
+            # continuous_action_norm = actions[
+            #     b * self.action_dim + 1 : b * self.action_dim + 10
+            # ]
+            continuous_action_l2 = sum(c * c for c in continuous_action_norm)
+            action_penalty = (
+                self._config.get("ACTION_PENALTY", 0.0) * continuous_action_l2
+            )
+            continuous_action_norm_mean = sum(
+                abs(c) for c in continuous_action_norm
+            ) / len(continuous_action_norm)
+            continuous_action_norm_median = median(
+                abs(c) for c in continuous_action_norm
+            )
+
+            end_episode_action = actions[
+                (b + 1) * self.action_dim - 1
+            ] > self._config.get("END_ACTION_THRESHOLD", 0.0)
+            original_drop_grasp = actions[b * self.action_dim]
+            if actions[b * self.action_dim] < self._config.get(
+                "DROP_THRESHOLD", 0.01
+            ):
+                actions[b * self.action_dim] = -1.0
+            elif actions[b * self.action_dim] > self._config.get(
+                "GRASP_THRESHOLD", 0.02
+            ):
+                actions[b * self.action_dim] = 1.0
+            else:
+                actions[b * self.action_dim] = 0.0
+
             end_episode_action = (
                 end_episode_action and state.episode_step_idx > 5
             )
@@ -682,7 +713,12 @@ class BatchedEnv:
             obj_to_goal = (state.goal_pos - obj_pos).length()
 
             object_is_close_to_goal = (
-                obj_to_goal < self._config.NPNP_SUCCESS_THRESH
+                obj_to_goal
+                < self._config.NPNP_SUCCESS_THRESH
+                # np.sqrt(
+                #         (state.goal_pos[0] - obj_pos[0]) ** 2
+                #         + (state.goal_pos[2] - obj_pos[2]) ** 2
+                #     ) < self._config.NPNP_SUCCESS_THRESH
             ) or self._object_dropped_properly[b]
 
             bad_attempt_penalty = 0.0
@@ -725,8 +761,13 @@ class BatchedEnv:
                 success = (
                     success
                     and (state.held_obj_idx == -1)
-                    and self._past_pick_success[b]
+                    # and self._past_pick_success[b]
                 )
+            if self._config.get("TASK_IS_NAV_PICK_NAV_REACH", False):
+                success = object_is_close_to_goal
+
+            if self._config.get("TASK_IS_SIMPLE_PICK", False):
+                success = is_holding_correct
 
             if self._config.get("PREVENT_STOP_ACTION", False):
                 end_episode_action = False
@@ -745,20 +786,6 @@ class BatchedEnv:
                 )
             else:
                 failure = end_episode_action and not success
-
-            continuous_action_norm = actions[
-                b * self.action_dim + 1 : b * self.action_dim + 10
-            ]
-            continuous_action_l2 = sum(c * c for c in continuous_action_norm)
-            action_penalty = (
-                self._config.get("ACTION_PENALTY", 0.0) * continuous_action_l2
-            )
-            continuous_action_norm_mean = sum(
-                abs(c) for c in continuous_action_norm
-            ) / len(continuous_action_norm)
-            continuous_action_norm_median = median(
-                abs(c) for c in continuous_action_norm
-            )
 
             if self._config.get(
                 "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
@@ -787,13 +814,17 @@ class BatchedEnv:
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
-                    "try_grasp": actions[(b * self.action_dim)] > 0.0,
+                    "try_grasp": actions[(b * self.action_dim)]
+                    > self._config.get("GRASP_THRESHOLD", 0.02),
+                    "try_drop": actions[(b * self.action_dim)]
+                    < self._config.get("DROP_THRESHOLD", 0.01),
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
                     "continuous_action_norm_mean": continuous_action_norm_mean,
                     "continuous_action_norm_median": continuous_action_norm_median,
                     "continuous_action_l2": continuous_action_l2,
+                    "original_drop_grasp": original_drop_grasp,
                 }
                 self._previous_state[b] = None
                 self._previous_action[b] = None
@@ -823,13 +854,17 @@ class BatchedEnv:
                     "episode_steps": state.episode_step_idx,
                     "distance_to_start": ee_to_start,
                     "distance_to_goal": obj_to_goal,
-                    "try_grasp": actions[(b * self.action_dim)] > 0.0,
+                    "try_grasp": actions[(b * self.action_dim)]
+                    > self._config.get("GRASP_THRESHOLD", 0.02),
+                    "try_drop": actions[(b * self.action_dim)]
+                    < self._config.get("DROP_THRESHOLD", 0.01),
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
                     "continuous_action_norm_mean": continuous_action_norm_mean,
                     "continuous_action_norm_median": continuous_action_norm_median,
                     "continuous_action_l2": continuous_action_l2,
+                    "original_drop_grasp": original_drop_grasp,
                 }
                 if self._previous_state[b] is not None:
                     prev_obj_pos = prev_state.obj_positions[

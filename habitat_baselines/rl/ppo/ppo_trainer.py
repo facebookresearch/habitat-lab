@@ -149,7 +149,8 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-        logger.add_filehandler(self.config.LOG_FILE)
+        if self.config.LOG_FILE is not None:
+            logger.add_filehandler(self.config.LOG_FILE)
 
         policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
         observation_space = self.obs_space
@@ -227,7 +228,8 @@ class PPOTrainer(BaseRLTrainer):
     def _init_train(self):
         resume_state = load_resume_state(self.config)
         if resume_state is not None:
-            self.config: Config = resume_state["config"]
+            if self.config.LOAD_CONFIG_FROM_CHECKPOINT:
+                self.config: Config = resume_state["config"]
             self.using_velocity_ctrl = (
                 self.config.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
             ) == ["VELOCITY_CONTROL"]
