@@ -8,7 +8,7 @@ from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 
 
-# TODO(akadian): This is a result of moving SimulatorActions away from core
+# This is a result of moving SimulatorActions away from core
 # and into simulators specifically. As a result of that the connection points
 # for our tasks and datasets for actions is coming from inside habitat-sim
 # which makes it impossible for anyone to use habitat-lab without having
