@@ -432,10 +432,15 @@ class PointNavResNetNet(Net):
         x = []
         aux_loss_state = {}
         if not self.is_blind:
-            visual_feats = observations.get(
-                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY,
-                self.visual_encoder(observations),
-            )
+            if (  # noqa: SIM401
+                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                in observations
+            ):
+                visual_feats = observations[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ]
+            else:
+                visual_feats = self.visual_encoder(observations)
 
             visual_feats = self.visual_fc(visual_feats)
             aux_loss_state["perception_embed"] = visual_feats
