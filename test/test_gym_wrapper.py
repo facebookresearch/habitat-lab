@@ -173,7 +173,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("configs/tasks/rearrange/**/*.yaml", recursive=True),
+        glob("configs/tasks/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):
