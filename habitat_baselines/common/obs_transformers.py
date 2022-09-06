@@ -142,7 +142,16 @@ class ResizeShortestEdge(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        return cls(config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE)
+        rs_config = config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE
+
+        # backwards compatibility for configs that only specify SIZE
+        channels_last = getattr(rs_config, "CHANNELS_LAST", True)
+        trans_keys = getattr(
+            rs_config, "TRANS_KEYS", ("rgb", "depth", "semantic")
+        )
+        semantic_key = getattr(rs_config, "SEMANTIC_KEY", "semantic")
+
+        return cls(rs_config.SIZE, channels_last, trans_keys, semantic_key)
 
 
 @baseline_registry.register_obs_transformer()
@@ -218,11 +227,15 @@ class CenterCropper(ObservationTransformer):
     @classmethod
     def from_config(cls, config: Config):
         cc_config = config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER
+
+        # backwards compatibility for configs that only specify {HEIGHT, WIDTH}
+        channels_last = getattr(cc_config, "CHANNELS_LAST", True)
+        trans_keys = getattr(
+            cc_config, "TRANS_KEYS", ("rgb", "depth", "semantic")
+        )
+
         return cls(
-            (
-                cc_config.HEIGHT,
-                cc_config.WIDTH,
-            )
+            (cc_config.HEIGHT, cc_config.WIDTH), channels_last, trans_keys
         )
 
 

@@ -14,6 +14,7 @@ from torch import nn as nn
 from torch.nn import functional as F
 
 from habitat.config import Config
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
@@ -270,6 +271,7 @@ class PointNavResNetNet(Net):
                 ProximitySensor.cls_uuid,
                 EpisodicCompassSensor.cls_uuid,
                 ImageGoalSensor.cls_uuid,
+                InstanceImageGoalSensor.cls_uuid,
             }
             fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
         self._fuse_keys_1d: List[str] = [
@@ -362,6 +364,29 @@ class PointNavResNetNet(Net):
                 nn.Linear(
                     np.prod(self.goal_visual_encoder.output_shape), hidden_size
                 ),
+                nn.ReLU(True),
+            )
+
+            rnn_input_size += hidden_size
+
+        if InstanceImageGoalSensor.cls_uuid in observation_space.spaces:
+            goal_observation_space = spaces.Dict(
+                {
+                    "rgb": observation_space.spaces[
+                        InstanceImageGoalSensor.cls_uuid
+                    ]
+                }
+            )
+            self.iig_encoder = ResNetEncoder(
+                goal_observation_space,
+                baseplanes=resnet_baseplanes,
+                ngroups=resnet_baseplanes // 2,
+                make_backbone=getattr(resnet, backbone),
+            )
+
+            self.iig_fc = nn.Sequential(
+                nn.Flatten(),
+                nn.Linear(np.prod(self.iig_encoder.output_shape), hidden_size),
                 nn.ReLU(True),
             )
 
@@ -534,6 +559,11 @@ class PointNavResNetNet(Net):
             goal_image = observations[ImageGoalSensor.cls_uuid]
             goal_output = self.goal_visual_encoder({"rgb": goal_image})
             x.append(self.goal_visual_fc(goal_output))
+
+        if InstanceImageGoalSensor.cls_uuid in observations:
+            iig = observations[InstanceImageGoalSensor.cls_uuid]
+            goal_output = self.iig_encoder({"rgb": iig})
+            x.append(self.iig_fc(goal_output))
 
         if self.discrete_actions:
             prev_actions = prev_actions.squeeze(-1)
