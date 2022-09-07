@@ -182,7 +182,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     """
     config = habitat.get_config(test_cfg_path)
     if "GYM" not in config or config.GYM.AUTO_NAME == "":
-        return
+        pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
 
     for prefix in ["", "Render"]:
         full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
