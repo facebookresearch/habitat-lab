@@ -224,6 +224,7 @@ class PointNavResNetNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
+    PRETRAINED_VISUAL_FEATURES_KEY = "visual_features"
     prev_action_embedding: nn.Module
 
     def __init__(
@@ -431,8 +432,15 @@ class PointNavResNetNet(Net):
         x = []
         aux_loss_state = {}
         if not self.is_blind:
-            if "visual_feats" in observations:  # noqa: SIM401
-                visual_feats = observations["visual_feats"]
+            # We CANNOT use observations.get() here because self.visual_encoder(observations)
+            # is an expensive operation. Therefore, we need `# noqa: SIM401`
+            if (  # noqa: SIM401
+                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                in observations
+            ):
+                visual_feats = observations[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ]
             else:
                 visual_feats = self.visual_encoder(observations)
 
