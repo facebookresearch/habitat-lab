@@ -47,7 +47,7 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
         return result
 
     @staticmethod
-    def __deserialize_goal(
+    def _deserialize_goal(
         serialized_goal: Dict[str, Any]
     ) -> InstanceImageGoal:
         g = InstanceImageGoal(**serialized_goal)
@@ -73,7 +73,7 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
         assert "goals" in deserialized
 
         for k, g in deserialized["goals"].items():
-            self.goals[k] = self.__deserialize_goal(g)
+            self.goals[k] = self._deserialize_goal(g)
 
         for episode in deserialized["episodes"]:
             episode = InstanceImageGoalNavEpisode(**episode)

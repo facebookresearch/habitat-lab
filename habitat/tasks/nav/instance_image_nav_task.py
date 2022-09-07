@@ -112,8 +112,16 @@ class InstanceImageGoalSensor(RGBSensor):
         *args: Any,
         **kwargs: Any,
     ):
-        self._sim = sim
+        from habitat.datasets.image_nav.instance_image_nav_dataset import (
+            InstanceImageNavDatasetV1,
+        )
+
+        assert isinstance(
+            dataset, InstanceImageNavDatasetV1
+        ), "Provided dataset needs to be InstanceImageNavDatasetV1"
+
         self._dataset = dataset
+        self._sim = sim
         super().__init__(config=config)
         self._current_episode_id = None
         self._current_image_goal = None
@@ -129,11 +137,11 @@ class InstanceImageGoalSensor(RGBSensor):
         )
         return spaces.Box(low=0, high=255, shape=(H, W, 3), dtype=np.uint8)
 
-    def _get_instance_image_goal(
-        self, img_params: InstanceImageParameters
-    ) -> VisualObservation:
+    def _add_sensor(
+        self, img_params: InstanceImageParameters, sensor_uuid: str
+    ) -> None:
         spec = habitat_sim.CameraSensorSpec()
-        spec.uuid = f"{self.cls_uuid}_sensor"
+        spec.uuid = sensor_uuid
         spec.sensor_type = habitat_sim.SensorType.COLOR
         spec.resolution = img_params.image_dimensions
         spec.hfov = img_params.hfov
@@ -148,7 +156,7 @@ class InstanceImageGoalSensor(RGBSensor):
                 rotation=agent_state.rotation,
                 sensor_states={
                     **agent_state.sensor_states,
-                    spec.uuid: SixDOFPose(
+                    sensor_uuid: SixDOFPose(
                         position=np.array(img_params.position),
                         rotation=quaternion_from_coeff(img_params.rotation),
                     ),
@@ -157,20 +165,31 @@ class InstanceImageGoalSensor(RGBSensor):
             infer_sensor_states=False,
         )
 
-        # render observations from this sensor only
-        self._sim._sensors[spec.uuid].draw_observation()
-        img = self._sim._sensors[spec.uuid].get_observation()[:, :, :3]
-
-        # TODO: delete sensor safely, like sim.remove_sensor(uuid)
-        del self._sim._sensors[spec.uuid]
-        hsim.SensorFactory.delete_subtree_sensor(agent.scene_node, spec.uuid)
-        del agent._sensors[spec.uuid]
+    def _remove_sensor(self, sensor_uuid: str) -> None:
+        agent = self._sim.get_agent(0)
+        del self._sim._sensors[sensor_uuid]
+        hsim.SensorFactory.delete_subtree_sensor(agent.scene_node, sensor_uuid)
+        del agent._sensors[sensor_uuid]
         agent.agent_config.sensor_specifications = [
             s
             for s in agent.agent_config.sensor_specifications
-            if s.uuid != spec.uuid
+            if s.uuid != sensor_uuid
         ]
 
+    def _get_instance_image_goal(
+        self, img_params: InstanceImageParameters
+    ) -> VisualObservation:
+        """To render the instance image goal, a temporary HabitatSim sensor is
+        created with the specified InstanceImageParameters. This sensor renders
+        the image and is then removed.
+        """
+        sensor_uuid = f"{self.cls_uuid}_sensor"
+        self._add_sensor(img_params, sensor_uuid)
+
+        self._sim._sensors[sensor_uuid].draw_observation()
+        img = self._sim._sensors[sensor_uuid].get_observation()[:, :, :3]
+
+        self._remove_sensor(sensor_uuid)
         return img
 
     def get_observation(
@@ -214,7 +233,7 @@ class InstanceImageGoalHFOVSensor(Sensor):
         return self.cls_uuid
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Space:
-        return spaces.Box(low=0, high=360, shape=(1,), dtype=np.int64)
+        return spaces.Box(low=0.0, high=360.0, shape=(1,), dtype=np.float32)
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
         return SensorTypes.MEASUREMENT
@@ -235,7 +254,7 @@ class InstanceImageGoalHFOVSensor(Sensor):
             return None
 
         img_params = episode.goals[0].image_goals[episode.goal_image_id]
-        return np.array([img_params.hfov])
+        return np.array([float(img_params.hfov)])
 
 
 @registry.register_task(name="InstanceImageNav-v1")

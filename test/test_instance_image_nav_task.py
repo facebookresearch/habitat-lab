@@ -24,7 +24,7 @@ EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -57,7 +57,7 @@ def test_hm3d_instance_image_nav_dataset():
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
     goal_keys = {ep.goal_key for ep in dataset.episodes}
     dataset.goals = {k: v for k, v in dataset.goals.items() if k in goal_keys}
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "val"])

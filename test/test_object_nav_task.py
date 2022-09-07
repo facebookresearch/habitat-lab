@@ -22,7 +22,7 @@ EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -58,7 +58,7 @@ def test_mp3d_object_nav_dataset():
         for k, v in dataset.goals_by_category.items()
         if k in (ep.goals_key for ep in dataset.episodes)
     }
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "val"])
