@@ -14,10 +14,12 @@ from habitat.config.default import get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
-from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
+from habitat.datasets.image_nav.instance_image_nav_dataset import (
+    InstanceImageNavDatasetV1,
+)
 from habitat.tasks.nav.nav import MoveForwardAction
 
-CFG_TEST = "configs/test/habitat_mp3d_object_nav_test.yaml"
+CFG_TEST = "configs/test/habitat_hm3d_instance_image_nav_test.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 
@@ -28,7 +30,7 @@ def check_json_serialization(dataset: habitat.Dataset):
     logger.info(
         "JSON conversion finished. {} sec".format((time.time() - start_time))
     )
-    decoded_dataset = ObjectNavDatasetV1()
+    decoded_dataset = InstanceImageNavDatasetV1()
     decoded_dataset.from_json(json_str)
     assert len(decoded_dataset.episodes) == len(dataset.episodes)
     episode = decoded_dataset.episodes[0]
@@ -41,11 +43,11 @@ def check_json_serialization(dataset: habitat.Dataset):
     ), "JSON dataset encoding/decoding isn't consistent"
 
 
-def test_mp3d_object_nav_dataset():
+def test_hm3d_instance_image_nav_dataset():
     dataset_config = get_config(CFG_TEST).DATASET
-    if not ObjectNavDatasetV1.check_config_paths_exist(dataset_config):
+    if not InstanceImageNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip(
-            "Please download Matterport3D ObjectNav Dataset to data folder."
+            "Please download the HM3D InstanceImageNav Dataset to data folder."
         )
 
     dataset = habitat.make_dataset(
@@ -53,11 +55,8 @@ def test_mp3d_object_nav_dataset():
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
-    dataset.goals_by_category = {
-        k: v
-        for k, v in dataset.goals_by_category.items()
-        if k in (ep.goals_key for ep in dataset.episodes)
-    }
+    goal_keys = {ep.goal_key for ep in dataset.episodes}
+    dataset.goals = {k: v for k, v in dataset.goals.items() if k in goal_keys}
     check_json_serialization(dataset)
 
 
@@ -67,10 +66,12 @@ def test_dataset_splitting(split):
     dataset_config.defrost()
     dataset_config.SPLIT = split
 
-    if not ObjectNavDatasetV1.check_config_paths_exist(dataset_config):
+    if not InstanceImageNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
 
-    scenes = ObjectNavDatasetV1.get_scenes_to_load(config=dataset_config)
+    scenes = InstanceImageNavDatasetV1.get_scenes_to_load(
+        config=dataset_config
+    )
     assert (
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
@@ -109,12 +110,12 @@ def test_dataset_splitting(split):
     ), "Intersection of split datasets is not the empty set"
 
 
-def test_object_nav_task():
+def test_instance_image_nav_task():
     config = get_config(CFG_TEST)
 
-    if not ObjectNavDatasetV1.check_config_paths_exist(config.DATASET):
+    if not InstanceImageNavDatasetV1.check_config_paths_exist(config.DATASET):
         pytest.skip(
-            "Please download Matterport3D scene and ObjectNav Datasets to data folder."
+            "Please download the HM3D scene InstanceImageNav Datasets to data folder."
         )
 
     dataset = make_dataset(
