@@ -143,15 +143,12 @@ class ResizeShortestEdge(ObservationTransformer):
     @classmethod
     def from_config(cls, config: Config):
         rs_config = config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE
-
-        # backwards compatibility for configs that only specify SIZE
-        channels_last = getattr(rs_config, "CHANNELS_LAST", True)
-        trans_keys = getattr(
-            rs_config, "TRANS_KEYS", ("rgb", "depth", "semantic")
+        return cls(
+            rs_config.SIZE,
+            rs_config.CHANNELS_LAST,
+            rs_config.TRANS_KEYS,
+            rs_config.SEMANTIC_KEY,
         )
-        semantic_key = getattr(rs_config, "SEMANTIC_KEY", "semantic")
-
-        return cls(rs_config.SIZE, channels_last, trans_keys, semantic_key)
 
 
 @baseline_registry.register_obs_transformer()
@@ -176,7 +173,7 @@ class CenterCropper(ObservationTransformer):
         assert len(size) == 2, "forced input size must be len of 2 (h, w)"
         self._size = size
         self.channels_last = channels_last
-        self.trans_keys = trans_keys  # TODO: Add to from_config constructor
+        self.trans_keys = trans_keys
 
     def transform_observation_space(
         self,
@@ -227,15 +224,10 @@ class CenterCropper(ObservationTransformer):
     @classmethod
     def from_config(cls, config: Config):
         cc_config = config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER
-
-        # backwards compatibility for configs that only specify {HEIGHT, WIDTH}
-        channels_last = getattr(cc_config, "CHANNELS_LAST", True)
-        trans_keys = getattr(
-            cc_config, "TRANS_KEYS", ("rgb", "depth", "semantic")
-        )
-
         return cls(
-            (cc_config.HEIGHT, cc_config.WIDTH), channels_last, trans_keys
+            (cc_config.HEIGHT, cc_config.WIDTH),
+            cc_config.CHANNELS_LAST,
+            cc_config.TRANS_KEYS,
         )
 
 
