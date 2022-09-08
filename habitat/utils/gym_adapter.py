@@ -16,6 +16,12 @@ from habitat.core.simulator import Observations
 from habitat.core.spaces import EmptySpace
 from habitat.utils.visualizations.utils import observations_to_image
 
+try:
+    import pygame
+
+except ImportError:
+    pygame = None
+
 
 def flatten_dict(d, parent_key=""):
     # From https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
@@ -225,6 +231,7 @@ class HabGymWrapper(gym.Env):
         if len(dict_space) > 1:
             self.observation_space = spaces.Dict(dict_space)
 
+        self._screen = None
         self._env = env
 
     def step(self, action: Union[np.ndarray, int]):
@@ -300,6 +307,26 @@ class HabGymWrapper(gym.Env):
             frame = observations_to_image(
                 self._last_obs, self._env._env.get_metrics()
             )
+        elif mode == "human":
+            if pygame is None:
+                raise ValueError(
+                    "Render mode human not supported without pygame."
+                )
+            frame = observations_to_image(
+                self._last_obs, self._env._env.get_metrics()
+            )
+            if self._screen is None:
+                pygame.init()
+                self._screen = pygame.display.set_mode(
+                    [frame.shape[1], frame.shape[0]]
+                )
+            draw_frame = np.transpose(frame, (1, 0, 2))
+            draw_frame = pygame.surfarray.make_surface(draw_frame)
+            self._screen.fill((0, 0, 0))  # type: ignore[attr-defined]
+            self._screen.blit(draw_frame, (0, 0))  # type: ignore[attr-defined]
+            pygame.display.update()
+            pygame.event.pump()
+            pygame.event.get()
         else:
             raise ValueError(f"Render mode {mode} not currently supported.")
 
@@ -307,4 +334,6 @@ class HabGymWrapper(gym.Env):
 
     def close(self):
         del self._last_obs
+        if self._screen is not None:
+            pygame.quit()  # type: ignore[unreachable]
         self._env.close()

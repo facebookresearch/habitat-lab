@@ -15,7 +15,6 @@ import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_definitions import _get_env_name
-from habitat.utils.render_wrapper import HabRenderWrapper
 
 
 @pytest.mark.parametrize(
@@ -64,7 +63,6 @@ def test_gym_wrapper_contract_continuous(
         env_class=env_class, config=config
     )
 
-    env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Box)
     assert (
         env.action_space.shape[0] == expected_action_dim
@@ -113,8 +111,6 @@ def test_gym_wrapper_contract_discrete(
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
-
-    env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Discrete)
     assert (
         env.action_space.n == expected_action_dim
@@ -213,6 +209,7 @@ def test_auto_gym_wrapper(test_cfg_path):
         "HabitatSetTable-v0",
         "HabitatNavPick-v0",
         "HabitatNavPickNavPlace-v0",
+        "HabitatImageNav-v0",
     ],
 )
 def test_gym_premade_envs(name):
