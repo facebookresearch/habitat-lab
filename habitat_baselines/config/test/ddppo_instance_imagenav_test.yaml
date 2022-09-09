@@ -1,4 +1,8 @@
 BASE_TASK_CONFIG_PATH: configs/tasks/instance_imagenav_hm3d.yaml
+TASK_CONFIG:
+  DATASET:
+    SPLIT: minival
+
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: []
@@ -66,7 +70,7 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2
 
