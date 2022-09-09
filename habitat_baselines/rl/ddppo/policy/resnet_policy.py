@@ -348,49 +348,32 @@ class PointNavResNetNet(Net):
             self.compass_embedding = nn.Linear(input_compass_dim, 32)
             rnn_input_size += 32
 
-        if ImageGoalSensor.cls_uuid in observation_space.spaces:
-            goal_observation_space = spaces.Dict(
-                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
-            )
-            self.goal_visual_encoder = ResNetEncoder(
-                goal_observation_space,
-                baseplanes=resnet_baseplanes,
-                ngroups=resnet_baseplanes // 2,
-                make_backbone=getattr(resnet, backbone),
-            )
+        for uuid in [
+            ImageGoalSensor.cls_uuid,
+            InstanceImageGoalSensor.cls_uuid,
+        ]:
+            if uuid in observation_space.spaces:
+                goal_observation_space = spaces.Dict(
+                    {"rgb": observation_space.spaces[uuid]}
+                )
+                goal_visual_encoder = ResNetEncoder(
+                    goal_observation_space,
+                    baseplanes=resnet_baseplanes,
+                    ngroups=resnet_baseplanes // 2,
+                    make_backbone=getattr(resnet, backbone),
+                )
+                setattr(self, f"{uuid}_encoder", goal_visual_encoder)
 
-            self.goal_visual_fc = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(
-                    np.prod(self.goal_visual_encoder.output_shape), hidden_size
-                ),
-                nn.ReLU(True),
-            )
+                goal_visual_fc = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(
+                        np.prod(goal_visual_encoder.output_shape), hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
+                setattr(self, f"{uuid}_fc", goal_visual_fc)
 
-            rnn_input_size += hidden_size
-
-        if InstanceImageGoalSensor.cls_uuid in observation_space.spaces:
-            goal_observation_space = spaces.Dict(
-                {
-                    "rgb": observation_space.spaces[
-                        InstanceImageGoalSensor.cls_uuid
-                    ]
-                }
-            )
-            self.iig_encoder = ResNetEncoder(
-                goal_observation_space,
-                baseplanes=resnet_baseplanes,
-                ngroups=resnet_baseplanes // 2,
-                make_backbone=getattr(resnet, backbone),
-            )
-
-            self.iig_fc = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(np.prod(self.iig_encoder.output_shape), hidden_size),
-                nn.ReLU(True),
-            )
-
-            rnn_input_size += hidden_size
+                rnn_input_size += hidden_size
 
         self._hidden_size = hidden_size
 
@@ -555,15 +538,18 @@ class PointNavResNetNet(Net):
                 self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid])
             )
 
-        if ImageGoalSensor.cls_uuid in observations:
-            goal_image = observations[ImageGoalSensor.cls_uuid]
-            goal_output = self.goal_visual_encoder({"rgb": goal_image})
-            x.append(self.goal_visual_fc(goal_output))
+        for uuid in [
+            ImageGoalSensor.cls_uuid,
+            InstanceImageGoalSensor.cls_uuid,
+        ]:
+            if uuid in observations:
+                goal_image = observations[uuid]
 
-        if InstanceImageGoalSensor.cls_uuid in observations:
-            iig = observations[InstanceImageGoalSensor.cls_uuid]
-            goal_output = self.iig_encoder({"rgb": iig})
-            x.append(self.iig_fc(goal_output))
+                goal_visual_encoder = getattr(self, f"{uuid}_encoder")
+                goal_visual_output = goal_visual_encoder({"rgb": goal_image})
+
+                goal_visual_fc = getattr(self, f"{uuid}_fc")
+                x.append(goal_visual_fc(goal_visual_output))
 
         if self.discrete_actions:
             prev_actions = prev_actions.squeeze(-1)
