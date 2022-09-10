@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import Any, Optional
 
 import numpy as np
 from gym import spaces
@@ -19,7 +20,76 @@ from habitat.tasks.rearrange.utils import (
     batch_transform_point,
     rearrange_logger,
 )
+from habitat.datasets.rearrange.rearrange_dataset import ObjectRearrangeEpisode
 from habitat.tasks.utils import cartesian_to_polar, get_angle
+from habitat.config import Config
+
+@registry.register_sensor
+class ObjectCategorySensor(Sensor):
+    cls_uuid: str = "object_category"
+
+    def __init__(
+        self,
+        sim,
+        config: Config,
+        dataset: "ObjectRearrangeDatasetV0",
+        category_attribute='object_category',
+        name_to_id_mapping='obj_category_to_obj_category_id',
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._sim = sim
+        self._dataset = dataset
+        self._category_attribute = category_attribute
+        self._name_to_id_mapping = name_to_id_mapping
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (1,)
+        max_value = self.config.GOAL_SPEC_MAX_VAL - 1
+        max_value = max(
+            getattr(self._dataset, self._name_to_id_mapping).values()
+        )
+
+        return spaces.Box(
+            low=0, high=max_value, shape=sensor_shape, dtype=np.int64
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: ObjectRearrangeEpisode,
+        **kwargs: Any,
+    ) -> Optional[np.ndarray]:
+
+        category_name = getattr(episode, self._category_attribute)
+        return np.array(
+            [getattr(self._dataset, self._name_to_id_mapping)[category_name]],
+            dtype=np.int64,
+        )
+
+
+@registry.register_sensor
+class GoalReceptacleSensor(ObjectCategorySensor):
+    cls_uuid: str = "goal_receptacle"
+
+    def __init__(
+        self,
+        sim,
+        config: Config,
+        dataset: "ObjectRearrangeDatasetV0",
+        *args: Any,
+        **kwargs: Any,
+    ):
+        super().__init__(sim=sim, config=config, dataset=dataset, category_attribute='goal_recep_category',
+            name_to_id_mapping='recep_category_to_recep_category_id', *args, **kwargs)
 
 
 class MultiObjSensor(PointGoalSensor):

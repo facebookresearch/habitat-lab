@@ -39,6 +39,17 @@ class RearrangeEpisode(Episode):
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
 
+@attr.s(auto_attribs=True, kw_only=True)
+class ObjectRearrangeEpisode(RearrangeEpisode):
+    r"""Specifies categories of the object, start and goal receptacles
+
+    :property object_category: Category of the object to be rearranged
+    :property start_recep_category: Category of the start receptacle
+    :property goal_recep_category: Category of the goal receptacle
+    """
+    object_category: Optional[str] = None
+    start_recep_category: Optional[str] = None
+    goal_recep_category: Optional[str] = None
 
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
@@ -75,4 +86,42 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
 
+            self.episodes.append(rearrangement_episode)
+
+@registry.register_dataset(name="ObjectRearrangeDataset-v0")
+class ObjectRearrangeDatasetV0(PointNavDatasetV1):
+    r"""Class inherited from PointNavDataset that loads Object Rearrangement dataset."""
+    obj_category_to_obj_category_id: Dict[str, int]
+    recep_category_to_recep_category_id: Dict[str, int]
+    episodes: List[ObjectRearrangeEpisode] = []  # type: ignore
+    content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
+
+    def to_json(self) -> str:
+        result = DatasetFloatJSONEncoder().encode(self)
+        return result
+
+    def __init__(self, config: Optional[Config] = None) -> None:
+        self.config = config
+
+        check_and_gen_physics_config()
+
+        super().__init__(config)
+
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
+        deserialized = json.loads(json_str)
+
+        if "obj_category_to_obj_category_id" in deserialized:
+            self.obj_category_to_obj_category_id = deserialized[
+                "obj_category_to_obj_category_id"
+            ]
+        if "recep_category_to_recep_category_id" in deserialized:
+            self.recep_category_to_recep_category_id = deserialized[
+                "recep_category_to_recep_category_id"
+            ]
+
+        for i, episode in enumerate(deserialized["episodes"]):
+            rearrangement_episode = ObjectRearrangeEpisode(**episode)
+            rearrangement_episode.episode_id = str(i)
             self.episodes.append(rearrangement_episode)
