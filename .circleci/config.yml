@@ -201,6 +201,13 @@ jobs:
                 wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
                 unzip habitat-test-scenes.zip
                 rm habitat-test-scenes.zip
+                cd -
+              fi
+              if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
+              then
+                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+                . activate habitat
+                python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
               fi
       - run:
           name: Download coda scene

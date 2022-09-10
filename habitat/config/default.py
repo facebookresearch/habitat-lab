@@ -209,6 +209,16 @@ _C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
 _C.TASK.IMAGEGOAL_SENSOR = CN()
 _C.TASK.IMAGEGOAL_SENSOR.TYPE = "ImageGoalSensor"
 # -----------------------------------------------------------------------------
+# INSTANCE IMAGEGOAL SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.INSTANCE_IMAGEGOAL_SENSOR = CN()
+_C.TASK.INSTANCE_IMAGEGOAL_SENSOR.TYPE = "InstanceImageGoalSensor"
+# -----------------------------------------------------------------------------
+# INSTANCE IMAGEGOAL HFOV SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.INSTANCE_IMAGEGOAL_HFOV_SENSOR = CN()
+_C.TASK.INSTANCE_IMAGEGOAL_HFOV_SENSOR.TYPE = "InstanceImageGoalHFOVSensor"
+# -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.HEADING_SENSOR = CN()
