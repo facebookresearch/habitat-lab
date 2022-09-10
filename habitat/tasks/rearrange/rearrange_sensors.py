@@ -9,9 +9,14 @@ from typing import Any, Optional
 import numpy as np
 from gym import spaces
 
+from habitat.config import Config
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.datasets.rearrange.rearrange_dataset import (
+    ObjectRearrangeDatasetV0,
+    ObjectRearrangeEpisode,
+)
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -20,9 +25,8 @@ from habitat.tasks.rearrange.utils import (
     batch_transform_point,
     rearrange_logger,
 )
-from habitat.datasets.rearrange.rearrange_dataset import ObjectRearrangeEpisode
 from habitat.tasks.utils import cartesian_to_polar, get_angle
-from habitat.config import Config
+
 
 @registry.register_sensor
 class ObjectCategorySensor(Sensor):
@@ -33,8 +37,8 @@ class ObjectCategorySensor(Sensor):
         sim,
         config: Config,
         dataset: "ObjectRearrangeDatasetV0",
-        category_attribute='object_category',
-        name_to_id_mapping='obj_category_to_obj_category_id',
+        category_attribute="object_category",
+        name_to_id_mapping="obj_category_to_obj_category_id",
         *args: Any,
         **kwargs: Any,
     ):
@@ -88,8 +92,13 @@ class GoalReceptacleSensor(ObjectCategorySensor):
         *args: Any,
         **kwargs: Any,
     ):
-        super().__init__(sim=sim, config=config, dataset=dataset, category_attribute='goal_recep_category',
-            name_to_id_mapping='recep_category_to_recep_category_id', *args, **kwargs)
+        super().__init__(
+            sim=sim,
+            config=config,
+            dataset=dataset,
+            category_attribute="goal_recep_category",
+            name_to_id_mapping="recep_category_to_recep_category_id",
+        )
 
 
 class MultiObjSensor(PointGoalSensor):

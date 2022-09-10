@@ -24,7 +24,10 @@ from habitat.tasks.nav.nav import (
     ProximitySensor,
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
-from habitat.tasks.rearrange.rearrange_sensors import ObjectCategorySensor, GoalReceptacleSensor
+from habitat.tasks.rearrange.rearrange_sensors import (
+    GoalReceptacleSensor,
+    ObjectCategorySensor,
+)
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
@@ -312,7 +315,9 @@ class PointNavResNetNet(Net):
         if ObjectCategorySensor.cls_uuid in observation_space.spaces:
             self._n_rearrange_obj_categories = (
                 int(
-                    observation_space.spaces[ObjectCategorySensor.cls_uuid].high[0]
+                    observation_space.spaces[
+                        ObjectCategorySensor.cls_uuid
+                    ].high[0]
                 )
                 + 1
             )
@@ -324,7 +329,9 @@ class PointNavResNetNet(Net):
         if GoalReceptacleSensor.cls_uuid in observation_space.spaces:
             self._n_goal_receptacles = (
                 int(
-                    observation_space.spaces[GoalReceptacleSensor.cls_uuid].high[0]
+                    observation_space.spaces[
+                        GoalReceptacleSensor.cls_uuid
+                    ].high[0]
                 )
                 + 1
             )
@@ -542,11 +549,19 @@ class PointNavResNetNet(Net):
 
         if ObjectCategorySensor.cls_uuid in observations:
             object_goal = observations[ObjectCategorySensor.cls_uuid].long()
-            x.append(self.rearrange_obj_categories_embedding(object_goal).squeeze(dim=1))
+            x.append(
+                self.rearrange_obj_categories_embedding(object_goal).squeeze(
+                    dim=1
+                )
+            )
 
         if GoalReceptacleSensor.cls_uuid in observations:
-            goal_receptacle = observations[GoalReceptacleSensor.cls_uuid].long()
-            x.append(self.goal_receptacles_embedding(goal_receptacle).squeeze(dim=1))
+            goal_receptacle = observations[
+                GoalReceptacleSensor.cls_uuid
+            ].long()
+            x.append(
+                self.goal_receptacles_embedding(goal_receptacle).squeeze(dim=1)
+            )
 
         if EpisodicCompassSensor.cls_uuid in observations:
             compass_observations = torch.stack(

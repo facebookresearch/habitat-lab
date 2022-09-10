@@ -39,6 +39,7 @@ class RearrangeEpisode(Episode):
     goal_receptacles: List[Tuple[str, int]] = []
     name_to_receptacle: Dict[str, str] = {}
 
+
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectRearrangeEpisode(RearrangeEpisode):
     r"""Specifies categories of the object, start and goal receptacles
@@ -50,6 +51,7 @@ class ObjectRearrangeEpisode(RearrangeEpisode):
     object_category: Optional[str] = None
     start_recep_category: Optional[str] = None
     goal_recep_category: Optional[str] = None
+
 
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
@@ -87,6 +89,7 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             rearrangement_episode.episode_id = str(i)
 
             self.episodes.append(rearrangement_episode)
+
 
 @registry.register_dataset(name="ObjectRearrangeDataset-v0")
 class ObjectRearrangeDatasetV0(PointNavDatasetV1):
