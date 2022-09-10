@@ -143,20 +143,23 @@ class PddlDomain:
                 self.parse_predicate(p, name_to_param)
                 for p in action_d["postcondition"]
             ]
-            task_info_d = action_d["task_info"]
-            full_entities = {**self._constants, **name_to_param}
-            add_task_args = {
-                k: full_entities[v]
-                for k, v in task_info_d.get("add_task_args", {}).items()
-            }
+            if "task_info" in action_d:
+                task_info_d = action_d["task_info"]
+                full_entities = {**self._constants, **name_to_param}
+                add_task_args = {
+                    k: full_entities[v]
+                    for k, v in task_info_d.get("add_task_args", {}).items()
+                }
 
-            task_info = ActionTaskInfo(
-                task_config=self._config,
-                task=task_info_d["task"],
-                task_def=task_info_d["task_def"],
-                config_args=task_info_d["config_args"],
-                add_task_args=add_task_args,
-            )
+                task_info = ActionTaskInfo(
+                    task_config=self._config,
+                    task=task_info_d["task"],
+                    task_def=task_info_d["task_def"],
+                    config_args=task_info_d["config_args"],
+                    add_task_args=add_task_args,
+                )
+            else:
+                task_info = None
             action = PddlAction(
                 action_d["name"], parameters, pre_cond, post_cond, task_info
             )

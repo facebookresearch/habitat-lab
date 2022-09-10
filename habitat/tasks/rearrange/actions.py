@@ -271,6 +271,7 @@ class BaseVelAction(RobotAction):
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
+        self.prev_base_vel = None
 
     def update_base(self):
 
@@ -316,6 +317,7 @@ class BaseVelAction(RobotAction):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._config.LIN_SPEED
         ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
+        self.prev_base_vel = (lin_vel, ang_vel)
         if not self._config.ALLOW_BACK:
             lin_vel = np.maximum(lin_vel, 0)
 

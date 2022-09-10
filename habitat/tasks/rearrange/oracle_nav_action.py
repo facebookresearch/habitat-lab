@@ -100,7 +100,10 @@ class OracleNavAction(BaseVelAction):
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
         )
-        cur_nav_targ = np.array(self._path_to_point(final_nav_targ)[1])
+        path = self._path_to_point(final_nav_targ)
+        if len(path) < 2:
+            return super().step(*args, is_last_action=is_last_action, **kwargs)
+        cur_nav_targ = np.array(path[1])
         final_nav_targ = np.array(final_nav_targ)
 
         robot_pos = np.array(self.cur_robot.base_pos)
@@ -126,20 +129,36 @@ class OracleNavAction(BaseVelAction):
             and angle_to_obj < self._config.TURN_THRESH
         )
 
+        def scale_down(speed, val, dist):
+            move_dist = val * speed * (1 / self._sim.ctrl_freq)
+            if dist < move_dist:
+                scale_ratio = dist / move_dist
+                val *= scale_ratio
+            return val
+
+        real_turn_vel = (180 / np.pi) * self._config.TURN_VELOCITY
+
         if not at_goal:
             if dist_to_final_nav_targ < self._config.DIST_THRESH:
                 # Look at the object
                 vel = compute_turn(
                     rel_pos, self._config.TURN_VELOCITY, robot_forward
                 )
+                vel[1] = scale_down(real_turn_vel, vel[1], angle_to_obj)
             elif angle_to_target < self._config.TURN_THRESH:
                 # Move towards the target
                 vel = [self._config.FORWARD_VELOCITY, 0]
+
+                # Are we going too fast?
+                vel[0] = scale_down(
+                    self._config.LIN_SPEED, vel[0], dist_to_final_nav_targ
+                )
             else:
                 # Look at the target waypoint.
                 vel = compute_turn(
                     rel_targ, self._config.TURN_VELOCITY, robot_forward
                 )
+                vel[1] = scale_down(real_turn_vel, vel[1], angle_to_target)
         else:
             vel = [0, 0]
 
