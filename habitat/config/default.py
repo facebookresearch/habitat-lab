@@ -372,6 +372,18 @@ _C.TASK.DIST_TO_NAV_GOAL.TYPE = "DistToNavGoalSensor"
 _C.TASK.LOCALIZATION_SENSOR = CN()
 _C.TASK.LOCALIZATION_SENSOR.TYPE = "LocalizationSensor"
 # -----------------------------------------------------------------------------
+# REARRANGE OBJECT CATEGORY SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.OBJECT_CATEGORY_SENSOR = CN()
+_C.TASK.OBJECT_CATEGORY_SENSOR.TYPE = "ObjectCategorySensor"
+_C.TASK.OBJECT_CATEGORY_SENSOR.GOAL_SPEC_MAX_VAL = 50
+# -----------------------------------------------------------------------------
+# REARRANGE GOAL RECEPTACLE SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.GOAL_RECEPTACLE_SENSOR = CN()
+_C.TASK.GOAL_RECEPTACLE_SENSOR.TYPE = "GoalReceptacleSensor"
+_C.TASK.GOAL_RECEPTACLE_SENSOR.GOAL_SPEC_MAX_VAL = 50
+# -----------------------------------------------------------------------------
 # SUCCESS MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.TASK.SUCCESS = CN()

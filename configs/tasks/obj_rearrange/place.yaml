@@ -63,7 +63,6 @@ TASK:
         TYPE: JointVelocitySensor
         DIMENSIONALITY: 7
     GOAL_RECEPTACLE_SENSOR:
-        GOAL_SPEC_MAX_VAL: 20
         TYPE: "GoalReceptacleSensor"
     SENSORS:
     - TARGET_START_SENSOR
