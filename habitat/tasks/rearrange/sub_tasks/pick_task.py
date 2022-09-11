@@ -16,10 +16,9 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
-    rearrange_collision,
+    get_robot_spawns,
     rearrange_logger,
 )
-from habitat.tasks.utils import get_angle
 
 
 @registry.register_task(name="RearrangePickTask-v0")
@@ -82,100 +81,20 @@ class RearrangePickTaskV1(RearrangeTask):
         else:
             snap_pos = targ_pos
 
-        orig_start_pos = sim.safe_snap_point(snap_pos)
+        start_pos, angle_to_obj, was_succ = get_robot_spawns(
+            snap_pos,
+            self._config.BASE_NOISE,
+            self._config.BASE_ANGLE_NOISE,
+            self._config.SPAWN_MAX_DIST_TO_OBJ,
+            sim,
+            self._config.NUM_SPAWN_ATTEMPTS,
+            self._config.PHYSICS_STABILITY_STEPS,
+        )
 
-        state = sim.capture_state()
-        start_pos = orig_start_pos
-
-        forward = np.array([1.0, 0, 0])
-        dist_thresh = 0.1
-        did_collide = False
-
-        if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
-            # Setting so the object is within reach is harder and requires more
-            # tries.
-            timeout = 5000
-        else:
-            timeout = 1000
-        attempt = 0
-        is_within_bounds = True
-
-        # Add noise to the base position and angle for a collision free
-        # starting position
-        while attempt < timeout:
-            attempt += 1
-            start_pos = orig_start_pos + np.random.normal(
-                0, self._config.BASE_NOISE, size=(3,)
-            )
-            rel_targ = targ_pos - start_pos
-            angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
-            if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
-                angle_to_obj *= -1.0
-
-            if not self._is_there_spawn_noise:
-                rearrange_logger.debug(
-                    "No spawn noise, returning first found position"
-                )
-                break
-
-            targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
-
-            is_navigable = is_easy_init or sim.pathfinder.is_navigable(
-                start_pos
-            )
-
-            if targ_dist > dist_thresh or not is_navigable:
-                continue
-
-            sim.set_state(state)
-
-            sim.robot.base_pos = start_pos
-
-            # Face the robot towards the object.
-            rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
-            sim.robot.base_rot = angle_to_obj + rot_noise
-
-            # Ensure the target is within reach
-            is_within_bounds = True
-            if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
-                robot_T = self._sim.robot.base_transformation
-                rel_targ_pos = robot_T.inverted().transform_point(targ_pos)
-                eps = 1e-2
-                upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
-                is_within_bounds = (rel_targ_pos < upper_bound).all()
-                if not is_within_bounds:
-                    continue
-
-            # Make sure the robot is not colliding with anything in this
-            # position.
-            for _ in range(100):
-                sim.internal_step(-1)
-                did_collide, details = rearrange_collision(
-                    self._sim,
-                    self._config.COUNT_OBJ_COLLISIONS,
-                    ignore_base=False,
-                )
-
-                if is_easy_init:
-                    # Only care about collisions between the robot and scene.
-                    did_collide = details.robot_scene_colls != 0
-
-                if did_collide:
-                    break
-
-            if not did_collide:
-                break
-
-        if attempt == timeout and (not is_easy_init):
-            start_pos, angle_to_obj = self._gen_start_pos(
-                sim, True, episode, sel_idx
-            )
-        elif not is_within_bounds or attempt == timeout or did_collide:
+        if was_succ:
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )
-
-        sim.set_state(state)
 
         return start_pos, angle_to_obj
 

@@ -13,12 +13,13 @@ TASK:
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
 
-    SHOULD_ENFORCE_TARGET_WITHIN_REACH: False
-
     # In radians
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
+    SPAWN_MAX_DIST_TO_OBJ: 2.0
     FORCE_REGENERATE: False
+    NUM_SPAWN_ATTEMPTS: 1000
+    PHYSICS_STABILITY_STEPS: 10
 
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: True
@@ -28,10 +29,6 @@ TASK:
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: True
-
-    # If true, does not care about navigability or collisions with objects when spawning
-    # robot
-    EASY_INIT: False
 
     TARGET_START_SENSOR:
         TYPE: "TargetStartSensor"
