@@ -16,6 +16,14 @@ import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_definitions import _get_env_name
 
+try:
+    import pygame
+
+    pygame_installed = True
+except ImportError:
+    pygame = None
+    pygame_installed = False
+
 
 @pytest.mark.parametrize(
     "config_file,overrides,expected_action_dim,expected_obs_type",
@@ -169,7 +177,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("configs/tasks/rearrange/**/*.yaml", recursive=True),
+        glob("configs/tasks/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):
@@ -179,7 +187,8 @@ def test_auto_gym_wrapper(test_cfg_path):
     config = habitat.get_config(test_cfg_path)
     if "GYM" not in config or config.GYM.AUTO_NAME == "":
         return
-
+    if not pygame_installed:
+        pytest.skip("pygame is required for this test.")
     for prefix in ["", "Render"]:
         full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
 
@@ -189,7 +198,13 @@ def test_auto_gym_wrapper(test_cfg_path):
             override_options=["SIMULATOR.CONCUR_RENDER", False],
         )
         hab_gym.reset()
-        hab_gym.step(hab_gym.action_space.sample())
+        done = False
+        for _ in range(5):
+            hab_gym.render(mode="human")
+            _, _, done, _ = hab_gym.step(hab_gym.action_space.sample())
+            if done:
+                hab_gym.reset()
+
         hab_gym.close()
 
 
@@ -209,7 +224,6 @@ def test_auto_gym_wrapper(test_cfg_path):
         "HabitatSetTable-v0",
         "HabitatNavPick-v0",
         "HabitatNavPickNavPlace-v0",
-        "HabitatImageNav-v0",
     ],
 )
 def test_gym_premade_envs(name):
