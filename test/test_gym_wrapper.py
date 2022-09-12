@@ -16,14 +16,6 @@ import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_definitions import _get_env_name
 
-try:
-    import pygame
-
-    pygame_installed = True
-except ImportError:
-    pygame = None
-    pygame_installed = False
-
 
 @pytest.mark.parametrize(
     "config_file,overrides,expected_action_dim,expected_obs_type",
@@ -187,8 +179,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     config = habitat.get_config(test_cfg_path)
     if "GYM" not in config or config.GYM.AUTO_NAME == "":
         pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
-    if not pygame_installed:
-        pytest.skip("pygame is required for this test.")
+    pytest.importorskip("pygame")
     for prefix in ["", "Render"]:
         full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
 
