@@ -38,6 +38,11 @@ jobs:
               mypy habitat-baselines/
               mypy examples/
               mypy test/
+      - run:
+          name: run assert no files in habitat and habitat_baselines
+          command: |
+              if test -d  habitat ;           then  echo "folder habitat should not exist";           exit 1; fi
+              if test -d  habitat_baselines ; then  echo "folder habitat_baselines should not exist"; exit 1; fi
   pre-commit:
     docker:
       - image: cimg/python:3.7.13
