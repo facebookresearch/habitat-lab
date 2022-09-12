@@ -2,9 +2,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
-import attr
 import magnum as mn
 import numpy as np
 
@@ -13,36 +12,29 @@ from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
 
 
-@attr.s(auto_attribs=True, slots=True)
-class RobotManipulatorParams:
-    """Data to configure a robot manipulator.
-    """
-    pass
-
-
 class RobotManipulator(RobotInterface):
     """Generic manupulator interface defines standard API functions."""
 
     def __init__(
-        self,                                                                                                                                                                                                             
-        params: RobotManipulatorParams,                                                                               
-        urdf_path: str,                                                                                                                                                                                             
-        sim: Simulator,                                                                                                                                                                                         
-        limit_robo_joints: bool = True, 
+        self,
+        params,
+        urdf_path: str,
+        sim: Simulator,
+        limit_robo_joints: bool = True,
     ):
         r"""Constructor"""
-        super().__init__()                                                                                                                                                                                   
-        self.urdf_path = urdf_path                                                                                                                                                                      
-        self.params = params    
-        self._sim = sim                                                                                                                                                                                           
+        super().__init__()
+        self.urdf_path = urdf_path
+        self.params = params
+        self._sim = sim
         self._limit_robo_joints = limit_robo_joints
-        self.sim_obj = None     
+        self.sim_obj = None
 
-        # NOTE: the follow members cache static info for improved efficiency over querying the API                     
-        # maps joint ids to motor settings for convenience                                                                                                                      
-        self.joint_motors: Dict[int, Tuple[int, JointMotorSettings]] = {}                                                                                             
-        # maps joint ids to position index                                                                                                                                               
-        self.joint_pos_indices: Dict[int, int] = {}                                                                                                                                
+        # NOTE: the follow members cache static info for improved efficiency over querying the API
+        # maps joint ids to motor settings for convenience
+        self.joint_motors: Dict[int, Tuple[int, JointMotorSettings]] = {}
+        # maps joint ids to position index
+        self.joint_pos_indices: Dict[int, int] = {}
         # maps joint ids to velocity index
         self.joint_limits: Tuple[np.ndarray, np.ndarray] = None
 
@@ -55,9 +47,10 @@ class RobotManipulator(RobotInterface):
             self.params.arm_init_params = np.zeros(
                 len(self.params.arm_joints), dtype=np.float32
             )
+        self._fixed_base = True
+        self.joint_dof_indices: Dict[int, int] = {}
 
-
-    def reconfigure(self) -> None:                                                                                                                                                                 
+    def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         ao_mgr = self._sim.get_articulated_object_manager()
         self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
@@ -116,31 +109,28 @@ class RobotManipulator(RobotInterface):
 
         self._update_motor_settings_cache()
 
-
     def update(self) -> None:
-        self.sim_obj.awake = True  
-
+        self.sim_obj.awake = True
 
     def reset(self) -> None:
         """Reset the robot's parameters."""
         self.sim_obj.clear_joint_states()
 
-        self.arm_joint_pos = self.params.arm_init_params  
+        self.arm_joint_pos = self.params.arm_init_params
 
-        self.gripper_joint_pos = self.params.gripper_init_params                                                                                                            
-                                                                                                              
-        self._update_motor_settings_cache()                                                                                                                                       
+        self.gripper_joint_pos = self.params.gripper_init_params
+
+        self._update_motor_settings_cache()
         self.update()
 
-
-    #############################################                                                                         
-    # ARM PROPERTIES GETTERS + SETTERS                                                                                                                                                                                   
     #############################################
-    @property                                                                                                                                                                                                             
-    def arm_joint_limits(self) -> Tuple[np.ndarray, np.ndarray]:                                                                                                           
-        """Get the arm joint limits in radians"""                                                                                                                                          
-                                                                                                                                                                                                                  
-        # deref self vars to cut access in half  
+    # ARM PROPERTIES GETTERS + SETTERS
+    #############################################
+    @property
+    def arm_joint_limits(self) -> Tuple[np.ndarray, np.ndarray]:
+        """Get the arm joint limits in radians"""
+
+        # deref self vars to cut access in half
 
         joint_pos_indices = self.joint_pos_indices
         lower_joints_limits, upper_joint_limits = self.joint_limits
@@ -296,9 +286,7 @@ class RobotManipulator(RobotInterface):
         joint dimensions.
         """
         if len(ctrl) != len(self.params.arm_joints):
-            raise ValueError(
-                "Dimensions do not match"
-            )
+            raise ValueError("Dimensions do not match")
         if np.any(np.isnan(ctrl)):
             raise ValueError("Control is NaN")
 
@@ -349,12 +337,6 @@ class RobotManipulator(RobotInterface):
             self.params.ee_constraint[:, 0],
             self.params.ee_constraint[:, 1],
         )
-
-    #############################################
-    # WHEEL RELATED
-    #############################################
-
-    # This depends on the robot type.
 
     #############################################
     # BASE RELATED

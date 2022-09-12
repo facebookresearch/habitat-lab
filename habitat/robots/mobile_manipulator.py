@@ -3,13 +3,12 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set
 
 import attr
 import magnum as mn
 import numpy as np
 
-from habitat.robots.robot_interface import RobotInterface
 from habitat.robots.robot_manipulator import RobotManipulator
 from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
@@ -115,14 +114,14 @@ class MobileManipulator(RobotManipulator):
             enforced.
         """
         super().__init__(
-            urdf_path=urdf_path, 
+            urdf_path=urdf_path,
             params=params,
             sim=sim,
-            limit_robo_joints=limit_robo_joints)
+            limit_robo_joints=limit_robo_joints,
+        )
 
         self._fix_joint_values: Optional[np.ndarray] = None
         self._fixed_base = fixed_base
-
 
         self._cameras = defaultdict(list)
         for camera_prefix in self.params.cameras:
@@ -196,22 +195,11 @@ class MobileManipulator(RobotManipulator):
 
         # reset the initial joint positions
         self._fix_joint_values = None
-        super.reset()
-
-    #############################################
-    # ARM PROPERTIES GETTERS + SETTERS   
-    #############################################
-
-    #############################################
-    # WHEEL RELATED
-    #############################################
-
-    # TODO: add some functions for easy wheel control
+        super().reset()
 
     #############################################
     # BASE RELATED
     #############################################
-
     @property
     def base_pos(self):
         """Get the robot base ground position via configured local offset from origin."""
@@ -243,7 +231,6 @@ class MobileManipulator(RobotManipulator):
         self.sim_obj.rotation = mn.Quaternion.rotation(
             mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
         )
-
 
     def is_base_link(self, link_id: int) -> bool:
         return (

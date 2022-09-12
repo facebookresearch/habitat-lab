@@ -4,6 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import sys
+sys.path.append('/Users/jimmytyyang/Habitat/habitat-lab')
+sys.path.remove('/Users/jimmytyyang/Documents/habitat-lab')
+
 from os import path as osp
 
 import numpy as np
@@ -264,7 +268,7 @@ def simulate(sim, dt, get_observations=False):
 
 
 @pytest.mark.skipif(
-    not osp.exists("data/robots/hab_fetch"),
+    not osp.exists("/Users/jimmytyyang/Documents/habitat-lab/data/versioned_data/hab_fetch_1.0"),
     reason="Test requires Fetch robot URDF and assets.",
 )
 @pytest.mark.skipif(
@@ -308,7 +312,7 @@ def test_fetch_robot_wrapper(fixed_base):
         sim.navmesh_visualization = True
 
         # add the robot to the world via the wrapper
-        robot_path = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+        robot_path = "/Users/jimmytyyang/Documents/habitat-lab/data/versioned_data/hab_fetch_1.0/robots/hab_fetch.urdf"
         fetch = fetch_robot.FetchRobot(robot_path, sim, fixed_base=fixed_base)
         fetch.reconfigure()
         assert fetch.get_robot_sim_id() == 1  # 0 is the ground plane
