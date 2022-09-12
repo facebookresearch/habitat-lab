@@ -186,7 +186,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     """
     config = habitat.get_config(test_cfg_path)
     if "GYM" not in config or config.GYM.AUTO_NAME == "":
-        return
+        pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
     if not pygame_installed:
         pytest.skip("pygame is required for this test.")
     for prefix in ["", "Render"]:
