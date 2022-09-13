@@ -4,17 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import importlib
 import sys
-
-import mock
-
-# using mock for pygame to avoid having a pygame windows
-sys.modules["pygame"] = mock.MagicMock()
-
 from glob import glob
 
 import gym
 import gym.spaces as spaces
+import mock
 import numpy as np
 import pytest
 
@@ -22,6 +18,10 @@ import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_definitions import _get_env_name
+
+# using mock for pygame to avoid having a pygame windows
+sys.modules["pygame"] = mock.MagicMock()
+importlib.reload(habitat.utils.gym_adapter)
 
 
 @pytest.mark.parametrize(
