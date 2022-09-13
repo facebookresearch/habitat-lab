@@ -254,7 +254,7 @@ class InstanceImageGoalHFOVSensor(Sensor):
             return None
 
         img_params = episode.goals[0].image_goals[episode.goal_image_id]
-        return np.array([float(img_params.hfov)])
+        return np.array([img_params.hfov], dtype=np.float32)
 
 
 @registry.register_task(name="InstanceImageNav-v1")

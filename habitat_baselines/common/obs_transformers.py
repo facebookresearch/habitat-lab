@@ -142,7 +142,13 @@ class ResizeShortestEdge(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        return cls(config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE)
+        rs_config = config.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE
+        return cls(
+            rs_config.SIZE,
+            rs_config.CHANNELS_LAST,
+            rs_config.TRANS_KEYS,
+            rs_config.SEMANTIC_KEY,
+        )
 
 
 @baseline_registry.register_obs_transformer()
@@ -167,7 +173,7 @@ class CenterCropper(ObservationTransformer):
         assert len(size) == 2, "forced input size must be len of 2 (h, w)"
         self._size = size
         self.channels_last = channels_last
-        self.trans_keys = trans_keys  # TODO: Add to from_config constructor
+        self.trans_keys = trans_keys
 
     def transform_observation_space(
         self,
@@ -219,10 +225,9 @@ class CenterCropper(ObservationTransformer):
     def from_config(cls, config: Config):
         cc_config = config.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER
         return cls(
-            (
-                cc_config.HEIGHT,
-                cc_config.WIDTH,
-            )
+            (cc_config.HEIGHT, cc_config.WIDTH),
+            cc_config.CHANNELS_LAST,
+            cc_config.TRANS_KEYS,
         )
 
 
