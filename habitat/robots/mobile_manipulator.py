@@ -2,15 +2,23 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+<<<<<<< HEAD
 from collections import defaultdict
+=======
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 from typing import Dict, List, Optional, Set
 
 import attr
 import magnum as mn
 import numpy as np
 
+<<<<<<< HEAD
 from habitat.robots.robot_manipulator import RobotManipulator
 from habitat_sim.physics import JointMotorSettings
+=======
+from habitat.robots.manipulator import Manipulator
+from habitat.robots.robotbase import RobotBase
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 from habitat_sim.simulator import Simulator
 from habitat_sim.utils.common import orthonormalize_rotation_shear
 
@@ -98,7 +106,11 @@ class MobileManipulatorParams:
     base_link_names: Set[str]
 
 
+<<<<<<< HEAD
 class MobileManipulator(RobotManipulator):
+=======
+class MobileManipulator(Manipulator, RobotBase):
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
     """Robot with a controllable base and arm."""
 
     def __init__(
@@ -110,15 +122,26 @@ class MobileManipulator(RobotManipulator):
         fixed_base: bool = True,
     ):
         r"""Constructor
+        :param params: The parameter of the manipulator robot.
+        :param urdf_path: The path to the robot's URDF file.
+        :param sim: The simulator.
         :param limit_robo_joints: If true, joint limits of robot are always
             enforced.
+        :param fixed_base: If the robot's base is fixed or not.
         """
+<<<<<<< HEAD
         super().__init__(
+=======
+        # instantiate a manipulator
+        Manipulator.__init__(
+            self,
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
             urdf_path=urdf_path,
             params=params,
             sim=sim,
             limit_robo_joints=limit_robo_joints,
         )
+<<<<<<< HEAD
 
         self._fix_joint_values: Optional[np.ndarray] = None
         self._fixed_base = fixed_base
@@ -151,11 +174,30 @@ class MobileManipulator(RobotManipulator):
                 self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
 
         self._update_motor_settings_cache()
+=======
+        # instantiate a robot base
+        RobotBase.__init__(
+            self,
+            urdf_path=urdf_path,
+            params=params,
+            sim=sim,
+            limit_robo_joints=limit_robo_joints,
+            fixed_based=fixed_base,
+            sim_obj=self.sim_obj,
+            base_type="mobile",
+        )
+
+    def reconfigure(self) -> None:
+        """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
+        Manipulator.reconfigure(self)
+        RobotBase.reconfigure(self)
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
+<<<<<<< HEAD
         agent_node = self._sim._default_agent.scene_node
         inv_T = agent_node.transformation.inverted()
 
@@ -188,10 +230,15 @@ class MobileManipulator(RobotManipulator):
             self.arm_joint_pos = self._fix_joint_values
 
         self.sim_obj.awake = True
+=======
+        Manipulator.update(self)
+        RobotBase.update(self)
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
+<<<<<<< HEAD
 
         # reset the initial joint positions
         self._fix_joint_values = None
@@ -236,3 +283,7 @@ class MobileManipulator(RobotManipulator):
         return (
             self.sim_obj.get_link_name(link_id) in self.params.base_link_names
         )
+=======
+        Manipulator.reset(self)
+        RobotBase.reset(self)
+>>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
