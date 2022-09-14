@@ -325,8 +325,6 @@ class HabGymWrapper(gym.Env):
             self._screen.fill((0, 0, 0))  # type: ignore[attr-defined]
             self._screen.blit(draw_frame, (0, 0))  # type: ignore[attr-defined]
             pygame.display.update()
-            pygame.event.pump()
-            pygame.event.get()
         else:
             raise ValueError(f"Render mode {mode} not currently supported.")
 
