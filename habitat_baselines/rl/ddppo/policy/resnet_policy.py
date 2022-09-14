@@ -25,7 +25,9 @@ from habitat.tasks.nav.nav import (
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.ddppo.policy import resnet
+
+# from habitat_baselines.rl.ddppo.policy import resnet
+from habitat_baselines.rl.ddppo.policy import resnet_gn as resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
 )

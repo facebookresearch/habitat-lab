@@ -116,17 +116,24 @@ class BaseTrainer:
                 )
             else:
                 # evaluate multiple checkpoints in order
+                log_file_dir = (
+                    self.config.EVAL_CKPT_PATH_DIR + "/history_of_success"
+                )
+                if not os.path.exists(log_file_dir):
+                    os.mkdir(
+                        self.config.EVAL_CKPT_PATH_DIR + "/history_of_success"
+                    )
                 prev_ckpt_ind = -1
                 while True:
                     current_ckpt = None
                     while current_ckpt is None:
-                        current_ckpt = poll_checkpoint_folder(
+                        current_ckpt, ckpt_ind = poll_checkpoint_folder(
                             self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
                     logger.info(f"=======current_ckpt: {current_ckpt}=======")
-                    prev_ckpt_ind += 1
-                    success_counter = self._eval_checkpoint(
+                    prev_ckpt_ind = ckpt_ind
+                    success_counter, aggregated_stats = self._eval_checkpoint(
                         checkpoint_path=current_ckpt,
                         writer=writer,
                         checkpoint_index=prev_ckpt_ind,
@@ -153,11 +160,22 @@ class BaseTrainer:
                     history_string += "Episode success history: \n"
                     for v in episode_success_history:
                         history_string += f"ckpt : {v[0]} : {v[1]*100}%\n"
+                    with open(
+                        self.config.EVAL_CKPT_PATH_DIR
+                        + f"/history_of_success/{prev_ckpt_ind}.log",
+                        "w",
+                    ) as f:
+                        f.write(
+                            f"ckpt : {current_ckpt} : {sum(v for v in success_counter.values()) / len(success_counter)*100}%\n"
+                        )
+                        for k, v in aggregated_stats.items():
+                            f.write(f"{k} : {v}\n")
+                        f.close()
 
                     print(history_string)
                     with open(
                         self.config.EVAL_CKPT_PATH_DIR
-                        + "/hirtory_of_success.log",
+                        + "/history_of_success.log",
                         "w",
                     ) as f:
                         f.write(history_string)

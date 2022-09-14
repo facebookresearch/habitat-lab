@@ -549,6 +549,7 @@ class BatchedEnv:
         self._past_pick_success: List[Optional[bool]] = [
             False
         ] * self._num_envs
+        self._drop_position: List[Optional[Any]] = [None] * self._num_envs
         self._object_dropped_properly = [False] * self._num_envs
         self._stagger_agents = [0] * self._num_envs
         if self._config.get("STAGGER", True):
@@ -750,7 +751,30 @@ class BatchedEnv:
                 ):
                     self._object_dropped_properly[b] = True
 
+            if (
+                actions[(b * self.action_dim)] == -1.0
+                and is_holding_correct
+                and self._drop_position[b] is None
+            ):
+                self._drop_position[b] = obj_pos
+
             success = end_episode_action and object_is_close_to_goal
+            if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
+                success = False
+                if self._drop_position[b] is not None:
+                    drop_to_goal = self._drop_position[b] - state.goal_pos
+                    drop_success = (
+                        np.sqrt(drop_to_goal[0] ** 2 + drop_to_goal[2] ** 2)
+                        < self._config.NPNP_SUCCESS_THRESH
+                    )
+                    drop_success = drop_success and drop_to_goal[1] > 0
+                    drop_success = (
+                        drop_success
+                        and drop_to_goal[1]
+                        < 2 * self._config.NPNP_SUCCESS_THRESH
+                    )
+
+                    success = end_episode_action and drop_success
 
             if self._config.get(
                 "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
@@ -821,14 +845,18 @@ class BatchedEnv:
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
-                    "continuous_action_norm_mean": continuous_action_norm_mean,
-                    "continuous_action_norm_median": continuous_action_norm_median,
-                    "continuous_action_l2": continuous_action_l2,
-                    "original_drop_grasp": original_drop_grasp,
+                    "_continuous_action_norm_mean": continuous_action_norm_mean,
+                    "_continuous_action_norm_median": continuous_action_norm_median,
+                    "_continuous_action_l2": continuous_action_l2,
+                    "_original_drop_grasp": original_drop_grasp,
+                    "_state.did_grasp": state.did_grasp,
+                    "_state.did_attempt_grasp": state.did_attempt_grasp,
+                    "_state.did_collide": state.did_collide,
                 }
                 self._previous_state[b] = None
                 self._previous_action[b] = None
                 self._past_pick_success[b] = False
+                self._drop_position[b] = None
                 self._object_dropped_properly[b] = False
 
                 next_episode = self.get_next_episode()
@@ -861,10 +889,13 @@ class BatchedEnv:
                     "is_holding_correct": float(is_holding_correct),
                     "was_holding_correct": float(was_holding_correct),
                     "end_action": float(end_episode_action),
-                    "continuous_action_norm_mean": continuous_action_norm_mean,
-                    "continuous_action_norm_median": continuous_action_norm_median,
-                    "continuous_action_l2": continuous_action_l2,
-                    "original_drop_grasp": original_drop_grasp,
+                    "_continuous_action_norm_mean": continuous_action_norm_mean,
+                    "_continuous_action_norm_median": continuous_action_norm_median,
+                    "_continuous_action_l2": continuous_action_l2,
+                    "_original_drop_grasp": original_drop_grasp,
+                    "_state.did_grasp": state.did_grasp,
+                    "_state.did_attempt_grasp": state.did_attempt_grasp,
+                    "_state.did_collide": state.did_collide,
                 }
                 if self._previous_state[b] is not None:
                     prev_obj_pos = prev_state.obj_positions[

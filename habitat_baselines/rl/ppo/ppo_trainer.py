@@ -9,7 +9,7 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -181,17 +181,21 @@ class PPOTrainer(BaseRLTrainer):
                 }
             )
         elif self.config.RL.DDPPO.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
+
+            state_dict = {
+                k.replace("module.", ""): v
+                for k, v in pretrained_state["teacher"].items()
+            }
             self.actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
-                }
+                state_dict=state_dict, strict=False
             )
 
-        if not self.config.RL.DDPPO.train_encoder:
-            self._static_encoder = True
+        # if not self.config.RL.DDPPO.train_encoder:
+        for (
+            param
+        ) in self.actor_critic.net.visual_encoder.backbone.parameters():
+            # self._static_encoder = True
+            self._static_encoder = False
             for param in self.actor_critic.net.visual_encoder.parameters():
                 param.requires_grad_(False)
 
@@ -1115,7 +1119,7 @@ class PPOTrainer(BaseRLTrainer):
         checkpoint_path: str,
         writer: TensorboardWriter,
         checkpoint_index: int = 0,
-    ) -> Dict[int, int]:
+    ) -> Tuple[Dict[int, int], Dict[Any, Any]]:
         r"""Evaluates a single checkpoint.
 
         Args:
@@ -1410,4 +1414,4 @@ class PPOTrainer(BaseRLTrainer):
             writer.add_scalars("eval_metrics", metrics, step_id)
 
         self.envs.close()
-        return episode_success_counter
+        return episode_success_counter, aggregated_stats

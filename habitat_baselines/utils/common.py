@@ -403,7 +403,7 @@ def get_checkpoint_id(ckpt_path: str) -> Optional[int]:
 
 def poll_checkpoint_folder(
     checkpoint_folder: str, previous_ckpt_ind: int
-) -> Optional[str]:
+) -> Tuple[Optional[str], int]:
     r"""Return (previous_ckpt_ind + 1)th checkpoint in checkpoint folder
     (sorted by time of last modification).
 
@@ -422,10 +422,14 @@ def poll_checkpoint_folder(
         filter(os.path.isfile, glob.glob(checkpoint_folder + "/*.pth"))
     )
     models_paths.sort(key=os.path.getmtime)
-    ind = previous_ckpt_ind + 1
+    ind = 0
+    while ind < len(models_paths) and os.path.exists(
+        checkpoint_folder + f"/history_of_success/{ind}.log"
+    ):
+        ind += 25
     if ind < len(models_paths):
-        return models_paths[ind]
-    return None
+        return models_paths[ind], ind
+    return None, ind
 
 
 def generate_video(
@@ -463,7 +467,7 @@ def generate_video(
         metric_strs.append(f"{k}={v:.2f}")
 
     video_name = f"episode={episode_id}-ckpt={checkpoint_idx}-" + "-".join(
-        [m for m in metric_strs if "action" not in m]
+        [m for m in metric_strs if (m[0] != "_")]
     )
     if "disk" in video_option:
         assert video_dir is not None

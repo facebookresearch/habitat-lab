@@ -2,7 +2,7 @@ LOAD_CONFIG_FROM_CHECKPOINT: True
 TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
 CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
 VIDEO_DIR: "../videos2"
-VIDEO_OPTION: [""]
+VIDEO_OPTION: []
 REWARD_SCALE: 1.0 # 0.01
 NUM_CHECKPOINTS: 1000
 BATCHED_ENV: True
@@ -35,6 +35,7 @@ DEBUG_SIM: False
 CARTHESIAN_REWARD: 1.0
 PICK_REWARD : 5.0
 TASK_IS_PLACE : True
+TASK_HAS_SIMPLE_PLACE: False
 TASK_IS_NAV_PICK_NAV_REACH: False
 TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT: False
 TASK_IS_SIMPLE_PICK: False
