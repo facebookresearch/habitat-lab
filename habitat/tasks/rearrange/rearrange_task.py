@@ -142,6 +142,7 @@ class RearrangeTask(NavigationTask):
             return None
 
     def _get_observations(self, episode):
+        self._sim.maybe_update_robot()
         obs = self._sim.get_sensor_observations()
         obs = self._sim._sensor_suite.get_observations(obs)
 

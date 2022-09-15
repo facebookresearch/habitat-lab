@@ -628,8 +628,7 @@ class RearrangeSim(HabitatSim):
                 add_back_viz_objs[name] = (before_pos, r)
             self.viz_ids = defaultdict(lambda: None)
 
-        if self.habitat_config.UPDATE_ROBOT:
-            self.robots_mgr.update_robots()
+        self.maybe_update_robot()
 
         if self.habitat_config.CONCUR_RENDER:
             self._prev_sim_obs = self.start_async_render()
@@ -669,6 +668,16 @@ class RearrangeSim(HabitatSim):
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
 
         return obs
+
+    def maybe_update_robot(self):
+        """
+        Calls the update robots method on the robot manager if the
+        `UPDATE_ROBOT` configuration is set to True. Among other
+        things, this will set the robot's sensors' positions to their new
+        positions.
+        """
+        if self.habitat_config.UPDATE_ROBOT:
+            self.robots_mgr.update_robots()
 
     def visualize_position(
         self,
