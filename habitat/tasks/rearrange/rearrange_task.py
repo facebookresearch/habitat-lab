@@ -137,11 +137,17 @@ class RearrangeTask(NavigationTask):
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:
-            return self._get_observations(episode)
+            return self._get_first_observations(episode)
         else:
             return None
 
-    def _get_observations(self, episode):
+    def _get_first_observations(self, episode):
+        """
+        Retrieve the first observations after a reset.
+        Should only be called after/within a reset call.
+        Tries to updates the robot's sensor position before
+        retrieving observations.
+        """
         self._sim.maybe_update_robot()
         obs = self._sim.get_sensor_observations()
         obs = self._sim._sensor_suite.get_observations(obs)

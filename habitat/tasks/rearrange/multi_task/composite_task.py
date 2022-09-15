@@ -66,4 +66,4 @@ class CompositeTask(RearrangeTask):
         if self._cur_node_idx >= 0:
             self.jump_to_node(self._cur_node_idx, episode)
 
-        return self._get_observations(episode)
+        return self._get_first_observations(episode)

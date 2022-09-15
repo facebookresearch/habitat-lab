@@ -61,4 +61,4 @@ class RearrangeReachTaskV1(RearrangeTask):
                 global_pos, self._sim.viz_ids["reach_target"]
             )
 
-        return self._get_observations(episode)
+        return self._get_first_observations(episode)

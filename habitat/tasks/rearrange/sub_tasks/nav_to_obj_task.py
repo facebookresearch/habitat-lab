@@ -344,7 +344,7 @@ class DynNavRLEnv(RearrangeTask):
                 r=0.2,
             )
 
-        return self._get_observations(episode)
+        return self._get_first_observations(episode)
 
 
 def get_robo_start_pos(

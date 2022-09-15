@@ -283,5 +283,5 @@ class RearrangePickTaskV1(RearrangeTask):
         self._targ_idx = sel_idx
 
         if fetch_observations:
-            return self._get_observations(episode)
+            return self._get_first_observations(episode)
         return None

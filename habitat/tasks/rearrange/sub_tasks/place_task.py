@@ -41,4 +41,4 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         self.was_prev_holding = self.targ_idx
 
         sim.internal_step(-1)
-        return self._get_observations(episode)
+        return self._get_first_observations(episode)
