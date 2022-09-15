@@ -301,7 +301,7 @@ class HabGymWrapper(gym.Env):
         self._last_obs = obs
         return self._transform_obs(obs)
 
-    def render(self, mode: str = "rgb_array") -> np.ndarray:
+    def render(self, mode: str = "human") -> np.ndarray:
         frame = None
         if mode == "rgb_array":
             frame = observations_to_image(
