@@ -944,6 +944,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.config.RL.POLICY.fuse_keys = fuse_keys
         self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+        self.config.RL.POLICY.SENSOR_ORDERING = fuse_keys
         self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
         self.config.freeze()
 
@@ -1074,6 +1075,12 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
                 prev_actions.copy_(actions)  # type: ignore
+
+            # To fix the action sequence
+            # torch.manual_seed(0)
+            # actions = torch.rand((1, 11))
+            # actions[:, -1] = 0.0
+
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.

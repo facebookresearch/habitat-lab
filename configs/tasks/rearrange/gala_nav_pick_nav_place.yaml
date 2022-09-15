@@ -96,20 +96,19 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
-            ARM_CONTROLLER: ArmRelPosKinematicAction
+            ARM_CONTROLLER: GalaArmKinematicAction
             GRIP_CONTROLLER: GalaMagicGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
-            DELTA_POS_LIMIT: 0.0125
-            EE_CTRL_LIM: 0.015
             GRASP_PICK_THRESH: 0.9
             GRASP_DROP_THRESH: -0.9
-            ACT_INTERVAL: 10
+            SCALING: [0.196, 0.196, 0.196, 0.196, 0.196, 0.262, 0.196]
+            # DELTA_POS_LIMIT: 0.0125
         BASE_VELOCITY:
             TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
+            LIN_SPEED: 0.1
+            ANG_SPEED: 0.0873
             ALLOW_DYN_SLIDE: true
             END_ON_STOP: false
             ALLOW_BACK: true
@@ -118,6 +117,7 @@ TASK:
         REARRANGE_STOP:
             TYPE: RearrangeStopAction
             STOP_THRESHOLD: 0.9
+            ALLOW_STOP: False
     POSSIBLE_ACTIONS:
     - ARM_ACTION
     - BASE_VELOCITY

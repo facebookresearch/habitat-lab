@@ -59,8 +59,13 @@ class RearrangeStopAction(SimulatorTaskAction):
 
     def step(self, task, *args, is_last_action, **kwargs):
         should_stop = kwargs.get("REARRANGE_STOP", [1.0])
-        if should_stop[0] > self._config.STOP_THRESHOLD:
-            rearrange_logger.debug("Rearrange stop action requesting episode stop.")
+        if (
+            should_stop[0] > self._config.STOP_THRESHOLD
+            and self._config.ALLOW_STOP
+        ):
+            rearrange_logger.debug(
+                "Rearrange stop action requesting episode stop."
+            )
             self.does_want_terminate = True
 
         if is_last_action:
@@ -198,17 +203,12 @@ class ArmAbsPosAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmAbsPosKinematicAction(SimulatorTaskAction):
-    """
-    The arm is kinematically directly set to the joint configuration specified
-    by the action.
-    """
-
+class GalaArmKinematicAction(SimulatorTaskAction):
     @property
     def action_space(self):
         return spaces.Box(
             shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
-            low=0,
+            low=-1,
             high=1,
             dtype=np.float32,
         )
@@ -216,8 +216,16 @@ class ArmAbsPosKinematicAction(SimulatorTaskAction):
     def step(self, set_pos, *args, **kwargs):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
+        set_pos = np.clip(set_pos, -1.0, 1.0)
+
+        for i in range(len(set_pos)):
+            scale_val = self._config.SCALING
+            set_pos[i] = mn.math.lerp(-scale_val[i], scale_val[i], set_pos[i])
+
         self._sim: RearrangeSim
-        self._sim.robot.arm_joint_pos = set_pos
+        set_arm_pos = set_pos + self._sim.robot.arm_joint_pos
+        self._sim.robot.arm_joint_pos = set_arm_pos
+        self._sim.robot.fix_joint_values = set_arm_pos
 
 
 @registry.register_task_action
@@ -279,7 +287,9 @@ class BaseVelAction(SimulatorTaskAction):
         )
 
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
-            1 / ctrl_freq, rigid_state
+            # 1 / ctrl_freq, rigid_state
+            1,
+            rigid_state,
         )
         end_pos = self._sim.step_filter(
             rigid_state.translation, target_rigid_state.translation
@@ -308,19 +318,25 @@ class BaseVelAction(SimulatorTaskAction):
             self._sim.grasp_mgr.update_object_to_grasp()
 
     def step(self, base_vel, *args, is_last_action, **kwargs):
-        lin_vel, ang_vel = base_vel
-        lin_vel = np.clip(lin_vel, -1, 1) * self._config.LIN_SPEED
-        ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
-        if not self._config.ALLOW_BACK:
-            lin_vel = np.maximum(lin_vel, 0)
+        base_vel = np.clip(base_vel, -1, 1)
+        ang_vel, lin_vel = base_vel
+        # scale_factor = self._sim.ctrl
+        # lin_speed = self._config.LIN_SPEED * (
+        ang_vel = mn.math.lerp(
+            -self._config.ANG_SPEED, self._config.ANG_SPEED, ang_vel
+        )
+        lin_vel = mn.math.lerp(
+            -self._config.LIN_SPEED, self._config.LIN_SPEED, lin_vel
+        )
 
-        if (
-            abs(lin_vel) < self._config.MIN_ABS_LIN_SPEED
-            and abs(ang_vel) < self._config.MIN_ABS_ANG_SPEED
-        ):
-            self.does_want_terminate = True
-        else:
-            self.does_want_terminate = False
+        # for i in range(len(set_pos)):
+        #     scale_val = self._config.SCALING
+        #     set_pos[i] = mn.math.lerp(-scale_val[i], scale_val[i], set_pos[i])
+
+        # if not self._config.ALLOW_BACK:
+        #     lin_vel = np.maximum(lin_vel, 0)
+
+        self.does_want_terminate = False
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)

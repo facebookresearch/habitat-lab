@@ -61,8 +61,12 @@ class PointNavResNetPolicy(NetPolicy):
         policy_config: Config = None,
     ):
         if policy_config is not None:
-            discrete_actions = policy_config.action_distribution_type == "categorical"
-            self.action_distribution_type = policy_config.action_distribution_type
+            discrete_actions = (
+                policy_config.action_distribution_type == "categorical"
+            )
+            self.action_distribution_type = (
+                policy_config.action_distribution_type
+            )
         else:
             discrete_actions = True
             self.action_distribution_type = "categorical"
@@ -77,6 +81,7 @@ class PointNavResNetPolicy(NetPolicy):
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
                 use_avg_pool=use_avg_pool,
+                sensor_ordering=policy_config.SENSOR_ORDERING,
                 obs_transform=obs_transform,
                 discrete_actions=discrete_actions,
             ),
@@ -85,7 +90,9 @@ class PointNavResNetPolicy(NetPolicy):
         )
 
     @classmethod
-    def from_config(cls, config: Config, observation_space: spaces.Dict, action_space):
+    def from_config(
+        cls, config: Config, observation_space: spaces.Dict, action_space
+    ):
         assert not config.FORCE_BLIND_POLICY
         return cls(
             observation_space=observation_space,
@@ -192,7 +199,9 @@ class ResNetEncoder(nn.Module):
                         int((s + 2 - 2 - 1) / 2 + 1) for s in self.spatial_size
                     )
 
-                final_compression_channels = flat_size / np.prod(self.spatial_size)
+                final_compression_channels = flat_size / np.prod(
+                    self.spatial_size
+                )
                 final_compression_channels = int(
                     round(final_compression_channels / ngroups) * ngroups
                 )
@@ -323,6 +332,7 @@ class ResNetNet(Net):
         backbone,
         resnet_baseplanes,
         use_avg_pool,
+        sensor_ordering,
         obs_transform=None,
         discrete_actions: bool = True,
     ):
@@ -340,7 +350,9 @@ class ResNetNet(Net):
 
         self.ssc_keys: List[str] = []
         self._n_state = 0
-        for k, v in observation_space.spaces.items():
+        # for k, v in observation_space.spaces.items():
+        for k in sensor_ordering:
+            v = observation_space.spaces[k]
             # All 1-dimension sensors are state sensors.
             if len(v.shape) == 1:
                 self._n_state += v.shape[0]
@@ -451,7 +463,10 @@ class ResNetNet(Net):
         #    inputs.append(goal_observations)
         batch_size = inputs[0].size(0)
         state_inputs = torch.cat(
-            [goal_observations[k].view(batch_size, -1).float() for k in self.ssc_keys],
+            [
+                goal_observations[k].view(batch_size, -1).float()
+                for k in self.ssc_keys
+            ],
             -1,
         )
         state_inputs = self.tgt_embeding(state_inputs)
@@ -467,7 +482,9 @@ class ResNetNet(Net):
                 torch.where(masks.view(-1), prev_actions + 1, start_token)
             )
         else:
-            prev_actions = self.prev_action_embedding(masks * prev_actions.float())
+            prev_actions = self.prev_action_embedding(
+                masks * prev_actions.float()
+            )
 
         inputs.append(prev_actions)
 
