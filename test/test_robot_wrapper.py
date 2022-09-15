@@ -4,12 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-<<<<<<< HEAD
-import sys
-sys.path.append('/Users/jimmytyyang/Habitat/habitat-lab')
-sys.path.remove('/Users/jimmytyyang/Documents/habitat-lab')
-=======
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
 from os import path as osp
 
@@ -272,11 +266,7 @@ def simulate(sim, dt, get_observations=False):
 
 
 @pytest.mark.skipif(
-<<<<<<< HEAD
-    not osp.exists("/Users/jimmytyyang/Documents/habitat-lab/data/versioned_data/hab_fetch_1.0"),
-=======
     not osp.exists("data/robots/hab_fetch"),
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
     reason="Test requires Fetch robot URDF and assets.",
 )
 @pytest.mark.skipif(
@@ -330,14 +320,10 @@ def test_fetch_robot_wrapper(fixed_base):
         # retract the arm
         observations += fetch._interpolate_arm_control(
             [1.2299035787582397, 2.345386505126953],
-<<<<<<< HEAD
-            [fetch.params.arm_joints[1], fetch.params.arm_joints[3]],
-=======
             [
                 fetch.params.arm_joints[1],
                 fetch.params.arm_joints[3],
             ],
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
             1,
             30,
             produce_debug_video,
@@ -346,14 +332,10 @@ def test_fetch_robot_wrapper(fixed_base):
         # ready the arm
         observations += fetch._interpolate_arm_control(
             [-0.45, 0.1],
-<<<<<<< HEAD
-            [fetch.params.arm_joints[1], fetch.params.arm_joints[3]],
-=======
             [
                 fetch.params.arm_joints[1],
                 fetch.params.arm_joints[3],
             ],
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
             1,
             30,
             produce_debug_video,
@@ -402,12 +384,8 @@ def test_fetch_robot_wrapper(fixed_base):
         # kinematic open/close (checked before simulation)
         fetch.gripper_joint_pos = fetch.params.gripper_open_state
         assert np.allclose(
-<<<<<<< HEAD
-            fetch.gripper_joint_pos, fetch.params.gripper_open_state
-=======
             fetch.gripper_joint_pos,
             fetch.params.gripper_open_state,
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
         )
         assert fetch.is_gripper_open
         observations += simulate(sim, 0.2, produce_debug_video)

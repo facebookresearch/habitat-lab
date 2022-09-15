@@ -2,25 +2,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-<<<<<<< HEAD
-from collections import defaultdict
-=======
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 from typing import Dict, List, Optional, Set
 
 import attr
 import magnum as mn
 import numpy as np
 
-<<<<<<< HEAD
-from habitat.robots.robot_manipulator import RobotManipulator
-from habitat_sim.physics import JointMotorSettings
-=======
 from habitat.robots.manipulator import Manipulator
 from habitat.robots.robotbase import RobotBase
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 from habitat_sim.simulator import Simulator
-from habitat_sim.utils.common import orthonormalize_rotation_shear
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -106,11 +96,7 @@ class MobileManipulatorParams:
     base_link_names: Set[str]
 
 
-<<<<<<< HEAD
-class MobileManipulator(RobotManipulator):
-=======
 class MobileManipulator(Manipulator, RobotBase):
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
     """Robot with a controllable base and arm."""
 
     def __init__(
@@ -129,52 +115,14 @@ class MobileManipulator(Manipulator, RobotBase):
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
         """
-<<<<<<< HEAD
-        super().__init__(
-=======
         # instantiate a manipulator
         Manipulator.__init__(
             self,
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
             urdf_path=urdf_path,
             params=params,
             sim=sim,
             limit_robo_joints=limit_robo_joints,
         )
-<<<<<<< HEAD
-
-        self._fix_joint_values: Optional[np.ndarray] = None
-        self._fixed_base = fixed_base
-
-        self._cameras = defaultdict(list)
-        for camera_prefix in self.params.cameras:
-            for sensor_name in self._sim._sensors:
-                if sensor_name.startswith(camera_prefix):
-                    self._cameras[camera_prefix].append(sensor_name)
-
-        # NOTE: the follow members cache static info for improved efficiency over querying the API
-        # maps joint ids to velocity index
-        self.joint_dof_indices: Dict[int, int] = {}
-
-    def reconfigure(self) -> None:
-        """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
-        super().reconfigure()
-
-        # set correct gains for wheels
-        if self.params.wheel_joints is not None:
-            jms = JointMotorSettings(
-                0,  # position_target
-                self.params.wheel_mtr_pos_gain,  # position_gain
-                0,  # velocity_target
-                self.params.wheel_mtr_vel_gain,  # velocity_gain
-                self.params.wheel_mtr_max_impulse,  # max_impulse
-            )
-            # pylint: disable=not-an-iterable
-            for i in self.params.wheel_joints:
-                self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
-
-        self._update_motor_settings_cache()
-=======
         # instantiate a robot base
         RobotBase.__init__(
             self,
@@ -191,99 +139,16 @@ class MobileManipulator(Manipulator, RobotBase):
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         Manipulator.reconfigure(self)
         RobotBase.reconfigure(self)
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
-<<<<<<< HEAD
-        agent_node = self._sim._default_agent.scene_node
-        inv_T = agent_node.transformation.inverted()
-
-        for cam_prefix, sensor_names in self._cameras.items():
-            for sensor_name in sensor_names:
-                sens_obj = self._sim._sensors[sensor_name]._sensor_object
-                cam_info = self.params.cameras[cam_prefix]
-
-                if cam_info.attached_link_id == -1:
-                    link_trans = self.sim_obj.transformation
-                else:
-                    link_trans = self.sim_obj.get_link_scene_node(
-                        self.params.ee_link
-                    ).transformation
-
-                cam_transform = mn.Matrix4.look_at(
-                    cam_info.cam_offset_pos,
-                    cam_info.cam_look_at_pos,
-                    mn.Vector3(0, 1, 0),
-                )
-                cam_transform = (
-                    link_trans @ cam_transform @ cam_info.relative_transform
-                )
-                cam_transform = inv_T @ cam_transform
-
-                sens_obj.node.transformation = orthonormalize_rotation_shear(
-                    cam_transform
-                )
-        if self._fix_joint_values is not None:
-            self.arm_joint_pos = self._fix_joint_values
-
-        self.sim_obj.awake = True
-=======
         Manipulator.update(self)
         RobotBase.update(self)
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
-<<<<<<< HEAD
-
-        # reset the initial joint positions
-        self._fix_joint_values = None
-        super().reset()
-
-    #############################################
-    # BASE RELATED
-    #############################################
-    @property
-    def base_pos(self):
-        """Get the robot base ground position via configured local offset from origin."""
-        return (
-            self.sim_obj.translation
-            + self.sim_obj.transformation.transform_vector(
-                self.params.base_offset
-            )
-        )
-
-    @base_pos.setter
-    def base_pos(self, position: mn.Vector3):
-        """Set the robot base to a desired ground position (e.g. NavMesh point) via configured local offset from origin."""
-        if len(position) != 3:
-            raise ValueError("Base position needs to be three dimensions")
-        self.sim_obj.translation = (
-            position
-            - self.sim_obj.transformation.transform_vector(
-                self.params.base_offset
-            )
-        )
-
-    @property
-    def base_rot(self) -> float:
-        return self.sim_obj.rotation.angle()
-
-    @base_rot.setter
-    def base_rot(self, rotation_y_rad: float):
-        self.sim_obj.rotation = mn.Quaternion.rotation(
-            mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
-        )
-
-    def is_base_link(self, link_id: int) -> bool:
-        return (
-            self.sim_obj.get_link_name(link_id) in self.params.base_link_names
-        )
-=======
         Manipulator.reset(self)
         RobotBase.reset(self)
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)

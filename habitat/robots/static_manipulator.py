@@ -1,27 +1,15 @@
-
-
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-<<<<<<< HEAD
-from typing import Dict, List, Optional, Tuple
-=======
 from typing import List, Optional
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
 import attr
 import magnum as mn
 import numpy as np
 
-<<<<<<< HEAD
-from habitat.robots.robot_interface import RobotInterface
-from habitat.robots.robot_manipulator import RobotManipulator
-from habitat_sim.physics import JointMotorSettings
-=======
 from habitat.robots.manipulator import Manipulator
 from habitat.robots.robotbase import RobotBase
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 from habitat_sim.simulator import Simulator
 
 
@@ -79,40 +67,6 @@ class StaticManipulator(Manipulator, RobotBase):
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
     ):
-<<<<<<< HEAD
-        r"""Constructor"""
-        super().__init__(
-            urdf_path=urdf_path, 
-            params=params,
-            sim=sim,
-            limit_robo_joints=limit_robo_joints)
-
-        # NOTE: the follow members cache static info for improved efficiency over querying the API
-        # maps joint ids to velocity index
-        self.joint_dof_indices: Dict[int, int] = {}
-        self._fixed_base = True
-
-    #############################################
-    # ARM PROPERTIES GETTERS + SETTERS
-    #############################################
-    def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
-        """Clips a 3D end-effector position within region the robot can reach."""
-        return np.clip(
-            pos,
-            self.params.ee_constraint[:, 0],
-            self.params.ee_constraint[:, 1],
-        )
-
-    @property
-    def arm_motor_forces(self) -> np.ndarray:
-        """Get the current torques on the arm joint motors"""
-        return np.array(self.sim_obj.joint_forces)
-
-    @arm_motor_forces.setter
-    def arm_motor_forces(self, ctrl: List[float]) -> None:
-        """Set the desired torques of the arm joint motors"""
-        self.sim_obj.joint_forces = ctrl
-=======
         r"""Constructor
         :param params: The parameter of the manipulator robot.
         :param urdf_path: The path to the robot's URDF file.
@@ -159,7 +113,6 @@ class StaticManipulator(Manipulator, RobotBase):
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
         Manipulator.reset(self)
         RobotBase.reset(self)
->>>>>>> 5968574a (Use mutiple interherences to design modules for constructing robot parts, along with the test code)
 
     #############################################
     # HIDDEN
