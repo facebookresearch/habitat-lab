@@ -84,7 +84,7 @@ class StaticManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
             fixed_based=fixed_base,
         )
-        # instantiate a robot base
+        # instantiate a robotBase
         RobotBase.__init__(
             self,
             urdf_path=urdf_path,

@@ -33,6 +33,7 @@ class RobotBase(RobotInterface):
             "static",
         ], f"'{base_type}' is invalid - valid options are [mobile, static]. Or you write your own class."
         RobotInterface.__init__(self)
+        # Assign the variables
         self.params = params
         self.urdf_path = urdf_path
         self._sim = sim

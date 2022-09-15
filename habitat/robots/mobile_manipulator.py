@@ -123,7 +123,7 @@ class MobileManipulator(Manipulator, RobotBase):
             sim=sim,
             limit_robo_joints=limit_robo_joints,
         )
-        # instantiate a robot base
+        # instantiate a robotBase
         RobotBase.__init__(
             self,
             urdf_path=urdf_path,

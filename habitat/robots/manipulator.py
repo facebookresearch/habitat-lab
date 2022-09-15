@@ -29,6 +29,7 @@ class Manipulator(RobotInterface):
     ):
         r"""Constructor"""
         RobotInterface.__init__(self)
+        # Assign the variables
         self.params = params
         self.urdf_path = urdf_path
         self._sim = sim

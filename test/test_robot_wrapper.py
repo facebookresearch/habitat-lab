@@ -275,6 +275,7 @@ def simulate(sim, dt, get_observations=False):
 )
 @pytest.mark.parametrize("fixed_base", [True, False])
 def test_fetch_robot_wrapper(fixed_base):
+    """Test the fetch robot."""
     # set this to output test results as video for easy investigation
     produce_debug_video = False
     observations = []
@@ -423,6 +424,7 @@ def test_fetch_robot_wrapper(fixed_base):
     reason="Test requires Fetch robot URDF and assets.",
 )
 def test_franka_robot_wrapper():
+    """Test the franka robot."""
     # set this to output test results as video for easy investigation
     produce_debug_video = False
     observations = []
