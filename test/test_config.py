@@ -60,6 +60,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
     "configs/test/new_keys_test.yaml",
     # Trainer excluded because does not use the default config
     "configs/baselines/ppo.yaml",
+    "configs/tasks/rearrange/rearrange_easy_multi_agent.yaml",
     # Planning Domain Definition Language configs are
     # excluded since they do not implement the default config
 ] + glob("**/pddl/*.yaml", recursive=True)

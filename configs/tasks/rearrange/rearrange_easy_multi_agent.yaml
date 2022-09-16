@@ -35,6 +35,12 @@ TASK:
     PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
+
+    # The sensor spec is specified per agent and then duplicated
+    # across each agent (a homogenous observation space). If the sensor derives
+    # from `UsesRobotInterface` then it is automatically duplicated.
+    # Hetrogeneous observation spaces are also supported by not deriving from
+    # `UsesRobotInterface`.
     SENSORS:
     - RELATIVE_RESTING_POS_SENSOR
     - TARGET_START_SENSOR
@@ -48,6 +54,9 @@ TASK:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: 100_000.0
         MAX_INSTANT_FORCE: 10_000.0
+    COMPOSITE_SUCCESS:
+        MUST_CALL_STOP: False
+    # Unlike sensors, measurements are not automatically duplicated per agent.
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE
@@ -56,6 +65,8 @@ TASK:
     - COMPOSITE_SUCCESS
     - NUM_STEPS
     ACTIONS:
+      # Actions are defined per agent. Unlike the sensors, actions are not
+      # automatically duplicated per agent.
       AGENT_0_ARM_ACTION:
           AGENT: 0
           TYPE: ArmAction
