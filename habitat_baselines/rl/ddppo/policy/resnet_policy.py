@@ -35,6 +35,10 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 
+IGNORE_VISUALS_KEYS = [
+    "robot_third",
+]
+
 
 @baseline_registry.register_policy
 class PointNavResNetPolicy(NetPolicy):
@@ -117,7 +121,12 @@ class ResNetEncoder(nn.Module):
         super().__init__()
 
         # Determine which visual observations are present
-        self.rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
+        self.rgb_keys = [
+            k
+            for k in observation_space.spaces
+            if "rgb" in k
+            and all(ignore_k not in k for ignore_k in IGNORE_VISUALS_KEYS)
+        ]
         self.depth_keys = [k for k in observation_space.spaces if "depth" in k]
 
         # Count total # of channels for rgb and for depth
