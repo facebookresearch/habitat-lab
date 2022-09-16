@@ -1,14 +1,14 @@
 GYM:
-    AUTO_NAME: RearrangeEasy
+    AUTO_NAME: RearrangeEasyMultiAgent
     OBS_KEYS:
-    - robot_head_depth
-    - relative_resting_position
-    - obj_start_sensor
-    - obj_goal_sensor
-    - obj_start_gps_compass
-    - obj_goal_gps_compass
-    - joint
-    - is_holding
+    - AGENT_0_robot_head_depth
+    - AGENT_1_robot_head_depth
+    - AGENT_0_obj_start_sensor
+    - AGENT_1_obj_start_sensor
+    - AGENT_0_obj_goal_sensor
+    - AGENT_1_obj_goal_sensor
+    - AGENT_0_joint
+    - AGENT_1_joint
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 1500
 DATASET:
@@ -18,7 +18,7 @@ DATASET:
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
-    REWARD_MEASURE: move_obj_reward
+    REWARD_MEASURE: composite_success
     SUCCESS_MEASURE: composite_success
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
@@ -87,9 +87,6 @@ TASK:
           ALLOW_BACK: true
           MIN_ABS_LIN_SPEED: 1.0
           MIN_ABS_ANG_SPEED: 1.0
-      AGENT_0_PDDL_APPLY_ACTION:
-          AGENT: 0
-          TYPE: PddlApplyAction
       AGENT_1_ARM_ACTION:
           AGENT: 1
           TYPE: ArmAction
@@ -110,9 +107,6 @@ TASK:
           ALLOW_BACK: true
           MIN_ABS_LIN_SPEED: 1.0
           MIN_ABS_ANG_SPEED: 1.0
-      AGENT_1_PDDL_APPLY_ACTION:
-          AGENT: 1
-          TYPE: PddlApplyAction
       AGENT_0_REARRANGE_STOP:
           TYPE: RearrangeStopAction
       AGENT_1_REARRANGE_STOP:
@@ -120,11 +114,9 @@ TASK:
     POSSIBLE_ACTIONS:
       - AGENT_0_ARM_ACTION
       - AGENT_0_BASE_VELOCITY
-      - AGENT_0_PDDL_APPLY_ACTION
       - AGENT_0_REARRANGE_STOP
       - AGENT_1_ARM_ACTION
       - AGENT_1_BASE_VELOCITY
-      - AGENT_1_PDDL_APPLY_ACTION
       - AGENT_1_REARRANGE_STOP
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
