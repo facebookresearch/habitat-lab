@@ -4,8 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+input("press enter to begin...")  # needed for py-spy capture
+
 import pickle
 import time
+from collections import OrderedDict
 
 import torch
 
@@ -14,6 +17,32 @@ from habitat.core.batched_env import BatchedEnv
 from habitat_baselines.config.default import get_config
 
 next_episode = 0
+
+
+def are_floats_equal(a, b, eps):
+    assert type(a) == type(b)
+    if isinstance(a, float):
+        return abs(a - b) < eps
+    elif isinstance(a, (str, int)):
+        return a == b
+    elif isinstance(a, (list, tuple)):
+        return all(
+            are_floats_equal(item_a, item_b, eps)
+            for item_a, item_b in zip(a, b)
+        )
+    elif isinstance(a, (OrderedDict, dict)):
+        return all(
+            are_floats_equal(item_a, item_b, eps)
+            for item_a, item_b in zip(a.items(), b.items())
+        )
+    else:
+        try:
+            _ = iter(a)
+        except TypeError:
+            # not iterable
+            return a == b
+        else:
+            raise AssertionError()
 
 
 def test_basic():
@@ -26,7 +55,9 @@ def test_basic():
     except FileNotFoundError:
         ref_outputs_by_step = None
 
-    exp_config = "habitat_baselines/config/rearrange/gala_kinematic_local.yaml"
+    exp_config = (
+        "habitat_baselines/config/rearrange/gala_kinematic_local_small.yaml"
+    )
     opts = None
     config = get_config(exp_config, opts)
 
@@ -51,7 +82,7 @@ def test_basic():
         outputs_by_step.append(outputs)
 
     if ref_outputs_by_step:
-        assert ref_outputs_by_step == outputs_by_step
+        assert are_floats_equal(ref_outputs_by_step, outputs_by_step, 1e-6)
         print("success")
     else:
         with open(pickle_filepath, "wb") as f:
@@ -65,9 +96,12 @@ def test_benchmark():
 
     print("build_type: ", habitat_sim.build_type)
 
-    exp_config = "habitat_baselines/config/rearrange/gala_kinematic_local.yaml"
+    exp_config = "habitat_baselines/config/rearrange/gala_kinematic_ddppo.yaml"
+    exp_config_local = (
+        "habitat_baselines/config/rearrange/gala_kinematic_local.yaml"
+    )
     opts = None
-    config = get_config(exp_config, opts)
+    config = get_config([exp_config, exp_config_local], opts)
 
     batched_env = BatchedEnv(config)
 
@@ -77,7 +111,7 @@ def test_benchmark():
 
     t_recent = time.time()
 
-    for batch_step_idx in range(1000000):
+    for batch_step_idx in range(4000):
         actions = torch.rand(batched_env.num_envs, batched_env.action_dim)
         batched_env.async_step(actions)
         # todo: use outputs to ensure they don't get optimized away
@@ -96,4 +130,5 @@ def test_benchmark():
 
 
 if __name__ == "__main__":
-    test_benchmark()
+    # test_benchmark()
+    test_basic()
