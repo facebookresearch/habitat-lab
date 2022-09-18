@@ -45,6 +45,35 @@ class StateSensorConfig:
     def get_obs(self, state) -> np.ndarray:
         raise NotImplementedError()
 
+    # This is for reference only. Beware it is slow!
+    def _get_batch_cartesian_coordinates_from_states(self, states):
+        robot_positions = np.empty((len(states), 3), dtype=np.float32)
+        robot_inv_rotation_mats = np.empty(
+            (len(states), 3, 3), dtype=np.float32
+        )
+        start_positions = np.empty((len(states), 3), dtype=np.float32)
+        for i in range(len(states)):
+            robot_positions[i] = states[i].robot_pos
+            m = states[i].robot_rotation.to_matrix()
+            for row in range(3):
+                for col in range(3):
+                    robot_inv_rotation_mats[i][row][col] = m[col][
+                        row
+                    ]  # transpose
+            start_positions[i] = states[i].robot_start_pos
+        return self._get_batch_cartesian_coordinates(
+            robot_positions, start_positions, robot_inv_rotation_mats
+        )
+
+    def _get_batch_cartesian_coordinates(
+        self, source_positions, goal_positions, source_inv_rotation_mats
+    ):
+        tmp = goal_positions - source_positions
+        new_list = np.matmul(
+            np.expand_dims(tmp, axis=1), source_inv_rotation_mats
+        ).squeeze(axis=1)
+        return torch.tensor(new_list)
+
     def _get_relative_coordinate(
         self, source_position, goal_position, source_rotation
     ):
@@ -57,7 +86,7 @@ class StateSensorConfig:
                 source_position, goal_position, source_rotation
             )
 
-    def get_batch_obs(self, states):
+    def get_batch_obs(self, states, batch_states):
         new_list = np.empty((len(states), self.shape), dtype=np.float32)
         for i in range(len(states)):
             item = self.get_obs(states[i])
@@ -145,6 +174,14 @@ def _get_spherical_coordinates(
 
 
 class RobotStartSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.robot_pos,
+            batch_states.robot_start_pos,
+            batch_states.robot_inv_rotation,
+        )
+
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
@@ -153,6 +190,14 @@ class RobotStartSensorConfig(StateSensorConfig):
 
 
 class RobotTargetSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.robot_pos,
+            batch_states.target_obj_start_pos,
+            batch_states.robot_inv_rotation,
+        )
+
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
@@ -161,6 +206,14 @@ class RobotTargetSensorConfig(StateSensorConfig):
 
 
 class RobotGoalSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.robot_pos,
+            batch_states.goal_pos,
+            batch_states.robot_inv_rotation,
+        )
+
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
@@ -169,6 +222,14 @@ class RobotGoalSensorConfig(StateSensorConfig):
 
 
 class EEStartSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.ee_pos,
+            batch_states.robot_start_pos,
+            batch_states.ee_inv_rotation,
+        )
+
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
@@ -177,6 +238,14 @@ class EEStartSensorConfig(StateSensorConfig):
 
 
 class EETargetSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.ee_pos,
+            batch_states.target_obj_start_pos,
+            batch_states.ee_inv_rotation,
+        )
+
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
@@ -185,6 +254,14 @@ class EETargetSensorConfig(StateSensorConfig):
 
 
 class EEGoalSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.ee_pos,
+            batch_states.goal_pos,
+            batch_states.ee_inv_rotation,
+        )
+
     def get_obs(self, state):
         ee_pos = state.ee_pos
         ee_rot = state.ee_rotation
@@ -193,6 +270,14 @@ class EEGoalSensorConfig(StateSensorConfig):
 
 
 class RobotEESensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        assert not self.polar
+        return self._get_batch_cartesian_coordinates(
+            batch_states.robot_pos,
+            batch_states.ee_pos,
+            batch_states.robot_inv_rotation,
+        )
+
     def get_obs(self, state):
         robot_pos = state.robot_pos
         robot_rot = state.robot_rotation
@@ -620,9 +705,15 @@ class BatchedEnv:
         #     for ssc in self.state_sensor_config:
         #         sensor_data = torch.tensor(ssc.get_obs(state))
         #         observations[ssc.obs_key][b, :] = sensor_data
+
+        batch_env_states_curr = self._bsim.get_batch_environment_state(
+            previous=False
+        )
+        # batch_env_states_prev = self._bsim.get_batch_environment_state(previous=True)
+
         for ssc in self.state_sensor_config:
             observations[ssc.obs_key] = torch.tensor(
-                ssc.get_batch_obs(env_states)
+                ssc.get_batch_obs(env_states, batch_env_states_curr)
             )
             if not torch.isfinite(observations[ssc.obs_key]).all():
                 logger.info((ssc.obs_key, "nan"))
