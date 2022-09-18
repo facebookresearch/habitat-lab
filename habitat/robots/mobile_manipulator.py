@@ -9,7 +9,7 @@ import magnum as mn
 import numpy as np
 
 from habitat.robots.manipulator import Manipulator
-from habitat.robots.robotbase import RobotBase
+from habitat.robots.robot_base import RobotBase
 from habitat_sim.simulator import Simulator
 
 

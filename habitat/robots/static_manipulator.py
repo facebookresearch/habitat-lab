@@ -9,7 +9,7 @@ import magnum as mn
 import numpy as np
 
 from habitat.robots.manipulator import Manipulator
-from habitat.robots.robotbase import RobotBase
+from habitat.robots.robot_base import RobotBase
 from habitat_sim.simulator import Simulator
 
 
@@ -105,21 +105,11 @@ class StaticManipulator(Manipulator, RobotBase):
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
-        Manipulator.reconfigure(self)
-        RobotBase.reconfigure(self)
+        Manipulator.update(self)
+        RobotBase.update(self)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
         Manipulator.reset(self)
         RobotBase.reset(self)
-
-    #############################################
-    # HIDDEN
-    #############################################
-    def _get_translation_from_htm(self, mat: np.ndarray) -> np.ndarray:
-        assert mat.shape == (
-            4,
-            4,
-        ), f"Invalid matrix shape. Homogenous transformation matrices should be 4x4, got {mat.shape} instead"
-        return mat[:3, -1]
