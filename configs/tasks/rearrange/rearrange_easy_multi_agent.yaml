@@ -144,6 +144,9 @@ SIMULATOR:
         HEIGHT: 1.5
         RADIUS: 0.3
         IS_SET_START_STATE: false
+        # A new instance of the sensor is created. The agents do not share a
+        # depth camera, but instead a different depth camera is created for
+        # each agent.
         SENSORS:
         - HEAD_DEPTH_SENSOR
         ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
