@@ -190,14 +190,14 @@ class PPOTrainer(BaseRLTrainer):
                 state_dict=state_dict, strict=False
             )
 
-        # if not self.config.RL.DDPPO.train_encoder:
-        for (
-            param
-        ) in self.actor_critic.net.visual_encoder.backbone.parameters():
-            # self._static_encoder = True
-            self._static_encoder = False
-            for param in self.actor_critic.net.visual_encoder.parameters():
-                param.requires_grad_(False)
+        if not self.config.RL.DDPPO.train_encoder:
+            for (
+                param
+            ) in self.actor_critic.net.visual_encoder.backbone.parameters():
+                # self._static_encoder = True
+                self._static_encoder = False
+                for param in self.actor_critic.net.visual_encoder.parameters():
+                    param.requires_grad_(False)
 
         if self.config.RL.DDPPO.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
