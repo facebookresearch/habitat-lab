@@ -179,9 +179,6 @@ class Manipulator(RobotInterface):
         self._update_motor_settings_cache()
         self.update()
 
-    #############################################
-    # ARM & GRIPPER PROPERTIES GETTERS + SETTERS
-    #############################################
     @property
     def arm_joint_limits(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get the arm joint limits in radians"""
@@ -401,10 +398,6 @@ class Manipulator(RobotInterface):
     def arm_motor_forces(self, ctrl: List[float]) -> None:
         """Set the desired torques of the arm joint motors"""
         self.sim_obj.joint_forces = ctrl
-
-    #############################################
-    # HIDDEN
-    #############################################
 
     def _validate_joint_idx(self, joint):
         if joint not in self.joint_motors:

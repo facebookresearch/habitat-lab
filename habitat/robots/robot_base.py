@@ -94,9 +94,6 @@ class RobotBase(RobotInterface):
     def reset(self) -> None:
         pass
 
-    #############################################
-    # BASE RELATED
-    #############################################
     @property
     def base_pos(self):
         """Get the robot base ground position"""
@@ -160,9 +157,6 @@ class RobotBase(RobotInterface):
             self.sim_obj.get_link_name(link_id) in self.params.base_link_names
         )
 
-    #############################################
-    # HIDDEN
-    #############################################
     def _update_motor_settings_cache(self):
         """Updates the JointMotorSettings cache for cheaper future updates"""
         self.joint_motors = {}
