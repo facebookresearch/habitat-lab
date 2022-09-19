@@ -320,10 +320,14 @@ class HabGymWrapper(gym.Env):
                 self._screen = pygame.display.set_mode(
                     [frame.shape[1], frame.shape[0]]
                 )
-            draw_frame = np.transpose(frame, (1, 0, 2))
+            draw_frame = np.transpose(
+                frame, (1, 0, 2)
+            )  # (H, W, C) -> (W, H, C)
             draw_frame = pygame.surfarray.make_surface(draw_frame)
-            self._screen.fill((0, 0, 0))  # type: ignore[attr-defined]
-            self._screen.blit(draw_frame, (0, 0))  # type: ignore[attr-defined]
+            BLACK_COLOR = (0, 0, 0)
+            self._screen.fill(BLACK_COLOR)  # type: ignore[attr-defined]
+            TOP_CORNER = (0, 0)
+            self._screen.blit(draw_frame, TOP_CORNER)  # type: ignore[attr-defined]
             pygame.display.update()
         else:
             raise ValueError(f"Render mode {mode} not currently supported.")
