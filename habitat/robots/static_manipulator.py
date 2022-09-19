@@ -9,7 +9,6 @@ import magnum as mn
 import numpy as np
 
 from habitat.robots.manipulator import Manipulator
-from habitat.robots.robot_base import RobotBase
 from habitat_sim.simulator import Simulator
 
 
@@ -56,7 +55,7 @@ class StaticManipulatorParams:
     arm_mtr_max_impulse: float
 
 
-class StaticManipulator(Manipulator, RobotBase):
+class StaticManipulator(Manipulator):
     """Robot with a fixed base and controllable arm."""
 
     def __init__(
@@ -84,32 +83,18 @@ class StaticManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
             fixed_based=fixed_base,
         )
-        # instantiate a robotBase
-        RobotBase.__init__(
-            self,
-            urdf_path=urdf_path,
-            params=params,
-            sim=sim,
-            limit_robo_joints=limit_robo_joints,
-            fixed_based=fixed_base,
-            base_type="static",
-            sim_obj=self.sim_obj,
-        )
 
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         Manipulator.reconfigure(self)
-        RobotBase.reconfigure(self)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
         Manipulator.update(self)
-        RobotBase.update(self)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
         Manipulator.reset(self)
-        RobotBase.reset(self)

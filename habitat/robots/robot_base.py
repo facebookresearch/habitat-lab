@@ -23,15 +23,14 @@ class RobotBase(RobotInterface):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_based: bool = True,
-        base_type="static",
+        base_type="mobile",
         sim_obj=None,
         **kwargs,
     ):
         r"""Constructor"""
         assert base_type in [
             "mobile",
-            "static",
-        ], f"'{base_type}' is invalid - valid options are [mobile, static]. Or you write your own class."
+        ], f"'{base_type}' is invalid - valid options are [mobile]. Or you write your own class."
         RobotInterface.__init__(self)
         # Assign the variables
         self.params = params
@@ -105,8 +104,6 @@ class RobotBase(RobotInterface):
                     self.params.base_offset
                 )
             )
-        elif self._base_type == "static":
-            return mn.Vector3()  # zeros
         else:
             raise NotImplementedError("The base type is not implemented.")
 
@@ -123,11 +120,6 @@ class RobotBase(RobotInterface):
                     self.params.base_offset
                 )
             )
-        # attempts to change the base position will result in an error to prevent accidental mobility if the base is static
-        elif self._base_type == "static":
-            raise NotImplementedError(
-                "Setting the base position of a static manipulator is not permitted."
-            )
         else:
             raise NotImplementedError("The base type is not implemented.")
 
@@ -140,10 +132,6 @@ class RobotBase(RobotInterface):
         if self._base_type == "mobile":
             self.sim_obj.rotation = mn.Quaternion.rotation(
                 mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
-            )
-        elif self._base_type == "static":
-            raise NotImplementedError(
-                "Setting the base rotation of a static manipulator is not permitted."
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
