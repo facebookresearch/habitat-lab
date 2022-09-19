@@ -420,8 +420,8 @@ def test_fetch_robot_wrapper(fixed_base):
 
 
 @pytest.mark.skipif(
-    not osp.exists("data/robots/hab_franka"),
-    reason="Test requires Fetch robot URDF and assets.",
+    not osp.exists("data/robots/franka_panda"),
+    reason="Test requires Franka robot URDF and assets.",
 )
 def test_franka_robot_wrapper():
     """Test the franka robot."""
@@ -460,7 +460,7 @@ def test_franka_robot_wrapper():
         sim.navmesh_visualization = True
 
         # add the robot to the world via the wrapper
-        robot_path = "data/robots/hab_franka/robots/panda_arm.urdf"
+        robot_path = "data/robots/franka_panda/panda_arm.urdf"
         franka = franka_robot.FrankaRobot(urdf_path=robot_path, sim=sim)
         franka.reconfigure()
         assert franka.get_robot_sim_id() == 1  # 0 is the ground plane
