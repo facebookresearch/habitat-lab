@@ -343,7 +343,7 @@ class DynNavRLEnv(RearrangeTask):
                 sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
-
+        self._sim.maybe_update_robot()
         return self._get_observations(episode)
 
 
