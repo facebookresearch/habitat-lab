@@ -10,12 +10,15 @@ in habitat. Customized environments should be registered using
 ``@habitat.registry.register_env(name="myEnv")` for reusability
 """
 
+import importlib
 from typing import Optional, Type
 
+import gym
 import numpy as np
 
 import habitat
 from habitat import Config, Dataset
+from habitat.utils.gym_adapter import HabGymWrapper
 
 
 def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
@@ -30,7 +33,6 @@ def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
     return habitat.registry.get_env(env_name)
 
 
-@habitat.registry.register_env(name="RLTaskEnv")
 class RLTaskEnv(habitat.RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
         super().__init__(config, dataset)
@@ -78,3 +80,31 @@ class RLTaskEnv(habitat.RLEnv):
 
     def get_info(self, observations):
         return self.habitat_env.get_metrics()
+
+
+@habitat.registry.register_env(name="GymRegistryEnv")
+class GymRegistryEnv(gym.Wrapper):
+    """
+    A registered environment that wraps a gym environment to be
+    used with habitat-baselines
+    """
+
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None):
+        for dependency in config["ENV_TASK_GYM_DEPENDENCIES"]:
+            importlib.import_module(dependency)
+            env_name = config["ENV_TASK_GYM_ID"]
+        gym_env = gym.make(env_name)
+        super().__init__(gym_env)
+
+
+@habitat.registry.register_env(name="GymHabitatEnv")
+class GymHabitatEnv(gym.Wrapper):
+    """
+    A registered environment that wraps a RLTaskEnv with the HabGymWrapper
+    to use the default gym API.
+    """
+
+    def __init__(self, config: Config, dataset: Optional[Dataset] = None):
+        base_env = RLTaskEnv(config=config, dataset=dataset)
+        env = HabGymWrapper(base_env)
+        super().__init__(env)

@@ -31,6 +31,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
+from habitat_baselines.rl.ddppo.policy import PointNavResNetNet  # noqa: F401.
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
 from habitat_baselines.rl.ver.environment_worker import (
     build_action_plugin_from_policy_action_space,
@@ -211,7 +212,7 @@ class VERTrainer(PPOTrainer):
         if self._static_encoder:
             rollouts_obs_space = spaces.Dict(
                 {
-                    "visual_features": spaces.Box(
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
                         low=np.finfo(np.float32).min,
                         high=np.finfo(np.float32).max,
                         shape=self._encoder.output_shape,

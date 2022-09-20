@@ -82,6 +82,10 @@ def test_rearrange_baseline_envs(test_cfg_path):
     Test the Habitat Baseline environments
     """
     config = baselines_get_config(test_cfg_path)
+    config.defrost()
+    config.TASK_CONFIG.GYM.OBS_KEYS = None
+    config.TASK_CONFIG.GYM.DESIRED_GOAL_KEYS = []
+    config.freeze()
 
     env_class = get_env_class(config.TASK_CONFIG.ENV_TASK)
 

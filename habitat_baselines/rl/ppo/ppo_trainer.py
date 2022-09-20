@@ -49,6 +49,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     save_resume_state,
 )
 from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
+    PointNavResNetNet,
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
@@ -283,7 +284,7 @@ class PPOTrainer(BaseRLTrainer):
             self._encoder = self.actor_critic.net.visual_encoder
             obs_space = spaces.Dict(
                 {
-                    "visual_features": spaces.Box(
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
                         low=np.finfo(np.float32).min,
                         high=np.finfo(np.float32).max,
                         shape=self._encoder.output_shape,
@@ -314,7 +315,9 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._static_encoder:
             with inference_mode():
-                batch["visual_features"] = self._encoder(batch)
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
         self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
@@ -529,7 +532,9 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._static_encoder:
             with inference_mode():
-                batch["visual_features"] = self._encoder(batch)
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
         self.rollouts.insert(
             next_observations=batch,
@@ -988,6 +993,9 @@ class PPOTrainer(BaseRLTrainer):
                 number_of_eval_episodes = total_num_eps
             else:
                 assert evals_per_ep == 1
+        assert (
+            number_of_eval_episodes > 0
+        ), "You must specify a number of evaluation episodes with TEST_EPISODE_COUNT"
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self.actor_critic.eval()
@@ -995,7 +1003,7 @@ class PPOTrainer(BaseRLTrainer):
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and self.envs.num_envs > 0
         ):
-            current_episodes = self.envs.current_episodes()
+            current_episodes_info = self.envs.current_episodes()
 
             with inference_mode():
                 (
@@ -1049,15 +1057,15 @@ class PPOTrainer(BaseRLTrainer):
                 rewards_l, dtype=torch.float, device="cpu"
             ).unsqueeze(1)
             current_episode_reward += rewards
-            next_episodes = self.envs.current_episodes()
+            next_episodes_info = self.envs.current_episodes()
             envs_to_pause = []
             n_envs = self.envs.num_envs
             for i in range(n_envs):
                 if (
                     ep_eval_count[
                         (
-                            next_episodes[i].scene_id,
-                            next_episodes[i].episode_id,
+                            next_episodes_info[i].scene_id,
+                            next_episodes_info[i].episode_id,
                         )
                     ]
                     == evals_per_ep
@@ -1090,8 +1098,8 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     current_episode_reward[i] = 0
                     k = (
-                        current_episodes[i].scene_id,
-                        current_episodes[i].episode_id,
+                        current_episodes_info[i].scene_id,
+                        current_episodes_info[i].episode_id,
                     )
                     ep_eval_count[k] += 1
                     # use scene_id + episode_id as unique id for storing stats
@@ -1102,7 +1110,7 @@ class PPOTrainer(BaseRLTrainer):
                             video_option=self.config.VIDEO_OPTION,
                             video_dir=self.config.VIDEO_DIR,
                             images=rgb_frames[i],
-                            episode_id=current_episodes[i].episode_id,
+                            episode_id=current_episodes_info[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
                             fps=self.config.VIDEO_FPS,
@@ -1117,7 +1125,7 @@ class PPOTrainer(BaseRLTrainer):
                         write_gfx_replay(
                             gfx_str,
                             self.config.TASK_CONFIG.TASK,
-                            current_episodes[i].episode_id,
+                            current_episodes_info[i].episode_id,
                         )
 
             not_done_masks = not_done_masks.to(device=self.device)

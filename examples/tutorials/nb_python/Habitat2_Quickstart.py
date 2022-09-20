@@ -53,7 +53,6 @@ import os
 
 if "COLAB_GPU" in os.environ:
     print("Setting Habitat base path")
-    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
     import importlib
 
     import PIL
@@ -232,7 +231,7 @@ class TargetStartSensor(Sensor):
             self._task.target_object_index
         ]
         relative_start_pos = T_inv.transform_point(start_pos)
-        return relative_start_pos
+        return np.asarray(relative_start_pos)
 
 
 @registry.register_measure

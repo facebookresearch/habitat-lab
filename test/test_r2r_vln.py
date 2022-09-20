@@ -20,7 +20,7 @@ R2R_VAL_SEEN_EPISODES = 778
 EPISODES_LIMIT = 1
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
     logger.info(
@@ -51,7 +51,7 @@ def test_r2r_vln_dataset():
         len(dataset.episodes) == R2R_VAL_SEEN_EPISODES
     ), "Val Seen split episode number mismatch"
 
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "val_seen", "val_unseen"])

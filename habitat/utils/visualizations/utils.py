@@ -216,28 +216,16 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
     """
     render_obs_images: List[np.ndarray] = []
     for sensor_name in observation:
-        if "rgb" in sensor_name:
-            rgb = observation[sensor_name]
-            if not isinstance(rgb, np.ndarray):
-                rgb = rgb.cpu().numpy()
-
-            render_obs_images.append(rgb)
-        elif "depth" in sensor_name:
-            depth_map = observation[sensor_name].squeeze() * 255.0
-            if not isinstance(depth_map, np.ndarray):
-                depth_map = depth_map.cpu().numpy()
-
-            depth_map = depth_map.astype(np.uint8)
-            depth_map = np.stack([depth_map for _ in range(3)], axis=2)
-            render_obs_images.append(depth_map)
-
-    # add image goal if observation has image_goal info
-    if "imagegoal" in observation:
-        rgb = observation["imagegoal"]
-        if not isinstance(rgb, np.ndarray):
-            rgb = rgb.cpu().numpy()
-
-        render_obs_images.append(rgb)
+        if len(observation[sensor_name].shape) > 1:
+            obs_k = observation[sensor_name]
+            if not isinstance(obs_k, np.ndarray):
+                obs_k = obs_k.cpu().numpy()
+            if obs_k.dtype != np.uint8:
+                obs_k = obs_k * 255.0
+                obs_k = obs_k.astype(np.uint8)
+            if obs_k.shape[2] == 1:
+                obs_k = np.concatenate([obs_k for _ in range(3)], axis=2)
+            render_obs_images.append(obs_k)
 
     assert (
         len(render_obs_images) > 0

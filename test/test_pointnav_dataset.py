@@ -32,7 +32,7 @@ PARTIAL_LOAD_SCENES = 3
 NUM_EPISODES = 10
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
     logger.info(
@@ -61,7 +61,7 @@ def test_single_pointnav_dataset():
     assert (
         len(dataset.scene_ids) == 2
     ), "The test dataset scenes number is wrong."
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 def test_multiple_files_scene_path():
@@ -109,7 +109,7 @@ def test_multiple_files_pointnav_dataset():
     assert (
         len(partial_dataset.scene_ids) == PARTIAL_LOAD_SCENES
     ), "Number of loaded scenes doesn't correspond."
-    check_json_serializaiton(partial_dataset)
+    check_json_serialization(partial_dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "val"])

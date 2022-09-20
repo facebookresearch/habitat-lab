@@ -39,7 +39,6 @@ import os
 
 if "COLAB_GPU" in os.environ:
     print("Setting Habitat base path")
-    # %env HABLAB_BASE_CFG_PATH=/content/habitat-lab
     import importlib
 
     import PIL

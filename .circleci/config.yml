@@ -138,7 +138,7 @@ jobs:
                 . activate habitat
                 pip install -U pip
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
-                pip install pytest-sugar cython
+                pip install pytest-sugar cython pygame
               fi
       - run:
           name: Install pytorch
@@ -201,6 +201,13 @@ jobs:
                 wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
                 unzip habitat-test-scenes.zip
                 rm habitat-test-scenes.zip
+                cd -
+              fi
+              if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
+              then
+                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+                . activate habitat
+                python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
               fi
       - run:
           name: Download coda scene
@@ -253,7 +260,8 @@ jobs:
               python setup.py develop --all
               find . -name ci-requirements.txt | xargs -I {} pip install -r {}
               export PYTHONPATH=.:$PYTHONPATH
-              python setup.py test --addopts "--cov-report=xml --cov-report term  --cov=./"
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              python setup.py test --addopts " --cov-report=xml --cov-report term  --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:
