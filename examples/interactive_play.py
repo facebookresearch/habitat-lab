@@ -28,6 +28,7 @@ Controls:
     - W,S,A,D,Q,E to translate the camera
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
+- X to change the robot that is being controlled (if there are multiple robots).
 
 Change the task with `--cfg configs/tasks/rearrange/close_cab.yaml` (choose any task under the `configs/tasks/rearrange/` folder).
 
@@ -54,6 +55,7 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
@@ -77,19 +79,24 @@ def step_env(env, action_name, action_args):
 
 
 def get_input_vel_ctlr(
-    skip_pygame,
-    arm_action,
-    env,
-    not_block_input,
+    skip_pygame, arm_action, env, not_block_input, agent_to_control
 ):
     if skip_pygame:
         return step_env(env, "EMPTY", {}), None, False
+    multi_agent = len(env._sim.robots_mgr) > 1
 
     arm_action_name = "ARM_ACTION"
     base_action_name = "BASE_VELOCITY"
     arm_key = "arm_action"
     grip_key = "grip_action"
     base_key = "base_vel"
+    if multi_agent:
+        agent_k = f"AGENT_{agent_to_control}"
+        arm_action_name = f"{agent_k}_{arm_action_name}"
+        base_action_name = f"{agent_k}_{base_action_name}"
+        arm_key = f"{agent_k}_{arm_key}"
+        grip_key = f"{agent_k}_{grip_key}"
+        base_key = f"{agent_k}_{base_key}"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
@@ -190,12 +197,12 @@ def get_input_vel_ctlr(
             raise ValueError("Unrecognized arm action space")
 
         if keys[pygame.K_p]:
-            print("[play.py]: Unsnapping")
+            logger.info("[play.py]: Unsnapping")
             # Unsnap
             magic_grasp = -1
         elif keys[pygame.K_o]:
             # Snap
-            print("[play.py]: Snapping")
+            logger.info("[play.py]: Snapping")
             magic_grasp = 1
 
     if keys[pygame.K_PERIOD]:
@@ -203,11 +210,13 @@ def get_input_vel_ctlr(
         pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
         rot = env._sim.robot.sim_obj.rotation
         ee_pos = env._sim.robot.ee_transform.translation
-        print(f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}")
+        logger.info(
+            f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
+        )
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the robot, useful for debugging.
         joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
-        print(f"Robot arm joint state: {joint_state}")
+        logger.info(f"Robot arm joint state: {joint_state}")
 
     args = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
@@ -258,7 +267,7 @@ class FreeCamHelper:
         keys = pygame.key.get_pressed()
         if keys[pygame.K_z] and (update_idx - self._last_pressed) > 60:
             self._is_free_cam_mode = not self._is_free_cam_mode
-            print(f"Switching camera mode to {self._is_free_cam_mode}")
+            logger.info(f"Switching camera mode to {self._is_free_cam_mode}")
             self._last_pressed = update_idx
 
         if self._is_free_cam_mode:
@@ -318,7 +327,7 @@ def play_env(env, args, config):
     if args.load_actions is not None:
         with open(args.load_actions, "rb") as f:
             use_arm_actions = np.load(f)
-            print("Loaded arm actions")
+            logger.info("Loaded arm actions")
 
     obs = env.reset()
 
@@ -335,11 +344,13 @@ def play_env(env, args, config):
     all_obs = []
     total_reward = 0
     all_arm_actions = []
+    agent_to_control = 0
 
     free_cam = FreeCamHelper()
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
+    is_multi_agent = len(env._sim.robots_mgr) > 1
 
     while True:
         if (
@@ -356,6 +367,13 @@ def play_env(env, args, config):
         else:
             keys = pygame.key.get_pressed()
 
+        if not args.no_render and is_multi_agent and keys[pygame.K_x]:
+            agent_to_control += 1
+            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            logger.info(
+                f"Controlled agent changed. Controlling agent {agent_to_control}."
+            )
+
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[update_idx]
@@ -363,18 +381,19 @@ def play_env(env, args, config):
             else None,
             env,
             not free_cam.is_free_cam_mode,
+            agent_to_control,
         )
 
         if not args.no_render and keys[pygame.K_c]:
             pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
-            print("Actions:")
+            logger.info("Actions:")
             actions = pddl_action._action_ordering
             for i, action in enumerate(actions):
-                print(f"{i}: {action}")
+                logger.info(f"{i}: {action}")
             entities = pddl_action._entities_list
-            print("Entities")
+            logger.info("Entities")
             for i, entity in enumerate(entities):
-                print(f"{i}: {entity}")
+                logger.info(f"{i}: {entity}")
             action_sel = input("Enter Action Selection: ")
             entity_sel = input("Enter Entity Selection: ")
             action_sel = int(action_sel)
@@ -390,11 +409,11 @@ def play_env(env, args, config):
                 "all_predicates"
             ]._predicates_list
             pred_values = step_result["all_predicates"]
-            print("\nPredicate Truth Values:")
+            logger.info("\nPredicate Truth Values:")
             for i, (pred, pred_value) in enumerate(
                 zip(pred_list, pred_values)
             ):
-                print(f"{i}: {pred.compact_str} = {pred_value}")
+                logger.info(f"{i}: {pred.compact_str} = {pred_value}")
 
         if step_result is None:
             break
@@ -467,7 +486,7 @@ def play_env(env, args, config):
         save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)
-        print(f"Saved actions to {save_path}")
+        logger.info(f"Saved actions to {save_path}")
         pygame.quit()
         return
 
