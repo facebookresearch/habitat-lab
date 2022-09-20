@@ -4,12 +4,14 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 from os import path as osp
 
 import numpy as np
 import pytest
 
 import habitat.robots.fetch_robot as fetch_robot
+import habitat.robots.franka_robot as franka_robot
 import habitat_sim
 import habitat_sim.agent
 
@@ -273,6 +275,7 @@ def simulate(sim, dt, get_observations=False):
 )
 @pytest.mark.parametrize("fixed_base", [True, False])
 def test_fetch_robot_wrapper(fixed_base):
+    """Test the fetch robot."""
     # set this to output test results as video for easy investigation
     produce_debug_video = False
     observations = []
@@ -318,7 +321,10 @@ def test_fetch_robot_wrapper(fixed_base):
         # retract the arm
         observations += fetch._interpolate_arm_control(
             [1.2299035787582397, 2.345386505126953],
-            [fetch.params.arm_joints[1], fetch.params.arm_joints[3]],
+            [
+                fetch.params.arm_joints[1],
+                fetch.params.arm_joints[3],
+            ],
             1,
             30,
             produce_debug_video,
@@ -327,7 +333,10 @@ def test_fetch_robot_wrapper(fixed_base):
         # ready the arm
         observations += fetch._interpolate_arm_control(
             [-0.45, 0.1],
-            [fetch.params.arm_joints[1], fetch.params.arm_joints[3]],
+            [
+                fetch.params.arm_joints[1],
+                fetch.params.arm_joints[3],
+            ],
             1,
             30,
             produce_debug_video,
@@ -376,7 +385,8 @@ def test_fetch_robot_wrapper(fixed_base):
         # kinematic open/close (checked before simulation)
         fetch.gripper_joint_pos = fetch.params.gripper_open_state
         assert np.allclose(
-            fetch.gripper_joint_pos, fetch.params.gripper_open_state
+            fetch.gripper_joint_pos,
+            fetch.params.gripper_open_state,
         )
         assert fetch.is_gripper_open
         observations += simulate(sim, 0.2, produce_debug_video)
@@ -405,5 +415,121 @@ def test_fetch_robot_wrapper(fixed_base):
                 "color_sensor",
                 "color",
                 "test_fetch_robot_wrapper__fixed_base=" + str(fixed_base),
+                open_vid=True,
+            )
+
+
+@pytest.mark.skipif(
+    not osp.exists("data/robots/franka_panda"),
+    reason="Test requires Franka robot URDF and assets.",
+)
+def test_franka_robot_wrapper():
+    """Test the franka robot."""
+    # set this to output test results as video for easy investigation
+    produce_debug_video = False
+    observations = []
+    cfg_settings = default_sim_settings.copy()
+    cfg_settings["scene"] = "NONE"
+    cfg_settings["enable_physics"] = True
+
+    # loading the physical scene
+    hab_cfg = make_cfg(cfg_settings)
+
+    with habitat_sim.Simulator(hab_cfg) as sim:
+        obj_template_mgr = sim.get_object_template_manager()
+        rigid_obj_mgr = sim.get_rigid_object_manager()
+
+        # setup the camera for debug video (looking at 0,0,0)
+        sim.agents[0].scene_node.translation = [0.0, -1.0, 2.0]
+
+        # add a ground plane
+        cube_handle = obj_template_mgr.get_template_handles("cubeSolid")[0]
+        cube_template_cpy = obj_template_mgr.get_template_by_handle(
+            cube_handle
+        )
+        cube_template_cpy.scale = np.array([5.0, 0.2, 5.0])
+        obj_template_mgr.register_template(cube_template_cpy)
+        ground_plane = rigid_obj_mgr.add_object_by_template_handle(cube_handle)
+        ground_plane.translation = [0.0, -0.2, 0.0]
+        ground_plane.motion_type = habitat_sim.physics.MotionType.STATIC
+
+        # compute a navmesh on the ground plane
+        navmesh_settings = habitat_sim.NavMeshSettings()
+        navmesh_settings.set_defaults()
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
+        sim.navmesh_visualization = True
+
+        # add the robot to the world via the wrapper
+        robot_path = "data/robots/franka_panda/panda_arm.urdf"
+        franka = franka_robot.FrankaRobot(urdf_path=robot_path, sim=sim)
+        franka.reconfigure()
+        assert franka.get_robot_sim_id() == 1  # 0 is the ground plane
+        print(franka.get_link_and_joint_names())
+        observations += simulate(sim, 1.0, produce_debug_video)
+
+        # move the arm
+        observations += franka._interpolate_arm_control(
+            [1.2299035787582397, 2.345386505126953],
+            [
+                franka.params.arm_joints[1],
+                franka.params.arm_joints[3],
+            ],
+            1,
+            30,
+            produce_debug_video,
+        )
+
+        # move the arm
+        observations += franka._interpolate_arm_control(
+            [-0.45, 0.1],
+            [
+                franka.params.arm_joints[1],
+                franka.params.arm_joints[3],
+            ],
+            1,
+            30,
+            produce_debug_video,
+        )
+
+        # setting arm motor positions
+        franka.arm_motor_pos = np.zeros(len(franka.params.arm_joints))
+        observations += simulate(sim, 1.0, produce_debug_video)
+        assert np.allclose(
+            franka.arm_motor_pos,
+            np.zeros(len(franka.params.arm_joints)),
+        )
+
+        # arm joint queries and setters
+        print(f" Arm joint velocities = {franka.arm_velocity}")
+        franka.arm_joint_pos = np.ones(len(franka.params.arm_joints))
+        franka.arm_motor_pos = np.ones(len(franka.params.arm_joints))
+        print(
+            f" Arm joint positions (should be ones) = {franka.arm_joint_pos}"
+        )
+        print(f" Arm joint limits = {franka.arm_joint_limits}")
+        franka.arm_motor_pos = franka.arm_motor_pos
+        observations += simulate(sim, 1.0, produce_debug_video)
+
+        # end effector queries
+        print(f" End effector link id = {franka.ee_link_id}")
+        print(f" End effector local offset = {franka.ee_local_offset}")
+        print(f" End effector transform = {franka.ee_transform}")
+        print(
+            f" End effector translation (at current state) = {franka.calculate_ee_forward_kinematics(franka.sim_obj.joint_positions)}"
+        )
+        invalid_ef_target = np.array([100.0, 200.0, 300.0])
+        print(
+            f" Clip end effector target ({invalid_ef_target}) to reach = {franka.clip_ee_to_workspace(invalid_ef_target)}"
+        )
+
+        # produce some test debug video
+        if produce_debug_video:
+            from habitat_sim.utils import viz_utils as vut
+
+            vut.make_video(
+                observations,
+                "color_sensor",
+                "color",
+                "test_franka_robot_wrapper",
                 open_vid=True,
             )
