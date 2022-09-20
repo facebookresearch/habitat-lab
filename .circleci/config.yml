@@ -260,7 +260,8 @@ jobs:
               python setup.py develop --all
               find . -name ci-requirements.txt | xargs -I {} pip install -r {}
               export PYTHONPATH=.:$PYTHONPATH
-              python setup.py test --addopts "--cov-report=xml --cov-report term  --cov=./"
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+              python setup.py test --addopts " --cov-report=xml --cov-report term  --cov=./"
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml
       - run:

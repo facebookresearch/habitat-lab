@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import importlib
+import sys
 from glob import glob
 
 import gym
 import gym.spaces as spaces
+import mock
 import numpy as np
 import pytest
 
@@ -15,7 +18,10 @@ import habitat.utils.env_utils
 import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
 from habitat.utils.gym_definitions import _get_env_name
-from habitat.utils.render_wrapper import HabRenderWrapper
+
+# using mock for pygame to avoid having a pygame windows
+sys.modules["pygame"] = mock.MagicMock()
+importlib.reload(habitat.utils.gym_adapter)
 
 
 @pytest.mark.parametrize(
@@ -64,7 +70,6 @@ def test_gym_wrapper_contract_continuous(
         env_class=env_class, config=config
     )
 
-    env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Box)
     assert (
         env.action_space.shape[0] == expected_action_dim
@@ -113,8 +118,6 @@ def test_gym_wrapper_contract_discrete(
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
-
-    env = HabRenderWrapper(env)
     assert isinstance(env.action_space, spaces.Discrete)
     assert (
         env.action_space.n == expected_action_dim
@@ -183,7 +186,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     config = habitat.get_config(test_cfg_path)
     if "GYM" not in config or config.GYM.AUTO_NAME == "":
         pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
-
+    pytest.importorskip("pygame")
     for prefix in ["", "Render"]:
         full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
 
@@ -193,7 +196,13 @@ def test_auto_gym_wrapper(test_cfg_path):
             override_options=["SIMULATOR.CONCUR_RENDER", False],
         )
         hab_gym.reset()
-        hab_gym.step(hab_gym.action_space.sample())
+        done = False
+        for _ in range(5):
+            hab_gym.render(mode="human")
+            _, _, done, _ = hab_gym.step(hab_gym.action_space.sample())
+            if done:
+                hab_gym.reset()
+
         hab_gym.close()
 
 
