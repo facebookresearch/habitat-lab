@@ -60,6 +60,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
     _HABITAT_CFG_DIR + "/test/new_keys_test.yaml",
     # Trainer excluded because does not use the default config
     _HABITAT_CFG_DIR + "/baselines/ppo.yaml",
+    _HABITAT_CFG_DIR + "/tasks/rearrange/rearrange_easy_multi_agent.yaml",
     # Planning Domain Definition Language configs are
     # excluded since they do not implement the default config
 ] + glob(_HABITAT_CFG_DIR + "/**/pddl/*.yaml", recursive=True)

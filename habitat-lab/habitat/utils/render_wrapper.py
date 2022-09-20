@@ -7,7 +7,6 @@
 from typing import List
 
 import cv2
-import gym
 import numpy as np
 
 from habitat.utils.gym_adapter import flatten_dict
@@ -80,50 +79,3 @@ def overlay_frame(frame, info, additional=None):
     frame = append_text_to_image(frame, lines, font_size=0.25)
 
     return frame
-
-
-class HabRenderWrapper(gym.Wrapper):
-    """
-    Overlays the measures values as text over the rendered frame. Only affects
-    the behavior of the `.render()` method. Also records and displays the
-    accumulated reward and number of steps. Example usage:
-    ```
-    env = make_gym_from_config(config)
-    env = HabRenderWrapper(env)
-    ```
-    """
-
-    def __init__(self, env):
-        if not isinstance(env, gym.Env):
-            raise ValueError("Can only wrap gym env")
-        super().__init__(env)
-        self._last_info = None
-        self._total_reward = 0.0
-        self._n_step = 0
-
-    def step(self, action):
-        obs, reward, done, info = super().step(action)
-        self._last_info = info
-        self._total_reward += reward
-        self._n_step += 1
-
-        return obs, reward, done, info
-
-    def reset(self):
-        self._last_info = None
-        self._total_reward = 0.0
-        self._n_step = 0
-        return super().reset()
-
-    def render(self, mode="rgb_array"):
-        frame = super().render(mode=mode)
-        if self._last_info is not None:
-            frame = overlay_frame(
-                frame,
-                self._last_info,
-                [
-                    f"Step {self._n_step}",
-                    f"Total Reward {self._total_reward:.4f}",
-                ],
-            )
-        return frame

@@ -88,7 +88,7 @@ Training checkpoints are by default stored in `data/eqa/vqa/checkpoints`.
 
 ### Pre-trained model
 
-Pre-trained VQA model can be downloaded from [here](https://www.dropbox.com/s/5e4srcc5odl4rbo/pretrained_vqa.ckpt?dl=0).
+Pre-trained VQA model can be downloaded from [here](https://drive.google.com/file/d/1frhIlgF1BpBT_vnRt7J5txlnfvgwXLeq/view?usp=sharing).
 
 After downloading the pre-trained model, add it's path to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation.
 

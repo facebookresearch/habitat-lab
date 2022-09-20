@@ -70,7 +70,7 @@ def get_minos_for_sim_eqa_config():
     return _sim_eqa_c
 
 
-def check_json_serializaiton(dataset: habitat.Dataset):
+def check_json_serialization(dataset: habitat.Dataset):
     start_time = time.time()
     json_str = str(dataset.to_json())
     logger.info(
@@ -98,7 +98,7 @@ def test_mp3d_eqa_dataset():
     assert (
         len(dataset.episodes) == mp3d_dataset.EQA_MP3D_V1_VAL_EPISODE_COUNT
     ), "Test split episode number mismatch"
-    check_json_serializaiton(dataset)
+    check_json_serialization(dataset)
 
 
 @pytest.mark.parametrize("split", ["train", "val"])

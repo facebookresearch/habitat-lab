@@ -1,0 +1,175 @@
+GYM:
+    AUTO_NAME: RearrangeEasyMultiAgent
+    OBS_KEYS:
+    - AGENT_0_robot_head_depth
+    - AGENT_1_robot_head_depth
+    - AGENT_0_obj_start_sensor
+    - AGENT_1_obj_start_sensor
+    - AGENT_0_obj_goal_sensor
+    - AGENT_1_obj_goal_sensor
+    - AGENT_0_joint
+    - AGENT_1_joint
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 1500
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
+    SCENES_DIR: data/replica_cad/
+TASK:
+    TYPE: RearrangeCompositeTask-v0
+    REWARD_MEASURE: composite_success
+    SUCCESS_MEASURE: composite_success
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    END_ON_SUCCESS: true
+    COUNT_OBJ_COLLISIONS: true
+    COUNT_ROBOT_OBJ_COLLS: false
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: True
+    BASE_ANGLE_NOISE: 0.15
+    BASE_NOISE: 0.05
+    EASY_INIT: false
+    TASK_SPEC_BASE_PATH: tasks/rearrange/pddl/
+    TASK_SPEC: rearrange_easy
+    PDDL_DOMAIN_DEF: replica_cad
+    OBJ_SUCC_THRESH: 0.3
+    ART_SUCC_THRESH: 0.15
+
+    # The sensor spec is specified per agent and then duplicated
+    # across each agent (a homogenous observation space). If the sensor derives
+    # from `UsesRobotInterface` then it is automatically duplicated.
+    # Hetrogeneous observation spaces are also supported by not deriving from
+    # `UsesRobotInterface`.
+    SENSORS:
+    - RELATIVE_RESTING_POS_SENSOR
+    - TARGET_START_SENSOR
+    - GOAL_SENSOR
+    - JOINT_SENSOR
+    - IS_HOLDING_SENSOR
+    - END_EFFECTOR_SENSOR
+    - TARGET_START_GPS_COMPASS_SENSOR
+    - TARGET_GOAL_GPS_COMPASS_SENSOR
+    FORCE_TERMINATE:
+        TYPE: ForceTerminate
+        MAX_ACCUM_FORCE: 100_000.0
+        MAX_INSTANT_FORCE: 10_000.0
+    COMPOSITE_SUCCESS:
+        MUST_CALL_STOP: False
+    # Unlike sensors, measurements are not automatically duplicated per agent.
+    MEASUREMENTS:
+    - OBJECT_TO_GOAL_DISTANCE
+    - ROBOT_FORCE
+    - FORCE_TERMINATE
+    - ROBOT_COLLS
+    - COMPOSITE_SUCCESS
+    - NUM_STEPS
+    ACTIONS:
+      # Actions are defined per agent. Unlike the sensors, actions are not
+      # automatically duplicated per agent.
+      AGENT_0_ARM_ACTION:
+          AGENT: 0
+          TYPE: ArmAction
+          ARM_CONTROLLER: ArmRelPosAction
+          GRIP_CONTROLLER: MagicGraspAction
+          ARM_JOINT_DIMENSIONALITY: 7
+          GRASP_THRESH_DIST: 0.15
+          DISABLE_GRIP: false
+          DELTA_POS_LIMIT: 0.0125
+          EE_CTRL_LIM: 0.015
+      AGENT_0_BASE_VELOCITY:
+          AGENT: 0
+          TYPE: BaseVelAction
+          LIN_SPEED: 10.0
+          ANG_SPEED: 10.0
+          ALLOW_DYN_SLIDE: true
+          END_ON_STOP: false
+          ALLOW_BACK: true
+          MIN_ABS_LIN_SPEED: 1.0
+          MIN_ABS_ANG_SPEED: 1.0
+      AGENT_1_ARM_ACTION:
+          AGENT: 1
+          TYPE: ArmAction
+          ARM_CONTROLLER: ArmRelPosAction
+          GRIP_CONTROLLER: MagicGraspAction
+          ARM_JOINT_DIMENSIONALITY: 7
+          GRASP_THRESH_DIST: 0.15
+          DISABLE_GRIP: false
+          DELTA_POS_LIMIT: 0.0125
+          EE_CTRL_LIM: 0.015
+      AGENT_1_BASE_VELOCITY:
+          AGENT: 1
+          TYPE: BaseVelAction
+          LIN_SPEED: 10.0
+          ANG_SPEED: 10.0
+          ALLOW_DYN_SLIDE: true
+          END_ON_STOP: false
+          ALLOW_BACK: true
+          MIN_ABS_LIN_SPEED: 1.0
+          MIN_ABS_ANG_SPEED: 1.0
+      AGENT_0_REARRANGE_STOP:
+          TYPE: RearrangeStopAction
+      AGENT_1_REARRANGE_STOP:
+          TYPE: RearrangeStopAction
+    POSSIBLE_ACTIONS:
+      - AGENT_0_ARM_ACTION
+      - AGENT_0_BASE_VELOCITY
+      - AGENT_0_REARRANGE_STOP
+      - AGENT_1_ARM_ACTION
+      - AGENT_1_BASE_VELOCITY
+      - AGENT_1_REARRANGE_STOP
+SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
+    ACTION_SPACE_CONFIG: v0
+    GRASP_IMPULSE: 10000.0
+    HOLD_THRESH: 0.2
+    AC_FREQ_RATIO: 4
+    DEBUG_RENDER: false
+    DEBUG_RENDER_GOAL: true
+    AGENTS:
+    - AGENT_0
+    - AGENT_1
+    AGENT_0:
+        HEIGHT: 1.5
+        RADIUS: 0.3
+        IS_SET_START_STATE: false
+        SENSORS:
+        - HEAD_DEPTH_SENSOR
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+        JOINT_START_NOISE: 0.0
+    AGENT_1:
+        HEIGHT: 1.5
+        RADIUS: 0.3
+        IS_SET_START_STATE: false
+        # A new instance of the sensor is created. The agents do not share a
+        # depth camera, but instead a different depth camera is created for
+        # each agent.
+        SENSORS:
+        - HEAD_DEPTH_SENSOR
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+        JOINT_START_NOISE: 0.0
+    HEAD_RGB_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: true
+    CTRL_FREQ: 120.0
+    DEFAULT_AGENT_ID: 0
+    FORWARD_STEP_SIZE: 0.25
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: false
+        ENABLE_PHYSICS: true
+        GPU_DEVICE_ID: 0
+        GPU_GPU: false
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    SEED: 100
+    TYPE: RearrangeSim-v0

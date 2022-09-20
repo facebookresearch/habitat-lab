@@ -32,6 +32,7 @@ try:
 except ImportError:
     baseline_installed = False
 
+from habitat import make_dataset
 from habitat.utils.gym_definitions import make_gym_from_config
 
 
@@ -45,11 +46,10 @@ def download_data():
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "test_cfg_path,mode,gpu2gpu,observation_transforms",
+    "test_cfg_path,gpu2gpu,observation_transforms,mode",
     list(
         itertools.product(
             glob("habitat-baselines/habitat_baselines/config/test/*"),
-            ["train", "eval"],
             [False],
             [
                 [],
@@ -58,6 +58,7 @@ def download_data():
                     "ResizeShortestEdge",
                 ],
             ],
+            ["train", "eval"],
         )
     )
     + list(
@@ -65,7 +66,6 @@ def download_data():
             [
                 "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
             ],
-            ["train", "eval"],
             [True],
             [
                 [],
@@ -74,12 +74,18 @@ def download_data():
                     "ResizeShortestEdge",
                 ],
             ],
+            ["train", "eval"],
         )
     ),
 )
-def test_trainers(test_cfg_path, mode, gpu2gpu, observation_transforms):
+def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
+
+    config = get_config(test_cfg_path).TASK_CONFIG.DATASET
+    dataset = make_dataset(id_dataset=config.TYPE)
+    if not dataset.check_config_paths_exist(config):
+        pytest.skip("Test skipped as dataset files are missing.")
 
     if gpu2gpu:
         try:

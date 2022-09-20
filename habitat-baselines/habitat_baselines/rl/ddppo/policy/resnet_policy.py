@@ -14,6 +14,7 @@ from torch import nn as nn
 from torch.nn import functional as F
 
 from habitat.config import Config
+from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
     EpisodicGPSSensor,
@@ -224,6 +225,7 @@ class PointNavResNetNet(Net):
     goal vector with CNN's output and passes that through RNN.
     """
 
+    PRETRAINED_VISUAL_FEATURES_KEY = "visual_features"
     prev_action_embedding: nn.Module
 
     def __init__(
@@ -269,6 +271,7 @@ class PointNavResNetNet(Net):
                 ProximitySensor.cls_uuid,
                 EpisodicCompassSensor.cls_uuid,
                 ImageGoalSensor.cls_uuid,
+                InstanceImageGoalSensor.cls_uuid,
             }
             fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
         self._fuse_keys_1d: List[str] = [
@@ -345,26 +348,32 @@ class PointNavResNetNet(Net):
             self.compass_embedding = nn.Linear(input_compass_dim, 32)
             rnn_input_size += 32
 
-        if ImageGoalSensor.cls_uuid in observation_space.spaces:
-            goal_observation_space = spaces.Dict(
-                {"rgb": observation_space.spaces[ImageGoalSensor.cls_uuid]}
-            )
-            self.goal_visual_encoder = ResNetEncoder(
-                goal_observation_space,
-                baseplanes=resnet_baseplanes,
-                ngroups=resnet_baseplanes // 2,
-                make_backbone=getattr(resnet, backbone),
-            )
+        for uuid in [
+            ImageGoalSensor.cls_uuid,
+            InstanceImageGoalSensor.cls_uuid,
+        ]:
+            if uuid in observation_space.spaces:
+                goal_observation_space = spaces.Dict(
+                    {"rgb": observation_space.spaces[uuid]}
+                )
+                goal_visual_encoder = ResNetEncoder(
+                    goal_observation_space,
+                    baseplanes=resnet_baseplanes,
+                    ngroups=resnet_baseplanes // 2,
+                    make_backbone=getattr(resnet, backbone),
+                )
+                setattr(self, f"{uuid}_encoder", goal_visual_encoder)
 
-            self.goal_visual_fc = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(
-                    np.prod(self.goal_visual_encoder.output_shape), hidden_size
-                ),
-                nn.ReLU(True),
-            )
+                goal_visual_fc = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(
+                        np.prod(goal_visual_encoder.output_shape), hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
+                setattr(self, f"{uuid}_fc", goal_visual_fc)
 
-            rnn_input_size += hidden_size
+                rnn_input_size += hidden_size
 
         self._hidden_size = hidden_size
 
@@ -431,8 +440,15 @@ class PointNavResNetNet(Net):
         x = []
         aux_loss_state = {}
         if not self.is_blind:
-            if "visual_feats" in observations:  # noqa: SIM401
-                visual_feats = observations["visual_feats"]
+            # We CANNOT use observations.get() here because self.visual_encoder(observations)
+            # is an expensive operation. Therefore, we need `# noqa: SIM401`
+            if (  # noqa: SIM401
+                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                in observations
+            ):
+                visual_feats = observations[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ]
             else:
                 visual_feats = self.visual_encoder(observations)
 
@@ -522,10 +538,18 @@ class PointNavResNetNet(Net):
                 self.gps_embedding(observations[EpisodicGPSSensor.cls_uuid])
             )
 
-        if ImageGoalSensor.cls_uuid in observations:
-            goal_image = observations[ImageGoalSensor.cls_uuid]
-            goal_output = self.goal_visual_encoder({"rgb": goal_image})
-            x.append(self.goal_visual_fc(goal_output))
+        for uuid in [
+            ImageGoalSensor.cls_uuid,
+            InstanceImageGoalSensor.cls_uuid,
+        ]:
+            if uuid in observations:
+                goal_image = observations[uuid]
+
+                goal_visual_encoder = getattr(self, f"{uuid}_encoder")
+                goal_visual_output = goal_visual_encoder({"rgb": goal_image})
+
+                goal_visual_fc = getattr(self, f"{uuid}_fc")
+                x.append(goal_visual_fc(goal_visual_output))
 
         if self.discrete_actions:
             prev_actions = prev_actions.squeeze(-1)

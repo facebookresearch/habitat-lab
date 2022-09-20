@@ -49,6 +49,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     save_resume_state,
 )
 from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
+    PointNavResNetNet,
     PointNavResNetPolicy,
 )
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
@@ -283,7 +284,7 @@ class PPOTrainer(BaseRLTrainer):
             self._encoder = self.actor_critic.net.visual_encoder
             obs_space = spaces.Dict(
                 {
-                    "visual_features": spaces.Box(
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
                         low=np.finfo(np.float32).min,
                         high=np.finfo(np.float32).max,
                         shape=self._encoder.output_shape,
@@ -314,7 +315,9 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._static_encoder:
             with inference_mode():
-                batch["visual_features"] = self._encoder(batch)
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
         self.rollouts.buffers["observations"][0] = batch  # type: ignore
 
@@ -529,7 +532,9 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._static_encoder:
             with inference_mode():
-                batch["visual_features"] = self._encoder(batch)
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
         self.rollouts.insert(
             next_observations=batch,

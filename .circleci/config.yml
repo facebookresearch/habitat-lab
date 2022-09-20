@@ -268,6 +268,7 @@ jobs:
               pip install -e habitat-lab
               pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               python -m pytest --cov-report=xml --cov-report term  --cov=./
 
               bash <(curl -s https://codecov.io/bash) -f coverage.xml

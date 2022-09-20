@@ -15,9 +15,8 @@ import habitat
 import habitat.utils.env_utils
 from habitat.config.default import _HABITAT_CFG_DIR, Config
 from habitat.core.environments import get_env_class
-from habitat.utils.render_wrapper import HabRenderWrapper
 
-gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/rearrange/")
+gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:
@@ -69,8 +68,6 @@ def _make_habitat_gym_env(
     # Re-loading the config since we modified the override_options
     config = habitat.get_config(cfg_file_path, override_options)
     env = make_gym_from_config(config)
-    if use_render_mode:
-        env = HabRenderWrapper(env)
     return env
 
 
