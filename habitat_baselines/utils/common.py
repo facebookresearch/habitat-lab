@@ -413,7 +413,7 @@ def poll_checkpoint_folder(
 
     Returns:
         return checkpoint path if (previous_ckpt_ind + 1)th checkpoint is found
-        else return None.
+        else return None. And the new checkpoint index.
     """
     assert os.path.isdir(checkpoint_folder), (
         f"invalid checkpoint folder " f"path {checkpoint_folder}"

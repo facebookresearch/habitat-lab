@@ -501,7 +501,7 @@ class BatchedEnv:
                 self._debug_camera = Camera(
                     "base_link",
                     mn.Vector3(
-                        -0.8, 3.5, -0.8
+                        -0.8, 2.7, -0.8
                     ),  # place behind, above, and to the left of the base
                     mn.Quaternion.rotation(
                         mn.Deg(-120.0), mn.Vector3(0.0, 1.0, 0.0)
@@ -849,7 +849,7 @@ class BatchedEnv:
             ):
                 self._drop_position[b] = obj_pos
 
-            success = end_episode_action and object_is_close_to_goal
+            success = object_is_close_to_goal
             if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
                 success = False
                 if self._drop_position[b] is not None:
@@ -865,7 +865,10 @@ class BatchedEnv:
                         < 2 * self._config.NPNP_SUCCESS_THRESH
                     )
 
-                    success = end_episode_action and drop_success
+                    success = drop_success
+
+            if not self._config.get("TASK_NO_END_ACTION", False):
+                success = success and end_episode_action
 
             if self._config.get(
                 "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
@@ -897,8 +900,9 @@ class BatchedEnv:
                         state.target_obj_idx != state.held_obj_idx
                         and state.held_obj_idx != -1
                     )
-                    or (end_episode_action and not success)
+                    or (end_episode_action)
                 )
+                failure = failure and not success
             else:
                 failure = end_episode_action and not success
 
