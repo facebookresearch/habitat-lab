@@ -186,6 +186,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         self.prev_dist_to_push = -1
 
         self.prev_snapped_marker_name = None
+        self._sim.maybe_update_robot()
         return self._get_observations(episode)
 
     def _disable_art_sleep(self):

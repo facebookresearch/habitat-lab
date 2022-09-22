@@ -168,6 +168,7 @@ class RearrangeTask(NavigationTask):
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:
+            self._sim.maybe_update_robot()
             return self._get_observations(episode)
         else:
             return None
