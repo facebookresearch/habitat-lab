@@ -586,6 +586,9 @@ def test_spot_robot_wrapper(fixed_base):
         assert spot.get_robot_sim_id() == 1  # 0 is the ground plane
         print(spot.get_link_and_joint_names())
 
+        # set the motor angles
+        spot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
+
         # set base ground position from navmesh
         target_base_pos = sim.pathfinder.snap_point(spot.sim_obj.translation)
         spot.base_pos = target_base_pos
