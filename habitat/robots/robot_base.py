@@ -65,7 +65,7 @@ class RobotBase(RobotInterface):
 
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
-        if self.sim_obj is None:
+        if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
                 self.urdf_path, fixed_base=self._fixed_base
