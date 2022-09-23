@@ -336,7 +336,7 @@ class NavPickSuccess(Measure):
 # %% [markdown]
 # We now add all the previously defined task, sensor, and measurement
 # definitions to a config file to finish defining the new Habitat task. For
-# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/tasks/rearrange).
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/tasks/rearrange).
 #
 # This config also defines the action space through the `TASK.ACTIONS` key. You
 # can substitute different base control actions from

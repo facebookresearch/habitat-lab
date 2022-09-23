@@ -1,4 +1,4 @@
-BASE_TASK_CONFIG_PATH: habitat-lab/habitat/config/tasks/instance_imagenav_hm3d.yaml
+BASE_TASK_CONFIG_PATH: tasks/instance_imagenav_hm3d.yaml
 TASK_CONFIG:
   DATASET:
     SPLIT: minival
