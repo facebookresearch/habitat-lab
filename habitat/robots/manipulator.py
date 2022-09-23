@@ -72,10 +72,11 @@ class Manipulator(RobotInterface):
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         # TODO: The current implementation requires users to define all the components of the robot in a single URDF.
         # The future will support loading multiple URDF files.
-        ao_mgr = self._sim.get_articulated_object_manager()
-        self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-            self.urdf_path, fixed_base=self._fixed_base
-        )
+        if self.sim_obj is None or not self.sim_obj.is_alive:
+            ao_mgr = self._sim.get_articulated_object_manager()
+            self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
+                self.urdf_path, fixed_base=self._fixed_base
+            )
         if self._limit_robo_joints:
             # automatic joint limit clamping after each call to sim.step_physics()
             self.sim_obj.auto_clamp_joint_limits = True
