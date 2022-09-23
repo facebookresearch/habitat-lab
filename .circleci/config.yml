@@ -265,7 +265,7 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               python setup.py test --addopts " --cov-report=xml --cov-report term  --cov=./"
-
+      - codecov/upload
       - run:
           name: Run baseline training tests
           no_output_timeout: 30m
@@ -326,4 +326,3 @@ workflows:
       - pre-commit
       - python_lint
       - install_and_test_ubuntu
-      - codecov/upload
