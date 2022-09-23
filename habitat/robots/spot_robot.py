@@ -170,4 +170,5 @@ class SpotRobot(MobileManipulator):
             sim,
             limit_robo_joints,
             fixed_base,
+            base_type="leg",
         )

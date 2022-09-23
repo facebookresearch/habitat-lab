@@ -106,6 +106,7 @@ class MobileManipulator(Manipulator, RobotBase):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
+        base_type="mobile",
     ):
         r"""Constructor
         :param params: The parameter of the manipulator robot.
@@ -114,6 +115,7 @@ class MobileManipulator(Manipulator, RobotBase):
         :param limit_robo_joints: If true, joint limits of robot are always
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
+        :param base_type: The base type
         """
         # instantiate a manipulator
         Manipulator.__init__(
@@ -132,7 +134,7 @@ class MobileManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
             fixed_based=fixed_base,
             sim_obj=self.sim_obj,
-            base_type="mobile",
+            base_type=base_type,
         )
 
     def reconfigure(self) -> None:
