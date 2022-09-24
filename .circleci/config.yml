@@ -1,10 +1,13 @@
-version: 2
+version: 2.1
 gpu: &gpu
   machine:
     image: ubuntu-1604-cuda-10.1:201909-23
   resource_class: gpu.nvidia.medium
   environment:
     FPS_THRESHOLD: 900
+
+orbs:
+  codecov: codecov/codecov@3.2.3
 
 jobs:
   python_lint:
@@ -262,8 +265,7 @@ jobs:
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               python setup.py test --addopts " --cov-report=xml --cov-report term  --cov=./"
-
-              bash <(curl -s https://codecov.io/bash) -f coverage.xml
+      - codecov/upload
       - run:
           name: Run baseline training tests
           no_output_timeout: 30m
