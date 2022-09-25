@@ -14,6 +14,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import (
+    DoesWantTerminate,
     EndEffectorToObjectDistance,
     ObjectToGoalDistance,
     RearrangeReward,
@@ -155,47 +156,6 @@ class MoveObjectsReward(RearrangeReward):
         self._metric += self._config.DIST_REWARD * dist_diff
         self._prev_measures = (to_obj, to_goal)
         self._prev_holding_obj = is_holding_obj
-
-
-@registry.register_measure
-class DoesWantTerminate(Measure):
-    cls_uuid: str = "does_want_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return DoesWantTerminate.cls_uuid
-
-    def reset_metric(self, *args, **kwargs):
-        self.update_metric(*args, **kwargs)
-
-    def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["REARRANGE_STOP"].does_want_terminate
-
-
-@registry.register_measure
-class CompositeBadCalledTerminate(Measure):
-    cls_uuid: str = "composite_bad_called_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return CompositeBadCalledTerminate.cls_uuid
-
-    def reset_metric(self, *args, task, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [DoesWantTerminate.cls_uuid, CompositeSuccess.cls_uuid],
-        )
-        self.update_metric(*args, task=task, **kwargs)
-
-    def update_metric(self, *args, task, **kwargs):
-        does_action_want_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
-        is_succ = task.measurements.measures[
-            CompositeSuccess.cls_uuid
-        ].get_metric()
-
-        self._metric = (not is_succ) and does_action_want_stop
 
 
 @registry.register_measure

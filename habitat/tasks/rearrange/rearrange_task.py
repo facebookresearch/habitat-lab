@@ -33,9 +33,6 @@ def merge_sim_episode_with_object_config(sim_config, episode):
     return sim_config
 
 
-ADD_CACHE_KEY = "add_cache_key"
-
-
 @registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
     """
@@ -72,7 +69,9 @@ class RearrangeTask(NavigationTask):
         sensor_suite.sensors = task_new_sensors
         sensor_suite.observation_spaces = spaces.Dict(spaces=task_obs_spaces)
 
-    def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
+    def __init__(
+        self, *args, sim, dataset=None, should_place_robot=True, **kwargs
+    ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
 
         super().__init__(sim=sim, dataset=dataset, **kwargs)
@@ -84,14 +83,16 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
+        self._should_place_robot = should_place_robot
 
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
-            osp.dirname(data_path), f"{fname}_robot_start.pickle"
+            osp.dirname(data_path),
+            f"{fname}_{self._config.TYPE}_robot_start.pickle",
         )
 
-        if self._config.CACHE_ROBOT_INIT or osp.exists(cache_path):
+        if self._config.SHOULD_SAVE_TO_CACHE or osp.exists(cache_path):
             self._robot_init_cache = CacheHelper(
                 cache_path,
                 def_val={},
@@ -171,8 +172,9 @@ class RearrangeTask(NavigationTask):
                 action_instance.reset(episode=episode, task=self)
             self._is_episode_active = True
 
-            for agent_idx in range(self._sim.num_robots):
-                self._set_robot_start(agent_idx)
+            if self._should_place_robot:
+                for agent_idx in range(self._sim.num_robots):
+                    self._set_robot_start(agent_idx)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

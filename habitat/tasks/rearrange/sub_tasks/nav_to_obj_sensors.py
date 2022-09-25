@@ -11,7 +11,10 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+from habitat.tasks.rearrange.rearrange_sensors import (
+    DoesWantTerminate,
+    RearrangeReward,
+)
 from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar, get_angle
 
@@ -108,7 +111,6 @@ class NavToObjReward(RearrangeReward):
             self.uuid,
             [
                 NavToObjSuccess.cls_uuid,
-                BadCalledTerminate.cls_uuid,
                 DistToGoal.cls_uuid,
                 RotDistToGoal.cls_uuid,
             ],
@@ -134,11 +136,6 @@ class NavToObjReward(RearrangeReward):
 
         reward += self._config.DIST_REWARD * dist_diff
         self._prev_dist = cur_dist
-
-        bad_terminate_pen = task.measurements.measures[
-            BadCalledTerminate.cls_uuid
-        ].reward_pen
-        reward -= bad_terminate_pen
 
         if (
             self._config.SHOULD_REWARD_TURN
@@ -200,47 +197,16 @@ class RotDistToGoal(Measure):
     def _get_uuid(*args, **kwargs):
         return RotDistToGoal.cls_uuid
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        forward = np.array([1.0, 0])
-        angle = get_angle(forward, task.nav_goal_pos[[0, 2]])
-        self._metric = np.abs(float(angle))
-
-
-@registry.register_measure
-class BadCalledTerminate(Measure):
-    cls_uuid: str = "bad_called_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return BadCalledTerminate.cls_uuid
-
-    def __init__(self, *args, config, **kwargs):
-        self._config = config
-        super().__init__(*args, config=config, **kwargs)
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.reward_pen = 0.0
-        super().reset_metric(
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(
             *args,
-            episode=episode,
-            task=task,
-            observations=observations,
             **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        success_measure = task.measurements.measures[NavToObjSuccess.cls_uuid]
-        if (
-            success_measure.does_action_want_stop(task, observations)
-            and not success_measure.get_metric()
-        ):
-            assert (
-                not self._config.DECAY_BAD_TERM
-            ), "DECAY_BAD_TERM is not supported for this measure"
-            self.reward_pen = self._config.BAD_TERM_PEN
-            self._metric = 1.0
-        else:
-            self._metric = 0.0
+        forward = np.array([1.0, 0])
+        angle = get_angle(forward, task.nav_goal_pos[[0, 2]])
+        self._metric = np.abs(float(angle))
 
 
 @registry.register_measure
@@ -255,19 +221,12 @@ class NavToPosSucc(Measure):
         self._config = config
         super().__init__(*args, config=config, **kwargs)
 
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
+    def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [DistToGoal.cls_uuid],
         )
-
-        super().reset_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
+        self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
@@ -282,21 +241,13 @@ class NavToObjSuccess(Measure):
     def _get_uuid(*args, **kwargs):
         return NavToObjSuccess.cls_uuid
 
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
+    def reset_metric(self, *args, task, **kwargs):
         # Get the end_on_stop property from the action
         task.measurements.check_measure_dependencies(
             self.uuid,
             [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
         )
-        self._end_on_stop = task.actions[BASE_ACTION_NAME].end_on_stop
-
-        super().reset_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
+        self.update_metric(*args, task=task, **kwargs)
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
@@ -311,6 +262,10 @@ class NavToObjSuccess(Measure):
             NavToPosSucc.cls_uuid
         ].get_metric()
 
+        called_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+
         if self._config.MUST_LOOK_AT_TARG:
             self._metric = (
                 nav_pos_succ and angle_dist < self._config.SUCCESS_ANGLE_DIST
@@ -318,17 +273,8 @@ class NavToObjSuccess(Measure):
         else:
             self._metric = nav_pos_succ
 
-        called_stop = self.does_action_want_stop(task, observations)
-
         if self._config.MUST_CALL_STOP:
             if called_stop:
-                if self._end_on_stop:
-                    task.should_end = True
+                task.should_end = True
             else:
                 self._metric = False
-
-    def does_action_want_stop(self, task, obs):
-        assert (
-            not self._config.HEURISTIC_STOP
-        ), "HEURISTIC_STOP not supported in this metric"
-        return task.actions[BASE_ACTION_NAME].does_want_terminate

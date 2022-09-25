@@ -67,7 +67,7 @@ _C.TASK.CONSTRAINT_VIOLATION_DROPS_OBJECT = False
 _C.TASK.FORCE_REGENERATE = (
     False  # Forced to regenerate the starts even if they are already cached.
 )
-_C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
+_C.TASK.SHOULD_SAVE_TO_CACHE = False  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
 _C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
 _C.TASK.GFX_REPLAY_DIR = "data/replays"
@@ -82,7 +82,6 @@ _C.TASK.SPAWN_REGION_SCALE = 0.2
 _C.TASK.JOINT_MAX_IMPULSE = -1.0
 _C.TASK.DESIRED_RESTING_POSITION = [0.5, 0.0, 1.0]
 _C.TASK.USE_MARKER_T = True
-_C.TASK.CACHE_ROBOT_INIT = False
 _C.TASK.SUCCESS_STATE = 0.0
 # Measurements for composite tasks.
 _C.TASK.REWARD_MEASUREMENT = ""
@@ -152,7 +151,6 @@ _C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
 _C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 10.0
 _C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 10.0
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_DYN_SLIDE = True
-_C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
 _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
@@ -323,9 +321,7 @@ _C.TASK.GOAL_SENSOR.DIMENSIONALITY = 3
 # TARGET START OR GOAL SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.TARGET_START_POINT_GOAL_SENSOR = CN()
-_C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
-    "TargetOrGoalStartPointGoalSensor"
-)
+_C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = "NavGoalPointGoalSensor"
 # -----------------------------------------------------------------------------
 # COMPOSITE SENSOR
 # -----------------------------------------------------------------------------
@@ -465,10 +461,6 @@ _C.TASK.ROT_DIST_TO_GOAL = CN()
 _C.TASK.ROT_DIST_TO_GOAL.TYPE = "RotDistToGoal"
 _C.TASK.DIST_TO_GOAL = CN()
 _C.TASK.DIST_TO_GOAL.TYPE = "DistToGoal"
-_C.TASK.BAD_CALLED_TERMINATE = CN()
-_C.TASK.BAD_CALLED_TERMINATE.TYPE = "BadCalledTerminate"
-_C.TASK.BAD_CALLED_TERMINATE.BAD_TERM_PEN = 0.0
-_C.TASK.BAD_CALLED_TERMINATE.DECAY_BAD_TERM = False
 _C.TASK.NAV_TO_POS_SUCC = CN()
 _C.TASK.NAV_TO_POS_SUCC.TYPE = "NavToPosSucc"
 _C.TASK.NAV_TO_POS_SUCC.SUCCESS_DISTANCE = 0.2
@@ -600,8 +592,8 @@ _C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
 _C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
 _C.TASK.DOES_WANT_TERMINATE = CN()
 _C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
-_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
-_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
+_C.TASK.BAD_CALLED_TERMINATE = CN()
+_C.TASK.BAD_CALLED_TERMINATE.TYPE = "BadCalledTerminate"
 # -----------------------------------------------------------------------------
 # # EQA TASK
 # -----------------------------------------------------------------------------

@@ -6,7 +6,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v2/{split}/rearrange_easy.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
@@ -16,6 +16,7 @@ TASK:
     # SPAWN PARAMETERS
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
+    FORCE_REGENERATE: false
     SPAWN_MAX_DIST_TO_OBJ: 3.0
     PHYSICS_STABILITY_STEPS: 1
     NUM_SPAWN_ATTEMPTS: 200

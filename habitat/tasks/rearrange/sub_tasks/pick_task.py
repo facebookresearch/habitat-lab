@@ -22,7 +22,13 @@ class RearrangePickTaskV1(RearrangeTask):
     """
 
     def __init__(self, *args, config, dataset=None, **kwargs):
-        super().__init__(config=config, *args, dataset=dataset, **kwargs)
+        super().__init__(
+            config=config,
+            *args,
+            dataset=dataset,
+            should_place_robot=False,
+            **kwargs,
+        )
 
         self.prev_colls = None
         self.force_set_idx = None

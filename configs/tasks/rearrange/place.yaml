@@ -11,16 +11,22 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v2/{split}/rearrange_easy.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangePlaceTask-v0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
-    SHOULD_ENFORCE_TARGET_WITHIN_REACH: false
+
+    # SPAWN PARAMETERS
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     FORCE_REGENERATE: false
+    SPAWN_MAX_DIST_TO_OBJ: 3.0
+    PHYSICS_STABILITY_STEPS: 1
+    NUM_SPAWN_ATTEMPTS: 200
+    SHOULD_SAVE_TO_CACHE: True
+
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: true
     REWARD_MEASURE: place_reward
@@ -28,7 +34,7 @@ TASK:
     SUCCESS_REWARD: 10.0
     SLACK_REWARD: 0.0
     END_ON_SUCCESS: true
-    EASY_INIT: false
+
     JOINT_VELOCITY_SENSOR:
         TYPE: JointVelocitySensor
         DIMENSIONALITY: 7
@@ -85,13 +91,23 @@ TASK:
             DISABLE_GRIP: false
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: BaseVelAction
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
     - ARM_ACTION
+    - BASE_VELOCITY
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
     - data/objects/ycb/configs/
     DEBUG_RENDER: false
-    DEBUG_RENDER_GOAL: false
+    DEBUG_RENDER_GOAL: true
     ACTION_SPACE_CONFIG: v0
     AGENTS:
     - AGENT_0

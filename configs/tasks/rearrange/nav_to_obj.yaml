@@ -2,9 +2,8 @@ GYM:
     AUTO_NAME: NavToObj
     OBS_KEYS:
     - robot_head_depth
-    - object_to_agent_gps_compass
+    - goal_to_agent_gps_compass
     - joint
-    - nav_to_skill
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 400
 DATASET:
@@ -45,11 +44,6 @@ TASK:
         MAX_ACCUM_FORCE: -1.0
         MAX_INSTANT_FORCE: 10000.0
 
-    BAD_CALLED_TERMINATE:
-        TYPE: BadCalledTerminate
-        BAD_TERM_PEN: 0.0
-        DECAY_BAD_TERM: false
-
     REARRANGE_NAV_TO_OBJ_REWARD:
         TYPE: NavToObjReward
         SHOULD_REWARD_TURN: true
@@ -70,12 +64,13 @@ TASK:
         MUST_LOOK_AT_TARG: true
         # 45 degrees.
         SUCCESS_ANGLE_DIST: 0.785398
-        HEURISTIC_STOP: false
+        MUST_CALL_STOP: True
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE
     - FORCE_TERMINATE
     - ROBOT_COLLS
+    - DOES_WANT_TERMINATE
     - ROT_DIST_TO_GOAL
     - DIST_TO_GOAL
     - NAV_TO_POS_SUCC
@@ -90,11 +85,13 @@ TASK:
             ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: true
             ALLOW_BACK: true
-            END_ON_STOP: true
             MIN_ABS_LIN_SPEED: 1.0
             MIN_ABS_ANG_SPEED: 1.0
+        REARRANGE_STOP:
+            TYPE: RearrangeStopAction
     POSSIBLE_ACTIONS:
     - BASE_VELOCITY
+    - REARRANGE_STOP
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
     - data/objects/ycb/configs/

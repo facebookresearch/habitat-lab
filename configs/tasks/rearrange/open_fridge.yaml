@@ -33,18 +33,8 @@ TASK:
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
-    JOINT_VELOCITY_SENSOR:
-        TYPE: JointVelocitySensor
-        DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: EEPositionSensor
-    IS_HOLDING_SENSOR:
-        TYPE: IsHoldingSensor
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: RelativeRestingPositionSensor
     SENSORS:
     - JOINT_SENSOR
-    - JOINT_VELOCITY_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
