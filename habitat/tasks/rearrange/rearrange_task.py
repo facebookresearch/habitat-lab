@@ -125,24 +125,38 @@ class RearrangeTask(NavigationTask):
     def set_sim_reset(self, sim_reset):
         self._sim_reset = sim_reset
 
-    def _set_robot_start(self, agent_idx: int) -> None:
-        start_ident = f"{self._episode_id}_{agent_idx}"
+    def _get_cached_robot_start(self, agent_idx: int = 0):
+        start_ident = self._get_ep_init_ident(agent_idx)
         if (
             self._robot_pos_start is None
             or start_ident not in self._robot_pos_start
             or self._config.FORCE_REGENERATE
         ):
+            return None
+        else:
+            return self._robot_pos_start[start_ident]
+
+    def _get_ep_init_ident(self, agent_idx):
+        return f"{self._episode_id}_{agent_idx}"
+
+    def _cache_robot_start(self, cache_data, agent_idx: int = 0):
+        if (
+            self._robot_pos_start is not None
+            and self._config.SHOULD_SAVE_TO_CACHE
+        ):
+            start_ident = self._get_ep_init_ident(agent_idx)
+            self._robot_pos_start[start_ident] = cache_data
+            self._robot_init_cache.save(self._robot_pos_start)
+
+    def _set_robot_start(self, agent_idx: int) -> None:
+        robot_start = self._get_cached_robot_start(agent_idx)
+        if robot_start is None:
             robot_pos, robot_rot = self._sim.set_robot_base_to_random_point(
                 agent_idx=agent_idx
             )
-            if (
-                self._robot_pos_start is not None
-                and self._config.SHOULD_SAVE_TO_CACHE
-            ):
-                self._robot_pos_start[start_ident] = (robot_pos, robot_rot)
-                self._robot_init_cache.save(self._robot_pos_start)
+            self._cache_robot_start((robot_pos, robot_rot), agent_idx)
         else:
-            robot_pos, robot_rot = self._robot_pos_start[start_ident]
+            robot_pos, robot_rot = robot_start
         robot = self._sim.get_robot_data(agent_idx).robot
         robot.base_pos = robot_pos
         robot.base_rot = robot_rot

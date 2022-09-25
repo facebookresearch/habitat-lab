@@ -6,19 +6,20 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePickTask-v0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
 
-    SHOULD_ENFORCE_TARGET_WITHIN_REACH: False
-
-    # In radians
+    # SPAWN PARAMETERS
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
-    FORCE_REGENERATE: False
+    SPAWN_MAX_DIST_TO_OBJ: 3.0
+    PHYSICS_STABILITY_STEPS: 1
+    NUM_SPAWN_ATTEMPTS: 200
+    SHOULD_SAVE_TO_CACHE: True
 
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: True
@@ -29,35 +30,10 @@ TASK:
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: True
 
-    # If true, does not care about navigability or collisions with objects when spawning
-    # robot
-    EASY_INIT: False
-
-    TARGET_START_SENSOR:
-        TYPE: "TargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    GOAL_SENSOR:
-        TYPE: "GoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_TARGET_START_SENSOR:
-        TYPE: "AbsTargetStartSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
-    ABS_GOAL_SENSOR:
-        TYPE: "AbsGoalSensor"
-        GOAL_FORMAT: "CARTESIAN"
-        DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
         DIMENSIONALITY: 7
-    END_EFFECTOR_SENSOR:
-        TYPE: "EEPositionSensor"
-    IS_HOLDING_SENSOR:
-        TYPE: "IsHoldingSensor"
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: "RelativeRestingPositionSensor"
+
     SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
     ROBOT_FORCE:
         TYPE: "RobotForce"
@@ -65,16 +41,6 @@ TASK:
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
         MAX_ACCUM_FORCE: 5000.0
-    END_EFFECTOR_TO_OBJECT_DISTANCE:
-        TYPE: "EndEffectorToObjectDistance"
-    END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: "EndEffectorToRestDistance"
-    DID_PICK_OBJECT:
-        TYPE: "DidPickObjectMeasure"
-    NUM_STEPS:
-        TYPE: "NumStepsMeasure"
-    DID_VIOLATE_HOLD_CONSTRAINT:
-        TYPE: "DidViolateHoldConstraintMeasure"
     PICK_REWARD:
         TYPE: "RearrangePickReward"
         DIST_REWARD: 20.0
@@ -116,8 +82,18 @@ TASK:
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: BaseVelAction
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
         - ARM_ACTION
+        - BASE_VELOCITY
 
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
@@ -130,6 +106,7 @@ SIMULATOR:
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3
+        JOINT_START_NOISE: 0.2
         SENSORS: ['HEAD_DEPTH_SENSOR']
         ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
         ROBOT_TYPE: FetchSuctionRobot

@@ -362,11 +362,6 @@ _C.TASK.ABS_GOAL_SENSOR.TYPE = "AbsGoalSensor"
 _C.TASK.ABS_GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
 _C.TASK.ABS_GOAL_SENSOR.DIMENSIONALITY = 3
 # -----------------------------------------------------------------------------
-# DISTANCE TO NAVIGATION GOAL SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.DIST_TO_NAV_GOAL = CN()
-_C.TASK.DIST_TO_NAV_GOAL.TYPE = "DistToNavGoalSensor"
-# -----------------------------------------------------------------------------
 # LOCALIZATION SENSOR
 # -----------------------------------------------------------------------------
 _C.TASK.LOCALIZATION_SENSOR = CN()

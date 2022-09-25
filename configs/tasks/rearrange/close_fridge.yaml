@@ -28,7 +28,6 @@ TASK:
     SUCCESS_MEASURE: art_obj_success
     SUCCESS_REWARD: 10.0
     SLACK_REWARD: 0.0
-    END_ON_SUCCESS: true
     EASY_INIT: false
     JOINT_SENSOR:
         TYPE: JointSensor

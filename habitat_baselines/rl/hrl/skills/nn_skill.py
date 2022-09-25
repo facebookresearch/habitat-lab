@@ -133,6 +133,7 @@ class NnSkillPolicy(SkillPolicy):
                 ) from e
 
             policy_cfg = ckpt_dict["config"]
+
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS

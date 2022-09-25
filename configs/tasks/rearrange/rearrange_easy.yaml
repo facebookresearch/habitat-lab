@@ -2,13 +2,13 @@ GYM:
     AUTO_NAME: RearrangeEasy
     OBS_KEYS:
     - robot_head_depth
-    - relative_resting_position
     - obj_start_sensor
     - obj_goal_sensor
     - obj_start_gps_compass
     - obj_goal_gps_compass
     - joint
     - is_holding
+    - relative_resting_position
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 1500
 DATASET:
@@ -22,7 +22,6 @@ TASK:
     SUCCESS_MEASURE: composite_success
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
-    END_ON_SUCCESS: true
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
@@ -30,7 +29,6 @@ TASK:
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
-    TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
     TASK_SPEC: rearrange_easy
     PDDL_DOMAIN_DEF: replica_cad
     OBJ_SUCC_THRESH: 0.3
@@ -60,7 +58,6 @@ TASK:
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
-    - GFX_REPLAY_MEASURE
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
@@ -107,6 +104,8 @@ SIMULATOR:
     DEBUG_RENDER_GOAL: true
     AGENTS:
     - AGENT_0
+    CONCUR_RENDER: true
+    AUTO_SLEEP: true
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3

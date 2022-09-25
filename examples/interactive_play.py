@@ -556,7 +556,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--add-ik",
         action="store_true",
-        default=False,
+        default=True,
         help="If true, changes arm control to IK",
     )
     parser.add_argument(

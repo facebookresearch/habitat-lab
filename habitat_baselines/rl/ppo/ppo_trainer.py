@@ -915,6 +915,7 @@ class PPOTrainer(BaseRLTrainer):
                 uuid = config.TASK_CONFIG.SIMULATOR[render_view].UUID
                 config.TASK_CONFIG.GYM.OBS_KEYS.append(uuid)
                 config.SENSORS.append(render_view)
+            config.TASK_CONFIG.SIMULATOR.DEBUG_RENDER = True
             config.freeze()
 
         if config.VERBOSE:
