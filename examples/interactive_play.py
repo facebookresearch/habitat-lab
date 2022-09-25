@@ -588,6 +588,7 @@ if __name__ == "__main__":
         config.SIMULATOR.DEBUG_RENDER = True
         config.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = False
         config.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = False
+        config.TASK.ART_OBJ_SUCCESS.MUST_CALL_STOP = False
         config.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
         config.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
     if args.gfx:

@@ -437,6 +437,7 @@ _C.TASK.ART_OBJ_STATE = CN()
 _C.TASK.ART_OBJ_STATE.TYPE = "ArtObjState"
 _C.TASK.ART_OBJ_SUCCESS = CN()
 _C.TASK.ART_OBJ_SUCCESS.TYPE = "ArtObjSuccess"
+_C.TASK.ART_OBJ_SUCCESS.MUST_CALL_STOP = True
 _C.TASK.ART_OBJ_SUCCESS.REST_DIST_THRESHOLD = 0.15
 
 _C.TASK.ART_OBJ_REWARD = CN()
@@ -678,8 +679,8 @@ _C.SIMULATOR.CTRL_FREQ = 120.0
 _C.SIMULATOR.AC_FREQ_RATIO = 4
 _C.SIMULATOR.LOAD_OBJS = False
 # Rearrange Agent Grasping
-_C.SIMULATOR.HOLD_THRESH = 0.09
-_C.SIMULATOR.GRASP_IMPULSE = 1000.0
+_C.SIMULATOR.HOLD_THRESH = 0.2
+_C.SIMULATOR.GRASP_IMPULSE = 10000.0
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------

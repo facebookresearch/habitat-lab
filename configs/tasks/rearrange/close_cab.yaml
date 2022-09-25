@@ -15,13 +15,16 @@ DATASET:
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCloseDrawerTask-v0
-    COUNT_OBJ_COLLISIONS: true
-    COUNT_ROBOT_OBJ_COLLS: false
     SETTLE_STEPS: 5
     BASE_ANGLE_NOISE: 0.15
     SPAWN_REGION_SCALE: 0.2
     JOINT_MAX_IMPULSE: -1.0
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: true
+
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: true
+    COUNT_OBJ_COLLISIONS: true
+    COUNT_ROBOT_OBJ_COLLS: false
+
     USE_MARKER_T: true
     SUCCESS_STATE: 0.0
     REWARD_MEASURE: art_obj_reward
@@ -33,9 +36,6 @@ TASK:
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
-    JOINT_VELOCITY_SENSOR:
-        TYPE: JointVelocitySensor
-        DIMENSIONALITY: 7
     END_EFFECTOR_SENSOR:
         TYPE: EEPositionSensor
     IS_HOLDING_SENSOR:
@@ -44,7 +44,6 @@ TASK:
         TYPE: RelativeRestingPositionSensor
     SENSORS:
     - JOINT_SENSOR
-    - JOINT_VELOCITY_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
@@ -54,14 +53,6 @@ TASK:
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
-    ROBOT_COLLS:
-        TYPE: RobotCollisions
-    EE_DIST_TO_MARKER:
-        TYPE: EndEffectorDistToMarker
-    ART_OBJ_STATE:
-        TYPE: ArtObjState
-    END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: EndEffectorToRestDistance
     ART_OBJ_AT_DESIRED_STATE:
         TYPE: ArtObjAtDesiredState
         USE_ABSOLUTE_DISTANCE: true
@@ -90,6 +81,7 @@ TASK:
     - ROBOT_FORCE
     - FORCE_TERMINATE
     - ROBOT_COLLS
+    - DOES_WANT_TERMINATE
     - EE_DIST_TO_MARKER
     - END_EFFECTOR_TO_REST_DISTANCE
     - ART_OBJ_AT_DESIRED_STATE
@@ -98,18 +90,15 @@ TASK:
     - ART_OBJ_REWARD
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
+    - BAD_CALLED_TERMINATE
     ACTIONS:
         ARM_ACTION:
-            TYPE: ArmAction
-            ARM_CONTROLLER: ArmRelPosAction
             GRIP_CONTROLLER: null
             ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: true
-            DELTA_POS_LIMIT: 0.0125
-            EE_CTRL_LIM: 0.015
     POSSIBLE_ACTIONS:
     - ARM_ACTION
+    - BASE_VELOCITY
+    - REARRANGE_STOP
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
     - data/objects/ycb/configs/
@@ -135,8 +124,6 @@ SIMULATOR:
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     FORWARD_STEP_SIZE: 0.25
-    HOLD_THRESH: 0.2
-    GRASP_IMPULSE: 10000.0
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
         ALLOW_SLIDING: false
@@ -146,7 +133,7 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     SEED: 100
     TYPE: RearrangeSim-v0
-    NEEDS_MARKERS: false
+    NEEDS_MARKERS: true
     ARM_DEPTH_SENSOR:
         WIDTH: 128
         HEIGHT: 128

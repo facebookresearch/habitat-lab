@@ -75,23 +75,8 @@ TASK:
         - "NUM_STEPS"
     ACTIONS:
         ARM_ACTION:
-            TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosAction"
             GRIP_CONTROLLER: SuctionGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: False
-            DELTA_POS_LIMIT: 0.0125
-            EE_CTRL_LIM: 0.015
-        BASE_VELOCITY:
-            TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: true
-            END_ON_STOP: false
-            ALLOW_BACK: true
-            MIN_ABS_LIN_SPEED: 1.0
-            MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
         - ARM_ACTION
         - BASE_VELOCITY
@@ -135,10 +120,6 @@ SIMULATOR:
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     FORWARD_STEP_SIZE: 0.25
-
-    # Grasping
-    HOLD_THRESH: 0.2
-    GRASP_IMPULSE: 10000.0
 
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
