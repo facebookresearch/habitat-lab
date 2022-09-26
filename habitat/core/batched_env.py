@@ -631,6 +631,7 @@ class BatchedEnv:
         self.infos: List[Dict[str, Any]] = [{}] * self._num_envs
         self._previous_state: List[Optional[Any]] = [None] * self._num_envs
         self._previous_action: List[Optional[Any]] = [None] * self._num_envs
+        self._previous_actions = None
         self._past_pick_success: List[Optional[bool]] = [
             False
         ] * self._num_envs
@@ -735,6 +736,316 @@ class BatchedEnv:
                 observations[ssc.obs_key] = torch.nan_to_num(
                     observations[ssc.obs_key], 0.0
                 )
+
+    def get_batch_dones_rewards_resets(self, env_states, actions):
+
+        state = self._bsim.get_batch_environment_state(previous=False)
+        prev_state = self._bsim.get_batch_environment_state(previous=True)
+
+        config_action_penalty = self._config.get("ACTION_PENALTY", 0.0)
+        config_end_action_threshold = self._config.get(
+            "END_ACTION_THRESHOLD", 0.0
+        )
+        config_drop_threshold = self._config.get("DROP_THRESHOLD", 0.01)
+        config_grasp_threshold = self._config.get("GRASP_THRESHOLD", 0.02)
+        drop_grasp_action_idx = 0
+
+        actions = actions.numpy()
+
+        continuous_action_norm = actions
+        # continuous_action_l2 = sum(c * c for c in continuous_action_norm)
+        # continuous_action_l2 = np.sum(np.dot(continuous_action_norm))
+        continuous_action_l2 = np.sum(
+            continuous_action_norm * continuous_action_norm
+        )
+        action_penalty = config_action_penalty * continuous_action_l2
+        # continuous_action_norm_mean = sum(
+        #     abs(c) for c in continuous_action_norm
+        # ) / len(continuous_action_norm)
+        # continuous_action_norm_median = median(
+        #     abs(c) for c in continuous_action_norm
+        # )
+
+        end_episode_action = (
+            actions[:, self.action_dim - 1] > config_end_action_threshold
+        )
+
+        original_drop_grasp = actions[:, drop_grasp_action_idx]
+
+        modified_drop_grasp = np.where(
+            original_drop_grasp < config_drop_threshold, -1.0, 0.0
+        )
+        modified_drop_grasp = np.where(
+            original_drop_grasp > config_grasp_threshold,
+            1.0,
+            modified_drop_grasp,
+        )
+
+        actions[:, 0] = modified_drop_grasp
+
+        end_episode_action = np.logical_and(
+            end_episode_action, np.greater(state.episode_step_idx, 5)
+        )
+
+        # tried_grasp_last_step = (
+        #     self._previous_action[b] is not None
+        # ) and (self._previous_action[b][(b * self.action_dim)] > 0.0)
+        tried_grasp_last_step = np.logical_and(
+            state.episode_step_idx,
+            np.greater(self._previous_actions[:, drop_grasp_action_idx], 0.0),
+        )
+
+        # prev_state = self._previous_state[b]
+
+        # ee_to_start = (state.target_obj_start_pos - state.ee_pos).length()
+        ee_to_start = np.linalg.norm(state.target_obj_start_pos - state.ee_pos)
+
+        is_holding_correct = state.target_obj_idx == state.held_obj_idx
+        # was_holding_correct = False
+        # if prev_state is not None:
+        #     was_holding_correct = (
+        #         prev_state.target_obj_idx == prev_state.held_obj_idx
+        #     )
+
+        was_holding_correct = np.where(
+            state.episode_step_idx,
+            prev_state.target_obj_idx == prev_state.held_obj_idx,
+            False,
+        )
+
+        # todo: keep porting
+
+        for (b, state) in enumerate(env_states):
+            if self._current_episodes[b].is_disabled():
+                # let this episode continue in the sim; ignore the results
+                assert self.resets[b] == -1
+                self.dones[b] = False
+                self.rewards[b] = 0
+                self.infos[b] = {}
+                continue
+
+            self._past_pick_success[b] = (
+                self._past_pick_success[b] or is_holding_correct
+            )
+
+            obj_pos = state.obj_positions[state.target_obj_idx]
+            obj_to_goal = (state.goal_pos - obj_pos).length()
+
+            object_is_close_to_goal = (
+                obj_to_goal
+                < self._config.NPNP_SUCCESS_THRESH
+                # np.sqrt(
+                #         (state.goal_pos[0] - obj_pos[0]) ** 2
+                #         + (state.goal_pos[2] - obj_pos[2]) ** 2
+                #     ) < self._config.NPNP_SUCCESS_THRESH
+            ) or self._object_dropped_properly[b]
+
+            bad_attempt_penalty = 0.0
+            if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
+                object_is_in_drop_position = (
+                    np.sqrt(
+                        (state.goal_pos[0] - obj_pos[0]) ** 2
+                        + (state.goal_pos[2] - obj_pos[2]) ** 2
+                    )
+                    < self._config.NPNP_SUCCESS_THRESH
+                    and (obj_pos[1] - state.goal_pos[1]) > 0
+                    and (obj_pos[1] - state.goal_pos[1])
+                    < self._config.NPNP_SUCCESS_THRESH
+                )
+                if (
+                    is_holding_correct
+                    and not object_is_in_drop_position
+                    and actions[(b * self.action_dim)] <= 0.0
+                ):
+                    bad_attempt_penalty = self._config.get(
+                        "DROP_WRONG_PENALTY", 0.1
+                    )
+                    # keep holding
+                    actions[(b * self.action_dim)] = 1.0
+                elif (
+                    is_holding_correct
+                    and object_is_in_drop_position
+                    and actions[(b * self.action_dim)] <= 0.0
+                ):
+                    self._object_dropped_properly[b] = True
+
+            if (
+                actions[(b * self.action_dim)] == -1.0
+                and is_holding_correct
+                and self._drop_position[b] is None
+            ):
+                self._drop_position[b] = obj_pos
+
+            success = end_episode_action and object_is_close_to_goal
+            if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
+                success = False
+                if self._drop_position[b] is not None:
+                    drop_to_goal = self._drop_position[b] - state.goal_pos
+                    drop_success = (
+                        np.sqrt(drop_to_goal[0] ** 2 + drop_to_goal[2] ** 2)
+                        < self._config.NPNP_SUCCESS_THRESH
+                    )
+                    drop_success = drop_success and drop_to_goal[1] > 0
+                    drop_success = (
+                        drop_success
+                        and drop_to_goal[1]
+                        < 2 * self._config.NPNP_SUCCESS_THRESH
+                    )
+
+                    success = end_episode_action and drop_success
+
+            if self._config.get(
+                "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
+            ):
+                success = is_holding_correct and end_episode_action
+
+            if self._config.get("TASK_IS_PLACE", False):
+                success = (
+                    success
+                    and (state.held_obj_idx == -1)
+                    # and self._past_pick_success[b]
+                )
+            if self._config.get("TASK_IS_NAV_PICK_NAV_REACH", False):
+                success = object_is_close_to_goal
+
+            if self._config.get("TASK_IS_SIMPLE_PICK", False):
+                success = is_holding_correct
+
+            if self._config.get("PREVENT_STOP_ACTION", False):
+                end_episode_action = False
+
+            if self._config.get("DROP_IS_FAIL", True):
+                failure = (
+                    (
+                        state.did_drop
+                        and (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
+                    )
+                    or (
+                        state.target_obj_idx != state.held_obj_idx
+                        and state.held_obj_idx != -1
+                    )
+                    or (end_episode_action and not success)
+                )
+            else:
+                failure = end_episode_action and not success
+
+            if self._config.get(
+                "TASK_IS_PICK_ONLY_FAIL_IF_BAD_ATTEMPT", False
+            ):
+                failure = (
+                    (not is_holding_correct) and tried_grasp_last_step
+                ) or state.did_drop
+
+            if (
+                success
+                or failure
+                or state.episode_step_idx
+                >= (self._max_episode_length - self._stagger_agents[b])
+            ):
+                self._stagger_agents[b] = 0
+                self.dones[b] = True
+                _rew = 0.0
+                _rew += self._config.NPNP_SUCCESS_REWARD if success else 0.0
+                _rew -= self._config.NPNP_FAILURE_PENALTY if failure else 0.0
+                _rew -= bad_attempt_penalty
+                self.rewards[b] = _rew
+                self.infos[b] = {
+                    "success": float(success),
+                    "failure": float(failure),
+                    "pick_success": float(self._past_pick_success[b]),
+                    "episode_steps": state.episode_step_idx,
+                    "distance_to_start": ee_to_start,
+                    "distance_to_goal": obj_to_goal,
+                    "try_grasp": actions[(b * self.action_dim)]
+                    > self._config.get("GRASP_THRESHOLD", 0.02),
+                    "try_drop": actions[(b * self.action_dim)]
+                    < self._config.get("DROP_THRESHOLD", 0.01),
+                    "is_holding_correct": float(is_holding_correct),
+                    "was_holding_correct": float(was_holding_correct),
+                    "end_action": float(end_episode_action),
+                    # "_continuous_action_norm_mean": continuous_action_norm_mean,
+                    # "_continuous_action_norm_median": continuous_action_norm_median,
+                    "_continuous_action_l2": continuous_action_l2,
+                    "_original_drop_grasp": original_drop_grasp,
+                    "_state.did_grasp": state.did_grasp,
+                    "_state.did_attempt_grasp": state.did_attempt_grasp,
+                    "_state.did_collide": state.did_collide,
+                }
+                self._previous_state[b] = None
+                self._previous_action[b] = None
+                self._past_pick_success[b] = False
+                self._drop_position[b] = None
+                self._object_dropped_properly[b] = False
+
+                next_episode = self.get_next_episode()
+                if next_episode != -1:
+                    self.resets[b] = next_episode
+                    self._current_episodes[b].episode_id = next_episode
+                else:
+                    # There are no more episodes to launch, so disable this env. We'll
+                    # hit this case during eval.
+                    # Note we don't yet communicate a disabled env to the sim; the
+                    # sim continues simulating this episode and we'll ignore the result.
+                    self.resets[b] = -1  # don't reset env
+                    self._current_episodes[b].set_disabled()
+
+            else:
+                self.resets[b] = -1
+                self.dones[b] = False
+                self.rewards[b] = -self._config.NPNP_SLACK_PENALTY
+                self.infos[b] = {
+                    "success": 0.0,
+                    "failure": 0.0,
+                    "pick_success": float(self._past_pick_success[b]),
+                    "episode_steps": state.episode_step_idx,
+                    "distance_to_start": ee_to_start,
+                    "distance_to_goal": obj_to_goal,
+                    "try_grasp": actions[(b * self.action_dim)]
+                    > self._config.get("GRASP_THRESHOLD", 0.02),
+                    "try_drop": actions[(b * self.action_dim)]
+                    < self._config.get("DROP_THRESHOLD", 0.01),
+                    "is_holding_correct": float(is_holding_correct),
+                    "was_holding_correct": float(was_holding_correct),
+                    "end_action": float(end_episode_action),
+                    "_continuous_action_norm_mean": continuous_action_norm_mean,
+                    "_continuous_action_norm_median": continuous_action_norm_median,
+                    "_continuous_action_l2": continuous_action_l2,
+                    "_original_drop_grasp": original_drop_grasp,
+                    "_state.did_grasp": state.did_grasp,
+                    "_state.did_attempt_grasp": state.did_attempt_grasp,
+                    "_state.did_collide": state.did_collide,
+                }
+                if self._previous_state[b] is not None:
+                    prev_obj_pos = prev_state.obj_positions[
+                        prev_state.target_obj_idx
+                    ]
+                    curr_dist_ee_to_obj = (
+                        state.obj_positions[state.target_obj_idx]
+                        - state.ee_pos
+                    ).length()
+                    prev_dist_ee_to_obj = (
+                        prev_obj_pos - prev_state.ee_pos
+                    ).length()
+                    self.rewards[b] += -(
+                        curr_dist_ee_to_obj - prev_dist_ee_to_obj
+                    ) * self._config.get("CARTHESIAN_REWARD", 1.0)
+                    prev_obj_to_goal = (
+                        prev_state.goal_pos - prev_obj_pos
+                    ).length()
+                    self.rewards[b] += -(
+                        obj_to_goal - prev_obj_to_goal
+                    ) * self._config.get("CARTHESIAN_REWARD", 1.0)
+                    self.rewards[b] -= bad_attempt_penalty
+                    self.rewards[b] -= action_penalty
+                    if (
+                        self._config.get("DROP_IS_FAIL", True)
+                        and is_holding_correct
+                        and (prev_state.held_obj_idx == -1)
+                        and obj_to_goal
+                        > self._config.NPNP_SUCCESS_THRESH  # the robot is not re-picking
+                    ):
+                        self.rewards[b] += self._config.PICK_REWARD
+                self._previous_state[b] = state
 
     def get_dones_rewards_resets(self, env_states, actions):
         for (b, state) in enumerate(env_states):
@@ -1098,7 +1409,8 @@ class BatchedEnv:
                 env_states = self._bsim.get_environment_states()
 
                 self.get_nonpixel_observations(env_states, self._observations)
-                self.get_dones_rewards_resets(env_states, actions_flat_list)
+                # self.get_dones_rewards_resets(env_states, actions_flat_list)
+                self.get_batch_dones_rewards_resets(env_states, actions)
                 self._bsim.start_step_physics_or_reset(
                     actions_flat_list, self.resets
                 )
