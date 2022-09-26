@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-input("press enter to begin...")  # needed for py-spy capture
+# input("press enter to begin...")  # needed for py-spy capture
 
 import pickle
 import time
@@ -130,5 +130,5 @@ def test_benchmark():
 
 
 if __name__ == "__main__":
-    # test_benchmark()
-    test_basic()
+    test_benchmark()
+    # test_basic()
