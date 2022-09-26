@@ -24,6 +24,8 @@ class NavToInfo:
     """
 
     nav_goal_pos: np.ndarray
+    robot_start_pos: np.ndarray
+    robot_start_angle: float
     start_hold_obj_idx: Optional[int]
 
 
@@ -36,7 +38,13 @@ class DynNavRLEnv(RearrangeTask):
     _nav_to_info: Optional[NavToInfo]
 
     def __init__(self, *args, config, dataset=None, **kwargs):
-        super().__init__(config=config, *args, dataset=dataset, **kwargs)
+        super().__init__(
+            config=config,
+            *args,
+            dataset=dataset,
+            should_place_robot=False,
+            **kwargs,
+        )
         self.force_obj_to_idx = None
         self.force_recep_to_name = None
 
@@ -84,25 +92,38 @@ class DynNavRLEnv(RearrangeTask):
             _, all_pos = self._sim.get_targets()
             nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
 
+        def filter_func(start_pos, _):
+            return (
+                np.linalg.norm(start_pos - nav_to_pos)
+                > self._config.MIN_START_DISTANCE
+            )
+
+        robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
+            filter_func=filter_func
+        )
+
         return NavToInfo(
-            nav_goal_pos=nav_to_pos, start_hold_obj_idx=start_hold_obj_idx
+            nav_goal_pos=nav_to_pos,
+            robot_start_pos=robot_pos,
+            robot_start_angle=robot_angle,
+            start_hold_obj_idx=start_hold_obj_idx,
         )
 
     def reset(self, episode: Episode):
         sim = self._sim
         super().reset(episode, fetch_observations=False)
 
-        self._nav_to_info = self._generate_nav_start_goal(
-            episode, force_idx=self.force_obj_to_idx
-        )
-
-        def filter_func(start_pos, _):
-            return (
-                np.linalg.norm(start_pos - self._nav_to_info.nav_goal_pos)
-                > self._config.MIN_START_DISTANCE
+        self._nav_to_info = self._get_cached_robot_start()
+        if self._nav_to_info is None or self.force_obj_to_idx is not None:
+            self._nav_to_info = self._generate_nav_start_goal(
+                episode, force_idx=self.force_obj_to_idx
             )
-
-        self._sim.set_robot_base_to_random_point(filter_func=filter_func)
+            if self.force_obj_to_idx is None:
+                self._cache_robot_start(self._nav_to_info)
+        else:
+            self._nav_to_info.start_hold_obj_idx = self._generate_snap_to_obj()
+            sim.robot.base_pos = self._nav_to_info.robot_start_pos
+            sim.robot.base_rot = self._nav_to_info.robot_start_angle
 
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
