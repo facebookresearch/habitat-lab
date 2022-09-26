@@ -190,11 +190,9 @@ class RobotBase(RobotInterface):
     def leg_joint_pos(self):
         """Get the current arm joint positions."""
         if self._base_type == "leg":
-            leg_pos_indices = list(
-                map(
-                    lambda x: self.joint_pos_indices[x], self.params.leg_joints
-                )
-            )
+            joint_pos_indices = self.joint_pos_indices
+            leg_joints = self.params.leg_joints
+            leg_pos_indices = [joint_pos_indices[x] for x in leg_joints]
             return [self.sim_obj.joint_positions[i] for i in leg_pos_indices]
         else:
             raise NotImplementedError(

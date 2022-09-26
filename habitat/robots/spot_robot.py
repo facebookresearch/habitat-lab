@@ -16,7 +16,7 @@ from habitat.robots.mobile_manipulator import (
 
 # TODO: refactor this class to support spherical joints: multiple dofs per link and #dofs != #positions
 @attr.s(auto_attribs=True, slots=True)
-class SpotMobileManipulatorParams:
+class MobileManipulatorParams:
     """Data to configure a mobile manipulator.
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
@@ -44,19 +44,6 @@ class SpotMobileManipulatorParams:
     :property arm_mtr_pos_gain: The position gain of the arm motor.
     :property arm_mtr_vel_gain: The velocity gain of the arm motor.
     :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
-    :property wheel_mtr_pos_gain: The position gain of the wheeled motor (if
-        there are wheels).
-    :property wheel_mtr_vel_gain: The velocity gain of the wheel motor (if
-        there are wheels).
-    :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
-        there are wheels).
-    :property leg_mtr_pos_gain: The position gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
-        there are legs).
-    :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
     """
 
     arm_joints: List[int]
@@ -79,6 +66,28 @@ class SpotMobileManipulatorParams:
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
 
+
+@attr.s(auto_attribs=True, slots=True)
+class BaseParams(MobileManipulatorParams):
+    """Data to configure a base.
+    :property arm_mtr_pos_gain: The position gain of the arm motor.
+    :property arm_mtr_vel_gain: The velocity gain of the arm motor.
+    :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
+    :property wheel_mtr_pos_gain: The position gain of the wheeled motor (if
+        there are wheels).
+    :property wheel_mtr_vel_gain: The velocity gain of the wheel motor (if
+        there are wheels).
+    :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
+        there are wheels).
+    :property leg_mtr_pos_gain: The position gain of the leg motor (if
+        there are legs).
+    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
+        there are legs).
+    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
+        there are legs).
+    :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    """
+
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
@@ -95,9 +104,14 @@ class SpotMobileManipulatorParams:
     leg_mtr_max_impulse: Optional[float] = None
 
 
+@attr.s(auto_attribs=True, slots=True)
+class SpotParams(BaseParams):
+    pass
+
+
 class SpotRobot(MobileManipulator):
     def _get_spot_params(self):
-        return SpotMobileManipulatorParams(
+        return SpotParams(
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),

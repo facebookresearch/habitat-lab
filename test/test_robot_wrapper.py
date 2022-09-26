@@ -587,6 +587,7 @@ def test_spot_robot_wrapper(fixed_base):
         print(spot.get_link_and_joint_names())
 
         # set the motor angles
+        print(spot.leg_joint_pos)
         spot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
 
         # set base ground position from navmesh
