@@ -4,7 +4,6 @@ baselines
 
 The `habitat_baselines` sub-package is NOT included upon installation by default. To install `habitat_baselines`, use the following command instead:
 ```bash
-pip install -r requirements.txt
 pip install -e habitat-lab
 pip install -e habitat-baselines
 ```
