@@ -110,7 +110,7 @@ class NnSkillPolicy(SkillPolicy):
             masks,
             deterministic,
         )
-        full_action = torch.zeros(prev_actions.shape)
+        full_action = torch.zeros(prev_actions.shape, device=masks.device)
         full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
         return full_action, rnn_hidden_states
 

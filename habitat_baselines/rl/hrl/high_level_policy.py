@@ -53,11 +53,9 @@ class GtHighLevelPolicy:
     def get_next_skill(
         self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
     ):
-        next_skill = torch.zeros(self._num_envs, device=prev_actions.device)
+        next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(
-            self._num_envs, device=prev_actions.device, dtype=torch.bool
-        )
+        immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan == 1.0:
                 if self._next_sol_idxs[batch_idx] >= len(

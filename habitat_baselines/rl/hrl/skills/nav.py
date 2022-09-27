@@ -56,11 +56,7 @@ class NavSkillPolicy(NnSkillPolicy):
         return self._cur_skill_args[batch_idx].obj_idx
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         filtered_prev_actions = prev_actions[
             :, self._ac_start : self._ac_start + self._ac_len

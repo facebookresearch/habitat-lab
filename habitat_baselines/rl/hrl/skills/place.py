@@ -27,11 +27,7 @@ class PlaceSkillPolicy(PickSkillPolicy):
         return action
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         # Is the agent not holding an object and is the end-effector at the
         # resting position?

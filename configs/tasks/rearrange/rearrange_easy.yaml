@@ -14,7 +14,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v2/{split}/rearrange_easy.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -22,10 +22,12 @@ TASK:
     SUCCESS_MEASURE: composite_success
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
-    COUNT_OBJ_COLLISIONS: true
-    COUNT_ROBOT_OBJ_COLLS: false
+
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: True
+    COUNT_OBJ_COLLISIONS: true
+    COUNT_ROBOT_OBJ_COLLS: false
+
     BASE_ANGLE_NOISE: 0.15
     BASE_NOISE: 0.05
     EASY_INIT: false
@@ -42,6 +44,7 @@ TASK:
     - END_EFFECTOR_SENSOR
     - TARGET_START_GPS_COMPASS_SENSOR
     - TARGET_GOAL_GPS_COMPASS_SENSOR
+    - LOCALIZATION_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: 100_000.0
@@ -54,31 +57,14 @@ TASK:
     - END_EFFECTOR_TO_OBJECT_DISTANCE
     - DOES_WANT_TERMINATE
     - COMPOSITE_SUCCESS
-    - COMPOSITE_BAD_CALLED_TERMINATE
+    - BAD_CALLED_TERMINATE
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
     ACTIONS:
         ARM_ACTION:
-            TYPE: ArmAction
-            ARM_CONTROLLER: ArmRelPosAction
             GRIP_CONTROLLER: SuctionGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: false
-            DELTA_POS_LIMIT: 0.0125
-            EE_CTRL_LIM: 0.015
-        BASE_VELOCITY:
-            TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: true
-            END_ON_STOP: false
-            ALLOW_BACK: true
-            MIN_ABS_LIN_SPEED: 1.0
-            MIN_ABS_ANG_SPEED: 1.0
-        REARRANGE_STOP:
-            TYPE: RearrangeStopAction
     POSSIBLE_ACTIONS:
     - ARM_ACTION
     - BASE_VELOCITY

@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_pick_nav_place.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/rearrange_easy.yaml
 TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
@@ -27,8 +27,29 @@ EVAL:
   USE_CKPT_CONFIG: False
   SHOULD_LOAD_CKPT: False
 TASK_CONFIG:
-  # Add the oracle navigation action
+  GYM:
+    OBS_KEYS:
+    - localization_sensor
+    - robot_head_depth
+    - obj_start_sensor
+    - obj_goal_sensor
+    - obj_start_gps_compass
+    - obj_goal_gps_compass
+    - joint
+    - is_holding
+    - relative_resting_position
   TASK:
+    SENSORS:
+    - LOCALIZATION_SENSOR
+    - RELATIVE_RESTING_POS_SENSOR
+    - TARGET_START_SENSOR
+    - GOAL_SENSOR
+    - JOINT_SENSOR
+    - IS_HOLDING_SENSOR
+    - END_EFFECTOR_SENSOR
+    - TARGET_START_GPS_COMPASS_SENSOR
+    - TARGET_GOAL_GPS_COMPASS_SENSOR
+    # Add the oracle navigation action
     POSSIBLE_ACTIONS:
     - ARM_ACTION
     - BASE_VELOCITY
@@ -43,8 +64,7 @@ RL:
       OBS_TRANSFORMS:
         ENABLED_TRANSFORMS: ['AddVirtualKeys']
         ADD_VIRTUAL_KEYS:
-          "nav_to_skill": 8
-          "object_to_agent_gps_compass": 2
+          "goal_to_agent_gps_compass": 2
       DEFINED_SKILLS:
         NN_OPEN_CAB:
           skill_name: "ArtObjSkillPolicy"
@@ -102,13 +122,12 @@ RL:
 
         GT_NAV:
           skill_name: "OracleNavPolicy"
-          OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+          OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor", "localization_sensor"]
           GOAL_SENSORS: ["obj_goal_sensor", "abs_obj_goal_sensor"]
           NAV_ACTION_NAME: "BASE_VELOCITY"
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: True
-          STOP_ANGLE_THRESH: 0.2
-          STOP_DIST_THRESH: 1.0
+          STOP_THRESH: 0.001
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"

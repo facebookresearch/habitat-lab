@@ -47,7 +47,7 @@ class ResetArmSkill(SkillPolicy):
         return None
 
     def _is_skill_done(
-        self, observations, rnn_hidden_states, prev_actions, masks
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ):
         current_joint_pos = observations["joint"].cpu().numpy()
 

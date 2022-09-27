@@ -177,6 +177,8 @@ _C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_ANG_SPEED = 1.0
 _C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_DYN_SLIDE = True
 _C.TASK.ACTIONS.ORACLE_NAV_ACTION.END_ON_STOP = False
 _C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_BACK = True
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.NUM_SPAWN_ATTEMPTS = 400
+_C.TASK.ACTIONS.ORACLE_NAV_ACTION.SPAWN_MAX_DIST_TO_OBJ = 2.0
 # -----------------------------------------------------------------------------
 # # TASK SENSORS
 # -----------------------------------------------------------------------------
@@ -337,12 +339,6 @@ _C.TASK.TARGET_START_GPS_COMPASS_SENSOR.TYPE = "TargetStartGpsCompassSensor"
 # -----------------------------------------------------------------------------
 _C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR = CN()
 _C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR.TYPE = "TargetGoalGpsCompassSensor"
-# -----------------------------------------------------------------------------
-# NAV TO SKILL ID SENSOR
-# -----------------------------------------------------------------------------
-_C.TASK.NAV_TO_SKILL_SENSOR = CN()
-_C.TASK.NAV_TO_SKILL_SENSOR.TYPE = "NavToSkillSensor"
-_C.TASK.NAV_TO_SKILL_SENSOR.NUM_SKILLS = 8
 # -----------------------------------------------------------------------------
 # ABSOLUTE TARGET START SENSOR
 # -----------------------------------------------------------------------------

@@ -29,11 +29,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         ]
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
 
         cur_resting_pos = observations[RelativeRestingPositionSensor.cls_uuid]

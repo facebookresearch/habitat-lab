@@ -80,17 +80,6 @@ TASK:
     - BAD_CALLED_TERMINATE
     - REARRANGE_NAV_TO_OBJ_REWARD
     - NUM_STEPS
-    ACTIONS:
-        BASE_VELOCITY:
-            TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: true
-            ALLOW_BACK: true
-            MIN_ABS_LIN_SPEED: 1.0
-            MIN_ABS_ANG_SPEED: 1.0
-        REARRANGE_STOP:
-            TYPE: RearrangeStopAction
     POSSIBLE_ACTIONS:
     - BASE_VELOCITY
     - REARRANGE_STOP

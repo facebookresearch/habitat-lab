@@ -343,6 +343,10 @@ class RestingPositionSensor(Sensor):
 
 @registry.register_sensor
 class LocalizationSensor(UsesRobotInterface, Sensor):
+    """
+    The position and angle of the robot in world coordinates.
+    """
+
     cls_uuid = "localization_sensor"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -364,7 +368,8 @@ class LocalizationSensor(UsesRobotInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        T = self._sim.get_robot_data(self.robot_id).robot.base_transformation
+        robot = self._sim.get_robot_data(self.robot_id).robot
+        T = robot.base_transformation
         forward = np.array([1.0, 0, 0])
         heading = np.array(T.transform_vector(forward))
         forward = forward[[0, 2]]
@@ -374,7 +379,7 @@ class LocalizationSensor(UsesRobotInterface, Sensor):
         c = np.cross(forward, heading) < 0
         if not c:
             heading_angle = -1.0 * heading_angle
-        return np.array([*T.translation, heading_angle], dtype=np.float32)
+        return np.array([*robot.base_pos, heading_angle], dtype=np.float32)
 
 
 @registry.register_sensor

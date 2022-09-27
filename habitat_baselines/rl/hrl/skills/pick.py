@@ -14,6 +14,7 @@ class PickSkillPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
+        batch_idx,
     ) -> torch.BoolTensor:
         # Is the agent holding the object and is the end-effector at the
         # resting position?

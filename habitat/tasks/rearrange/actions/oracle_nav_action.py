@@ -5,6 +5,7 @@ import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import BaseVelAction
+from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
 
 
@@ -57,18 +58,21 @@ class OracleNavAction(BaseVelAction):
     def _get_target_for_idx(self, nav_to_target_idx: int):
         if nav_to_target_idx not in self._targets:
             action = self._poss_actions[nav_to_target_idx]
-            state = self._sim.capture_state(True)
-            task = action.init_task(
-                self._task.pddl_problem.sim_info, should_reset=True
-            )
-            target_pos = task.nav_target_pos
-            self._sim.set_state(state, True)
-            obj_entity = action.get_arg_value("obj")
+            nav_to_obj = action.get_arg_value("obj")
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
-                obj_entity
+                nav_to_obj
+            )
+            start_pos, _, _ = get_robot_spawns(
+                np.array(obj_pos),
+                0.0,
+                0.0,
+                self._config.SPAWN_MAX_DIST_TO_OBJ,
+                self._sim,
+                self._config.NUM_SPAWN_ATTEMPTS,
+                1,
             )
 
-            self._targets[nav_to_target_idx] = (target_pos, np.array(obj_pos))
+            self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
     def _path_to_point(self, point):

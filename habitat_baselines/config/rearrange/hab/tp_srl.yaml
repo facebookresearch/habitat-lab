@@ -35,8 +35,7 @@ RL:
       OBS_TRANSFORMS:
         ENABLED_TRANSFORMS: ['AddVirtualKeys']
         ADD_VIRTUAL_KEYS:
-          "nav_to_skill": 8
-          "object_to_agent_gps_compass": 2
+          "goal_to_agent_gps_compass": 2
       DEFINED_SKILLS:
         NN_OPEN_CAB:
           skill_name: "ArtObjSkillPolicy"
