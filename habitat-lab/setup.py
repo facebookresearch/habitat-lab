@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import glob
 import os
 import sys
 
@@ -36,19 +37,15 @@ PROJECT_URLS = {
 }
 
 if __name__ == "__main__":
+    # package data are the files and configurations included in the package
+    package_data = [
+        x[8:] for x in glob.glob("habitat/config/**/*.yaml", recursive=True)
+    ] + ["utils/visualizations/assets/**/*.png"]
     setuptools.setup(
         name=DISTNAME,
         install_requires=REQUIREMENTS,
         packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
-        package_data={
-            "habitat": [
-                "config/*.yaml",
-                "config/*/*.yaml",
-                "config/*/*/*.yaml",
-                "config/*/*/*/*.yaml",
-                "utils/visualizations/assets/**/*.png",
-            ]
-        },
+        package_data={"habitat": package_data},
         version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
