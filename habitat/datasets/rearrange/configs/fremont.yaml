@@ -1,0 +1,107 @@
+---
+dataset_path: "data/fremont/fremont_knuckles.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/configs/"
+scene_sets:
+  -
+    name: "scene_train_split"
+    included_substrings:
+      - ""
+    excluded_substrings: []
+
+
+object_sets:
+  -
+    name: "kitchen"
+    included_substrings:
+      - "024_bowl"
+    excluded_substrings: []
+
+  -
+    name: "clutter"
+    excluded_substrings: []
+    included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "011_banana.object_config.json"
+      - "012_strawberry.object_config.json"
+      - "013_apple.object_config.json"
+      - "014_lemon.object_config.json"
+      - "015_peach.object_config.json"
+      - "016_pear.object_config.json"
+      - "017_orange.object_config.json"
+      - "018_plum.object_config.json"
+      - "021_bleach_cleanser.object_config.json"
+      - "024_bowl.object_config.json"
+      - "025_mug.object_config.json"
+      - "026_sponge.object_config.json"
+
+receptacle_sets:
+  -
+    name: "counter"
+    included_object_substrings: [""]
+    included_receptacle_substrings:
+      - "right_top_kitchen_island"
+    excluded_object_substrings: []
+    excluded_receptacle_substrings: []
+  -
+    name: "clutter"
+    included_object_substrings: [""]
+    included_receptacle_substrings:
+      - "top_kitchen_island"
+      - "sink_kitchen_island"
+      - "volume_table"
+      - "volume_dresser"
+      - "livingroom_roundtable"
+    excluded_object_substrings: []
+    excluded_receptacle_substrings: []
+  -
+    name: "table"
+    included_object_substrings: [""]
+    included_receptacle_substrings:
+      - "receptacle_aabb_volume_table"
+    excluded_receptacle_substrings: []
+    excluded_object_substrings: []
+
+scene_sampler:
+  type: "single"
+
+  params:
+    scene_sets: ["scene_train_split"]
+    scene: fremont_dynamic
+
+object_samplers:
+  - name: "target"
+    type: "uniform"
+    params:
+      object_sets: ["kitchen"]
+      receptacle_sets: ["counter"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+  - name: "clutter"
+    type: "uniform"
+    params:
+      object_sets: ["clutter"]
+      receptacle_sets: ["clutter"]
+      num_samples: [20, 30]
+      orientation_sampling: "up"
+
+object_target_samplers:
+  -
+    name: "target"
+    type: "uniform"
+    params:
+      object_samplers: ["target"]
+      receptacle_sets: ["table"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+
+
+
+markers: []

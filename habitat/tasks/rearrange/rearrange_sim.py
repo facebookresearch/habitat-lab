@@ -31,7 +31,6 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
-from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 
@@ -302,9 +301,13 @@ class RearrangeSim(HabitatSim):
 
     def _load_navmesh(self):
         scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
-        base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
+        base_dir = osp.dirname(self.active_dataset)
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+        if not osp.exists(navmesh_path):
+            rearrange_logger.warning(
+                f"Cannot load navmesh path {navmesh_path}"
+            )
         self.pathfinder.load_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(

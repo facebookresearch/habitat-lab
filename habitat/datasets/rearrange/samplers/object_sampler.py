@@ -115,6 +115,7 @@ class ObjectSampler:
         if self.receptacle_candidates is None:
             self.receptacle_candidates = []
             for receptacle in self.receptacle_instances:
+                print(receptacle.name)
                 found_match = False
                 for receptacle_set in match_recep_sets:
                     culled = False
