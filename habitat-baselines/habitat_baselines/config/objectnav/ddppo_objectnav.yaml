@@ -1,34 +1,34 @@
-BASE_TASK_CONFIG_PATH: "habitat-lab/habitat/config/tasks/objectnav_mp3d.yaml"
-CMD_TRAILING_OPTS: ["TASK_CONFIG.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS", "50000"]
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: []
-TENSORBOARD_DIR: "tb"
-VIDEO_DIR: "video_dir"
-TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 4
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-TRAINER_NAME: "ddppo"
-SENSORS: ["DEPTH_SENSOR", "RGB_SENSOR"]
-NUM_UPDATES: 270000
-LOG_INTERVAL: 10
-NUM_CHECKPOINTS: 100
+base_task_config_path: "habitat-lab/habitat/config/tasks/objectnav_mp3d.yaml"
+cmd_trailing_opts: ["habitat.environment.iterator_options.max_scene_repeat_steps", "50000"]
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: []
+tensorboard_dir: "tb"
+video_dir: "video_dir"
+test_episode_count: -1
+eval_ckpt_path_dir: "data/new_checkpoints"
+num_environments: 4
+checkpoint_folder: "data/new_checkpoints"
+trainer_name: "ddppo"
+sensors: ["depth_sensor", "rgb_sensor"]
+num_updates: 270000
+log_interval: 10
+num_checkpoints: 100
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
-EVAL:
-  SPLIT: "val"
+eval:
+  split: "val"
 
-RL:
-  SUCCESS_REWARD: 2.5
-  SLACK_REWARD: -1e-3
+rl:
+  success_reward: 2.5
+  slack_reward: -1e-3
 
-  POLICY:
+  policy:
     name: "PointNavResNetPolicy"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 4
@@ -50,7 +50,7 @@ RL:
 
     hidden_size: 512
 
-  DDPPO:
+  ddppo:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
     distrib_backend: NCCL

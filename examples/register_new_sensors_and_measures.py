@@ -48,7 +48,7 @@ class AgentPositionSensor(habitat.Sensor):
 
         self._sim = sim
         # Prints out the answer to life on init
-        print("The answer to life is", self.config.ANSWER_TO_LIFE)
+        print("The answer to life is", self.config.answer_to_life)
 
     # Defines the name of the sensor in the sensor suite dictionary
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -80,27 +80,27 @@ def main():
     config.defrost()
 
     # Add things to the config to for the measure
-    config.TASK.EPISODE_INFO_EXAMPLE = habitat.Config()
+    config.habitat.task.episode_info_example = habitat.Config()
     # The type field is used to look-up the measure in the registry.
     # By default, the things are registered with the class name
-    config.TASK.EPISODE_INFO_EXAMPLE.TYPE = "EpisodeInfoExample"
-    config.TASK.EPISODE_INFO_EXAMPLE.VALUE = 5
+    config.habitat.task.episode_info_example.type = "EpisodeInfoExample"
+    config.habitat.task.episode_info_example.VALUE = 5
     # Add the measure to the list of measures in use
-    config.TASK.MEASUREMENTS.append("EPISODE_INFO_EXAMPLE")
+    config.habitat.task.measurements.append("episode_info_example")
 
     # Now define the config for the sensor
-    config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
+    config.habitat.task.agent_position_sensor = habitat.Config()
     # Use the custom name
-    config.TASK.AGENT_POSITION_SENSOR.TYPE = "my_supercool_sensor"
-    config.TASK.AGENT_POSITION_SENSOR.ANSWER_TO_LIFE = 42
+    config.habitat.task.agent_position_sensor.type = "my_supercool_sensor"
+    config.habitat.task.agent_position_sensor.answer_to_life = 42
     # Add the sensor to the list of sensors in use
-    config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
+    config.habitat.task.sensors.append("agent_position_sensor")
     config.freeze()
 
     with habitat.Env(config=config) as env:
         print(env.reset()["agent_position"])
         print(env.get_metrics()["episode_info"])
-        print(env.step("MOVE_FORWARD")["agent_position"])
+        print(env.step("move_forward")["agent_position"])
         print(env.get_metrics()["episode_info"])
 
 

@@ -1,31 +1,31 @@
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 500
-SIMULATOR:
-  FORWARD_STEP_SIZE: 0.25
-  TURN_ANGLE: 15
-  HABITAT_SIM_V0:
-    GPU_DEVICE_ID: 0
-  RGB_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-    HFOV: 90
-    TYPE: HabitatSimRGBSensor
-  DEPTH_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-TASK:
-  TYPE: VLN-v0
-  SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR', 'INSTRUCTION_SENSOR']
-  POINTGOAL_WITH_GPS_COMPASS_SENSOR:
-    GOAL_FORMAT: "POLAR"
-    DIMENSIONALITY: 2
-  GOAL_SENSOR_UUID: pointgoal_with_gps_compass
-  INSTRUCTION_SENSOR_UUID: instruction
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL']
-  SUCCESS:
-    SUCCESS_DISTANCE: 3.0
-DATASET:
-  TYPE: R2RVLN-v1
-  SPLIT: val_seen
-  DATA_PATH: "data/datasets/vln/mp3d/r2r/v1/{split}/{split}.json.gz"
-  SCENES_DIR: "data/scene_datasets/"
+habitat:
+  environment:
+    max_episode_steps: 500
+  simulator:
+    forward_step_size: 0.25
+    turn_angle: 15
+    habitat_sim_v0:
+      gpu_device_id: 0
+    rgb_sensor:
+      width: 256
+      height: 256
+      hfov: 90
+      type: HabitatSimRGBSensor
+    depth_sensor:
+      width: 256
+      height: 256
+  task:
+    type: VLN-v0
+    sensors: ['pointgoal_with_gps_compass_sensor', 'instruction_sensor']
+    pointgoal_with_gps_compass_sensor:
+      goal_format: "POLAR"
+      dimensionality: 2
+    goal_sensor_uuid: pointgoal_with_gps_compass
+    measurements: ['distance_to_goal', 'success', 'spl']
+    success:
+      success_distance: 3.0
+  dataset:
+    type: R2RVLN-v1
+    split: val_seen
+    data_path: "data/datasets/vln/mp3d/r2r/v1/{split}/{split}.json.gz"
+    scenes_dir: "data/scene_datasets/"

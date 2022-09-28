@@ -11,7 +11,7 @@ goal:
     - at(obj0_target|0,TARGET_obj0_target|0)
     - at(obj1_target|1,TARGET_obj1_target|1)
     - at(obj2_target|2,TARGET_obj2_target|2)
-    - not_holding(ROBOT_0)
+    - not_holding(robot_0)
 
 objects:
   - name: obj0_target|0
@@ -29,36 +29,36 @@ objects:
   - name: TARGET_obj2_target|2
     expr_type: goal_type
 
-  - name: ROBOT_0
+  - name: robot_0
     expr_type: robot_type
 
 stage_goals:
   stage_0_5:
     expr_type: AND
     sub_exprs:
-      - holding(obj0_target|0, ROBOT_0)
+      - holding(obj0_target|0, robot_0)
   stage_1:
     expr_type: AND
     sub_exprs:
       - at(obj0_target|0,TARGET_obj0_target|0)
-      - not_holding(ROBOT_0)
+      - not_holding(robot_0)
   stage_1_5:
     expr_type: AND
     sub_exprs:
       - at(obj0_target|0,TARGET_obj0_target|0)
-      - holding(obj1_target|1, ROBOT_0)
+      - holding(obj1_target|1, robot_0)
   stage_2:
     expr_type: AND
     sub_exprs:
       - at(obj0_target|0,TARGET_obj0_target|0)
       - at(obj1_target|1,TARGET_obj1_target|1)
-      - not_holding(ROBOT_0)
+      - not_holding(robot_0)
   stage_2_5:
     expr_type: AND
     sub_exprs:
       - at(obj0_target|0,TARGET_obj0_target|0)
       - at(obj1_target|1,TARGET_obj1_target|1)
-      - holding(obj2_target|2, ROBOT_0)
+      - holding(obj2_target|2, robot_0)
   stage_3:
     expr_type: AND
     sub_exprs:
@@ -67,17 +67,17 @@ stage_goals:
       - at(obj2_target|2,TARGET_obj2_target|2)
 
 solution:
-  - nav(obj0_target|0, ROBOT_0)
-  - pick(obj0_target|0, ROBOT_0)
-  - nav(TARGET_obj0_target|0, ROBOT_0)
-  - place(obj0_target|0,TARGET_obj0_target|0, ROBOT_0)
+  - nav(obj0_target|0, robot_0)
+  - pick(obj0_target|0, robot_0)
+  - nav(TARGET_obj0_target|0, robot_0)
+  - place(obj0_target|0,TARGET_obj0_target|0, robot_0)
 
-  - nav(obj1_target|1, ROBOT_0)
-  - pick(obj1_target|1, ROBOT_0)
-  - nav(TARGET_obj1_target|1, ROBOT_0)
-  - place(obj1_target|1,TARGET_obj1_target|1, ROBOT_0)
+  - nav(obj1_target|1, robot_0)
+  - pick(obj1_target|1, robot_0)
+  - nav(TARGET_obj1_target|1, robot_0)
+  - place(obj1_target|1,TARGET_obj1_target|1, robot_0)
 
-  - nav(obj2_target|2, ROBOT_0)
-  - pick(obj2_target|2, ROBOT_0)
-  - nav(TARGET_obj2_target|2, ROBOT_0)
-  - place(obj2_target|2,TARGET_obj2_target|2, ROBOT_0)
+  - nav(obj2_target|2, robot_0)
+  - pick(obj2_target|2, robot_0)
+  - nav(TARGET_obj2_target|2, robot_0)
+  - place(obj2_target|2,TARGET_obj2_target|2, robot_0)

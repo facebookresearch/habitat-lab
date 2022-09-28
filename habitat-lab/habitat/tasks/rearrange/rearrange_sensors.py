@@ -202,7 +202,7 @@ class JointSensor(UsesRobotInterface, Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(config.DIMENSIONALITY,),
+            shape=(config.dimensionality,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -229,7 +229,7 @@ class JointVelocitySensor(UsesRobotInterface, Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(config.DIMENSIONALITY,),
+            shape=(config.dimensionality,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -507,7 +507,7 @@ class ObjAtGoal(Measure):
         ].get_metric()
 
         self._metric = {
-            str(idx): dist < self._config.SUCC_THRESH
+            str(idx): dist < self._config.succ_thresh
             for idx, dist in obj_to_goal_dists.items()
         }
 
@@ -693,14 +693,14 @@ class RobotForce(UsesRobotInterface, Measure):
         robot_force, _, overall_force = self._task.get_coll_forces(
             self.robot_id
         )
-        if self._task._config.COUNT_OBJ_COLLISIONS:
+        if self._task._config.count_obj_collisions:
             self._cur_force = overall_force
         else:
             self._cur_force = robot_force
 
         if self._prev_force is not None:
             self._add_force = self._cur_force - self._prev_force
-            if self._add_force > self._config.MIN_FORCE:
+            if self._add_force > self._config.min_force:
                 self._accum_force += self._add_force
                 self._prev_force = self._cur_force
             elif self._add_force < 0.0:
@@ -777,20 +777,20 @@ class ForceTerminate(Measure):
         accum_force = force_info["accum"]
         instant_force = force_info["instant"]
         if (
-            self._config.MAX_ACCUM_FORCE > 0
-            and accum_force > self._config.MAX_ACCUM_FORCE
+            self._config.max_accum_force > 0
+            and accum_force > self._config.max_accum_force
         ):
             rearrange_logger.debug(
-                f"Force threshold={self._config.MAX_ACCUM_FORCE} exceeded with {accum_force}, ending episode"
+                f"Force threshold={self._config.max_accum_force} exceeded with {accum_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True
         elif (
-            self._config.MAX_INSTANT_FORCE > 0
-            and instant_force > self._config.MAX_INSTANT_FORCE
+            self._config.max_instant_force > 0
+            and instant_force > self._config.max_instant_force
         ):
             rearrange_logger.debug(
-                f"Force instant threshold={self._config.MAX_INSTANT_FORCE} exceeded with {instant_force}, ending episode"
+                f"Force instant threshold={self._config.max_instant_force} exceeded with {instant_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True
@@ -864,13 +864,13 @@ class RearrangeReward(UsesRobotInterface, Measure):
         if self._sim.get_robot_data(
             self.robot_id
         ).grasp_mgr.is_violating_hold_constraint():
-            reward -= self._config.CONSTRAINT_VIOLATE_PEN
+            reward -= self._config.constraint_violate_pen
 
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
         if force_terminate:
-            reward -= self._config.FORCE_END_PEN
+            reward -= self._config.force_end_pen
 
         self._metric = reward
 
@@ -883,8 +883,8 @@ class RearrangeReward(UsesRobotInterface, Measure):
         reward -= max(
             0,  # This penalty is always positive
             min(
-                self._config.FORCE_PEN * force_metric.add_force,
-                self._config.MAX_FORCE_PEN,
+                self._config.force_pen * force_metric.add_force,
+                self._config.max_force_pen,
             ),
         )
         return reward

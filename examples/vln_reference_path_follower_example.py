@@ -45,8 +45,8 @@ def reference_path_example(mode):
     """
     config = habitat.get_config(config_paths="test/habitat_r2r_vln_test.yaml")
     config.defrost()
-    config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-    config.TASK.SENSORS.append("HEADING_SENSOR")
+    config.habitat.task.measurements.append("top_down_map")
+    config.habitat.task.sensors.append("heading_sensor")
     config.freeze()
     with SimpleRLEnv(config=config) as env:
         follower = ShortestPathFollower(

@@ -128,9 +128,9 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
-        logger.add_filehandler(self.config.LOG_FILE)
+        logger.add_filehandler(self.config.log_file)
 
-        policy = baseline_registry.get_policy(self.config.RL.POLICY.name)
+        policy = baseline_registry.get_policy(self.config.rl.policy.name)
         observation_space = self.obs_space
         self.obs_transforms = get_active_obs_transforms(self.config)
         observation_space = apply_obs_transforms_obs_space(
@@ -147,21 +147,21 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic.to(self.device)
 
         if (
-            self.config.RL.DDPPO.pretrained_encoder
-            or self.config.RL.DDPPO.pretrained
+            self.config.rl.ddppo.pretrained_encoder
+            or self.config.rl.ddppo.pretrained
         ):
             pretrained_state = torch.load(
-                self.config.RL.DDPPO.pretrained_weights, map_location="cpu"
+                self.config.rl.ddppo.pretrained_weights, map_location="cpu"
             )
 
-        if self.config.RL.DDPPO.pretrained:
+        if self.config.rl.ddppo.pretrained:
             self.actor_critic.load_state_dict(
                 {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }
             )
-        elif self.config.RL.DDPPO.pretrained_encoder:
+        elif self.config.rl.ddppo.pretrained_encoder:
             prefix = "actor_critic.net.visual_encoder."
             self.actor_critic.net.visual_encoder.load_state_dict(
                 {
@@ -171,12 +171,12 @@ class PPOTrainer(BaseRLTrainer):
                 }
             )
 
-        if not self.config.RL.DDPPO.train_encoder:
+        if not self.config.rl.ddppo.train_encoder:
             self._static_encoder = True
             for param in self.actor_critic.net.visual_encoder.parameters():
                 param.requires_grad_(False)
 
-        if self.config.RL.DDPPO.reset_critic:
+        if self.config.rl.ddppo.reset_critic:
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
@@ -201,14 +201,14 @@ class PPOTrainer(BaseRLTrainer):
         if resume_state is not None:
             self.config: Config = resume_state["config"]
 
-        if self.config.RL.DDPPO.force_distributed:
+        if self.config.rl.ddppo.force_distributed:
             self._is_distributed = True
 
         self._add_preemption_signal_handlers()
 
         if self._is_distributed:
             local_rank, tcp_store = init_distrib_slurm(
-                self.config.RL.DDPPO.distrib_backend
+                self.config.rl.ddppo.distrib_backend
             )
             if rank0_only():
                 logger.info(
@@ -218,28 +218,28 @@ class PPOTrainer(BaseRLTrainer):
                 )
 
             self.config.defrost()
-            self.config.TORCH_GPU_ID = local_rank
-            self.config.SIMULATOR_GPU_ID = local_rank
+            self.config.torch_gpu_id = local_rank
+            self.config.simulator_gpu_id = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.TASK_CONFIG.SEED += (
-                torch.distributed.get_rank() * self.config.NUM_ENVIRONMENTS
+            self.config.habitat.seed += (
+                torch.distributed.get_rank() * self.config.num_environments
             )
             self.config.freeze()
 
-            random.seed(self.config.TASK_CONFIG.SEED)
-            np.random.seed(self.config.TASK_CONFIG.SEED)
-            torch.manual_seed(self.config.TASK_CONFIG.SEED)
+            random.seed(self.config.habitat.seed)
+            np.random.seed(self.config.habitat.seed)
+            torch.manual_seed(self.config.habitat.seed)
             self.num_rollouts_done_store = torch.distributed.PrefixStore(
                 "rollout_tracker", tcp_store
             )
             self.num_rollouts_done_store.set("num_done", "0")
 
-        if rank0_only() and self.config.VERBOSE:
+        if rank0_only() and self.config.verbose:
             logger.info(f"config: {self.config}")
 
         profiling_wrapper.configure(
-            capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
-            num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
+            capture_start_step=self.config.profiling.capture_start_step,
+            num_steps_to_capture=self.config.profiling.num_steps_to_capture,
         )
 
         self._init_envs()
@@ -256,15 +256,15 @@ class PPOTrainer(BaseRLTrainer):
             action_shape = (1,)
             discrete_actions = True
 
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.rl.ppo
         if torch.cuda.is_available():
-            self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
+            self.device = torch.device("cuda", self.config.torch_gpu_id)
             torch.cuda.set_device(self.device)
         else:
             self.device = torch.device("cpu")
 
-        if rank0_only() and not os.path.isdir(self.config.CHECKPOINT_FOLDER):
-            os.makedirs(self.config.CHECKPOINT_FOLDER)
+        if rank0_only() and not os.path.isdir(self.config.checkpoint_folder):
+            os.makedirs(self.config.checkpoint_folder)
 
         self._setup_actor_critic_agent(ppo_cfg)
         if resume_state is not None:
@@ -355,11 +355,11 @@ class PPOTrainer(BaseRLTrainer):
             checkpoint["extra_state"] = extra_state
 
         torch.save(
-            checkpoint, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
+            checkpoint, os.path.join(self.config.checkpoint_folder, file_name)
         )
         torch.save(
             checkpoint,
-            os.path.join(self.config.CHECKPOINT_FOLDER, "latest.pth"),
+            os.path.join(self.config.checkpoint_folder, "latest.pth"),
         )
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
@@ -556,7 +556,7 @@ class PPOTrainer(BaseRLTrainer):
 
     @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self):
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.rl.ppo
         t_update_model = time.time()
         with inference_mode():
             step_batch = self.rollouts.buffers[
@@ -654,7 +654,7 @@ class PPOTrainer(BaseRLTrainer):
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
 
         # log stats
-        if self.num_updates_done % self.config.LOG_INTERVAL == 0:
+        if self.num_updates_done % self.config.log_interval == 0:
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
@@ -690,9 +690,9 @@ class PPOTrainer(BaseRLTrainer):
         # worker detects it will be a straggler, it preempts itself!
         return (
             rollout_step
-            >= self.config.RL.PPO.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+            >= self.config.rl.ppo.num_steps * self.SHORT_ROLLOUT_THRESHOLD
         ) and int(self.num_rollouts_done_store.get("num_done")) >= (
-            self.config.RL.DDPPO.sync_frac * torch.distributed.get_world_size()
+            self.config.rl.ddppo.sync_frac * torch.distributed.get_world_size()
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -738,7 +738,7 @@ class PPOTrainer(BaseRLTrainer):
                 requeue_stats["window_episode_stats"]
             )
 
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.rl.ppo
 
         with (
             get_writer(
@@ -877,7 +877,7 @@ class PPOTrainer(BaseRLTrainer):
             raise RuntimeError("Evaluation does not support distributed mode")
 
         # Map location CPU is almost always better than mapping to a CUDA device.
-        if self.config.EVAL.SHOULD_LOAD_CKPT:
+        if self.config.eval.should_load_ckpt:
             ckpt_dict = self.load_checkpoint(
                 checkpoint_path, map_location="cpu"
             )
@@ -886,38 +886,38 @@ class PPOTrainer(BaseRLTrainer):
         else:
             ckpt_dict = {}
 
-        if self.config.EVAL.USE_CKPT_CONFIG:
+        if self.config.eval.use_ckpt_config:
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
             config = self.config.clone()
 
-        ppo_cfg = config.RL.PPO
+        ppo_cfg = config.rl.ppo
 
         config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.habitat.dataset.split = config.eval.split
         config.freeze()
 
         if (
-            len(self.config.VIDEO_OPTION) > 0
-            and self.config.VIDEO_RENDER_TOP_DOWN
+            len(self.config.video_option) > 0
+            and self.config.video_render_top_down
         ):
             config.defrost()
-            config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-            config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
+            config.habitat.task.measurements.append("top_down_map")
+            config.habitat.task.measurements.append("collisions")
             config.freeze()
 
         if (
-            len(config.VIDEO_RENDER_VIEWS) > 0
-            and len(self.config.VIDEO_OPTION) > 0
+            len(config.video_render_views) > 0
+            and len(self.config.video_option) > 0
         ):
             config.defrost()
-            for render_view in config.VIDEO_RENDER_VIEWS:
-                uuid = config.TASK_CONFIG.SIMULATOR[render_view].UUID
-                config.TASK_CONFIG.GYM.OBS_KEYS.append(uuid)
-                config.SENSORS.append(render_view)
+            for render_view in config.video_render_views:
+                uuid = config.habitat.simulator[render_view].uuid
+                config.habitat.gym.obs_keys.append(uuid)
+                config.sensors.append(render_view)
             config.freeze()
 
-        if config.VERBOSE:
+        if config.verbose:
             logger.info(f"env config: {config}")
 
         self._init_envs(config, is_eval=True)
@@ -949,19 +949,19 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.config.NUM_ENVIRONMENTS,
+            self.config.num_environments,
             self.actor_critic.num_recurrent_layers,
             ppo_cfg.hidden_size,
             device=self.device,
         )
         prev_actions = torch.zeros(
-            self.config.NUM_ENVIRONMENTS,
+            self.config.num_environments,
             *action_shape,
             device=self.device,
             dtype=torch.long if discrete_actions else torch.float,
         )
         not_done_masks = torch.zeros(
-            self.config.NUM_ENVIRONMENTS,
+            self.config.num_environments,
             1,
             device=self.device,
             dtype=torch.bool,
@@ -972,13 +972,13 @@ class PPOTrainer(BaseRLTrainer):
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
         rgb_frames = [
-            [] for _ in range(self.config.NUM_ENVIRONMENTS)
+            [] for _ in range(self.config.num_environments)
         ]  # type: List[List[np.ndarray]]
-        if len(self.config.VIDEO_OPTION) > 0:
-            os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
+        if len(self.config.video_option) > 0:
+            os.makedirs(self.config.video_dir, exist_ok=True)
 
-        number_of_eval_episodes = self.config.TEST_EPISODE_COUNT
-        evals_per_ep = self.config.EVAL.EVALS_PER_EP
+        number_of_eval_episodes = self.config.test_episode_count
+        evals_per_ep = self.config.eval.evals_per_ep
         if number_of_eval_episodes == -1:
             number_of_eval_episodes = sum(self.envs.number_of_episodes)
         else:
@@ -995,7 +995,7 @@ class PPOTrainer(BaseRLTrainer):
                 assert evals_per_ep == 1
         assert (
             number_of_eval_episodes > 0
-        ), "You must specify a number of evaluation episodes with TEST_EPISODE_COUNT"
+        ), "You must specify a number of evaluation episodes with test_episode_count"
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self.actor_critic.eval()
@@ -1072,7 +1072,7 @@ class PPOTrainer(BaseRLTrainer):
                 ):
                     envs_to_pause.append(i)
 
-                if len(self.config.VIDEO_OPTION) > 0:
+                if len(self.config.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
@@ -1083,7 +1083,7 @@ class PPOTrainer(BaseRLTrainer):
                         frame = observations_to_image(
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
-                    if self.config.VIDEO_RENDER_ALL_INFO:
+                    if self.config.video_render_all_info:
                         frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
@@ -1105,17 +1105,17 @@ class PPOTrainer(BaseRLTrainer):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
-                    if len(self.config.VIDEO_OPTION) > 0:
+                    if len(self.config.video_option) > 0:
                         generate_video(
-                            video_option=self.config.VIDEO_OPTION,
-                            video_dir=self.config.VIDEO_DIR,
+                            video_option=self.config.video_option,
+                            video_dir=self.config.video_dir,
                             images=rgb_frames[i],
                             episode_id=current_episodes_info[i].episode_id,
                             checkpoint_idx=checkpoint_index,
                             metrics=self._extract_scalars_from_info(infos[i]),
-                            fps=self.config.VIDEO_FPS,
+                            fps=self.config.video_fps,
                             tb_writer=writer,
-                            keys_to_include_in_name=self.config.EVAL_KEYS_TO_INCLUDE_IN_NAME,
+                            keys_to_include_in_name=self.config.eval_keys_to_include_in_name,
                         )
 
                         rgb_frames[i] = []
@@ -1124,7 +1124,7 @@ class PPOTrainer(BaseRLTrainer):
                     if gfx_str != "":
                         write_gfx_replay(
                             gfx_str,
-                            self.config.TASK_CONFIG.TASK,
+                            self.config.habitat.task,
                             current_episodes_info[i].episode_id,
                         )
 

@@ -1,28 +1,29 @@
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 500
-SIMULATOR:
-  AGENT_0:
-    SENSORS: ['RGB_SENSOR']
-  HABITAT_SIM_V0:
-    GPU_DEVICE_ID: 0
-  RGB_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-  DEPTH_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-TASK:
-  TYPE: Nav-v0
-  END_ON_SUCCESS: True
-  REWARD_MEASURE: "distance_to_goal_reward"
-  SUCCESS_MEASURE: "spl"
+habitat:
+  environment:
+    max_episode_steps: 500
+  simulator:
+    agent_0:
+      sensors: ['rgb_sensor']
+    habitat_sim_v0:
+      gpu_device_id: 0
+    rgb_sensor:
+      width: 256
+      height: 256
+    depth_sensor:
+      width: 256
+      height: 256
+  task:
+    type: Nav-v0
+    end_on_success: True
+    reward_measure: "distance_to_goal_reward"
+    success_measure: "spl"
 
-  SENSORS: ['POINTGOAL_WITH_GPS_COMPASS_SENSOR']
-  POINTGOAL_WITH_GPS_COMPASS_SENSOR:
-    GOAL_FORMAT: "POLAR"
-    DIMENSIONALITY: 2
-  GOAL_SENSOR_UUID: pointgoal_with_gps_compass
+    sensors: ['pointgoal_with_gps_compass_sensor']
+    pointgoal_with_gps_compass_sensor:
+      goal_format: "POLAR"
+      dimensionality: 2
+    goal_sensor_uuid: pointgoal_with_gps_compass
 
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'DISTANCE_TO_GOAL_REWARD']
-  SUCCESS:
-    SUCCESS_DISTANCE: 0.2
+    measurements: ['distance_to_goal', 'success', 'spl', 'distance_to_goal_reward']
+    success:
+      success_distance: 0.2

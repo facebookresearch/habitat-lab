@@ -59,22 +59,23 @@ class DynNavRLEnv(RearrangeTask):
         self.force_recep_to_name = None
         self._prev_measure = 1.0
 
-        data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
+        data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
-            osp.join(save_dir, f"{fname}_{config.TYPE}_start.pickle"),
+            osp.join(save_dir, f"{fname}_{config.type}_start.pickle"),
             def_val={},
             verbose=False,
         )
         self.start_states = self.cache.load()
 
         task_spec_path = osp.join(
-            self._config.TASK_SPEC_BASE_PATH, self._config.TASK_SPEC + ".yaml"
+            self._config.task_spec_base_path,
+            self._config.task_spec + ".yaml",
         )
 
         self.pddl_problem = PddlProblem(
-            self._config.PDDL_DOMAIN_DEF,
+            self._config.pddl_domain_def,
             task_spec_path,
             self._config,
         )
@@ -109,10 +110,10 @@ class DynNavRLEnv(RearrangeTask):
         :returns: Mapping the action name to the grounded instances of the action that are possible in the current state.
         """
         allowed_actions = None
-        if len(self._config.FILTER_NAV_TO_TASKS) != 0:
-            allowed_actions = self._config.FILTER_NAV_TO_TASKS
+        if len(self._config.filter_nav_to_tasks) != 0:
+            allowed_actions = self._config.filter_nav_to_tasks
         true_preds = self.pddl_problem.get_true_predicates()
-        robot_entity = self.pddl_problem.get_entity("ROBOT_0")
+        robot_entity = self.pddl_problem.get_entity("robot_0")
 
         for entity in self.pddl_problem.all_entities.values():
             if entity.expr_type.is_subtype_of(
@@ -175,7 +176,7 @@ class DynNavRLEnv(RearrangeTask):
         start_hold_obj_idx: Optional[int] = None
 
         # Only change the scene if this skill is not running as a sub-task
-        if random.random() < self._config.OBJECT_IN_HAND_SAMPLE_PROB:
+        if random.random() < self._config.object_in_hand_sample_prob:
             start_hold_obj_idx = self._generate_snap_to_obj()
 
         allowed_tasks = self._get_allowed_tasks()
@@ -257,7 +258,7 @@ class DynNavRLEnv(RearrangeTask):
             )
             if (
                 full_key in self.start_states
-                and not self._config.FORCE_REGENERATE
+                and not self._config.force_regenerate
             ):
                 self._nav_to_info = self.start_states[full_key]
                 rearrange_logger.debug(
@@ -273,7 +274,7 @@ class DynNavRLEnv(RearrangeTask):
                 self._nav_to_info = self._get_force_nav_start_info(episode)
 
                 self.start_states[full_key] = self._nav_to_info
-                if self._config.SHOULD_SAVE_TO_CACHE:
+                if self._config.should_save_to_cache:
                     self.cache.save(self.start_states)
                     rearrange_logger.debug(
                         f"Forcing episode, saved key `{full_key}` to cache {self.cache.cache_id}."
@@ -281,7 +282,7 @@ class DynNavRLEnv(RearrangeTask):
         else:
             if (
                 episode_id in self.start_states
-                and not self._config.FORCE_REGENERATE
+                and not self._config.force_regenerate
             ):
                 self._nav_to_info = self.start_states[episode_id]
 
@@ -312,7 +313,7 @@ class DynNavRLEnv(RearrangeTask):
             if self._nav_to_info is None:
                 self._nav_to_info = self._generate_nav_start_goal(episode)
                 self.start_states[episode_id] = self._nav_to_info
-                if self._config.SHOULD_SAVE_TO_CACHE:
+                if self._config.should_save_to_cache:
                     self.cache.save(self.start_states)
                     rearrange_logger.debug(
                         f"Saved episode to cache {self.cache.cache_id}."
@@ -336,7 +337,7 @@ class DynNavRLEnv(RearrangeTask):
         if not sim.pathfinder.is_navigable(self._nav_to_info.nav_target_pos):
             rearrange_logger.error("Goal is not navigable.")
 
-        if self._sim.habitat_config.DEBUG_RENDER:
+        if self._sim.habitat_config.debug_render:
             # Visualize the position the agent is navigating to.
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
                 self._nav_to_info.nav_target_pos,

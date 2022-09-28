@@ -36,21 +36,21 @@ validate that transformation comparing projected and original views.
         # Set up the environment for testing
         config = habitat.get_config(config_paths="../habitat-lab/habitat/config/tasks/pointnav_rgbd.yaml")
         config.defrost()
-        config.DATASET.DATA_PATH = '../data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz'
-        config.DATASET.SCENES_DIR = '../data/scene_datasets/'
+        config.habitat.dataset.data_path = '../data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz'
+        config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
         config.freeze()
 
         # Can also do directly in the config file
         config.defrost()
-        config.SIMULATOR.DEPTH_SENSOR.NORMALIZE_DEPTH = False
+        config.habitat.simulator.depth_sensor.normalize_depth = False
         config.freeze()
 
         # Intrinsic parameters, assuming width matches height. Requires a simple refactor otherwise
-        W = config.SIMULATOR.DEPTH_SENSOR.WIDTH
-        H = config.SIMULATOR.DEPTH_SENSOR.HEIGHT
+        W = config.habitat.simulator.depth_sensor.width
+        H = config.habitat.simulator.depth_sensor.height
 
         assert(W == H)
-        hfov = float(config.SIMULATOR.DEPTH_SENSOR.HFOV) * np.pi / 180.
+        hfov = float(config.habitat.simulator.depth_sensor.hfov) * np.pi / 180.
 
 
         env = habitat.Env(config=config)

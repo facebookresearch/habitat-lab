@@ -1,39 +1,39 @@
-VERBOSE: False
-BASE_TASK_CONFIG_PATH: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
-TRAINER_NAME: "ddppo"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb"
-VIDEO_DIR: "video_dir"
-VIDEO_FPS: 30
-VIDEO_RENDER_TOP_DOWN: False
-VIDEO_RENDER_ALL_INFO: True
-VIDEO_RENDER_VIEWS:
-  - "THIRD_RGB_SENSOR"
-SENSORS: ["HEAD_DEPTH_SENSOR"]
-TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: ""
-NUM_ENVIRONMENTS: 1
-WRITER_TYPE: 'tb'
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1.0e8
-LOG_INTERVAL: 10
-NUM_CHECKPOINTS: 20
-FORCE_TORCH_SINGLE_THREADED: True
-EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'composite_success']
-EVAL:
-  USE_CKPT_CONFIG: False
-  SHOULD_LOAD_CKPT: False
+verbose: False
+base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
+trainer_name: "ddppo"
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: ["disk"]
+tensorboard_dir: "tb"
+video_dir: "video_dir"
+video_fps: 30
+video_render_top_down: False
+video_render_all_info: True
+video_render_views:
+  - "third_rgb_sensor"
+sensors: ["head_depth_sensor"]
+test_episode_count: -1
+eval_ckpt_path_dir: ""
+num_environments: 1
+writer_type: 'tb'
+checkpoint_folder: "data/new_checkpoints"
+num_updates: -1
+total_num_steps: 1.0e8
+log_interval: 10
+num_checkpoints: 20
+force_torch_single_threaded: True
+eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
+eval:
+  use_ckpt_config: False
+  should_load_ckpt: False
 
-RL:
-  POLICY:
+rl:
+  policy:
       name: "HierarchicalPolicy"
       high_level_policy:
         name: "GtHighLevelPolicy"
-      OBS_TRANSFORMS:
-        ENABLED_TRANSFORMS: ['AddVirtualKeys']
+      obs_transforms:
+        enabled_transforms: ['AddVirtualKeys']
         ADD_VIRTUAL_KEYS:
           "nav_to_skill": 8
           "object_to_agent_gps_compass": 2
@@ -46,7 +46,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
@@ -57,7 +57,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
@@ -68,7 +68,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
@@ -79,7 +79,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:
@@ -108,8 +108,8 @@ RL:
           action_distribution_type: "gaussian"
           OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
           OBS_SKILL_INPUT_DIM: 2
-          LIN_SPEED_STOP: 0.067
-          ANG_SPEED_STOP: 0.067
+          lin_speed_stop: 0.067
+          ang_speed_stop: 0.067
           LOAD_CKPT_FILE: "data/models/nav.pth"
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: False
@@ -138,7 +138,7 @@ RL:
         wait: "WAIT_SKILL"
         reset_arm: "RESET_ARM_SKILL"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2
@@ -165,7 +165,7 @@ RL:
     # policy inference time during rollout generation
     use_double_buffered_sampler: False
 
-  DDPPO:
+  ddppo:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
     distrib_backend: NCCL

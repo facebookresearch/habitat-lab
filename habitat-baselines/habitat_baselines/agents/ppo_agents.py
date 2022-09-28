@@ -28,17 +28,17 @@ def get_default_config() -> Config:
     c.INPUT_TYPE = "rgb"
     c.MODEL_PATH = "data/checkpoints/gibson-rgb-best.pth"
     c.RESOLUTION = 256
-    c.HIDDEN_SIZE = 512
+    c.hidden_size = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    c.goal_sensor_uuid = "pointgoal_with_gps_compass"
     return c
 
 
 class PPOAgent(Agent):
     def __init__(self, config: Config) -> None:
         spaces = {
-            get_default_config().GOAL_SENSOR_UUID: Box(
+            get_default_config().goal_sensor_uuid: Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
                 shape=(2,),
@@ -70,7 +70,7 @@ class PPOAgent(Agent):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        self.hidden_size = config.HIDDEN_SIZE
+        self.hidden_size = config.hidden_size
 
         random.seed(config.RANDOM_SEED)
         torch.random.manual_seed(config.RANDOM_SEED)

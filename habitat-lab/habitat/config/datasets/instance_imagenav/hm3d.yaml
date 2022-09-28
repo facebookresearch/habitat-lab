@@ -1,4 +1,5 @@
-DATASET:
-  TYPE: InstanceImageNav-v1
-  SPLIT: train
-  DATA_PATH: data/datasets/instance_imagenav/hm3d/v1/{split}/{split}.json.gz
+habitat:
+  dataset:
+    type: InstanceImageNav-v1
+    split: train
+    data_path: data/datasets/instance_imagenav/hm3d/v1/{split}/{split}.json.gz

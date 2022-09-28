@@ -46,15 +46,15 @@ class RobotManager:
         self._sim = sim
         self._all_robot_data = []
         self._is_pb_installed = is_pb_installed()
-        self.agent_names = cfg.AGENTS
+        self.agent_names = cfg.agents
 
-        for agent_name in cfg.AGENTS:
+        for agent_name in cfg.agents:
             agent_cfg = cfg[agent_name]
-            robot_cls = eval(agent_cfg.ROBOT_TYPE)
-            robot = robot_cls(agent_cfg.ROBOT_URDF, sim)
+            robot_cls = eval(agent_cfg.robot_type)
+            robot = robot_cls(agent_cfg.robot_urdf, sim)
             grasp_mgr = RearrangeGraspManager(sim, cfg, robot)
 
-            if len(cfg.AGENTS) > 1:
+            if len(cfg.agents) > 1:
                 # Prefix sensors if there is more than 1 agent in the scene.
                 robot.params.cameras = {
                     f"{agent_name}_{k}": v
@@ -99,17 +99,17 @@ class RobotManager:
         for robot_data in self._all_robot_data:
             robot_data.robot.params.arm_init_params = (
                 robot_data.start_js
-                + robot_data.cfg.JOINT_START_NOISE
+                + robot_data.cfg.joint_start_noise
                 * np.random.randn(len(robot_data.start_js))
             )
             robot_data.robot.reset()
 
-            # consume a fixed position from SIMUALTOR.AGENT_0 if configured
-            if robot_data.cfg.IS_SET_START_STATE:
+            # consume a fixed position from SIMUALTOR.agent_0 if configured
+            if robot_data.cfg.is_set_start_state:
                 robot_data.robot.base_pos = mn.Vector3(
-                    robot_data.cfg.START_POSITION
+                    robot_data.cfg.start_position
                 )
-                agent_rot = robot_data.cfg.START_ROTATION
+                agent_rot = robot_data.cfg.start_rotation
                 robot_data.robot.sim_obj.rotation = mn.Quaternion(
                     mn.Vector3(agent_rot[:3]), agent_rot[3]
                 )
@@ -144,10 +144,10 @@ class RobotManager:
 
     def first_setup(self):
         for robot_data in self._all_robot_data:
-            ik_arm_urdf = robot_data.cfg.IK_ARM_URDF
+            ik_arm_urdf = robot_data.cfg.ik_arm_urdf
             if ik_arm_urdf is not None and self._is_pb_installed:
                 robot_data._ik_helper = IkHelper(
-                    robot_data.cfg.IK_ARM_URDF,
+                    robot_data.cfg.ik_arm_urdf,
                     robot_data.start_js,
                 )
 

@@ -19,7 +19,7 @@ def generate_inits(cfg_path, opts):
                 # Print the dataset we are generating initializations for. This
                 # is useful when this script runs for a long time and we don't
                 # know which dataset the job is for.
-                print(cfg_path, config.DATASET.DATA_PATH)
+                print(cfg_path, config.habitat.dataset.data_path)
             env.reset()
 
 

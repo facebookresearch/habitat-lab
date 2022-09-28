@@ -61,7 +61,7 @@ cd build || exit
 CONDA_DIR="$(dirname $(dirname $(which conda)))"
 CONDA_DIR=\"${CONDA_DIR}/envs/HandcraftedAgents/lib/python3.7/site-packages/\"
 sed -i "s,lib/python3.5/dist-packages,${CONDA_DIR},g" ../CMakeLists.txt
-cmake .. -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")/libpython3.7m.so -DPYTHON_EXECUTABLE:FILEPATH=$(which python) -DCMAKE_LIBRARY_PATH="${MAINDIR}"/ORBSLAM2_installed/lib -DCMAKE_INCLUDE_PATH="${MAINDIR}"/ORBSLAM2_installed/include;"${MAINDIR}"/eigen3_installed/include/eigen3 -DCMAKE_INSTALL_PREFIX="${MAINDIR}"/pyorbslam2_installed
+cmake .. -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")/libpython3.7m.so -DPYTHON_EXECUTABLE:FILEPATH=$(which python) -DCMAKE_LIBRARY_PATH="${MAINDIR}"/orbslam2_installed/lib -DCMAKE_INCLUDE_PATH="${MAINDIR}"/ORBSLAM2_installed/include;"${MAINDIR}"/eigen3_installed/include/eigen3 -DCMAKE_INSTALL_PREFIX="${MAINDIR}"/pyorbslam2_installed
 make
 make install
 cp "${MAINDIR}"/ORB_SLAM2/Vocabulary/ORBvoc.txt "${DIR1}"/data/

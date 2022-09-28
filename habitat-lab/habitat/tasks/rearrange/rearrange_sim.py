@@ -45,20 +45,20 @@ class RearrangeSim(HabitatSim):
     ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
 
     def __init__(self, config: Config):
-        if len(config.AGENTS) > 1:
+        if len(config.agents) > 1:
             config.defrost()
             all_new_sensor_names = []
-            for agent in config.AGENTS:
+            for agent in config.agents:
                 agent_cfg = config[agent]
-                for orig_sensor_name in config.AGENT_0.SENSORS:
+                for orig_sensor_name in config.agent_0.sensors:
                     full_name = f"{agent}_{orig_sensor_name}"
-                    orig_sensor_id = config[orig_sensor_name].UUID
+                    orig_sensor_id = config[orig_sensor_name].uuid
                     new_sensor_cfg = config[orig_sensor_name].clone()
-                    new_sensor_cfg.UUID = f"{agent}_{orig_sensor_id}"
+                    new_sensor_cfg.uuid = f"{agent}_{orig_sensor_id}"
                     config[full_name] = new_sensor_cfg
                     all_new_sensor_names.append(full_name)
 
-            config.AGENT_0.SENSORS = all_new_sensor_names
+            config.agent_0.sensors = all_new_sensor_names
             config.freeze()
         super().__init__(config)
 
@@ -68,9 +68,9 @@ class RearrangeSim(HabitatSim):
         self.prev_scene_id = None
 
         # Number of physics updates per action
-        self.ac_freq_ratio = self.habitat_config.AC_FREQ_RATIO
+        self.ac_freq_ratio = self.habitat_config.ac_freq_ratio
         # The physics update time step.
-        self.ctrl_freq = self.habitat_config.CTRL_FREQ
+        self.ctrl_freq = self.habitat_config.ctrl_freq
         # Effective control speed is (ctrl_freq/ac_freq_ratio)
 
         self.art_objs: List[habitat_sim.physics.ManagedArticulatedObject] = []
@@ -126,7 +126,7 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self.habitat_config.CONCUR_RENDER:
+        if self.habitat_config.concur_render:
             self.renderer.acquire_gl_context()
 
     def sleep_all_objects(self):
@@ -182,7 +182,7 @@ class RearrangeSim(HabitatSim):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
-        config["SCENE"] = ep_info["scene_id"]
+        config["scene"] = ep_info["scene_id"]
 
         super().reconfigure(config, should_close_on_new_scene=False)
 
@@ -226,7 +226,7 @@ class RearrangeSim(HabitatSim):
         self.add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
-        if self.habitat_config.AUTO_SLEEP:
+        if self.habitat_config.auto_sleep:
             self.sleep_all_objects()
 
         if new_scene:
@@ -423,7 +423,7 @@ class RearrangeSim(HabitatSim):
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
             )
-            if self.habitat_config.KINEMATIC_MODE:
+            if self.habitat_config.kinematic_mode:
                 ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
                 ro.collidable = False
 
@@ -445,7 +445,7 @@ class RearrangeSim(HabitatSim):
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
             if (
-                self.habitat_config.KINEMATIC_MODE
+                self.habitat_config.kinematic_mode
                 and ao.handle not in robot_art_handles
             ):
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
@@ -468,7 +468,7 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
         for target_handle, transform in self._targets.items():
             # Visualize the goal of the object
-            if self.habitat_config.DEBUG_RENDER_GOAL:
+            if self.habitat_config.debug_render_goal:
                 new_target_handle = (
                     target_handle.split("_:")[0] + ".object_config.json"
                 )
@@ -599,8 +599,8 @@ class RearrangeSim(HabitatSim):
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
-        if self.habitat_config.DEBUG_RENDER:
-            if self.habitat_config.DEBUG_RENDER_ROBOT:
+        if self.habitat_config.debug_render:
+            if self.habitat_config.debug_render_robot:
                 self.robots_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
@@ -630,7 +630,7 @@ class RearrangeSim(HabitatSim):
 
         self.maybe_update_robot()
 
-        if self.habitat_config.CONCUR_RENDER:
+        if self.habitat_config.concur_render:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -644,15 +644,15 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
-        if self.habitat_config.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE:
+        if self.habitat_config.habitat_sim_v0.enable_gfx_replay_save:
             self.gfx_replay_manager.save_keyframe()
         self.step_idx += 1
 
-        if self.habitat_config.NEEDS_MARKERS:
+        if self.habitat_config.needs_markers:
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs and self.habitat_config.DEBUG_RENDER:
+        if "robot_third_rgb" in obs and self.habitat_config.debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -672,11 +672,11 @@ class RearrangeSim(HabitatSim):
     def maybe_update_robot(self):
         """
         Calls the update robots method on the robot manager if the
-        `UPDATE_ROBOT` configuration is set to True. Among other
+        `update_robot` configuration is set to True. Among other
         things, this will set the robot's sensors' positions to their new
         positions.
         """
-        if self.habitat_config.UPDATE_ROBOT:
+        if self.habitat_config.update_robot:
             self.robots_mgr.update_robots()
 
     def visualize_position(
@@ -721,14 +721,14 @@ class RearrangeSim(HabitatSim):
         """
 
         # optionally step physics and update the robot for benchmarking purposes
-        if self.habitat_config.STEP_PHYSICS:
+        if self.habitat_config.step_physics:
             self.step_world(dt)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
 
         :return: ([idx: int], [goal_pos: list]) The index of the target object
-          in self.scene_obj_ids and the 3D goal POSITION, rotation is IGNORED.
+          in self.scene_obj_ids and the 3D goal position, rotation is IGNORED.
           Note that goal_pos is the desired position of the object, not the
           starting position.
         """

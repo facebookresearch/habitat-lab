@@ -48,7 +48,7 @@ def reference_path_benchmark(config, num_episodes=None):
                     env.current_episode.goals[0].position
                 )
                 if best_action == None:
-                    best_action = HabitatSimActions.STOP
+                    best_action = HabitatSimActions.stop
                 env.step(best_action)
 
             for m, v in env.get_metrics().items():

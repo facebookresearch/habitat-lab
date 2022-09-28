@@ -135,8 +135,8 @@ actions:
       task: NavToObjTask-v0
       task_def: "nav_to_obj"
       config_args:
-        TASK.FORCE_REGENERATE: True
-        TASK.SHOULD_SAVE_TO_CACHE: False
+        task.force_regenerate: True
+        task.should_save_to_cache: False
 
   - name: nav_to_receptacle
     parameters:
@@ -156,8 +156,8 @@ actions:
       task: NavToObjTask-v0
       task_def: "nav_to_obj"
       config_args:
-        TASK.FORCE_REGENERATE: True
-        TASK.SHOULD_SAVE_TO_CACHE: False
+        task.force_regenerate: True
+        task.should_save_to_cache: False
 
   - name: pick
     parameters:
@@ -183,11 +183,11 @@ actions:
       task: RearrangePickTask-v0
       task_def: "pick"
       config_args:
-        TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
-        TASK.FORCE_REGENERATE: True
-        TASK.BASE_ANGLE_NOISE: 0.0
-        TASK.BASE_NOISE: 0.0
-        TASK.SHOULD_SAVE_TO_CACHE: False
+        habitat.task.should_enforce_target_within_reach: True
+        habitat.task.force_regenerate: True
+        habitat.task.base_angle_noise: 0.0
+        habitat.task.base_noise: 0.0
+        habitat.task.should_save_to_cache: False
 
   - name: place
     parameters:
@@ -209,11 +209,11 @@ actions:
       task: RearrangePlaceTask-v0
       task_def: "place"
       config_args:
-        TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
-        TASK.FORCE_REGENERATE: True
-        TASK.BASE_ANGLE_NOISE: 0.0
-        TASK.BASE_NOISE: 0.0
-        TASK.SHOULD_SAVE_TO_CACHE: False
+        task.should_enforce_target_within_reach: True
+        task.force_regenerate: True
+        task.base_angle_noise: 0.0
+        task.base_noise: 0.0
+        task.should_save_to_cache: False
 
   - name: open_fridge
     parameters:
@@ -237,8 +237,8 @@ actions:
       add_task_args:
         marker: fridge_id
       config_args:
-        TASK.BASE_ANGLE_NOISE: 0.0
-        TASK.SPAWN_REGION_SCALE: 0.0
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
 
   - name: close_fridge
     parameters:
@@ -262,8 +262,8 @@ actions:
       add_task_args:
         marker: fridge_id
       config_args:
-        TASK.BASE_ANGLE_NOISE: 0.0
-        TASK.SPAWN_REGION_SCALE: 0.0
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
 
   - name: open_cab
     parameters:
@@ -285,8 +285,8 @@ actions:
       task_def: "open_cab"
       task: RearrangeOpenDrawerTask-v0
       config_args:
-        TASK.BASE_ANGLE_NOISE: 0.0
-        TASK.SPAWN_REGION_SCALE: 0.0
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
 
   - name: close_cab
     parameters:
@@ -308,5 +308,5 @@ actions:
       task_def: "close_cab"
       task: RearrangeCloseDrawerTask-v0
       config_args:
-        TASK.BASE_ANGLE_NOISE: 0.0
-        TASK.SPAWN_REGION_SCALE: 0.0
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0

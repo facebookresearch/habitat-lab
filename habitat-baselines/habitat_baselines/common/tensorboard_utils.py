@@ -18,9 +18,9 @@ except ImportError:
 
 
 def get_writer(config, **kwargs):
-    if config.WRITER_TYPE == "tb":
-        return TensorboardWriter(config.TENSORBOARD_DIR, **kwargs)
-    elif config.WRITER_TYPE == "wb":
+    if config.writer_type == "tb":
+        return TensorboardWriter(config.tensorboard_dir, **kwargs)
+    elif config.writer_type == "wb":
         return WeightsAndBiasesWriter(config)
     else:
         raise ValueError("Unrecongized writer")
@@ -93,14 +93,14 @@ class WeightsAndBiasesWriter:
         Integrates with https://wandb.ai logging service.
         """
         wb_kwargs = {}
-        if config.WB.PROJECT_NAME != "":
-            wb_kwargs["project"] = config.WB.PROJECT_NAME
-        if config.WB.RUN_NAME != "":
-            wb_kwargs["name"] = config.WB.RUN_NAME
-        if config.WB.ENTITY != "":
-            wb_kwargs["entity"] = config.WB.ENTITY
-        if config.WB.GROUP != "":
-            wb_kwargs["group"] = config.WB.GROUP
+        if config.wb.project_name != "":
+            wb_kwargs["project"] = config.wb.project_name
+        if config.wb.run_name != "":
+            wb_kwargs["name"] = config.wb.run_name
+        if config.wb.entity != "":
+            wb_kwargs["entity"] = config.wb.entity
+        if config.wb.group != "":
+            wb_kwargs["group"] = config.wb.group
         slurm_info_dict = {
             k[len("SLURM_") :]: v
             for k, v in os.environ.items()

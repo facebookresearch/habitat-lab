@@ -1,32 +1,33 @@
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 1000
-  ITERATOR_OPTIONS:
-    MAX_SCENE_REPEAT_STEPS: 50000
-SIMULATOR:
-  AGENT_0:
-    SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
-  HABITAT_SIM_V0:
-    GPU_DEVICE_ID: 0
-  RGB_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-  DEPTH_SENSOR:
-    WIDTH: 256
-    HEIGHT: 256
-TASK:
-  TYPE: Nav-v0
-  END_ON_SUCCESS: True
-  REWARD_MEASURE: "distance_to_goal_reward"
-  SUCCESS_MEASURE: "spl"
+habitat:
+  environment:
+    max_episode_steps: 1000
+    iterator_options:
+      max_scene_repeat_steps: 50000
+  simulator:
+    agent_0:
+      sensors: ["rgb_sensor", "depth_sensor"]
+    habitat_sim_v0:
+      gpu_device_id: 0
+    rgb_sensor:
+      width: 256
+      height: 256
+    depth_sensor:
+      width: 256
+      height: 256
+  task:
+    type: Nav-v0
+    end_on_success: True
+    reward_measure: "distance_to_goal_reward"
+    success_measure: "spl"
 
 
-  SENSORS: ['IMAGEGOAL_SENSOR']
+    sensors: ['imagegoal_sensor']
 
-  MEASUREMENTS: ["DISTANCE_TO_GOAL", "SUCCESS", "SPL", "SOFT_SPL", "DISTANCE_TO_GOAL_REWARD"]
-  SUCCESS:
-    SUCCESS_DISTANCE: 1.
+    measurements: ["distance_to_goal", "success", "spl", "soft_spl", "distance_to_goal_reward"]
+    success:
+      success_distance: 1.
 
-DATASET:
-  TYPE: PointNav-v1
-  SPLIT: train
-  DATA_PATH: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
+  dataset:
+    type: PointNav-v1
+    split: train
+    data_path: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz

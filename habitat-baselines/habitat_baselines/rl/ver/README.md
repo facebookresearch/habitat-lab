@@ -2,7 +2,7 @@ Variable Experience Rollout (VER)
 =================================
 
 
-Implementation of variable experience rollout (VER). VER applies the sampling techniques for async to sync and collects a variable amount of experience for each environments rollout to mitigate the straggler effect.
+Implementation of variable experience rollout (ver). VER applies the sampling techniques for async to sync and collects a variable amount of experience for each environments rollout to mitigate the straggler effect.
 
 
 The system has 5 components. 3 of these are the key components for learning:
@@ -13,7 +13,7 @@ The system has 5 components. 3 of these are the key components for learning:
 
 How these pieces are connected together is best seen via this diagram:
 
-![VER System Diagram](/habitat_baselines/rl/ver/images/ver-system.svg)
+![ver System Diagram](/habitat_baselines/rl/ver/images/ver-system.svg)
 
 The Shared CPU Memory block is implemented via the `transfer_buffers` and the Shared GPU Memory block is implemented via the `rollouts`.
 
@@ -27,7 +27,7 @@ There are two components that serve auxiliary functions:
 If you use VER or the model-weights in your research, please cite the following [paper](https://tbd):
 
     @inproceedings{wijmans2022ver,
-      title = {{VER}: {S}caling On-Policy RL Leads to the Emergence of Navigation in Embodied Rearrangement},
+      title = {{ver}: {S}caling On-Policy RL Leads to the Emergence of Navigation in Embodied Rearrangement},
       author =  {Erik Wijmans and Irfan Essa and Dhruv Batra},
       booktitle = {arXiv},
       year =    {2022}

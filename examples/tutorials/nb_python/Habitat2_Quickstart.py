@@ -85,10 +85,10 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 def insert_render_options(config):
     # Added settings to make rendering higher resolution for better visualization
     config.defrost()
-    config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = 512
-    config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = 512
-    config.SIMULATOR.CONCUR_RENDER = False
-    config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
+    config.habitat.simulator.third_rgb_sensor.width = 512
+    config.habitat.simulator.third_rgb_sensor.height = 512
+    config.habitat.simulator.concur_render = False
+    config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
     config.freeze()
     return config
 
@@ -338,7 +338,7 @@ class NavPickSuccess(Measure):
 # definitions to a config file to finish defining the new Habitat task. For
 # examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/tasks/rearrange).
 #
-# This config also defines the action space through the `TASK.ACTIONS` key. You
+# This config also defines the action space through the `task.actions` key. You
 # can substitute different base control actions from
 # [here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/actions.py),
 # different arm control actions [from
@@ -347,118 +347,118 @@ class NavPickSuccess(Measure):
 
 # %%
 cfg_txt = """
-ENVIRONMENT:
+environment:
     # Number of steps within an episode.
-    MAX_EPISODE_STEPS: 200
-DATASET:
-    TYPE: RearrangeDataset-v0
-    SPLIT: train
+    max_episode_steps: 200
+dataset:
+    type: RearrangeDataset-v0
+    split: train
     # The dataset to use. Later we will generate our own dataset.
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    SCENES_DIR: "data/replica_cad/"
-TASK:
-    TYPE: RearrangeDemoNavPickTask-v0
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    scenes_dir: "data/replica_cad/"
+task:
+    type: RearrangeDemoNavPickTask-v0
 
     # Sensors for the observation space.
-    TARGET_START_SENSOR:
-        TYPE: "TargetStartSensor"
-    JOINT_SENSOR:
-        TYPE: "JointSensor"
-        DIMENSIONALITY: 7
-    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR"]
+    target_start_sensor:
+        type: "TargetStartSensor"
+    joint_sensor:
+        type: "JointSensor"
+        dimensionality: 7
+    sensors: ["target_start_sensor", "joint_sensor"]
 
     # Measurements
-    ROBOT_FORCE:
-        TYPE: "RobotForce"
-        MIN_FORCE: 20.0
-    FORCE_TERMINATE:
-        TYPE: "ForceTerminate"
+    robot_force:
+        type: "RobotForce"
+        min_force: 20.0
+    force_terminate:
+        type: "ForceTerminate"
         # Maximum amount of allowed force in Newtons.
-        MAX_ACCUM_FORCE: 5000.0
-    DISTANCE_TO_TARGET_OBJECT:
-        TYPE: "DistanceToTargetObject"
-    NAV_PICK_REWARD:
-        TYPE: "NavPickReward"
+        max_accum_force: 5000.0
+    distance_to_target_object:
+        type: "DistanceToTargetObject"
+    nav_pick_reward:
+        type: "NavPickReward"
         SCALING_FACTOR: 0.1
 
         # General Rearrange Reward config
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
+        constraint_violate_pen: 10.0
+        force_pen: 0.001
+        max_force_pen: 1.0
+        force_end_pen: 10.0
 
-    NAV_PICK_SUCCESS:
-        TYPE: "NavPickSuccess"
+    nav_pick_success:
+        type: "NavPickSuccess"
 
-    MEASUREMENTS:
+    measurements:
         # The measurements returned in the info dictionary
-        - "ROBOT_FORCE"
-        - "FORCE_TERMINATE"
-        - "DISTANCE_TO_TARGET_OBJECT"
-        - "NAV_PICK_REWARD"
-        - "NAV_PICK_SUCCESS"
-    ACTIONS:
+        - "robot_force"
+        - "force_terminate"
+        - "distance_to_target_object"
+        - "nav_pick_reward"
+        - "nav_pick_success"
+    actions:
         # Define the action space.
-        ARM_ACTION:
-            TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosAction"
-            GRIP_CONTROLLER: "MagicGraspAction"
-            ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: False
-            DELTA_POS_LIMIT: 0.0125
-            EE_CTRL_LIM: 0.015
-        BASE_VELOCITY:
-            TYPE: "BaseVelAction"
-            LIN_SPEED: 12.0
-            ANG_SPEED: 12.0
-            ALLOW_DYN_SLIDE: True
-            END_ON_STOP: False
-            ALLOW_BACK: True
-            MIN_ABS_LIN_SPEED: 1.0
-            MIN_ABS_ANG_SPEED: 1.0
-    POSSIBLE_ACTIONS:
-        - ARM_ACTION
-        - BASE_VELOCITY
+        arm_action:
+            type: "ArmAction"
+            arm_controller: "ArmRelPosAction"
+            grip_controller: "MagicGraspAction"
+            arm_joint_dimensionality: 7
+            grasp_thresh_dist: 0.15
+            disable_grip: False
+            delta_pos_limit: 0.0125
+            ee_ctrl_lim: 0.015
+        base_velocity:
+            type: "BaseVelAction"
+            lin_speed: 12.0
+            ang_speed: 12.0
+            allow_dyn_slide: True
+            end_on_stop: False
+            allow_back: True
+            min_abs_lin_speed: 1.0
+            min_abs_ang_speed: 1.0
+    possible_actions:
+        - arm_action
+        - base_velocity
 
-SIMULATOR:
-    ADDITIONAL_OBJECT_PATHS:
+simulator:
+    additional_object_paths:
         - "data/objects/ycb/configs/"
-    DEBUG_RENDER: False
-    ACTION_SPACE_CONFIG: v0
-    AGENTS: ['AGENT_0']
-    CONCUR_RENDER: False
-    AUTO_SLEEP: False
-    AGENT_0:
-        HEIGHT: 1.5
-        IS_SET_START_STATE: False
-        RADIUS: 0.1
-        SENSORS: ['HEAD_RGB_SENSOR']
-        START_POSITION: [0, 0, 0]
-        START_ROTATION: [0, 0, 0, 1]
-    HEAD_RGB_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
+    debug_render: False
+    action_space_config: v0
+    agents: ['agent_0']
+    concur_render: False
+    auto_sleep: False
+    agent_0:
+        height: 1.5
+        is_set_start_state: False
+        radius: 0.1
+        sensors: ['head_rgb_sensor']
+        start_position: [0, 0, 0]
+        start_rotation: [0, 0, 0, 1]
+    head_rgb_sensor:
+        width: 128
+        height: 128
 
     # Agent setup
     ARM_REST: [0.6, 0.0, 0.9]
-    CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: "FetchRobot"
-    FORWARD_STEP_SIZE: 0.25
+    ctrl_freq: 120.0
+    ac_freq_ratio: 4
+    robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+    robot_type: "FetchRobot"
+    forward_step_size: 0.25
 
     # Grasping
-    HOLD_THRESH: 0.09
-    GRASP_IMPULSE: 1000.0
+    hold_thresh: 0.09
+    grasp_impulse: 1000.0
 
-    HABITAT_SIM_V0:
-        ALLOW_SLIDING: True
-        ENABLE_PHYSICS: True
-        GPU_DEVICE_ID: 0
-        GPU_GPU: False
-        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    TYPE: RearrangeSim-v0
+    habitat_sim_v0:
+        allow_sliding: True
+        enable_physics: True
+        gpu_device_id: 0
+        gpu_gpu: False
+        physics_config_file: ./data/default.physics_config.json
+    type: RearrangeSim-v0
 """
 nav_pick_cfg_path = "data/nav_pick_demo.yaml"
 with open(nav_pick_cfg_path, "w") as f:
@@ -571,4 +571,4 @@ with open(nav_pick_cfg_path, "w") as f:
 # !python -m habitat.datasets.rearrange.run_episode_generator --run --config data/nav_pick_dataset.yaml --num-episodes 10 --out data/nav_pick.json.gz
 
 # %% [markdown]
-# To use this dataset set `DATASET.DATA_PATH = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.run_episode_generator --list`
+# To use this dataset set `dataset.data_path = data/nav_pick.json.gz` in the task config. See the full set of possible objects, receptacles, and scenes with `python -m habitat.datasets.rearrange.run_episode_generator --list`

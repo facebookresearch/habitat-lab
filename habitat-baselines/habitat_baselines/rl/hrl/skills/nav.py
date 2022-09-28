@@ -71,8 +71,8 @@ class NavSkillPolicy(NnSkillPolicy):
             filtered_prev_actions[:, 1],
         )
         should_stop = (
-            torch.abs(lin_vel) < self._config.LIN_SPEED_STOP
-            and torch.abs(ang_vel) < self._config.ANG_SPEED_STOP
+            torch.abs(lin_vel) < self._config.lin_speed_stop
+            and torch.abs(ang_vel) < self._config.ang_speed_stop
         )
         return should_stop
 

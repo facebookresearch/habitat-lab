@@ -137,9 +137,9 @@ class Dataset(Generic[T]):
     @classmethod
     def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
         r"""Returns a filter function that takes an episode and returns True if that
-        episode is valid under the CONTENT_SCENES feild of the provided config
+        episode is valid under the content_scenes feild of the provided config
         """
-        scenes_to_load = set(config.CONTENT_SCENES)
+        scenes_to_load = set(config.content_scenes)
 
         def _filter(ep: T) -> bool:
             return (

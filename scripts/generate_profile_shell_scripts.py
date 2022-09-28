@@ -132,9 +132,9 @@ if __name__ == "__main__":
     if do_capture_step_range:
         program_with_extra_args_str = (
             program_str
-            + " PROFILING.CAPTURE_START_STEP "
+            + " profiling.capture_start_step "
             + str(capture_start_step)
-            + " PROFILING.NUM_STEPS_TO_CAPTURE "
+            + " profiling.num_steps_to_capture "
             + str(num_steps_to_capture)
         )
     else:

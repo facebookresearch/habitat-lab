@@ -2,38 +2,38 @@
 # ppo_pointnav.yaml contains the known best practices
 # and should be used as the starting point instead.
 
-VERBOSE: False
+verbose: False
 
-BASE_TASK_CONFIG_PATH: "habitat-lab/habitat/config/tasks/pointnav_gibson.yaml"
-TRAINER_NAME: "ppo"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: []
+base_task_config_path: "habitat-lab/habitat/config/tasks/pointnav_gibson.yaml"
+trainer_name: "ppo"
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: []
 # Can be uncommented to generate videos.
-# VIDEO_OPTION: ["disk", "tensorboard"]
-TENSORBOARD_DIR: "tb"
-VIDEO_DIR: "video_dir"
+# video_option: ["disk", "tensorboard"]
+tensorboard_dir: "tb"
+video_dir: "video_dir"
 # Evaluate on all episodes
-TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
+test_episode_count: -1
+eval_ckpt_path_dir: "data/new_checkpoints"
 # This was 6 for mp3d and 8 for gibson in the paper
-NUM_ENVIRONMENTS: 6
-SENSORS: ["DEPTH_SENSOR"]
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-TOTAL_NUM_STEPS: 75e6
-LOG_INTERVAL: 25
-NUM_CHECKPOINTS: 100
+num_environments: 6
+sensors: ["depth_sensor"]
+checkpoint_folder: "data/new_checkpoints"
+total_num_steps: 75e6
+log_interval: 25
+num_checkpoints: 100
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
-RL:
-  SUCCESS_REWARD: 10.0
+rl:
+  success_reward: 10.0
 
-  POLICY:
+  policy:
     name: "PointNavBaselinePolicy"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.1
     ppo_epoch: 4

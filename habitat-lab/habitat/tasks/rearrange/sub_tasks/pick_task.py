@@ -31,12 +31,12 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
-        data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
+        data_path = dataset.config.data_path.format(split=dataset.config.split)
 
         fname = data_path.split("/")[-1].split(".")[0]
         save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
-            osp.join(save_dir, f"{fname}_{config.TYPE}_start.pickle"),
+            osp.join(save_dir, f"{fname}_{config.type}_start.pickle"),
             def_val={},
             verbose=False,
         )
@@ -67,8 +67,8 @@ class RearrangePickTaskV1(RearrangeTask):
     @property
     def _is_there_spawn_noise(self):
         return (
-            self._config.BASE_NOISE != 0.0
-            or self._config.BASE_ANGLE_NOISE != 0
+            self._config.base_noise != 0.0
+            or self._config.base_angle_noise != 0
         )
 
     def _gen_start_pos(
@@ -91,7 +91,7 @@ class RearrangePickTaskV1(RearrangeTask):
         dist_thresh = 0.1
         did_collide = False
 
-        if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
+        if self._config.should_enforce_target_within_reach:
             # Setting so the object is within reach is harder and requires more
             # tries.
             timeout = 5000
@@ -105,7 +105,7 @@ class RearrangePickTaskV1(RearrangeTask):
         while attempt < timeout:
             attempt += 1
             start_pos = orig_start_pos + np.random.normal(
-                0, self._config.BASE_NOISE, size=(3,)
+                0, self._config.base_noise, size=(3,)
             )
             rel_targ = targ_pos - start_pos
             angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
@@ -132,12 +132,12 @@ class RearrangePickTaskV1(RearrangeTask):
             sim.robot.base_pos = start_pos
 
             # Face the robot towards the object.
-            rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
+            rot_noise = np.random.normal(0.0, self._config.base_angle_noise)
             sim.robot.base_rot = angle_to_obj + rot_noise
 
             # Ensure the target is within reach
             is_within_bounds = True
-            if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
+            if self._config.should_enforce_target_within_reach:
                 robot_T = self._sim.robot.base_transformation
                 rel_targ_pos = robot_T.inverted().transform_point(targ_pos)
                 eps = 1e-2
@@ -152,7 +152,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 sim.internal_step(-1)
                 did_collide, details = rearrange_collision(
                     self._sim,
-                    self._config.COUNT_OBJ_COLLISIONS,
+                    self._config.count_obj_collisions,
                     ignore_base=False,
                 )
 
@@ -220,12 +220,12 @@ class RearrangePickTaskV1(RearrangeTask):
         if self.force_set_idx is not None:
             cache_lookup_k += str(self.force_set_idx)
         rearrange_logger.debug(
-            f"Using cache key {cache_lookup_k}, force_regenerate={self._config.FORCE_REGENERATE}"
+            f"Using cache key {cache_lookup_k}, force_regenerate={self._config.force_regenerate}"
         )
 
         if (
             cache_lookup_k in self.start_states
-            and not self._config.FORCE_REGENERATE
+            and not self._config.force_regenerate
         ):
             start_pos, start_rot, sel_idx = self.start_states[cache_lookup_k]
         else:
@@ -270,11 +270,11 @@ class RearrangePickTaskV1(RearrangeTask):
                 start_pos = None
 
             start_pos, start_rot = self._gen_start_pos(
-                sim, self._config.EASY_INIT, episode, sel_idx, start_pos
+                sim, self._config.easy_init, episode, sel_idx, start_pos
             )
             rearrange_logger.debug(f"Finished creating init for {self}")
             self.start_states[cache_lookup_k] = (start_pos, start_rot, sel_idx)
-            if self._config.SHOULD_SAVE_TO_CACHE:
+            if self._config.should_save_to_cache:
                 self.cache.save(self.start_states)
 
         sim.robot.base_pos = start_pos

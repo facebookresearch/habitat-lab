@@ -111,7 +111,7 @@ def ensure_entity_lists_match(
 
 
 # Hardcoded pddl types needed for setting simulator states.
-ROBOT_TYPE = "robot_type"
+robot_type = "robot_type"
 STATIC_OBJ_TYPE = "static_obj_type"
 ART_OBJ_TYPE = "art_obj_type"
 OBJ_TYPE = "obj_type"
@@ -148,7 +148,7 @@ class PddlSimInfo:
 
     def get_entity_pos(self, entity: PddlEntity) -> np.ndarray:
         ename = entity.name
-        if self.check_type_matches(entity, ROBOT_TYPE):
+        if self.check_type_matches(entity, robot_type):
             robot_id = self.robot_ids[ename]
             return self.sim.get_robot_data(robot_id).robot.base_pos
         elif self.check_type_matches(entity, ART_OBJ_TYPE):
@@ -172,7 +172,7 @@ class PddlSimInfo:
 
     def search_for_entity_any(self, entity: PddlEntity):
         ename = entity.name
-        if self.check_type_matches(entity, ROBOT_TYPE):
+        if self.check_type_matches(entity, robot_type):
             return self.robot_ids[ename]
         elif self.check_type_matches(entity, ART_OBJ_TYPE):
             return self.marker_handles[ename]
@@ -193,7 +193,7 @@ class PddlSimInfo:
 
         ename = entity.name
 
-        if expected_type == ROBOT_TYPE:
+        if expected_type == robot_type:
             return self.robot_ids[ename]
         elif expected_type == ART_OBJ_TYPE:
             return self.marker_handles[ename]

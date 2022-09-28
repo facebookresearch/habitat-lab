@@ -19,36 +19,35 @@ CONFIG_FILE_SEPARATOR = ","
 # -----------------------------------------------------------------------------
 _C = CN()
 # task config can be a list of conifgs like "A.yaml,B.yaml"
-_C.BASE_TASK_CONFIG_PATH = "habitat-lab/habitat/config/tasks/pointnav.yaml"
-_C.TASK_CONFIG = CN()  # task_config will be stored as a config node
-_C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
-_C.TRAINER_NAME = "ppo"
-_C.SIMULATOR_GPU_ID = 0
-_C.TORCH_GPU_ID = 0
-_C.VIDEO_OPTION = ["disk", "tensorboard"]
-_C.VIDEO_RENDER_VIEWS = []
-_C.TENSORBOARD_DIR = "tb"
-_C.WRITER_TYPE = "tb"
-_C.VIDEO_DIR = "video_dir"
-_C.VIDEO_FPS = 10
-_C.VIDEO_RENDER_TOP_DOWN = True
-_C.VIDEO_RENDER_ALL_INFO = False
-_C.TEST_EPISODE_COUNT = -1
-_C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
-_C.NUM_ENVIRONMENTS = 16
-_C.NUM_PROCESSES = -1  # depricated
-_C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
-_C.CHECKPOINT_FOLDER = "data/checkpoints"
-_C.NUM_UPDATES = 10000
-_C.NUM_CHECKPOINTS = 10
+_C.base_task_config_path = "habitat-lab/habitat/config/tasks/pointnav.yaml"
+_C.cmd_trailing_opts = []  # store command line options as list of strings
+_C.trainer_name = "ppo"
+_C.simulator_gpu_id = 0
+_C.torch_gpu_id = 0
+_C.video_option = ["disk", "tensorboard"]
+_C.video_render_views = []
+_C.tensorboard_dir = "tb"
+_C.writer_type = "tb"
+_C.video_dir = "video_dir"
+_C.video_fps = 10
+_C.video_render_top_down = True
+_C.video_render_all_info = False
+_C.test_episode_count = -1
+_C.eval_ckpt_path_dir = "data/checkpoints"  # path to ckpt or path to ckpts dir
+_C.num_environments = 16
+_C.num_processes = -1  # depricated
+_C.sensors = ["rgb_sensor", "depth_sensor"]
+_C.checkpoint_folder = "data/checkpoints"
+_C.num_updates = 10000
+_C.num_checkpoints = 10
 # Number of model updates between checkpoints
-_C.CHECKPOINT_INTERVAL = -1
-_C.TOTAL_NUM_STEPS = -1.0
-_C.LOG_INTERVAL = 10
-_C.LOG_FILE = "train.log"
-_C.FORCE_BLIND_POLICY = False
-_C.VERBOSE = True
-_C.EVAL_KEYS_TO_INCLUDE_IN_NAME = []
+_C.checkpoint_interval = -1
+_C.total_num_steps = -1.0
+_C.log_interval = 10
+_C.log_file = "train.log"
+_C.force_blind_policy = False
+_C.verbose = True
+_C.eval_keys_to_include_in_name = []
 # For our use case, the CPU side things are mainly memory copies
 # and nothing of substantive compute. PyTorch has been making
 # more and more memory copies parallel, but that just ends up
@@ -57,100 +56,100 @@ _C.EVAL_KEYS_TO_INCLUDE_IN_NAME = []
 # value is left as false as it's different than how
 # PyTorch normally behaves, but all configs we provide
 # set it to true and yours likely should too
-_C.FORCE_TORCH_SINGLE_THREADED = False
+_C.force_torch_single_threaded = False
 # -----------------------------------------------------------------------------
 # Weights and Biases config
 # -----------------------------------------------------------------------------
-_C.WB = CN()
+_C.wb = CN()
 # The name of the project on W&B.
-_C.WB.PROJECT_NAME = ""
+_C.wb.project_name = ""
 # Logging entity (like your username or team name)
-_C.WB.ENTITY = ""
+_C.wb.entity = ""
 # The group ID to assign to the run. Optional to specify.
-_C.WB.GROUP = ""
+_C.wb.group = ""
 # The run name to assign to the run. If not specified, W&B will randomly assign a name.
-_C.WB.RUN_NAME = ""
+_C.wb.run_name = ""
 # -----------------------------------------------------------------------------
-# EVAL CONFIG
+# eval CONFIG
 # -----------------------------------------------------------------------------
-_C.EVAL = CN()
+_C.eval = CN()
 # The split to evaluate on
-_C.EVAL.SPLIT = "val"
+_C.eval.split = "val"
 # Whether or not to use the config in the checkpoint. Setting this to False
 # is useful if some code changes necessitate a new config but the weights
 # are still valid.
-_C.EVAL.USE_CKPT_CONFIG = True
-_C.EVAL.SHOULD_LOAD_CKPT = True
+_C.eval.use_ckpt_config = True
+_C.eval.should_load_ckpt = True
 # The number of time to run each episode through evaluation.
 # Only works when evaluating on all episodes.
-_C.EVAL.EVALS_PER_EP = 1
+_C.eval.evals_per_ep = 1
 # -----------------------------------------------------------------------------
 # REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
 # -----------------------------------------------------------------------------
-_C.RL = CN()
+_C.rl = CN()
 # -----------------------------------------------------------------------------
 # preemption CONFIG
 # -----------------------------------------------------------------------------
-_C.RL.preemption = CN()
+_C.rl.preemption = CN()
 # Append the slurm job ID to the resume state filename if running a slurm job
 # This is useful when you want to have things from a different job but same
 # same checkpoint dir not resume.
-_C.RL.preemption.append_slurm_job_id = False
+_C.rl.preemption.append_slurm_job_id = False
 # Number of gradient updates between saving the resume state
-_C.RL.preemption.save_resume_state_interval = 100
+_C.rl.preemption.save_resume_state_interval = 100
 # Save resume states only when running with slurm
 # This is nice if you don't want debug jobs to resume
-_C.RL.preemption.save_state_batch_only = False
+_C.rl.preemption.save_state_batch_only = False
 # -----------------------------------------------------------------------------
-# POLICY CONFIG
+# policy CONFIG
 # -----------------------------------------------------------------------------
-_C.RL.POLICY = CN()
-_C.RL.POLICY.name = "PointNavResNetPolicy"
-_C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
+_C.rl.policy = CN()
+_C.rl.policy.name = "PointNavResNetPolicy"
+_C.rl.policy.action_distribution_type = "categorical"  # or 'gaussian'
 # If the list is empty, all keys will be included.
 # For gaussian action distribution:
-_C.RL.POLICY.ACTION_DIST = CN()
-_C.RL.POLICY.ACTION_DIST.use_log_std = True
-_C.RL.POLICY.ACTION_DIST.use_softplus = False
-_C.RL.POLICY.ACTION_DIST.log_std_init = 0.0
+_C.rl.policy.action_dist = CN()
+_C.rl.policy.action_dist.use_log_std = True
+_C.rl.policy.action_dist.use_softplus = False
+_C.rl.policy.action_dist.log_std_init = 0.0
 # If True, the std will be a parameter not conditioned on state
-_C.RL.POLICY.ACTION_DIST.use_std_param = False
+_C.rl.policy.action_dist.use_std_param = False
 # If True, the std will be clamped to the specified min and max std values
-_C.RL.POLICY.ACTION_DIST.clamp_std = True
-_C.RL.POLICY.ACTION_DIST.min_std = 1e-6
-_C.RL.POLICY.ACTION_DIST.max_std = 1
-_C.RL.POLICY.ACTION_DIST.min_log_std = -5
-_C.RL.POLICY.ACTION_DIST.max_log_std = 2
+_C.rl.policy.action_dist.clamp_std = True
+_C.rl.policy.action_dist.min_std = 1e-6
+_C.rl.policy.action_dist.max_std = 1
+_C.rl.policy.action_dist.min_log_std = -5
+_C.rl.policy.action_dist.max_log_std = 2
 # For continuous action distributions (including gaussian):
-_C.RL.POLICY.ACTION_DIST.action_activation = "tanh"  # ['tanh', '']
-_C.RL.POLICY.ACTION_DIST.scheduled_std = False
+_C.rl.policy.action_dist.action_activation = "tanh"  # ['tanh', '']
+_C.rl.policy.action_dist.scheduled_std = False
 # -----------------------------------------------------------------------------
-# OBS_TRANSFORMS CONFIG
+# obs_transforms CONFIG
 # -----------------------------------------------------------------------------
-_C.RL.POLICY.OBS_TRANSFORMS = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = tuple()
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.WIDTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.CHANNELS_LAST = True
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.TRANS_KEYS = (
+_C.rl.policy.obs_transforms = CN()
+_C.rl.policy.obs_transforms.enabled_transforms = tuple()
+_C.rl.policy.obs_transforms.center_cropper = CN()
+_C.rl.policy.obs_transforms.center_cropper.height = 256
+_C.rl.policy.obs_transforms.center_cropper.width = 256
+_C.rl.policy.obs_transforms.center_cropper.channels_last = True
+_C.rl.policy.obs_transforms.center_cropper.trans_keys = (
     "rgb",
     "depth",
     "semantic",
 )
-_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SIZE = 256
-_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.CHANNELS_LAST = True
-_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.TRANS_KEYS = (
+_C.rl.policy.obs_transforms.resize_shortest_edge = CN()
+_C.rl.policy.obs_transforms.resize_shortest_edge.size = 256
+_C.rl.policy.obs_transforms.resize_shortest_edge.channels_last = True
+_C.rl.policy.obs_transforms.resize_shortest_edge.trans_keys = (
     "rgb",
     "depth",
     "semantic",
 )
-_C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SEMANTIC_KEY = "semantic"
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH = 512
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = [
+_C.rl.policy.obs_transforms.resize_shortest_edge.semantic_key = "semantic"
+_C.rl.policy.obs_transforms.cube2eq = CN()
+_C.rl.policy.obs_transforms.cube2eq.height = 256
+_C.rl.policy.obs_transforms.cube2eq.width = 512
+_C.rl.policy.obs_transforms.cube2eq.sensor_uuids = [
     "BACK",
     "DOWN",
     "FRONT",
@@ -158,12 +157,12 @@ _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = [
     "RIGHT",
     "UP",
 ]
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.WIDTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.FOV = 180
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.PARAMS = (0.2, 0.2, 0.2)
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = [
+_C.rl.policy.obs_transforms.cube2fish = CN()
+_C.rl.policy.obs_transforms.cube2fish.height = 256
+_C.rl.policy.obs_transforms.cube2fish.width = 256
+_C.rl.policy.obs_transforms.cube2fish.fov = 180
+_C.rl.policy.obs_transforms.cube2fish.params = (0.2, 0.2, 0.2)
+_C.rl.policy.obs_transforms.cube2fish.sensor_uuids = [
     "BACK",
     "DOWN",
     "FRONT",
@@ -171,10 +170,10 @@ _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = [
     "RIGHT",
     "UP",
 ]
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.WIDTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = [
+_C.rl.policy.obs_transforms.eq2cube = CN()
+_C.rl.policy.obs_transforms.eq2cube.height = 256
+_C.rl.policy.obs_transforms.eq2cube.width = 256
+_C.rl.policy.obs_transforms.eq2cube.sensor_uuids = [
     "BACK",
     "DOWN",
     "FRONT",
@@ -185,105 +184,107 @@ _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = [
 # -----------------------------------------------------------------------------
 # PROXIMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
-_C.RL.PPO = CN()
-_C.RL.PPO.clip_param = 0.2
-_C.RL.PPO.ppo_epoch = 4
-_C.RL.PPO.num_mini_batch = 2
-_C.RL.PPO.value_loss_coef = 0.5
-_C.RL.PPO.entropy_coef = 0.01
-_C.RL.PPO.lr = 2.5e-4
-_C.RL.PPO.eps = 1e-5
-_C.RL.PPO.max_grad_norm = 0.5
-_C.RL.PPO.num_steps = 5
-_C.RL.PPO.use_gae = True
-_C.RL.PPO.use_linear_lr_decay = False
-_C.RL.PPO.use_linear_clip_decay = False
-_C.RL.PPO.gamma = 0.99
-_C.RL.PPO.tau = 0.95
-_C.RL.PPO.reward_window_size = 50
-_C.RL.PPO.use_normalized_advantage = False
-_C.RL.PPO.hidden_size = 512
-_C.RL.PPO.entropy_target_factor = 0.0
-_C.RL.PPO.use_adaptive_entropy_pen = False
-_C.RL.PPO.use_clipped_value_loss = True
+_C.rl.ppo = CN()
+_C.rl.ppo.clip_param = 0.2
+_C.rl.ppo.ppo_epoch = 4
+_C.rl.ppo.num_mini_batch = 2
+_C.rl.ppo.value_loss_coef = 0.5
+_C.rl.ppo.entropy_coef = 0.01
+_C.rl.ppo.lr = 2.5e-4
+_C.rl.ppo.eps = 1e-5
+_C.rl.ppo.max_grad_norm = 0.5
+_C.rl.ppo.num_steps = 5
+_C.rl.ppo.use_gae = True
+_C.rl.ppo.use_linear_lr_decay = False
+_C.rl.ppo.use_linear_clip_decay = False
+_C.rl.ppo.gamma = 0.99
+_C.rl.ppo.tau = 0.95
+_C.rl.ppo.reward_window_size = 50
+_C.rl.ppo.use_normalized_advantage = False
+_C.rl.ppo.hidden_size = 512
+_C.rl.ppo.entropy_target_factor = 0.0
+_C.rl.ppo.use_adaptive_entropy_pen = False
+_C.rl.ppo.use_clipped_value_loss = True
 # Use double buffered sampling, typically helps
 # when environment time is similar or large than
 # policy inference time during rollout generation
 # Not that this does not change the memory requirements
-_C.RL.PPO.use_double_buffered_sampler = False
+_C.rl.ppo.use_double_buffered_sampler = False
 # -----------------------------------------------------------------------------
 # Variable Experience Rollout (VER)
 # -----------------------------------------------------------------------------
-_C.RL.VER = CN()
-_C.RL.VER.variable_experience = True
-_C.RL.VER.num_inference_workers = 2
-_C.RL.VER.overlap_rollouts_and_learn = False
+_C.rl.ver = CN()
+_C.rl.ver.variable_experience = True
+_C.rl.ver.num_inference_workers = 2
+_C.rl.ver.overlap_rollouts_and_learn = False
 # -----------------------------------------------------------------------------
 # Auxiliary Losses
 # -----------------------------------------------------------------------------
-_C.RL.auxiliary_losses = CN()
-_C.RL.auxiliary_losses.enabled = []
+_C.rl.auxiliary_losses = CN()
+_C.rl.auxiliary_losses.enabled = []
 # Action-Conditional Contrastive Predictive Coding Loss
-_C.RL.auxiliary_losses.cpca = CN()
-_C.RL.auxiliary_losses.cpca.k = 20
-_C.RL.auxiliary_losses.cpca.time_subsample = 6
-_C.RL.auxiliary_losses.cpca.future_subsample = 2
-_C.RL.auxiliary_losses.cpca.loss_scale = 0.1
+_C.rl.auxiliary_losses.cpca = CN()
+_C.rl.auxiliary_losses.cpca.k = 20
+_C.rl.auxiliary_losses.cpca.time_subsample = 6
+_C.rl.auxiliary_losses.cpca.future_subsample = 2
+_C.rl.auxiliary_losses.cpca.loss_scale = 0.1
 # -----------------------------------------------------------------------------
 # DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------
-_C.RL.DDPPO = CN()
-_C.RL.DDPPO.sync_frac = 0.6
-_C.RL.DDPPO.distrib_backend = "GLOO"
-_C.RL.DDPPO.rnn_type = "GRU"
-_C.RL.DDPPO.num_recurrent_layers = 1
-_C.RL.DDPPO.backbone = "resnet18"
-_C.RL.DDPPO.pretrained_weights = "data/ddppo-models/gibson-2plus-resnet50.pth"
+_C.rl.ddppo = CN()
+_C.rl.ddppo.sync_frac = 0.6
+_C.rl.ddppo.distrib_backend = "GLOO"
+_C.rl.ddppo.rnn_type = "GRU"
+_C.rl.ddppo.num_recurrent_layers = 1
+_C.rl.ddppo.backbone = "resnet18"
+_C.rl.ddppo.pretrained_weights = "data/ddppo-models/gibson-2plus-resnet50.pth"
 # Loads pretrained weights
-_C.RL.DDPPO.pretrained = False
+_C.rl.ddppo.pretrained = False
 # Loads just the visual encoder backbone weights
-_C.RL.DDPPO.pretrained_encoder = False
+_C.rl.ddppo.pretrained_encoder = False
 # Whether or not the visual encoder backbone will be trained
-_C.RL.DDPPO.train_encoder = True
+_C.rl.ddppo.train_encoder = True
 # Whether or not to reset the critic linear layer
-_C.RL.DDPPO.reset_critic = True
+_C.rl.ddppo.reset_critic = True
 # Forces distributed mode for testing
-_C.RL.DDPPO.force_distributed = False
+_C.rl.ddppo.force_distributed = False
 # -----------------------------------------------------------------------------
-# ORBSLAM2 BASELINE
+# orbslam2 BASELINE
 # -----------------------------------------------------------------------------
-_C.ORBSLAM2 = CN()
-_C.ORBSLAM2.SLAM_VOCAB_PATH = "habitat_baselines/slambased/data/ORBvoc.txt"
-_C.ORBSLAM2.SLAM_SETTINGS_PATH = (
+_C.orbslam2 = CN()
+_C.orbslam2.slam_vocab_path = "habitat_baselines/slambased/data/ORBvoc.txt"
+_C.orbslam2.slam_settings_path = (
     "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
 )
-_C.ORBSLAM2.MAP_CELL_SIZE = 0.1
-_C.ORBSLAM2.MAP_SIZE = 40
-_C.ORBSLAM2.CAMERA_HEIGHT = get_task_config().SIMULATOR.DEPTH_SENSOR.POSITION[
-    1
-]
-_C.ORBSLAM2.BETA = 100
-_C.ORBSLAM2.H_OBSTACLE_MIN = 0.3 * _C.ORBSLAM2.CAMERA_HEIGHT
-_C.ORBSLAM2.H_OBSTACLE_MAX = 1.0 * _C.ORBSLAM2.CAMERA_HEIGHT
-_C.ORBSLAM2.D_OBSTACLE_MIN = 0.1
-_C.ORBSLAM2.D_OBSTACLE_MAX = 4.0
-_C.ORBSLAM2.PREPROCESS_MAP = True
-_C.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
-    get_task_config().SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
+_C.orbslam2.map_cell_size = 0.1
+_C.orbslam2.map_size = 40
+_C.orbslam2.camera_height = (
+    get_task_config().habitat.simulator.depth_sensor.position[1]
 )
-_C.ORBSLAM2.ANGLE_TH = float(np.deg2rad(15))
-_C.ORBSLAM2.DIST_REACHED_TH = 0.15
-_C.ORBSLAM2.NEXT_WAYPOINT_TH = 0.5
-_C.ORBSLAM2.NUM_ACTIONS = 3
-_C.ORBSLAM2.DIST_TO_STOP = 0.05
-_C.ORBSLAM2.PLANNER_MAX_STEPS = 500
-_C.ORBSLAM2.DEPTH_DENORM = get_task_config().SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
+_C.orbslam2.beta = 100
+_C.orbslam2.h_obstacle_min = 0.3 * _C.orbslam2.camera_height
+_C.orbslam2.h_obstacle_max = 1.0 * _C.orbslam2.camera_height
+_C.orbslam2.d_obstacle_min = 0.1
+_C.orbslam2.d_obstacle_max = 4.0
+_C.orbslam2.preprocess_map = True
+_C.orbslam2.min_pts_in_obstacle = (
+    get_task_config().habitat.simulator.depth_sensor.width / 2.0
+)
+_C.orbslam2.angle_th = float(np.deg2rad(15))
+_C.orbslam2.dist_reached_th = 0.15
+_C.orbslam2.next_waypoint_th = 0.5
+_C.orbslam2.num_actions = 3
+_C.orbslam2.dist_to_stop = 0.05
+_C.orbslam2.planner_max_steps = 500
+_C.orbslam2.depth_denorm = (
+    get_task_config().habitat.simulator.depth_sensor.max_depth
+)
 # -----------------------------------------------------------------------------
-# PROFILING
+# profiling
 # -----------------------------------------------------------------------------
-_C.PROFILING = CN()
-_C.PROFILING.CAPTURE_START_STEP = -1
-_C.PROFILING.NUM_STEPS_TO_CAPTURE = -1
+_C.profiling = CN()
+_C.profiling.capture_start_step = -1
+_C.profiling.num_steps_to_capture = -1
 
 
 _C.register_renamed_key
@@ -316,29 +317,29 @@ def get_config(
 
     if opts:
         for k, v in zip(opts[0::2], opts[1::2]):
-            if k == "BASE_TASK_CONFIG_PATH":
-                config.BASE_TASK_CONFIG_PATH = v
+            if k == "base_task_config_path":
+                config.base_task_config_path = v
 
-    config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
+    config.merge_from_other_cfg(get_task_config(config.base_task_config_path))
 
-    # In case the config specifies overrides for the TASK_CONFIG, we
+    # In case the config specifies overrides for the habitat config, we
     # remerge the files here
     if config_paths:
         for config_path in config_paths:
             config.merge_from_file(config_path)
 
     if opts:
-        config.CMD_TRAILING_OPTS = config.CMD_TRAILING_OPTS + opts
-        config.merge_from_list(config.CMD_TRAILING_OPTS)
+        config.cmd_trailing_opts = config.cmd_trailing_opts + opts
+        config.merge_from_list(config.cmd_trailing_opts)
 
-    if config.NUM_PROCESSES != -1:
+    if config.num_processes != -1:
         warnings.warn(
-            "NUM_PROCESSES is depricated and will be removed in a future version."
-            "  Use NUM_ENVIRONMENTS instead."
-            "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility."
+            "num_processes is depricated and will be removed in a future version."
+            "  Use num_environments instead."
+            "  Overwriting num_environments with num_processes for backwards compatibility."
         )
 
-        config.NUM_ENVIRONMENTS = config.NUM_PROCESSES
+        config.num_environments = config.num_processes
 
     config.freeze()
     return config

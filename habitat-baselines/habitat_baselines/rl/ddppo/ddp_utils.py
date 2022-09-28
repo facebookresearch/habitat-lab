@@ -69,10 +69,10 @@ def is_slurm_batch_job() -> bool:
 def resume_state_filename(config: Config, filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
-    if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
+    if is_slurm_job() and config.rl.preemption.append_slurm_job_id:
         fname += "-{}".format(SLURM_JOBID)
 
-    return osp.join(config.CHECKPOINT_FOLDER, fname) + filename_key + ".pth"
+    return osp.join(config.checkpoint_folder, fname) + filename_key + ".pth"
 
 
 @overload

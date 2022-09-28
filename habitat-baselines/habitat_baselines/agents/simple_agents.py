@@ -32,13 +32,13 @@ class RandomAgent(habitat.Agent):
 
     def act(self, observations: Observations) -> Dict[str, int64]:
         if self.is_goal_reached(observations):
-            action = HabitatSimActions.STOP
+            action = HabitatSimActions.stop
         else:
             action = np.random.choice(
                 [
-                    HabitatSimActions.MOVE_FORWARD,
-                    HabitatSimActions.TURN_LEFT,
-                    HabitatSimActions.TURN_RIGHT,
+                    HabitatSimActions.move_forward,
+                    HabitatSimActions.turn_left,
+                    HabitatSimActions.turn_right,
                 ]
             )
         return {"action": action}
@@ -47,9 +47,9 @@ class RandomAgent(habitat.Agent):
 class ForwardOnlyAgent(RandomAgent):
     def act(self, observations: Observations) -> Dict[str, int]:
         if self.is_goal_reached(observations):
-            action = HabitatSimActions.STOP
+            action = HabitatSimActions.stop
         else:
-            action = HabitatSimActions.MOVE_FORWARD
+            action = HabitatSimActions.move_forward
         return {"action": action}
 
 
@@ -60,13 +60,13 @@ class RandomForwardAgent(RandomAgent):
 
     def act(self, observations: Observations) -> Dict[str, Union[int, int64]]:
         if self.is_goal_reached(observations):
-            action = HabitatSimActions.STOP
+            action = HabitatSimActions.stop
         else:
             if np.random.uniform(0, 1, 1) < self.FORWARD_PROBABILITY:
-                action = HabitatSimActions.MOVE_FORWARD
+                action = HabitatSimActions.move_forward
             else:
                 action = np.random.choice(
-                    [HabitatSimActions.TURN_LEFT, HabitatSimActions.TURN_RIGHT]
+                    [HabitatSimActions.turn_left, HabitatSimActions.turn_right]
                 )
 
         return {"action": action}
@@ -90,20 +90,20 @@ class GoalFollower(RandomAgent):
         if angle_to_goal > pi or (
             (angle_to_goal < 0) and (angle_to_goal > -pi)
         ):
-            action = HabitatSimActions.TURN_RIGHT
+            action = HabitatSimActions.turn_right
         else:
-            action = HabitatSimActions.TURN_LEFT
+            action = HabitatSimActions.turn_left
         return action
 
     def act(self, observations: Observations) -> Dict[str, int]:
         if self.is_goal_reached(observations):
-            action = HabitatSimActions.STOP
+            action = HabitatSimActions.stop
         else:
             angle_to_goal = self.normalize_angle(
                 np.array(observations[self.goal_sensor_uuid][1])
             )
             if abs(angle_to_goal) < self.angle_th:
-                action = HabitatSimActions.MOVE_FORWARD
+                action = HabitatSimActions.move_forward
             else:
                 action = self.turn_towards_goal(angle_to_goal)
 
@@ -140,7 +140,7 @@ def main():
 
     agent = get_agent_cls(args.agent_class)(
         success_distance=args.success_distance,
-        goal_sensor_uuid=config.TASK.GOAL_SENSOR_UUID,
+        goal_sensor_uuid=config.habitat.task.goal_sensor_uuid,
     )
     benchmark = habitat.Benchmark(config_paths=args.task_config)
     metrics = benchmark.evaluate(agent)

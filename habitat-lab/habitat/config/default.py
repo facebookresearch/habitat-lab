@@ -32,898 +32,947 @@ CONFIG_FILE_SEPARATOR = ","
 # Config definition
 # -----------------------------------------------------------------------------
 _C = CN()
-_C.SEED = 100
+_C.habitat = CN()
+_C.habitat.seed = 100
 # -----------------------------------------------------------------------------
-# ENVIRONMENT
+# environment
 # -----------------------------------------------------------------------------
-_C.ENVIRONMENT = CN()
-_C.ENVIRONMENT.MAX_EPISODE_STEPS = 1000
-_C.ENVIRONMENT.MAX_EPISODE_SECONDS = 10000000
-_C.ENVIRONMENT.ITERATOR_OPTIONS = CN()
-_C.ENVIRONMENT.ITERATOR_OPTIONS.CYCLE = True
-_C.ENVIRONMENT.ITERATOR_OPTIONS.SHUFFLE = True
-_C.ENVIRONMENT.ITERATOR_OPTIONS.GROUP_BY_SCENE = True
-_C.ENVIRONMENT.ITERATOR_OPTIONS.NUM_EPISODE_SAMPLE = -1
-_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_EPISODES = -1
-_C.ENVIRONMENT.ITERATOR_OPTIONS.MAX_SCENE_REPEAT_STEPS = int(1e4)
-_C.ENVIRONMENT.ITERATOR_OPTIONS.STEP_REPETITION_RANGE = 0.2
+_C.habitat.environment = CN()
+_C.habitat.environment.max_episode_steps = 1000
+_C.habitat.environment.max_episode_seconds = 10000000
+_C.habitat.environment.iterator_options = CN()
+_C.habitat.environment.iterator_options.cycle = True
+_C.habitat.environment.iterator_options.shuffle = True
+_C.habitat.environment.iterator_options.group_by_scene = True
+_C.habitat.environment.iterator_options.num_episode_sample = -1
+_C.habitat.environment.iterator_options.max_scene_repeat_episodes = -1
+_C.habitat.environment.iterator_options.max_scene_repeat_steps = int(1e4)
+_C.habitat.environment.iterator_options.step_repetition_range = 0.2
 # -----------------------------------------------------------------------------
-# TASK
+# task
 # -----------------------------------------------------------------------------
-_C.TASK = CN()
-_C.TASK.REWARD_MEASURE = None
-_C.TASK.SUCCESS_MEASURE = None
-_C.TASK.SUCCESS_REWARD = 2.5
-_C.TASK.SLACK_REWARD = -0.01
-_C.TASK.END_ON_SUCCESS = False
+_C.habitat.task = CN()
+_C.habitat.task.reward_measure = None
+_C.habitat.task.success_measure = None
+_C.habitat.task.success_reward = 2.5
+_C.habitat.task.slack_reward = -0.01
+_C.habitat.task.end_on_success = False
 # -----------------------------------------------------------------------------
-# # NAVIGATION TASK
+# # NAVIGATION task
 # -----------------------------------------------------------------------------
-_C.TASK.TYPE = "Nav-v0"
-_C.TASK.SENSORS = []
-_C.TASK.MEASUREMENTS = []
-_C.TASK.GOAL_SENSOR_UUID = "pointgoal"
-_C.TASK.POSSIBLE_ACTIONS = ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT"]
+_C.habitat.task.type = "Nav-v0"
+_C.habitat.task.sensors = []
+_C.habitat.task.measurements = []
+_C.habitat.task.goal_sensor_uuid = "pointgoal"
+_C.habitat.task.possible_actions = [
+    "stop",
+    "move_forward",
+    "turn_left",
+    "turn_right",
+]
 # -----------------------------------------------------------------------------
-# # REARRANGE TASK
+# # REARRANGE task
 # -----------------------------------------------------------------------------
-_C.TASK.COUNT_OBJ_COLLISIONS = True
-_C.TASK.COUNT_ROBOT_OBJ_COLLS = False
-_C.TASK.SETTLE_STEPS = 5
-_C.TASK.CONSTRAINT_VIOLATION_ENDS_EPISODE = True
-_C.TASK.CONSTRAINT_VIOLATION_DROPS_OBJECT = False
-_C.TASK.FORCE_REGENERATE = (
+_C.habitat.task.count_obj_collisions = True
+_C.habitat.task.settle_steps = 5
+_C.habitat.task.constraint_violation_ends_episode = True
+_C.habitat.task.constraint_violation_drops_object = False
+_C.habitat.task.force_regenerate = (
     False  # Forced to regenerate the starts even if they are already cached.
 )
-_C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
-_C.TASK.MUST_LOOK_AT_TARG = True
-_C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
-_C.TASK.GFX_REPLAY_DIR = "data/replays"
-_C.TASK.DEBUG_GOAL_POINT = True
-_C.TASK.RENDER_TARGET = True
-_C.TASK.EE_SAMPLE_FACTOR = 0.2
-_C.TASK.EE_EXCLUDE_REGION = 0.0
+_C.habitat.task.should_save_to_cache = True  # Saves the generated starts to a cache if they are not already generated.
+_C.habitat.task.must_look_at_targ = True
+_C.habitat.task.object_in_hand_sample_prob = 0.167
+_C.habitat.task.gfx_replay_dir = "data/replays"
+_C.habitat.task.render_target = True
+_C.habitat.task.ee_sample_factor = 0.2
+_C.habitat.task.ee_exclude_region = 0.0
 # In radians
-_C.TASK.BASE_ANGLE_NOISE = 0.15
-_C.TASK.BASE_NOISE = 0.05
-_C.TASK.SPAWN_REGION_SCALE = 0.2
-_C.TASK.JOINT_MAX_IMPULSE = -1.0
-_C.TASK.DESIRED_RESTING_POSITION = [0.5, 0.0, 1.0]
-_C.TASK.USE_MARKER_T = True
-_C.TASK.CACHE_ROBOT_INIT = False
-_C.TASK.SUCCESS_STATE = 0.0
-# Measurements for composite tasks.
-_C.TASK.REWARD_MEASUREMENT = ""
-_C.TASK.SUCCESS_MEASUREMENT = ""
+_C.habitat.task.base_angle_noise = 0.15
+_C.habitat.task.base_noise = 0.05
+_C.habitat.task.spawn_region_scale = 0.2
+_C.habitat.task.joint_max_impulse = -1.0
+_C.habitat.task.desired_resting_position = [0.5, 0.0, 1.0]
+_C.habitat.task.use_marker_t = True
+_C.habitat.task.cache_robot_init = False
+_C.habitat.task.success_state = 0.0
 # If true, does not care about navigability or collisions with objects when spawning
 # robot
-_C.TASK.EASY_INIT = False
-_C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
+_C.habitat.task.easy_init = False
+_C.habitat.task.should_enforce_target_within_reach = False
 # -----------------------------------------------------------------------------
-# # COMPOSITE TASK CONFIG
+# # COMPOSITE task CONFIG
 # -----------------------------------------------------------------------------
-_C.TASK.TASK_SPEC_BASE_PATH = "tasks/rearrange/pddl/"
-_C.TASK.TASK_SPEC = ""
+_C.habitat.task.task_spec_base_path = "tasks/rearrange/pddl/"
+_C.habitat.task.task_spec = ""
 # PDDL domain params
-_C.TASK.PDDL_DOMAIN_DEF = "replica_cad"
-_C.TASK.OBJ_SUCC_THRESH = 0.3
-_C.TASK.ART_SUCC_THRESH = 0.15
-_C.TASK.ROBOT_AT_THRESH = 2.0
-_C.TASK.FILTER_NAV_TO_TASKS = []
+_C.habitat.task.pddl_domain_def = "replica_cad"
+_C.habitat.task.obj_succ_thresh = 0.3
+_C.habitat.task.art_succ_thresh = 0.15
+_C.habitat.task.robot_at_thresh = 2.0
+_C.habitat.task.filter_nav_to_tasks = []
 # -----------------------------------------------------------------------------
-# # ACTIONS
+# # actions
 # -----------------------------------------------------------------------------
-_C.TASK.ACTIONS = CN()
-_C.TASK.ACTIONS.STOP = CN()
-_C.TASK.ACTIONS.STOP.TYPE = "StopAction"
-_C.TASK.ACTIONS.EMPTY = CN()
-_C.TASK.ACTIONS.EMPTY.TYPE = "EmptyAction"
+_C.habitat.task.actions = CN()
+_C.habitat.task.actions.stop = CN()
+_C.habitat.task.actions.stop.type = "StopAction"
+_C.habitat.task.actions.empty = CN()
+_C.habitat.task.actions.empty.type = "EmptyAction"
 # -----------------------------------------------------------------------------
-# # NAVIGATION ACTIONS
+# # NAVIGATION actions
 # -----------------------------------------------------------------------------
-_C.TASK.ACTIONS.MOVE_FORWARD = CN()
-_C.TASK.ACTIONS.MOVE_FORWARD.TYPE = "MoveForwardAction"
-_C.TASK.ACTIONS.TURN_LEFT = CN()
-_C.TASK.ACTIONS.TURN_LEFT.TYPE = "TurnLeftAction"
-_C.TASK.ACTIONS.TURN_RIGHT = CN()
-_C.TASK.ACTIONS.TURN_RIGHT.TYPE = "TurnRightAction"
-_C.TASK.ACTIONS.LOOK_UP = CN()
-_C.TASK.ACTIONS.LOOK_UP.TYPE = "LookUpAction"
-_C.TASK.ACTIONS.LOOK_DOWN = CN()
-_C.TASK.ACTIONS.LOOK_DOWN.TYPE = "LookDownAction"
-_C.TASK.ACTIONS.TELEPORT = CN()
-_C.TASK.ACTIONS.TELEPORT.TYPE = "TeleportAction"
-_C.TASK.ACTIONS.VELOCITY_CONTROL = CN()
-_C.TASK.ACTIONS.VELOCITY_CONTROL.TYPE = "VelocityAction"
-_C.TASK.ACTIONS.VELOCITY_CONTROL.LIN_VEL_RANGE = [0.0, 0.25]  # meters per sec
-_C.TASK.ACTIONS.VELOCITY_CONTROL.ANG_VEL_RANGE = [-10.0, 10.0]  # deg per sec
-_C.TASK.ACTIONS.VELOCITY_CONTROL.MIN_ABS_LIN_SPEED = 0.025  # meters per sec
-_C.TASK.ACTIONS.VELOCITY_CONTROL.MIN_ABS_ANG_SPEED = 1.0  # deg per sec
-_C.TASK.ACTIONS.VELOCITY_CONTROL.TIME_STEP = 1.0  # seconds
+_C.habitat.task.actions.move_forward = CN()
+_C.habitat.task.actions.move_forward.type = "MoveForwardAction"
+_C.habitat.task.actions.turn_left = CN()
+_C.habitat.task.actions.turn_left.type = "TurnLeftAction"
+_C.habitat.task.actions.turn_right = CN()
+_C.habitat.task.actions.turn_right.type = "TurnRightAction"
+_C.habitat.task.actions.look_up = CN()
+_C.habitat.task.actions.look_up.type = "LookUpAction"
+_C.habitat.task.actions.look_down = CN()
+_C.habitat.task.actions.look_down.type = "LookDownAction"
+_C.habitat.task.actions.teleport = CN()
+_C.habitat.task.actions.teleport.type = "TeleportAction"
+_C.habitat.task.actions.velocity_control = CN()
+_C.habitat.task.actions.velocity_control.type = "VelocityAction"
+_C.habitat.task.actions.velocity_control.lin_vel_range = [
+    0.0,
+    0.25,
+]  # meters per sec
+_C.habitat.task.actions.velocity_control.ang_vel_range = [
+    -10.0,
+    10.0,
+]  # deg per sec
+_C.habitat.task.actions.velocity_control.min_abs_lin_speed = (
+    0.025  # meters per sec
+)
+_C.habitat.task.actions.velocity_control.min_abs_ang_speed = 1.0  # deg per sec
+_C.habitat.task.actions.velocity_control.time_step = 1.0  # seconds
 # -----------------------------------------------------------------------------
-# # REARRANGE ACTIONS
+# # REARRANGE actions
 # -----------------------------------------------------------------------------
-_C.TASK.ACTIONS.ARM_ACTION = CN()
-_C.TASK.ACTIONS.ARM_ACTION.TYPE = "ArmAction"
-_C.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmRelPosAction"
-_C.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER = None
-_C.TASK.ACTIONS.ARM_ACTION.ARM_JOINT_DIMENSIONALITY = 7
-_C.TASK.ACTIONS.ARM_ACTION.GRASP_THRESH_DIST = 0.15
-_C.TASK.ACTIONS.ARM_ACTION.DISABLE_GRIP = False
-_C.TASK.ACTIONS.ARM_ACTION.DELTA_POS_LIMIT = 0.0125
-_C.TASK.ACTIONS.ARM_ACTION.EE_CTRL_LIM = 0.015
-_C.TASK.ACTIONS.ARM_ACTION.SHOULD_CLIP = False
-_C.TASK.ACTIONS.ARM_ACTION.RENDER_EE_TARGET = False
-_C.TASK.ACTIONS.ARM_ACTION.AGENT = None
-_C.TASK.ACTIONS.BASE_VELOCITY = CN()
-_C.TASK.ACTIONS.BASE_VELOCITY.TYPE = "BaseVelAction"
-_C.TASK.ACTIONS.BASE_VELOCITY.LIN_SPEED = 10.0
-_C.TASK.ACTIONS.BASE_VELOCITY.ANG_SPEED = 10.0
-_C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_DYN_SLIDE = True
-_C.TASK.ACTIONS.BASE_VELOCITY.END_ON_STOP = False
-_C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
-_C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
-_C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
-_C.TASK.ACTIONS.BASE_VELOCITY.AGENT = None
-_C.TASK.ACTIONS.REARRANGE_STOP = CN()
-_C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
+_C.habitat.task.actions.arm_action = CN()
+_C.habitat.task.actions.arm_action.type = "ArmAction"
+_C.habitat.task.actions.arm_action.arm_controller = "ArmRelPosAction"
+_C.habitat.task.actions.arm_action.grip_controller = None
+_C.habitat.task.actions.arm_action.arm_joint_dimensionality = 7
+_C.habitat.task.actions.arm_action.grasp_thresh_dist = 0.15
+_C.habitat.task.actions.arm_action.disable_grip = False
+_C.habitat.task.actions.arm_action.delta_pos_limit = 0.0125
+_C.habitat.task.actions.arm_action.ee_ctrl_lim = 0.015
+_C.habitat.task.actions.arm_action.should_clip = False
+_C.habitat.task.actions.arm_action.render_ee_target = False
+_C.habitat.task.actions.arm_action.agent = None
+_C.habitat.task.actions.base_velocity = CN()
+_C.habitat.task.actions.base_velocity.type = "BaseVelAction"
+_C.habitat.task.actions.base_velocity.lin_speed = 10.0
+_C.habitat.task.actions.base_velocity.ang_speed = 10.0
+_C.habitat.task.actions.base_velocity.allow_dyn_slide = True
+_C.habitat.task.actions.base_velocity.end_on_stop = False
+_C.habitat.task.actions.base_velocity.allow_back = True
+_C.habitat.task.actions.base_velocity.min_abs_lin_speed = 1.0
+_C.habitat.task.actions.base_velocity.min_abs_ang_speed = 1.0
+_C.habitat.task.actions.base_velocity.agent = None
+_C.habitat.task.actions.rearrange_stop = CN()
+_C.habitat.task.actions.rearrange_stop.type = "RearrangeStopAction"
 # -----------------------------------------------------------------------------
 # Oracle navigation action
 # This action takes as input a discrete ID which refers to an object in the
 # PDDL domain. The oracle navigation controller then computes the actions to
 # navigate to that desired object.
 # -----------------------------------------------------------------------------
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION = CN()
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TYPE = "OracleNavAction"
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TURN_VELOCITY = 1.0
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.FORWARD_VELOCITY = 1.0
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.TURN_THRESH = 0.1
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.DIST_THRESH = 0.2
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.AGENT = None
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.LIN_SPEED = 10.0
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ANG_SPEED = 10.0
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_LIN_SPEED = 1.0
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.MIN_ABS_ANG_SPEED = 1.0
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_DYN_SLIDE = True
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.END_ON_STOP = False
-_C.TASK.ACTIONS.ORACLE_NAV_ACTION.ALLOW_BACK = True
+_C.habitat.task.actions.oracle_nav_action = CN()
+_C.habitat.task.actions.oracle_nav_action.type = "OracleNavAction"
+_C.habitat.task.actions.oracle_nav_action.turn_velocity = 1.0
+_C.habitat.task.actions.oracle_nav_action.forward_velocity = 1.0
+_C.habitat.task.actions.oracle_nav_action.turn_thresh = 0.1
+_C.habitat.task.actions.oracle_nav_action.dist_thresh = 0.2
+_C.habitat.task.actions.oracle_nav_action.agent = None
+_C.habitat.task.actions.oracle_nav_action.lin_speed = 10.0
+_C.habitat.task.actions.oracle_nav_action.ang_speed = 10.0
+_C.habitat.task.actions.oracle_nav_action.min_abs_lin_speed = 1.0
+_C.habitat.task.actions.oracle_nav_action.min_abs_ang_speed = 1.0
+_C.habitat.task.actions.oracle_nav_action.allow_dyn_slide = True
+_C.habitat.task.actions.oracle_nav_action.end_on_stop = False
+_C.habitat.task.actions.oracle_nav_action.allow_back = True
 # -----------------------------------------------------------------------------
-# # TASK SENSORS
+# # TASK_SENSORS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # POINTGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.POINTGOAL_SENSOR = CN()
-_C.TASK.POINTGOAL_SENSOR.TYPE = "PointGoalSensor"
-_C.TASK.POINTGOAL_SENSOR.GOAL_FORMAT = "POLAR"
-_C.TASK.POINTGOAL_SENSOR.DIMENSIONALITY = 2
+_C.habitat.task.pointgoal_sensor = CN()
+_C.habitat.task.pointgoal_sensor.type = "PointGoalSensor"
+_C.habitat.task.pointgoal_sensor.goal_format = "POLAR"
+_C.habitat.task.pointgoal_sensor.dimensionality = 2
 # -----------------------------------------------------------------------------
 # POINTGOAL WITH GPS+COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR = _C.TASK.POINTGOAL_SENSOR.clone()
-_C.TASK.POINTGOAL_WITH_GPS_COMPASS_SENSOR.TYPE = (
+_C.habitat.task.pointgoal_with_gps_compass_sensor = (
+    _C.habitat.task.pointgoal_sensor.clone()
+)
+_C.habitat.task.pointgoal_with_gps_compass_sensor.type = (
     "PointGoalWithGPSCompassSensor"
 )
 # -----------------------------------------------------------------------------
 # OBJECTGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.OBJECTGOAL_SENSOR = CN()
-_C.TASK.OBJECTGOAL_SENSOR.TYPE = "ObjectGoalSensor"
-_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC = "TASK_CATEGORY_ID"
-_C.TASK.OBJECTGOAL_SENSOR.GOAL_SPEC_MAX_VAL = 50
+_C.habitat.task.OBJECTgoal_sensor = CN()
+_C.habitat.task.OBJECTgoal_sensor.type = "ObjectGoalSensor"
+_C.habitat.task.OBJECTgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
+_C.habitat.task.OBJECTgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
 # IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.IMAGEGOAL_SENSOR = CN()
-_C.TASK.IMAGEGOAL_SENSOR.TYPE = "ImageGoalSensor"
+_C.habitat.task.imagegoal_sensor = CN()
+_C.habitat.task.imagegoal_sensor.type = "ImageGoalSensor"
 # -----------------------------------------------------------------------------
 # INSTANCE IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.INSTANCE_IMAGEGOAL_SENSOR = CN()
-_C.TASK.INSTANCE_IMAGEGOAL_SENSOR.TYPE = "InstanceImageGoalSensor"
+_C.habitat.task.instance_imagegoal_sensor = CN()
+_C.habitat.task.instance_imagegoal_sensor.type = "InstanceImageGoalSensor"
 # -----------------------------------------------------------------------------
 # INSTANCE IMAGEGOAL HFOV SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.INSTANCE_IMAGEGOAL_HFOV_SENSOR = CN()
-_C.TASK.INSTANCE_IMAGEGOAL_HFOV_SENSOR.TYPE = "InstanceImageGoalHFOVSensor"
+_C.habitat.task.instance_imagegoal_hfov_sensor = CN()
+_C.habitat.task.instance_imagegoal_hfov_sensor.type = (
+    "InstanceImageGoalHFOVSensor"
+)
 # -----------------------------------------------------------------------------
 # HEADING SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.HEADING_SENSOR = CN()
-_C.TASK.HEADING_SENSOR.TYPE = "HeadingSensor"
+_C.habitat.task.heading_sensor = CN()
+_C.habitat.task.heading_sensor.type = "HeadingSensor"
 # -----------------------------------------------------------------------------
 # COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.COMPASS_SENSOR = CN()
-_C.TASK.COMPASS_SENSOR.TYPE = "CompassSensor"
+_C.habitat.task.compass_sensor = CN()
+_C.habitat.task.compass_sensor.type = "CompassSensor"
 # -----------------------------------------------------------------------------
 # GPS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.GPS_SENSOR = CN()
-_C.TASK.GPS_SENSOR.TYPE = "GPSSensor"
-_C.TASK.GPS_SENSOR.DIMENSIONALITY = 2
+_C.habitat.task.gps_sensor = CN()
+_C.habitat.task.gps_sensor.type = "GPSSensor"
+_C.habitat.task.gps_sensor.dimensionality = 2
 # -----------------------------------------------------------------------------
 # PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.PROXIMITY_SENSOR = CN()
-_C.TASK.PROXIMITY_SENSOR.TYPE = "ProximitySensor"
-_C.TASK.PROXIMITY_SENSOR.MAX_DETECTION_RADIUS = 2.0
+_C.habitat.task.proximity_sensor = CN()
+_C.habitat.task.proximity_sensor.type = "ProximitySensor"
+_C.habitat.task.proximity_sensor.max_detection_radius = 2.0
 # -----------------------------------------------------------------------------
 # JOINT SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.JOINT_SENSOR = CN()
-_C.TASK.JOINT_SENSOR.TYPE = "JointSensor"
-_C.TASK.JOINT_SENSOR.DIMENSIONALITY = 7
+_C.habitat.task.joint_sensor = CN()
+_C.habitat.task.joint_sensor.type = "JointSensor"
+_C.habitat.task.joint_sensor.dimensionality = 7
 # -----------------------------------------------------------------------------
 # END EFFECTOR POSITION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.END_EFFECTOR_SENSOR = CN()
-_C.TASK.END_EFFECTOR_SENSOR.TYPE = "EEPositionSensor"
+_C.habitat.task.end_effector_sensor = CN()
+_C.habitat.task.end_effector_sensor.type = "EEPositionSensor"
 # -----------------------------------------------------------------------------
 # IS HOLDING SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.IS_HOLDING_SENSOR = CN()
-_C.TASK.IS_HOLDING_SENSOR.TYPE = "IsHoldingSensor"
+_C.habitat.task.is_holding_sensor = CN()
+_C.habitat.task.is_holding_sensor.type = "IsHoldingSensor"
 # -----------------------------------------------------------------------------
 # RELATIVE RESTING POSISITON SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.RELATIVE_RESTING_POS_SENSOR = CN()
-_C.TASK.RELATIVE_RESTING_POS_SENSOR.TYPE = "RelativeRestingPositionSensor"
+_C.habitat.task.relative_resting_pos_sensor = CN()
+_C.habitat.task.relative_resting_pos_sensor.type = (
+    "RelativeRestingPositionSensor"
+)
 # -----------------------------------------------------------------------------
 # JOINT VELOCITY SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.JOINT_VELOCITY_SENSOR = CN()
-_C.TASK.JOINT_VELOCITY_SENSOR.TYPE = "JointVelocitySensor"
-_C.TASK.JOINT_VELOCITY_SENSOR.DIMENSIONALITY = 7
+_C.habitat.task.joint_velocity_sensor = CN()
+_C.habitat.task.joint_velocity_sensor.type = "JointVelocitySensor"
+_C.habitat.task.joint_velocity_sensor.dimensionality = 7
 # -----------------------------------------------------------------------------
 # ORACLE NAVIGATION ACTION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.ORACLE_NAV_ACTION_SENSOR = CN()
-_C.TASK.ORACLE_NAV_ACTION_SENSOR.TYPE = "OracleNavigationActionSensor"
+_C.habitat.task.oracle_nav_action_SENSOR = CN()
+_C.habitat.task.oracle_nav_action_SENSOR.type = "OracleNavigationActionSensor"
 # -----------------------------------------------------------------------------
 # RESTING POSITION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.RESTING_POS_SENSOR = CN()
-_C.TASK.RESTING_POS_SENSOR.TYPE = "RestingPositionSensor"
+_C.habitat.task.resting_pos_sensor = CN()
+_C.habitat.task.resting_pos_sensor.type = "RestingPositionSensor"
 # -----------------------------------------------------------------------------
 # ART JOINT SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.ART_JOINT_SENSOR = CN()
-_C.TASK.ART_JOINT_SENSOR.TYPE = "ArtJointSensor"
+_C.habitat.task.ART_joint_sensor = CN()
+_C.habitat.task.ART_joint_sensor.type = "ArtJointSensor"
 # -----------------------------------------------------------------------------
 # NAV GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.NAV_GOAL_SENSOR = CN()
-_C.TASK.NAV_GOAL_SENSOR.TYPE = "NavGoalSensor"
+_C.habitat.task.NAV_goal_sensor = CN()
+_C.habitat.task.NAV_goal_sensor.type = "NavGoalSensor"
 # -----------------------------------------------------------------------------
 # ART JOINT NO VELOCITY SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.ART_JOINT_SENSOR_NO_VEL = CN()
-_C.TASK.ART_JOINT_SENSOR_NO_VEL.TYPE = "ArtJointSensorNoVel"
+_C.habitat.task.ART_joint_sensor_NO_VEL = CN()
+_C.habitat.task.ART_joint_sensor_NO_VEL.type = "ArtJointSensorNoVel"
 # -----------------------------------------------------------------------------
 # MARKER RELATIVE POSISITON SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.MARKER_REL_POS_SENSOR = CN()
-_C.TASK.MARKER_REL_POS_SENSOR.TYPE = "MarkerRelPosSensor"
+_C.habitat.task.marker_rel_pos_sensor = CN()
+_C.habitat.task.marker_rel_pos_sensor.type = "MarkerRelPosSensor"
 # -----------------------------------------------------------------------------
 # TARGET START SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.TARGET_START_SENSOR = CN()
-_C.TASK.TARGET_START_SENSOR.TYPE = "TargetStartSensor"
-_C.TASK.TARGET_START_SENSOR.GOAL_FORMAT = "CARTESIAN"
-_C.TASK.TARGET_START_SENSOR.DIMENSIONALITY = 3
+_C.habitat.task.target_start_sensor = CN()
+_C.habitat.task.target_start_sensor.type = "TargetStartSensor"
+_C.habitat.task.target_start_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.target_start_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # OBJECT SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.OBJECT_SENSOR = CN()
-_C.TASK.OBJECT_SENSOR.TYPE = "TargetCurrentSensor"
-_C.TASK.OBJECT_SENSOR.GOAL_FORMAT = "CARTESIAN"
-_C.TASK.OBJECT_SENSOR.DIMENSIONALITY = 3
+_C.habitat.task.object_sensor = CN()
+_C.habitat.task.object_sensor.type = "TargetCurrentSensor"
+_C.habitat.task.object_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.object_sensor.dimensionality = 3
 
 # -----------------------------------------------------------------------------
 # GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.GOAL_SENSOR = CN()
-_C.TASK.GOAL_SENSOR.TYPE = "GoalSensor"
-_C.TASK.GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
-_C.TASK.GOAL_SENSOR.DIMENSIONALITY = 3
+_C.habitat.task.goal_sensor = CN()
+_C.habitat.task.goal_sensor.type = "GoalSensor"
+_C.habitat.task.goal_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.goal_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # TARGET START OR GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.TARGET_START_POINT_GOAL_SENSOR = CN()
-_C.TASK.TARGET_START_POINT_GOAL_SENSOR.TYPE = (
+_C.habitat.task.target_start_point_goal_sensor = CN()
+_C.habitat.task.target_start_point_goal_sensor.type = (
     "TargetOrGoalStartPointGoalSensor"
 )
 # -----------------------------------------------------------------------------
 # COMPOSITE SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.GLOBAL_PREDICATE_SENSOR = CN()
-_C.TASK.GLOBAL_PREDICATE_SENSOR.TYPE = "GlobalPredicatesSensor"
+_C.habitat.task.global_predicate_sensor = CN()
+_C.habitat.task.global_predicate_sensor.type = "GlobalPredicatesSensor"
 # -----------------------------------------------------------------------------
 # TARGET START GPS/COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.TARGET_START_GPS_COMPASS_SENSOR = CN()
-_C.TASK.TARGET_START_GPS_COMPASS_SENSOR.TYPE = "TargetStartGpsCompassSensor"
+_C.habitat.task.target_start_gps_compass_sensor = CN()
+_C.habitat.task.target_start_gps_compass_sensor.type = (
+    "TargetStartGpsCompassSensor"
+)
 # -----------------------------------------------------------------------------
 # TARGET GOAL GPS/COMPASS SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR = CN()
-_C.TASK.TARGET_GOAL_GPS_COMPASS_SENSOR.TYPE = "TargetGoalGpsCompassSensor"
+_C.habitat.task.target_goal_gps_compass_sensor = CN()
+_C.habitat.task.target_goal_gps_compass_sensor.type = (
+    "TargetGoalGpsCompassSensor"
+)
 # -----------------------------------------------------------------------------
 # NAV TO SKILL ID SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.NAV_TO_SKILL_SENSOR = CN()
-_C.TASK.NAV_TO_SKILL_SENSOR.TYPE = "NavToSkillSensor"
-_C.TASK.NAV_TO_SKILL_SENSOR.NUM_SKILLS = 8
+_C.habitat.task.nav_to_skill_sensor = CN()
+_C.habitat.task.nav_to_skill_sensor.type = "NavToSkillSensor"
+_C.habitat.task.nav_to_skill_sensor.num_skills = 8
 # -----------------------------------------------------------------------------
 # ABSOLUTE TARGET START SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.ABS_TARGET_START_SENSOR = CN()
-_C.TASK.ABS_TARGET_START_SENSOR.TYPE = "AbsTargetStartSensor"
-_C.TASK.ABS_TARGET_START_SENSOR.GOAL_FORMAT = "CARTESIAN"
-_C.TASK.ABS_TARGET_START_SENSOR.DIMENSIONALITY = 3
+_C.habitat.task.abs_target_start_sensor = CN()
+_C.habitat.task.abs_target_start_sensor.type = "AbsTargetStartSensor"
+_C.habitat.task.abs_target_start_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.abs_target_start_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # ABSOLUTE GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.ABS_GOAL_SENSOR = CN()
-_C.TASK.ABS_GOAL_SENSOR.TYPE = "AbsGoalSensor"
-_C.TASK.ABS_GOAL_SENSOR.GOAL_FORMAT = "CARTESIAN"
-_C.TASK.ABS_GOAL_SENSOR.DIMENSIONALITY = 3
+_C.habitat.task.ABS_goal_sensor = CN()
+_C.habitat.task.ABS_goal_sensor.type = "AbsGoalSensor"
+_C.habitat.task.ABS_goal_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.ABS_goal_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # DISTANCE TO NAVIGATION GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.DIST_TO_NAV_GOAL = CN()
-_C.TASK.DIST_TO_NAV_GOAL.TYPE = "DistToNavGoalSensor"
+_C.habitat.task.dist_to_nav_goal = CN()
+_C.habitat.task.dist_to_nav_goal.type = "DistToNavGoalSensor"
 # -----------------------------------------------------------------------------
 # LOCALIZATION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.LOCALIZATION_SENSOR = CN()
-_C.TASK.LOCALIZATION_SENSOR.TYPE = "LocalizationSensor"
+_C.habitat.task.localization_sensor = CN()
+_C.habitat.task.localization_sensor.type = "LocalizationSensor"
 # -----------------------------------------------------------------------------
 # SUCCESS MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.SUCCESS = CN()
-_C.TASK.SUCCESS.TYPE = "Success"
-_C.TASK.SUCCESS.SUCCESS_DISTANCE = 0.2
+_C.habitat.task.success = CN()
+_C.habitat.task.success.type = "Success"
+_C.habitat.task.success.success_distance = 0.2
 # -----------------------------------------------------------------------------
 # SPL MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.SPL = CN()
-_C.TASK.SPL.TYPE = "SPL"
+_C.habitat.task.spl = CN()
+_C.habitat.task.spl.type = "SPL"
 # -----------------------------------------------------------------------------
 # SOFT-SPL MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.SOFT_SPL = CN()
-_C.TASK.SOFT_SPL.TYPE = "SoftSPL"
+_C.habitat.task.soft_spl = CN()
+_C.habitat.task.soft_spl.type = "SoftSPL"
 # -----------------------------------------------------------------------------
 # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.TOP_DOWN_MAP = CN()
-_C.TASK.TOP_DOWN_MAP.TYPE = "TopDownMap"
-_C.TASK.TOP_DOWN_MAP.MAX_EPISODE_STEPS = _C.ENVIRONMENT.MAX_EPISODE_STEPS
-_C.TASK.TOP_DOWN_MAP.MAP_PADDING = 3
-_C.TASK.TOP_DOWN_MAP.MAP_RESOLUTION = 1024
-_C.TASK.TOP_DOWN_MAP.DRAW_SOURCE = True
-_C.TASK.TOP_DOWN_MAP.DRAW_BORDER = True
-_C.TASK.TOP_DOWN_MAP.DRAW_SHORTEST_PATH = True
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR = CN()
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.DRAW = True
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.VISIBILITY_DIST = 5.0
-_C.TASK.TOP_DOWN_MAP.FOG_OF_WAR.FOV = 90
-_C.TASK.TOP_DOWN_MAP.DRAW_VIEW_POINTS = True
-_C.TASK.TOP_DOWN_MAP.DRAW_GOAL_POSITIONS = True
+_C.habitat.task.top_down_map = CN()
+_C.habitat.task.top_down_map.type = "TopDownMap"
+_C.habitat.task.top_down_map.max_episode_steps = (
+    _C.habitat.environment.max_episode_steps
+)
+_C.habitat.task.top_down_map.map_padding = 3
+_C.habitat.task.top_down_map.map_resolution = 1024
+_C.habitat.task.top_down_map.draw_source = True
+_C.habitat.task.top_down_map.draw_border = True
+_C.habitat.task.top_down_map.draw_shortest_path = True
+_C.habitat.task.top_down_map.fog_of_war = CN()
+_C.habitat.task.top_down_map.fog_of_war.draw = True
+_C.habitat.task.top_down_map.fog_of_war.visibility_dist = 5.0
+_C.habitat.task.top_down_map.fog_of_war.fov = 90
+_C.habitat.task.top_down_map.draw_view_points = True
+_C.habitat.task.top_down_map.draw_goal_positions = True
 # Axes aligned bounding boxes
-_C.TASK.TOP_DOWN_MAP.DRAW_GOAL_AABBS = True
+_C.habitat.task.top_down_map.draw_goal_aabbs = True
 # -----------------------------------------------------------------------------
-# COLLISIONS MEASUREMENT
+# COLLISIONSMEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.COLLISIONS = CN()
-_C.TASK.COLLISIONS.TYPE = "Collisions"
+_C.habitat.task.collisions = CN()
+_C.habitat.task.collisions.type = "Collisions"
 # -----------------------------------------------------------------------------
 # GENERAL MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.ROBOT_FORCE = CN()
-_C.TASK.ROBOT_FORCE.TYPE = "RobotForce"
-_C.TASK.ROBOT_FORCE.MIN_FORCE = 20.0
+_C.habitat.task.robot_force = CN()
+_C.habitat.task.robot_force.type = "RobotForce"
+_C.habitat.task.robot_force.min_force = 20.0
 
-_C.TASK.FORCE_TERMINATE = CN()
-_C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
-_C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
-_C.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
+_C.habitat.task.force_terminate = CN()
+_C.habitat.task.force_terminate.type = "ForceTerminate"
+_C.habitat.task.force_terminate.max_accum_force = -1.0
+_C.habitat.task.force_terminate.max_instant_force = -1.0
 
-_C.TASK.ROBOT_COLLS = CN()
-_C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
-_C.TASK.OBJECT_TO_GOAL_DISTANCE = CN()
-_C.TASK.OBJECT_TO_GOAL_DISTANCE.TYPE = "ObjectToGoalDistance"
-_C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE = CN()
-_C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE.TYPE = "EndEffectorToObjectDistance"
-_C.TASK.END_EFFECTOR_TO_REST_DISTANCE = CN()
-_C.TASK.END_EFFECTOR_TO_REST_DISTANCE.TYPE = "EndEffectorToRestDistance"
+_C.habitat.task.robot_colls = CN()
+_C.habitat.task.robot_colls.type = "RobotCollisions"
+_C.habitat.task.object_to_goal_distance = CN()
+_C.habitat.task.object_to_goal_distance.type = "ObjectToGoalDistance"
+_C.habitat.task.end_effector_to_object_distance = CN()
+_C.habitat.task.end_effector_to_object_distance.type = (
+    "EndEffectorToObjectDistance"
+)
+_C.habitat.task.end_effector_to_rest_distance = CN()
+_C.habitat.task.end_effector_to_rest_distance.type = (
+    "EndEffectorToRestDistance"
+)
 
-_C.TASK.ART_OBJ_AT_DESIRED_STATE = CN()
-_C.TASK.ART_OBJ_AT_DESIRED_STATE.TYPE = "ArtObjAtDesiredState"
-_C.TASK.ART_OBJ_AT_DESIRED_STATE.USE_ABSOLUTE_DISTANCE = True
-_C.TASK.ART_OBJ_AT_DESIRED_STATE.SUCCESS_DIST_THRESHOLD = 0.05
+_C.habitat.task.art_obj_at_desired_state = CN()
+_C.habitat.task.art_obj_at_desired_state.type = "ArtObjAtDesiredState"
+_C.habitat.task.art_obj_at_desired_state.use_absolute_distance = True
+_C.habitat.task.art_obj_at_desired_state.success_dist_threshold = 0.05
 
-_C.TASK.GFX_REPLAY_MEASURE = CN()
-_C.TASK.GFX_REPLAY_MEASURE.TYPE = "GfxReplayMeasure"
+_C.habitat.task.gfx_replay_measure = CN()
+_C.habitat.task.gfx_replay_measure.type = "GfxReplayMeasure"
 
-_C.TASK.EE_DIST_TO_MARKER = CN()
-_C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
-_C.TASK.ART_OBJ_STATE = CN()
-_C.TASK.ART_OBJ_STATE.TYPE = "ArtObjState"
-_C.TASK.ART_OBJ_SUCCESS = CN()
-_C.TASK.ART_OBJ_SUCCESS.TYPE = "ArtObjSuccess"
-_C.TASK.ART_OBJ_SUCCESS.REST_DIST_THRESHOLD = 0.15
+_C.habitat.task.ee_dist_to_marker = CN()
+_C.habitat.task.ee_dist_to_marker.type = "EndEffectorDistToMarker"
+_C.habitat.task.art_obj_state = CN()
+_C.habitat.task.art_obj_state.type = "ArtObjState"
+_C.habitat.task.art_obj_success = CN()
+_C.habitat.task.art_obj_success.type = "ArtObjSuccess"
+_C.habitat.task.art_obj_success.rest_dist_threshold = 0.15
 
-_C.TASK.ART_OBJ_REWARD = CN()
-_C.TASK.ART_OBJ_REWARD.TYPE = "ArtObjReward"
-_C.TASK.ART_OBJ_REWARD.DIST_REWARD = 1.0
-_C.TASK.ART_OBJ_REWARD.WRONG_GRASP_END = False
-_C.TASK.ART_OBJ_REWARD.WRONG_GRASP_PEN = 5.0
-_C.TASK.ART_OBJ_REWARD.ART_DIST_REWARD = 10.0
-_C.TASK.ART_OBJ_REWARD.EE_DIST_REWARD = 10.0
-_C.TASK.ART_OBJ_REWARD.MARKER_DIST_REWARD = 0.0
-_C.TASK.ART_OBJ_REWARD.ART_AT_DESIRED_STATE_REWARD = 5.0
-_C.TASK.ART_OBJ_REWARD.GRASP_REWARD = 0.0
+_C.habitat.task.art_obj_reward = CN()
+_C.habitat.task.art_obj_reward.type = "ArtObjReward"
+_C.habitat.task.art_obj_reward.dist_reward = 1.0
+_C.habitat.task.art_obj_reward.wrong_grasp_end = False
+_C.habitat.task.art_obj_reward.wrong_grasp_pen = 5.0
+_C.habitat.task.art_obj_reward.art_dist_reward = 10.0
+_C.habitat.task.art_obj_reward.ee_dist_reward = 10.0
+_C.habitat.task.art_obj_reward.marker_dist_reward = 0.0
+_C.habitat.task.art_obj_reward.art_at_desired_state_reward = 5.0
+_C.habitat.task.art_obj_reward.grasp_reward = 0.0
 # General Rearrange Reward config
-_C.TASK.ART_OBJ_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-_C.TASK.ART_OBJ_REWARD.FORCE_PEN = 0.0
-_C.TASK.ART_OBJ_REWARD.MAX_FORCE_PEN = 1.0
-_C.TASK.ART_OBJ_REWARD.FORCE_END_PEN = 10.0
+_C.habitat.task.art_obj_reward.constraint_violate_pen = 10.0
+_C.habitat.task.art_obj_reward.force_pen = 0.0
+_C.habitat.task.art_obj_reward.max_force_pen = 1.0
+_C.habitat.task.art_obj_reward.force_end_pen = 10.0
 # -----------------------------------------------------------------------------
 # NAVIGATION MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.ROT_DIST_TO_GOAL = CN()
-_C.TASK.ROT_DIST_TO_GOAL.TYPE = "RotDistToGoal"
-_C.TASK.DIST_TO_GOAL = CN()
-_C.TASK.DIST_TO_GOAL.TYPE = "DistToGoal"
-_C.TASK.BAD_CALLED_TERMINATE = CN()
-_C.TASK.BAD_CALLED_TERMINATE.TYPE = "BadCalledTerminate"
-_C.TASK.BAD_CALLED_TERMINATE.BAD_TERM_PEN = 0.0
-_C.TASK.BAD_CALLED_TERMINATE.DECAY_BAD_TERM = False
-_C.TASK.NAV_TO_POS_SUCC = CN()
-_C.TASK.NAV_TO_POS_SUCC.TYPE = "NavToPosSucc"
-_C.TASK.NAV_TO_POS_SUCC.SUCCESS_DISTANCE = 0.2
+_C.habitat.task.rot_dist_to_goal = CN()
+_C.habitat.task.rot_dist_to_goal.type = "RotDistToGoal"
+_C.habitat.task.dist_to_goal = CN()
+_C.habitat.task.dist_to_goal.type = "DistToGoal"
+_C.habitat.task.bad_called_terminate = CN()
+_C.habitat.task.bad_called_terminate.type = "BadCalledTerminate"
+_C.habitat.task.bad_called_terminate.bad_term_pen = 0.0
+_C.habitat.task.bad_called_terminate.decay_bad_term = False
+_C.habitat.task.nav_to_pos_succ = CN()
+_C.habitat.task.nav_to_pos_succ.type = "NavToPosSucc"
+_C.habitat.task.nav_to_pos_succ.success_distance = 0.2
 # -----------------------------------------------------------------------------
 # REARRANGE NAVIGATION MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD = CN()
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.TYPE = "NavToObjReward"
+_C.habitat.task.rearrange_nav_to_obj_reward = CN()
+_C.habitat.task.rearrange_nav_to_obj_reward.type = "NavToObjReward"
 # Reward the agent for facing the object?
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.SHOULD_REWARD_TURN = True
+_C.habitat.task.rearrange_nav_to_obj_reward.should_reward_turn = True
 # What distance do we start giving the reward for facing the object?
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.TURN_REWARD_DIST = 0.1
+_C.habitat.task.rearrange_nav_to_obj_reward.turn_reward_dist = 0.1
 # Multiplier on the angle distance to the goal.
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.ANGLE_DIST_REWARD = 1.0
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.DIST_REWARD = 10.0
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.FORCE_PEN = 0.0
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.MAX_FORCE_PEN = 1.0
-_C.TASK.REARRANGE_NAV_TO_OBJ_REWARD.FORCE_END_PEN = 10.0
+_C.habitat.task.rearrange_nav_to_obj_reward.angle_dist_reward = 1.0
+_C.habitat.task.rearrange_nav_to_obj_reward.dist_reward = 10.0
+_C.habitat.task.rearrange_nav_to_obj_reward.constraint_violate_pen = 10.0
+_C.habitat.task.rearrange_nav_to_obj_reward.force_pen = 0.0
+_C.habitat.task.rearrange_nav_to_obj_reward.max_force_pen = 1.0
+_C.habitat.task.rearrange_nav_to_obj_reward.force_end_pen = 10.0
 
-_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS = CN()
-_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.TYPE = "NavToObjSuccess"
-_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_LOOK_AT_TARG = True
-_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = True
+_C.habitat.task.rearrange_nav_to_obj_success = CN()
+_C.habitat.task.rearrange_nav_to_obj_success.type = "NavToObjSuccess"
+_C.habitat.task.rearrange_nav_to_obj_success.must_look_at_targ = True
+_C.habitat.task.rearrange_nav_to_obj_success.must_call_stop = True
 # Distance in radians.
-_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.SUCCESS_ANGLE_DIST = 0.15
-_C.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.HEURISTIC_STOP = False
+_C.habitat.task.rearrange_nav_to_obj_success.success_angle_dist = 0.15
+_C.habitat.task.rearrange_nav_to_obj_success.heuristic_stop = False
 # -----------------------------------------------------------------------------
 # REARRANGE REACH MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.REARRANGE_REACH_REWARD = CN()
-_C.TASK.REARRANGE_REACH_REWARD.TYPE = "RearrangeReachReward"
-_C.TASK.REARRANGE_REACH_REWARD.SCALE = 1.0
-_C.TASK.REARRANGE_REACH_REWARD.DIFF_REWARD = True
-_C.TASK.REARRANGE_REACH_REWARD.SPARSE_REWARD = False
+_C.habitat.task.rearrange_reach_reward = CN()
+_C.habitat.task.rearrange_reach_reward.type = "RearrangeReachReward"
+_C.habitat.task.rearrange_reach_reward.scale = 1.0
+_C.habitat.task.rearrange_reach_reward.diff_reward = True
+_C.habitat.task.rearrange_reach_reward.sparse_reward = False
 
-_C.TASK.REARRANGE_REACH_SUCCESS = CN()
-_C.TASK.REARRANGE_REACH_SUCCESS.TYPE = "RearrangeReachSuccess"
-_C.TASK.REARRANGE_REACH_SUCCESS.SUCC_THRESH = 0.2
+_C.habitat.task.rearrange_reach_success = CN()
+_C.habitat.task.rearrange_reach_success.type = "RearrangeReachSuccess"
+_C.habitat.task.rearrange_reach_success.succ_thresh = 0.2
 # -----------------------------------------------------------------------------
 # NUM STEPS MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.NUM_STEPS = CN()
-_C.TASK.NUM_STEPS.TYPE = "NumStepsMeasure"
+_C.habitat.task.num_steps = CN()
+_C.habitat.task.num_steps.type = "NumStepsMeasure"
 # -----------------------------------------------------------------------------
 # DID PICK OBJECT MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.DID_PICK_OBJECT = CN()
-_C.TASK.DID_PICK_OBJECT.TYPE = "DidPickObjectMeasure"
+_C.habitat.task.did_pick_object = CN()
+_C.habitat.task.did_pick_object.type = "DidPickObjectMeasure"
 # -----------------------------------------------------------------------------
 # DID VIOLATE HOLD CONSTRAINT MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.DID_VIOLATE_HOLD_CONSTRAINT = CN()
-_C.TASK.DID_VIOLATE_HOLD_CONSTRAINT.TYPE = "DidViolateHoldConstraintMeasure"
+_C.habitat.task.did_violate_hold_constraint = CN()
+_C.habitat.task.did_violate_hold_constraint.type = (
+    "DidViolateHoldConstraintMeasure"
+)
 # -----------------------------------------------------------------------------
 # MOVE OBJECTS REWARD
 # -----------------------------------------------------------------------------
-_C.TASK.MOVE_OBJECTS_REWARD = CN()
-_C.TASK.MOVE_OBJECTS_REWARD.TYPE = "MoveObjectsReward"
-_C.TASK.MOVE_OBJECTS_REWARD.PICK_REWARD = 1.0
-_C.TASK.MOVE_OBJECTS_REWARD.SUCCESS_DIST = 0.15
-_C.TASK.MOVE_OBJECTS_REWARD.SINGLE_REARRANGE_REWARD = 1.0
-_C.TASK.MOVE_OBJECTS_REWARD.DIST_REWARD = 1.0
-_C.TASK.MOVE_OBJECTS_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-_C.TASK.MOVE_OBJECTS_REWARD.FORCE_PEN = 0.001
-_C.TASK.MOVE_OBJECTS_REWARD.MAX_FORCE_PEN = 1.0
-_C.TASK.MOVE_OBJECTS_REWARD.FORCE_END_PEN = 10.0
+_C.habitat.task.move_objects_reward = CN()
+_C.habitat.task.move_objects_reward.type = "MoveObjectsReward"
+_C.habitat.task.move_objects_reward.pick_reward = 1.0
+_C.habitat.task.move_objects_reward.success_dist = 0.15
+_C.habitat.task.move_objects_reward.single_rearrange_reward = 1.0
+_C.habitat.task.move_objects_reward.dist_reward = 1.0
+_C.habitat.task.move_objects_reward.constraint_violate_pen = 10.0
+_C.habitat.task.move_objects_reward.force_pen = 0.001
+_C.habitat.task.move_objects_reward.max_force_pen = 1.0
+_C.habitat.task.move_objects_reward.force_end_pen = 10.0
 # -----------------------------------------------------------------------------
 # PICK MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.PICK_REWARD = CN()
-_C.TASK.PICK_REWARD.TYPE = "RearrangePickReward"
-_C.TASK.PICK_REWARD.DIST_REWARD = 20.0
-_C.TASK.PICK_REWARD.SUCC_REWARD = 10.0
-_C.TASK.PICK_REWARD.PICK_REWARD = 20.0
-_C.TASK.PICK_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-_C.TASK.PICK_REWARD.DROP_PEN = 5.0
-_C.TASK.PICK_REWARD.WRONG_PICK_PEN = 5.0
-_C.TASK.PICK_REWARD.COLL_PEN = 1.0
-_C.TASK.PICK_REWARD.ROBOT_OBJ_COLL_PEN = 0.0
-_C.TASK.PICK_REWARD.MAX_ACCUM_FORCE = 5000.0
-_C.TASK.PICK_REWARD.FORCE_PEN = 0.001
-_C.TASK.PICK_REWARD.MAX_FORCE_PEN = 1.0
-_C.TASK.PICK_REWARD.FORCE_END_PEN = 10.0
-_C.TASK.PICK_REWARD.USE_DIFF = True
-_C.TASK.PICK_REWARD.DROP_OBJ_SHOULD_END = False
-_C.TASK.PICK_REWARD.WRONG_PICK_SHOULD_END = False
-_C.TASK.PICK_REWARD.COLLISION_PENALTY = 0.0
-_C.TASK.PICK_REWARD.ROBOT_OBJ_COLLISION_PENALTY = 0.0
-_C.TASK.PICK_SUCCESS = CN()
-_C.TASK.PICK_SUCCESS.TYPE = "RearrangePickSuccess"
-_C.TASK.PICK_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
+_C.habitat.task.pick_reward = CN()
+_C.habitat.task.pick_reward.type = "RearrangePickReward"
+_C.habitat.task.pick_reward.dist_reward = 20.0
+_C.habitat.task.pick_reward.succ_reward = 10.0
+_C.habitat.task.pick_reward.pick_reward = 20.0
+_C.habitat.task.pick_reward.constraint_violate_pen = 10.0
+_C.habitat.task.pick_reward.drop_pen = 5.0
+_C.habitat.task.pick_reward.wrong_pick_pen = 5.0
+_C.habitat.task.pick_reward.max_accum_force = 5000.0
+_C.habitat.task.pick_reward.force_pen = 0.001
+_C.habitat.task.pick_reward.max_force_pen = 1.0
+_C.habitat.task.pick_reward.force_end_pen = 10.0
+_C.habitat.task.pick_reward.use_diff = True
+_C.habitat.task.pick_reward.drop_obj_should_end = False
+_C.habitat.task.pick_reward.wrong_pick_should_end = False
+_C.habitat.task.pick_success = CN()
+_C.habitat.task.pick_success.type = "RearrangePickSuccess"
+_C.habitat.task.pick_success.ee_resting_success_threshold = 0.15
 # -----------------------------------------------------------------------------
 # PLACE MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.OBJ_AT_GOAL = CN()
-_C.TASK.OBJ_AT_GOAL.TYPE = "ObjAtGoal"
-_C.TASK.OBJ_AT_GOAL.SUCC_THRESH = 0.15
+_C.habitat.task.obj_at_goal = CN()
+_C.habitat.task.obj_at_goal.type = "ObjAtGoal"
+_C.habitat.task.obj_at_goal.succ_thresh = 0.15
 
-_C.TASK.PLACE_REWARD = CN()
-_C.TASK.PLACE_REWARD.TYPE = "PlaceReward"
-_C.TASK.PLACE_REWARD.DIST_REWARD = 20.0
-_C.TASK.PLACE_REWARD.SUCC_REWARD = 10.0
-_C.TASK.PLACE_REWARD.PLACE_REWARD = 20.0
-_C.TASK.PLACE_REWARD.DROP_PEN = 5.0
-_C.TASK.PLACE_REWARD.USE_DIFF = True
-_C.TASK.PLACE_REWARD.WRONG_DROP_SHOULD_END = False
-_C.TASK.PLACE_REWARD.CONSTRAINT_VIOLATE_PEN = 10.0
-_C.TASK.PLACE_REWARD.FORCE_PEN = 0.001
-_C.TASK.PLACE_REWARD.MAX_FORCE_PEN = 1.0
-_C.TASK.PLACE_REWARD.FORCE_END_PEN = 10.0
+_C.habitat.task.place_reward = CN()
+_C.habitat.task.place_reward.type = "PlaceReward"
+_C.habitat.task.place_reward.dist_reward = 20.0
+_C.habitat.task.place_reward.succ_reward = 10.0
+_C.habitat.task.place_reward.place_reward = 20.0
+_C.habitat.task.place_reward.drop_pen = 5.0
+_C.habitat.task.place_reward.use_diff = True
+_C.habitat.task.place_reward.wrong_drop_should_end = False
+_C.habitat.task.place_reward.constraint_violate_pen = 10.0
+_C.habitat.task.place_reward.force_pen = 0.001
+_C.habitat.task.place_reward.max_force_pen = 1.0
+_C.habitat.task.place_reward.force_end_pen = 10.0
 
-_C.TASK.PLACE_SUCCESS = CN()
-_C.TASK.PLACE_SUCCESS.TYPE = "PlaceSuccess"
-_C.TASK.PLACE_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
+_C.habitat.task.place_success = CN()
+_C.habitat.task.place_success.type = "PlaceSuccess"
+_C.habitat.task.place_success.ee_resting_success_threshold = 0.15
 # -----------------------------------------------------------------------------
 # COMPOSITE MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.COMPOSITE_NODE_IDX = CN()
-_C.TASK.COMPOSITE_NODE_IDX.TYPE = "CompositeNodeIdx"
-_C.TASK.COMPOSITE_STAGE_GOALS = CN()
-_C.TASK.COMPOSITE_STAGE_GOALS.TYPE = "CompositeStageGoals"
-_C.TASK.COMPOSITE_SUCCESS = CN()
-_C.TASK.COMPOSITE_SUCCESS.TYPE = "CompositeSuccess"
-_C.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = True
-_C.TASK.COMPOSITE_REWARD = CN()
-_C.TASK.COMPOSITE_REWARD.TYPE = "CompositeReward"
-_C.TASK.COMPOSITE_REWARD.STAGE_COMPLETE_REWARD = 10.0
-_C.TASK.COMPOSITE_REWARD.SUCCESS_REWARD = 10.0
-_C.TASK.DOES_WANT_TERMINATE = CN()
-_C.TASK.DOES_WANT_TERMINATE.TYPE = "DoesWantTerminate"
-_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE = CN()
-_C.TASK.COMPOSITE_BAD_CALLED_TERMINATE.TYPE = "CompositeBadCalledTerminate"
+_C.habitat.task.composite_node_idx = CN()
+_C.habitat.task.composite_node_idx.type = "CompositeNodeIdx"
+_C.habitat.task.composite_stage_goals = CN()
+_C.habitat.task.composite_stage_goals.type = "CompositeStageGoals"
+_C.habitat.task.composite_success = CN()
+_C.habitat.task.composite_success.type = "CompositeSuccess"
+_C.habitat.task.composite_success.must_call_stop = True
+_C.habitat.task.composite_reward = CN()
+_C.habitat.task.composite_reward.type = "CompositeReward"
+_C.habitat.task.composite_reward.success_reward = 10.0
+_C.habitat.task.does_want_terminate = CN()
+_C.habitat.task.does_want_terminate.type = "DoesWantTerminate"
+_C.habitat.task.composite_bad_called_terminate = CN()
+_C.habitat.task.composite_bad_called_terminate.type = (
+    "CompositeBadCalledTerminate"
+)
 # -----------------------------------------------------------------------------
-# # EQA TASK
+# # EQA task
 # -----------------------------------------------------------------------------
-_C.TASK.ACTIONS.ANSWER = CN()
-_C.TASK.ACTIONS.ANSWER.TYPE = "AnswerAction"
-# # EQA TASK QUESTION SENSOR
+_C.habitat.task.actions.answer = CN()
+_C.habitat.task.actions.answer.type = "AnswerAction"
+# # EQA task QUESTION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.QUESTION_SENSOR = CN()
-_C.TASK.QUESTION_SENSOR.TYPE = "QuestionSensor"
+_C.habitat.task.question_sensor = CN()
+_C.habitat.task.question_sensor.type = "QuestionSensor"
 # -----------------------------------------------------------------------------
-# # EQA TASK CORRECT_ANSWER measure for training
+# # EQA task correct_answer measure for training
 # -----------------------------------------------------------------------------
-_C.TASK.CORRECT_ANSWER = CN()
-_C.TASK.CORRECT_ANSWER.TYPE = "CorrectAnswer"
+_C.habitat.task.correct_answer = CN()
+_C.habitat.task.correct_answer.type = "CorrectAnswer"
 # -----------------------------------------------------------------------------
-# # EQA TASK ANSWER SENSOR
+# # EQA task answer SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.EPISODE_INFO = CN()
-_C.TASK.EPISODE_INFO.TYPE = "EpisodeInfo"
+_C.habitat.task.episode_info = CN()
+_C.habitat.task.episode_info.type = "EpisodeInfo"
 # -----------------------------------------------------------------------------
-# # VLN TASK INSTRUCTION SENSOR
+# # VLN task INSTRUCTION SENSOR
 # -----------------------------------------------------------------------------
-_C.TASK.INSTRUCTION_SENSOR = CN()
-_C.TASK.INSTRUCTION_SENSOR.TYPE = "InstructionSensor"
-_C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
+_C.habitat.task.instruction_sensor = CN()
+_C.habitat.task.instruction_sensor.type = "InstructionSensor"
 # -----------------------------------------------------------------------------
-# # DISTANCE_TO_GOAL MEASUREMENT
+# # distance_to_goal MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.DISTANCE_TO_GOAL = CN()
-_C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
-_C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
+_C.habitat.task.distance_to_goal = CN()
+_C.habitat.task.distance_to_goal.type = "DistanceToGoal"
+_C.habitat.task.distance_to_goal.distance_to = "POINT"
 # -----------------------------------------------------------------------------
-# # DISTANCE_TO_GOAL_REWARD MEASUREMENT
+# # distance_to_goal_reward MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.DISTANCE_TO_GOAL_REWARD = CN()
-_C.TASK.DISTANCE_TO_GOAL_REWARD.TYPE = "DistanceToGoalReward"
+_C.habitat.task.distance_to_goal_reward = CN()
+_C.habitat.task.distance_to_goal_reward.type = "DistanceToGoalReward"
 # -----------------------------------------------------------------------------
-# # ANSWER_ACCURACY MEASUREMENT
+# # answer_accuracy MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.TASK.ANSWER_ACCURACY = CN()
-_C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
+_C.habitat.task.answer_accuracy = CN()
+_C.habitat.task.answer_accuracy.type = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
 # SIMULATOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR = CN()
-_C.SIMULATOR.TYPE = "Sim-v0"
-_C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
-_C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
-_C.SIMULATOR.CREATE_RENDERER = False
-_C.SIMULATOR.REQUIRES_TEXTURES = True
-_C.SIMULATOR.LAG_OBSERVATIONS = 0
-_C.SIMULATOR.AUTO_SLEEP = False
-_C.SIMULATOR.STEP_PHYSICS = True
-_C.SIMULATOR.UPDATE_ROBOT = True
-_C.SIMULATOR.CONCUR_RENDER = False
-_C.SIMULATOR.NEEDS_MARKERS = (
+_C.habitat.simulator = CN()
+_C.habitat.simulator.type = "Sim-v0"
+_C.habitat.simulator.action_space_config = "v0"
+_C.habitat.simulator.forward_step_size = 0.25  # in metres
+_C.habitat.simulator.create_renderer = False
+_C.habitat.simulator.requires_textures = True
+_C.habitat.simulator.lag_observations = 0
+_C.habitat.simulator.auto_sleep = False
+_C.habitat.simulator.step_physics = True
+_C.habitat.simulator.update_robot = True
+_C.habitat.simulator.concur_render = False
+_C.habitat.simulator.needs_markers = (
     True  # If markers should be updated at every step.
 )
-_C.SIMULATOR.UPDATE_ROBOT = (
+_C.habitat.simulator.update_robot = (
     True  # If the robot camera positions should be updated at every step.
 )
-_C.SIMULATOR.SCENE = (
+_C.habitat.simulator.scene = (
     "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 )
-_C.SIMULATOR.SCENE_DATASET = "default"  # the scene dataset to load in the MetaDataMediator. Should contain SIMULATOR.SCENE
-_C.SIMULATOR.ADDITIONAL_OBJECT_PATHS = (
+_C.habitat.simulator.scene_dataset = "default"  # the scene dataset to load in the MetaDataMediator. Should contain simulator.scene
+_C.habitat.simulator.additional_object_paths = (
     []
 )  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
-_C.SIMULATOR.SEED = _C.SEED
-_C.SIMULATOR.TURN_ANGLE = 10  # angle to rotate left or right in degrees
-_C.SIMULATOR.TILT_ANGLE = 15  # angle to tilt the camera up or down in degrees
-_C.SIMULATOR.DEFAULT_AGENT_ID = 0
-_C.SIMULATOR.DEBUG_RENDER = False
-_C.SIMULATOR.DEBUG_RENDER_ROBOT = False
-_C.SIMULATOR.KINEMATIC_MODE = False
+_C.habitat.simulator.seed = _C.habitat.seed
+_C.habitat.simulator.turn_angle = (
+    10  # angle to rotate left or right in degrees
+)
+_C.habitat.simulator.tilt_angle = (
+    15  # angle to tilt the camera up or down in degrees
+)
+_C.habitat.simulator.default_agent_id = 0
+_C.habitat.simulator.debug_render = False
+_C.habitat.simulator.debug_render_robot = False
+_C.habitat.simulator.kinematic_mode = False
 # If in render mode a visualization of the rearrangement goal position should
 # also be displayed.
-_C.SIMULATOR.DEBUG_RENDER_GOAL = True
-_C.SIMULATOR.ROBOT_JOINT_START_NOISE = 0.0
+_C.habitat.simulator.debug_render_goal = True
+_C.habitat.simulator.robot_joint_start_noise = 0.0
 # Rearrange Agent Setup
-_C.SIMULATOR.CTRL_FREQ = 120.0
-_C.SIMULATOR.AC_FREQ_RATIO = 4
-_C.SIMULATOR.LOAD_OBJS = False
+_C.habitat.simulator.ctrl_freq = 120.0
+_C.habitat.simulator.ac_freq_ratio = 4
+_C.habitat.simulator.load_objs = False
 # Rearrange Agent Grasping
-_C.SIMULATOR.HOLD_THRESH = 0.09
-_C.SIMULATOR.GRASP_IMPULSE = 1000.0
+_C.habitat.simulator.hold_thresh = 0.09
+_C.habitat.simulator.grasp_impulse = 1000.0
 # -----------------------------------------------------------------------------
 # SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
-SIMULATOR_SENSOR = CN()
-SIMULATOR_SENSOR.HEIGHT = 480
-SIMULATOR_SENSOR.WIDTH = 640
-SIMULATOR_SENSOR.POSITION = [0, 1.25, 0]
-SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
+simulator_sensor = CN()
+simulator_sensor.height = 480
+simulator_sensor.width = 640
+simulator_sensor.position = [0, 1.25, 0]
+simulator_sensor.orientation = [0.0, 0.0, 0.0]  # Euler's angles
 
 # -----------------------------------------------------------------------------
 # CAMERA SENSOR
 # -----------------------------------------------------------------------------
-CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
-CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
-CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
+camera_sim_sensor = simulator_sensor.clone()
+camera_sim_sensor.hfov = 90  # horizontal field of view in degrees
+camera_sim_sensor.sensor_subtype = "PINHOLE"
 
-SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
-SIMULATOR_DEPTH_SENSOR.MIN_DEPTH = 0.0
-SIMULATOR_DEPTH_SENSOR.MAX_DEPTH = 10.0
-SIMULATOR_DEPTH_SENSOR.NORMALIZE_DEPTH = True
+simulator_depth_sensor = simulator_sensor.clone()
+simulator_depth_sensor.min_depth = 0.0
+simulator_depth_sensor.max_depth = 10.0
+simulator_depth_sensor.normalize_depth = True
 
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.RGB_SENSOR = CAMERA_SIM_SENSOR.clone()
-_C.SIMULATOR.RGB_SENSOR.TYPE = "HabitatSimRGBSensor"
+_C.habitat.simulator.rgb_sensor = camera_sim_sensor.clone()
+_C.habitat.simulator.rgb_sensor.type = "HabitatSimRGBSensor"
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
-_C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
-_C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
+_C.habitat.simulator.depth_sensor = camera_sim_sensor.clone()
+_C.habitat.simulator.depth_sensor.merge_from_other_cfg(simulator_depth_sensor)
+_C.habitat.simulator.depth_sensor.type = "HabitatSimDepthSensor"
 # -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
-_C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+_C.habitat.simulator.semantic_sensor = camera_sim_sensor.clone()
+_C.habitat.simulator.semantic_sensor.type = "HabitatSimSemanticSensor"
 # -----------------------------------------------------------------------------
 # EQUIRECT RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.EQUIRECT_RGB_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.EQUIRECT_RGB_SENSOR.TYPE = "HabitatSimEquirectangularRGBSensor"
+_C.habitat.simulator.equirect_rgb_sensor = simulator_sensor.clone()
+_C.habitat.simulator.equirect_rgb_sensor.type = (
+    "HabitatSimEquirectangularRGBSensor"
+)
 # -----------------------------------------------------------------------------
 # EQUIRECT DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
-_C.SIMULATOR.EQUIRECT_DEPTH_SENSOR.TYPE = (
+_C.habitat.simulator.equirect_depth_sensor = simulator_sensor.clone()
+_C.habitat.simulator.equirect_depth_sensor.merge_from_other_cfg(
+    simulator_depth_sensor
+)
+_C.habitat.simulator.equirect_depth_sensor.type = (
     "HabitatSimEquirectangularDepthSensor"
 )
 # -----------------------------------------------------------------------------
 # EQUIRECT SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR = SIMULATOR_SENSOR.clone()
-_C.SIMULATOR.EQUIRECT_SEMANTIC_SENSOR.TYPE = (
+_C.habitat.simulator.equirect_semantic_sensor = simulator_sensor.clone()
+_C.habitat.simulator.equirect_semantic_sensor.type = (
     "HabitatSimEquirectangularSemanticSensor"
 )
 # -----------------------------------------------------------------------------
 # FISHEYE SENSOR
 # -----------------------------------------------------------------------------
-FISHEYE_SIM_SENSOR = SIMULATOR_SENSOR.clone()
-FISHEYE_SIM_SENSOR.HEIGHT = FISHEYE_SIM_SENSOR.WIDTH
+fisheye_sim_sensor = simulator_sensor.clone()
+fisheye_sim_sensor.height = fisheye_sim_sensor.width
 # -----------------------------------------------------------------------------
-# ROBOT HEAD RGB SENSOR
+# robot HEAD RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.HEAD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
-_C.SIMULATOR.HEAD_RGB_SENSOR.UUID = "robot_head_rgb"
+_C.habitat.simulator.head_rgb_sensor = _C.habitat.simulator.rgb_sensor.clone()
+_C.habitat.simulator.head_rgb_sensor.uuid = "robot_head_rgb"
 # -----------------------------------------------------------------------------
-# ROBOT HEAD DEPTH SENSOR
+# robot HEAD DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.HEAD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
-_C.SIMULATOR.HEAD_DEPTH_SENSOR.UUID = "robot_head_depth"
+_C.habitat.simulator.head_depth_sensor = (
+    _C.habitat.simulator.depth_sensor.clone()
+)
+_C.habitat.simulator.head_depth_sensor.uuid = "robot_head_depth"
 # -----------------------------------------------------------------------------
 # ARM RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.ARM_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
-_C.SIMULATOR.ARM_RGB_SENSOR.UUID = "robot_arm_rgb"
+_C.habitat.simulator.arm_rgb_sensor = _C.habitat.simulator.rgb_sensor.clone()
+_C.habitat.simulator.arm_rgb_sensor.uuid = "robot_arm_rgb"
 # -----------------------------------------------------------------------------
 # ARM DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
-_C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
+_C.habitat.simulator.arm_depth_sensor = (
+    _C.habitat.simulator.depth_sensor.clone()
+)
+_C.habitat.simulator.arm_depth_sensor.uuid = "robot_arm_depth"
 # -----------------------------------------------------------------------------
 # 3rd RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.THIRD_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
-_C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "robot_third_rgb"
+_C.habitat.simulator.third_rgb_sensor = _C.habitat.simulator.rgb_sensor.clone()
+_C.habitat.simulator.third_rgb_sensor.uuid = "robot_third_rgb"
 # -----------------------------------------------------------------------------
 # 3rd DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
-_C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_rgb"
+_C.habitat.simulator.third_depth_sensor = (
+    _C.habitat.simulator.depth_sensor.clone()
+)
+_C.habitat.simulator.third_depth_sensor.uuid = "robot_third_rgb"
 
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
 # Camera Model, The International Conference on 3D Vision (3DV), 2018
 # You can find the intrinsic parameters for the other lenses in the same table as well.
-FISHEYE_SIM_SENSOR.XI = -0.27
-FISHEYE_SIM_SENSOR.ALPHA = 0.57
-FISHEYE_SIM_SENSOR.FOCAL_LENGTH = [364.84, 364.86]
+fisheye_sim_sensor.xi = -0.27
+fisheye_sim_sensor.alpha = 0.57
+fisheye_sim_sensor.focal_length = [364.84, 364.86]
 # Place camera at center of screen
 # Can be specified, otherwise is calculated automatically.
-FISHEYE_SIM_SENSOR.PRINCIPAL_POINT_OFFSET = None  # (defaults to (h/2,w/2))
-FISHEYE_SIM_SENSOR.SENSOR_MODEL_TYPE = "DOUBLE_SPHERE"
+fisheye_sim_sensor.principal_point_offset = None  # (defaults to (h/2,w/2))
+fisheye_sim_sensor.sensor_model_type = "DOUBLE_SPHERE"
 # -----------------------------------------------------------------------------
 # FISHEYE RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.FISHEYE_RGB_SENSOR = FISHEYE_SIM_SENSOR.clone()
-_C.SIMULATOR.FISHEYE_RGB_SENSOR.TYPE = "HabitatSimFisheyeRGBSensor"
+_C.habitat.simulator.fisheye_rgb_sensor = fisheye_sim_sensor.clone()
+_C.habitat.simulator.fisheye_rgb_sensor.type = "HabitatSimFisheyeRGBSensor"
 # -----------------------------------------------------------------------------
 # FISHEYE DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.FISHEYE_DEPTH_SENSOR = FISHEYE_SIM_SENSOR.clone()
-_C.SIMULATOR.FISHEYE_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
-_C.SIMULATOR.FISHEYE_DEPTH_SENSOR.TYPE = "HabitatSimFisheyeDepthSensor"
+_C.habitat.simulator.fisheye_depth_sensor = fisheye_sim_sensor.clone()
+_C.habitat.simulator.fisheye_depth_sensor.merge_from_other_cfg(
+    simulator_depth_sensor
+)
+_C.habitat.simulator.fisheye_depth_sensor.type = "HabitatSimFisheyeDepthSensor"
 # -----------------------------------------------------------------------------
 # FISHEYE SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR = FISHEYE_SIM_SENSOR.clone()
-_C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.TYPE = "HabitatSimFisheyeSemanticSensor"
+_C.habitat.simulator.fisheye_semantic_sensor = fisheye_sim_sensor.clone()
+_C.habitat.simulator.fisheye_semantic_sensor.type = (
+    "HabitatSimFisheyeSemanticSensor"
+)
 # -----------------------------------------------------------------------------
-# AGENT
+# agent
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.AGENT_0 = CN()
-_C.SIMULATOR.AGENT_0.HEIGHT = 1.5
-_C.SIMULATOR.AGENT_0.RADIUS = 0.1
-_C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
-_C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
-_C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]
-_C.SIMULATOR.AGENT_0.START_ROTATION = [0, 0, 0, 1]
-_C.SIMULATOR.AGENT_0.JOINT_START_NOISE = 0.0
-_C.SIMULATOR.AGENT_0.ROBOT_URDF = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-_C.SIMULATOR.AGENT_0.ROBOT_TYPE = "FetchRobot"
-_C.SIMULATOR.AGENT_0.IK_ARM_URDF = (
+_C.habitat.simulator.agent_0 = CN()
+_C.habitat.simulator.agent_0.height = 1.5
+_C.habitat.simulator.agent_0.radius = 0.1
+_C.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
+_C.habitat.simulator.agent_0.is_set_start_state = False
+_C.habitat.simulator.agent_0.start_position = [0, 0, 0]
+_C.habitat.simulator.agent_0.start_rotation = [0, 0, 0, 1]
+_C.habitat.simulator.agent_0.joint_start_noise = 0.0
+_C.habitat.simulator.agent_0.robot_urdf = (
+    "data/robots/hab_fetch/robots/hab_fetch.urdf"
+)
+_C.habitat.simulator.agent_0.robot_type = "FetchRobot"
+_C.habitat.simulator.agent_0.ik_arm_urdf = (
     "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 )
-_C.SIMULATOR.AGENTS = ["AGENT_0"]
+_C.habitat.simulator.agents = ["agent_0"]
 # -----------------------------------------------------------------------------
-# SIMULATOR HABITAT_SIM_V0
+# SIMULATOR habitat_sim_v0
 # -----------------------------------------------------------------------------
-_C.SIMULATOR.HABITAT_SIM_V0 = CN()
-_C.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = 0
+_C.habitat.simulator.habitat_sim_v0 = CN()
+_C.habitat.simulator.habitat_sim_v0.gpu_device_id = 0
 # Use Habitat-Sim's GPU->GPU copy mode to return rendering results
 # in PyTorch tensors.  Requires Habitat-Sim to be built
 # with --with-cuda
 # This will generally imply sharing CUDA tensors between processes.
 # Read here: https://pytorch.org/docs/stable/multiprocessing.html#sharing-cuda-tensors
 # for the caveats that results in
-_C.SIMULATOR.HABITAT_SIM_V0.GPU_GPU = False
+_C.habitat.simulator.habitat_sim_v0.gpu_gpu = False
 # Whether or not the agent slides on collisions
-_C.SIMULATOR.HABITAT_SIM_V0.ALLOW_SLIDING = True
-_C.SIMULATOR.HABITAT_SIM_V0.FRUSTUM_CULLING = True
-_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_PHYSICS = False
-_C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
+_C.habitat.simulator.habitat_sim_v0.allow_sliding = True
+_C.habitat.simulator.habitat_sim_v0.frustum_culling = True
+_C.habitat.simulator.habitat_sim_v0.enable_physics = False
+_C.habitat.simulator.habitat_sim_v0.physics_config_file = (
     "./data/default.physics_config.json"
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
-_C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
-_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = False
+_C.habitat.simulator.habitat_sim_v0.leave_context_with_background_renderer = (
+    False
+)
+_C.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = False
 # -----------------------------------------------------------------------------
-# PYROBOT
+# pyrobot
 # -----------------------------------------------------------------------------
-_C.PYROBOT = CN()
-_C.PYROBOT.ROBOTS = ["locobot"]  # types of robots supported
-_C.PYROBOT.ROBOT = "locobot"
-_C.PYROBOT.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR", "BUMP_SENSOR"]
-_C.PYROBOT.BASE_CONTROLLER = "proportional"
-_C.PYROBOT.BASE_PLANNER = "none"
+_C.habitat.pyrobot = CN()
+_C.habitat.pyrobot.robots = ["locobot"]  # types of robots supported
+_C.habitat.pyrobot.robot = "locobot"
+_C.habitat.pyrobot.sensors = ["rgb_sensor", "depth_sensor", "bump_sensor"]
+_C.habitat.pyrobot.base_controller = "proportional"
+_C.habitat.pyrobot.base_planner = "none"
 # -----------------------------------------------------------------------------
-# SENSORS
+# sensors
 # -----------------------------------------------------------------------------
-PYROBOT_VISUAL_SENSOR = CN()
-PYROBOT_VISUAL_SENSOR.HEIGHT = 480
-PYROBOT_VISUAL_SENSOR.WIDTH = 640
+pyrobot_visual_sensor = CN()
+pyrobot_visual_sensor.height = 480
+pyrobot_visual_sensor.width = 640
 # -----------------------------------------------------------------------------
 # RGB SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.RGB_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
-_C.PYROBOT.RGB_SENSOR.TYPE = "PyRobotRGBSensor"
-_C.PYROBOT.RGB_SENSOR.CENTER_CROP = False
+_C.habitat.pyrobot.rgb_sensor = pyrobot_visual_sensor.clone()
+_C.habitat.pyrobot.rgb_sensor.type = "PyRobotRGBSensor"
+_C.habitat.pyrobot.rgb_sensor.center_crop = False
 # -----------------------------------------------------------------------------
 # DEPTH SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.DEPTH_SENSOR = PYROBOT_VISUAL_SENSOR.clone()
-_C.PYROBOT.DEPTH_SENSOR.TYPE = "PyRobotDepthSensor"
-_C.PYROBOT.DEPTH_SENSOR.MIN_DEPTH = 0.0
-_C.PYROBOT.DEPTH_SENSOR.MAX_DEPTH = 5.0
-_C.PYROBOT.DEPTH_SENSOR.NORMALIZE_DEPTH = True
-_C.PYROBOT.DEPTH_SENSOR.CENTER_CROP = False
+_C.habitat.pyrobot.depth_sensor = pyrobot_visual_sensor.clone()
+_C.habitat.pyrobot.depth_sensor.type = "PyRobotDepthSensor"
+_C.habitat.pyrobot.depth_sensor.min_depth = 0.0
+_C.habitat.pyrobot.depth_sensor.max_depth = 5.0
+_C.habitat.pyrobot.depth_sensor.normalize_depth = True
+_C.habitat.pyrobot.depth_sensor.center_crop = False
 # -----------------------------------------------------------------------------
 # BUMP SENSOR
 # -----------------------------------------------------------------------------
-_C.PYROBOT.BUMP_SENSOR = CN()
-_C.PYROBOT.BUMP_SENSOR.TYPE = "PyRobotBumpSensor"
+_C.habitat.pyrobot.bump_sensor = CN()
+_C.habitat.pyrobot.bump_sensor.type = "PyRobotBumpSensor"
 # -----------------------------------------------------------------------------
-# ACTIONS LOCOBOT
+# actions locobot
 # -----------------------------------------------------------------------------
-_C.PYROBOT.LOCOBOT = CN()
-_C.PYROBOT.LOCOBOT.ACTIONS = ["BASE_ACTIONS", "CAMERA_ACTIONS"]
-_C.PYROBOT.LOCOBOT.BASE_ACTIONS = ["go_to_relative", "go_to_absolute"]
-_C.PYROBOT.LOCOBOT.CAMERA_ACTIONS = ["set_pan", "set_tilt", "set_pan_tilt"]
+_C.habitat.pyrobot.locobot = CN()
+_C.habitat.pyrobot.locobot.actions = ["base_actions", "camera_actions"]
+_C.habitat.pyrobot.locobot.base_actions = ["go_to_relative", "go_to_absolute"]
+_C.habitat.pyrobot.locobot.camera_actions = [
+    "set_pan",
+    "set_tilt",
+    "set_pan_tilt",
+]
 # TODO(akadian): add support for Arm actions
 # -----------------------------------------------------------------------------
-# DATASET
+# dataset
 # -----------------------------------------------------------------------------
-_C.DATASET = CN()
-_C.DATASET.TYPE = "PointNav-v1"
-_C.DATASET.SPLIT = "train"
-_C.DATASET.SCENES_DIR = "data/scene_datasets"
-_C.DATASET.CONTENT_SCENES = ["*"]
-_C.DATASET.DATA_PATH = (
+_C.habitat.dataset = CN()
+_C.habitat.dataset.type = "PointNav-v1"
+_C.habitat.dataset.split = "train"
+_C.habitat.dataset.scenes_dir = "data/scene_datasets"
+_C.habitat.dataset.content_scenes = ["*"]
+_C.habitat.dataset.data_path = (
     "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz"
 )
 
 # -----------------------------------------------------------------------------
-# GYM
+# gym
 # -----------------------------------------------------------------------------
-_C.GYM = CN()
-_C.GYM.AUTO_NAME = ""
-_C.GYM.OBS_KEYS = None
-_C.GYM.ACTION_KEYS = None
-_C.GYM.ACHIEVED_GOAL_KEYS = []
-_C.GYM.DESIRED_GOAL_KEYS = []
+_C.habitat.gym = CN()
+_C.habitat.gym.auto_name = ""
+_C.habitat.gym.obs_keys = None
+_C.habitat.gym.action_keys = None
+_C.habitat.gym.achieved_goal_keys = []
+_C.habitat.gym.desired_goal_keys = []
 
 # -----------------------------------------------------------------------------
 # Task
@@ -931,21 +980,14 @@ _C.GYM.DESIRED_GOAL_KEYS = []
 # GymHabitatEnv works for all Habitat tasks, including Navigation and Rearrange.
 # To use a gym environment from the registry, use the GymRegistryEnv.
 # Any other environment needs to be created and registered.
-_C.ENV_TASK = "GymHabitatEnv"
+_C.habitat.env_task = "GymHabitatEnv"
 # The dependencies for launching the GymRegistryEnv environments.
 # modules listed here will be imported prior to making the environment with
 # gym.make()
-_C.ENV_TASK_GYM_DEPENDENCIES = []
+_C.habitat.env_task_gym_dependencies = []
 # The key of the gym environment in the registry to use in GymRegistryEnv
 # for example: `Cartpole-v0`
-_C.ENV_TASK_GYM_ID = ""
-
-# -----------------------------------------------------------------------------
-# -----------------------------------------------------------------------------
-# DEPRECATED KEYS
-# -----------------------------------------------------------------------------'
-_C.register_deprecated_key("TASK.SUCCESS_DISTANCE")
-# -----------------------------------------------------------------------------
+_C.habitat.env_task_gym_id = ""
 
 
 def _get_full_config_path(config_path: str) -> str:

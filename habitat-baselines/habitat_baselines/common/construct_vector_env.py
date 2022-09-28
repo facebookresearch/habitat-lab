@@ -24,15 +24,15 @@ def construct_envs(
     :return: VectorEnv object created according to specification.
     """
 
-    num_environments = config.NUM_ENVIRONMENTS
+    num_environments = config.num_environments
     configs = []
-    dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
-    scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
-    if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
-        scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+    dataset = make_dataset(config.habitat.dataset.type)
+    scenes = config.habitat.dataset.content_scenes
+    if "*" in config.habitat.dataset.content_scenes:
+        scenes = dataset.get_scenes_to_load(config.habitat.dataset)
 
     if num_environments < 1:
-        raise RuntimeError("NUM_ENVIRONMENTS must be strictly positive")
+        raise RuntimeError("num_environments must be strictly positive")
 
     if len(scenes) == 0:
         raise RuntimeError(
@@ -68,16 +68,16 @@ def construct_envs(
         proc_config = config.clone()
         proc_config.defrost()
 
-        task_config = proc_config.TASK_CONFIG
-        task_config.SEED = task_config.SEED + i
+        task_config = proc_config.habitat
+        task_config.seed = task_config.seed + i
         if len(scenes) > 0:
-            task_config.DATASET.CONTENT_SCENES = scene_splits[i]
+            task_config.dataset.content_scenes = scene_splits[i]
 
-        task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
-            config.SIMULATOR_GPU_ID
+        task_config.simulator.habitat_sim_v0.gpu_device_id = (
+            config.simulator_gpu_id
         )
 
-        task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
+        task_config.simulator.agent_0.sensors = config.sensors
 
         proc_config.freeze()
         configs.append(proc_config)

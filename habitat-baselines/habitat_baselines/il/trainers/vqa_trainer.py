@@ -34,7 +34,7 @@ class VQATrainer(BaseILTrainer):
         super().__init__(config)
 
         self.device = (
-            torch.device("cuda", self.config.TORCH_GPU_ID)
+            torch.device("cuda", self.config.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -91,7 +91,7 @@ class VQATrainer(BaseILTrainer):
         logger.info("Ground-truth answer: {}".format(gt_answer))
 
         result_path = self.config.RESULTS_DIR.format(
-            split=self.config.TASK_CONFIG.DATASET.SPLIT
+            split=self.config.habitat.dataset.split
         )
 
         result_path = os.path.join(
@@ -110,7 +110,7 @@ class VQATrainer(BaseILTrainer):
         """
         config = self.config
 
-        # env = habitat.Env(config=config.TASK_CONFIG)
+        # env = habitat.Env(config=config.habitat)
 
         vqa_dataset = (
             EQADataset(
@@ -177,7 +177,7 @@ class VQATrainer(BaseILTrainer):
             model.cnn.eval()
 
         with TensorboardWriter(
-            config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+            config.tensorboard_dir, flush_secs=self.flush_secs
         ) as writer:
             while epoch <= config.IL.VQA.max_epochs:
                 start_time = time.time()
@@ -214,7 +214,7 @@ class VQATrainer(BaseILTrainer):
                     avg_mean_rank += mean_rank
                     avg_mean_reciprocal_rank += mean_reciprocal_rank
 
-                    if t % config.LOG_INTERVAL == 0:
+                    if t % config.log_interval == 0:
                         logger.info("Epoch: {}".format(epoch))
                         logger.info(metrics.get_stat_string())
 
@@ -283,7 +283,7 @@ class VQATrainer(BaseILTrainer):
         config = self.config
 
         config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
+        config.habitat.dataset.split = self.config.eval.split
         config.freeze()
 
         vqa_dataset = (
@@ -374,13 +374,13 @@ class VQATrainer(BaseILTrainer):
                 avg_mean_rank += mean_rank
                 avg_mean_reciprocal_rank += mean_reciprocal_rank
 
-                if t % config.LOG_INTERVAL == 0:
+                if t % config.log_interval == 0:
                     logger.info(metrics.get_stat_string(mode=0))
                     metrics.dump_log()
 
                 if (
-                    config.EVAL_SAVE_RESULTS
-                    and t % config.EVAL_SAVE_RESULTS_INTERVAL == 0
+                    config.eval_save_results
+                    and t % config.eval_save_results_interval == 0
                 ):
 
                     self._save_vqa_results(

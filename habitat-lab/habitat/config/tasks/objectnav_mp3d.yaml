@@ -1,54 +1,55 @@
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 500
+habitat:
+  environment:
+    max_episode_steps: 500
 
-SIMULATOR:
-  TURN_ANGLE: 30
-  TILT_ANGLE: 30
-  ACTION_SPACE_CONFIG: "v1"
-  AGENT_0:
-    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR']
-    HEIGHT: 0.88
-    RADIUS: 0.18
-  HABITAT_SIM_V0:
-    GPU_DEVICE_ID: 0
-    ALLOW_SLIDING: False
-  SEMANTIC_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
-    HFOV: 79
-    POSITION: [0, 0.88, 0]
-  RGB_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
-    HFOV: 79
-    POSITION: [0, 0.88, 0]
-  DEPTH_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
-    HFOV: 79
-    MIN_DEPTH: 0.5
-    MAX_DEPTH: 5.0
-    POSITION: [0, 0.88, 0]
-TASK:
-  TYPE: ObjectNav-v1
-  END_ON_SUCCESS: True
-  REWARD_MEASURE: "distance_to_goal_reward"
-  SUCCESS_MEASURE: "spl"
+  simulator:
+    turn_angle: 30
+    tilt_angle: 30
+    action_space_config: "v1"
+    agent_0:
+      sensors: ['rgb_sensor', 'depth_sensor']
+      height: 0.88
+      radius: 0.18
+    habitat_sim_v0:
+      gpu_device_id: 0
+      allow_sliding: False
+    semantic_sensor:
+      width: 640
+      height: 480
+      hfov: 79
+      position: [0, 0.88, 0]
+    rgb_sensor:
+      width: 640
+      height: 480
+      hfov: 79
+      position: [0, 0.88, 0]
+    depth_sensor:
+      width: 640
+      height: 480
+      hfov: 79
+      min_depth: 0.5
+      max_depth: 5.0
+      position: [0, 0.88, 0]
+  task:
+    type: ObjectNav-v1
+    end_on_success: True
+    reward_measure: "distance_to_goal_reward"
+    success_measure: "spl"
 
-  POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
+    possible_actions: ["stop", "move_forward", "turn_left", "turn_right", "look_up", "look_down"]
 
-  SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
-  GOAL_SENSOR_UUID: objectgoal
+    sensors: ['OBJECTgoal_sensor', 'compass_sensor', 'gps_sensor']
+    goal_sensor_uuid: objectgoal
 
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL', 'DISTANCE_TO_GOAL_REWARD']
+    measurements: ['distance_to_goal', 'success', 'spl', 'soft_spl', 'distance_to_goal_reward']
 
-  DISTANCE_TO_GOAL:
-    DISTANCE_TO: VIEW_POINTS
-  SUCCESS:
-    SUCCESS_DISTANCE: 0.1
+    distance_to_goal:
+      distance_to: VIEW_POINTS
+    success:
+      success_distance: 0.1
 
-DATASET:
-  TYPE: ObjectNav-v1
-  SPLIT: train
-  DATA_PATH: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
-  SCENES_DIR: "data/scene_datasets/"
+  dataset:
+    type: ObjectNav-v1
+    split: train
+    data_path: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
+    scenes_dir: "data/scene_datasets/"

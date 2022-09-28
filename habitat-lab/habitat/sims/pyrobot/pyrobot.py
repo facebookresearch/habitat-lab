@@ -46,7 +46,7 @@ def _locobot_camera_action_space():
 def _resize_observation(obs, observation_space, config):
     if obs.shape != observation_space.shape:
         if (
-            config.CENTER_CROP is True
+            config.center_crop is True
             and obs.shape[0] > observation_space.shape[0]
             and obs.shape[1] > observation_space.shape[1]
         ):
@@ -61,9 +61,9 @@ def _resize_observation(obs, observation_space, config):
 
 MM_IN_METER = 1000  # millimeters in a meter
 ACTION_SPACES = {
-    "LOCOBOT": {
-        "BASE_ACTIONS": _locobot_base_action_space(),
-        "CAMERA_ACTIONS": _locobot_camera_action_space(),
+    "locobot": {
+        "base_actions": _locobot_base_action_space(),
+        "camera_actions": _locobot_camera_action_space(),
     }
 }
 
@@ -77,7 +77,7 @@ class PyRobotRGBSensor(RGBSensor):
         return spaces.Box(
             low=0,
             high=255,
-            shape=(self.config.HEIGHT, self.config.WIDTH, 3),
+            shape=(self.config.height, self.config.width, 3),
             dtype=np.uint8,
         )
 
@@ -99,12 +99,12 @@ class PyRobotDepthSensor(DepthSensor):
     max_depth_value: float
 
     def __init__(self, config):
-        if config.NORMALIZE_DEPTH:
+        if config.normalize_depth:
             self.min_depth_value = 0
             self.max_depth_value = 1
         else:
-            self.min_depth_value = config.MIN_DEPTH
-            self.max_depth_value = config.MAX_DEPTH
+            self.min_depth_value = config.min_depth
+            self.max_depth_value = config.max_depth
 
         super().__init__(config=config)
 
@@ -112,7 +112,7 @@ class PyRobotDepthSensor(DepthSensor):
         return spaces.Box(
             low=self.min_depth_value,
             high=self.max_depth_value,
-            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
+            shape=(self.config.height, self.config.width, 1),
             dtype=np.float32,
         )
 
@@ -127,11 +127,11 @@ class PyRobotDepthSensor(DepthSensor):
 
         obs = obs / MM_IN_METER  # convert from mm to m
 
-        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
-        if self.config.NORMALIZE_DEPTH:
+        obs = np.clip(obs, self.config.min_depth, self.config.max_depth)
+        if self.config.normalize_depth:
             # normalize depth observations to [0, 1]
-            obs = (obs - self.config.MIN_DEPTH) / (
-                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            obs = (obs - self.config.min_depth) / (
+                self.config.max_depth - self.config.min_depth
             )
 
         obs = np.expand_dims(obs, axis=2)  # make depth observations a 3D array
@@ -171,32 +171,32 @@ class PyRobot(Simulator):
         self._config = config
 
         robot_sensors = []
-        for sensor_name in self._config.SENSORS:
+        for sensor_name in self._config.sensors:
             sensor_cfg = getattr(self._config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.TYPE)
+            sensor_type = registry.get_sensor(sensor_cfg.type)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.TYPE
+                sensor_cfg.type
             )
             robot_sensors.append(sensor_type(sensor_cfg))
         self._sensor_suite = SensorSuite(robot_sensors)
 
         config_pyrobot = {
-            "base_controller": self._config.BASE_CONTROLLER,
-            "base_planner": self._config.BASE_PLANNER,
+            "base_controller": self._config.base_controller,
+            "base_planner": self._config.base_planner,
         }
 
         assert (
-            self._config.ROBOT in self._config.ROBOTS
-        ), "Invalid robot type {}".format(self._config.ROBOT)
-        self._robot_config = getattr(self._config, self._config.ROBOT.upper())
+            self._config.robot in self._config.robots
+        ), "Invalid robot type {}".format(self._config.robot)
+        self._robot_config = getattr(self._config, self._config.robot)
 
         self._action_space = self._robot_action_space(
-            self._config.ROBOT, self._robot_config
+            self._config.robot, self._robot_config
         )
 
         self._robot = pyrobot.Robot(
-            self._config.ROBOT, base_config=config_pyrobot
+            self._config.robot, base_config=config_pyrobot
         )
 
     def get_robot_observations(self):
@@ -220,10 +220,8 @@ class PyRobot(Simulator):
 
     def _robot_action_space(self, robot_type, robot_config):
         action_spaces_dict = {}
-        for action in robot_config.ACTIONS:
-            action_spaces_dict[action] = ACTION_SPACES[robot_type.upper()][
-                action
-            ]
+        for action in robot_config.actions:
+            action_spaces_dict[action] = ACTION_SPACES[robot_type][action]
         return spaces.Dict(action_spaces_dict)
 
     @property
@@ -246,9 +244,9 @@ class PyRobot(Simulator):
         of namesake methods in PyRobot
         (https://github.com/facebookresearch/pyrobot).
         """
-        if action in self._robot_config.BASE_ACTIONS:
+        if action in self._robot_config.base_actions:
             getattr(self._robot.base, action)(**action_params)
-        elif action in self._robot_config.CAMERA_ACTIONS:
+        elif action in self._robot_config.camera_actions:
             getattr(self._robot.camera, action)(**action_params)
         else:
             raise ValueError("Invalid action {}".format(action))

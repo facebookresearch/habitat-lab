@@ -151,15 +151,18 @@ def main():
     config = habitat.get_config(config_paths="tasks/pointnav.yaml")
     config.defrost()
 
-    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
-        "STRAFE_LEFT",
-        "STRAFE_RIGHT",
-    ]
-    config.TASK.ACTIONS.STRAFE_LEFT = habitat.config.Config()
-    config.TASK.ACTIONS.STRAFE_LEFT.TYPE = "StrafeLeft"
-    config.TASK.ACTIONS.STRAFE_RIGHT = habitat.config.Config()
-    config.TASK.ACTIONS.STRAFE_RIGHT.TYPE = "StrafeRight"
-    config.SIMULATOR.ACTION_SPACE_CONFIG = "NoNoiseStrafe"
+    config.habitat.task.possible_actions = (
+        config.habitat.task.possible_actions
+        + [
+            "STRAFE_LEFT",
+            "STRAFE_RIGHT",
+        ]
+    )
+    config.habitat.task.actions.STRAFE_LEFT = habitat.config.Config()
+    config.habitat.task.actions.STRAFE_LEFT.type = "StrafeLeft"
+    config.habitat.task.actions.STRAFE_RIGHT = habitat.config.Config()
+    config.habitat.task.actions.STRAFE_RIGHT.type = "StrafeRight"
+    config.habitat.simulator.action_space_config = "NoNoiseStrafe"
     config.freeze()
 
     with habitat.Env(config=config) as env:
@@ -168,7 +171,7 @@ def main():
         env.step("STRAFE_RIGHT")
 
     config.defrost()
-    config.SIMULATOR.ACTION_SPACE_CONFIG = "NoiseStrafe"
+    config.habitat.simulator.action_space_config = "NoiseStrafe"
     config.freeze()
 
     with habitat.Env(config=config) as env:

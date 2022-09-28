@@ -1,27 +1,27 @@
-BASE_TASK_CONFIG_PATH: "tasks/pointnav.yaml"
-TRAINER_NAME: "ddppo"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: []
-TENSORBOARD_DIR: ""
-EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/pointnav/ckpt.0.pth"
-NUM_ENVIRONMENTS: 1
-CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/pointnav/"
-NUM_UPDATES: 2
-NUM_CHECKPOINTS: 2
-LOG_INTERVAL: 100
-TEST_EPISODE_COUNT: 2
+base_task_config_path: "tasks/pointnav.yaml"
+trainer_name: "ddppo"
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: []
+tensorboard_dir: ""
+eval_ckpt_path_dir: "data/test_checkpoints/ddppo/pointnav/ckpt.0.pth"
+num_environments: 1
+checkpoint_folder: "data/test_checkpoints/ddppo/pointnav/"
+num_updates: 2
+num_checkpoints: 2
+log_interval: 100
+test_episode_count: 2
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
-RL:
-  SUCCESS_REWARD: 2.5
+rl:
+  success_reward: 2.5
 
-  POLICY:
+  policy:
     name: "PointNavResNetPolicy"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2
@@ -43,7 +43,7 @@ RL:
 
     hidden_size: 512
 
-  DDPPO:
+  ddppo:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
     distrib_backend: GLOO
@@ -65,4 +65,4 @@ RL:
 
     force_distributed: True
 
-  GYM_ACTION_KEYS: [ "STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT" ]
+  gym_action_keys: [ "stop", "move_forward", "turn_left", "turn_right" ]

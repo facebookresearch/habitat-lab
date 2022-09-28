@@ -36,14 +36,14 @@ def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
 class RLTaskEnv(habitat.RLEnv):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
         super().__init__(config, dataset)
-        self._reward_measure_name = self.config.TASK.REWARD_MEASURE
-        self._success_measure_name = self.config.TASK.SUCCESS_MEASURE
+        self._reward_measure_name = self.config.task.reward_measure
+        self._success_measure_name = self.config.task.success_measure
         assert (
             self._reward_measure_name is not None
-        ), "The key TASK.REWARD_MEASURE cannot be None"
+        ), "The key task.reward_measure cannot be None"
         assert (
             self._success_measure_name is not None
-        ), "The key TASK.SUCCESS_MEASURE cannot be None"
+        ), "The key task.success_measure cannot be None"
 
     def reset(self):
         observations = super().reset()
@@ -58,12 +58,12 @@ class RLTaskEnv(habitat.RLEnv):
 
     def get_reward(self, observations):
         current_measure = self._env.get_metrics()[self._reward_measure_name]
-        reward = self.config.TASK.SLACK_REWARD
+        reward = self.config.task.slack_reward
 
         reward += current_measure
 
         if self._episode_success():
-            reward += self.config.TASK.SUCCESS_REWARD
+            reward += self.config.task.success_reward
 
         return reward
 
@@ -74,7 +74,7 @@ class RLTaskEnv(habitat.RLEnv):
         done = False
         if self._env.episode_over:
             done = True
-        if self.config.TASK.END_ON_SUCCESS and self._episode_success():
+        if self.config.task.end_on_success and self._episode_success():
             done = True
         return done
 
@@ -90,9 +90,9 @@ class GymRegistryEnv(gym.Wrapper):
     """
 
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
-        for dependency in config["ENV_TASK_GYM_DEPENDENCIES"]:
+        for dependency in config["env_task_gym_dependencies"]:
             importlib.import_module(dependency)
-            env_name = config["ENV_TASK_GYM_ID"]
+            env_name = config["env_task_gym_id"]
         gym_env = gym.make(env_name)
         super().__init__(gym_env)
 

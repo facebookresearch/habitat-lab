@@ -1,25 +1,25 @@
-BASE_TASK_CONFIG_PATH: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
-TRAINER_NAME: "eqa-cnn-pretrain"
+base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
+trainer_name: "eqa-cnn-pretrain"
 
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
+simulator_gpu_id: 0
+torch_gpu_id: 0
 
-DATASET_PATH: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"
+dataset_PATH: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"
 
-EVAL_CKPT_PATH_DIR: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
+eval_ckpt_path_dir: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
 
-CHECKPOINT_FOLDER: "data/eqa/eqa_cnn_pretrain/checkpoints"
-TENSORBOARD_DIR: "data/eqa/eqa_cnn_pretrain/tb"
+checkpoint_folder: "data/eqa/eqa_cnn_pretrain/checkpoints"
+tensorboard_dir: "data/eqa/eqa_cnn_pretrain/tb"
 RESULTS_DIR: "data/eqa/eqa_cnn_pretrain/results/{split}/{type}"
 OUTPUT_LOG_DIR: data/eqa/eqa_cnn_pretrain/logs
 
 LOG_METRICS: True
-LOG_INTERVAL: 50
-EVAL_SAVE_RESULTS: True
-EVAL_SAVE_RESULTS_INTERVAL: 50
+log_interval: 50
+eval_save_results: True
+eval_save_results_interval: 50
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
 IL:
   EQACNNPretrain:

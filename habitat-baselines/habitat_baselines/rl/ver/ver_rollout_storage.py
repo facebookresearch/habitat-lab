@@ -405,7 +405,7 @@ class VERRolloutStorage(RolloutStorage):
         self.current_rollout_step_idxs[0] = self.num_steps + 1
 
         if self.use_is_coeffs:
-            # To correct for the biased sampling in VER, we use importance
+            # To correct for the biased sampling in ver, we use importance
             # sampling weighting. To do this we must count the number of
             # steps of experience we got from each environment
             assert isinstance(self.buffers["environment_ids"], torch.Tensor)

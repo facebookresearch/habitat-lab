@@ -59,14 +59,14 @@ def check_json_serialization(dataset: habitat.Dataset):
 
 
 def test_rearrange_dataset():
-    dataset_config = get_config(CFG_TEST).DATASET
+    dataset_config = get_config(CFG_TEST).habitat.dataset
     if not RearrangeDatasetV0.check_config_paths_exist(dataset_config):
         pytest.skip(
             "Please download ReplicaCAD RearrangeDataset Dataset to data folder."
         )
 
     dataset = habitat.make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
@@ -88,11 +88,11 @@ def test_rearrange_baseline_envs(test_cfg_path):
     """
     config = baselines_get_config(test_cfg_path)
     config.defrost()
-    config.TASK_CONFIG.GYM.OBS_KEYS = None
-    config.TASK_CONFIG.GYM.DESIRED_GOAL_KEYS = []
+    config.habitat.gym.obs_keys = None
+    config.habitat.gym.desired_goal_keys = []
     config.freeze()
 
-    env_class = get_env_class(config.TASK_CONFIG.ENV_TASK)
+    env_class = get_env_class(config.habitat.env_task)
 
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
@@ -140,8 +140,10 @@ def test_composite_tasks(test_cfg_path):
     if not osp.isfile(test_cfg_path):
         return
 
-    config = get_config(test_cfg_path, ["SIMULATOR.CONCUR_RENDER", False])
-    if "TASK_SPEC" not in config.TASK:
+    config = get_config(
+        test_cfg_path, ["habitat.simulator.concur_render", False]
+    )
+    if "task_spec" not in config.habitat.task:
         return
 
     with habitat.Env(config=config) as env:
@@ -150,8 +152,8 @@ def test_composite_tasks(test_cfg_path):
 
         pddl_path = osp.join(
             _HABITAT_CFG_DIR,
-            config.TASK.TASK_SPEC_BASE_PATH,
-            config.TASK.TASK_SPEC + ".yaml",
+            config.habitat.task.task_spec_base_path,
+            config.habitat.task.task_spec + ".yaml",
         )
         with open(pddl_path, "r") as f:
             domain = yaml.safe_load(f)
@@ -206,7 +208,7 @@ def test_tp_srl(test_cfg_path, mode):
     run_exp(
         test_cfg_path,
         mode,
-        ["EVAL.SPLIT", "train"],
+        ["eval.split", "train"],
     )
 
     # Needed to destroy the trainer

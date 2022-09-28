@@ -170,10 +170,10 @@ class ArtObjAtDesiredState(Measure):
 
         # If not absolute distance, we can have a joint state greater than the
         # target.
-        if self._config.USE_ABSOLUTE_DISTANCE:
-            self._metric = abs(dist) < self._config.SUCCESS_DIST_THRESHOLD
+        if self._config.use_absolute_distance:
+            self._metric = abs(dist) < self._config.success_dist_threshold
         else:
-            self._metric = dist < self._config.SUCCESS_DIST_THRESHOLD
+            self._metric = dist < self._config.success_dist_threshold
 
 
 @registry.register_measure
@@ -214,7 +214,7 @@ class ArtObjSuccess(Measure):
         # target.
         self._metric = (
             is_art_obj_state_succ
-            and ee_to_rest_distance < self._config.REST_DIST_THRESHOLD
+            and ee_to_rest_distance < self._config.rest_dist_threshold
             and not self._sim.grasp_mgr.is_grasped
         )
 
@@ -329,7 +329,7 @@ class ArtObjReward(RearrangeReward):
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
         if not is_art_obj_state_succ:
-            reward += self._config.ART_DIST_REWARD * dist_diff
+            reward += self._config.art_dist_reward * dist_diff
 
         cur_has_grasped = task._sim.grasp_mgr.is_grasped
 
@@ -339,28 +339,28 @@ class ArtObjReward(RearrangeReward):
         if cur_has_grasped and not self._any_has_grasped:
             if task._sim.grasp_mgr.snapped_marker_id != task.use_marker_name:
                 # Grasped wrong marker
-                reward -= self._config.WRONG_GRASP_PEN
-                if self._config.WRONG_GRASP_END:
+                reward -= self._config.wrong_grasp_pen
+                if self._config.wrong_grasp_end:
                     rearrange_logger.debug(
                         "Grasped wrong marker, ending episode."
                     )
                     task.should_end = True
             else:
                 # Grasped right marker
-                reward += self._config.GRASP_REWARD
+                reward += self._config.grasp_reward
             self._any_has_grasped = True
 
         if is_art_obj_state_succ:
             if not self._any_at_desired_state:
-                reward += self._config.ART_AT_DESIRED_STATE_REWARD
+                reward += self._config.art_at_desired_state_reward
                 self._any_at_desired_state = True
             # Give the reward based on distance to the resting position.
             ee_dist_change = self._prev_ee_to_rest - ee_to_rest_distance
-            reward += self._config.EE_DIST_REWARD * ee_dist_change
+            reward += self._config.ee_dist_reward * ee_dist_change
         elif not cur_has_grasped:
             # Give the reward based on distance to the handle
             dist_diff = self._prev_ee_dist_to_marker - cur_ee_dist_to_marker
-            reward += self._config.MARKER_DIST_REWARD * dist_diff
+            reward += self._config.marker_dist_reward * dist_diff
 
         self._prev_ee_to_rest = ee_to_rest_distance
 

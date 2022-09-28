@@ -89,40 +89,40 @@ def test_trainers(config_path, num_updates, trainer_name):
     config = get_config(
         config_path,
         [
-            "NUM_UPDATES",
+            "num_updates",
             num_updates,
-            "TOTAL_NUM_STEPS",
+            "total_num_steps",
             -1.0,
-            "CHECKPOINT_FOLDER",
+            "checkpoint_folder",
             "data/test_checkpoints/test_training",
-            "TRAINER_NAME",
+            "trainer_name",
             trainer_name,
             # Changing the visual observation size for speed
-            "TASK_CONFIG.SIMULATOR.HEAD_RGB_SENSOR.WIDTH",
+            "habitat.simulator.head_rgb_sensor.width",
             64,
-            "TASK_CONFIG.SIMULATOR.HEAD_RGB_SENSOR.HEIGHT",
+            "habitat.simulator.head_rgb_sensor.height",
             64,
-            "TASK_CONFIG.SIMULATOR.HEAD_DEPTH_SENSOR.WIDTH",
+            "habitat.simulator.head_depth_sensor.width",
             64,
-            "TASK_CONFIG.SIMULATOR.HEAD_DEPTH_SENSOR.HEIGHT",
+            "habitat.simulator.head_depth_sensor.height",
             64,
         ],
     )
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
-    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if config.force_torch_single_threaded and torch.cuda.is_available():
         torch.set_num_threads(1)
 
-    assert config.TRAINER_NAME in (
+    assert config.trainer_name in (
         "ddppo",
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(config.trainer_name)
+    assert trainer_init is not None, f"{config.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
@@ -161,38 +161,38 @@ def test_trainers_gym_registry(
     config = get_config(
         config_path,
         [
-            "NUM_UPDATES",
+            "num_updates",
             num_updates,
-            "TOTAL_NUM_STEPS",
+            "total_num_steps",
             -1.0,
-            "CHECKPOINT_FOLDER",
+            "checkpoint_folder",
             "data/test_checkpoints/test_training",
-            "TRAINER_NAME",
+            "trainer_name",
             trainer_name,
             # Overwrite the gym_environment
-            "TASK_CONFIG.ENV_TASK",
+            "habitat.env_task",
             "GymRegistryEnv",
-            "TASK_CONFIG.ENV_TASK_GYM_DEPENDENCIES",
+            "habitat.env_task_gym_dependencies",
             ["pygame"],
-            "TASK_CONFIG.ENV_TASK_GYM_ID",
+            "habitat.env_task_gym_id",
             env_key,
         ],
     )
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
-    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if config.force_torch_single_threaded and torch.cuda.is_available():
         torch.set_num_threads(1)
 
-    assert config.TRAINER_NAME in (
+    assert config.trainer_name in (
         "ddppo",
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(config.trainer_name)
+    assert trainer_init is not None, f"{config.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
@@ -231,38 +231,38 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
     config = get_config(
         config_path,
         [
-            "NUM_UPDATES",
+            "num_updates",
             num_updates,
-            "TOTAL_NUM_STEPS",
+            "total_num_steps",
             -1.0,
-            "CHECKPOINT_FOLDER",
+            "checkpoint_folder",
             "data/test_checkpoints/test_training",
-            "TRAINER_NAME",
+            "trainer_name",
             trainer_name,
         ],
     )
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
-    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if config.force_torch_single_threaded and torch.cuda.is_available():
         torch.set_num_threads(1)
 
-    assert config.TRAINER_NAME in (
+    assert config.trainer_name in (
         "ddppo",
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(config.trainer_name)
+    assert trainer_init is not None, f"{config.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
     trainer.train()
 
     # Gather the data
-    if config.TRAINER_NAME == "ddppo":
+    if config.trainer_name == "ddppo":
         deltas = {
             k: (
                 (v[-1] - v[0]).sum().item()
