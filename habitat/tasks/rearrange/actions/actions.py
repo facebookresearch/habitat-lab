@@ -289,6 +289,7 @@ class BaseVelAction(RobotAction):
         end_pos = self._sim.step_filter(
             rigid_state.translation, target_rigid_state.translation
         )
+        end_pos -= self.cur_robot.params.base_offset
 
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
