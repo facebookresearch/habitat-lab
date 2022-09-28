@@ -71,7 +71,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```
       conda install habitat-sim withbullet -c conda-forge -c aihabitat
       ```
-      See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more detials.
+      See Habitat-Sim's [installation instructions](https://github.com/facebookresearch/habitat-sim#installation) for more details.
 
 1. **pip install habitat-lab stable version**.
 
@@ -167,7 +167,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
 
 ## Documentation
 
-Browse the online [Habitat-Lab documentation](https://aihabitat.org/docs/habitat-lab/index.html). And the extentive [tutorial on how to train your agents with Habitat](https://aihabitat.org/tutorial/2020/). For Habitat 2.0, use this [quickstart guide](https://aihabitat.org/docs/habitat2/).
+Browse the online [Habitat-Lab documentation](https://aihabitat.org/docs/habitat-lab/index.html) and the extensive [tutorial on how to train your agents with Habitat](https://aihabitat.org/tutorial/2020/). For Habitat 2.0, use this [quickstart guide](https://aihabitat.org/docs/habitat2/).
 
 
 ## Docker Setup
