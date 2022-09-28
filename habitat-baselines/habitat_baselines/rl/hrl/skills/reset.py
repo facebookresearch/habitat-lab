@@ -20,7 +20,7 @@ class ResetArmSkill(SkillPolicy):
 
         self._ac_start = 0
         for k, space in action_space.items():
-            if k != "ARM_ACTION":
+            if k != "arm_action":
                 self._ac_start += get_num_actions(space)
             else:
                 break

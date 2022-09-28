@@ -138,21 +138,21 @@ class MoveObjectsReward(RearrangeReward):
             and not self._prev_holding_obj
             and self._cur_rearrange_step not in self._did_give_pick_reward
         ):
-            self._metric += self._config.PICK_REWARD
+            self._metric += self._config.pick_reward
             self._did_give_pick_reward[self._cur_rearrange_step] = True
 
         if (
-            dist < self._config.SUCCESS_DIST
+            dist < self._config.success_dist
             and not is_holding_obj
             and self._cur_rearrange_step < num_targs
         ):
-            self._metric += self._config.SINGLE_REARRANGE_REWARD
+            self._metric += self._config.single_rearrange_reward
             self._cur_rearrange_step += 1
             self._cur_rearrange_step = min(
                 self._cur_rearrange_step, num_targs - 1
             )
 
-        self._metric += self._config.DIST_REWARD * dist_diff
+        self._metric += self._config.dist_reward * dist_diff
         self._prev_measures = (to_obj, to_goal)
         self._prev_holding_obj = is_holding_obj
 
@@ -169,7 +169,7 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["REARRANGE_STOP"].does_want_terminate
+        self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 
 @registry.register_measure
@@ -216,7 +216,7 @@ class CompositeSuccess(Measure):
         return CompositeSuccess.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
-        if self._config.MUST_CALL_STOP:
+        if self._config.must_call_stop:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [DoesWantTerminate.cls_uuid],
@@ -226,7 +226,7 @@ class CompositeSuccess(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = task.pddl_problem.is_expr_true(task.pddl_problem.goal)
 
-        if self._config.MUST_CALL_STOP:
+        if self._config.must_call_stop:
             does_action_want_stop = task.measurements.measures[
                 DoesWantTerminate.cls_uuid
             ].get_metric()
@@ -241,7 +241,7 @@ class CompositeSuccess(Measure):
 @registry.register_measure
 class CompositeStageGoals(Measure):
     """
-    Adds to the metrics `[TASK_NAME]_success`: Did the agent complete a
+    Adds to the metrics `[task_NAME]_success`: Did the agent complete a
         particular stage defined in `stage_goals`.
     """
 

@@ -5,7 +5,7 @@ TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 TENSORBOARD_DIR: ""
 EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ppo/imagenav/ckpt.0.pth"
-NUM_ENVIRONMENTS: 1
+num_environments: 1
 CHECKPOINT_FOLDER: "data/test_checkpoints/ppo/imagenav/"
 NUM_UPDATES: 2
 LOG_INTERVAL: 100

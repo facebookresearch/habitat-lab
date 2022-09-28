@@ -9,7 +9,7 @@ from habitat.tasks.rearrange.actions.oracle_nav_action import (
     get_possible_nav_to_actions,
 )
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_type
 from habitat.tasks.rearrange.rearrange_sensors import (
     TargetGoalGpsCompassSensor,
     TargetStartGpsCompassSensor,
@@ -54,7 +54,7 @@ class OracleNavPolicy(NnSkillPolicy):
         )
         self._poss_actions = get_possible_nav_to_actions(self._pddl_problem)
         self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, "ORACLE_NAV_ACTION"
+            action_space, "oracle_nav_action"
         )
 
         self._is_target_obj = None
@@ -93,12 +93,12 @@ class OracleNavPolicy(NnSkillPolicy):
             observation_space,
             filtered_action_space,
             batch_size,
-            full_config.TASK_CONFIG.TASK.PDDL_DOMAIN_DEF,
+            full_config.habitat.task.pddl_domain_def,
             osp.join(
-                full_config.TASK_CONFIG.TASK.TASK_SPEC_BASE_PATH,
-                full_config.TASK_CONFIG.TASK.TASK_SPEC + ".yaml",
+                full_config.habitat.task.task_spec_base_path,
+                full_config.habitat.task.task_spec + ".yaml",
             ),
-            full_config.TASK_CONFIG.TASK,
+            full_config.habitat.task,
         )
 
     def _is_skill_done(
@@ -121,8 +121,8 @@ class OracleNavPolicy(NnSkillPolicy):
                 ][env_i]
             angle = np.abs(angle)
             ret[env_i] = (
-                dist < self._config.STOP_DIST_THRESH
-                and angle < self._config.STOP_ANGLE_THRESH
+                dist < self._config.stop_dist_thresh
+                and angle < self._config.stop_ANGLE_THRESH
             )
 
         return ret
@@ -158,7 +158,7 @@ class OracleNavPolicy(NnSkillPolicy):
         if match_i is None:
             raise ValueError(f"Cannot find matching action for {skill_arg}")
         is_target_obj = targ_obj.expr_type.is_subtype_of(
-            self._pddl_problem.expr_types[RIGID_OBJ_TYPE]
+            self._pddl_problem.expr_types[RIGID_OBJ_type]
         )
         return OracleNavPolicy.OracleNavActionArgs(
             match_i, is_target_obj, targ_obj_idx

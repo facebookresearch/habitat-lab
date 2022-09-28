@@ -34,7 +34,7 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 
-MIN_SCENES_PER_ENV = 16
+MIN_sceneS_PER_ENV = 16
 
 T = TypeVar("T")
 
@@ -306,32 +306,32 @@ def _make_proc_config(config, rank, scenes=None, scene_splits=None):
     proc_config = config.clone()
     proc_config.defrost()
 
-    task_config = proc_config.TASK_CONFIG
-    task_config.SEED = task_config.SEED + rank
+    task_config = proc_config.habitat
+    task_config.seed = task_config.seed + rank
     if scenes is not None and len(scenes) > 0:
-        task_config.DATASET.CONTENT_SCENES = scene_splits[rank]
+        task_config.dataset.content_scenes = scene_splits[rank]
 
-    task_config.SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID = (
+    task_config.simulator.habitat_sim_v0.gpu_device_id = (
         config.SIMULATOR_GPU_ID
     )
 
-    task_config.SIMULATOR.AGENT_0.SENSORS = config.SENSORS
+    task_config.simulator.agent_0.sensors = config.sensors
 
     proc_config.freeze()
     return proc_config
 
 
 def _create_worker_configs(config: Config):
-    num_environments = config.NUM_ENVIRONMENTS
+    num_environments = config.num_environments
 
-    dataset = make_dataset(config.TASK_CONFIG.DATASET.TYPE)
-    scenes = config.TASK_CONFIG.DATASET.CONTENT_SCENES
-    if "*" in config.TASK_CONFIG.DATASET.CONTENT_SCENES:
-        scenes = dataset.get_scenes_to_load(config.TASK_CONFIG.DATASET)
+    dataset = make_dataset(config.habitat.dataset.type)
+    scenes = config.habitat.dataset.content_scenes
+    if "*" in config.habitat.dataset.content_scenes:
+        scenes = dataset.get_scenes_to_load(config.habitat.dataset)
 
     # We use a minimum number of scenes per environment to reduce bias
     scenes_per_env = max(
-        int(math.ceil(len(scenes) / num_environments)), MIN_SCENES_PER_ENV
+        int(math.ceil(len(scenes) / num_environments)), MIN_sceneS_PER_ENV
     )
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
     for idx, scene in enumerate(infinite_shuffling_iterator(scenes)):

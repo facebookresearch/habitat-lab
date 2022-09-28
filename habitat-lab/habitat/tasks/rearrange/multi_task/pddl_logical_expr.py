@@ -18,7 +18,7 @@ class LogicalExprType(Enum):
 
 class LogicalQuantifierType(Enum):
     FORALL = "forall"
-    EXISTS = "exists"
+    ExiSTS = "exists"
 
 
 class LogicalExpr:

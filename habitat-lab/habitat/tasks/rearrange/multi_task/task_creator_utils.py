@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
 TASK_CONFIGS_DIR = "tasks/rearrange/"
-TASK_IGNORE_KEYS = ["TASK_SPEC", "TASK_SPEC_BASE_PATH", "PDDL_DOMAIN_DEF"]
+TASK_IGNORE_KEYS = ["task_spec", "task_spec_base_path", "pddl_domain_def"]
 
 
 def create_task_object(
@@ -52,11 +52,11 @@ def create_task_object(
             osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"), pass_args
         )
         for k in TASK_IGNORE_KEYS:
-            del task_config["TASK"][k]
-        config.merge_from_other_cfg(task_config.TASK)
+            del task_config.habitat["task"][k]
+        config.merge_from_other_cfg(task_config.habitat.task)
     # New task should not recreate any sensors
-    config.MEASUREMENTS = []
-    config.SENSORS = []
+    config.measurements = []
+    config.sensors = []
     config.freeze()
     task = task_cls(config=config, dataset=cur_dataset, sim=cur_env._sim)
 

@@ -19,7 +19,7 @@ from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.ddp_utils import (
-    EXIT,
+    ExiT,
     add_signal_handlers,
     get_distrib_size,
     get_free_port_distributed,
@@ -77,17 +77,17 @@ class VERTrainer(PPOTrainer):
             self.config.TORCH_GPU_ID = local_rank
             self.config.SIMULATOR_GPU_ID = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.TASK_CONFIG.SEED += (
-                world_rank * self.config.NUM_ENVIRONMENTS
+            self.config.habitat.seed += (
+                world_rank * self.config.num_environments
             )
             self.config.freeze()
 
-        random.seed(self.config.TASK_CONFIG.SEED)
-        np.random.seed(self.config.TASK_CONFIG.SEED)
-        torch.manual_seed(self.config.TASK_CONFIG.SEED)
+        random.seed(self.config.habitat.seed)
+        np.random.seed(self.config.habitat.seed)
+        torch.manual_seed(self.config.habitat.seed)
 
         self.mp_ctx = torch.multiprocessing.get_context("forkserver")
-        self.queues = WorkerQueues(self.config.NUM_ENVIRONMENTS)
+        self.queues = WorkerQueues(self.config.num_environments)
         self.environment_workers = construct_environment_workers(
             self.config,
             self.mp_ctx,
@@ -125,7 +125,7 @@ class VERTrainer(PPOTrainer):
 
         profiling_wrapper.configure(
             capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
-            num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
+            num_steps_to_capture=self.config.PROFILING.num_steps_TO_CAPTURE,
         )
 
         self._all_workers: List[WorkerBase] = []
@@ -477,7 +477,7 @@ class VERTrainer(PPOTrainer):
                     self.config,
                 )
 
-            if EXIT.is_set():
+            if ExiT.is_set():
                 profiling_wrapper.range_pop()  # train update
                 [w.close() for w in self._all_workers]
                 [w.join() for w in self._all_workers]

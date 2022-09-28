@@ -121,7 +121,7 @@ class MotionPlanner:
         self._use_sim.micro_step()
 
         did_collide, coll_details = self._use_sim.get_collisions(
-            self._config.COUNT_OBJ_COLLISIONS, self._ignore_names, True
+            self._config.count_obj_collisions, self._ignore_names, True
         )
         if (
             self._ignore_first
@@ -184,7 +184,7 @@ class MotionPlanner:
             self._should_render,
             grasp_thresh,
             n_gen_grasps,
-            self._config.MP_SIM_TYPE == "Priv",
+            self._config.MP_SIM_type == "Priv",
             self._config.DEBUG_DIR,
             self._config.GRASP_GEN_IS_VERBOSE,
         )
@@ -380,7 +380,7 @@ class MotionPlanner:
         """
         The two different simulators used for planning.
         """
-        if self._config.MP_SIM_TYPE == "Priv":
+        if self._config.MP_SIM_type == "Priv":
             return HabMpSim(self._sim)
         else:
             raise ValueError("Unrecognized simulator type")

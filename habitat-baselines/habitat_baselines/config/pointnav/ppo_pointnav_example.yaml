@@ -11,11 +11,11 @@ VIDEO_DIR: "video_dir"
 # To evaluate on all episodes, set this to -1
 TEST_EPISODE_COUNT: 2
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 1
-SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
+num_environments: 1
+sensors: ["rgb_sensor", "depth_sensor"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1e6
+TOTAL_num_steps: 1e6
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 50
 # Force PyTorch to be single threaded as

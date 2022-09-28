@@ -33,7 +33,7 @@ from numpy import ndarray
 from habitat.config import Config
 from habitat.core.utils import not_none_validator
 
-ALL_SCENES_MASK = "*"
+ALL_sceneS_MASK = "*"
 
 
 @attr.s(auto_attribs=True)
@@ -137,13 +137,13 @@ class Dataset(Generic[T]):
     @classmethod
     def build_content_scenes_filter(cls, config) -> Callable[[T], bool]:
         r"""Returns a filter function that takes an episode and returns True if that
-        episode is valid under the CONTENT_SCENES feild of the provided config
+        episode is valid under the content_scenes feild of the provided config
         """
-        scenes_to_load = set(config.CONTENT_SCENES)
+        scenes_to_load = set(config.content_scenes)
 
         def _filter(ep: T) -> bool:
             return (
-                ALL_SCENES_MASK in scenes_to_load
+                ALL_sceneS_MASK in scenes_to_load
                 or cls.scene_from_scene_path(ep.scene_id) in scenes_to_load
             )
 

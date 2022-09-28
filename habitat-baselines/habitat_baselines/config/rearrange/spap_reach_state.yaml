@@ -11,27 +11,26 @@ SENSE_PLAN_ACT:
   TIMEOUT: 3
   EXEC_EE_THRESH: 0.1
   # "Priv" or "Reg"
-  MP_SIM_TYPE: "Priv"
+  MP_SIM_type: "Priv"
   VIDEO_DIR: 'data/vids'
   DEBUG_DIR: "data/mp_test"
-  COUNT_OBJ_COLLISIONS: True
+  count_obj_collisions: True
   GRASP_GEN_IS_VERBOSE: True
-  IK_DIST_THRESH: 0.1
+  IK_dist_thresh: 0.1
   IK_SPEED_FACTOR: 1.0
 
-TASK_CONFIG:
-    REWARD_MEASURE: "rearrange_reach_reward"
-    SUCCESS_MEASURE: "rearrange_reach_success"
-    SUCCESS_REWARD: 10.0
-    SLACK_REWARD: -0.01
-    END_ON_SUCCESS: False
-    GYM:
-      OBS_KEYS: ['joint', 'ee_pos']
-      DESIRED_GOAL_KEYS: ['resting_position']
-      ACTION_KEYS: ['ARM_ACTION']
+habitat:
+    reward_measure: "rearrange_reach_reward"
+    success_measure: "rearrange_reach_success"
+    success_reward: 10.0
+    slack_reward: -0.01
+    end_on_success: False
+    gym:
+      obs_keys: ['joint', 'ee_pos']
+      desired_goal_keys: ['resting_position']
+      action_keys: ['arm_action']
 
 VIDEO_DIR: "data/vids/"
 VIDEO_OPTIONS: ["disk"]
 
-COUNT_OBJ_COLLISIONS: True
-COUNT_ROBOT_OBJ_COLLS: False
+count_obj_collisions: True

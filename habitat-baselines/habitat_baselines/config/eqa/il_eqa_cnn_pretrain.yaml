@@ -4,7 +4,7 @@ TRAINER_NAME: "eqa-cnn-pretrain"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 
-DATASET_PATH: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"
+dataset_PATH: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"
 
 EVAL_CKPT_PATH_DIR: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
 

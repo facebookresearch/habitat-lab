@@ -39,7 +39,7 @@ from habitat_baselines.common.tensorboard_utils import (
 )
 from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
-    EXIT,
+    ExiT,
     get_distrib_size,
     init_distrib_slurm,
     is_slurm_batch_job,
@@ -221,14 +221,14 @@ class PPOTrainer(BaseRLTrainer):
             self.config.TORCH_GPU_ID = local_rank
             self.config.SIMULATOR_GPU_ID = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.TASK_CONFIG.SEED += (
-                torch.distributed.get_rank() * self.config.NUM_ENVIRONMENTS
+            self.config.habitat.seed += (
+                torch.distributed.get_rank() * self.config.num_environments
             )
             self.config.freeze()
 
-            random.seed(self.config.TASK_CONFIG.SEED)
-            np.random.seed(self.config.TASK_CONFIG.SEED)
-            torch.manual_seed(self.config.TASK_CONFIG.SEED)
+            random.seed(self.config.habitat.seed)
+            np.random.seed(self.config.habitat.seed)
+            torch.manual_seed(self.config.habitat.seed)
             self.num_rollouts_done_store = torch.distributed.PrefixStore(
                 "rollout_tracker", tcp_store
             )
@@ -239,7 +239,7 @@ class PPOTrainer(BaseRLTrainer):
 
         profiling_wrapper.configure(
             capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
-            num_steps_to_capture=self.config.PROFILING.NUM_STEPS_TO_CAPTURE,
+            num_steps_to_capture=self.config.PROFILING.num_steps_TO_CAPTURE,
         )
 
         self._init_envs()
@@ -782,7 +782,7 @@ class PPOTrainer(BaseRLTrainer):
                         self.config,
                     )
 
-                if EXIT.is_set():
+                if ExiT.is_set():
                     profiling_wrapper.range_pop()  # train update
 
                     self.envs.close()
@@ -894,7 +894,7 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = config.RL.PPO
 
         config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
+        config.habitat.dataset.split = config.EVAL.split
         config.freeze()
 
         if (
@@ -902,8 +902,8 @@ class PPOTrainer(BaseRLTrainer):
             and self.config.VIDEO_RENDER_TOP_DOWN
         ):
             config.defrost()
-            config.TASK_CONFIG.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
-            config.TASK_CONFIG.TASK.MEASUREMENTS.append("COLLISIONS")
+            config.habitat.task.measurements.append("top_down_map")
+            config.habitat.task.measurements.append("collisions")
             config.freeze()
 
         if (
@@ -912,9 +912,9 @@ class PPOTrainer(BaseRLTrainer):
         ):
             config.defrost()
             for render_view in config.VIDEO_RENDER_VIEWS:
-                uuid = config.TASK_CONFIG.SIMULATOR[render_view].UUID
-                config.TASK_CONFIG.GYM.OBS_KEYS.append(uuid)
-                config.SENSORS.append(render_view)
+                uuid = config.habitat.simulator[render_view].uuid
+                config.habitat.gym.obs_keys.append(uuid)
+                config.sensors.append(render_view)
             config.freeze()
 
         if config.VERBOSE:
@@ -949,19 +949,19 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.config.NUM_ENVIRONMENTS,
+            self.config.num_environments,
             self.actor_critic.num_recurrent_layers,
             ppo_cfg.hidden_size,
             device=self.device,
         )
         prev_actions = torch.zeros(
-            self.config.NUM_ENVIRONMENTS,
+            self.config.num_environments,
             *action_shape,
             device=self.device,
             dtype=torch.long if discrete_actions else torch.float,
         )
         not_done_masks = torch.zeros(
-            self.config.NUM_ENVIRONMENTS,
+            self.config.num_environments,
             1,
             device=self.device,
             dtype=torch.bool,
@@ -972,7 +972,7 @@ class PPOTrainer(BaseRLTrainer):
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
         rgb_frames = [
-            [] for _ in range(self.config.NUM_ENVIRONMENTS)
+            [] for _ in range(self.config.num_environments)
         ]  # type: List[List[np.ndarray]]
         if len(self.config.VIDEO_OPTION) > 0:
             os.makedirs(self.config.VIDEO_DIR, exist_ok=True)
@@ -1124,7 +1124,7 @@ class PPOTrainer(BaseRLTrainer):
                     if gfx_str != "":
                         write_gfx_replay(
                             gfx_str,
-                            self.config.TASK_CONFIG.TASK,
+                            self.config.habitat.task,
                             current_episodes_info[i].episode_id,
                         )
 

@@ -105,8 +105,8 @@ class ObjectGoalSensor(Sensor):
     Args:
         sim: a reference to the simulator for calculating task observations.
         config: a config for the ObjectGoalSensor sensor. Can contain field
-            GOAL_SPEC that specifies which id use for goal specification,
-            GOAL_SPEC_MAX_VAL the maximum object_id possible used for
+            goal_spec that specifies which id use for goal specification,
+            goal_spec_max_val the maximum object_id possible used for
             observation space definition.
         dataset: a Object Goal navigation dataset that contains dictionaries
         of categories id to text mapping.
@@ -133,8 +133,8 @@ class ObjectGoalSensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         sensor_shape = (1,)
-        max_value = self.config.GOAL_SPEC_MAX_VAL - 1
-        if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
+        max_value = self.config.goal_spec_max_val - 1
+        if self.config.goal_spec == "TASK_CATEGORY_ID":
             max_value = max(
                 self._dataset.category_to_task_category_id.values()
             )
@@ -162,18 +162,18 @@ class ObjectGoalSensor(Sensor):
             )
             return None
         category_name = episode.object_category
-        if self.config.GOAL_SPEC == "TASK_CATEGORY_ID":
+        if self.config.goal_spec == "TASK_CATEGORY_ID":
             return np.array(
                 [self._dataset.category_to_task_category_id[category_name]],
                 dtype=np.int64,
             )
-        elif self.config.GOAL_SPEC == "OBJECT_ID":
+        elif self.config.goal_spec == "OBJECT_ID":
             obj_goal = episode.goals[0]
             assert isinstance(obj_goal, ObjectGoal)  # for type checking
             return np.array([obj_goal.object_name_id], dtype=np.int64)
         else:
             raise RuntimeError(
-                "Wrong GOAL_SPEC specified for ObjectGoalSensor."
+                "Wrong goal_spec specified for ObjectGoalSensor."
             )
 
 

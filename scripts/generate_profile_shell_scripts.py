@@ -134,7 +134,7 @@ if __name__ == "__main__":
             program_str
             + " PROFILING.CAPTURE_START_STEP "
             + str(capture_start_step)
-            + " PROFILING.NUM_STEPS_TO_CAPTURE "
+            + " PROFILING.num_steps_TO_CAPTURE "
             + str(num_steps_to_capture)
         )
     else:

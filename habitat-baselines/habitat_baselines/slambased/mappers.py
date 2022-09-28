@@ -93,8 +93,8 @@ class DirectDepthMapper(nn.Module):
 
     def forward(self, depth, pose=torch.eye(4).float()):  # noqa: B008
         self.device = depth.device
-        # Works for FOV = 90 degrees
-        # Should be adjusted, if FOV changed
+        # Works for fov = 90 degrees
+        # Should be adjusted, if fov changed
         self.fx = float(depth.size(1)) / 2.0
         self.fy = float(depth.size(0)) / 2.0
         self.cx = int(self.fx) - 1

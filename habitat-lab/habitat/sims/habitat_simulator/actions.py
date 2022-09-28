@@ -16,12 +16,12 @@ from habitat.core.utils import Singleton
 
 
 class _DefaultHabitatSimActions(Enum):
-    STOP = 0
-    MOVE_FORWARD = 1
-    TURN_LEFT = 2
-    TURN_RIGHT = 3
-    LOOK_UP = 4
-    LOOK_DOWN = 5
+    stop = 0
+    move_forward = 1
+    turn_left = 2
+    turn_right = 3
+    look_up = 4
+    look_down = 5
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -93,20 +93,20 @@ HabitatSimActions: HabitatSimActionsSingleton = HabitatSimActionsSingleton()
 class HabitatSimV0ActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
         return {
-            HabitatSimActions.STOP: habitat_sim.ActionSpec("stop"),
-            HabitatSimActions.MOVE_FORWARD: habitat_sim.ActionSpec(
+            HabitatSimActions.stop: habitat_sim.ActionSpec("stop"),
+            HabitatSimActions.move_forward: habitat_sim.ActionSpec(
                 "move_forward",
                 habitat_sim.ActuationSpec(
-                    amount=self.config.FORWARD_STEP_SIZE
+                    amount=self.config.forward_step_size
                 ),
             ),
-            HabitatSimActions.TURN_LEFT: habitat_sim.ActionSpec(
+            HabitatSimActions.turn_left: habitat_sim.ActionSpec(
                 "turn_left",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
             ),
-            HabitatSimActions.TURN_RIGHT: habitat_sim.ActionSpec(
+            HabitatSimActions.turn_right: habitat_sim.ActionSpec(
                 "turn_right",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
             ),
         }
 
@@ -118,13 +118,13 @@ class HabitatSimV1ActionSpaceConfiguration(
     def get(self):
         config = super().get()
         new_config = {
-            HabitatSimActions.LOOK_UP: habitat_sim.ActionSpec(
+            HabitatSimActions.look_up: habitat_sim.ActionSpec(
                 "look_up",
-                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.tilt_angle),
             ),
-            HabitatSimActions.LOOK_DOWN: habitat_sim.ActionSpec(
+            HabitatSimActions.look_down: habitat_sim.ActionSpec(
                 "look_down",
-                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.tilt_angle),
             ),
         }
 
@@ -137,56 +137,56 @@ class HabitatSimV1ActionSpaceConfiguration(
 class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
         return {
-            HabitatSimActions.STOP: habitat_sim.ActionSpec("stop"),
-            HabitatSimActions.MOVE_FORWARD: habitat_sim.ActionSpec(
+            HabitatSimActions.stop: habitat_sim.ActionSpec("stop"),
+            HabitatSimActions.move_forward: habitat_sim.ActionSpec(
                 "pyrobot_noisy_move_forward",
                 habitat_sim.PyRobotNoisyActuationSpec(
-                    amount=self.config.FORWARD_STEP_SIZE,
-                    robot=self.config.NOISE_MODEL.ROBOT,
+                    amount=self.config.forward_step_size,
+                    robot=self.config.NOISE_MODEL.robot,
                     controller=self.config.NOISE_MODEL.CONTROLLER,
                     noise_multiplier=self.config.NOISE_MODEL.NOISE_MULTIPLIER,
                 ),
             ),
-            HabitatSimActions.TURN_LEFT: habitat_sim.ActionSpec(
+            HabitatSimActions.turn_left: habitat_sim.ActionSpec(
                 "pyrobot_noisy_turn_left",
                 habitat_sim.PyRobotNoisyActuationSpec(
-                    amount=self.config.TURN_ANGLE,
-                    robot=self.config.NOISE_MODEL.ROBOT,
+                    amount=self.config.turn_angle,
+                    robot=self.config.NOISE_MODEL.robot,
                     controller=self.config.NOISE_MODEL.CONTROLLER,
                     noise_multiplier=self.config.NOISE_MODEL.NOISE_MULTIPLIER,
                 ),
             ),
-            HabitatSimActions.TURN_RIGHT: habitat_sim.ActionSpec(
+            HabitatSimActions.turn_right: habitat_sim.ActionSpec(
                 "pyrobot_noisy_turn_right",
                 habitat_sim.PyRobotNoisyActuationSpec(
-                    amount=self.config.TURN_ANGLE,
-                    robot=self.config.NOISE_MODEL.ROBOT,
+                    amount=self.config.turn_angle,
+                    robot=self.config.NOISE_MODEL.robot,
                     controller=self.config.NOISE_MODEL.CONTROLLER,
                     noise_multiplier=self.config.NOISE_MODEL.NOISE_MULTIPLIER,
                 ),
             ),
-            HabitatSimActions.LOOK_UP: habitat_sim.ActionSpec(
+            HabitatSimActions.look_up: habitat_sim.ActionSpec(
                 "look_up",
-                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.tilt_angle),
             ),
-            HabitatSimActions.LOOK_DOWN: habitat_sim.ActionSpec(
+            HabitatSimActions.look_down: habitat_sim.ActionSpec(
                 "look_down",
-                habitat_sim.ActuationSpec(amount=self.config.TILT_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.tilt_angle),
             ),
             # The perfect actions are needed for the oracle planner
             "_forward": habitat_sim.ActionSpec(
                 "move_forward",
                 habitat_sim.ActuationSpec(
-                    amount=self.config.FORWARD_STEP_SIZE
+                    amount=self.config.forward_step_size
                 ),
             ),
             "_left": habitat_sim.ActionSpec(
                 "turn_left",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
             ),
             "_right": habitat_sim.ActionSpec(
                 "turn_right",
-                habitat_sim.ActuationSpec(amount=self.config.TURN_ANGLE),
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
             ),
         }
 

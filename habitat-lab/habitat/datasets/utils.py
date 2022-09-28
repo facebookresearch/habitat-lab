@@ -25,12 +25,12 @@ try:
 except ImportError:
     pass
 
-SENTENCE_SPLIT_REGEX = re.compile(r"([^\w-]+)")
+SENTENCE_split_REGEX = re.compile(r"([^\w-]+)")
 DEFAULT_PHYSICS_CONFIG_PATH = "data/default.physics_config.json"
 
 
 def tokenize(
-    sentence, regex=SENTENCE_SPLIT_REGEX, keep=("'s"), remove=(",", "?")
+    sentence, regex=SENTENCE_split_REGEX, keep=("'s"), remove=(",", "?")
 ) -> List[str]:
     sentence = sentence.lower()
 
@@ -130,7 +130,7 @@ class VocabDict:
     def tokenize_and_index(
         self,
         sentence,
-        regex=SENTENCE_SPLIT_REGEX,
+        regex=SENTENCE_split_REGEX,
         keep=("'s"),
         remove=(",", "?"),
     ) -> List[int]:
@@ -153,7 +153,7 @@ class VocabFromText(VocabDict):
         self,
         sentences,
         min_count=1,
-        regex=SENTENCE_SPLIT_REGEX,
+        regex=SENTENCE_split_REGEX,
         keep=(),
         remove=(),
         only_unk_extra=False,
@@ -193,7 +193,7 @@ def get_action_shortest_path(
     step_count = 0
     action = follower.get_next_action(goal_position)
     while (
-        action is not HabitatSimActions.STOP and step_count < max_episode_steps
+        action is not HabitatSimActions.stop and step_count < max_episode_steps
     ):
         state = sim.get_agent_state()
         shortest_path.append(

@@ -22,7 +22,7 @@ except ImportError:
 cv2 = try_cv2_import()
 
 
-AGENT_SPRITE = imageio.imread(
+agent_SPRITE = imageio.imread(
     os.path.join(
         os.path.dirname(__file__),
         "assets",
@@ -30,7 +30,7 @@ AGENT_SPRITE = imageio.imread(
         "100x100.png",
     )
 )
-AGENT_SPRITE = np.ascontiguousarray(np.flipud(AGENT_SPRITE))
+agent_SPRITE = np.ascontiguousarray(np.flipud(agent_SPRITE))
 
 MAP_INVALID_POINT = 0
 MAP_VALID_POINT = 1
@@ -40,18 +40,18 @@ MAP_TARGET_POINT_INDICATOR = 6
 MAP_SHORTEST_PATH_COLOR = 7
 MAP_VIEW_POINT_INDICATOR = 8
 MAP_TARGET_BOUNDING_BOX = 9
-TOP_DOWN_MAP_COLORS = np.full((256, 3), 150, dtype=np.uint8)
-TOP_DOWN_MAP_COLORS[10:] = cv2.applyColorMap(
+top_down_map_COLORS = np.full((256, 3), 150, dtype=np.uint8)
+top_down_map_COLORS[10:] = cv2.applyColorMap(
     np.arange(246, dtype=np.uint8), cv2.COLORMAP_JET
 ).squeeze(1)[:, ::-1]
-TOP_DOWN_MAP_COLORS[MAP_INVALID_POINT] = [255, 255, 255]  # White
-TOP_DOWN_MAP_COLORS[MAP_VALID_POINT] = [150, 150, 150]  # Light Grey
-TOP_DOWN_MAP_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]  # Grey
-TOP_DOWN_MAP_COLORS[MAP_SOURCE_POINT_INDICATOR] = [0, 0, 200]  # Blue
-TOP_DOWN_MAP_COLORS[MAP_TARGET_POINT_INDICATOR] = [200, 0, 0]  # Red
-TOP_DOWN_MAP_COLORS[MAP_SHORTEST_PATH_COLOR] = [0, 200, 0]  # Green
-TOP_DOWN_MAP_COLORS[MAP_VIEW_POINT_INDICATOR] = [245, 150, 150]  # Light Red
-TOP_DOWN_MAP_COLORS[MAP_TARGET_BOUNDING_BOX] = [0, 175, 0]  # Green
+top_down_map_COLORS[MAP_INVALID_POINT] = [255, 255, 255]  # White
+top_down_map_COLORS[MAP_VALID_POINT] = [150, 150, 150]  # Light Grey
+top_down_map_COLORS[MAP_BORDER_INDICATOR] = [50, 50, 50]  # Grey
+top_down_map_COLORS[MAP_SOURCE_POINT_INDICATOR] = [0, 0, 200]  # Blue
+top_down_map_COLORS[MAP_TARGET_POINT_INDICATOR] = [200, 0, 0]  # Red
+top_down_map_COLORS[MAP_SHORTEST_PATH_COLOR] = [0, 200, 0]  # Green
+top_down_map_COLORS[MAP_VIEW_POINT_INDICATOR] = [245, 150, 150]  # Light Red
+top_down_map_COLORS[MAP_TARGET_BOUNDING_BOX] = [0, 175, 0]  # Green
 
 
 def draw_agent(
@@ -72,11 +72,11 @@ def draw_agent(
 
     # Rotate before resize to keep good resolution.
     rotated_agent = scipy.ndimage.interpolation.rotate(
-        AGENT_SPRITE, agent_rotation * 180 / np.pi
+        agent_SPRITE, agent_rotation * 180 / np.pi
     )
     # Rescale because rotation may result in larger image than original, but
     # the agent sprite size should stay the same.
-    initial_agent_size = AGENT_SPRITE.shape[0]
+    initial_agent_size = agent_SPRITE.shape[0]
     new_size = rotated_agent.shape[0]
     agent_size_px = max(
         1, int(agent_radius_px * 2 * new_size / initial_agent_size)
@@ -363,7 +363,7 @@ def colorize_topdown_map(
     Returns:
         A colored version of the top-down map.
     """
-    _map = TOP_DOWN_MAP_COLORS[top_down_map]
+    _map = top_down_map_COLORS[top_down_map]
 
     if fog_of_war_mask is not None:
         fog_of_war_desat_values = np.array([[fog_of_war_desat_amount], [1.0]])
@@ -386,7 +386,7 @@ def draw_path(
     r"""Draw path on top_down_map (in place) with specified color.
     Args:
         top_down_map: A colored version of the map.
-        color: color code of the path, from TOP_DOWN_MAP_COLORS.
+        color: color code of the path, from top_down_map_COLORS.
         path_points: list of points that specify the path to be drawn
         thickness: thickness of the path.
     """

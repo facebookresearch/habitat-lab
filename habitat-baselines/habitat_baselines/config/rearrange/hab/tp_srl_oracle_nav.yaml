@@ -10,15 +10,15 @@ VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 VIDEO_RENDER_VIEWS:
-  - "THIRD_RGB_SENSOR"
-SENSORS: ["HEAD_DEPTH_SENSOR"]
+  - "third_rgb_sensor"
+sensors: ["head_depth_sensor"]
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: ""
-NUM_ENVIRONMENTS: 1
-WRITER_TYPE: 'tb'
+num_environments: 1
+WRITER_type: 'tb'
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1.0e8
+TOTAL_num_steps: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
 FORCE_TORCH_SINGLE_THREADED: True
@@ -26,14 +26,14 @@ EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'composite_success']
 EVAL:
   USE_CKPT_CONFIG: False
   SHOULD_LOAD_CKPT: False
-TASK_CONFIG:
+habitat:
   # Add the oracle navigation action
-  TASK:
-    POSSIBLE_ACTIONS:
-    - ARM_ACTION
-    - BASE_VELOCITY
-    - REARRANGE_STOP
-    - ORACLE_NAV_ACTION
+  task:
+    possible_actions:
+    - arm_action
+    - base_velocity
+    - rearrange_stop
+    - oracle_nav_action
 
 RL:
   POLICY:
@@ -54,7 +54,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
@@ -65,7 +65,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
@@ -76,7 +76,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
@@ -87,7 +87,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:
@@ -103,12 +103,12 @@ RL:
         GT_NAV:
           skill_name: "OracleNavPolicy"
           OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-          GOAL_SENSORS: ["obj_goal_sensor", "abs_obj_goal_sensor"]
-          NAV_ACTION_NAME: "BASE_VELOCITY"
+          GOAL_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
+          NAV_ACTION_NAME: "base_velocity"
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: True
-          STOP_ANGLE_THRESH: 0.2
-          STOP_DIST_THRESH: 1.0
+          stop_ANGLE_THRESH: 0.2
+          stop_dist_thresh: 1.0
 
         NN_PLACE:
           skill_name: "PlaceSkillPolicy"

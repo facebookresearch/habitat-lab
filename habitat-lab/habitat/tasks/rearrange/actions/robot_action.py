@@ -15,9 +15,9 @@ class RobotAction(SimulatorTaskAction):
         Underlying robot mananger for the robot instance the action is attached to.
         """
 
-        if self._config.AGENT is None:
+        if self._config.agent is None:
             return self._sim.robots_mgr[0]
-        return self._sim.robots_mgr[self._config.AGENT]
+        return self._sim.robots_mgr[self._config.agent]
 
     @property
     def _ik_helper(self):
@@ -48,6 +48,6 @@ class RobotAction(SimulatorTaskAction):
         there are multiple agents.
         """
 
-        if self._config.AGENT is not None:
-            return f"AGENT_{self._config.AGENT}_"
+        if self._config.agent is not None:
+            return f"agent_{self._config.agent}_"
         return ""

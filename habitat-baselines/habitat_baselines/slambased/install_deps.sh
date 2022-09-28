@@ -47,7 +47,7 @@ rm ORB_SLAM2-PythonBindings -rf
 git clone https://github.com/ducha-aiki/ORB_SLAM2
 git clone https://github.com/ducha-aiki/ORB_SLAM2-PythonBindings
 cd "${MAINDIR}"/ORB_SLAM2 || exit
-sed -i "s,cmake .. -DCMAKE_BUILD_TYPE=Release,cmake .. -DCMAKE_BUILD_TYPE=Release -DEIGEN3_INCLUDE_DIR=${MAINDIR}/eigen3_installed/include/eigen3/ -DCMAKE_INSTALL_PREFIX=${MAINDIR}/ORBSLAM2_installed ,g" build.sh
+sed -i "s,cmake .. -DCMAKE_BUILD_type=Release,cmake .. -DCMAKE_BUILD_type=Release -DEIGEN3_INCLUDE_DIR=${MAINDIR}/eigen3_installed/include/eigen3/ -DCMAKE_INSTALL_PREFIX=${MAINDIR}/ORBSLAM2_installed ,g" build.sh
 ln -s "${MAINDIR}"/eigen3_installed/include/eigen3/Eigen "${MAINDIR}"/ORB_SLAM2/Thirdparty/g2o/g2o/core/Eigen
 ./build.sh
 cd build || exit

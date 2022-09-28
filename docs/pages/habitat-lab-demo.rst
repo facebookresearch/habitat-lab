@@ -27,8 +27,8 @@ override parameters and freeze the config.
 
         config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
         config.defrost()
-        config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
-        config.DATASET.SCENES_DIR = '../data/scene_datasets/'
+        config.habitat.dataset.data_path = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
+        config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
         config.freeze()
 
         env = habitat.Env(config=config)
@@ -130,12 +130,12 @@ override parameters and freeze the config.
 
     config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
     config.defrost()
-    config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
-    config.DATASET.SCENES_DIR = '../data/scene_datasets/'
-    config.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
-    config.SIMULATOR.SEMANTIC_SENSOR.WIDTH = 256
-    config.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = 256
-    config.SIMULATOR.TURN_ANGLE = 30
+    config.habitat.dataset.data_path = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
+    config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
+    config.habitat.simulator.agent_0.sensors = ['rgb_sensor', 'depth_sensor', 'semantic_sensor']
+    config.habitat.simulator.semantic_sensor.width = 256
+    config.habitat.simulator.semantic_sensor.height = 256
+    config.habitat.simulator.turn_angle = 30
     config.freeze()
 
     env = habitat.Env(config=config)

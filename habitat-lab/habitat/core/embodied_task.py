@@ -234,7 +234,7 @@ class EmbodiedTask:
 
         self.measurements = Measurements(
             self._init_entities(
-                entity_names=config.MEASUREMENTS,
+                entity_names=config.measurements,
                 register_func=registry.get_measure,
                 entities_config=config,
             ).values()
@@ -242,16 +242,16 @@ class EmbodiedTask:
 
         self.sensor_suite = SensorSuite(
             self._init_entities(
-                entity_names=config.SENSORS,
+                entity_names=config.sensors,
                 register_func=registry.get_sensor,
                 entities_config=config,
             ).values()
         )
 
         self.actions = self._init_entities(
-            entity_names=config.POSSIBLE_ACTIONS,
+            entity_names=config.possible_actions,
             register_func=registry.get_task_action,
-            entities_config=self._config.ACTIONS,
+            entities_config=self._config.actions,
         )
         self._action_keys = list(self.actions.keys())
 
@@ -266,12 +266,12 @@ class EmbodiedTask:
         entities = OrderedDict()
         for entity_name in entity_names:
             entity_cfg = getattr(entities_config, entity_name)
-            if "TYPE" not in entity_cfg:
-                raise ValueError(f"Could not find TYPE in {entity_cfg}")
-            entity_type = register_func(entity_cfg.TYPE)
+            if "type" not in entity_cfg:
+                raise ValueError(f"Could not find type in {entity_cfg}")
+            entity_type = register_func(entity_cfg.type)
             assert (
                 entity_type is not None
-            ), f"invalid {entity_name} type {entity_cfg.TYPE}"
+            ), f"invalid {entity_name} type {entity_cfg.type}"
             entities[entity_name] = entity_type(
                 sim=self._sim,
                 config=entity_cfg,

@@ -5,10 +5,10 @@ TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 TENSORBOARD_DIR: ""
 VIDEO_DIR: "data/test_checkpoints/ppo/pointnav/video"
-SENSORS: ["HEAD_DEPTH_SENSOR"]
+sensors: ["head_depth_sensor"]
 TEST_EPISODE_COUNT: 2
 EVAL_CKPT_PATH_DIR: ""
-NUM_ENVIRONMENTS: 1
+num_environments: 1
 CHECKPOINT_FOLDER: "data/test_checkpoints/ppo/pointnav/"
 NUM_UPDATES: 2
 LOG_INTERVAL: 100
@@ -57,8 +57,8 @@ RL:
           action_distribution_type: "gaussian"
           OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
           OBS_SKILL_INPUT_DIM: 2
-          LIN_SPEED_STOP: 0.067
-          ANG_SPEED_STOP: 0.067
+          lin_speed_stop: 0.067
+          ang_speed_stop: 0.067
           LOAD_CKPT_FILE: ""
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: False

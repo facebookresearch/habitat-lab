@@ -20,7 +20,6 @@ CONFIG_FILE_SEPARATOR = ","
 _C = CN()
 # task config can be a list of conifgs like "A.yaml,B.yaml"
 _C.BASE_TASK_CONFIG_PATH = "habitat-lab/habitat/config/tasks/pointnav.yaml"
-_C.TASK_CONFIG = CN()  # task_config will be stored as a config node
 _C.CMD_TRAILING_OPTS = []  # store command line options as list of strings
 _C.TRAINER_NAME = "ppo"
 _C.SIMULATOR_GPU_ID = 0
@@ -28,22 +27,22 @@ _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.VIDEO_RENDER_VIEWS = []
 _C.TENSORBOARD_DIR = "tb"
-_C.WRITER_TYPE = "tb"
+_C.WRITER_type = "tb"
 _C.VIDEO_DIR = "video_dir"
 _C.VIDEO_FPS = 10
 _C.VIDEO_RENDER_TOP_DOWN = True
 _C.VIDEO_RENDER_ALL_INFO = False
 _C.TEST_EPISODE_COUNT = -1
 _C.EVAL_CKPT_PATH_DIR = "data/checkpoints"  # path to ckpt or path to ckpts dir
-_C.NUM_ENVIRONMENTS = 16
+_C.num_environments = 16
 _C.NUM_PROCESSES = -1  # depricated
-_C.SENSORS = ["RGB_SENSOR", "DEPTH_SENSOR"]
+_C.sensors = ["rgb_sensor", "depth_sensor"]
 _C.CHECKPOINT_FOLDER = "data/checkpoints"
 _C.NUM_UPDATES = 10000
 _C.NUM_CHECKPOINTS = 10
 # Number of model updates between checkpoints
 _C.CHECKPOINT_INTERVAL = -1
-_C.TOTAL_NUM_STEPS = -1.0
+_C.TOTAL_num_steps = -1.0
 _C.LOG_INTERVAL = 10
 _C.LOG_FILE = "train.log"
 _C.FORCE_BLIND_POLICY = False
@@ -75,7 +74,7 @@ _C.WB.RUN_NAME = ""
 # -----------------------------------------------------------------------------
 _C.EVAL = CN()
 # The split to evaluate on
-_C.EVAL.SPLIT = "val"
+_C.EVAL.split = "val"
 # Whether or not to use the config in the checkpoint. Setting this to False
 # is useful if some code changes necessitate a new config but the weights
 # are still valid.
@@ -85,7 +84,7 @@ _C.EVAL.SHOULD_LOAD_CKPT = True
 # Only works when evaluating on all episodes.
 _C.EVAL.EVALS_PER_EP = 1
 # -----------------------------------------------------------------------------
-# REINFORCEMENT LEARNING (RL) ENVIRONMENT CONFIG
+# REINFORCEMENT LEARNING (RL) environment CONFIG
 # -----------------------------------------------------------------------------
 _C.RL = CN()
 # -----------------------------------------------------------------------------
@@ -130,8 +129,8 @@ _C.RL.POLICY.ACTION_DIST.scheduled_std = False
 _C.RL.POLICY.OBS_TRANSFORMS = CN()
 _C.RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS = tuple()
 _C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.WIDTH = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.height = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.width = 256
 _C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.CHANNELS_LAST = True
 _C.RL.POLICY.OBS_TRANSFORMS.CENTER_CROPPER.TRANS_KEYS = (
     "rgb",
@@ -148,8 +147,8 @@ _C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.TRANS_KEYS = (
 )
 _C.RL.POLICY.OBS_TRANSFORMS.RESIZE_SHORTEST_EDGE.SEMANTIC_KEY = "semantic"
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.WIDTH = 512
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.height = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.width = 512
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = [
     "BACK",
     "DOWN",
@@ -159,9 +158,9 @@ _C.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = [
     "UP",
 ]
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.WIDTH = 256
-_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.FOV = 180
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.height = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.width = 256
+_C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.fov = 180
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.PARAMS = (0.2, 0.2, 0.2)
 _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = [
     "BACK",
@@ -172,8 +171,8 @@ _C.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = [
     "UP",
 ]
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE = CN()
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.HEIGHT = 256
-_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.WIDTH = 256
+_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.height = 256
+_C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.width = 256
 _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = [
     "BACK",
     "DOWN",
@@ -183,7 +182,7 @@ _C.RL.POLICY.OBS_TRANSFORMS.EQ2CUBE.SENSOR_UUIDS = [
     "UP",
 ]
 # -----------------------------------------------------------------------------
-# PROXIMAL POLICY OPTIMIZATION (PPO)
+# PROxiMAL POLICY OPTIMIZATION (PPO)
 # -----------------------------------------------------------------------------
 _C.RL.PPO = CN()
 _C.RL.PPO.clip_param = 0.2
@@ -230,7 +229,7 @@ _C.RL.auxiliary_losses.cpca.time_subsample = 6
 _C.RL.auxiliary_losses.cpca.future_subsample = 2
 _C.RL.auxiliary_losses.cpca.loss_scale = 0.1
 # -----------------------------------------------------------------------------
-# DECENTRALIZED DISTRIBUTED PROXIMAL POLICY OPTIMIZATION (DD-PPO)
+# DECENTRALIZED DISTRIBUTED PROxiMAL POLICY OPTIMIZATION (DD-PPO)
 # -----------------------------------------------------------------------------
 _C.RL.DDPPO = CN()
 _C.RL.DDPPO.sync_frac = 0.6
@@ -259,31 +258,33 @@ _C.ORBSLAM2.SLAM_SETTINGS_PATH = (
 )
 _C.ORBSLAM2.MAP_CELL_SIZE = 0.1
 _C.ORBSLAM2.MAP_SIZE = 40
-_C.ORBSLAM2.CAMERA_HEIGHT = get_task_config().SIMULATOR.DEPTH_SENSOR.POSITION[
-    1
-]
+_C.ORBSLAM2.CAMERA_height = (
+    get_task_config().habitat.simulator.depth_sensor.position[1]
+)
 _C.ORBSLAM2.BETA = 100
-_C.ORBSLAM2.H_OBSTACLE_MIN = 0.3 * _C.ORBSLAM2.CAMERA_HEIGHT
-_C.ORBSLAM2.H_OBSTACLE_MAX = 1.0 * _C.ORBSLAM2.CAMERA_HEIGHT
+_C.ORBSLAM2.H_OBSTACLE_MIN = 0.3 * _C.ORBSLAM2.CAMERA_height
+_C.ORBSLAM2.H_OBSTACLE_MAX = 1.0 * _C.ORBSLAM2.CAMERA_height
 _C.ORBSLAM2.D_OBSTACLE_MIN = 0.1
 _C.ORBSLAM2.D_OBSTACLE_MAX = 4.0
 _C.ORBSLAM2.PREPROCESS_MAP = True
 _C.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
-    get_task_config().SIMULATOR.DEPTH_SENSOR.WIDTH / 2.0
+    get_task_config().habitat.simulator.depth_sensor.width / 2.0
 )
 _C.ORBSLAM2.ANGLE_TH = float(np.deg2rad(15))
 _C.ORBSLAM2.DIST_REACHED_TH = 0.15
 _C.ORBSLAM2.NEXT_WAYPOINT_TH = 0.5
-_C.ORBSLAM2.NUM_ACTIONS = 3
-_C.ORBSLAM2.DIST_TO_STOP = 0.05
+_C.ORBSLAM2.NUM_actions = 3
+_C.ORBSLAM2.DIST_TO_stop = 0.05
 _C.ORBSLAM2.PLANNER_MAX_STEPS = 500
-_C.ORBSLAM2.DEPTH_DENORM = get_task_config().SIMULATOR.DEPTH_SENSOR.MAX_DEPTH
+_C.ORBSLAM2.DEPTH_DENORM = (
+    get_task_config().habitat.simulator.depth_sensor.max_depth
+)
 # -----------------------------------------------------------------------------
 # PROFILING
 # -----------------------------------------------------------------------------
 _C.PROFILING = CN()
 _C.PROFILING.CAPTURE_START_STEP = -1
-_C.PROFILING.NUM_STEPS_TO_CAPTURE = -1
+_C.PROFILING.num_steps_TO_CAPTURE = -1
 
 
 _C.register_renamed_key
@@ -319,9 +320,9 @@ def get_config(
             if k == "BASE_TASK_CONFIG_PATH":
                 config.BASE_TASK_CONFIG_PATH = v
 
-    config.TASK_CONFIG = get_task_config(config.BASE_TASK_CONFIG_PATH)
+    config.merge_from_other_cfg(get_task_config(config.BASE_TASK_CONFIG_PATH))
 
-    # In case the config specifies overrides for the TASK_CONFIG, we
+    # In case the config specifies overrides for the habitat config, we
     # remerge the files here
     if config_paths:
         for config_path in config_paths:
@@ -334,11 +335,11 @@ def get_config(
     if config.NUM_PROCESSES != -1:
         warnings.warn(
             "NUM_PROCESSES is depricated and will be removed in a future version."
-            "  Use NUM_ENVIRONMENTS instead."
-            "  Overwriting NUM_ENVIRONMENTS with NUM_PROCESSES for backwards compatibility."
+            "  Use num_environments instead."
+            "  Overwriting num_environments with NUM_PROCESSES for backwards compatibility."
         )
 
-        config.NUM_ENVIRONMENTS = config.NUM_PROCESSES
+        config.num_environments = config.NUM_PROCESSES
 
     config.freeze()
     return config

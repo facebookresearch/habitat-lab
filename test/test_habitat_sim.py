@@ -17,9 +17,11 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 def init_sim():
     config = get_config()
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
+    return make_sim(
+        config.habitat.simulator.type, config=config.habitat.simulator
+    )
 
 
 def test_sim_trajectory():
@@ -74,18 +76,22 @@ def test_sim_trajectory():
 def test_sim_no_sensors():
     config = get_config()
     config.defrost()
-    config.SIMULATOR.AGENT_0.SENSORS = []
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    config.habitat.simulator.agent_0.sensors = []
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    with make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR) as sim:
+    with make_sim(
+        config.habitat.simulator.type, config=config.habitat.simulator
+    ) as sim:
         sim.reset()
 
 
 def test_sim_geodesic_distance():
     config = get_config()
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    with make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR) as sim:
+    with make_sim(
+        config.habitat.simulator.type, config=config.habitat.simulator
+    ) as sim:
         sim.reset()
 
         with open(

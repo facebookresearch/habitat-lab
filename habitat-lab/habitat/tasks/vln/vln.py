@@ -83,7 +83,7 @@ class VLNTask(NavigationTask):
     r"""Vision and Language Navigation Task
     Goal: An agent must navigate to a goal location in a 3D environment
         specified by a natural language instruction.
-    Metric: Success weighted by Path Length (SPL)
+    Metric: Success weighted by Path Length (spl)
     Usage example:
         examples/vln_reference_path_follower_example.py
     """

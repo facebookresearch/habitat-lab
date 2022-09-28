@@ -28,8 +28,8 @@ from habitat import Config, logger
 
 T = TypeVar("T")
 
-EXIT = threading.Event()
-EXIT.clear()
+ExiT = threading.Event()
+ExiT.clear()
 REQUEUE = threading.Event()
 REQUEUE.clear()
 SAVE_STATE = threading.Event()
@@ -131,12 +131,12 @@ def _ignore_handler(signum, frame):
 
 
 def _clean_exit_handler(signum, frame):
-    EXIT.set()
+    ExiT.set()
     print("Exiting cleanly", flush=True)
 
 
 def _clean_exit_and_save_handler(signum, frame):
-    EXIT.set()
+    ExiT.set()
     SAVE_STATE.set()
     print("Exiting cleanly and saving state", flush=True)
 
@@ -144,7 +144,7 @@ def _clean_exit_and_save_handler(signum, frame):
 def _requeue_handler(signal, frame):
     REQUEUE.set()
     SAVE_STATE.set()
-    EXIT.set()
+    ExiT.set()
     print("Got signal to requeue", flush=True)
 
 
@@ -240,7 +240,7 @@ def get_distrib_size() -> Tuple[int, int, int]:
     elif os.environ.get("SLURM_JOBID", None) is not None:
         local_rank = int(os.environ["SLURM_LOCALID"])
         world_rank = int(os.environ["SLURM_PROCID"])
-        world_size = int(os.environ["SLURM_NTASKS"])
+        world_size = int(os.environ["SLURM_NtaskS"])
     # Otherwise setup for just 1 process, this is nice for testing
     else:
         local_rank = 0

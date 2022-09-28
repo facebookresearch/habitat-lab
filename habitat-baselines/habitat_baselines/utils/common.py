@@ -652,7 +652,7 @@ def action_to_velocity_control(
     lin_vel, ang_vel = torch.clip(action, min=-1, max=1)
     step_action = {
         "action": {
-            "action": "VELOCITY_CONTROL",
+            "action": "velocity_control",
             "action_args": {
                 "linear_velocity": lin_vel.item(),
                 "angular_velocity": ang_vel.item(),

@@ -91,7 +91,7 @@ class VQATrainer(BaseILTrainer):
         logger.info("Ground-truth answer: {}".format(gt_answer))
 
         result_path = self.config.RESULTS_DIR.format(
-            split=self.config.TASK_CONFIG.DATASET.SPLIT
+            split=self.config.habitat.dataset.split
         )
 
         result_path = os.path.join(
@@ -110,7 +110,7 @@ class VQATrainer(BaseILTrainer):
         """
         config = self.config
 
-        # env = habitat.Env(config=config.TASK_CONFIG)
+        # env = habitat.Env(config=config.habitat)
 
         vqa_dataset = (
             EQADataset(
@@ -122,7 +122,7 @@ class VQATrainer(BaseILTrainer):
             .to_tuple(
                 "episode_id",
                 "question",
-                "answer",
+                "ANSWER",
                 *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
             )
             .map(img_bytes_2_np_array)
@@ -283,7 +283,7 @@ class VQATrainer(BaseILTrainer):
         config = self.config
 
         config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
+        config.habitat.dataset.split = self.config.EVAL.split
         config.freeze()
 
         vqa_dataset = (
@@ -296,7 +296,7 @@ class VQATrainer(BaseILTrainer):
             .to_tuple(
                 "episode_id",
                 "question",
-                "answer",
+                "ANSWER",
                 *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
             )
             .map(img_bytes_2_np_array)

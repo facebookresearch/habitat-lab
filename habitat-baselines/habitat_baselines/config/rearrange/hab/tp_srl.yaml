@@ -10,15 +10,15 @@ VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 VIDEO_RENDER_VIEWS:
-  - "THIRD_RGB_SENSOR"
-SENSORS: ["HEAD_DEPTH_SENSOR"]
+  - "third_rgb_sensor"
+sensors: ["head_depth_sensor"]
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: ""
-NUM_ENVIRONMENTS: 1
-WRITER_TYPE: 'tb'
+num_environments: 1
+WRITER_type: 'tb'
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1.0e8
+TOTAL_num_steps: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
 FORCE_TORCH_SINGLE_THREADED: True
@@ -46,7 +46,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
@@ -57,7 +57,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
@@ -68,7 +68,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
@@ -79,7 +79,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_RADIUS: 0.3
+          START_ZONE_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:
@@ -108,8 +108,8 @@ RL:
           action_distribution_type: "gaussian"
           OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
           OBS_SKILL_INPUT_DIM: 2
-          LIN_SPEED_STOP: 0.067
-          ANG_SPEED_STOP: 0.067
+          lin_speed_stop: 0.067
+          ang_speed_stop: 0.067
           LOAD_CKPT_FILE: "data/models/nav.pth"
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: False

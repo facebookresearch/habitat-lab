@@ -72,9 +72,9 @@ class BaseTrainer:
             config = self.config.clone()
             config.merge_from_list(eval_cmd_opts)
         config.defrost()
-        if config.TASK_CONFIG.DATASET.SPLIT == "train":
-            config.TASK_CONFIG.DATASET.SPLIT = "val"
-        config.TASK_CONFIG.SIMULATOR.AGENT_0.SENSORS = self.config.SENSORS
+        if config.habitat.dataset.split == "train":
+            config.habitat.dataset.split = "val"
+        config.habitat.simulator.agent_0.sensors = self.config.sensors
         config.freeze()
 
         return config
@@ -213,19 +213,19 @@ class BaseRLTrainer(BaseTrainer):
         self.num_steps_done = 0
         self._last_checkpoint_percent = -1.0
 
-        if config.NUM_UPDATES != -1 and config.TOTAL_NUM_STEPS != -1:
+        if config.NUM_UPDATES != -1 and config.TOTAL_num_steps != -1:
             raise RuntimeError(
-                "NUM_UPDATES and TOTAL_NUM_STEPS are both specified.  One must be -1.\n"
-                " NUM_UPDATES: {} TOTAL_NUM_STEPS: {}".format(
-                    config.NUM_UPDATES, config.TOTAL_NUM_STEPS
+                "NUM_UPDATES and TOTAL_num_steps are both specified.  One must be -1.\n"
+                " NUM_UPDATES: {} TOTAL_num_steps: {}".format(
+                    config.NUM_UPDATES, config.TOTAL_num_steps
                 )
             )
 
-        if config.NUM_UPDATES == -1 and config.TOTAL_NUM_STEPS == -1:
+        if config.NUM_UPDATES == -1 and config.TOTAL_num_steps == -1:
             raise RuntimeError(
-                "One of NUM_UPDATES and TOTAL_NUM_STEPS must be specified.\n"
-                " NUM_UPDATES: {} TOTAL_NUM_STEPS: {}".format(
-                    config.NUM_UPDATES, config.TOTAL_NUM_STEPS
+                "One of NUM_UPDATES and TOTAL_num_steps must be specified.\n"
+                " NUM_UPDATES: {} TOTAL_num_steps: {}".format(
+                    config.NUM_UPDATES, config.TOTAL_num_steps
                 )
             )
 
@@ -250,7 +250,7 @@ class BaseRLTrainer(BaseTrainer):
         if self.config.NUM_UPDATES != -1:
             return self.num_updates_done / self.config.NUM_UPDATES
         else:
-            return self.num_steps_done / self.config.TOTAL_NUM_STEPS
+            return self.num_steps_done / self.config.TOTAL_num_steps
 
     def is_done(self) -> bool:
         return self.percent_done() >= 1.0

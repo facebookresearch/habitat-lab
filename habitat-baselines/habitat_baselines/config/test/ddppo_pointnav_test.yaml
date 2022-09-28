@@ -5,7 +5,7 @@ TORCH_GPU_ID: 0
 VIDEO_OPTION: []
 TENSORBOARD_DIR: ""
 EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/pointnav/ckpt.0.pth"
-NUM_ENVIRONMENTS: 1
+num_environments: 1
 CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/pointnav/"
 NUM_UPDATES: 2
 NUM_CHECKPOINTS: 2
@@ -16,7 +16,7 @@ TEST_EPISODE_COUNT: 2
 FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
-  SUCCESS_REWARD: 2.5
+  success_reward: 2.5
 
   POLICY:
     name: "PointNavResNetPolicy"
@@ -65,4 +65,4 @@ RL:
 
     force_distributed: True
 
-  GYM_ACTION_KEYS: [ "STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT" ]
+  gym_action_keys: [ "stop", "move_forward", "turn_left", "turn_right" ]

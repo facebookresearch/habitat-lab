@@ -23,23 +23,23 @@ def get_noop_arm_action(sim, task):
     else:
         grip_state = 0.0
 
-    if "grip_action" in task.action_space.spaces["ARM_ACTION"]:
+    if "grip_action" in task.action_space.spaces["arm_action"]:
         grip_ac_dict = {"grip_action": grip_state}
     else:
         grip_ac_dict = {}
 
-    if isinstance(task.actions["ARM_ACTION"].arm_ctrlr, ArmEEAction):
+    if isinstance(task.actions["arm_action"].arm_ctrlr, ArmEEAction):
         arm_args: Dict[str, Union[float, np.ndarray]] = {
             "arm_action": np.zeros(3),
             **grip_ac_dict,
         }
         ret_val = {
-            "action": "ARM_ACTION",
+            "action": "arm_action",
             "action_args": arm_args,
         }
     else:
         ret_val = {
-            "action": "ARM_ACTION",
+            "action": "arm_action",
             "action_args": {
                 "arm_action": sim.robot.arm_joint_pos,
                 **grip_ac_dict,
@@ -178,7 +178,7 @@ class ArmTargModule(ParameterizedAgent):
         super().__init__(
             env, config, action_config, should_auto_end, auto_get_args_fn
         )
-        self._grasp_thresh = self._agent_config.ARM_ACTION.GRASP_THRESH_DIST
+        self._grasp_thresh = self._agent_config.arm_action.grasp_thresh_dist
         self._viz_points = []
 
         self._mp = MotionPlanner(self._sim, self._config)
@@ -232,10 +232,10 @@ class ArmTargModule(ParameterizedAgent):
 
         self._plan_idx += 1
 
-        if "grip_action" in self._task.action_space.spaces["ARM_ACTION"]:
+        if "grip_action" in self._task.action_space.spaces["arm_action"]:
             grip = self._get_gripper_ac(cur_plan_ac)
             return {
-                "action": "ARM_ACTION",
+                "action": "arm_action",
                 "action_args": {
                     "arm_action": cur_plan_ac,
                     "grip_action": grip,
@@ -243,7 +243,7 @@ class ArmTargModule(ParameterizedAgent):
             }
         else:
             return {
-                "action": "ARM_ACTION",
+                "action": "arm_action",
                 "action_args": {"arm_action": cur_plan_ac},
             }
 
@@ -354,7 +354,7 @@ class IkMoveArm(ArmTargModule):
             observations["ee_pos"] - self._robot_target
         )
 
-        return dist_to_target < self._config.IK_DIST_THRESH
+        return dist_to_target < self._config.IK_dist_thresh
 
 
 class SpaManipPick(ArmTargModule):

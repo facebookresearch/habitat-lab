@@ -335,7 +335,7 @@ class ReportWorkerProcess(ProcessBase):
                 functools.partial(
                     WindowedRunningMean,
                     ppo_cfg.reward_window_size
-                    * self.config.NUM_ENVIRONMENTS
+                    * self.config.num_environments
                     * self.world_size,
                 )
             )

@@ -88,6 +88,6 @@ class PddlApplyAction(RobotAction):
 
             cur_i += action.n_args
         if is_last_action:
-            return self._sim.step(HabitatSimActions.ARM_ACTION)
+            return self._sim.step(HabitatSimActions.arm_action)
         else:
             return {}

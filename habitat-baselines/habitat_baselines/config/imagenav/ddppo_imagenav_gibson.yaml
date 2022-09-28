@@ -8,11 +8,11 @@ TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 4
-SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
+num_environments: 4
+sensors: ["rgb_sensor", "depth_sensor"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1e9
+TOTAL_num_steps: 1e9
 LOG_INTERVAL: 100
 NUM_CHECKPOINTS: 100
 # Force PyTorch to be single threaded as
@@ -20,8 +20,8 @@ NUM_CHECKPOINTS: 100
 FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
-  SUCCESS_REWARD: 2.5
-  SLACK_REWARD: -1e-4
+  success_reward: 2.5
+  slack_reward: -1e-4
 
   POLICY:
     name: "PointNavResNetPolicy"

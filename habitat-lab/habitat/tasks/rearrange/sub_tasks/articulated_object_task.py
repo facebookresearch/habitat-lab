@@ -55,7 +55,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         """
         The success state of the articulated object desired joint.
         """
-        return self._config.SUCCESS_STATE
+        return self._config.success_state
 
     @abstractmethod
     def _gen_start_state(self) -> np.ndarray:
@@ -80,13 +80,13 @@ class SetArticulatedObjectTask(RearrangeTask):
         """
         spawn_region = self._get_spawn_region()
 
-        if self._config.SPAWN_REGION_SCALE == 0.0:
+        if self._config.spawn_region_scale == 0.0:
             # No randomness in the base position spawn
             start_pos = spawn_region.center()
         else:
             spawn_region = mn.Range2D.from_center(
                 spawn_region.center(),
-                self._config.SPAWN_REGION_SCALE * spawn_region.size() / 2,
+                self._config.spawn_region_scale * spawn_region.size() / 2,
             )
 
             start_pos = np.random.uniform(spawn_region.min, spawn_region.max)
@@ -116,8 +116,8 @@ class SetArticulatedObjectTask(RearrangeTask):
     @property
     def _is_there_spawn_noise(self):
         return (
-            self._config.BASE_ANGLE_NOISE != 0.0
-            or self._config.SPAWN_REGION_SCALE != 0.0
+            self._config.base_angle_noise != 0.0
+            or self._config.spawn_region_scale != 0.0
         )
 
     def reset(self, episode: Episode):
@@ -126,7 +126,7 @@ class SetArticulatedObjectTask(RearrangeTask):
             self._use_marker = self._force_use_marker
 
         marker = self.get_use_marker()
-        if self._config.USE_MARKER_T:
+        if self._config.use_marker_t:
             T = marker.get_current_transform()
         else:
             ao = marker.ao_parent
@@ -134,9 +134,9 @@ class SetArticulatedObjectTask(RearrangeTask):
 
         jms = marker.ao_parent.get_joint_motor_settings(marker.joint_idx)
 
-        if self._config.JOINT_MAX_IMPULSE > 0:
+        if self._config.joint_max_impulse > 0:
             jms.velocity_target = 0.0
-            jms.max_impulse = self._config.JOINT_MAX_IMPULSE
+            jms.max_impulse = self._config.joint_max_impulse
         marker.ao_parent.update_joint_motor(marker.joint_idx, jms)
 
         num_timeout = 100
@@ -146,7 +146,7 @@ class SetArticulatedObjectTask(RearrangeTask):
 
             angle_to_obj, base_pos = self._sample_robot_start(T)
 
-            noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
+            noise = np.random.normal(0.0, self._config.base_angle_noise)
             self._sim.robot.base_rot = angle_to_obj + noise
             self._sim.robot.base_pos = base_pos
 
@@ -167,11 +167,11 @@ class SetArticulatedObjectTask(RearrangeTask):
                 continue
 
             did_collide = False
-            for _ in range(self._config.SETTLE_STEPS):
+            for _ in range(self._config.settle_steps):
                 self._sim.internal_step(-1)
                 did_collide, details = rearrange_collision(
                     self._sim,
-                    self._config.COUNT_OBJ_COLLISIONS,
+                    self._config.count_obj_collisions,
                     ignore_base=False,
                 )
                 if did_collide:

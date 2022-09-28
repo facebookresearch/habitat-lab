@@ -11,28 +11,27 @@ SENSE_PLAN_ACT:
   TIMEOUT: 3
   EXEC_EE_THRESH: 0.1
   # "Priv" or "Reg"
-  MP_SIM_TYPE: "Priv"
+  MP_SIM_type: "Priv"
   VIDEO_DIR: 'data/vids'
   DEBUG_DIR: "data/mp_test"
-  COUNT_OBJ_COLLISIONS: True
+  count_obj_collisions: True
   GRASP_GEN_IS_VERBOSE: True
-  IK_DIST_THRESH: 0.1
+  IK_dist_thresh: 0.1
 
-TASK_CONFIG:
-  SUCCESS_REWARD: 2000.0
-  END_ON_SUCCESS: False
-  GYM:
-    OBS_KEYS: ['joint', 'ee_pos']
-    DESIRED_GOAL_KEYS: ['obj_goal_pos_sensor']
-    ACHIEVED_GOAL_KEYS: []
-    ACTION_KEYS: ['ARM_ACTION']
+habitat:
+  success_reward: 2000.0
+  end_on_success: False
+  gym:
+    obs_keys: ['joint', 'ee_pos']
+    desired_goal_keys: ['obj_goal_pos_sensor']
+    achieved_goal_keys: []
+    action_keys: ['arm_action']
 
 RL:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
-    EASY_INIT: False
+    easy_init: False
 VIDEO_DIR: "data/vids/"
 VIDEO_OPTIONS: ["disk"]
 
-COUNT_OBJ_COLLISIONS: True
-COUNT_ROBOT_OBJ_COLLS: False
+count_obj_collisions: True

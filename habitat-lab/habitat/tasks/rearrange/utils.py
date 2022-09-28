@@ -346,7 +346,7 @@ class IkHelper:
 
     def calc_ik(self, targ_ee: np.ndarray):
         """
-        :param targ_ee: 3D target position in the ROBOT BASE coordinate frame
+        :param targ_ee: 3D target position in the robot BASE coordinate frame
         """
         js = p.calculateInverseKinematics(
             self.robo_id,
@@ -375,12 +375,12 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
     form 'episodeX.replay.json' where `X` is the episode ID.
     """
 
-    os.makedirs(task_config.GFX_REPLAY_DIR, exist_ok=True)
+    os.makedirs(task_config.gfx_replay_dir, exist_ok=True)
     # A gfx-replay list of keyframes for the episode. This is a JSON string that
     # should be saved to a file; the file can be read by visualization tools
     # (e.g. import into Blender for screenshots and videos).
     filepath = osp.join(
-        task_config.GFX_REPLAY_DIR, f"episode{ep_id}.replay.json"
+        task_config.gfx_replay_dir, f"episode{ep_id}.replay.json"
     )
     with open(filepath, "w") as text_file:
         text_file.write(gfx_keyframe_str)

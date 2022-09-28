@@ -24,7 +24,7 @@ from habitat.datasets.pointnav.pointnav_generator import (
     generate_pointnav_episode,
 )
 
-NUM_EPISODES_PER_SCENE = int(1e4)
+NUM_EPISODES_PER_scene = int(1e4)
 # Sample all scenes with a minimum quality
 QUAL_THRESH = 2
 
@@ -39,16 +39,16 @@ def safe_mkdir(path):
 def _generate_fn(scene):
     cfg = habitat.get_config()
     cfg.defrost()
-    cfg.SIMULATOR.SCENE = scene
-    cfg.SIMULATOR.AGENT_0.SENSORS = []
+    cfg.habitat.simulator.scene = scene
+    cfg.habitat.simulator.agent_0.sensors = []
     cfg.freeze()
 
-    sim = habitat.sims.make_sim("Sim-v0", config=cfg.SIMULATOR)
+    sim = habitat.sims.make_sim("Sim-v0", config=cfg.habitat.simulator)
 
     dset = habitat.datasets.make_dataset("PointNav-v1")
     dset.episodes = list(
         generate_pointnav_episode(
-            sim, NUM_EPISODES_PER_SCENE, is_gen_shortest_path=False
+            sim, NUM_EPISODES_PER_scene, is_gen_shortest_path=False
         )
     )
     for ep in dset.episodes:

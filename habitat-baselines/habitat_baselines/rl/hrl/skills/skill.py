@@ -33,7 +33,7 @@ class SkillPolicy(Policy):
         self._grip_ac_idx = 0
         found_grip = False
         for k, space in action_space.items():
-            if k != "ARM_ACTION":
+            if k != "arm_action":
                 self._grip_ac_idx += get_num_actions(space)
             else:
                 # The last actioin in the arm action is the grip action.

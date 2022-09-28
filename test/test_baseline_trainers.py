@@ -82,8 +82,8 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
 
-    config = get_config(test_cfg_path).TASK_CONFIG.DATASET
-    dataset = make_dataset(id_dataset=config.TYPE)
+    config = get_config(test_cfg_path).habitat.dataset
+    dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
         pytest.skip("Test skipped as dataset files are missing.")
 
@@ -101,7 +101,7 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
             test_cfg_path,
             mode,
             [
-                "TASK_CONFIG.SIMULATOR.HABITAT_SIM_V0.GPU_GPU",
+                "habitat.simulator.habitat_sim_v0.gpu_gpu",
                 str(gpu2gpu),
                 "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
                 str(tuple(observation_transforms)),
@@ -140,7 +140,7 @@ def test_ver_trainer(
             test_cfg_path,
             "train",
             [
-                "NUM_ENVIRONMENTS",
+                "num_environments",
                 4,
                 "TRAINER_NAME",
                 "ver",
@@ -152,7 +152,7 @@ def test_ver_trainer(
                 "['CenterCropper', 'ResizeShortestEdge']",
                 "NUM_UPDATES",
                 2,
-                "TOTAL_NUM_STEPS",
+                "TOTAL_num_steps",
                 -1.0,
                 "RL.preemption.save_state_batch_only",
                 True,
@@ -196,7 +196,7 @@ def test_cubemap_stiching(
 ):
     meta_config = get_config(config_paths=test_cfg_path)
     meta_config.defrost()
-    config = meta_config.TASK_CONFIG
+    config = meta_config.habitat
     CAMERA_NUM = 6
     orient = [
         [0, math.pi, 0],  # Back
@@ -208,20 +208,22 @@ def test_cubemap_stiching(
     ]
     sensor_uuids = []
 
-    if f"{sensor_type}_SENSOR" not in config.SIMULATOR.AGENT_0.SENSORS:
-        config.SIMULATOR.AGENT_0.SENSORS.append(f"{sensor_type}_SENSOR")
-    sensor = getattr(config.SIMULATOR, f"{sensor_type}_SENSOR")
+    if f"{sensor_type}_SENSOR" not in config.habitat.simulator.agent_0.sensors:
+        config.habitat.simulator.agent_0.sensors.append(
+            f"{sensor_type}_SENSOR"
+        )
+    sensor = getattr(config.habitat.simulator, f"{sensor_type}_SENSOR")
     for camera_id in range(CAMERA_NUM):
         camera_template = f"{sensor_type}_{camera_id}"
         camera_config = deepcopy(sensor)
-        camera_config.ORIENTATION = orient[camera_id]
-        camera_config.UUID = camera_template.lower()
-        sensor_uuids.append(camera_config.UUID)
-        setattr(config.SIMULATOR, camera_template, camera_config)
-        config.SIMULATOR.AGENT_0.SENSORS.append(camera_template)
+        camera_config.orientation = orient[camera_id]
+        camera_config.uuid = camera_template.lower()
+        sensor_uuids.append(camera_config.uuid)
+        setattr(config.habitat.simulator, camera_template, camera_config)
+        config.habitat.simulator.agent_0.sensors.append(camera_template)
 
-    meta_config.TASK_CONFIG = config
-    meta_config.SENSORS = config.SIMULATOR.AGENT_0.SENSORS
+    meta_config.habitat = config
+    meta_config.sensors = config.habitat.simulator.agent_0.sensors
     if camera == "equirect":
         meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = tuple(
             sensor_uuids
@@ -245,7 +247,7 @@ def test_cubemap_stiching(
         for split in ["train", "val"]:
             tmp_config = config.clone()
             tmp_config.defrost()
-            tmp_config.DATASET["SPLIT"] = split
+            tmp_config.habitat.dataset["split"] = split
             tmp_config.freeze()
             env_fn_args.append((tmp_config,))
 

@@ -71,11 +71,13 @@ class Env:
             "Freeze the config before creating the "
             "environment, use config.freeze()."
         )
+        if "habitat" in config:
+            config = config.habitat
         self._config = config
         self._dataset = dataset
-        if self._dataset is None and config.DATASET.TYPE:
+        if self._dataset is None and config.dataset.type:
             self._dataset = make_dataset(
-                id_dataset=config.DATASET.TYPE, config=config.DATASET
+                id_dataset=config.dataset.type, config=config.dataset
             )
 
         self._current_episode = None
@@ -91,10 +93,10 @@ class Env:
             self._setup_episode_iterator()
             self.current_episode = next(self.episode_iterator)
             self._config.defrost()
-            self._config.SIMULATOR.SCENE_DATASET = (
+            self._config.simulator.scene_dataset = (
                 self.current_episode.scene_dataset_config
             )
-            self._config.SIMULATOR.SCENE = self.current_episode.scene_id
+            self._config.simulator.scene = self.current_episode.scene_id
             self._config.freeze()
 
             self.number_of_episodes = len(self.episodes)
@@ -102,12 +104,12 @@ class Env:
             self.number_of_episodes = None
 
         self._sim = make_sim(
-            id_sim=self._config.SIMULATOR.TYPE, config=self._config.SIMULATOR
+            id_sim=self._config.simulator.type, config=self._config.simulator
         )
 
         self._task = make_task(
-            self._config.TASK.TYPE,
-            config=self._config.TASK,
+            self._config.task.type,
+            config=self._config.task,
             sim=self._sim,
             dataset=self._dataset,
         )
@@ -119,9 +121,9 @@ class Env:
         )
         self.action_space = self._task.action_space
         self._max_episode_seconds = (
-            self._config.ENVIRONMENT.MAX_EPISODE_SECONDS
+            self._config.environment.max_episode_seconds
         )
-        self._max_episode_steps = self._config.ENVIRONMENT.MAX_EPISODE_STEPS
+        self._max_episode_steps = self._config.environment.max_episode_steps
         self._elapsed_steps = 0
         self._episode_start_time: Optional[float] = None
         self._episode_over = False
@@ -130,9 +132,9 @@ class Env:
         assert self._dataset is not None
         iter_option_dict = {
             k.lower(): v
-            for k, v in self._config.ENVIRONMENT.ITERATOR_OPTIONS.items()
+            for k, v in self._config.environment.iterator_options.items()
         }
-        iter_option_dict["seed"] = self._config.SEED
+        iter_option_dict["seed"] = self._config.seed
         self._episode_iterator = self._dataset.get_episode_iterator(
             **iter_option_dict
         )
@@ -328,12 +330,12 @@ class Env:
         self._config = config
 
         self._config.defrost()
-        self._config.SIMULATOR = self._task.overwrite_sim_config(
-            self._config.SIMULATOR, self.current_episode
+        self._config.simulator = self._task.overwrite_sim_config(
+            self._config.simulator, self.current_episode
         )
         self._config.freeze()
 
-        self._sim.reconfigure(self._config.SIMULATOR)
+        self._sim.reconfigure(self._config.simulator)
 
     def render(self, mode="rgb") -> np.ndarray:
         return self._sim.render(mode)
@@ -370,6 +372,8 @@ class RLEnv(gym.Env):
         :param config: config to construct :ref:`Env`
         :param dataset: dataset to construct :ref:`Env`.
         """
+        if "habitat" in config:
+            config = config.habitat
         self._core_env_config = config
         self._env = Env(config, dataset)
         self.observation_space = self._env.observation_space

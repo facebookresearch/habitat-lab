@@ -31,14 +31,14 @@ def get_default_config() -> Config:
     c.HIDDEN_SIZE = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
-    c.GOAL_SENSOR_UUID = "pointgoal_with_gps_compass"
+    c.goal_sensor_uuid = "pointgoal_with_gps_compass"
     return c
 
 
 class PPOAgent(Agent):
     def __init__(self, config: Config) -> None:
         spaces = {
-            get_default_config().GOAL_SENSOR_UUID: Box(
+            get_default_config().goal_sensor_uuid: Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
                 shape=(2,),

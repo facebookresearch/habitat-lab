@@ -161,7 +161,7 @@ class PreemptionDeciderProcess(ProcessBase):
         # Mask out options where we collect too many steps
         valids = candidate_length_steps <= (
             self.config.RL.PPO.num_steps
-            * self.config.NUM_ENVIRONMENTS
+            * self.config.num_environments
             * self.world_size
         )
 
@@ -331,10 +331,10 @@ class PreemptionDeciderProcess(ProcessBase):
 
         self.step_averages = [
             WindowedRunningMean(5 * self.config.RL.PPO.num_steps)
-            for _ in range(self.config.NUM_ENVIRONMENTS)
+            for _ in range(self.config.num_environments)
         ]
         self.last_step_times = np.zeros(
-            (self.config.NUM_ENVIRONMENTS,), dtype=np.float64
+            (self.config.num_environments,), dtype=np.float64
         )
 
         self.started = False

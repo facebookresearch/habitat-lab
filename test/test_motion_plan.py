@@ -34,7 +34,7 @@ def test_pick_motion_planning():
         target_idx = skill._sim.get_targets()[0][0]
         return {"obj": target_idx}
 
-    ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
+    ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).task.actions
     spa_cfg = config.SENSE_PLAN_ACT
     env = benchmark._env
     pick_skill = AgentComposition(

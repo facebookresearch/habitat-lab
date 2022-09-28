@@ -17,10 +17,10 @@ VIDEO_DIR: "video_dir"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
 # This was 6 for mp3d and 8 for gibson in the paper
-NUM_ENVIRONMENTS: 6
-SENSORS: ["DEPTH_SENSOR"]
+num_environments: 6
+sensors: ["depth_sensor"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
-TOTAL_NUM_STEPS: 75e6
+TOTAL_num_steps: 75e6
 LOG_INTERVAL: 25
 NUM_CHECKPOINTS: 100
 # Force PyTorch to be single threaded as
@@ -28,7 +28,7 @@ NUM_CHECKPOINTS: 100
 FORCE_TORCH_SINGLE_THREADED: True
 
 RL:
-  SUCCESS_REWARD: 10.0
+  success_reward: 10.0
 
   POLICY:
     name: "PointNavBaselinePolicy"

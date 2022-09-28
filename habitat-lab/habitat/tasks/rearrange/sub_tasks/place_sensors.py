@@ -85,14 +85,14 @@ class PlaceReward(RearrangeReward):
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
             if obj_at_goal:
-                reward += self._config.PLACE_REWARD
+                reward += self._config.place_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self._prev_dist = -1
             else:
                 # Dropped at wrong location
-                reward -= self._config.DROP_PEN
-                if self._config.WRONG_DROP_SHOULD_END:
+                reward -= self._config.drop_pen
+                if self._config.wrong_drop_should_end:
                     rearrange_logger.debug(
                         "Dropped to wrong place, ending episode."
                     )
@@ -100,7 +100,7 @@ class PlaceReward(RearrangeReward):
                     self._metric = reward
                     return
 
-        if self._config.USE_DIFF:
+        if self._config.use_diff:
             if self._prev_dist < 0:
                 dist_diff = 0.0
             else:
@@ -108,9 +108,9 @@ class PlaceReward(RearrangeReward):
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
-            reward += self._config.DIST_REWARD * dist_diff
+            reward += self._config.dist_reward * dist_diff
         else:
-            reward -= self._config.DIST_REWARD * dist_to_goal
+            reward -= self._config.dist_reward * dist_to_goal
         self._prev_dist = dist_to_goal
 
         self._metric = reward
@@ -158,5 +158,5 @@ class PlaceSuccess(Measure):
         self._metric = (
             not is_holding
             and is_obj_at_goal
-            and ee_to_rest_distance < self._config.EE_RESTING_SUCCESS_THRESHOLD
+            and ee_to_rest_distance < self._config.ee_resting_success_threshold
         )

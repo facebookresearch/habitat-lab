@@ -30,7 +30,7 @@ All weights available as a zip [here](https://dl.fbaipublicfiles.com/habitat/dat
 
 ### Depth models
 
-| Architecture | Training Data | Val SPL | Test SPL | URL |
+| Architecture | Training Data | Val spl | Test spl | URL |
 | ------------ | ------------- | ------- | -------- | --- |
 | ResNet50 + LSTM512 | Gibson 4+ | 0.922 | 0.917 | [gibson-4plus-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-4plus-resnet50.pth) |
 | ResNet50 + LSTM512 | Gibson 4+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.956 | 0.941 | [gibson-4plus-mp3d-train-val-test-resnet50.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-4plus-mp3d-train-val-test-resnet50.pth) |
@@ -40,14 +40,14 @@ All weights available as a zip [here](https://dl.fbaipublicfiles.com/habitat/dat
 
 ### RGB models
 
-| Architecture | Training Data | Val SPL | Test SPL | URL |
+| Architecture | Training Data | Val spl | Test spl | URL |
 | ------------ | ------------- | ------- | -------- | --- |
 | SE-ResNeXt50 + LSTM512 | Gibson 2+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.933 | 0.920 | [gibson-2plus-mp3d-train-val-test-se-resneXt50-rgb.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-2plus-mp3d-train-val-test-se-resneXt50-rgb.pth) |
 
 
 ### Blind Models
 
-| Architecture | Training Data | Val SPL | Test SPL | URL |
+| Architecture | Training Data | Val spl | Test spl | URL |
 | ------------ | ------------- | ------- | -------- | --- |
 | LSTM512 | Gibson 0+ and MP3D(train/val/test)<br/> **Caution:** Trained on MP3D val and test | 0.729  |  0.676 | [gibson-0plus-mp3d-train-val-test-blind.pth](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/ddppo/ddppo-models/gibson-0plus-mp3d-train-val-test-blind.pth) |
 

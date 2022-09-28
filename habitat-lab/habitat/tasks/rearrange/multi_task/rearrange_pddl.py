@@ -111,14 +111,14 @@ def ensure_entity_lists_match(
 
 
 # Hardcoded pddl types needed for setting simulator states.
-ROBOT_TYPE = "robot_type"
-STATIC_OBJ_TYPE = "static_obj_type"
-ART_OBJ_TYPE = "art_obj_type"
-OBJ_TYPE = "obj_type"
-CAB_TYPE = "cab_type"
-FRIDGE_TYPE = "fridge_type"
-GOAL_TYPE = "goal_type"
-RIGID_OBJ_TYPE = "rigid_obj_type"
+robot_type = "robot_type"
+STATIC_OBJ_type = "static_obj_type"
+ART_OBJ_type = "art_obj_type"
+OBJ_type = "obj_type"
+CAB_type = "cab_type"
+FRIDGE_type = "fridge_type"
+GOAL_type = "goal_type"
+RIGID_OBJ_type = "rigid_obj_type"
 
 
 @dataclass
@@ -148,18 +148,18 @@ class PddlSimInfo:
 
     def get_entity_pos(self, entity: PddlEntity) -> np.ndarray:
         ename = entity.name
-        if self.check_type_matches(entity, ROBOT_TYPE):
+        if self.check_type_matches(entity, robot_type):
             robot_id = self.robot_ids[ename]
             return self.sim.get_robot_data(robot_id).robot.base_pos
-        elif self.check_type_matches(entity, ART_OBJ_TYPE):
+        elif self.check_type_matches(entity, ART_OBJ_type):
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()
-        elif self.check_type_matches(entity, GOAL_TYPE):
+        elif self.check_type_matches(entity, GOAL_type):
             idx = self.target_ids[ename]
             targ_idxs, pos_targs = self.sim.get_targets()
             rel_idx = targ_idxs.tolist().index(idx)
             return pos_targs[rel_idx]
-        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
+        elif self.check_type_matches(entity, RIGID_OBJ_type):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
             abs_obj_id = self.sim.scene_obj_ids[idx]
@@ -172,13 +172,13 @@ class PddlSimInfo:
 
     def search_for_entity_any(self, entity: PddlEntity):
         ename = entity.name
-        if self.check_type_matches(entity, ROBOT_TYPE):
+        if self.check_type_matches(entity, robot_type):
             return self.robot_ids[ename]
-        elif self.check_type_matches(entity, ART_OBJ_TYPE):
+        elif self.check_type_matches(entity, ART_OBJ_type):
             return self.marker_handles[ename]
-        elif self.check_type_matches(entity, GOAL_TYPE):
+        elif self.check_type_matches(entity, GOAL_type):
             return self.target_ids[ename]
-        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
+        elif self.check_type_matches(entity, RIGID_OBJ_type):
             return self.obj_ids[ename]
         else:
             raise ValueError()
@@ -193,13 +193,13 @@ class PddlSimInfo:
 
         ename = entity.name
 
-        if expected_type == ROBOT_TYPE:
+        if expected_type == robot_type:
             return self.robot_ids[ename]
-        elif expected_type == ART_OBJ_TYPE:
+        elif expected_type == ART_OBJ_type:
             return self.marker_handles[ename]
-        elif expected_type == GOAL_TYPE:
+        elif expected_type == GOAL_type:
             return self.target_ids[ename]
-        elif expected_type == RIGID_OBJ_TYPE:
+        elif expected_type == RIGID_OBJ_type:
             return self.obj_ids[ename]
         else:
             raise ValueError()

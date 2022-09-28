@@ -25,8 +25,8 @@ DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 def get_default_mp3d_v1_config(split: str = "val"):
     config = Config()
     config.name = "MP3DEQA-v1"
-    config.DATA_PATH = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
-    config.SPLIT = split
+    config.data_path = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
+    config.split = split
     return config
 
 
@@ -36,8 +36,8 @@ class Matterport3dDatasetV1(Dataset):
     Embodied Question Answering dataset.
 
     This class can then be used as follows::
-        eqa_config.dataset = get_default_mp3d_v1_config()
-        eqa = habitat.make_task(eqa_config.task_name, config=eqa_config)
+        eqa_config.habitat.dataset = get_default_mp3d_v1_config()
+        eqa = habitat.make_task(eqa_config.habitat.task_name, config=eqa_config)
     """
 
     episodes: List[EQAEpisode]
@@ -46,7 +46,7 @@ class Matterport3dDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
-        return os.path.exists(config.DATA_PATH.format(split=config.SPLIT))
+        return os.path.exists(config.data_path.format(split=config.split))
 
     def __init__(self, config: Config = None) -> None:
         self.episodes = []
@@ -54,8 +54,8 @@ class Matterport3dDatasetV1(Dataset):
         if config is None:
             return
 
-        with gzip.open(config.DATA_PATH.format(split=config.SPLIT), "rt") as f:
-            self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+        with gzip.open(config.data_path.format(split=config.split), "rt") as f:
+            self.from_json(f.read(), scenes_dir=config.scenes_dir)
 
         self.episodes = list(
             filter(self.build_content_scenes_filter(config), self.episodes)

@@ -14,16 +14,16 @@ import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import get_ao_global_bb
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    ART_OBJ_TYPE,
-    CAB_TYPE,
-    FRIDGE_TYPE,
-    GOAL_TYPE,
-    OBJ_TYPE,
-    RIGID_OBJ_TYPE,
-    ROBOT_TYPE,
-    STATIC_OBJ_TYPE,
+    ART_OBJ_type,
+    CAB_type,
+    FRIDGE_type,
+    GOAL_type,
+    OBJ_type,
     PddlEntity,
     PddlSimInfo,
+    RIGID_OBJ_type,
+    STATIC_OBJ_type,
+    robot_type,
 )
 from habitat.tasks.rearrange.utils import rearrange_logger
 from habitat.tasks.utils import get_angle
@@ -81,7 +81,7 @@ class PddlRobotState:
         Returns if the desired robot state is currently true in the simulator state.
         """
         robot_id = cast(
-            int, sim_info.search_for_entity(robot_entity, ROBOT_TYPE)
+            int, sim_info.search_for_entity(robot_entity, robot_type)
         )
         grasp_mgr = sim_info.sim.get_robot_data(robot_id).grasp_mgr
 
@@ -90,7 +90,7 @@ class PddlRobotState:
         if self.holding is not None:
             # Robot must be holding desired object.
             obj_idx = cast(
-                int, sim_info.search_for_entity(self.holding, RIGID_OBJ_TYPE)
+                int, sim_info.search_for_entity(self.holding, RIGID_OBJ_type)
             )
             abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
             if grasp_mgr.snap_idx != abs_obj_id:
@@ -111,7 +111,7 @@ class PddlRobotState:
         self, sim_info: PddlSimInfo, robot_entity: PddlEntity
     ) -> None:
         robot_id = cast(
-            int, sim_info.search_for_entity(robot_entity, ROBOT_TYPE)
+            int, sim_info.search_for_entity(robot_entity, robot_type)
         )
         sim = sim_info.sim
         grasp_mgr = sim.get_robot_data(robot_id).grasp_mgr
@@ -121,7 +121,7 @@ class PddlRobotState:
         elif self.holding is not None:
             # Swap objects to the desired object.
             obj_idx = cast(
-                int, sim_info.search_for_entity(self.holding, RIGID_OBJ_TYPE)
+                int, sim_info.search_for_entity(self.holding, RIGID_OBJ_type)
             )
             grasp_mgr.desnap(True)
             sim.internal_step(-1)
@@ -208,9 +208,9 @@ class PddlSimState:
         """
         entity_pos = sim_info.get_entity_pos(entity)
         check_marker = cast(
-            MarkerInfo, sim_info.search_for_entity(target, ART_OBJ_TYPE)
+            MarkerInfo, sim_info.search_for_entity(target, ART_OBJ_type)
         )
-        if sim_info.check_type_matches(target, FRIDGE_TYPE):
+        if sim_info.check_type_matches(target, FRIDGE_type):
             global_bb = get_ao_global_bb(check_marker.ao_parent)
         else:
             bb = check_marker.link_node.cumulative_bb
@@ -225,14 +225,14 @@ class PddlSimState:
             return entity.expr_type.is_subtype_of(expr_types[match_name])
 
         for entity, target in self._obj_states.items():
-            if not type_matches(entity, OBJ_TYPE):
+            if not type_matches(entity, OBJ_type):
                 return False
-            if not type_matches(target, STATIC_OBJ_TYPE):
+            if not type_matches(target, STATIC_OBJ_type):
                 return False
 
             if not (
-                type_matches(target, ART_OBJ_TYPE)
-                or type_matches(target, GOAL_TYPE)
+                type_matches(target, ART_OBJ_type)
+                or type_matches(target, GOAL_type)
             ):
                 return False
 
@@ -240,7 +240,7 @@ class PddlSimState:
                 return False
 
         return all(
-            type_matches(art_entity, ART_OBJ_TYPE)
+            type_matches(art_entity, ART_OBJ_type)
             for art_entity in self._art_states
         )
 
@@ -256,19 +256,19 @@ class PddlSimState:
         # Check object states.
         rom = sim_info.sim.get_rigid_object_manager()
         for entity, target in self._obj_states.items():
-            if not sim_info.check_type_matches(entity, OBJ_TYPE):
+            if not sim_info.check_type_matches(entity, OBJ_type):
                 raise ValueError()
-            if not sim_info.check_type_matches(target, STATIC_OBJ_TYPE):
+            if not sim_info.check_type_matches(target, STATIC_OBJ_type):
                 raise ValueError()
 
-            if sim_info.check_type_matches(target, ART_OBJ_TYPE):
+            if sim_info.check_type_matches(target, ART_OBJ_type):
                 # object is rigid and target is receptacle, we are checking if
                 # an object is inside of a receptacle.
                 if not self._is_object_inside(entity, target, sim_info):
                     return False
-            elif sim_info.check_type_matches(target, GOAL_TYPE):
+            elif sim_info.check_type_matches(target, GOAL_type):
                 obj_idx = cast(
-                    int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+                    int, sim_info.search_for_entity(entity, RIGID_OBJ_type)
                 )
                 abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]
                 cur_pos = rom.get_object_by_id(
@@ -276,7 +276,7 @@ class PddlSimState:
                 ).transformation.translation
 
                 targ_idx = cast(
-                    int, sim_info.search_for_entity(target, GOAL_TYPE)
+                    int, sim_info.search_for_entity(target, GOAL_type)
                 )
                 idxs, pos_targs = sim_info.sim.get_targets()
                 targ_pos = pos_targs[list(idxs).index(targ_idx)]
@@ -290,12 +290,12 @@ class PddlSimState:
                 )
 
         for art_entity, set_art in self._art_states.items():
-            if not sim_info.check_type_matches(art_entity, ART_OBJ_TYPE):
+            if not sim_info.check_type_matches(art_entity, ART_OBJ_type):
                 raise ValueError()
 
             marker = cast(
                 MarkerInfo,
-                sim_info.search_for_entity(art_entity, ART_OBJ_TYPE),
+                sim_info.search_for_entity(art_entity, ART_OBJ_type),
             )
             prev_art_pos = marker.get_targ_js()
             if not set_art.is_satisfied(prev_art_pos, sim_info.art_thresh):
@@ -312,11 +312,11 @@ class PddlSimState:
         sim = sim_info.sim
         for entity, target in self._obj_states.items():
             obj_idx = cast(
-                int, sim_info.search_for_entity(entity, RIGID_OBJ_TYPE)
+                int, sim_info.search_for_entity(entity, RIGID_OBJ_type)
             )
             abs_obj_id = sim.scene_obj_ids[obj_idx]
 
-            targ_idx = cast(int, sim_info.search_for_entity(target, GOAL_TYPE))
+            targ_idx = cast(int, sim_info.search_for_entity(target, GOAL_type))
             all_targ_idxs, pos_targs = sim.get_targets()
             targ_pos = pos_targs[list(all_targ_idxs).index(targ_idx)]
             set_T = mn.Matrix4.translation(targ_pos)
@@ -340,7 +340,7 @@ class PddlSimState:
                 e
                 for e in sim_info.all_entities.values()
                 if e.expr_type.is_subtype_of(
-                    sim_info.expr_types[RIGID_OBJ_TYPE]
+                    sim_info.expr_types[RIGID_OBJ_type]
                 )
             ]
 
@@ -352,7 +352,7 @@ class PddlSimState:
                     continue
                 obj_idx = cast(
                     int,
-                    sim_info.search_for_entity(poss_entity, RIGID_OBJ_TYPE),
+                    sim_info.search_for_entity(poss_entity, RIGID_OBJ_type),
                 )
                 abs_obj_id = sim.scene_obj_ids[obj_idx]
                 set_obj = rom.get_object_by_id(abs_obj_id)
@@ -360,14 +360,14 @@ class PddlSimState:
 
             marker = cast(
                 MarkerInfo,
-                sim_info.search_for_entity(art_entity, ART_OBJ_TYPE),
+                sim_info.search_for_entity(art_entity, ART_OBJ_type),
             )
             pre_link_pos = marker.link_node.transformation.translation
             marker.set_targ_js(set_art.sample())
             post_link_pos = marker.link_node.transformation.translation
 
             if art_entity.expr_type.is_subtype_of(
-                sim_info.expr_types[CAB_TYPE]
+                sim_info.expr_types[CAB_type]
             ):
                 # Also move all objects that were in the drawer
                 diff_pos = post_link_pos - pre_link_pos
