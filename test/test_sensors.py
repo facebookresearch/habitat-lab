@@ -560,7 +560,7 @@ def test_noise_models_rgbd():
                 np.array(state.position) - np.array(prev_state.position), ord=2
             )
 
-            if action["action"][:5] == "TURN_":
+            if action["action"][:5] == "turn_":
                 angle_diff = abs(
                     angle_between_quaternions(
                         state.rotation, prev_state.rotation

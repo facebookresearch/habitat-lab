@@ -156,7 +156,7 @@ def test_ver_trainer(
                 -1.0,
                 "rl.preemption.save_state_batch_only",
                 True,
-                "rl.PPO.num_steps",
+                "rl.ppo.num_steps",
                 16,
             ],
         )
@@ -190,7 +190,7 @@ def test_cpca():
     ],
 )
 @pytest.mark.parametrize("camera", ["equirect", "fisheye", "cubemap"])
-@pytest.mark.parametrize("sensor_type", ["RGB", "DEPTH"])
+@pytest.mark.parametrize("sensor_type", ["rgb", "depth"])
 def test_cubemap_stiching(
     test_cfg_path: str, mode: str, camera: str, sensor_type: str
 ):
@@ -208,22 +208,20 @@ def test_cubemap_stiching(
     ]
     sensor_uuids = []
 
-    if f"{sensor_type}_SENSOR" not in config.habitat.simulator.agent_0.sensors:
-        config.habitat.simulator.agent_0.sensors.append(
-            f"{sensor_type}_SENSOR"
-        )
-    sensor = getattr(config.habitat.simulator, f"{sensor_type}_SENSOR")
+    if f"{sensor_type}_sensor" not in config.simulator.agent_0.sensors:
+        config.simulator.agent_0.sensors.append(f"{sensor_type}_sensor")
+    sensor = getattr(config.simulator, f"{sensor_type}_sensor")
     for camera_id in range(CAMERA_NUM):
         camera_template = f"{sensor_type}_{camera_id}"
         camera_config = deepcopy(sensor)
         camera_config.orientation = orient[camera_id]
         camera_config.uuid = camera_template.lower()
         sensor_uuids.append(camera_config.uuid)
-        setattr(config.habitat.simulator, camera_template, camera_config)
-        config.habitat.simulator.agent_0.sensors.append(camera_template)
+        setattr(config.simulator, camera_template, camera_config)
+        config.simulator.agent_0.sensors.append(camera_template)
 
     meta_config.habitat = config
-    meta_config.sensors = config.habitat.simulator.agent_0.sensors
+    meta_config.sensors = config.simulator.agent_0.sensors
     if camera == "equirect":
         meta_config.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
             sensor_uuids
@@ -247,7 +245,7 @@ def test_cubemap_stiching(
         for split in ["train", "val"]:
             tmp_config = config.clone()
             tmp_config.defrost()
-            tmp_config.habitat.dataset["split"] = split
+            tmp_config.dataset["split"] = split
             tmp_config.freeze()
             env_fn_args.append((tmp_config,))
 
@@ -281,7 +279,7 @@ def test_cubemap_stiching(
         input_cube = torch.flatten(input_cube, end_dim=1)
 
         # Apply blur to absorb difference (blur, etc.) caused by conversion
-        if sensor_type == "RGB":
+        if sensor_type == "rgb":
             output_cube = output_cube.float() / 255
             input_cube = input_cube.float() / 255
         output_cube = output_cube.permute((0, 3, 1, 2))  # NHWC => NCHW
@@ -301,16 +299,16 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["video_option", "[]"]
-    eval_opts = ["video_option", "['disk']"]
+    ckpt_opts = ["habitat.video_option", "[]"]
+    eval_opts = ["habitat.video_option", "['disk']"]
 
     ckpt_cfg = get_config(None, ckpt_opts)
     assert ckpt_cfg.video_option == []
-    assert ckpt_cfg.cmd_trailing_opts == ["video_option", "[]"]
+    assert ckpt_cfg.cmd_trailing_opts == ["habitat.video_option", "[]"]
 
     eval_cfg = get_config(None, eval_opts)
     assert eval_cfg.video_option == ["disk"]
-    assert eval_cfg.cmd_trailing_opts == ["video_option", "['disk']"]
+    assert eval_cfg.cmd_trailing_opts == ["habitat.video_option", "['disk']"]
 
     trainer = BaseRLTrainer(get_config())
     assert trainer.config.video_option == ["disk", "tensorboard"]
