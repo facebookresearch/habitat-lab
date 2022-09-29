@@ -686,6 +686,9 @@ _C.habitat.simulator = CN()
 _C.habitat.simulator.type = "Sim-v0"
 _C.habitat.simulator.action_space_config = "v0"
 _C.habitat.simulator.forward_step_size = 0.25  # in metres
+_C.habitat.simulator.create_renderer = False
+_C.habitat.simulator.requires_textures = True
+_C.habitat.simulator.lag_observations = 0
 _C.habitat.simulator.auto_sleep = False
 _C.habitat.simulator.step_physics = True
 _C.habitat.simulator.update_robot = True
@@ -717,9 +720,11 @@ _C.habitat.simulator.kinematic_mode = False
 # If in render mode a visualization of the rearrangement goal position should
 # also be displayed.
 _C.habitat.simulator.debug_render_goal = True
+_C.habitat.simulator.robot_joint_start_noise = 0.0
 # Rearrange Agent Setup
 _C.habitat.simulator.ctrl_freq = 120.0
 _C.habitat.simulator.ac_freq_ratio = 4
+_C.habitat.simulator.load_objs = False
 # Rearrange Agent Grasping
 _C.habitat.simulator.hold_thresh = 0.09
 _C.habitat.simulator.grasp_impulse = 1000.0
@@ -836,6 +841,7 @@ fisheye_sim_sensor.focal_length = [364.84, 364.86]
 # Place camera at center of screen
 # Can be specified, otherwise is calculated automatically.
 fisheye_sim_sensor.principal_point_offset = None  # (defaults to (h/2,w/2))
+fisheye_sim_sensor.sensor_model_type = "DOUBLE_SPHERE"
 # -----------------------------------------------------------------------------
 # FISHEYE RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -889,11 +895,15 @@ _C.habitat.simulator.habitat_sim_v0.gpu_device_id = 0
 _C.habitat.simulator.habitat_sim_v0.gpu_gpu = False
 # Whether or not the agent slides on collisions
 _C.habitat.simulator.habitat_sim_v0.allow_sliding = True
+_C.habitat.simulator.habitat_sim_v0.frustum_culling = True
 _C.habitat.simulator.habitat_sim_v0.enable_physics = False
 _C.habitat.simulator.habitat_sim_v0.physics_config_file = (
     "./data/default.physics_config.json"
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
+_C.habitat.simulator.habitat_sim_v0.leave_context_with_background_renderer = (
+    False
+)
 _C.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = False
 # -----------------------------------------------------------------------------
 # pyrobot

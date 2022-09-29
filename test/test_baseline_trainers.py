@@ -299,16 +299,16 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["habitat.video_option", "[]"]
-    eval_opts = ["habitat.video_option", "['disk']"]
+    ckpt_opts = ["video_option", "[]"]
+    eval_opts = ["video_option", "['disk']"]
 
     ckpt_cfg = get_config(None, ckpt_opts)
     assert ckpt_cfg.video_option == []
-    assert ckpt_cfg.cmd_trailing_opts == ["habitat.video_option", "[]"]
+    assert ckpt_cfg.cmd_trailing_opts == ["video_option", "[]"]
 
     eval_cfg = get_config(None, eval_opts)
     assert eval_cfg.video_option == ["disk"]
-    assert eval_cfg.cmd_trailing_opts == ["habitat.video_option", "['disk']"]
+    assert eval_cfg.cmd_trailing_opts == ["video_option", "['disk']"]
 
     trainer = BaseRLTrainer(get_config())
     assert trainer.config.video_option == ["disk", "tensorboard"]
