@@ -33,7 +33,7 @@ from numpy import ndarray
 from habitat.config import Config
 from habitat.core.utils import not_none_validator
 
-ALL_sceneS_MASK = "*"
+ALL_SCENES_MASK = "*"
 
 
 @attr.s(auto_attribs=True)
@@ -143,7 +143,7 @@ class Dataset(Generic[T]):
 
         def _filter(ep: T) -> bool:
             return (
-                ALL_sceneS_MASK in scenes_to_load
+                ALL_SCENES_MASK in scenes_to_load
                 or cls.scene_from_scene_path(ep.scene_id) in scenes_to_load
             )
 

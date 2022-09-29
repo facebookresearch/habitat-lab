@@ -19,8 +19,8 @@ RESULTS_DIR: "data/eqa/vqa/results/{split}"
 LOG_METRICS: True
 OUTPUT_LOG_DIR: "data/eqa/vqa/logs"
 log_interval: 100
-eval_SAVE_RESULTS: True
-eval_SAVE_RESULTS_INTERVAL: 10
+eval_save_results: True
+eval_save_results_interval: 10
 
 # Force PyTorch to be single threaded as
 # this improves performance considerably

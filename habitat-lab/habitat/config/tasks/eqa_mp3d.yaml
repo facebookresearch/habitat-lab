@@ -2,8 +2,8 @@ habitat:
   task:
     type: EQA-v0
     sensors: ['question_sensor']
-    possible_actions: ['move_forward', 'turn_left', 'turn_right', 'ANSWER']
-    measurements: ['episode_info', 'distance_to_GOAL', 'answer_accuracy']
+    possible_actions: ['move_forward', 'turn_left', 'turn_right', 'answer']
+    measurements: ['episode_info', 'distance_to_goal', 'answer_accuracy']
 
   environment:
     max_episode_steps: 500

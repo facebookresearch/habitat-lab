@@ -19,7 +19,7 @@ writer_type: 'tb'
 sensors: ["head_depth_sensor"]
 checkpoint_folder: "data/new_checkpoints"
 num_updates: -1
-TOTAL_num_steps: 1.0e8
+total_num_steps: 1.0e8
 log_interval: 10
 num_checkpoints: 20
 # Force PyTorch to be single threaded as
@@ -27,7 +27,7 @@ num_checkpoints: 20
 force_torch_single_threaded: True
 eval_keys_to_include_in_name: ['reward', 'force', 'success']
 
-RL:
+rl:
   policy:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"

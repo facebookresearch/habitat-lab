@@ -15,7 +15,7 @@ test_episode_count: 2
 # this improves performance considerably
 force_torch_single_threaded: True
 
-RL:
+rl:
   success_reward: 2.5
 
   policy:

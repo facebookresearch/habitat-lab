@@ -87,7 +87,7 @@ habitat:
 
             drop_obj_should_end: False
             wrong_pick_should_end: False
-        PICK_success:
+        pick_success:
             type: "RearrangePickSuccess"
             ee_resting_success_threshold: 0.15
         ########################

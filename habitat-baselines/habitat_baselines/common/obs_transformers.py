@@ -223,7 +223,7 @@ class CenterCropper(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        cc_config = config.rl.policy.obs_transforms.CENTER_CROPPER
+        cc_config = config.rl.policy.obs_transforms.center_cropper
         return cls(
             (cc_config.height, cc_config.width),
             cc_config.channels_last,
@@ -940,7 +940,7 @@ class ProjectionTransformer(ObservationTransformer):
             # If the sensor is depth
             is_depth = any(self.depth_key in s for s in in_sensor_uuids)
 
-            # The uuid we are overwriting
+            # The UUID we are overwriting
             assert target_sensor_uuid in in_sensor_uuids
             sensor_obs = [observations[sensor] for sensor in in_sensor_uuids]
             target_obs = observations[target_sensor_uuid]
@@ -970,10 +970,10 @@ class CubeMap2Equirect(ProjectionTransformer):
     a list of 6 cameras at various orientations but will be able to stitch a
     360 sensor out of these inputs. The code below will generate a config that
     has the 6 sensors in the proper orientations. This code also assumes a 90
-    fov.
+    FOV.
 
     Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
-    The output will be written the uuid of the first sensor.
+    The output will be written the UUID of the first sensor.
     """
 
     def __init__(
@@ -1004,9 +1004,9 @@ class CubeMap2Equirect(ProjectionTransformer):
     @classmethod
     def from_config(cls, config):
         cube2eq_config = config.rl.policy.obs_transforms.cube2eq
-        if hasattr(cube2eq_config, "TARGET_uuidS"):
+        if hasattr(cube2eq_config, "target_uuids"):
             # Optional Config Value to specify target uuid
-            target_uuids = cube2eq_config.TARGET_uuidS
+            target_uuids = cube2eq_config.target_uuids
         else:
             target_uuids = None
         return cls(
@@ -1064,10 +1064,10 @@ class CubeMap2Fisheye(ProjectionTransformer):
     a list of 6 cameras at various orientations but will be able to stitch a
     fisheye image out of these inputs. The code below will generate a config that
     has the 6 sensors in the proper orientations. This code also assumes a 90
-    fov.
+    FOV.
 
     Sensor order for cubemap stiching is Back, Down, Front, Left, Right, Up.
-    The output will be written the uuid of the first sensor.
+    The output will be written the UUID of the first sensor.
     """
 
     def __init__(
@@ -1115,9 +1115,9 @@ class CubeMap2Fisheye(ProjectionTransformer):
     @classmethod
     def from_config(cls, config):
         cube2fish_config = config.rl.policy.obs_transforms.cube2fish
-        if hasattr(cube2fish_config, "TARGET_uuidS"):
+        if hasattr(cube2fish_config, "target_uuids"):
             # Optional Config Value to specify target uuid
-            target_uuids = cube2fish_config.TARGET_uuidS
+            target_uuids = cube2fish_config.target_uuids
         else:
             target_uuids = None
         return cls(
@@ -1157,7 +1157,7 @@ class Equirect2CubeMap(ProjectionTransformer):
     r"""This is an experimental use of ObservationTransformer that converts
     an equirectangular image to cubemap images.
     Cubemap order is Back, Down, Front, Left, Right, Up.
-    The output will be written the uuid of the first sensor.
+    The output will be written the UUID of the first sensor.
     """
 
     def __init__(
@@ -1189,9 +1189,9 @@ class Equirect2CubeMap(ProjectionTransformer):
     def from_config(cls, config):
         eq2cube_config = config.rl.policy.obs_transforms.eq2cube
 
-        if hasattr(eq2cube_config, "TARGET_uuidS"):
+        if hasattr(eq2cube_config, "target_uuids"):
             # Optional Config Value to specify target uuid
-            target_uuids = eq2cube_config.TARGET_uuidS
+            target_uuids = eq2cube_config.target_uuids
         else:
             target_uuids = None
         return cls(

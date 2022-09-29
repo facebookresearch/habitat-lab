@@ -213,19 +213,19 @@ class BaseRLTrainer(BaseTrainer):
         self.num_steps_done = 0
         self._last_checkpoint_percent = -1.0
 
-        if config.num_updates != -1 and config.TOTAL_num_steps != -1:
+        if config.num_updates != -1 and config.total_num_steps != -1:
             raise RuntimeError(
-                "num_updates and TOTAL_num_steps are both specified.  One must be -1.\n"
-                " num_updates: {} TOTAL_num_steps: {}".format(
-                    config.num_updates, config.TOTAL_num_steps
+                "num_updates and total_num_steps are both specified.  One must be -1.\n"
+                " num_updates: {} total_num_steps: {}".format(
+                    config.num_updates, config.total_num_steps
                 )
             )
 
-        if config.num_updates == -1 and config.TOTAL_num_steps == -1:
+        if config.num_updates == -1 and config.total_num_steps == -1:
             raise RuntimeError(
-                "One of num_updates and TOTAL_num_steps must be specified.\n"
-                " num_updates: {} TOTAL_num_steps: {}".format(
-                    config.num_updates, config.TOTAL_num_steps
+                "One of num_updates and total_num_steps must be specified.\n"
+                " num_updates: {} total_num_steps: {}".format(
+                    config.num_updates, config.total_num_steps
                 )
             )
 
@@ -250,7 +250,7 @@ class BaseRLTrainer(BaseTrainer):
         if self.config.num_updates != -1:
             return self.num_updates_done / self.config.num_updates
         else:
-            return self.num_steps_done / self.config.TOTAL_num_steps
+            return self.num_steps_done / self.config.total_num_steps
 
     def is_done(self) -> bool:
         return self.percent_done() >= 1.0

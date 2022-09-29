@@ -48,7 +48,7 @@ class AgentPositionSensor(habitat.Sensor):
 
         self._sim = sim
         # Prints out the answer to life on init
-        print("The answer to life is", self.config.answer_TO_LIFE)
+        print("The answer to life is", self.config.answer_to_life)
 
     # Defines the name of the sensor in the sensor suite dictionary
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -56,7 +56,7 @@ class AgentPositionSensor(habitat.Sensor):
 
     # Defines the type of the sensor
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return habitat.SensorTypes.position
+        return habitat.SensorTypes.POSITION
 
     # Defines the size and range of the observations of the sensor
     def _get_observation_space(self, *args: Any, **kwargs: Any):
@@ -80,21 +80,21 @@ def main():
     config.defrost()
 
     # Add things to the config to for the measure
-    config.habitat.task.episode_info_EXAMPLE = habitat.Config()
+    config.habitat.task.episode_info_example = habitat.Config()
     # The type field is used to look-up the measure in the registry.
     # By default, the things are registered with the class name
-    config.habitat.task.episode_info_EXAMPLE.type = "EpisodeInfoExample"
-    config.habitat.task.episode_info_EXAMPLE.VALUE = 5
+    config.habitat.task.episode_info_example.type = "EpisodeInfoExample"
+    config.habitat.task.episode_info_example.VALUE = 5
     # Add the measure to the list of measures in use
-    config.habitat.task.measurements.append("episode_info_EXAMPLE")
+    config.habitat.task.measurements.append("episode_info_example")
 
     # Now define the config for the sensor
-    config.habitat.task.agent_position_SENSOR = habitat.Config()
+    config.habitat.task.agent_position_sensor = habitat.Config()
     # Use the custom name
-    config.habitat.task.agent_position_SENSOR.type = "my_supercool_sensor"
-    config.habitat.task.agent_position_SENSOR.answer_TO_LIFE = 42
+    config.habitat.task.agent_position_sensor.type = "my_supercool_sensor"
+    config.habitat.task.agent_position_sensor.answer_to_life = 42
     # Add the sensor to the list of sensors in use
-    config.habitat.task.sensors.append("agent_position_SENSOR")
+    config.habitat.task.sensors.append("agent_position_sensor")
     config.freeze()
 
     with habitat.Env(config=config) as env:

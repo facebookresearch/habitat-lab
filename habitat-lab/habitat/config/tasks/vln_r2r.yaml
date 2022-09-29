@@ -11,7 +11,7 @@ habitat:
     rgb_sensor:
       width: 256
       height: 256
-      Hfov: 90
+      hfov: 90
       type: HabitatSimRGBSensor
     depth_sensor:
       width: 256
@@ -20,7 +20,7 @@ habitat:
     type: VLN-v0
     sensors: ['instruction_sensor']
     possible_actions: ['stop', 'move_forward', 'turn_left', 'turn_right']
-    measurements: ['distance_to_GOAL', 'success', 'spl']
+    measurements: ['distance_to_goal', 'success', 'spl']
   dataset:
     type: R2RVLN-v1
     split: train

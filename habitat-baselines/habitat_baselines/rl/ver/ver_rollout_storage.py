@@ -74,7 +74,7 @@ def generate_ver_mini_batches(
     last_sequence_in_batch_mask: np.ndarray,
     episode_ids: np.ndarray,
 ) -> Iterator[np.ndarray]:
-    r"""Generate mini-batches for ver.
+    r"""Generate mini-batches for VER.
 
     This works by taking all the sequences of experience, putting them in a random order,
     and then slicing their steps into :ref:`num_mini_batch` batches.
@@ -119,8 +119,8 @@ def generate_ver_mini_batches(
         ]
 
 
-class verRolloutStorage(RolloutStorage):
-    r"""Rollout storage for ver."""
+class VERRolloutStorage(RolloutStorage):
+    r"""Rollout storage for VER."""
     ptr: np.ndarray
     prev_inds: np.ndarray
     num_steps_collected: np.ndarray
@@ -235,7 +235,7 @@ class verRolloutStorage(RolloutStorage):
         )
 
         if self.variable_experience:
-            # In ver mode, there isn't a clean assignment from
+            # In VER mode, there isn't a clean assignment from
             # (env_id, current_step) to place in the rollouts storage
             # anymore. Instead we treat this as just a linear buffer
             # and write into that.
@@ -286,7 +286,7 @@ class verRolloutStorage(RolloutStorage):
         # On unpickle, we reset the aux buffers.
         self._set_aux_buffers()
 
-    def copy(self, other: "verRolloutStorage"):
+    def copy(self, other: "VERRolloutStorage"):
         self.buffers[:] = other.buffers
         self._aux_buffers[:] = other._aux_buffers
 

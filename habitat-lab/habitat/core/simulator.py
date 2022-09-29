@@ -52,7 +52,7 @@ class SensorTypes(Enum):
     NORMAL = 3
     SEMANTIC = 4
     PATH = 5
-    position = 6
+    POSITION = 6
     FORCE = 7
     TENSOR = 8
     TEXT = 9

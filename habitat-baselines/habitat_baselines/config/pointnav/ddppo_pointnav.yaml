@@ -12,14 +12,14 @@ num_environments: 4
 sensors: ["depth_sensor"]
 checkpoint_folder: "data/new_checkpoints"
 num_updates: -1
-TOTAL_num_steps: 2.5e9
+total_num_steps: 2.5e9
 log_interval: 10
 num_checkpoints: 100
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 force_torch_single_threaded: True
 
-RL:
+rl:
   success_reward: 2.5
 
   policy:

@@ -61,7 +61,7 @@ CLOSE_COMMAND = "close"
 CALL_COMMAND = "call"
 COUNT_EPISODES_COMMAND = "count_episodes"
 
-EPISODE_Over_NAME = "episode_over"
+EPISODE_OVER_NAME = "episode_over"
 GET_METRICS_NAME = "get_metrics"
 CURRENT_EPISODE_NAME = "current_episode"
 NUMBER_OF_EPISODE_NAME = "number_of_episodes"
@@ -358,7 +358,7 @@ class VectorEnv:
 
     def episode_over(self):
         for write_fn in self._connection_write_fns:
-            write_fn((CALL_COMMAND, (EPISODE_Over_NAME, None)))
+            write_fn((CALL_COMMAND, (EPISODE_OVER_NAME, None)))
         results = []
         for read_fn in self._connection_read_fns:
             results.append(read_fn())

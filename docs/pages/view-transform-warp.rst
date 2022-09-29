@@ -50,7 +50,7 @@ validate that transformation comparing projected and original views.
         H = config.habitat.simulator.depth_sensor.height
 
         assert(W == H)
-        hfov = float(config.habitat.simulator.depth_sensor.Hfov) * np.pi / 180.
+        hfov = float(config.habitat.simulator.depth_sensor.hfov) * np.pi / 180.
 
 
         env = habitat.Env(config=config)

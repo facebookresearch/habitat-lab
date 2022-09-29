@@ -152,7 +152,7 @@ def test_ver_trainer(
                 "['CenterCropper', 'ResizeShortestEdge']",
                 "num_updates",
                 2,
-                "TOTAL_num_steps",
+                "total_num_steps",
                 -1.0,
                 "RL.preemption.save_state_batch_only",
                 True,

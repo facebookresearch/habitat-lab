@@ -31,7 +31,7 @@ from habitat_baselines.rl.ver.worker_common import (
 
 @attr.s(auto_attribs=True)
 class PreemptionDeciderProcess(ProcessBase):
-    r"""Used to decide when to preempt GPU-worker stragglers when training with ver+DD-PPO.
+    r"""Used to decide when to preempt GPU-worker stragglers when training with VER+DD-PPO.
 
 
     This attempts to approximate the optimal preemption schedule for each rollout. The optimal

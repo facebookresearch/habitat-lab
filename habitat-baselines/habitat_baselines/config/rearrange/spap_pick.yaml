@@ -3,7 +3,7 @@ base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
 SENSE_PLAN_ACT:
   verbose: True
   RUN_FREQ: 2
-  KINEMATIC_CTRL: True
+  KINEMATIC_CTrl: True
   N_GRASPS: 100
   MP_OBJ: True
   MP_MARGIN: null
@@ -11,12 +11,12 @@ SENSE_PLAN_ACT:
   TIMEOUT: 3
   EXEC_EE_THRESH: 0.1
   # "Priv" or "Reg"
-  MP_SIM_type: "Priv"
+  mp_sim_type: "Priv"
   video_dir: 'data/vids'
-  DEBUG_DIR: "data/mp_test"
+  debug_dir: "data/mp_test"
   count_obj_collisions: True
-  GRASP_GEN_IS_verbose: True
-  IK_dist_thresh: 0.1
+  grasp_gen_is_verbose: True
+  ik_dist_thresh: 0.1
 
 habitat:
   success_reward: 2000.0
@@ -27,7 +27,7 @@ habitat:
     achieved_goal_keys: []
     action_keys: ['arm_action']
 
-RL:
+rl:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     easy_init: False

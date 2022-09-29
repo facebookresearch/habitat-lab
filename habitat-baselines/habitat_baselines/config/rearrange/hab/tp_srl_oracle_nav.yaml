@@ -18,7 +18,7 @@ num_environments: 1
 writer_type: 'tb'
 checkpoint_folder: "data/new_checkpoints"
 num_updates: -1
-TOTAL_num_steps: 1.0e8
+total_num_steps: 1.0e8
 log_interval: 10
 num_checkpoints: 20
 force_torch_single_threaded: True
@@ -35,7 +35,7 @@ habitat:
     - rearrange_stop
     - oracle_nav_action
 
-RL:
+rl:
   policy:
       name: "HierarchicalPolicy"
       high_level_policy:
@@ -54,7 +54,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
@@ -65,7 +65,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
@@ -76,7 +76,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
@@ -87,7 +87,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:
@@ -103,11 +103,11 @@ RL:
         GT_NAV:
           skill_name: "OracleNavPolicy"
           OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-          GOAL_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
+          goal_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
           NAV_ACTION_NAME: "base_velocity"
           MAX_SKILL_STEPS: 300
           FORCE_END_ON_TIMEOUT: True
-          stop_angle_thRESH: 0.2
+          stop_angle_thresh: 0.2
           stop_dist_thresh: 1.0
 
         NN_PLACE:

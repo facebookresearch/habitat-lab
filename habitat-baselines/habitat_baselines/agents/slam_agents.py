@@ -14,7 +14,7 @@ import time
 from math import pi
 
 import numpy as np
-import orbslam2
+import ORBSLAM2
 import PIL
 import requests
 import torch
@@ -76,14 +76,14 @@ def make_good_config_for_orbslam2(config):
     config.habitat.simulator.rgb_sensor.height = 256
     config.habitat.simulator.depth_sensor.width = 256
     config.habitat.simulator.depth_sensor.height = 256
-    config.TRAINER.orbslam2.CAMERA_height = (
+    config.TRAINER.orbslam2.camera_height = (
         config.habitat.simulator.depth_sensor.position[1]
     )
     config.TRAINER.orbslam2.h_obstacle_min = (
-        0.3 * config.TRAINER.orbslam2.CAMERA_height
+        0.3 * config.TRAINER.orbslam2.camera_height
     )
     config.TRAINER.orbslam2.h_obstacle_max = (
-        1.0 * config.TRAINER.orbslam2.CAMERA_height
+        1.0 * config.TRAINER.orbslam2.camera_height
     )
     config.TRAINER.orbslam2.min_pts_in_obstacle = (
         config.habitat.simulator.depth_sensor.width / 2.0
@@ -98,8 +98,8 @@ class RandomAgent:
 
     def __init__(self, config):
         super(RandomAgent, self).__init__()
-        self.num_actions = config.NUM_actions
-        self.dist_threshold_to_stop = config.DIST_TO_stop
+        self.num_actions = config.num_actions
+        self.dist_threshold_to_stop = config.dist_to_stop
         self.reset()
         return
 
@@ -130,7 +130,7 @@ class RandomAgent:
 class BlindAgent(RandomAgent):
     def __init__(self, config):
         super(BlindAgent, self).__init__(config)
-        self.pos_th = config.DIST_TO_stop
+        self.pos_th = config.dist_to_stop
         self.angle_th = config.angle_th
         self.reset()
         return
@@ -170,17 +170,17 @@ class BlindAgent(RandomAgent):
         return {"action": action}
 
 
-class orbslam2Agent(RandomAgent):
+class ORBSLAM2Agent(RandomAgent):
     def __init__(self, config, device=torch.device("cuda:0")):  # noqa: B008
-        super(orbslam2Agent, self).__init__(config)
-        self.num_actions = config.NUM_actions
-        self.dist_threshold_to_stop = config.DIST_TO_stop
+        super(ORBSLAM2Agent, self).__init__(config)
+        self.num_actions = config.num_actions
+        self.dist_threshold_to_stop = config.dist_to_stop
         self.slam_vocab_path = config.slam_vocab_path
         assert os.path.isfile(self.slam_vocab_path)
         self.slam_settings_path = config.slam_settings_path
         assert os.path.isfile(self.slam_settings_path)
-        self.slam = orbslam2.System(
-            self.slam_vocab_path, self.slam_settings_path, orbslam2.Sensor.RGBD
+        self.slam = ORBSLAM2.System(
+            self.slam_vocab_path, self.slam_settings_path, ORBSLAM2.Sensor.RGBD
         )
         self.slam.set_use_viewer(False)
         self.slam.initialize()
@@ -194,7 +194,7 @@ class orbslam2Agent(RandomAgent):
         self.depth_denorm = config.depth_denorm
         self.planned_waypoints = []
         self.mapper = DirectDepthMapper(
-            camera_height=config.CAMERA_height,
+            camera_height=config.camera_height,
             near_th=config.d_obstacle_min,
             far_th=config.d_obstacle_max,
             h_min=config.h_obstacle_min,
@@ -216,7 +216,7 @@ class orbslam2Agent(RandomAgent):
         return
 
     def reset(self):
-        super(orbslam2Agent, self).reset()
+        super(ORBSLAM2Agent, self).reset()
         self.offset_to_goal = None
         self.tracking_is_OK = False
         self.waypointPose6D = None
@@ -242,7 +242,7 @@ class orbslam2Agent(RandomAgent):
         return
 
     def update_internal_state(self, habitat_observation):
-        super(orbslam2Agent, self).update_internal_state(habitat_observation)
+        super(ORBSLAM2Agent, self).update_internal_state(habitat_observation)
         self.cur_time += self.timestep
         rgb, depth = self.rgb_d_from_observation(habitat_observation)
         t = time.time()
@@ -524,22 +524,22 @@ class orbslam2Agent(RandomAgent):
         return command
 
 
-class orbslam2MonodepthAgent(orbslam2Agent):
+class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
     def __init__(
         self,
         config,
         device=torch.device("cuda:0"),  # noqa: B008
         monocheckpoint="habitat_baselines/slambased/data/mp3d_resnet50.pth",
     ):
-        super(orbslam2MonodepthAgent, self).__init__(config)
-        self.num_actions = config.NUM_actions
-        self.dist_threshold_to_stop = config.DIST_TO_stop
+        super(ORBSLAM2MonodepthAgent, self).__init__(config)
+        self.num_actions = config.num_actions
+        self.dist_threshold_to_stop = config.dist_to_stop
         self.slam_vocab_path = config.slam_vocab_path
         assert os.path.isfile(self.slam_vocab_path)
         self.slam_settings_path = config.slam_settings_path
         assert os.path.isfile(self.slam_settings_path)
-        self.slam = orbslam2.System(
-            self.slam_vocab_path, self.slam_settings_path, orbslam2.Sensor.RGBD
+        self.slam = ORBSLAM2.System(
+            self.slam_vocab_path, self.slam_settings_path, ORBSLAM2.Sensor.RGBD
         )
         self.slam.set_use_viewer(False)
         self.slam.initialize()
@@ -553,7 +553,7 @@ class orbslam2MonodepthAgent(orbslam2Agent):
         self.depth_denorm = config.depth_denorm
         self.planned_waypoints = []
         self.mapper = DirectDepthMapper(
-            camera_height=config.CAMERA_height,
+            camera_height=config.camera_height,
             near_th=config.d_obstacle_min,
             far_th=config.d_obstacle_max,
             h_min=config.h_obstacle_min,
@@ -617,9 +617,9 @@ def main():
     if args.agent_type == "blind":
         agent = BlindAgent(config.TRAINER.orbslam2)
     elif args.agent_type == "orbslam2-rgbd":
-        agent = orbslam2Agent(config.TRAINER.orbslam2)
+        agent = ORBSLAM2Agent(config.TRAINER.orbslam2)
     elif args.agent_type == "orbslam2-rgb-monod":
-        agent = orbslam2MonodepthAgent(config.TRAINER.orbslam2)
+        agent = ORBSLAM2MonodepthAgent(config.TRAINER.orbslam2)
     else:
         raise ValueError(args.agent_type, "is unknown type of agent")
     benchmark = habitat.Benchmark(args.task_config)

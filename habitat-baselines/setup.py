@@ -15,7 +15,7 @@ from setuptools.command.install import install as DefaultInstallCommand
 sys.path.insert(
     0, os.path.join(os.path.dirname(__file__), "habitat_baselines")
 )
-from version import verSION  # isort:skip noqa
+from version import VERSION  # isort:skip noqa
 
 
 with open("../README.md", encoding="utf8") as f:
@@ -47,7 +47,7 @@ if __name__ == "__main__":
         name=DISTNAME,
         install_requires=list(REQUIREMENTS),
         packages=setuptools.find_packages(exclude=DEFAULT_EXCLUSION),
-        version=verSION,
+        version=VERSION,
         description=DESCRIPTION,
         long_description=LONG_DESCRIPTION,
         long_description_content_type="text/markdown",

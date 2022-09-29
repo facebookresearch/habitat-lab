@@ -93,7 +93,7 @@ habitat:
         seed: 100
         semantic_sensor:
             height: 480
-            Hfov: 90
+            hfov: 90
             orientation: [0.0, 0.0, 0.0]
             position: [0, 1.25, 0]
             type: HabitatSimSemanticSensor

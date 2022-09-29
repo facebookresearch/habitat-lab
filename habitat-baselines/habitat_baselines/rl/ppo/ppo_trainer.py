@@ -37,9 +37,9 @@ from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,
 )
-from habitat_baselines.rl.ddppo.algo import ddppo
+from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
-    ExiT,
+    EXIT,
     get_distrib_size,
     init_distrib_slurm,
     is_slurm_batch_job,
@@ -180,7 +180,7 @@ class PPOTrainer(BaseRLTrainer):
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
-        self.agent = (ddppo if self._is_distributed else PPO).from_config(
+        self.agent = (DDPPO if self._is_distributed else PPO).from_config(
             self.actor_critic, ppo_cfg
         )
 
@@ -239,7 +239,7 @@ class PPOTrainer(BaseRLTrainer):
 
         profiling_wrapper.configure(
             capture_start_step=self.config.profiling.capture_start_step,
-            num_steps_to_capture=self.config.profiling.num_steps_TO_CAPTURE,
+            num_steps_to_capture=self.config.profiling.num_steps_to_capture,
         )
 
         self._init_envs()
@@ -782,7 +782,7 @@ class PPOTrainer(BaseRLTrainer):
                         self.config,
                     )
 
-                if ExiT.is_set():
+                if EXIT.is_set():
                     profiling_wrapper.range_pop()  # train update
 
                     self.envs.close()

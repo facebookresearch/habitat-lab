@@ -122,7 +122,7 @@ class VQATrainer(BaseILTrainer):
             .to_tuple(
                 "episode_id",
                 "question",
-                "ANSWER",
+                "answer",
                 *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
             )
             .map(img_bytes_2_np_array)
@@ -296,7 +296,7 @@ class VQATrainer(BaseILTrainer):
             .to_tuple(
                 "episode_id",
                 "question",
-                "ANSWER",
+                "answer",
                 *["{0:0=3d}.jpg".format(x) for x in range(0, 5)],
             )
             .map(img_bytes_2_np_array)
@@ -379,8 +379,8 @@ class VQATrainer(BaseILTrainer):
                     metrics.dump_log()
 
                 if (
-                    config.eval_SAVE_RESULTS
-                    and t % config.eval_SAVE_RESULTS_INTERVAL == 0
+                    config.eval_save_results
+                    and t % config.eval_save_results_interval == 0
                 ):
 
                     self._save_vqa_results(

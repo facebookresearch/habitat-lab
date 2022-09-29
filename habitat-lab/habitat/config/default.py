@@ -197,7 +197,7 @@ _C.habitat.task.actions.oracle_nav_action.allow_dyn_slide = True
 _C.habitat.task.actions.oracle_nav_action.end_on_stop = False
 _C.habitat.task.actions.oracle_nav_action.allow_back = True
 # -----------------------------------------------------------------------------
-# # task sensors
+# # TASK_SENSORS
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
 # POINTGOAL SENSOR
@@ -225,19 +225,19 @@ _C.habitat.task.OBJECTgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
 # IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.habitat.task.IMAGEgoal_sensor = CN()
-_C.habitat.task.IMAGEgoal_sensor.type = "ImageGoalSensor"
+_C.habitat.task.imagegoal_sensor = CN()
+_C.habitat.task.imagegoal_sensor.type = "ImageGoalSensor"
 # -----------------------------------------------------------------------------
 # INSTANCE IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------
 _C.habitat.task.instance_imagegoal_sensor = CN()
 _C.habitat.task.instance_imagegoal_sensor.type = "InstanceImageGoalSensor"
 # -----------------------------------------------------------------------------
-# INSTANCE IMAGEGOAL Hfov SENSOR
+# INSTANCE IMAGEGOAL HFOV SENSOR
 # -----------------------------------------------------------------------------
 _C.habitat.task.instance_imagegoal_hfov_sensor = CN()
 _C.habitat.task.instance_imagegoal_hfov_sensor.type = (
-    "InstanceImageGoalHfovSensor"
+    "InstanceImageGoalHFOVSensor"
 )
 # -----------------------------------------------------------------------------
 # HEADING SENSOR
@@ -256,7 +256,7 @@ _C.habitat.task.gps_sensor = CN()
 _C.habitat.task.gps_sensor.type = "GPSSensor"
 _C.habitat.task.gps_sensor.dimensionality = 2
 # -----------------------------------------------------------------------------
-# PROxiMITY SENSOR
+# PROXIMITY SENSOR
 # -----------------------------------------------------------------------------
 _C.habitat.task.proximity_sensor = CN()
 _C.habitat.task.proximity_sensor.type = "ProximitySensor"
@@ -268,7 +268,7 @@ _C.habitat.task.joint_sensor = CN()
 _C.habitat.task.joint_sensor.type = "JointSensor"
 _C.habitat.task.joint_sensor.dimensionality = 7
 # -----------------------------------------------------------------------------
-# END EFFECTOR position SENSOR
+# END EFFECTOR POSITION SENSOR
 # -----------------------------------------------------------------------------
 _C.habitat.task.end_effector_sensor = CN()
 _C.habitat.task.end_effector_sensor.type = "EEPositionSensor"
@@ -296,7 +296,7 @@ _C.habitat.task.joint_velocity_sensor.dimensionality = 7
 _C.habitat.task.oracle_nav_action_SENSOR = CN()
 _C.habitat.task.oracle_nav_action_SENSOR.type = "OracleNavigationActionSensor"
 # -----------------------------------------------------------------------------
-# RESTING position SENSOR
+# RESTING POSITION SENSOR
 # -----------------------------------------------------------------------------
 _C.habitat.task.resting_pos_sensor = CN()
 _C.habitat.task.resting_pos_sensor.type = "RestingPositionSensor"
@@ -399,21 +399,21 @@ _C.habitat.task.dist_to_nav_goal.type = "DistToNavGoalSensor"
 _C.habitat.task.localization_sensor = CN()
 _C.habitat.task.localization_sensor.type = "LocalizationSensor"
 # -----------------------------------------------------------------------------
-# success MEASUREMENT
+# SUCCESS MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.habitat.task.success = CN()
 _C.habitat.task.success.type = "Success"
 _C.habitat.task.success.success_distance = 0.2
 # -----------------------------------------------------------------------------
-# spl MEASUREMENT
+# SPL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.habitat.task.spl = CN()
-_C.habitat.task.spl.type = "spl"
+_C.habitat.task.spl.type = "SPL"
 # -----------------------------------------------------------------------------
-# SOFT-spl MEASUREMENT
+# SOFT-SPL MEASUREMENT
 # -----------------------------------------------------------------------------
 _C.habitat.task.soft_spl = CN()
-_C.habitat.task.soft_spl.type = "Softspl"
+_C.habitat.task.soft_spl.type = "SoftSPL"
 # -----------------------------------------------------------------------------
 # TopDownMap MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -436,7 +436,7 @@ _C.habitat.task.top_down_map.draw_goal_positions = True
 # Axes aligned bounding boxes
 _C.habitat.task.top_down_map.draw_goal_aabbs = True
 # -----------------------------------------------------------------------------
-# collisions MEASUREMENT
+# COLLISIONSMEASUREMENT
 # -----------------------------------------------------------------------------
 _C.habitat.task.collisions = CN()
 _C.habitat.task.collisions.type = "Collisions"
@@ -477,9 +477,9 @@ _C.habitat.task.ee_dist_to_marker = CN()
 _C.habitat.task.ee_dist_to_marker.type = "EndEffectorDistToMarker"
 _C.habitat.task.art_obj_state = CN()
 _C.habitat.task.art_obj_state.type = "ArtObjState"
-_C.habitat.task.ART_OBJ_success = CN()
-_C.habitat.task.ART_OBJ_success.type = "ArtObjSuccess"
-_C.habitat.task.ART_OBJ_success.rest_dist_threshold = 0.15
+_C.habitat.task.art_obj_success = CN()
+_C.habitat.task.art_obj_success.type = "ArtObjSuccess"
+_C.habitat.task.art_obj_success.rest_dist_threshold = 0.15
 
 _C.habitat.task.art_obj_reward = CN()
 _C.habitat.task.art_obj_reward.type = "ArtObjReward"
@@ -594,9 +594,9 @@ _C.habitat.task.pick_reward.force_end_pen = 10.0
 _C.habitat.task.pick_reward.use_diff = True
 _C.habitat.task.pick_reward.drop_obj_should_end = False
 _C.habitat.task.pick_reward.wrong_pick_should_end = False
-_C.habitat.task.PICK_success = CN()
-_C.habitat.task.PICK_success.type = "RearrangePickSuccess"
-_C.habitat.task.PICK_success.ee_resting_success_threshold = 0.15
+_C.habitat.task.pick_success = CN()
+_C.habitat.task.pick_success.type = "RearrangePickSuccess"
+_C.habitat.task.pick_success.ee_resting_success_threshold = 0.15
 # -----------------------------------------------------------------------------
 # PLACE MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -664,11 +664,11 @@ _C.habitat.task.episode_info.type = "EpisodeInfo"
 _C.habitat.task.instruction_sensor = CN()
 _C.habitat.task.instruction_sensor.type = "InstructionSensor"
 # -----------------------------------------------------------------------------
-# # distance_to_GOAL MEASUREMENT
+# # distance_to_goal MEASUREMENT
 # -----------------------------------------------------------------------------
-_C.habitat.task.distance_to_GOAL = CN()
-_C.habitat.task.distance_to_GOAL.type = "DistanceToGoal"
-_C.habitat.task.distance_to_GOAL.distance_to = "POINT"
+_C.habitat.task.distance_to_goal = CN()
+_C.habitat.task.distance_to_goal.type = "DistanceToGoal"
+_C.habitat.task.distance_to_goal.distance_to = "POINT"
 # -----------------------------------------------------------------------------
 # # distance_to_goal_reward MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -680,7 +680,7 @@ _C.habitat.task.distance_to_goal_reward.type = "DistanceToGoalReward"
 _C.habitat.task.answer_accuracy = CN()
 _C.habitat.task.answer_accuracy.type = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
-# simulator
+# SIMULATOR
 # -----------------------------------------------------------------------------
 _C.habitat.simulator = CN()
 _C.habitat.simulator.type = "Sim-v0"
@@ -724,7 +724,7 @@ _C.habitat.simulator.ac_freq_ratio = 4
 _C.habitat.simulator.hold_thresh = 0.09
 _C.habitat.simulator.grasp_impulse = 1000.0
 # -----------------------------------------------------------------------------
-# simulator sensors
+# SIMULATOR SENSORS
 # -----------------------------------------------------------------------------
 simulator_sensor = CN()
 simulator_sensor.height = 480
@@ -736,7 +736,7 @@ simulator_sensor.orientation = [0.0, 0.0, 0.0]  # Euler's angles
 # CAMERA SENSOR
 # -----------------------------------------------------------------------------
 camera_sim_sensor = simulator_sensor.clone()
-camera_sim_sensor.Hfov = 90  # horizontal field of view in degrees
+camera_sim_sensor.hfov = 90  # horizontal field of view in degrees
 camera_sim_sensor.sensor_subtype = "PINHOLE"
 
 simulator_depth_sensor = simulator_sensor.clone()
@@ -876,7 +876,7 @@ _C.habitat.simulator.agent_0.ik_arm_urdf = (
 )
 _C.habitat.simulator.agents = ["agent_0"]
 # -----------------------------------------------------------------------------
-# simulator habitat_sim_v0
+# SIMULATOR habitat_sim_v0
 # -----------------------------------------------------------------------------
 _C.habitat.simulator.habitat_sim_v0 = CN()
 _C.habitat.simulator.habitat_sim_v0.gpu_device_id = 0

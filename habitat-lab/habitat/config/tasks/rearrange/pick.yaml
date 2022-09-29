@@ -92,7 +92,7 @@ habitat:
             max_force_pen: 1.0
             force_end_pen: 10.0
 
-        PICK_success:
+        pick_success:
             type: "RearrangePickSuccess"
             ee_resting_success_threshold: 0.2
 
@@ -102,7 +102,7 @@ habitat:
             - "end_effector_to_rest_distance"
             - "end_effector_to_object_distance"
             - "did_pick_object"
-            - "PICK_success"
+            - "pick_success"
             - "pick_reward"
             - "did_violate_hold_constraint"
             - "num_steps"

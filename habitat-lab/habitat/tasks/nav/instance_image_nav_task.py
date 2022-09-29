@@ -91,7 +91,7 @@ class InstanceImageGoal(ObjectGoal):
 class InstanceImageGoalSensor(RGBSensor):
     """A sensor for instance-based image goal specification used by the
     InstanceImageGoal Navigation task. Image goals are rendered according to
-    camera parameters (resolution, Hfov, extrinsics) specified by the dataset.
+    camera parameters (resolution, HFOV, extrinsics) specified by the dataset.
 
     Args:
         sim: a reference to the simulator for rendering instance image goals.
@@ -222,8 +222,8 @@ class InstanceImageGoalSensor(RGBSensor):
 
 
 @registry.register_sensor
-class InstanceImageGoalHfovSensor(Sensor):
-    """A sensor that returns the horizontal field of view (Hfov) in degrees
+class InstanceImageGoalHFOVSensor(Sensor):
+    """A sensor that returns the horizontal field of view (HFOV) in degrees
     of the current episode's instance image goal.
     """
 

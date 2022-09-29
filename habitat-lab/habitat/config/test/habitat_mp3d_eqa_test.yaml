@@ -2,8 +2,8 @@ habitat:
   task:
     type: EQA-v0
     sensors: ['question_sensor']
-    possible_actions: ['move_forward', 'turn_left', 'turn_right', 'ANSWER']
-    measurements: ['episode_info', 'distance_to_GOAL', 'answer_accuracy']
+    possible_actions: ['move_forward', 'turn_left', 'turn_right', 'answer']
+    measurements: ['episode_info', 'distance_to_goal', 'answer_accuracy']
 
   environment:
     iterator_options:
@@ -18,7 +18,7 @@ habitat:
     rgb_sensor:
       height: 512
       width: 512
-      Hfov: 45
+      hfov: 45
       position: [0, 1.09, 0]
       type: HabitatSimRGBSensor
 

@@ -387,7 +387,7 @@ def generate_video(
         images: list of images to be converted to video.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
-        metric_name: name of the performance metric, e.g. "spl".
+        metric_name: name of the performance metric, e.g. "SPL".
         metric_value: value of metric.
         tb_writer: tensorboard writer object for uploading video.
         fps: fps for generated video.

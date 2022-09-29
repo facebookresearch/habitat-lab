@@ -23,6 +23,6 @@ habitat:
       dimensionality: 2
     goal_sensor_uuid: pointgoal_with_gps_compass
 
-    measurements: ['distance_to_GOAL', 'success', 'spl']
+    measurements: ['distance_to_goal', 'success', 'spl']
     success:
       success_distance: 0.2

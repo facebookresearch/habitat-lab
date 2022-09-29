@@ -66,7 +66,7 @@ habitat:
             type: ArtObjAtDesiredState
             use_absolute_distance: true
             success_dist_threshold: 0.05
-        ART_OBJ_success:
+        art_obj_success:
             type: ArtObjSuccess
             rest_dist_threshold: 0.15
         art_obj_reward:
@@ -94,7 +94,7 @@ habitat:
         - end_effector_to_rest_distance
         - art_obj_at_desired_state
         - art_obj_state
-        - ART_OBJ_success
+        - art_obj_success
         - art_obj_reward
         - num_steps
         - did_violate_hold_constraint

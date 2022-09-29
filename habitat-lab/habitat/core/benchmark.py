@@ -66,7 +66,7 @@ class Benchmark:
             )
             return res_env["episode_over"]
 
-        env_address_port = os.environ.get("evalENV_ADDPORT", "localhost:8085")
+        env_address_port = os.environ.get("EVALENV_ADDPORT", "localhost:8085")
         channel = grpc.insecure_channel(env_address_port)
         stub = evaluation_pb2_grpc.EnvironmentStub(channel)
 

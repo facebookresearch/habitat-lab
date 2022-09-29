@@ -354,7 +354,7 @@ class IkMoveArm(ArmTargModule):
             observations["ee_pos"] - self._robot_target
         )
 
-        return dist_to_target < self._config.IK_dist_thresh
+        return dist_to_target < self._config.ik_dist_thresh
 
 
 class SpaManipPick(ArmTargModule):

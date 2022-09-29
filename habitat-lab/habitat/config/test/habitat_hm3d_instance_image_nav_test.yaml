@@ -16,12 +16,12 @@ habitat:
     rgb_sensor:
       width: 640
       height: 480
-      Hfov: 79
+      hfov: 79
       position: [0, 0.88, 0]
     depth_sensor:
       width: 640
       height: 480
-      Hfov: 79
+      hfov: 79
       min_depth: 0.5
       max_depth: 5.0
       position: [0, 0.88, 0]
@@ -42,14 +42,14 @@ habitat:
     goal_sensor_uuid: instance_imagegoal
     measurements: [
       num_steps,
-      distance_to_GOAL,
+      distance_to_goal,
       success,
       spl,
       soft_spl,
       distance_to_goal_reward
     ]
 
-    distance_to_GOAL:
+    distance_to_goal:
       distance_to: VIEW_POINTS
     success:
       success_distance: 0.1

@@ -1,8 +1,8 @@
-Variable Experience Rollout (ver)
+Variable Experience Rollout (VER)
 =================================
 
 
-Implementation of variable experience rollout (ver). ver applies the sampling techniques for async to sync and collects a variable amount of experience for each environments rollout to mitigate the straggler effect.
+Implementation of variable experience rollout (ver). VER applies the sampling techniques for async to sync and collects a variable amount of experience for each environments rollout to mitigate the straggler effect.
 
 
 The system has 5 components. 3 of these are the key components for learning:
@@ -20,11 +20,11 @@ The Shared CPU Memory block is implemented via the `transfer_buffers` and the Sh
 There are two components that serve auxiliary functions:
 
 * The Report worker is responsible for tracking the progress of training. It writes metrics to tensorboard (or wandb). This lives in a separate process for maximum training speed.
-* The Preemption decider decides when to preempt stragglers when combining ver and DD-PPO
+* The Preemption decider decides when to preempt stragglers when combining VER and DD-PPO
 
 ## Citing
 
-If you use ver or the model-weights in your research, please cite the following [paper](https://tbd):
+If you use VER or the model-weights in your research, please cite the following [paper](https://tbd):
 
     @inproceedings{wijmans2022ver,
       title = {{ver}: {S}caling On-Policy RL Leads to the Emergence of Navigation in Embodied Rearrangement},

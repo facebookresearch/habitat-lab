@@ -375,9 +375,9 @@ task:
         type: "ForceTerminate"
         # Maximum amount of allowed force in Newtons.
         max_accum_force: 5000.0
-    distance_to_TARGET_OBJECT:
+    distance_to_target_object:
         type: "DistanceToTargetObject"
-    NAV_pick_reward:
+    nav_pick_reward:
         type: "NavPickReward"
         SCALING_FACTOR: 0.1
 
@@ -387,16 +387,16 @@ task:
         max_force_pen: 1.0
         force_end_pen: 10.0
 
-    NAV_PICK_success:
+    nav_pick_success:
         type: "NavPickSuccess"
 
     measurements:
         # The measurements returned in the info dictionary
         - "robot_force"
         - "force_terminate"
-        - "distance_to_TARGET_OBJECT"
-        - "NAV_pick_reward"
-        - "NAV_PICK_success"
+        - "distance_to_target_object"
+        - "nav_pick_reward"
+        - "nav_pick_success"
     actions:
         # Define the action space.
         arm_action:

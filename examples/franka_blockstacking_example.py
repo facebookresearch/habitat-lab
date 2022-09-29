@@ -16,10 +16,10 @@ SENSOR_KEY = "rgb"
 CONFIG_FILE = "tasks/franka_point.yaml"
 BLOCK_LOC_RANGE = 2.0
 BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
-BLOCK_scale = 0.2
+BLOCK_SCALE = 0.2
 NUM_BLOCKS = 6
-UNIFORM_scale = 2
-UNIFORM_OFFSET = UNIFORM_scale / 2
+UNIFORM_SCALE = 2
+UNIFORM_OFFSET = UNIFORM_SCALE / 2
 
 
 def example(render):
@@ -35,7 +35,7 @@ def example(render):
         cube_template_cpy = obj_templates_mgr.get_template_by_handle(
             cube_handle
         )
-        cube_template_cpy.scale = np.array([BLOCK_scale] * 3)
+        cube_template_cpy.scale = np.array([BLOCK_SCALE] * 3)
         obj_templates_mgr.register_template(
             cube_template_cpy, "my_scaled_cube"
         )
@@ -45,7 +45,7 @@ def example(render):
 
             # blocks placed around BLOCK_LOC_CENTER with uniform distribution and range BLOCK_LOC_RANGE
             offset = (
-                np.random.random(3) * UNIFORM_scale - UNIFORM_OFFSET
+                np.random.random(3) * UNIFORM_SCALE - UNIFORM_OFFSET
             ) * BLOCK_LOC_RANGE
             offset[1] = 0  #  no change in z
             obj.translation = BLOCK_LOC_CENTER + offset

@@ -19,7 +19,7 @@ from habitat import logger
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.ddp_utils import (
-    ExiT,
+    EXIT,
     add_signal_handlers,
     get_distrib_size,
     get_free_port_distributed,
@@ -45,7 +45,7 @@ from habitat_baselines.rl.ver.preemption_decider import PreemptionDeciderWorker
 from habitat_baselines.rl.ver.report_worker import ReportWorker
 from habitat_baselines.rl.ver.task_enums import ReportWorkerTasks
 from habitat_baselines.rl.ver.timing import Timing
-from habitat_baselines.rl.ver.ver_rollout_storage import verRolloutStorage
+from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.rl.ver.worker_common import (
     InferenceWorkerSync,
     WorkerBase,
@@ -66,8 +66,8 @@ except AttributeError:
 
 
 @baseline_registry.register_trainer(name="ver")
-class verTrainer(PPOTrainer):
-    rollouts: verRolloutStorage
+class VERTrainer(PPOTrainer):
+    rollouts: VERRolloutStorage
 
     def _init_train(self, resume_state):
         if self._is_distributed:
@@ -125,7 +125,7 @@ class verTrainer(PPOTrainer):
 
         profiling_wrapper.configure(
             capture_start_step=self.config.profiling.capture_start_step,
-            num_steps_to_capture=self.config.profiling.num_steps_TO_CAPTURE,
+            num_steps_to_capture=self.config.profiling.num_steps_to_capture,
         )
 
         self._all_workers: List[WorkerBase] = []
@@ -236,11 +236,11 @@ class verTrainer(PPOTrainer):
                 discrete_actions=discrete_actions,
                 observation_space=rollouts_obs_space,
             )
-            self.rollouts = verRolloutStorage(**storage_kwargs)
+            self.rollouts = VERRolloutStorage(**storage_kwargs)
             self.rollouts.to(self.device)
             self.rollouts.share_memory_()
             if self.ver_config.overlap_rollouts_and_learn:
-                self.learning_rollouts = verRolloutStorage(**storage_kwargs)
+                self.learning_rollouts = VERRolloutStorage(**storage_kwargs)
                 self.learning_rollouts.to(self.device)
             else:
                 self.learning_rollouts = self.rollouts
@@ -249,7 +249,7 @@ class verTrainer(PPOTrainer):
             storage_kwargs["numsteps"] = 1
 
             self._transfer_buffers = (
-                verRolloutStorage(**storage_kwargs)
+                VERRolloutStorage(**storage_kwargs)
                 .buffers.slice_keys(
                     "rewards",
                     "masks",
@@ -477,7 +477,7 @@ class verTrainer(PPOTrainer):
                     self.config,
                 )
 
-            if ExiT.is_set():
+            if EXIT.is_set():
                 profiling_wrapper.range_pop()  # train update
                 [w.close() for w in self._all_workers]
                 [w.join() for w in self._all_workers]

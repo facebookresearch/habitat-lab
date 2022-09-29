@@ -83,7 +83,7 @@ habitat:
 
             drop_obj_should_end: False
             wrong_pick_should_end: False
-        PICK_success:
+        pick_success:
             type: "RearrangePickSuccess"
             ee_resting_success_threshold: 0.15
         num_steps:
@@ -94,7 +94,7 @@ habitat:
             - "force_terminate"
             - "end_effector_to_rest_distance"
             - "end_effector_to_object_distance"
-            - "PICK_success"
+            - "pick_success"
             - "pick_reward"
             - "num_steps"
         actions:
@@ -170,7 +170,7 @@ habitat:
         seed: 100
         semantic_sensor:
             height: 480
-            Hfov: 90
+            hfov: 90
             orientation: [0.0, 0.0, 0.0]
             position: [0, 1.25, 0]
             type: HabitatSimSemanticSensor

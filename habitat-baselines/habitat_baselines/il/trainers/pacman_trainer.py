@@ -643,8 +643,8 @@ class PACMANTrainer(BaseILTrainer):
                     )
 
                 if (
-                    config.eval_SAVE_RESULTS
-                    and t % config.eval_SAVE_RESULTS_INTERVAL == 0
+                    config.eval_save_results
+                    and t % config.eval_save_results_interval == 0
                 ):
                     q_string = q_vocab_dict.token_idx_2_string(question[0])
                     logger.info("Question: {}".format(q_string))

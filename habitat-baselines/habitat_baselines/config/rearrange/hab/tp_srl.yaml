@@ -18,7 +18,7 @@ num_environments: 1
 writer_type: 'tb'
 checkpoint_folder: "data/new_checkpoints"
 num_updates: -1
-TOTAL_num_steps: 1.0e8
+total_num_steps: 1.0e8
 log_interval: 10
 num_checkpoints: 20
 force_torch_single_threaded: True
@@ -27,7 +27,7 @@ eval:
   use_ckpt_config: False
   should_load_ckpt: False
 
-RL:
+rl:
   policy:
       name: "HierarchicalPolicy"
       high_level_policy:
@@ -46,7 +46,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_OPEN_FRIDGE:
@@ -57,7 +57,7 @@ RL:
           OBS_SKILL_INPUTS: []
           LOAD_CKPT_FILE: "data/models/open_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_CAB:
@@ -68,7 +68,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_cab.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_CLOSE_FRIDGE:
@@ -79,7 +79,7 @@ RL:
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/close_fridge.pth"
           MAX_SKILL_STEPS: 200
-          START_ZONE_radius: 0.3
+          start_zone_radius: 0.3
           FORCE_END_ON_TIMEOUT: True
 
         NN_PICK:

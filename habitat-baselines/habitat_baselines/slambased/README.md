@@ -25,7 +25,7 @@ If you use this code or the provided environments in your research, please cite 
 - conda
 - numpy
 - pytorch
-- orbslam2
+- ORBSLAM2
 
 
 ## Tested with:

@@ -20,8 +20,8 @@ LOG_METRICS: True
 OUTPUT_LOG_DIR: data/eqa/nav/logs
 log_interval: 10
 checkpoint_interval: 1
-eval_SAVE_RESULTS: True
-eval_SAVE_RESULTS_INTERVAL: 10
+eval_save_results: True
+eval_save_results_interval: 10
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 force_torch_single_threaded: True

@@ -35,7 +35,7 @@ from habitat_baselines.rl.ver.task_enums import (
     ReportWorkerTasks,
 )
 from habitat_baselines.rl.ver.timing import Timing
-from habitat_baselines.rl.ver.ver_rollout_storage import verRolloutStorage
+from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.rl.ver.worker_common import (
     InferenceWorkerSync,
     ProcessBase,
@@ -60,7 +60,7 @@ class InferenceWorkerProcess(ProcessBase):
     device: torch.device
     rollout_ends: RolloutEarlyEnds
     actor_critic_tensors: List[torch.Tensor] = attr.ib(None, init=False)
-    rollouts: verRolloutStorage = attr.ib(None, init=False)
+    rollouts: VERRolloutStorage = attr.ib(None, init=False)
     replay_reqs: List = attr.ib(factory=list, init=False)
     new_reqs: List = attr.ib(factory=list, init=False)
     _avg_step_time: WindowedRunningMean = attr.ib(
@@ -128,7 +128,7 @@ class InferenceWorkerProcess(ProcessBase):
                 # Otherwise each inference worker needs its own copy.
                 self._update_actor_critic()
 
-    def set_rollouts(self, rollouts: verRolloutStorage):
+    def set_rollouts(self, rollouts: VERRolloutStorage):
         self.rollouts = rollouts
         self._current_policy_version = int(
             self.rollouts.cpu_current_policy_version

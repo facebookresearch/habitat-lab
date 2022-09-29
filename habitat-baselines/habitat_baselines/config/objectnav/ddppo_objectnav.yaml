@@ -21,7 +21,7 @@ force_torch_single_threaded: True
 eval:
   split: "val"
 
-RL:
+rl:
   success_reward: 2.5
   slack_reward: -1e-3
 

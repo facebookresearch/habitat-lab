@@ -17,7 +17,7 @@ num_environments: 32
 sensors: ["head_depth_sensor"]
 checkpoint_folder: "data/new_checkpoints"
 num_updates: -1
-TOTAL_num_steps: 2.5e9
+total_num_steps: 2.5e9
 log_interval: 10
 num_checkpoints: 100
 # Force PyTorch to be single threaded as
@@ -25,7 +25,7 @@ num_checkpoints: 100
 force_torch_single_threaded: True
 
 base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml
-RL:
+rl:
   policy:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"

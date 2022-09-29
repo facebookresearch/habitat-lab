@@ -91,7 +91,7 @@ def test_trainers(config_path, num_updates, trainer_name):
         [
             "num_updates",
             num_updates,
-            "TOTAL_num_steps",
+            "total_num_steps",
             -1.0,
             "checkpoint_folder",
             "data/test_checkpoints/test_training",
@@ -163,7 +163,7 @@ def test_trainers_gym_registry(
         [
             "num_updates",
             num_updates,
-            "TOTAL_num_steps",
+            "total_num_steps",
             -1.0,
             "checkpoint_folder",
             "data/test_checkpoints/test_training",
@@ -233,7 +233,7 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
         [
             "num_updates",
             num_updates,
-            "TOTAL_num_steps",
+            "total_num_steps",
             -1.0,
             "checkpoint_folder",
             "data/test_checkpoints/test_training",

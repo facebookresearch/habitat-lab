@@ -129,11 +129,11 @@ class PointGoalSensor(Sensor):
     Args:
         sim: reference to the simulator for calculating task observations.
         config: config for the PointGoal sensor. Can contain field for
-            goal_format which can be used to specify the format in which
+            `goal_format` which can be used to specify the format in which
             the pointgoal is specified. Current options for goal format are
             cartesian and polar.
 
-            Also contains a dimensionality field which specifes the number
+            Also contains a `dimensionality` field which specifes the number
             of dimensions ued to specify the goal, must be in [2, 3]
 
     Attributes:
@@ -309,11 +309,11 @@ class IntegratedPointGoalGPSAndCompassSensor(PointGoalSensor):
     Args:
         sim: reference to the simulator for calculating task observations.
         config: config for the PointGoal sensor. Can contain field for
-            goal_format which can be used to specify the format in which
+            `goal_format` which can be used to specify the format in which
             the pointgoal is specified. Current options for goal format are
             cartesian and polar.
 
-            Also contains a dimensionality field which specifes the number
+            Also contains a `dimensionality` field which specifes the number
             of dimensions ued to specify the goal, must be in [2, 3]
 
     Attributes:
@@ -417,7 +417,7 @@ class EpisodicGPSSensor(Sensor):
 
     Args:
         sim: reference to the simulator for calculating task observations.
-        config: Contains the dimensionality field for the number of dimensions to express the agents position
+        config: Contains the `dimensionality` field for the number of dimensions to express the agents position
     Attributes:
         _dimensionality: number of dimensions used to specify the agents position
     """
@@ -436,7 +436,7 @@ class EpisodicGPSSensor(Sensor):
         return self.cls_uuid
 
     def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.position
+        return SensorTypes.POSITION
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         sensor_shape = (self._dimensionality,)
@@ -558,8 +558,8 @@ class Success(Measure):
 
 
 @registry.register_measure
-class spl(Measure):
-    r"""spl (Success weighted by Path Length)
+class SPL(Measure):
+    r"""SPL (Success weighted by Path Length)
 
     ref: On Evaluation of Embodied Agents - Anderson et. al
     https://arxiv.org/pdf/1807.06757.pdf
@@ -623,15 +623,15 @@ class spl(Measure):
 
 
 @registry.register_measure
-class Softspl(spl):
-    r"""Soft spl
+class SoftSPL(SPL):
+    r"""Soft SPL
 
     Similar to spl with a relaxed soft-success criteria. Instead of a boolean
     success is now calculated as 1 - (ratio of distance covered to target).
     """
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return "softspl"
+        return "soft_spl"
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(

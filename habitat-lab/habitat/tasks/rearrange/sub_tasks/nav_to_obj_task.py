@@ -19,9 +19,9 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
-    OBJ_type,
+    OBJ_TYPE,
+    RIGID_OBJ_TYPE,
     PddlEntity,
-    RIGID_OBJ_type,
 )
 from habitat.tasks.rearrange.rearrange_task import ADD_CACHE_KEY, RearrangeTask
 from habitat.tasks.rearrange.utils import CacheHelper, rearrange_logger
@@ -117,7 +117,7 @@ class DynNavRLEnv(RearrangeTask):
 
         for entity in self.pddl_problem.all_entities.values():
             if entity.expr_type.is_subtype_of(
-                self.pddl_problem.expr_types[RIGID_OBJ_type]
+                self.pddl_problem.expr_types[RIGID_OBJ_TYPE]
             ):
                 # The robot could be at this object.
                 new_pred = self.pddl_problem.predicates["robot_at"].clone()
@@ -156,7 +156,7 @@ class DynNavRLEnv(RearrangeTask):
         heading_angle = self._sim.robot.base_rot
 
         self._sim.set_state(orig_state, set_hold=True)
-        obj_type = self.pddl_problem.expr_types[OBJ_type]
+        obj_type = self.pddl_problem.expr_types[OBJ_TYPE]
         nav_to_entity = action.get_arg_value("obj")
         if nav_to_entity is None:
             raise ValueError(f"`obj` argument is necessary in action {action}")

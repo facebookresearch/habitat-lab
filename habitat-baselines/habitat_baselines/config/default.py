@@ -42,7 +42,7 @@ _C.num_updates = 10000
 _C.num_checkpoints = 10
 # Number of model updates between checkpoints
 _C.checkpoint_interval = -1
-_C.TOTAL_num_steps = -1.0
+_C.total_num_steps = -1.0
 _C.log_interval = 10
 _C.log_file = "train.log"
 _C.force_blind_policy = False
@@ -128,11 +128,11 @@ _C.rl.policy.action_dist.scheduled_std = False
 # -----------------------------------------------------------------------------
 _C.rl.policy.obs_transforms = CN()
 _C.rl.policy.obs_transforms.enabled_transforms = tuple()
-_C.rl.policy.obs_transforms.CENTER_CROPPER = CN()
-_C.rl.policy.obs_transforms.CENTER_CROPPER.height = 256
-_C.rl.policy.obs_transforms.CENTER_CROPPER.width = 256
-_C.rl.policy.obs_transforms.CENTER_CROPPER.channels_last = True
-_C.rl.policy.obs_transforms.CENTER_CROPPER.trans_keys = (
+_C.rl.policy.obs_transforms.center_cropper = CN()
+_C.rl.policy.obs_transforms.center_cropper.height = 256
+_C.rl.policy.obs_transforms.center_cropper.width = 256
+_C.rl.policy.obs_transforms.center_cropper.channels_last = True
+_C.rl.policy.obs_transforms.center_cropper.trans_keys = (
     "rgb",
     "depth",
     "semantic",
@@ -211,7 +211,7 @@ _C.rl.ppo.use_clipped_value_loss = True
 # Not that this does not change the memory requirements
 _C.rl.ppo.use_double_buffered_sampler = False
 # -----------------------------------------------------------------------------
-# Variable Experience Rollout (ver)
+# Variable Experience Rollout (VER)
 # -----------------------------------------------------------------------------
 _C.rl.ver = CN()
 _C.rl.ver.variable_experience = True
@@ -258,12 +258,12 @@ _C.orbslam2.slam_settings_path = (
 )
 _C.orbslam2.map_cell_size = 0.1
 _C.orbslam2.map_size = 40
-_C.orbslam2.CAMERA_height = (
+_C.orbslam2.camera_height = (
     get_task_config().habitat.simulator.depth_sensor.position[1]
 )
 _C.orbslam2.beta = 100
-_C.orbslam2.h_obstacle_min = 0.3 * _C.orbslam2.CAMERA_height
-_C.orbslam2.h_obstacle_max = 1.0 * _C.orbslam2.CAMERA_height
+_C.orbslam2.h_obstacle_min = 0.3 * _C.orbslam2.camera_height
+_C.orbslam2.h_obstacle_max = 1.0 * _C.orbslam2.camera_height
 _C.orbslam2.d_obstacle_min = 0.1
 _C.orbslam2.d_obstacle_max = 4.0
 _C.orbslam2.preprocess_map = True
@@ -273,8 +273,8 @@ _C.orbslam2.min_pts_in_obstacle = (
 _C.orbslam2.angle_th = float(np.deg2rad(15))
 _C.orbslam2.dist_reached_th = 0.15
 _C.orbslam2.next_waypoint_th = 0.5
-_C.orbslam2.NUM_actions = 3
-_C.orbslam2.DIST_TO_stop = 0.05
+_C.orbslam2.num_actions = 3
+_C.orbslam2.dist_to_stop = 0.05
 _C.orbslam2.planner_max_steps = 500
 _C.orbslam2.depth_denorm = (
     get_task_config().habitat.simulator.depth_sensor.max_depth
@@ -284,7 +284,7 @@ _C.orbslam2.depth_denorm = (
 # -----------------------------------------------------------------------------
 _C.profiling = CN()
 _C.profiling.capture_start_step = -1
-_C.profiling.num_steps_TO_CAPTURE = -1
+_C.profiling.num_steps_to_capture = -1
 
 
 _C.register_renamed_key

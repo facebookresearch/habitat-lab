@@ -9,7 +9,7 @@ from habitat.tasks.rearrange.actions.oracle_nav_action import (
     get_possible_nav_to_actions,
 )
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_type
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
 from habitat.tasks.rearrange.rearrange_sensors import (
     TargetGoalGpsCompassSensor,
     TargetStartGpsCompassSensor,
@@ -122,7 +122,7 @@ class OracleNavPolicy(NnSkillPolicy):
             angle = np.abs(angle)
             ret[env_i] = (
                 dist < self._config.stop_dist_thresh
-                and angle < self._config.stop_angle_thRESH
+                and angle < self._config.stop_angle_thresh
             )
 
         return ret
@@ -158,7 +158,7 @@ class OracleNavPolicy(NnSkillPolicy):
         if match_i is None:
             raise ValueError(f"Cannot find matching action for {skill_arg}")
         is_target_obj = targ_obj.expr_type.is_subtype_of(
-            self._pddl_problem.expr_types[RIGID_OBJ_type]
+            self._pddl_problem.expr_types[RIGID_OBJ_TYPE]
         )
         return OracleNavPolicy.OracleNavActionArgs(
             match_i, is_target_obj, targ_obj_idx

@@ -24,7 +24,7 @@ from habitat.tasks.utils import get_angle
 
 @registry.register_task(name="RearrangePickTask-v0")
 class RearrangePickTaskV1(RearrangeTask):
-    distance_to_RECEPTACLE = 1.0
+    DISTANCE_TO_RECEPTACLE = 1.0
     """
     Rearrange Pick Task with Fetch robot interacting with objects and environment.
     """
@@ -251,7 +251,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 receptacle_ao = mgr.get_object_by_handle(receptacle_handle)
                 start_pos = np.array(
                     receptacle_ao.transformation.transform_point(
-                        mn.Vector3(self.distance_to_RECEPTACLE, 0, 0)
+                        mn.Vector3(self.DISTANCE_TO_RECEPTACLE, 0, 0)
                     )
                 )
             elif (

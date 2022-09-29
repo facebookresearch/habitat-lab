@@ -12,7 +12,7 @@ checkpoint_folder: data/new_checkpoints
 trainer_name: ddppo
 sensors: [depth_sensor, rgb_sensor]
 num_updates: -1
-TOTAL_num_steps: 2.5e9
+total_num_steps: 2.5e9
 log_interval: 10
 num_checkpoints: 100
 # Force PyTorch to be single threaded as
@@ -22,7 +22,7 @@ force_torch_single_threaded: True
 eval:
   split: val
 
-RL:
+rl:
   success_reward: 2.5
   slack_reward: -1e-3
 

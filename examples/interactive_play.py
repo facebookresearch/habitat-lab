@@ -70,8 +70,8 @@ except ImportError:
 
 DEFAULT_CFG = "tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
-save_video_dir = "./data/vids"
-SAVE_actions_DIR = "./data/interactive_play_replays"
+SAVE_VIDEO_DIR = "./data/vids"
+SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 
 def step_env(env, action_name, action_args):
@@ -482,8 +482,8 @@ def play_env(env, args, config):
                 f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
             )
         all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
-        os.makedirs(SAVE_actions_DIR, exist_ok=True)
-        save_path = osp.join(SAVE_actions_DIR, args.save_actions_fname)
+        os.makedirs(SAVE_ACTIONS_DIR, exist_ok=True)
+        save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
             np.save(f, all_arm_actions)
         logger.info(f"Saved actions to {save_path}")
@@ -493,12 +493,12 @@ def play_env(env, args, config):
     if args.save_obs:
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
-        os.makedirs(save_video_dir, exist_ok=True)
+        os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
         vut.make_video(
             np.expand_dims(all_obs, 1),
             0,
             "color",
-            osp.join(save_video_dir, args.save_obs_fname),
+            osp.join(SAVE_VIDEO_DIR, args.save_obs_fname),
         )
     if gfx_measure is not None:
         gfx_str = gfx_measure.get_metric(force_get=True)

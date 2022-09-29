@@ -58,7 +58,7 @@ class MotionPlanner:
         self._ignore_names: List[str] = []
         self.traj_viz_id: Optional[int] = None
         self._sim = sim
-        os.makedirs(self._config.DEBUG_DIR, exist_ok=True)
+        os.makedirs(self._config.debug_dir, exist_ok=True)
 
         self._use_sim = self._get_sim()
         self.grasp_gen: Optional[GraspGenerator] = None
@@ -66,7 +66,7 @@ class MotionPlanner:
     def set_should_render(self, should_render: bool):
         self._should_render = should_render
         if self._should_render:
-            for f in glob.glob(f"{self._config.DEBUG_DIR}/*"):
+            for f in glob.glob(f"{self._config.debug_dir}/*"):
                 os.remove(f)
 
     def _log(self, txt: str):
@@ -92,7 +92,7 @@ class MotionPlanner:
             pic = pic[:, :, :3]
         im = Image.fromarray(pic)
         save_name = "%s/%s%s_%s.jpeg" % (
-            self._config.DEBUG_DIR,
+            self._config.debug_dir,
             before_txt,
             str(uuid.uuid4())[:4],
             add_txt,
@@ -184,9 +184,9 @@ class MotionPlanner:
             self._should_render,
             grasp_thresh,
             n_gen_grasps,
-            self._config.MP_SIM_type == "Priv",
-            self._config.DEBUG_DIR,
-            self._config.GRASP_GEN_IS_verbose,
+            self._config.mp_sim_type == "Priv",
+            self._config.debug_dir,
+            self._config.grasp_gen_is_verbose,
         )
 
     def setup_ee_margin(self, obj_id_target: int):
@@ -380,7 +380,7 @@ class MotionPlanner:
         """
         The two different simulators used for planning.
         """
-        if self._config.MP_SIM_type == "Priv":
+        if self._config.mp_sim_type == "Priv":
             return HabMpSim(self._sim)
         else:
             raise ValueError("Unrecognized simulator type")

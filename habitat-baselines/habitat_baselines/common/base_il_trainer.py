@@ -39,7 +39,7 @@ class BaseILTrainer(BaseTrainer):
         r"""Makes directories for log files, checkpoints & results."""
         self._make_log_dir()
         self._make_ckpt_dir()
-        if self.config.eval_SAVE_RESULTS:
+        if self.config.eval_save_results:
             self._make_results_dir()
 
     def _make_log_dir(self) -> None:

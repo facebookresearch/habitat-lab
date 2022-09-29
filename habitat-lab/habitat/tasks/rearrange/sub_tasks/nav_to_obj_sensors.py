@@ -328,12 +328,12 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class splToObj(GeoMeasure):
+class SPLToObj(GeoMeasure):
     cls_uuid: str = "spl_to_obj"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return splToObj.cls_uuid
+        return SPLToObj.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._start_dist = self._get_cur_geo_dist(task)

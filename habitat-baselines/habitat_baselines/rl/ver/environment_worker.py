@@ -34,7 +34,7 @@ from habitat_baselines.utils.common import (
     is_continuous_action_space,
 )
 
-MIN_sceneS_PER_ENV = 16
+MIN_SCENES_PER_ENV = 16
 
 T = TypeVar("T")
 
@@ -331,7 +331,7 @@ def _create_worker_configs(config: Config):
 
     # We use a minimum number of scenes per environment to reduce bias
     scenes_per_env = max(
-        int(math.ceil(len(scenes) / num_environments)), MIN_sceneS_PER_ENV
+        int(math.ceil(len(scenes) / num_environments)), MIN_SCENES_PER_ENV
     )
     scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
     for idx, scene in enumerate(infinite_shuffling_iterator(scenes)):

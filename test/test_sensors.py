@@ -265,7 +265,7 @@ def test_imagegoal_sensor():
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     config.defrost()
-    config.habitat.task.sensors = ["IMAGEgoal_sensor"]
+    config.habitat.task.sensors = ["imagegoal_sensor"]
     config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
     config.freeze()
     with habitat.Env(config=config, dataset=None) as env:

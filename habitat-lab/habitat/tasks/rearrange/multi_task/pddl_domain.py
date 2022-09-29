@@ -558,7 +558,7 @@ class PddlProblem(PddlDomain):
 
         if expr.quantifier == LogicalQuantifierType.FORALL:
             combine_type = LogicalExprType.AND
-        elif expr.quantifier == LogicalQuantifierType.ExiSTS:
+        elif expr.quantifier == LogicalQuantifierType.EXISTS:
             combine_type = LogicalExprType.OR
         elif expr.quantifier is None:
             return expr

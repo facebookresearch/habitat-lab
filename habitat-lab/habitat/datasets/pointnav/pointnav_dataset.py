@@ -10,7 +10,7 @@ import os
 from typing import List, Optional
 
 from habitat.config import Config
-from habitat.core.dataset import ALL_sceneS_MASK, Dataset
+from habitat.core.dataset import ALL_SCENES_MASK, Dataset
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import (
     NavigationEpisode,
@@ -64,7 +64,7 @@ class PointNavDatasetV1(Dataset):
             )
         else:
             # Load the full dataset, things are not split into separate files
-            cfg.content_scenes = [ALL_sceneS_MASK]
+            cfg.content_scenes = [ALL_SCENES_MASK]
             dataset = cls(cfg)
             return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
@@ -105,7 +105,7 @@ class PointNavDatasetV1(Dataset):
         )
         if has_individual_scene_files:
             scenes = config.content_scenes
-            if ALL_sceneS_MASK in scenes:
+            if ALL_SCENES_MASK in scenes:
                 scenes = self._get_scenes_from_folder(
                     content_scenes_path=self.content_scenes_path,
                     dataset_dir=dataset_dir,

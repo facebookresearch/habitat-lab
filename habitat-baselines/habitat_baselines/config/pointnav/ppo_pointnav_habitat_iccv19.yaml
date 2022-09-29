@@ -20,14 +20,14 @@ eval_ckpt_path_dir: "data/new_checkpoints"
 num_environments: 6
 sensors: ["depth_sensor"]
 checkpoint_folder: "data/new_checkpoints"
-TOTAL_num_steps: 75e6
+total_num_steps: 75e6
 log_interval: 25
 num_checkpoints: 100
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 force_torch_single_threaded: True
 
-RL:
+rl:
   success_reward: 10.0
 
   policy:

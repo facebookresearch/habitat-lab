@@ -255,8 +255,8 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                     )
 
                 if (
-                    config.eval_SAVE_RESULTS
-                    and t % config.eval_SAVE_RESULTS_INTERVAL == 0
+                    config.eval_save_results
+                    and t % config.eval_save_results_interval == 0
                 ):
 
                     result_id = "ckpt_{}_{}".format(

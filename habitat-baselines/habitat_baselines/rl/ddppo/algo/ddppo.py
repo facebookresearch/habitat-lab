@@ -130,5 +130,5 @@ class DecentralizedDistributedMixin:
         )
 
 
-class ddppo(DecentralizedDistributedMixin, PPO):
+class DDPPO(DecentralizedDistributedMixin, PPO):
     pass
