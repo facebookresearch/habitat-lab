@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-r"""Reference python script for profiling DDPPO PointNav on the FAIR internal
+r"""Reference python script for profiling ddppo PointNav on the FAIR internal
 cluster used by the Habitat team. This script can be modified locally to suit
 your needs, for example, to profile a different program or to profile with
 different settings.
@@ -43,9 +43,9 @@ if __name__ == "__main__":
         # steps may suffer from poor agent behavior, too-short episodes, etc. If
         # necessary, capture and inspect a very long-duration profile to
         # determine when your training FPS "settles".
-        # DDPPO PointNav empirical test from Aug 2020, 8 nodes:
+        # ddppo PointNav empirical test from Aug 2020, 8 nodes:
         #   FPS settled at ~190 steps
-        # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
+        # ddppo PointNav empirical test from Oct 2020, 2 nodes:
         #   FPS settled at ~1200 steps
         capture_start_step = 1200
 
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         # happens consistently every update), you don't need a large number
         # here. However, beware overlooking infrequent events like env resets,
         # scene loads, checkpointing, and eval. Beware profile storage
-        # requirement. DDPPO PointNav empirical test from Aug 2020:
+        # requirement. ddppo PointNav empirical test from Aug 2020:
         #   qdrep: 3.3 MB per 100 steps
         #   sqlite: 12 MB per 100 steps
         # These figures are for a single task (see capture_all_tasks below).
@@ -85,9 +85,9 @@ if __name__ == "__main__":
         # duration will cause your slurm job to terminate before profiles are
         # saved. A much-too-large duration may result in a longer wait time
         # before slurm starts your job.
-        # DDPPO PointNav empirical test from Aug 2020, 8 nodes:
+        # ddppo PointNav empirical test from Aug 2020, 8 nodes:
         #   startup time is 2 minutes and 100 steps takes 12 minutes
-        # DDPPO PointNav empirical test from Oct 2020, 2 nodes:
+        # ddppo PointNav empirical test from Oct 2020, 2 nodes:
         #   startup time is 2 minutes and 100 steps takes 5.9 minutes
         buffered_start_minutes = 10
         buffered_minutes_per_100_steps = 8
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         # large profile storage requirement in this case. If False, only one
         # task runs with profiling. The other tasks run without profiling. In
         # theory, all tasks behave similarly and so a single task's profile is
-        # representative of all tasks. In my DDPPO PointNav empirical test from
+        # representative of all tasks. In my ddppo PointNav empirical test from
         # Aug 2020, this was true.
         capture_all_tasks = False
 
@@ -132,9 +132,9 @@ if __name__ == "__main__":
     if do_capture_step_range:
         program_with_extra_args_str = (
             program_str
-            + " PROFILING.CAPTURE_START_STEP "
+            + " profiling.capture_start_step "
             + str(capture_start_step)
-            + " PROFILING.num_steps_TO_CAPTURE "
+            + " profiling.num_steps_TO_CAPTURE "
             + str(num_steps_to_capture)
         )
     else:
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         )
 
     task_capture_str = (
-        """export HABITAT_PROFILING=1
+        """export HABITAT_profiling=1
 export NSYS_NVTX_PROFILER_REGISTER_ONLY=0
 """
         + nsys_path

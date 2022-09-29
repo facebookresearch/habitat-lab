@@ -28,7 +28,7 @@ def get_default_config() -> Config:
     c.INPUT_TYPE = "rgb"
     c.MODEL_PATH = "data/checkpoints/gibson-rgb-best.pth"
     c.RESOLUTION = 256
-    c.HIDDEN_SIZE = 512
+    c.hidden_size = 512
     c.RANDOM_SEED = 7
     c.PTH_GPU_ID = 0
     c.goal_sensor_uuid = "pointgoal_with_gps_compass"
@@ -70,7 +70,7 @@ class PPOAgent(Agent):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        self.hidden_size = config.HIDDEN_SIZE
+        self.hidden_size = config.hidden_size
 
         random.seed(config.RANDOM_SEED)
         torch.random.manual_seed(config.RANDOM_SEED)

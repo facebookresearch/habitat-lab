@@ -20,7 +20,7 @@ from torch import nn
 
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.config.default import get_config
-from habitat_baselines.rl.ddppo.algo import DDPPO
+from habitat_baselines.rl.ddppo.algo import ddppo
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.rl.ppo.policy import PointNavBaselinePolicy
 
@@ -63,8 +63,8 @@ def _worker_fn(
         actor_critic.unused = nn.Linear(64, 64)
 
     actor_critic.to(device=device)
-    ppo_cfg = config.RL.PPO
-    agent = DDPPO(
+    ppo_cfg = config.rl.ppo
+    agent = ddppo(
         actor_critic=actor_critic,
         clip_param=ppo_cfg.clip_param,
         ppo_epoch=ppo_cfg.ppo_epoch,

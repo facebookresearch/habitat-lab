@@ -70,7 +70,7 @@ except ImportError:
 
 DEFAULT_CFG = "tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
-SAVE_VIDEO_DIR = "./data/vids"
+save_video_dir = "./data/vids"
 SAVE_actions_DIR = "./data/interactive_play_replays"
 
 
@@ -493,12 +493,12 @@ def play_env(env, args, config):
     if args.save_obs:
         all_obs = np.array(all_obs)
         all_obs = np.transpose(all_obs, (0, 2, 1, 3))
-        os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
+        os.makedirs(save_video_dir, exist_ok=True)
         vut.make_video(
             np.expand_dims(all_obs, 1),
             0,
             "color",
-            osp.join(SAVE_VIDEO_DIR, args.save_obs_fname),
+            osp.join(save_video_dir, args.save_obs_fname),
         )
     if gfx_measure is not None:
         gfx_str = gfx_measure.get_metric(force_get=True)

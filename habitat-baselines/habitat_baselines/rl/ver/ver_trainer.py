@@ -45,7 +45,7 @@ from habitat_baselines.rl.ver.preemption_decider import PreemptionDeciderWorker
 from habitat_baselines.rl.ver.report_worker import ReportWorker
 from habitat_baselines.rl.ver.task_enums import ReportWorkerTasks
 from habitat_baselines.rl.ver.timing import Timing
-from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
+from habitat_baselines.rl.ver.ver_rollout_storage import verRolloutStorage
 from habitat_baselines.rl.ver.worker_common import (
     InferenceWorkerSync,
     WorkerBase,
@@ -66,16 +66,16 @@ except AttributeError:
 
 
 @baseline_registry.register_trainer(name="ver")
-class VERTrainer(PPOTrainer):
-    rollouts: VERRolloutStorage
+class verTrainer(PPOTrainer):
+    rollouts: verRolloutStorage
 
     def _init_train(self, resume_state):
         if self._is_distributed:
             local_rank, world_rank, _ = get_distrib_size()
 
             self.config.defrost()
-            self.config.TORCH_GPU_ID = local_rank
-            self.config.SIMULATOR_GPU_ID = local_rank
+            self.config.torch_gpu_id = local_rank
+            self.config.simulator_gpu_id = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
             self.config.habitat.seed += (
                 world_rank * self.config.num_environments
@@ -96,7 +96,7 @@ class VERTrainer(PPOTrainer):
         [ew.start() for ew in self.environment_workers]
         [ew.reset() for ew in self.environment_workers]
 
-        if self.config.RL.DDPPO.force_distributed:
+        if self.config.rl.ddppo.force_distributed:
             self._is_distributed = True
 
         if is_slurm_batch_job():
@@ -105,27 +105,27 @@ class VERTrainer(PPOTrainer):
         if self._is_distributed:
             #  os.environ["TORCH_DISTRIBUTED_DEBUG"] = "DETAIL"
             local_rank, tcp_store = init_distrib_slurm(
-                self.config.RL.DDPPO.distrib_backend
+                self.config.rl.ddppo.distrib_backend
             )
             if rank0_only():
                 logger.info(
-                    "Initialized VER+DD-PPO with {} workers".format(
+                    "Initialized ver+DD-PPO with {} workers".format(
                         torch.distributed.get_world_size()
                     )
                 )
         else:
-            logger.info("Initialized VER")
+            logger.info("Initialized ver")
             tcp_store = None
 
         self._last_should_end_val = None
         self._last_should_end_calc_time = 0
 
-        if rank0_only() and self.config.VERBOSE:
+        if rank0_only() and self.config.verbose:
             logger.info(f"config: {self.config}")
 
         profiling_wrapper.configure(
-            capture_start_step=self.config.PROFILING.CAPTURE_START_STEP,
-            num_steps_to_capture=self.config.PROFILING.num_steps_TO_CAPTURE,
+            capture_start_step=self.config.profiling.capture_start_step,
+            num_steps_to_capture=self.config.profiling.num_steps_TO_CAPTURE,
         )
 
         self._all_workers: List[WorkerBase] = []
@@ -189,19 +189,19 @@ class VERTrainer(PPOTrainer):
             action_shape = (1,)
             discrete_actions = True
 
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.rl.ppo
         if torch.cuda.is_available():
-            self.device = torch.device("cuda", self.config.TORCH_GPU_ID)
+            self.device = torch.device("cuda", self.config.torch_gpu_id)
             torch.cuda.set_device(self.device)
         else:
             self.device = torch.device("cpu")
 
-        if rank0_only() and not os.path.exists(self.config.CHECKPOINT_FOLDER):
-            os.makedirs(self.config.CHECKPOINT_FOLDER)
+        if rank0_only() and not os.path.exists(self.config.checkpoint_folder):
+            os.makedirs(self.config.checkpoint_folder)
 
         actor_obs_space = init_reports[0]["obs_space"]
         self.obs_space = copy.deepcopy(actor_obs_space)
-        self.ver_config = self.config.RL.VER
+        self.ver_config = self.config.rl.ver
 
         self._setup_actor_critic_agent(ppo_cfg)
         if resume_state is not None:
@@ -236,11 +236,11 @@ class VERTrainer(PPOTrainer):
                 discrete_actions=discrete_actions,
                 observation_space=rollouts_obs_space,
             )
-            self.rollouts = VERRolloutStorage(**storage_kwargs)
+            self.rollouts = verRolloutStorage(**storage_kwargs)
             self.rollouts.to(self.device)
             self.rollouts.share_memory_()
             if self.ver_config.overlap_rollouts_and_learn:
-                self.learning_rollouts = VERRolloutStorage(**storage_kwargs)
+                self.learning_rollouts = verRolloutStorage(**storage_kwargs)
                 self.learning_rollouts.to(self.device)
             else:
                 self.learning_rollouts = self.rollouts
@@ -249,7 +249,7 @@ class VERTrainer(PPOTrainer):
             storage_kwargs["numsteps"] = 1
 
             self._transfer_buffers = (
-                VERRolloutStorage(**storage_kwargs)
+                verRolloutStorage(**storage_kwargs)
                 .buffers.slice_keys(
                     "rewards",
                     "masks",
@@ -290,7 +290,7 @@ class VERTrainer(PPOTrainer):
             self.queues,
             self._iw_sync,
             self._transfer_buffers,
-            self.config.RL.POLICY.name,
+            self.config.rl.policy.name,
             (self.config, self.obs_space, self.policy_action_space),
             self.device,
             self.preemption_decider.rollout_ends,
@@ -359,7 +359,7 @@ class VERTrainer(PPOTrainer):
     @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self):
         torch.backends.cudnn.benchmark = True
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.rl.ppo
 
         with self.timer.avg_time("learn"):
 
@@ -444,7 +444,7 @@ class VERTrainer(PPOTrainer):
             ]
             count_checkpoints = requeue_stats["count_checkpoints"]
 
-        ppo_cfg = self.config.RL.PPO
+        ppo_cfg = self.config.rl.ppo
         if self.ver_config.overlap_rollouts_and_learn:
             self.preemption_decider.start_rollout()
 

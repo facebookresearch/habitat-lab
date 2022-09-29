@@ -74,7 +74,7 @@ def construct_envs(
             task_config.dataset.content_scenes = scene_splits[i]
 
         task_config.simulator.habitat_sim_v0.gpu_device_id = (
-            config.SIMULATOR_GPU_ID
+            config.simulator_gpu_id
         )
 
         task_config.simulator.agent_0.sensors = config.sensors

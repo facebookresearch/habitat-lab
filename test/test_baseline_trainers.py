@@ -103,7 +103,7 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
             [
                 "habitat.simulator.habitat_sim_v0.gpu_gpu",
                 str(gpu2gpu),
-                "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
+                "RL.policy.obs_transforms.enabled_transforms",
                 str(tuple(observation_transforms)),
             ],
         )
@@ -142,15 +142,15 @@ def test_ver_trainer(
             [
                 "num_environments",
                 4,
-                "TRAINER_NAME",
+                "trainer_name",
                 "ver",
-                "RL.VER.variable_experience",
+                "RL.ver.variable_experience",
                 str(variable_experience),
-                "RL.VER.overlap_rollouts_and_learn",
+                "RL.ver.overlap_rollouts_and_learn",
                 str(overlap_rollouts_and_learn),
-                "RL.POLICY.OBS_TRANSFORMS.ENABLED_TRANSFORMS",
+                "RL.policy.obs_transforms.enabled_transforms",
                 "['CenterCropper', 'ResizeShortestEdge']",
-                "NUM_UPDATES",
+                "num_updates",
                 2,
                 "TOTAL_num_steps",
                 -1.0,
@@ -225,11 +225,11 @@ def test_cubemap_stiching(
     meta_config.habitat = config
     meta_config.sensors = config.habitat.simulator.agent_0.sensors
     if camera == "equirect":
-        meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2EQ.SENSOR_UUIDS = tuple(
+        meta_config.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
             sensor_uuids
         )
     elif camera == "fisheye":
-        meta_config.RL.POLICY.OBS_TRANSFORMS.CUBE2FISH.SENSOR_UUIDS = tuple(
+        meta_config.rl.policy.obs_transforms.cube2fish.sensor_uuids = tuple(
             sensor_uuids
         )
     meta_config.freeze()
@@ -301,25 +301,25 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["VIDEO_OPTION", "[]"]
-    eval_opts = ["VIDEO_OPTION", "['disk']"]
+    ckpt_opts = ["video_option", "[]"]
+    eval_opts = ["video_option", "['disk']"]
 
     ckpt_cfg = get_config(None, ckpt_opts)
-    assert ckpt_cfg.VIDEO_OPTION == []
-    assert ckpt_cfg.CMD_TRAILING_OPTS == ["VIDEO_OPTION", "[]"]
+    assert ckpt_cfg.video_option == []
+    assert ckpt_cfg.cmd_trailing_opts == ["video_option", "[]"]
 
     eval_cfg = get_config(None, eval_opts)
-    assert eval_cfg.VIDEO_OPTION == ["disk"]
-    assert eval_cfg.CMD_TRAILING_OPTS == ["VIDEO_OPTION", "['disk']"]
+    assert eval_cfg.video_option == ["disk"]
+    assert eval_cfg.cmd_trailing_opts == ["video_option", "['disk']"]
 
     trainer = BaseRLTrainer(get_config())
-    assert trainer.config.VIDEO_OPTION == ["disk", "tensorboard"]
+    assert trainer.config.video_option == ["disk", "tensorboard"]
     returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
-    assert returned_config.VIDEO_OPTION == []
+    assert returned_config.video_option == []
 
     trainer = BaseRLTrainer(eval_cfg)
     returned_config = trainer._setup_eval_config(ckpt_cfg)
-    assert returned_config.VIDEO_OPTION == ["disk"]
+    assert returned_config.video_option == ["disk"]
 
 
 def __do_pause_test(num_envs, envs_to_pause):

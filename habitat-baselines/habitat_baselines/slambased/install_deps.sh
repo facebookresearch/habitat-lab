@@ -47,7 +47,7 @@ rm ORB_SLAM2-PythonBindings -rf
 git clone https://github.com/ducha-aiki/ORB_SLAM2
 git clone https://github.com/ducha-aiki/ORB_SLAM2-PythonBindings
 cd "${MAINDIR}"/ORB_SLAM2 || exit
-sed -i "s,cmake .. -DCMAKE_BUILD_type=Release,cmake .. -DCMAKE_BUILD_type=Release -DEIGEN3_INCLUDE_DIR=${MAINDIR}/eigen3_installed/include/eigen3/ -DCMAKE_INSTALL_PREFIX=${MAINDIR}/ORBSLAM2_installed ,g" build.sh
+sed -i "s,cmake .. -DCMAKE_BUILD_type=Release,cmake .. -DCMAKE_BUILD_type=Release -DEIGEN3_INCLUDE_DIR=${MAINDIR}/eigen3_installed/include/eigen3/ -DCMAKE_INSTALL_PREFIX=${MAINDIR}/orbslam2_installed ,g" build.sh
 ln -s "${MAINDIR}"/eigen3_installed/include/eigen3/Eigen "${MAINDIR}"/ORB_SLAM2/Thirdparty/g2o/g2o/core/Eigen
 ./build.sh
 cd build || exit
@@ -61,7 +61,7 @@ cd build || exit
 CONDA_DIR="$(dirname $(dirname $(which conda)))"
 CONDA_DIR=\"${CONDA_DIR}/envs/HandcraftedAgents/lib/python3.7/site-packages/\"
 sed -i "s,lib/python3.5/dist-packages,${CONDA_DIR},g" ../CMakeLists.txt
-cmake .. -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")/libpython3.7m.so -DPYTHON_EXECUTABLE:FILEPATH=$(which python) -DCMAKE_LIBRARY_PATH="${MAINDIR}"/ORBSLAM2_installed/lib -DCMAKE_INCLUDE_PATH="${MAINDIR}"/ORBSLAM2_installed/include;"${MAINDIR}"/eigen3_installed/include/eigen3 -DCMAKE_INSTALL_PREFIX="${MAINDIR}"/pyorbslam2_installed
+cmake .. -DPYTHON_INCLUDE_DIR=$(python -c "from distutils.sysconfig import get_python_inc; print(get_python_inc())") -DPYTHON_LIBRARY=$(python -c "import distutils.sysconfig as sysconfig; print(sysconfig.get_config_var('LIBDIR'))")/libpython3.7m.so -DPYTHON_EXECUTABLE:FILEPATH=$(which python) -DCMAKE_LIBRARY_PATH="${MAINDIR}"/orbslam2_installed/lib -DCMAKE_INCLUDE_PATH="${MAINDIR}"/orbslam2_installed/include;"${MAINDIR}"/eigen3_installed/include/eigen3 -DCMAKE_INSTALL_PREFIX="${MAINDIR}"/pyorbslam2_installed
 make
 make install
 cp "${MAINDIR}"/ORB_SLAM2/Vocabulary/ORBvoc.txt "${DIR1}"/data/

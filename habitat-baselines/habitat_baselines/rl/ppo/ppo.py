@@ -17,7 +17,7 @@ from torch import Tensor
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
-from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
+from habitat_baselines.rl.ver.ver_rollout_storage import verRolloutStorage
 from habitat_baselines.utils.common import (
     LagrangeInequalityCoefficient,
     inference_mode,
@@ -300,7 +300,7 @@ class PPO(nn.Module):
                             batch["is_stale"].float().mean()
                         )
 
-                    if isinstance(rollouts, VERRolloutStorage):
+                    if isinstance(rollouts, verRolloutStorage):
                         assert isinstance(
                             batch["policy_version"], torch.Tensor
                         )

@@ -208,7 +208,7 @@ def test_tp_srl(test_cfg_path, mode):
     run_exp(
         test_cfg_path,
         mode,
-        ["EVAL.split", "train"],
+        ["eval.split", "train"],
     )
 
     # Needed to destroy the trainer

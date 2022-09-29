@@ -225,7 +225,7 @@ class HierarchicalPolicy(Policy):
         **kwargs,
     ):
         return cls(
-            config.RL.POLICY,
+            config.rl.policy,
             config,
             observation_space,
             orig_action_space,

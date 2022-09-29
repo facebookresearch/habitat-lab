@@ -1,7 +1,7 @@
-BASE_TASK_CONFIG_PATH: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
+base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
 
 SENSE_PLAN_ACT:
-  VERBOSE: True
+  verbose: True
   RUN_FREQ: 2
   KINEMATIC_CTRL: True
   N_GRASPS: 100
@@ -12,10 +12,10 @@ SENSE_PLAN_ACT:
   EXEC_EE_THRESH: 0.1
   # "Priv" or "Reg"
   MP_SIM_type: "Priv"
-  VIDEO_DIR: 'data/vids'
+  video_dir: 'data/vids'
   DEBUG_DIR: "data/mp_test"
   count_obj_collisions: True
-  GRASP_GEN_IS_VERBOSE: True
+  GRASP_GEN_IS_verbose: True
   IK_dist_thresh: 0.1
 
 habitat:
@@ -31,7 +31,7 @@ RL:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     easy_init: False
-VIDEO_DIR: "data/vids/"
-VIDEO_OPTIONS: ["disk"]
+video_dir: "data/vids/"
+video_optionS: ["disk"]
 
 count_obj_collisions: True

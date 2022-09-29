@@ -69,10 +69,10 @@ def is_slurm_batch_job() -> bool:
 def resume_state_filename(config: Config, filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
-    if is_slurm_job() and config.RL.preemption.append_slurm_job_id:
+    if is_slurm_job() and config.rl.preemption.append_slurm_job_id:
         fname += "-{}".format(SLURM_JOBID)
 
-    return osp.join(config.CHECKPOINT_FOLDER, fname) + filename_key + ".pth"
+    return osp.join(config.checkpoint_folder, fname) + filename_key + ".pth"
 
 
 @overload
@@ -235,7 +235,7 @@ def get_distrib_size() -> Tuple[int, int, int]:
     if os.environ.get("LOCAL_RANK", None) is not None:
         local_rank = int(os.environ["LOCAL_RANK"])
         world_rank = int(os.environ["RANK"])
-        world_size = int(os.environ["WORLD_SIZE"])
+        world_size = int(os.environ["WORLD_size"])
     # Else parse from SLURM is using SLURM
     elif os.environ.get("SLURM_JOBID", None) is not None:
         local_rank = int(os.environ["SLURM_LOCALID"])

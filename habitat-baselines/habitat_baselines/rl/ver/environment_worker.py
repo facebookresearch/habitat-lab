@@ -312,7 +312,7 @@ def _make_proc_config(config, rank, scenes=None, scene_splits=None):
         task_config.dataset.content_scenes = scene_splits[rank]
 
     task_config.simulator.habitat_sim_v0.gpu_device_id = (
-        config.SIMULATOR_GPU_ID
+        config.simulator_gpu_id
     )
 
     task_config.simulator.agent_0.sensors = config.sensors

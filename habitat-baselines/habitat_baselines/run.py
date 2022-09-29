@@ -61,11 +61,11 @@ def execute_exp(config: Config, run_type: str) -> None:
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
     torch.manual_seed(config.habitat.seed)
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if config.force_torch_single_threaded and torch.cuda.is_available():
         torch.set_num_threads(1)
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(config.trainer_name)
+    assert trainer_init is not None, f"{config.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     if run_type == "train":

@@ -76,16 +76,16 @@ def make_good_config_for_orbslam2(config):
     config.habitat.simulator.rgb_sensor.height = 256
     config.habitat.simulator.depth_sensor.width = 256
     config.habitat.simulator.depth_sensor.height = 256
-    config.TRAINER.ORBSLAM2.CAMERA_height = (
+    config.TRAINER.orbslam2.CAMERA_height = (
         config.habitat.simulator.depth_sensor.position[1]
     )
-    config.TRAINER.ORBSLAM2.H_OBSTACLE_MIN = (
-        0.3 * config.TRAINER.ORBSLAM2.CAMERA_height
+    config.TRAINER.orbslam2.h_obstacle_min = (
+        0.3 * config.TRAINER.orbslam2.CAMERA_height
     )
-    config.TRAINER.ORBSLAM2.H_OBSTACLE_MAX = (
-        1.0 * config.TRAINER.ORBSLAM2.CAMERA_height
+    config.TRAINER.orbslam2.h_obstacle_max = (
+        1.0 * config.TRAINER.orbslam2.CAMERA_height
     )
-    config.TRAINER.ORBSLAM2.MIN_PTS_IN_OBSTACLE = (
+    config.TRAINER.orbslam2.min_pts_in_obstacle = (
         config.habitat.simulator.depth_sensor.width / 2.0
     )
     return
@@ -131,7 +131,7 @@ class BlindAgent(RandomAgent):
     def __init__(self, config):
         super(BlindAgent, self).__init__(config)
         self.pos_th = config.DIST_TO_stop
-        self.angle_th = config.ANGLE_TH
+        self.angle_th = config.angle_th
         self.reset()
         return
 
@@ -170,14 +170,14 @@ class BlindAgent(RandomAgent):
         return {"action": action}
 
 
-class ORBSLAM2Agent(RandomAgent):
+class orbslam2Agent(RandomAgent):
     def __init__(self, config, device=torch.device("cuda:0")):  # noqa: B008
-        super(ORBSLAM2Agent, self).__init__(config)
+        super(orbslam2Agent, self).__init__(config)
         self.num_actions = config.NUM_actions
         self.dist_threshold_to_stop = config.DIST_TO_stop
-        self.slam_vocab_path = config.SLAM_VOCAB_PATH
+        self.slam_vocab_path = config.slam_vocab_path
         assert os.path.isfile(self.slam_vocab_path)
-        self.slam_settings_path = config.SLAM_SETTINGS_PATH
+        self.slam_settings_path = config.slam_settings_path
         assert os.path.isfile(self.slam_settings_path)
         self.slam = orbslam2.System(
             self.slam_vocab_path, self.slam_settings_path, orbslam2.Sensor.RGBD
@@ -185,28 +185,28 @@ class ORBSLAM2Agent(RandomAgent):
         self.slam.set_use_viewer(False)
         self.slam.initialize()
         self.device = device
-        self.map_size_meters = config.MAP_SIZE
-        self.map_cell_size = config.MAP_CELL_SIZE
-        self.pos_th = config.DIST_REACHED_TH
-        self.next_wp_th = config.NEXT_WAYPOINT_TH
-        self.angle_th = config.ANGLE_TH
-        self.obstacle_th = config.MIN_PTS_IN_OBSTACLE
-        self.depth_denorm = config.DEPTH_DENORM
+        self.map_size_meters = config.map_size
+        self.map_cell_size = config.map_cell_size
+        self.pos_th = config.dist_reached_th
+        self.next_wp_th = config.next_waypoint_th
+        self.angle_th = config.angle_th
+        self.obstacle_th = config.min_pts_in_obstacle
+        self.depth_denorm = config.depth_denorm
         self.planned_waypoints = []
         self.mapper = DirectDepthMapper(
             camera_height=config.CAMERA_height,
-            near_th=config.D_OBSTACLE_MIN,
-            far_th=config.D_OBSTACLE_MAX,
-            h_min=config.H_OBSTACLE_MIN,
-            h_max=config.H_OBSTACLE_MAX,
-            map_size=config.MAP_SIZE,
-            map_cell_size=config.MAP_CELL_SIZE,
+            near_th=config.d_obstacle_min,
+            far_th=config.d_obstacle_max,
+            h_min=config.h_obstacle_min,
+            h_max=config.h_obstacle_max,
+            map_size=config.map_size,
+            map_cell_size=config.map_cell_size,
             device=device,
         )
         self.planner = DifferentiableStarPlanner(
-            max_steps=config.PLANNER_MAX_STEPS,
-            preprocess=config.PREPROCESS_MAP,
-            beta=config.BETA,
+            max_steps=config.planner_max_steps,
+            preprocess=config.preprocess_map,
+            beta=config.beta,
             device=device,
         )
         self.slam_to_world = 1.0
@@ -216,7 +216,7 @@ class ORBSLAM2Agent(RandomAgent):
         return
 
     def reset(self):
-        super(ORBSLAM2Agent, self).reset()
+        super(orbslam2Agent, self).reset()
         self.offset_to_goal = None
         self.tracking_is_OK = False
         self.waypointPose6D = None
@@ -242,7 +242,7 @@ class ORBSLAM2Agent(RandomAgent):
         return
 
     def update_internal_state(self, habitat_observation):
-        super(ORBSLAM2Agent, self).update_internal_state(habitat_observation)
+        super(orbslam2Agent, self).update_internal_state(habitat_observation)
         self.cur_time += self.timestep
         rgb, depth = self.rgb_d_from_observation(habitat_observation)
         t = time.time()
@@ -524,19 +524,19 @@ class ORBSLAM2Agent(RandomAgent):
         return command
 
 
-class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
+class orbslam2MonodepthAgent(orbslam2Agent):
     def __init__(
         self,
         config,
         device=torch.device("cuda:0"),  # noqa: B008
         monocheckpoint="habitat_baselines/slambased/data/mp3d_resnet50.pth",
     ):
-        super(ORBSLAM2MonodepthAgent, self).__init__(config)
+        super(orbslam2MonodepthAgent, self).__init__(config)
         self.num_actions = config.NUM_actions
         self.dist_threshold_to_stop = config.DIST_TO_stop
-        self.slam_vocab_path = config.SLAM_VOCAB_PATH
+        self.slam_vocab_path = config.slam_vocab_path
         assert os.path.isfile(self.slam_vocab_path)
-        self.slam_settings_path = config.SLAM_SETTINGS_PATH
+        self.slam_settings_path = config.slam_settings_path
         assert os.path.isfile(self.slam_settings_path)
         self.slam = orbslam2.System(
             self.slam_vocab_path, self.slam_settings_path, orbslam2.Sensor.RGBD
@@ -544,28 +544,28 @@ class ORBSLAM2MonodepthAgent(ORBSLAM2Agent):
         self.slam.set_use_viewer(False)
         self.slam.initialize()
         self.device = device
-        self.map_size_meters = config.MAP_SIZE
-        self.map_cell_size = config.MAP_CELL_SIZE
-        self.pos_th = config.DIST_REACHED_TH
-        self.next_wp_th = config.NEXT_WAYPOINT_TH
-        self.angle_th = config.ANGLE_TH
-        self.obstacle_th = config.MIN_PTS_IN_OBSTACLE
-        self.depth_denorm = config.DEPTH_DENORM
+        self.map_size_meters = config.map_size
+        self.map_cell_size = config.map_cell_size
+        self.pos_th = config.dist_reached_th
+        self.next_wp_th = config.next_waypoint_th
+        self.angle_th = config.angle_th
+        self.obstacle_th = config.min_pts_in_obstacle
+        self.depth_denorm = config.depth_denorm
         self.planned_waypoints = []
         self.mapper = DirectDepthMapper(
             camera_height=config.CAMERA_height,
-            near_th=config.D_OBSTACLE_MIN,
-            far_th=config.D_OBSTACLE_MAX,
-            h_min=config.H_OBSTACLE_MIN,
-            h_max=config.H_OBSTACLE_MAX,
-            map_size=config.MAP_SIZE,
-            map_cell_size=config.MAP_CELL_SIZE,
+            near_th=config.d_obstacle_min,
+            far_th=config.d_obstacle_max,
+            h_min=config.h_obstacle_min,
+            h_max=config.h_obstacle_max,
+            map_size=config.map_size,
+            map_cell_size=config.map_cell_size,
             device=device,
         )
         self.planner = DifferentiableStarPlanner(
-            max_steps=config.PLANNER_MAX_STEPS,
-            preprocess=config.PREPROCESS_MAP,
-            beta=config.BETA,
+            max_steps=config.planner_max_steps,
+            preprocess=config.preprocess_map,
+            beta=config.beta,
             device=device,
         )
         self.slam_to_world = 1.0
@@ -615,11 +615,11 @@ def main():
     make_good_config_for_orbslam2(config)
 
     if args.agent_type == "blind":
-        agent = BlindAgent(config.TRAINER.ORBSLAM2)
+        agent = BlindAgent(config.TRAINER.orbslam2)
     elif args.agent_type == "orbslam2-rgbd":
-        agent = ORBSLAM2Agent(config.TRAINER.ORBSLAM2)
+        agent = orbslam2Agent(config.TRAINER.orbslam2)
     elif args.agent_type == "orbslam2-rgb-monod":
-        agent = ORBSLAM2MonodepthAgent(config.TRAINER.ORBSLAM2)
+        agent = orbslam2MonodepthAgent(config.TRAINER.orbslam2)
     else:
         raise ValueError(args.agent_type, "is unknown type of agent")
     benchmark = habitat.Benchmark(args.task_config)

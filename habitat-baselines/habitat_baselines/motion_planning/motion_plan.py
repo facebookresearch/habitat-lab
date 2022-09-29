@@ -73,7 +73,7 @@ class MotionPlanner:
         """
         Logs text to console only if logging is enabled.
         """
-        if self._config.VERBOSE:
+        if self._config.verbose:
             print("MP:", txt)
 
     @property
@@ -186,7 +186,7 @@ class MotionPlanner:
             n_gen_grasps,
             self._config.MP_SIM_type == "Priv",
             self._config.DEBUG_DIR,
-            self._config.GRASP_GEN_IS_VERBOSE,
+            self._config.GRASP_GEN_IS_verbose,
         )
 
     def setup_ee_margin(self, obj_id_target: int):
@@ -285,7 +285,7 @@ class MotionPlanner:
 
         if joint_plan is None:
             self._mp_space.render_start_targ(
-                self._run_cfg.VIDEO_DIR,
+                self._run_cfg.video_dir,
                 "mp_fail",
                 robot_target.ee_target_pos,
                 f"ep{self._sim.ep_info['episode_id']}",
@@ -364,7 +364,7 @@ class MotionPlanner:
         else:
             dist_to_goal = -1.0  # type: ignore[assignment]
 
-        save_dir = osp.join(self._run_cfg.VIDEO_DIR, "mp_plans")
+        save_dir = osp.join(self._run_cfg.video_dir, "mp_plans")
         os.makedirs(save_dir, exist_ok=True)
         mp_name = "ep%s_%i_%.3f" % (
             self._sim.ep_info["episode_id"],

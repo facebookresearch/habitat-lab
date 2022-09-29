@@ -74,7 +74,7 @@ def generate_ver_mini_batches(
     last_sequence_in_batch_mask: np.ndarray,
     episode_ids: np.ndarray,
 ) -> Iterator[np.ndarray]:
-    r"""Generate mini-batches for VER.
+    r"""Generate mini-batches for ver.
 
     This works by taking all the sequences of experience, putting them in a random order,
     and then slicing their steps into :ref:`num_mini_batch` batches.
@@ -119,8 +119,8 @@ def generate_ver_mini_batches(
         ]
 
 
-class VERRolloutStorage(RolloutStorage):
-    r"""Rollout storage for VER."""
+class verRolloutStorage(RolloutStorage):
+    r"""Rollout storage for ver."""
     ptr: np.ndarray
     prev_inds: np.ndarray
     num_steps_collected: np.ndarray
@@ -235,7 +235,7 @@ class VERRolloutStorage(RolloutStorage):
         )
 
         if self.variable_experience:
-            # In VER mode, there isn't a clean assignment from
+            # In ver mode, there isn't a clean assignment from
             # (env_id, current_step) to place in the rollouts storage
             # anymore. Instead we treat this as just a linear buffer
             # and write into that.
@@ -286,7 +286,7 @@ class VERRolloutStorage(RolloutStorage):
         # On unpickle, we reset the aux buffers.
         self._set_aux_buffers()
 
-    def copy(self, other: "VERRolloutStorage"):
+    def copy(self, other: "verRolloutStorage"):
         self.buffers[:] = other.buffers
         self._aux_buffers[:] = other._aux_buffers
 
@@ -405,7 +405,7 @@ class VERRolloutStorage(RolloutStorage):
         self.current_rollout_step_idxs[0] = self.num_steps + 1
 
         if self.use_is_coeffs:
-            # To correct for the biased sampling in VER, we use importance
+            # To correct for the biased sampling in ver, we use importance
             # sampling weighting. To do this we must count the number of
             # steps of experience we got from each environment
             assert isinstance(self.buffers["environment_ids"], torch.Tensor)

@@ -45,7 +45,7 @@ class PACMANTrainer(BaseILTrainer):
         super().__init__(config)
 
         self.device = (
-            torch.device("cuda", self.config.TORCH_GPU_ID)
+            torch.device("cuda", self.config.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -182,7 +182,7 @@ class PACMANTrainer(BaseILTrainer):
 
             with TensorboardWriter(
                 "train_{}/{}".format(
-                    config.TENSORBOARD_DIR,
+                    config.tensorboard_dir,
                     datetime.today().strftime("%Y-%m-%d-%H:%M"),
                 ),
                 flush_secs=self.flush_secs,
@@ -288,7 +288,7 @@ class PACMANTrainer(BaseILTrainer):
                         avg_p_loss += planner_loss
                         avg_c_loss += controller_loss
 
-                        if t % config.LOG_INTERVAL == 0:
+                        if t % config.log_interval == 0:
                             logger.info("Epoch: {}".format(epoch))
                             logger.info(metrics.get_stat_string())
 
@@ -326,7 +326,7 @@ class PACMANTrainer(BaseILTrainer):
 
                     print("-----------------------------------------")
 
-                    if epoch % config.CHECKPOINT_INTERVAL == 0:
+                    if epoch % config.checkpoint_interval == 0:
                         self.save_checkpoint(
                             model.state_dict(), "epoch_{}.ckpt".format(epoch)
                         )
@@ -352,7 +352,7 @@ class PACMANTrainer(BaseILTrainer):
         config = self.config
 
         config.defrost()
-        config.habitat.dataset.split = self.config.EVAL.split
+        config.habitat.dataset.split = self.config.eval.split
         config.freeze()
 
         with habitat.Env(config.habitat) as env:
@@ -380,7 +380,7 @@ class PACMANTrainer(BaseILTrainer):
             model.eval().to(self.device)
 
             results_dir = config.RESULTS_DIR.format(split="val")
-            video_option = self.config.VIDEO_OPTION
+            video_option = self.config.video_option
 
             metrics = NavMetric(
                 info={"split": "val"},
@@ -627,14 +627,14 @@ class PACMANTrainer(BaseILTrainer):
                 # update metrics
                 metrics.update(metrics_list)
 
-                if t % config.LOG_INTERVAL == 0:
+                if t % config.log_interval == 0:
                     logger.info(
                         "Valid cases: {}; Invalid cases: {}".format(
                             (t + 1) * 8 - len(invalids), len(invalids)
                         )
                     )
                     logger.info(
-                        "EVAL: Avg metrics: {}".format(
+                        "eval: Avg metrics: {}".format(
                             metrics.get_stat_string(mode=0)
                         )
                     )
@@ -643,8 +643,8 @@ class PACMANTrainer(BaseILTrainer):
                     )
 
                 if (
-                    config.EVAL_SAVE_RESULTS
-                    and t % config.EVAL_SAVE_RESULTS_INTERVAL == 0
+                    config.eval_SAVE_RESULTS
+                    and t % config.eval_SAVE_RESULTS_INTERVAL == 0
                 ):
                     q_string = q_vocab_dict.token_idx_2_string(question[0])
                     logger.info("Question: {}".format(q_string))

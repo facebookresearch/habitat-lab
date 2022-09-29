@@ -122,7 +122,7 @@ class OracleNavPolicy(NnSkillPolicy):
             angle = np.abs(angle)
             ret[env_i] = (
                 dist < self._config.stop_dist_thresh
-                and angle < self._config.stop_ANGLE_THRESH
+                and angle < self._config.stop_angle_thRESH
             )
 
         return ret

@@ -57,7 +57,7 @@ Results from evaluation are stored in `data/eqa/eqa_cnn_pretrain/results/val`.
 
 Pre-trained EQA-CNN-Pretrain model can be downloaded from [here](https://drive.google.com/drive/folders/1yO8Pnyt-oxqAz0ozxwyI3OcaFRiKZKgd?usp=sharing).
 
-After downloading the pre-trained model, it's path needs to be added to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation.
+After downloading the pre-trained model, it's path needs to be added to the config file's `eval_ckpt_path_dir` parameter for evaluation.
 
 ### Example results:
 
@@ -90,7 +90,7 @@ Training checkpoints are by default stored in `data/eqa/vqa/checkpoints`.
 
 Pre-trained VQA model can be downloaded from [here](https://drive.google.com/file/d/1frhIlgF1BpBT_vnRt7J5txlnfvgwXLeq/view?usp=sharing).
 
-After downloading the pre-trained model, add it's path to the config file's `EVAL_CKPT_PATH_DIR` parameter for evaluation.
+After downloading the pre-trained model, add it's path to the config file's `eval_ckpt_path_dir` parameter for evaluation.
 
 ### Eval:
 
