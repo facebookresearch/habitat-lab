@@ -25,7 +25,7 @@ num_checkpoints: 100
 force_torch_single_threaded: True
 
 rl:
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 4

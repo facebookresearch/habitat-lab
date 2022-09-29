@@ -25,7 +25,7 @@ rl:
   policy:
     name: "PointNavResNetPolicy"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2

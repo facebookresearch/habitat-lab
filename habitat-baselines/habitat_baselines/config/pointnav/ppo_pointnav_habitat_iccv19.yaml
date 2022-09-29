@@ -33,7 +33,7 @@ rl:
   policy:
     name: "PointNavBaselinePolicy"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.1
     ppo_epoch: 4

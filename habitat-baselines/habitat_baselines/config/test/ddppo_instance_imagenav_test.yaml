@@ -32,7 +32,7 @@ rl:
       resize_shortest_edge:
         trans_keys: [rgb, depth, semantic, instance_imagegoal]
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2

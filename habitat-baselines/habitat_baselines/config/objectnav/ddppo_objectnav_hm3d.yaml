@@ -30,7 +30,7 @@ rl:
     obs_transforms:
       enabled_transforms: ("ResizeShortestEdge", "CenterCropper")
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 4

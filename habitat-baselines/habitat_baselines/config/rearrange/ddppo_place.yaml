@@ -33,7 +33,7 @@ rl:
       action_dist:
          use_log_std: True
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2

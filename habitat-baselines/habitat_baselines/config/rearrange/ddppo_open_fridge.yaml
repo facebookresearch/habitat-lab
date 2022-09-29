@@ -31,7 +31,7 @@ rl:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2

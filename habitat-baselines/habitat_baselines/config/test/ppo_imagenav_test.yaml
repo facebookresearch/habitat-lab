@@ -16,7 +16,7 @@ test_episode_count: 2
 force_torch_single_threaded: True
 
 rl:
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.1
     ppo_epoch: 4

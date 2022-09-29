@@ -138,7 +138,7 @@ rl:
         wait: "WAIT_SKILL"
         reset_arm: "RESET_ARM_SKILL"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2
