@@ -103,7 +103,7 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
             [
                 "habitat.simulator.habitat_sim_v0.gpu_gpu",
                 str(gpu2gpu),
-                "RL.policy.obs_transforms.enabled_transforms",
+                "rl.policy.obs_transforms.enabled_transforms",
                 str(tuple(observation_transforms)),
             ],
         )
@@ -144,19 +144,19 @@ def test_ver_trainer(
                 4,
                 "trainer_name",
                 "ver",
-                "RL.ver.variable_experience",
+                "rl.ver.variable_experience",
                 str(variable_experience),
-                "RL.ver.overlap_rollouts_and_learn",
+                "rl.ver.overlap_rollouts_and_learn",
                 str(overlap_rollouts_and_learn),
-                "RL.policy.obs_transforms.enabled_transforms",
+                "rl.policy.obs_transforms.enabled_transforms",
                 "['CenterCropper', 'ResizeShortestEdge']",
                 "num_updates",
                 2,
                 "total_num_steps",
                 -1.0,
-                "RL.preemption.save_state_batch_only",
+                "rl.preemption.save_state_batch_only",
                 True,
-                "RL.PPO.num_steps",
+                "rl.PPO.num_steps",
                 16,
             ],
         )
@@ -173,7 +173,7 @@ def test_cpca():
     run_exp(
         "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
         "train",
-        ["RL.auxiliary_losses.enabled", "['cpca']"],
+        ["rl.auxiliary_losses.enabled", "['cpca']"],
     )
 
 
