@@ -426,7 +426,7 @@ def poll_checkpoint_folder(
     while ind < len(models_paths) and os.path.exists(
         checkpoint_folder + f"/history_of_success/{ind}.log"
     ):
-        ind += 25
+        ind += 100
     if ind < len(models_paths):
         return models_paths[ind], ind
     return None, ind

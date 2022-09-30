@@ -813,41 +813,61 @@ class BatchedEnv:
                 #     ) < self._config.NPNP_SUCCESS_THRESH
             ) or self._object_dropped_properly[b]
 
-            bad_attempt_penalty = 0.0
-            if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
-                object_is_in_drop_position = (
-                    np.sqrt(
-                        (state.goal_pos[0] - obj_pos[0]) ** 2
-                        + (state.goal_pos[2] - obj_pos[2]) ** 2
-                    )
-                    < self._config.NPNP_SUCCESS_THRESH
-                    and (obj_pos[1] - state.goal_pos[1]) > 0
-                    and (obj_pos[1] - state.goal_pos[1])
-                    < self._config.NPNP_SUCCESS_THRESH
-                )
-                if (
-                    is_holding_correct
-                    and not object_is_in_drop_position
-                    and actions[(b * self.action_dim)] <= 0.0
-                ):
-                    bad_attempt_penalty = self._config.get(
-                        "DROP_WRONG_PENALTY", 0.1
-                    )
-                    # keep holding
-                    actions[(b * self.action_dim)] = 1.0
-                elif (
-                    is_holding_correct
-                    and object_is_in_drop_position
-                    and actions[(b * self.action_dim)] <= 0.0
-                ):
-                    self._object_dropped_properly[b] = True
-
             if (
                 actions[(b * self.action_dim)] == -1.0
                 and is_holding_correct
                 and self._drop_position[b] is None
             ):
                 self._drop_position[b] = obj_pos
+
+            bad_attempt_penalty = 0.0
+            if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
+                assert self._config.get("TASK_HAS_SIMPLE_PLACE", False)
+                if self._drop_position[b] is not None:
+                    drop_to_goal = self._drop_position[b] - state.goal_pos
+                    drop_success = (
+                        np.sqrt(drop_to_goal[0] ** 2 + drop_to_goal[2] ** 2)
+                        < self._config.NPNP_SUCCESS_THRESH
+                    )
+                    drop_success = drop_success and drop_to_goal[1] > 0
+                    drop_success = (
+                        drop_success
+                        and drop_to_goal[1]
+                        < 2 * self._config.NPNP_SUCCESS_THRESH
+                    )
+                    if not drop_success:
+                        self._drop_position[b] = None
+                        actions[(b * self.action_dim)] = 1.0
+                        bad_attempt_penalty = self._config.get(
+                            "DROP_WRONG_PENALTY", 0.0
+                        )
+
+                # object_is_in_drop_position = (
+                #     np.sqrt(
+                #         (state.goal_pos[0] - obj_pos[0]) ** 2
+                #         + (state.goal_pos[2] - obj_pos[2]) ** 2
+                #     )
+                #     < self._config.NPNP_SUCCESS_THRESH
+                #     and (obj_pos[1] - state.goal_pos[1]) > 0
+                #     and (obj_pos[1] - state.goal_pos[1])
+                #     < self._config.NPNP_SUCCESS_THRESH
+                # )
+                # if (
+                #     is_holding_correct
+                #     and not object_is_in_drop_position
+                #     and actions[(b * self.action_dim)] <= 0.0
+                # ):
+                #     bad_attempt_penalty = self._config.get(
+                #         "DROP_WRONG_PENALTY", 0.1
+                #     )
+                #     # keep holding
+                #     actions[(b * self.action_dim)] = 1.0
+                # elif (
+                #     is_holding_correct
+                #     and object_is_in_drop_position
+                #     and actions[(b * self.action_dim)] <= 0.0
+                # ):
+                #     self._object_dropped_properly[b] = True
 
             success = object_is_close_to_goal
             if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
@@ -888,6 +908,7 @@ class BatchedEnv:
                 success = is_holding_correct
 
             if self._config.get("PREVENT_STOP_ACTION", False):
+                assert self._config.get("TASK_NO_END_ACTION", False)
                 end_episode_action = False
 
             if self._config.get("DROP_IS_FAIL", True):
