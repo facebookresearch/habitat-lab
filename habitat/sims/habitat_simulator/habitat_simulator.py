@@ -248,6 +248,64 @@ def check_sim_obs(
     )
 
 
+@registry.register_sensor
+class SpotLeftRgbSensor(HabitatSimRGBSensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "spot_head_left_rgb"
+
+
+@registry.register_sensor
+class SpotRightRgbSensor(HabitatSimRGBSensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "spot_head_right_rgb"
+
+
+@registry.register_sensor
+class SpotDepthSensor(HabitatSimDepthSensor):
+    def __init__(self, config, *args, **kwargs):
+        if "MAX_ZERO" in config:
+            self.max_zero = config.MAX_ZERO
+            # We need to delete it because this sensor does not allow for new
+            # params in the config.
+            del config["MAX_ZERO"]
+        else:
+            self.max_zero = False
+        super().__init__(config, *args, **kwargs)
+
+    def _get_uuid(self, *args, **kwargs):
+        return "spot_depth"
+
+    def get_observation(self, sim_obs):
+        obs = sim_obs.get(self.uuid, None)
+        assert isinstance(obs, np.ndarray)
+
+        # Spot blacks out far pixels
+        obs[obs > self.config.MAX_DEPTH] = 0.0
+        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+        obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
+        if self.config.NORMALIZE_DEPTH:
+            # Oormalize depth observation to [0, 1]
+            obs = (obs - self.config.MIN_DEPTH) / (
+                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            )
+        if self.max_zero:
+            obs[obs == 0.0] = 1.0
+
+        return obs
+
+
+@registry.register_sensor
+class SpotLeftDepthSensor(SpotDepthSensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "spot_head_left_depth"
+
+
+@registry.register_sensor
+class SpotRightDepthSensor(SpotDepthSensor):
+    def _get_uuid(self, *args, **kwargs):
+        return "spot_head_right_depth"
+
+
 @registry.register_simulator(name="Sim-v0")
 class HabitatSim(habitat_sim.Simulator, Simulator):
     r"""Simulator wrapper over habitat-sim

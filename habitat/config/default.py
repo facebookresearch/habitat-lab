@@ -706,7 +706,7 @@ SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 # CAMERA SENSOR
 # -----------------------------------------------------------------------------
 CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
-CAMERA_SIM_SENSOR.HFOV = 90.0  # To ensure that it is a floating point number, which is consistent with yaml  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.HFOV = 90
 CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
 
 SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()

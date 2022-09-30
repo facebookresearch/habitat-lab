@@ -160,17 +160,17 @@ SIMULATOR:
         TYPE: "SpotLeftRgbSensor"
         WIDTH: 120
         HEIGHT: 212
-        HFOV: 58.286
+        HFOV: 58
     SPOT_HEAD_RIGHT_RGB_SENSOR:
         TYPE: "SpotRightRgbSensor"
         WIDTH: 120
         HEIGHT: 212
-        HFOV: 58.286
+        HFOV: 58
     SPOT_HEAD_LEFT_DEPTH_SENSOR:
         TYPE: "SpotLeftDepthSensor"
         WIDTH: 120
         HEIGHT: 212
-        HFOV: 58.286
+        HFOV: 58
         MAX_DEPTH: 3.5
         MIN_DEPTH: 0.0
         NORMALIZE_DEPTH: True
@@ -179,7 +179,7 @@ SIMULATOR:
         TYPE: "SpotRightDepthSensor"
         WIDTH: 120
         HEIGHT: 212
-        HFOV: 58.286
+        HFOV: 58
         MAX_DEPTH: 3.5
         MIN_DEPTH: 0.0
         NORMALIZE_DEPTH: True
