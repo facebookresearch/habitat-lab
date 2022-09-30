@@ -12,6 +12,7 @@ from habitat.robots.mobile_manipulator import (
     RobotCameraParams,
 )
 from habitat.robots.robot_interface import RobotInterface
+from habitat.robots.spot_robot import SpotRobot
 from habitat.robots.static_manipulator import (
     StaticManipulator,
     StaticManipulatorParams,
@@ -23,6 +24,7 @@ __all__ = [
     "MobileManipulator",
     "FetchRobot",
     "FetchRobotNoWheels",
+    "SpotRobot",
     "RobotCameraParams",
     "StaticManipulatorParams",
     "StaticManipulator",

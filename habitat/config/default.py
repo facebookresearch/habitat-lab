@@ -706,7 +706,7 @@ SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 # CAMERA SENSOR
 # -----------------------------------------------------------------------------
 CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
-CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.HFOV = 90.0  # To ensure that it is a floating point number, which is consistent with yaml  # horizontal field of view in degrees
 CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
 
 SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
@@ -785,6 +785,26 @@ _C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "robot_third_rgb"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
 _C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_rgb"
+# -----------------------------------------------------------------------------
+# Spot Left RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.SPOT_HEAD_LEFT_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.SPOT_HEAD_LEFT_RGB_SENSOR.UUID = "spot_head_left_rgb"
+# -----------------------------------------------------------------------------
+# Spot Left DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.SPOT_HEAD_LEFT_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.SPOT_HEAD_LEFT_DEPTH_SENSOR.UUID = "spot_head_left_depth"
+# -----------------------------------------------------------------------------
+# Spot Right RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.SPOT_HEAD_RIGHT_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.SPOT_HEAD_RIGHT_RGB_SENSOR.UUID = "spot_head_right_rgb"
+# -----------------------------------------------------------------------------
+# Spot Right DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.SPOT_HEAD_RIGHT_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.SPOT_HEAD_RIGHT_DEPTH_SENSOR.UUID = "spot_head_right_depth"
 
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere

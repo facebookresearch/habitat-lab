@@ -154,7 +154,7 @@ class RobotBase(RobotInterface):
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
-        if self._base_type == "mobile":
+        if self._base_type == "mobile" or self._base_type == "leg":
             self.sim_obj.rotation = mn.Quaternion.rotation(
                 mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
             )
