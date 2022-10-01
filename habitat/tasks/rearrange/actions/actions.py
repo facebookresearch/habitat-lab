@@ -369,8 +369,6 @@ class BaseVelAction(RobotAction):
             )
             self.cur_robot.sim_obj.transformation = target_trans
 
-        self.cur_robot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
-
         if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything.
             # If so we have to revert back to the previous transform
