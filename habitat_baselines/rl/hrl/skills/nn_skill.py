@@ -135,6 +135,11 @@ class NnSkillPolicy(SkillPolicy):
             policy_cfg = ckpt_dict["config"]
         policy = baseline_registry.get_policy(config.name)
 
+        if "order_keys" in config:
+            policy_cfg.defrost()
+            policy_cfg.RL.POLICY.order_keys = config.order_keys
+            policy_cfg.freeze()
+
         expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
             OrderedDict(
