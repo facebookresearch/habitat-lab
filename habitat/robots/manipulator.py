@@ -129,9 +129,7 @@ class Manipulator(RobotInterface):
         self._update_motor_settings_cache()
 
     def update(self) -> None:
-        """Updates the camera transformations and performs necessary checks on
-        joint limits and sleep states.
-        """
+        """Updates the camera transformations and performs necessary checks on joint limits and sleep states."""
         if self._cameras is not None:
             # get the transformation
             agent_node = self._sim._default_agent.scene_node
