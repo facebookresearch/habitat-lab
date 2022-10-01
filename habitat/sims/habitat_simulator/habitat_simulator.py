@@ -124,6 +124,39 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
 
 
 @registry.register_sensor
+class HabitatSimRGBStereoSensor(RGBSensor, HabitatSimSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.COLOR
+
+    RGBSENSOR_DIMENSION = 3
+
+    def __init__(self, config: Config) -> None:
+        super().__init__(config=config)
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
+        return spaces.Box(
+            low=0,
+            high=255,
+            shape=(
+                self.config.HEIGHT,
+                self.config.WIDTH,
+                self.RGBSENSOR_DIMENSION,
+            ),
+            dtype=np.uint8,
+        )
+
+    def get_observation(
+        self, sim_obs: Dict[str, Union[np.ndarray, bool, "Tensor"]]
+    ) -> VisualObservation:
+        obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
+        check_sim_obs(obs, self)
+
+        # remove alpha channel
+        obs = obs[:, :, : self.RGBSENSOR_DIMENSION]  # type: ignore[index]
+        return obs
+
+
+@registry.register_sensor
 class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
     _config_ignore_keys = {
@@ -249,15 +282,15 @@ def check_sim_obs(
 
 
 @registry.register_sensor
-class SpotLeftRgbSensor(HabitatSimRGBSensor):
+class HabitatSimHeadStereoLeftRGBSensor(HabitatSimRGBSensor):
     def _get_uuid(self, *args, **kwargs):
-        return "spot_head_left_rgb"
+        return "robot_head_stereo_left_rgb"
 
 
 @registry.register_sensor
-class SpotRightRgbSensor(HabitatSimRGBSensor):
+class HabitatSimHeadStereoRightRGBSensor(HabitatSimRGBSensor):
     def _get_uuid(self, *args, **kwargs):
-        return "spot_head_right_rgb"
+        return "robot_head_stereo_right_rgb"
 
 
 @registry.register_sensor
@@ -284,7 +317,7 @@ class SpotDepthSensor(HabitatSimDepthSensor):
         obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
         obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
         if self.config.NORMALIZE_DEPTH:
-            # Oormalize depth observation to [0, 1]
+            # normalize depth observation to [0, 1]
             obs = (obs - self.config.MIN_DEPTH) / (
                 self.config.MAX_DEPTH - self.config.MIN_DEPTH
             )
@@ -295,15 +328,15 @@ class SpotDepthSensor(HabitatSimDepthSensor):
 
 
 @registry.register_sensor
-class SpotLeftDepthSensor(SpotDepthSensor):
+class HabitatSimHeadStereoLeftDepthSensor(SpotDepthSensor):
     def _get_uuid(self, *args, **kwargs):
-        return "spot_head_left_depth"
+        return "robot_head_stereo_left_depth"
 
 
 @registry.register_sensor
-class SpotRightDepthSensor(SpotDepthSensor):
+class HabitatSimHeadStereoRightDepthSensor(SpotDepthSensor):
     def _get_uuid(self, *args, **kwargs):
-        return "spot_head_right_depth"
+        return "robot_head_stereo_right_depth"
 
 
 @registry.register_simulator(name="Sim-v0")

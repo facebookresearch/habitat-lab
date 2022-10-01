@@ -134,7 +134,7 @@ class SpotRobot(MobileManipulator):
                     relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
                     @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
-                "spot_head_right": RobotCameraParams(
+                "robot_head_stereo_right": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, 0.03614789234067159
                     ),
@@ -143,7 +143,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "spot_head_left": RobotCameraParams(
+                "robot_head_stereo_left": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, -0.03740343144695029
                     ),
