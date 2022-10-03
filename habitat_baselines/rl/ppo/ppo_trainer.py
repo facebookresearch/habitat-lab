@@ -1006,7 +1006,9 @@ class PPOTrainer(BaseRLTrainer):
             observations, device=self.device, cache=self._obs_batching_cache
         )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-
+        for orig, map_to in map_sensors.items():
+            print(map_to, list(batch[map_to].view(-1).cpu().numpy()))
+        raise ValueError()
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"
         )
@@ -1054,6 +1056,7 @@ class PPOTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes)
         self.actor_critic.eval()
+        eval_i = 0
         while (
             len(stats_episodes) < number_of_eval_episodes
             and self.envs.num_envs > 0
@@ -1077,9 +1080,11 @@ class PPOTrainer(BaseRLTrainer):
                 prev_actions.copy_(actions)  # type: ignore
 
             # To fix the action sequence
-            # torch.manual_seed(0)
-            # actions = torch.rand((1, 11))
-            # actions[:, -1] = 0.0
+            # actions = torch.zeros((1, 11))
+            # actions[:, -8:-1] = 0.01
+            # print("\n" * 3)
+            # print("Pre step", list(batch["joint"].view(-1).cpu().numpy()))
+            # print("Actions", list(actions[:, -8:-1].view(-1).cpu().numpy()))
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
@@ -1105,6 +1110,10 @@ class PPOTrainer(BaseRLTrainer):
                 cache=self._obs_batching_cache,
             )
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
+            # eval_i += 1
+            # print("Post step", list(batch["joint"].view(-1).cpu().numpy()))
+            # if eval_i == 5:
+            #     raise ValueError()
 
             not_done_masks = torch.tensor(
                 [[not done] for done in dones],

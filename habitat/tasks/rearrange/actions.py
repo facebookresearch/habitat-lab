@@ -216,13 +216,15 @@ class GalaArmKinematicAction(SimulatorTaskAction):
     def step(self, set_pos, *args, **kwargs):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
+
         set_pos = np.clip(set_pos, -1.0, 1.0)
+        # To [0,1]
+        set_pos = (set_pos + 1.0) / 2.0
 
         for i in range(len(set_pos)):
             scale_val = self._config.SCALING
             set_pos[i] = mn.math.lerp(-scale_val[i], scale_val[i], set_pos[i])
 
-        self._sim: RearrangeSim
         set_arm_pos = set_pos + self._sim.robot.arm_joint_pos
         self._sim.robot.arm_joint_pos = set_arm_pos
         self._sim.robot.fix_joint_values = set_arm_pos

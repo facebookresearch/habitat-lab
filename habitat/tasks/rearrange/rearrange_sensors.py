@@ -19,6 +19,36 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar, get_angle
+import magnum as mn
+
+
+def get_robot_local(robot):
+    T = robot.base_transformation
+    forward = np.array([1.0, 0, 0])
+    heading = np.array(T.transform_vector(forward))
+    forward = forward[[0, 2]]
+    heading = heading[[0, 2]]
+
+    heading_angle = get_angle(forward, heading)
+    c = np.cross(forward, heading) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    rot = mn.Quaternion.rotation(mn.Rad(heading_angle), mn.Vector3(0, 1, 0))
+    pos = T.translation
+    return mn.Vector3(pos[0], 0.0, pos[2]), rot
+
+
+def get_rel_coord(source_position, goal_position, source_rotation):
+    return np.array(
+        source_rotation.inverted().transform_vector(
+            goal_position - source_position
+        )
+    )
+
+
+def get_ee_local(robot):
+    ee_T = robot.ee_transform
+    return ee_T.translation, mn.Quaternion.from_matrix(ee_T.rotation())
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -80,11 +110,10 @@ class TargetStartSensor(MultiObjSensor):
     cls_uuid: str = "obj_start_sensor"
 
     def get_observation(self, *args, observations, episode, **kwargs):
-        self._sim: RearrangeSim
-        global_T = self._sim.robot.ee_transform
-        T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
-        return batch_transform_point(pos, T_inv, np.float32)[0].reshape(-1)
+        ee_pos, ee_rot = get_ee_local(self._sim.robot)
+
+        return get_rel_coord(ee_pos, pos[0], ee_rot)
 
 
 class PositionGpsCompassSensor(Sensor):
@@ -178,11 +207,13 @@ class GoalSensor(MultiObjSensor):
     cls_uuid: str = "obj_goal_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        global_T = self._sim.robot.ee_transform
-        T_inv = global_T.inverted()
-
         _, pos = self._sim.get_targets()
-        return batch_transform_point(pos, T_inv, np.float32)[0].reshape(-1)
+        ee_pos, ee_rot = get_ee_local(self._sim.robot)
+
+        def mtoq(m):
+            return mn.Quaternion.from_matrix(m.rotation)
+
+        return get_rel_coord(ee_pos, pos[0], ee_rot)
 
 
 @registry.register_sensor
@@ -299,11 +330,14 @@ class EEPositionSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.robot.base_transformation
+        robot_pos, robot_rot = get_robot_local(self._sim.robot)
         ee_pos = self._sim.robot.ee_transform.translation
-        local_ee_pos = trans.inverted().transform_point(ee_pos)
+        return get_rel_coord(robot_pos, ee_pos, robot_rot)
 
-        return np.array(local_ee_pos)
+        # trans = self._sim.robot.base_transformation
+        # local_ee_pos = trans.inverted().transform_point(ee_pos)
+
+        # return np.array(local_ee_pos)
 
 
 @registry.register_sensor
@@ -750,7 +784,9 @@ class ForceTerminate(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        accum_force = task.measurements.measures[RobotForce.cls_uuid].get_metric()
+        accum_force = task.measurements.measures[
+            RobotForce.cls_uuid
+        ].get_metric()
         if (
             self._config.MAX_ACCUM_FORCE > 0
             and accum_force > self._config.MAX_ACCUM_FORCE
