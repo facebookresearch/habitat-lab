@@ -5,4 +5,12 @@ EVAL_CKPT_PATH_DIR: "../data/ckpt/gala_kinematic_ddppo"
 VIDEO_DIR: "../videos"
 VIDEO_OPTION: ["disk"]
 PROCEDURAL_GENERATION: True
-NUM_ENVIRONMENTS: 128
+NUM_ENVIRONMENTS: 64
+DEBUG_SIM: True
+TASK_IS_PLACE : False
+DROP_IS_FAIL: False
+NUM_UPDATES: 101
+TOTAL_NUM_STEPS: -1.0
+RL:
+  POLICY:
+    name: "PointNavBaselinePolicy"
