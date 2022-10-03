@@ -277,23 +277,97 @@ class BaseVelAction(RobotAction):
         ctrl_freq = self._sim.ctrl_freq
 
         before_trans_state = self._capture_robot_state()
-
+        cur_state = self._sim.robot.sim_obj.transformation
         trans = self.cur_robot.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
-
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
         )
-        end_pos = self._sim.step_filter(
-            rigid_state.translation, target_rigid_state.translation
-        )
 
-        target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(), end_pos
+        # Conduct the collision detection
+        has_attr = hasattr(
+            self._sim.habitat_config, "COLLISION_DETECTION_METHOD"
         )
-        self.cur_robot.sim_obj.transformation = target_trans
+        if (
+            has_attr
+            and self._sim.habitat_config.COLLISION_DETECTION_METHOD
+            == "ContactTestRevert"
+        ):
+            end_pos = target_rigid_state.translation
+            proposed_target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self._sim.robot.sim_obj.transformation = proposed_target_trans
+            if self._sim.contact_test(self.cur_robot.sim_obj.object_id):
+                self._sim.robot.sim_obj.transformation = cur_state
+        elif (
+            has_attr
+            and self._sim.habitat_config.COLLISION_DETECTION_METHOD
+            == "ContactTestProj"
+        ):
+            did_collide = self._sim.contact_test(
+                self.cur_robot.sim_obj.object_id
+            )
+            robot_id = self.cur_robot.sim_obj.object_id
+            end_pos = target_rigid_state.translation
+
+            if did_collide:
+                cur_pos = rigid_state.translation
+                target_pos = target_rigid_state.translation
+                move_dir = target_pos - cur_pos
+
+                # Find the point that is closed to the move_dir
+                contact_points = self._sim.get_physics_contact_points()
+                num_contact_points = len(
+                    self._sim.get_physics_contact_points()
+                )
+                robot_contact_list = []
+                for i in range(num_contact_points):
+                    if robot_id == contact_points[i].object_id_a:
+                        robot_contact_list.append(contact_points[i])
+                # Perform sliding
+                contact_points = robot_contact_list
+                if len(contact_points) != 0:
+                    # Get the average normal vector
+                    n_vec = contact_points[0].contact_normal_on_b_in_ws
+                    for i in range(1, len(contact_points)):
+                        n_vec += contact_points[i].contact_normal_on_b_in_ws
+                    n_vec = n_vec / len(contact_points)
+                    # Get the average contact point
+                    c_pot = contact_points[0].position_on_a_in_ws
+                    for i in range(1, len(contact_points)):
+                        c_pot += contact_points[i].position_on_a_in_ws
+                    c_pot = c_pot / len(contact_points)
+                    # Get the next target point
+                    p_pot = target_rigid_state.translation
+                    # Do the projection
+                    s0 = n_vec[0] * c_pot[0] - n_vec[0] * p_pot[0]
+                    s2 = n_vec[2] * c_pot[2] - n_vec[2] * p_pot[2]
+                    s = s0 + s2
+                    proj_pot = p_pot + s * n_vec
+                    # Get the final movement vector
+                    move_vec = target_pos - proj_pot
+                    move_vec[1] = 0
+                    end_pos = rigid_state.translation + move_vec
+            target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self.cur_robot.sim_obj.transformation = target_trans
+        elif (
+            ~has_attr
+            or self._sim.habitat_config.COLLISION_DETECTION_METHOD == "NevMesh"
+        ):
+            end_pos = self._sim.step_filter(
+                rigid_state.translation, target_rigid_state.translation
+            )
+            # Offset the end position
+            end_pos -= self.cur_robot.params.base_offset
+            target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self.cur_robot.sim_obj.transformation = target_trans
 
         if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything.

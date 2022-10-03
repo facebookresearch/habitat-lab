@@ -653,6 +653,7 @@ _C.TASK.ANSWER_ACCURACY.TYPE = "AnswerAccuracy"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR = CN()
 _C.SIMULATOR.TYPE = "Sim-v0"
+_C.SIMULATOR.COLLISION_DETECTION_METHOD = None
 _C.SIMULATOR.ACTION_SPACE_CONFIG = "v0"
 _C.SIMULATOR.FORWARD_STEP_SIZE = 0.25  # in metres
 _C.SIMULATOR.CREATE_RENDERER = False
@@ -706,7 +707,7 @@ SIMULATOR_SENSOR.ORIENTATION = [0.0, 0.0, 0.0]  # Euler's angles
 # CAMERA SENSOR
 # -----------------------------------------------------------------------------
 CAMERA_SIM_SENSOR = SIMULATOR_SENSOR.clone()
-CAMERA_SIM_SENSOR.HFOV = 90  # horizontal field of view in degrees
+CAMERA_SIM_SENSOR.HFOV = 90
 CAMERA_SIM_SENSOR.SENSOR_SUBTYPE = "PINHOLE"
 
 SIMULATOR_DEPTH_SENSOR = SIMULATOR_SENSOR.clone()
@@ -785,6 +786,44 @@ _C.SIMULATOR.THIRD_RGB_SENSOR.UUID = "robot_third_rgb"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.THIRD_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
 _C.SIMULATOR.THIRD_DEPTH_SENSOR.UUID = "robot_third_rgb"
+# -----------------------------------------------------------------------------
+# HEAD STEREO LEFT RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_STEREO_LEFT_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.HEAD_STEREO_LEFT_RGB_SENSOR.UUID = "robot_head_stereo_left_rgb"
+_C.SIMULATOR.HEAD_STEREO_LEFT_RGB_SENSOR.TYPE = (
+    "HabitatSimHeadStereoLeftRGBSensor"
+)
+# -----------------------------------------------------------------------------
+# HEAD STEREO LEFT DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_STEREO_LEFT_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.HEAD_STEREO_LEFT_DEPTH_SENSOR.UUID = (
+    "robot_head_stereo_left_depth"
+)
+_C.SIMULATOR.HEAD_STEREO_LEFT_DEPTH_SENSOR.TYPE = (
+    "HabitatSimHeadStereoLeftDepthSensor"
+)
+_C.SIMULATOR.HEAD_STEREO_LEFT_DEPTH_SENSOR.MAX_ZERO = False
+# -----------------------------------------------------------------------------
+# HEAD STEREO RIGHT RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_STEREO_RIGHT_RGB_SENSOR = _C.SIMULATOR.RGB_SENSOR.clone()
+_C.SIMULATOR.HEAD_STEREO_RIGHT_RGB_SENSOR.UUID = "robot_head_stereo_right_rgb"
+_C.SIMULATOR.HEAD_STEREO_RIGHT_RGB_SENSOR.TYPE = (
+    "HabitatSimHeadStereoRightRGBSensor"
+)
+# -----------------------------------------------------------------------------
+# HEAD STEREO RIGHT DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_STEREO_RIGHT_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.SIMULATOR.HEAD_STEREO_RIGHT_DEPTH_SENSOR.UUID = (
+    "robot_head_stereo_right_depth"
+)
+_C.SIMULATOR.HEAD_STEREO_RIGHT_DEPTH_SENSOR.TYPE = (
+    "HabitatSimHeadStereoRightDepthSensor"
+)
+_C.SIMULATOR.HEAD_STEREO_RIGHT_DEPTH_SENSOR.MAX_ZERO = False
 
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
