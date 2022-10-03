@@ -73,7 +73,7 @@ def test_rearrange_example_modules(args):
 
 
 @pytest.mark.skipif(
-    not osp.exists("configs/tasks/franka_point.yaml"),
+    not osp.exists("habitat-lab/habitat/config/tasks/franka_point.yaml"),
     reason="Requires the franka point config",
 )
 @pytest.mark.parametrize(
@@ -90,7 +90,7 @@ def test_static_franka_example(args):
 
 
 @pytest.mark.skipif(
-    not osp.exists("configs/tasks/franka_point.yaml")
+    not osp.exists("habitat-lab/habitat/config/tasks/franka_point.yaml")
     or not osp.exists("data/test_assets/objects/nested_box.glb")
     or not osp.exists(
         "data/test_assets/objects/nested_box.object_config.json"

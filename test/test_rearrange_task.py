@@ -21,7 +21,7 @@ import habitat.datasets.rearrange.run_episode_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
-from habitat.config.default import get_config
+from habitat.config.default import _HABITAT_CFG_DIR, get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
@@ -31,8 +31,10 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
 
-CFG_TEST = "configs/tasks/rearrange/pick.yaml"
-GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
+CFG_TEST = "tasks/rearrange/pick.yaml"
+GEN_TEST_CFG = (
+    "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
+)
 EPISODES_LIMIT = 6
 
 
@@ -74,7 +76,10 @@ def test_rearrange_dataset():
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
+        glob(
+            "habitat-baselines/habitat_baselines/config/rearrange/**/*.yaml",
+            recursive=True,
+        ),
     ),
 )
 def test_rearrange_baseline_envs(test_cfg_path):
@@ -105,7 +110,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("configs/tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/tasks/rearrange/*"),
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
@@ -125,7 +130,7 @@ def test_rearrange_tasks(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("configs/tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/tasks/rearrange/*"),
     ),
 )
 def test_composite_tasks(test_cfg_path):
@@ -144,7 +149,9 @@ def test_composite_tasks(test_cfg_path):
             return
 
         pddl_path = osp.join(
-            config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
+            _HABITAT_CFG_DIR,
+            config.TASK.TASK_SPEC_BASE_PATH,
+            config.TASK.TASK_SPEC + ".yaml",
         )
         with open(pddl_path, "r") as f:
             domain = yaml.safe_load(f)
@@ -187,7 +194,7 @@ def test_rearrange_episode_generator(
     "test_cfg_path,mode",
     list(
         itertools.product(
-            glob("habitat_baselines/config/tp_srl_test/*"),
+            glob("habitat-baselines/habitat_baselines/config/tp_srl_test/*"),
             ["eval"],
         )
     ),

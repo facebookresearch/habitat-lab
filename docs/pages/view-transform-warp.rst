@@ -34,7 +34,7 @@ validate that transformation comparing projected and original views.
         from torchvision.transforms import ToTensor
 
         # Set up the environment for testing
-        config = habitat.get_config(config_paths="../configs/tasks/pointnav_rgbd.yaml")
+        config = habitat.get_config(config_paths="../habitat-lab/habitat/config/tasks/pointnav_rgbd.yaml")
         config.defrost()
         config.DATASET.DATA_PATH = '../data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz'
         config.DATASET.SCENES_DIR = '../data/scene_datasets/'

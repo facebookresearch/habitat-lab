@@ -16,7 +16,7 @@ Habitat Lab Demo
 
 All the boilerplate code in the habitat-sim to set sensor config and agent
 config is abstracted out in the Habitat Lab config system. Default config is at
-:gh:`habitat/config/default.py <facebookresearch/habitat-lab/blob/main/habitat/config/default.py>`.
+:gh:`habitat-lab/habitat/config/default.py <facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/config/default.py>`.
 You can override defaults by specifying them in a separate file and pass it to
 the :ref:`habitat.config.get_config()` function or defrost the config object,
 override parameters and freeze the config.
@@ -25,7 +25,7 @@ override parameters and freeze the config.
 
     .. code:: py
 
-        config = habitat.get_config(config_paths='../configs/tasks/pointnav_mp3d.yaml')
+        config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
         config.defrost()
         config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
         config.DATASET.SCENES_DIR = '../data/scene_datasets/'
@@ -128,7 +128,7 @@ override parameters and freeze the config.
             plt.imshow(data)
         plt.show()
 
-    config = habitat.get_config(config_paths='../configs/tasks/pointnav_mp3d.yaml')
+    config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
     config.defrost()
     config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
     config.DATASET.SCENES_DIR = '../data/scene_datasets/'

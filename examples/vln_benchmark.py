@@ -61,7 +61,9 @@ def reference_path_benchmark(config, num_episodes=None):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--task-config", type=str, default="configs/tasks/vln_r2r.yaml"
+        "--task-config",
+        type=str,
+        default="tasks/vln_r2r.yaml",
     )
     args = parser.parse_args()
     config = get_config(args.task_config)

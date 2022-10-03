@@ -67,7 +67,7 @@ import gym.spaces as spaces
 import numpy as np
 
 import habitat
-import habitat.utils.gym_definitions as habitat_gym
+import habitat.utils.gym_definitions
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -117,10 +117,7 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            os.path.join(
-                habitat_gym.base_dir,
-                "configs/tasks/rearrange/pick.yaml",
-            )
+            "tasks/rearrange/pick.yaml",
         )
     )
 ) as env:
@@ -339,7 +336,7 @@ class NavPickSuccess(Measure):
 # %% [markdown]
 # We now add all the previously defined task, sensor, and measurement
 # definitions to a config file to finish defining the new Habitat task. For
-# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/configs/tasks/rearrange).
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/tasks/rearrange).
 #
 # This config also defines the action space through the `TASK.ACTIONS` key. You
 # can substitute different base control actions from

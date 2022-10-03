@@ -46,7 +46,7 @@ RUN /bin/bash -c ". activate habitat; cd habitat-sim; pip install -r requirement
 
 # Install challenge specific habitat-lab
 RUN git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
-RUN /bin/bash -c ". activate habitat; cd habitat-lab; pip install -e ."
+RUN /bin/bash -c ". activate habitat; cd habitat-lab; pip install -e habitat-lab/"
 
 # Silence habitat-sim logs
 ENV GLOG_minloglevel=2

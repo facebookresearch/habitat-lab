@@ -18,7 +18,7 @@ def example(render):
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
     with habitat.Env(
-        config=habitat.get_config("configs/tasks/franka_point.yaml")
+        config=habitat.get_config("tasks/franka_point.yaml")
     ) as env:
         logger.info("Environment creation successful")
         observations = env.reset()  # noqa: F841

@@ -10,11 +10,11 @@ from glob import glob
 import pytest
 
 import habitat
-from habitat.config.default import _C, get_config
+from habitat.config.default import _C, _HABITAT_CFG_DIR, get_config
 
-CFG_TEST = "configs/test/habitat_all_sensors_test.yaml"
-CFG_EQA = "configs/test/habitat_mp3d_eqa_test.yaml"
-CFG_NEW_KEYS = "configs/test/new_keys_test.yaml"
+CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_EQA = "test/habitat_mp3d_eqa_test.yaml"
+CFG_NEW_KEYS = "test/new_keys_test.yaml"
 MAX_TEST_STEPS_LIMIT = 3
 
 
@@ -57,18 +57,18 @@ def test_overwrite_options():
 CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
     # new_keys_test.yaml excluded since it explicitely uses
     # keys not present in the default for testing purposes
-    "configs/test/new_keys_test.yaml",
+    _HABITAT_CFG_DIR + "/test/new_keys_test.yaml",
     # Trainer excluded because does not use the default config
-    "configs/baselines/ppo.yaml",
-    "configs/tasks/rearrange/rearrange_easy_multi_agent.yaml",
+    _HABITAT_CFG_DIR + "/baselines/ppo.yaml",
+    _HABITAT_CFG_DIR + "/tasks/rearrange/rearrange_easy_multi_agent.yaml",
     # Planning Domain Definition Language configs are
     # excluded since they do not implement the default config
-] + glob("**/pddl/*.yaml", recursive=True)
+] + glob(_HABITAT_CFG_DIR + "/**/pddl/*.yaml", recursive=True)
 
 
 @pytest.mark.parametrize(
     "config_path",
-    glob("configs/**/*.yaml", recursive=True),
+    glob(_HABITAT_CFG_DIR + "/**/*.yaml", recursive=True),
 )
 def test_no_core_config_has_non_default_keys(config_path):
     if config_path in CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS:

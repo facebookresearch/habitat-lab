@@ -1,0 +1,90 @@
+BASE_TASK_CONFIG_PATH: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
+TRAINER_NAME: "ppo"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+VIDEO_OPTION: []
+TENSORBOARD_DIR: ""
+VIDEO_DIR: "data/test_checkpoints/ppo/pointnav/video"
+SENSORS: ["HEAD_DEPTH_SENSOR"]
+TEST_EPISODE_COUNT: 2
+EVAL_CKPT_PATH_DIR: ""
+NUM_ENVIRONMENTS: 1
+CHECKPOINT_FOLDER: "data/test_checkpoints/ppo/pointnav/"
+NUM_UPDATES: 2
+LOG_INTERVAL: 100
+NUM_CHECKPOINTS: 2
+FORCE_TORCH_SINGLE_THREADED: True
+EVAL:
+  USE_CKPT_CONFIG: False
+  SHOULD_LOAD_CKPT: False
+
+RL:
+  POLICY:
+      name: "HierarchicalPolicy"
+      high_level_policy:
+        name: "GtHighLevelPolicy"
+      OBS_TRANSFORMS:
+        ENABLED_TRANSFORMS: ['AddVirtualKeys']
+        ADD_VIRTUAL_KEYS:
+          "nav_to_skill": 8
+          "object_to_agent_gps_compass": 2
+      DEFINED_SKILLS:
+        NN_PICK:
+          skill_name: "PickSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          AT_RESTING_THRESHOLD: 0.15
+          OBS_SKILL_INPUTS: ["obj_start_sensor"]
+          LOAD_CKPT_FILE: ""
+          MAX_SKILL_STEPS: 200
+          FORCE_END_ON_TIMEOUT: True
+          FORCE_CONFIG_FILE: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml"
+
+        NN_PLACE:
+          skill_name: "PlaceSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          AT_RESTING_THRESHOLD: 0.15
+          OBS_SKILL_INPUTS: ["obj_goal_sensor"]
+          LOAD_CKPT_FILE: ""
+          MAX_SKILL_STEPS: 200
+          FORCE_END_ON_TIMEOUT: True
+          FORCE_CONFIG_FILE: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml"
+
+        NN_NAV:
+          skill_name: "NavSkillPolicy"
+          name: "PointNavResNetPolicy"
+          action_distribution_type: "gaussian"
+          OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
+          OBS_SKILL_INPUT_DIM: 2
+          LIN_SPEED_STOP: 0.067
+          ANG_SPEED_STOP: 0.067
+          LOAD_CKPT_FILE: ""
+          MAX_SKILL_STEPS: 300
+          FORCE_END_ON_TIMEOUT: False
+          FORCE_CONFIG_FILE: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml"
+
+        WAIT_SKILL:
+          skill_name: "WaitSkillPolicy"
+          MAX_SKILL_STEPS: -1.0
+          FORCE_END_ON_TIMEOUT: False
+
+        RESET_ARM_SKILL:
+          skill_name: "ResetArmSkill"
+          MAX_SKILL_STEPS: 50
+          RESET_JOINT_STATE: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+          FORCE_END_ON_TIMEOUT: False
+
+      USE_SKILLS:
+        # Uncomment if you are also using these skills
+        pick: "NN_PICK"
+        place: "NN_PLACE"
+        nav: "NN_NAV"
+        nav_to_receptacle: "NN_NAV"
+        wait: "WAIT_SKILL"
+        reset_arm: "RESET_ARM_SKILL"
+  DDPPO:
+      pretrained: False
+      pretrained_encoder: False
+      train_encoder: True
+      reset_critic: False

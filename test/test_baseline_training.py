@@ -46,14 +46,38 @@ def setup_function(test_trainers):
 @pytest.mark.parametrize(
     "config_path,num_updates",
     [
-        ("habitat_baselines/config/rearrange/ddppo_close_cab.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_open_fridge.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_place.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_close_fridge.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_open_cab.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_pick.yaml", 3),
-        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_close_cab.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_open_fridge.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_close_fridge.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_open_cab.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            3,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
@@ -119,7 +143,10 @@ def test_trainers(config_path, num_updates, trainer_name):
 @pytest.mark.parametrize(
     "config_path,num_updates",
     [
-        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+        (
+            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            3,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
@@ -183,8 +210,16 @@ def test_trainers_gym_registry(
 @pytest.mark.parametrize(
     "config_path,num_updates,target_reward",
     [
-        ("habitat_baselines/config/rearrange/ddppo_reach_state.yaml", 40, 5.0),
-        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 1000, 2.0),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            40,
+            5.0,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/pointnav/ddppo_pointnav.yaml",
+            1000,
+            2.0,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])

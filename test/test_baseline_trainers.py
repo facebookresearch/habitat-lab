@@ -49,7 +49,7 @@ def download_data():
     "test_cfg_path,gpu2gpu,observation_transforms,mode",
     list(
         itertools.product(
-            glob("habitat_baselines/config/test/*"),
+            glob("habitat-baselines/habitat_baselines/config/test/*"),
             [False],
             [
                 [],
@@ -63,7 +63,9 @@ def download_data():
     )
     + list(
         itertools.product(
-            ["habitat_baselines/config/test/ppo_pointnav_test.yaml"],
+            [
+                "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
+            ],
             [True],
             [
                 [],
@@ -120,8 +122,8 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
 @pytest.mark.parametrize(
     "test_cfg_path",
     (
-        "habitat_baselines/config/test/ddppo_pointnav_test.yaml",
-        "habitat_baselines/config/rearrange/ddppo_pick.yaml",
+        "habitat-baselines/habitat_baselines/config/test/ddppo_pointnav_test.yaml",
+        "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml",
     ),
 )
 @pytest.mark.parametrize("variable_experience", [True, False])
@@ -169,7 +171,7 @@ def test_ver_trainer(
 
 def test_cpca():
     run_exp(
-        "habitat_baselines/config/test/ppo_pointnav_test.yaml",
+        "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
         "train",
         ["RL.auxiliary_losses.enabled", "['cpca']"],
     )
@@ -182,7 +184,7 @@ def test_cpca():
     "test_cfg_path,mode",
     [
         [
-            "habitat_baselines/config/test/ppo_pointnav_test.yaml",
+            "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
             "train",
         ],
     ],

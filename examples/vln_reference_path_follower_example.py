@@ -43,9 +43,7 @@ def reference_path_example(mode):
     Args:
         mode: 'geodesic_path' or 'greedy'
     """
-    config = habitat.get_config(
-        config_paths="configs/test/habitat_r2r_vln_test.yaml"
-    )
+    config = habitat.get_config(config_paths="test/habitat_r2r_vln_test.yaml")
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.TASK.SENSORS.append("HEADING_SENSOR")

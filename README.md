@@ -78,17 +78,14 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```bash
       git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
       cd habitat-lab
-      pip install -e .
+      pip install -e habitat-lab  # install habitat_lab
       ```
-1. **[Optional] Install habitat-baselines from source**.
+1. **Install habitat-baselines**.
 
-    The command above will install only core of Habitat-Lab. To include habitat_baselines along with all additional requirements, use the command below instead:
+    The command above will install only core of Habitat-Lab. To include habitat_baselines along with all additional requirements, use the command below after installing habitat-lab:
 
       ```bash
-      git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
-      cd habitat-lab
-      pip install -r requirements.txt
-      python setup.py develop --all # install habitat and habitat_baselines
+      pip install -e habitat-baselines  # install habitat_baselines
       ```
 
 ## Testing
@@ -126,14 +123,14 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     python examples/example.py
     ```
 
-    which uses [`configs/tasks/rearrange/pick.yaml`](configs/tasks/rearrange/pick.yaml) for configuration of task and agent.
+    which uses [`habitat-lab/habitat/config/tasks/rearrange/pick.yaml`](habitat-lab/habitat/config/tasks/rearrange/pick.yaml) for configuration of task and agent.
 
     ```python
     import habitat
 
     # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
     env = habitat.Env(
-        config=habitat.get_config("configs/tasks/rearrange/pick.yaml")
+        config=habitat.get_config("habitat-lab/habitat/config/tasks/rearrange/pick.yaml")
       )
 
     observations = env.reset()

@@ -21,23 +21,31 @@ jobs:
               pip install black --progress-bar off
               pip install "isort[pyproject]" numpy --progress-bar off
               pip install mypy==0.950 --progress-bar off
-              pip install -r requirements.txt --progress-bar off
+              pip install -r habitat-lab/requirements.txt --progress-bar off
       - run:
           name: run black
           command: |
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat/. habitat_baselines/. examples/. test/. setup.py --check
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --diff
+              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --check
       - run:
           name: run isort
           command: |
               isort --version
-              isort habitat/. habitat_baselines/. examples/. test/. setup.py --diff
-              isort habitat/. habitat_baselines/. examples/. test/. setup.py --check-only
+              isort habitat-lab/. habitat-baselines/. examples/. test/.  --diff
+              isort habitat-lab/. habitat-baselines/. examples/. test/.  --check-only
       - run:
           name: run mypy
           command: |
               mypy --version
-              mypy
+              mypy habitat-lab/
+              mypy habitat-baselines/
+              mypy examples/
+              mypy test/
+      - run:
+          name: run assert no files in habitat and habitat_baselines
+          command: |
+              if test -d  habitat ;           then  echo "folder habitat should not exist";           exit 1; fi
+              if test -d  habitat_baselines ; then  echo "folder habitat_baselines should not exist"; exit 1; fi
   pre-commit:
     docker:
       - image: cimg/python:3.7.13
@@ -141,7 +149,7 @@ jobs:
                 . activate habitat
                 pip install -U pip
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
-                pip install pytest-sugar cython pygame
+                pip install pytest-sugar mock cython pygame
               fi
       - run:
           name: Install pytorch
@@ -247,7 +255,7 @@ jobs:
               . activate habitat; cd habitat-lab
               while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
-              pip install -r requirements.txt --progress-bar off
+              pip install -r habitat-lab/requirements.txt --progress-bar off
               touch ~/miniconda/pip_deps_installed
       - save_cache:
           key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
@@ -260,11 +268,11 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              python setup.py develop --all
-              find . -name ci-requirements.txt | xargs -I {} pip install -r {}
+              pip install -e habitat-lab
+              pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python setup.py test --addopts " --cov-report=xml --cov-report term  --cov=./"
+              python -m pytest --cov-report=xml --cov-report term  --cov=./
       - codecov/upload
       - run:
           name: Run baseline training tests
@@ -272,11 +280,13 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              python setup.py develop --all
+              pip install -e habitat-lab
+              pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
+              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               # This is a flag that enables test_test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python setup.py test --addopts "test/test_baseline_training.py"
+              python -m pytest  test/test_baseline_training.py -s
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
@@ -293,7 +303,8 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              python setup.py develop --all
+              pip install -e habitat-lab
+              pip install -e habitat-baselines
 
               # Download sim inventory for crosslinking (no need to build
               # the whole sim docs for that)
@@ -312,8 +323,11 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              python -m pip install .
+              python -m pip install habitat-lab/
               python -c "import habitat"
+              python -m pip install habitat-baselines/
+              python -c "import habitat_baselines"
+
 
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
