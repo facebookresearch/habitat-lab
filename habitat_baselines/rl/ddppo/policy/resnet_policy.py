@@ -94,6 +94,10 @@ class PointNavResNetPolicy(NetPolicy):
         action_space,
         **kwargs,
     ):
+        if not config.RL.POLICY.get("order_keys", False):
+            fuse_keys = config.TASK_CONFIG.GYM.OBS_KEYS
+        else:
+            fuse_keys = None
         return cls(
             observation_space=observation_space,
             action_space=action_space,
@@ -104,7 +108,7 @@ class PointNavResNetPolicy(NetPolicy):
             normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.FORCE_BLIND_POLICY,
             policy_config=config.RL.POLICY,
-            fuse_keys=None,
+            fuse_keys=fuse_keys,
         )
 
 
@@ -267,7 +271,7 @@ class PointNavResNetNet(Net):
         # Only fuse the 1D state inputs. Other inputs are processed by the
         # visual encoder
         if fuse_keys is None:
-            fuse_keys = observation_space.spaces.keys()
+            fuse_keys = sorted(observation_space.spaces.keys())
             # removing keys that correspond to goal sensors
             goal_sensor_keys = {
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid,
