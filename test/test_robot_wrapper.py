@@ -537,7 +537,7 @@ def test_franka_robot_wrapper():
 
 
 @pytest.mark.skipif(
-    not osp.exists("data/spot"),
+    not osp.exists("data/robots/hab_spot_arm"),
     reason="Test requires Spot w/ arm robot URDF and assets.",
 )
 @pytest.mark.skipif(
@@ -547,7 +547,7 @@ def test_franka_robot_wrapper():
 @pytest.mark.parametrize("fixed_base", [True, False])
 def test_spot_robot_wrapper(fixed_base):
     # set this to output test results as video for easy investigation
-    produce_debug_video = True
+    produce_debug_video = False
     observations = []
     cfg_settings = default_sim_settings.copy()
     cfg_settings["scene"] = "NONE"
@@ -580,7 +580,7 @@ def test_spot_robot_wrapper(fixed_base):
         sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
-        robot_path = "data/spot/urdf/spot_arm.urdf"
+        robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
         spot = spot_robot.SpotRobot(robot_path, sim, fixed_base=fixed_base)
         spot.reconfigure()
         assert spot.get_robot_sim_id() == 1  # 0 is the ground plane
