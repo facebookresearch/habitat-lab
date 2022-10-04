@@ -1,158 +1,158 @@
-GYM:
-    AUTO_NAME: NavToObj
-    OBS_KEYS:
-    - robot_head_depth
-    - object_to_agent_gps_compass
-    - joint
-    - nav_to_skill
-ENVIRONMENT:
-    MAX_EPISODE_STEPS: 400
-DATASET:
-    TYPE: RearrangeDataset-v0
-    SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    SCENES_DIR: data/replica_cad/
-TASK:
-    TYPE: NavToObjTask-v0
-    MUST_LOOK_AT_TARG: true
-    FORCE_REGENERATE: false
-    OBJECT_IN_HAND_SAMPLE_PROB: 0.167
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
-    CONSTRAINT_VIOLATION_DROPS_OBJECT: true
-    COUNT_OBJ_COLLISIONS: true
-    COUNT_ROBOT_OBJ_COLLS: false
-    FILTER_NAV_TO_TASKS: []
-    TASK_SPEC_BASE_PATH: tasks/rearrange/pddl/
-    TASK_SPEC: nav_pick_nav_place
-    PDDL_DOMAIN_DEF: replica_cad
-    OBJ_SUCC_THRESH: 0.3
-    ART_SUCC_THRESH: 0.15
-    REWARD_MEASURE: nav_to_obj_reward
-    SUCCESS_MEASURE: nav_to_obj_success
-    SUCCESS_REWARD: 10.0
-    SLACK_REWARD: 0.0
-    END_ON_SUCCESS: true
-    TARGET_START_POINT_GOAL_SENSOR:
-        TYPE: TargetOrGoalStartPointGoalSensor
-    NAV_TO_SKILL_SENSOR:
-        TYPE: NavToSkillSensor
-        NUM_SKILLS: 8
-    JOINT_SENSOR:
-        TYPE: JointSensor
-        DIMENSIONALITY: 7
-    SENSORS:
-    - TARGET_START_POINT_GOAL_SENSOR
-    - JOINT_SENSOR
-    - NAV_TO_SKILL_SENSOR
-    ROBOT_FORCE:
-        TYPE: RobotForce
-        MIN_FORCE: 20.0
-    FORCE_TERMINATE:
-        TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: -1.0
-        MAX_INSTANT_FORCE: 10000.0
-    ROBOT_COLLS:
-        TYPE: RobotCollisions
-    OBJECT_TO_GOAL_DISTANCE:
-        TYPE: ObjectToGoalDistance
-    ROT_DIST_TO_GOAL:
-        TYPE: RotDistToGoal
-    DIST_TO_GOAL:
-        TYPE: DistToGoal
-    BAD_CALLED_TERMINATE:
-        TYPE: BadCalledTerminate
-        BAD_TERM_PEN: 0.0
-        DECAY_BAD_TERM: false
-    NUM_STEPS:
-        TYPE: NumStepsMeasure
-    REARRANGE_NAV_TO_OBJ_REWARD:
-        TYPE: NavToObjReward
-        SHOULD_REWARD_TURN: true
-        TURN_REWARD_DIST: 0.6
-        ANGLE_DIST_REWARD: 1.0
-        DIST_REWARD: 10.0
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 5.0
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.3
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        MUST_LOOK_AT_TARG: true
-        SUCCESS_ANGLE_DIST: 0.3
-        HEURISTIC_STOP: false
-    MEASUREMENTS:
-    - OBJECT_TO_GOAL_DISTANCE
-    - ROBOT_FORCE
-    - FORCE_TERMINATE
-    - ROBOT_COLLS
-    - ROT_DIST_TO_GOAL
-    - DIST_TO_GOAL
-    - NAV_TO_POS_SUCC
-    - REARRANGE_NAV_TO_OBJ_SUCCESS
-    - BAD_CALLED_TERMINATE
-    - REARRANGE_NAV_TO_OBJ_REWARD
-    - NUM_STEPS
-    ACTIONS:
-        BASE_VELOCITY:
-            TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: true
-            ALLOW_BACK: true
-            END_ON_STOP: true
-            MIN_ABS_LIN_SPEED: 1.0
-            MIN_ABS_ANG_SPEED: 1.0
-    POSSIBLE_ACTIONS:
-    - BASE_VELOCITY
-SIMULATOR:
-    ADDITIONAL_OBJECT_PATHS:
-    - data/objects/ycb/configs/
-    ACTION_SPACE_CONFIG: v0
-    DEBUG_RENDER: false
-    DEBUG_RENDER_GOAL: false
-    AGENTS:
-    - AGENT_0
-    AGENT_0:
-        HEIGHT: 1.5
-        RADIUS: 0.3
-        SENSORS:
-        - HEAD_DEPTH_SENSOR
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
-        ROBOT_TYPE: FetchSuctionRobot
-        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
-    HEAD_DEPTH_SENSOR:
-        WIDTH: 256
-        HEIGHT: 256
-        MIN_DEPTH: 0.0
-        MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: true
-    CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
-    FORWARD_STEP_SIZE: 0.25
-    HOLD_THRESH: 0.2
-    GRASP_IMPULSE: 10000.0
-    DEFAULT_AGENT_ID: 0
-    HABITAT_SIM_V0:
-        ALLOW_SLIDING: false
-        ENABLE_PHYSICS: true
-        GPU_DEVICE_ID: 0
-        GPU_GPU: false
-        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    SEED: 100
-    TYPE: RearrangeSim-v0
-    NEEDS_MARKERS: false
-    ARM_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
-        MIN_DEPTH: 0.0
-        MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: true
-    HEAD_RGB_SENSOR:
-        WIDTH: 256
-        HEIGHT: 256
-    ARM_RGB_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
+habitat:
+    gym:
+        auto_name: NavToObj
+        obs_keys:
+        - robot_head_depth
+        - object_to_agent_gps_compass
+        - joint
+        - nav_to_skill
+    environment:
+        max_episode_steps: 400
+    dataset:
+        type: RearrangeDataset-v0
+        split: train
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+        scenes_dir: data/replica_cad/
+    task:
+        type: NavToObjTask-v0
+        must_look_at_targ: true
+        force_regenerate: false
+        object_in_hand_sample_prob: 0.167
+        constraint_violation_ends_episode: false
+        constraint_violation_drops_object: true
+        count_obj_collisions: true
+        filter_nav_to_tasks: []
+        task_spec_base_path: tasks/rearrange/pddl/
+        task_spec: nav_pick_nav_place
+        pddl_domain_def: replica_cad
+        obj_succ_thresh: 0.3
+        art_succ_thresh: 0.15
+        reward_measure: nav_to_obj_reward
+        success_measure: nav_to_obj_success
+        success_reward: 10.0
+        slack_reward: 0.0
+        end_on_success: true
+        target_start_point_goal_sensor:
+            type: TargetOrGoalStartPointGoalSensor
+        nav_to_skill_sensor:
+            type: NavToSkillSensor
+            num_skills: 8
+        joint_sensor:
+            type: JointSensor
+            dimensionality: 7
+        sensors:
+        - target_start_point_goal_sensor
+        - joint_sensor
+        - nav_to_skill_sensor
+        robot_force:
+            type: RobotForce
+            min_force: 20.0
+        force_terminate:
+            type: ForceTerminate
+            max_accum_force: -1.0
+            max_instant_force: 10000.0
+        robot_colls:
+            type: RobotCollisions
+        object_to_goal_distance:
+            type: ObjectToGoalDistance
+        rot_dist_to_goal:
+            type: RotDistToGoal
+        dist_to_goal:
+            type: DistToGoal
+        bad_called_terminate:
+            type: BadCalledTerminate
+            bad_term_pen: 0.0
+            decay_bad_term: false
+        num_steps:
+            type: NumStepsMeasure
+        rearrange_nav_to_obj_reward:
+            type: NavToObjReward
+            should_reward_turn: true
+            turn_reward_dist: 0.6
+            angle_dist_reward: 1.0
+            dist_reward: 10.0
+            constraint_violate_pen: 10.0
+            force_pen: 0.0
+            max_force_pen: 1.0
+            force_end_pen: 5.0
+        nav_to_pos_succ:
+            type: NavToPosSucc
+            success_distance: 0.3
+        rearrange_nav_to_obj_success:
+            type: NavToObjSuccess
+            must_look_at_targ: true
+            success_angle_dist: 0.3
+            heuristic_stop: false
+        measurements:
+        - object_to_goal_distance
+        - robot_force
+        - force_terminate
+        - robot_colls
+        - rot_dist_to_goal
+        - dist_to_goal
+        - nav_to_pos_succ
+        - rearrange_nav_to_obj_success
+        - bad_called_terminate
+        - rearrange_nav_to_obj_reward
+        - num_steps
+        actions:
+            base_velocity:
+                type: BaseVelAction
+                lin_speed: 10.0
+                ang_speed: 10.0
+                allow_dyn_slide: true
+                allow_back: true
+                end_on_stop: true
+                min_abs_lin_speed: 1.0
+                min_abs_ang_speed: 1.0
+        possible_actions:
+        - base_velocity
+    simulator:
+        additional_object_paths:
+        - data/objects/ycb/configs/
+        action_space_config: v0
+        debug_render: false
+        debug_render_goal: false
+        agents:
+        - agent_0
+        agent_0:
+            height: 1.5
+            radius: 0.3
+            sensors:
+            - head_depth_sensor
+            robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+            robot_type: FetchSuctionRobot
+            ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+        head_depth_sensor:
+            width: 256
+            height: 256
+            min_depth: 0.0
+            max_depth: 10.0
+            normalize_depth: true
+        ctrl_freq: 120.0
+        ac_freq_ratio: 4
+        forward_step_size: 0.25
+        hold_thresh: 0.2
+        grasp_impulse: 10000.0
+        default_agent_id: 0
+        habitat_sim_v0:
+            allow_sliding: false
+            enable_physics: true
+            gpu_device_id: 0
+            gpu_gpu: false
+            physics_config_file: ./data/default.physics_config.json
+        seed: 100
+        type: RearrangeSim-v0
+        needs_markers: false
+        arm_depth_sensor:
+            width: 128
+            height: 128
+            min_depth: 0.0
+            max_depth: 10.0
+            normalize_depth: true
+        head_rgb_sensor:
+            width: 256
+            height: 256
+        arm_rgb_sensor:
+            height: 128
+            width: 128

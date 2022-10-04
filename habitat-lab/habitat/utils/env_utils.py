@@ -23,9 +23,9 @@ def make_env_fn(
     Returns:
         env object created according to specification.
     """
-    if "TASK_CONFIG" in config:
-        config = config.TASK_CONFIG
-    dataset = make_dataset(config.DATASET.TYPE, config=config.DATASET)
+    if "habitat" in config:
+        config = config.habitat
+    dataset = make_dataset(config.dataset.type, config=config.dataset)
     env = env_class(config=config, dataset=dataset)
-    env.seed(config.SEED)
+    env.seed(config.seed)
     return env

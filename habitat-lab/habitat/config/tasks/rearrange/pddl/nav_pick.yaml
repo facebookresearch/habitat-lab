@@ -1,7 +1,7 @@
 objects:
   - name: hab2|0
     expr_type: rigid_obj_type
-  - name: ROBOT_0
+  - name: robot_0
     expr_type: robot_type
 
 stage_goals: {}
@@ -10,8 +10,8 @@ init: []
 goal:
   expr_type: AND
   sub_exprs:
-    - holding(hab2|0, ROBOT_0)
+    - holding(hab2|0, robot_0)
 
 solution:
-  - nav(hab2|0,ROBOT_0)
-  - pick(hab2|0,ROBOT_0)
+  - nav(hab2|0,robot_0)
+  - pick(hab2|0,robot_0)

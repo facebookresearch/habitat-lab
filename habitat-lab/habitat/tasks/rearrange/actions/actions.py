@@ -48,7 +48,7 @@ class EmptyAction(RobotAction):
         )
 
     def step(self, *args, **kwargs):
-        return self._sim.step(HabitatSimActions.EMPTY)
+        return self._sim.step(HabitatSimActions.empty)
 
 
 @registry.register_task_action
@@ -58,7 +58,7 @@ class RearrangeStopAction(SimulatorTaskAction):
         self.does_want_terminate = False
 
     def step(self, task, *args, is_last_action, **kwargs):
-        should_stop = kwargs.get("REARRANGE_STOP", [1.0])
+        should_stop = kwargs.get("rearrange_stop", [1.0])
         if should_stop[0] > 0.0:
             rearrange_logger.debug(
                 "Rearrange stop action requesting episode stop."
@@ -66,7 +66,7 @@ class RearrangeStopAction(SimulatorTaskAction):
             self.does_want_terminate = True
 
         if is_last_action:
-            return self._sim.step(HabitatSimActions.REARRANGE_STOP)
+            return self._sim.step(HabitatSimActions.rearrange_stop)
         else:
             return {}
 
@@ -77,14 +77,14 @@ class ArmAction(RobotAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        arm_controller_cls = eval(self._config.ARM_CONTROLLER)
+        arm_controller_cls = eval(self._config.arm_controller)
         self._sim: RearrangeSim = sim
         self.arm_ctrlr = arm_controller_cls(
             *args, config=config, sim=sim, **kwargs
         )
 
-        if self._config.GRIP_CONTROLLER is not None:
-            grip_controller_cls = eval(self._config.GRIP_CONTROLLER)
+        if self._config.grip_controller is not None:
+            grip_controller_cls = eval(self._config.grip_controller)
             self.grip_ctrlr: Optional[
                 GripSimulatorTaskAction
             ] = grip_controller_cls(*args, config=config, sim=sim, **kwargs)
@@ -92,8 +92,8 @@ class ArmAction(RobotAction):
             self.grip_ctrlr = None
 
         self.disable_grip = False
-        if "DISABLE_GRIP" in config:
-            self.disable_grip = config["DISABLE_GRIP"]
+        if "disable_grip" in config:
+            self.disable_grip = config["disable_grip"]
 
     def reset(self, *args, **kwargs):
         self.arm_ctrlr.reset(*args, **kwargs)
@@ -119,7 +119,7 @@ class ArmAction(RobotAction):
             grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
         if is_last_action:
-            return self._sim.step(HabitatSimActions.ARM_ACTION)
+            return self._sim.step(HabitatSimActions.arm_action)
         else:
             return {}
 
@@ -134,7 +134,7 @@ class ArmRelPosAction(RobotAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            shape=(self._config.arm_joint_dimensionality,),
             low=-1,
             high=1,
             dtype=np.float32,
@@ -143,7 +143,7 @@ class ArmRelPosAction(RobotAction):
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._config.DELTA_POS_LIMIT
+        delta_pos *= self._config.delta_pos_limit
         # The actual joint positions
         self._sim: RearrangeSim
         self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
@@ -159,17 +159,17 @@ class ArmRelPosKinematicAction(RobotAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            shape=(self._config.arm_joint_dimensionality,),
             low=0,
             high=1,
             dtype=np.float32,
         )
 
     def step(self, delta_pos, *args, **kwargs):
-        if self._config.get("SHOULD_CLIP", True):
+        if self._config.get("should_clip", True):
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._config.DELTA_POS_LIMIT
+        delta_pos *= self._config.delta_pos_limit
         self._sim: RearrangeSim
 
         set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos
@@ -187,7 +187,7 @@ class ArmAbsPosAction(RobotAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            shape=(self._config.arm_joint_dimensionality,),
             low=0,
             high=1,
             dtype=np.float32,
@@ -210,7 +210,7 @@ class ArmAbsPosKinematicAction(RobotAction):
     @property
     def action_space(self):
         return spaces.Box(
-            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            shape=(self._config.arm_joint_dimensionality,),
             low=0,
             high=1,
             dtype=np.float32,
@@ -228,7 +228,7 @@ class BaseVelAction(RobotAction):
     """
     The robot base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
-    Optionally cull states with active collisions if config parameter `ALLOW_DYN_SLIDE` is True
+    Optionally cull states with active collisions if config parameter `allow_dyn_slide` is True
     """
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
@@ -242,7 +242,7 @@ class BaseVelAction(RobotAction):
 
     @property
     def end_on_stop(self):
-        return self._config.END_ON_STOP
+        return self._config.end_on_stop
 
     @property
     def action_space(self):
@@ -295,7 +295,7 @@ class BaseVelAction(RobotAction):
         )
         self.cur_robot.sim_obj.transformation = target_trans
 
-        if not self._config.get("ALLOW_DYN_SLIDE", True):
+        if not self._config.get("allow_dyn_slide", True):
             # Check if in the new robot state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
@@ -314,14 +314,14 @@ class BaseVelAction(RobotAction):
 
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
-        lin_vel = np.clip(lin_vel, -1, 1) * self._config.LIN_SPEED
-        ang_vel = np.clip(ang_vel, -1, 1) * self._config.ANG_SPEED
-        if not self._config.ALLOW_BACK:
+        lin_vel = np.clip(lin_vel, -1, 1) * self._config.lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._config.ang_speed
+        if not self._config.allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
         if (
-            abs(lin_vel) < self._config.MIN_ABS_LIN_SPEED
-            and abs(ang_vel) < self._config.MIN_ABS_ANG_SPEED
+            abs(lin_vel) < self._config.min_abs_lin_speed
+            and abs(ang_vel) < self._config.min_abs_ang_speed
         ):
             self.does_want_terminate = True
         else:
@@ -334,7 +334,7 @@ class BaseVelAction(RobotAction):
             self.update_base()
 
         if is_last_action:
-            return self._sim.step(HabitatSimActions.BASE_VELOCITY)
+            return self._sim.step(HabitatSimActions.base_velocity)
         else:
             return {}
 
@@ -383,10 +383,10 @@ class ArmEEAction(RobotAction):
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
-        ee_pos *= self._config.EE_CTRL_LIM
+        ee_pos *= self._config.ee_ctrl_lim
         self.set_desired_ee_pos(ee_pos)
 
-        if self._config.get("RENDER_EE_TARGET", False):
+        if self._config.get("render_ee_target", False):
             global_pos = self._sim.robot.base_transformation.transform_point(
                 self.ee_target
             )

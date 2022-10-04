@@ -1,157 +1,157 @@
-GYM:
-    AUTO_NAME: SetTable
-    OBS_KEYS:
-    - robot_head_depth
-    - relative_resting_position
-    - obj_start_sensor
-    - obj_goal_sensor
-    - obj_start_gps_compass
-    - obj_goal_gps_compass
-    - joint
-    - is_holding
-ENVIRONMENT:
-    MAX_EPISODE_STEPS: 4500
-DATASET:
-    TYPE: RearrangeDataset-v0
-    SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
-    SCENES_DIR: data/replica_cad/
-TASK:
-    TYPE: RearrangeCompositeTask-v0
-    REWARD_MEASURE: move_obj_reward
-    SUCCESS_MEASURE: composite_success
-    SUCCESS_REWARD: 100.0
-    SLACK_REWARD: -0.01
-    END_ON_SUCCESS: true
-    COUNT_OBJ_COLLISIONS: true
-    COUNT_ROBOT_OBJ_COLLS: false
-    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
-    BASE_ANGLE_NOISE: 0.15
-    BASE_NOISE: 0.05
-    EASY_INIT: false
-    TASK_SPEC_BASE_PATH: tasks/rearrange/pddl/
-    TASK_SPEC: set_table
-    PDDL_DOMAIN_DEF: replica_cad
-    SENSORS:
-    - RELATIVE_RESTING_POS_SENSOR
-    - TARGET_START_SENSOR
-    - GOAL_SENSOR
-    - JOINT_SENSOR
-    - IS_HOLDING_SENSOR
-    - END_EFFECTOR_SENSOR
-    - TARGET_START_GPS_COMPASS_SENSOR
-    - TARGET_GOAL_GPS_COMPASS_SENSOR
-    FORCE_TERMINATE:
-        TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: -1.0
-    ROBOT_FORCE:
-        TYPE: RobotForce
-        MIN_FORCE: 20.0
-    MEASUREMENTS:
-    - OBJECT_TO_GOAL_DISTANCE
-    - ROBOT_FORCE
-    - FORCE_TERMINATE
-    - ROBOT_COLLS
-    - END_EFFECTOR_TO_OBJECT_DISTANCE
-    - DOES_WANT_TERMINATE
-    - COMPOSITE_SUCCESS
-    - COMPOSITE_BAD_CALLED_TERMINATE
-    - NUM_STEPS
-    - DID_VIOLATE_HOLD_CONSTRAINT
-    - MOVE_OBJECTS_REWARD
-    - COMPOSITE_STAGE_GOALS
-    ACTIONS:
-        ARM_ACTION:
-            TYPE: ArmAction
-            ARM_CONTROLLER: ArmRelPosAction
-            GRIP_CONTROLLER: MagicGraspAction
-            ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15
-            DISABLE_GRIP: false
-            DELTA_POS_LIMIT: 0.0125
-            EE_CTRL_LIM: 0.015
-        BASE_VELOCITY:
-            TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: true
-            END_ON_STOP: false
-            ALLOW_BACK: true
-            MIN_ABS_LIN_SPEED: 1.0
-            MIN_ABS_ANG_SPEED: 1.0
-        REARRANGE_STOP:
-            TYPE: RearrangeStopAction
-    POSSIBLE_ACTIONS:
-    - ARM_ACTION
-    - BASE_VELOCITY
-    - REARRANGE_STOP
-    MOVE_OBJECTS_REWARD:
-        TYPE: MoveObjectsReward
-        PICK_REWARD: 1.0
-        SUCCESS_DIST: 0.15
-        SINGLE_REARRANGE_REWARD: 1.0
-        DIST_REWARD: 1.0
-        CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
-SIMULATOR:
-    ADDITIONAL_OBJECT_PATHS:
-        - "data/objects/ycb/configs/"
-    ACTION_SPACE_CONFIG: v0
-    GRASP_IMPULSE: 1000.0
-    HOLD_THRESH: 0.09
-    AC_FREQ_RATIO: 4
-    DEBUG_RENDER: false
-    DEBUG_RENDER_GOAL: true
-    AGENTS:
-    - AGENT_0
-    CONCUR_RENDER: true
-    AUTO_SLEEP: true
-    AGENT_0:
-        HEIGHT: 1.5
-        IS_SET_START_STATE: false
-        RADIUS: 0.3
-        SENSORS:
-        - HEAD_DEPTH_SENSOR
-        START_POSITION:
-        - 0
-        - 0
-        - 0
-        START_ROTATION:
-        - 0
-        - 0
-        - 0
-        - 1
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-        ROBOT_TYPE: FetchRobot
-        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
-    HEAD_RGB_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
-    HEAD_DEPTH_SENSOR:
-        WIDTH: 128
-        HEIGHT: 128
-        MIN_DEPTH: 0.0
-        MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: true
-    ARM_DEPTH_SENSOR:
-        HEIGHT: 128
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: true
-        WIDTH: 128
-    ARM_RGB_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
-    CTRL_FREQ: 120.0
-    DEFAULT_AGENT_ID: 0
-    FORWARD_STEP_SIZE: 0.25
-    HABITAT_SIM_V0:
-        ALLOW_SLIDING: false
-        ENABLE_PHYSICS: true
-        GPU_DEVICE_ID: 0
-        GPU_GPU: false
-        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    SEED: 100
-    TYPE: RearrangeSim-v0
+habitat:
+    gym:
+        auto_name: SetTable
+        obs_keys:
+        - robot_head_depth
+        - relative_resting_position
+        - obj_start_sensor
+        - obj_goal_sensor
+        - obj_start_gps_compass
+        - obj_goal_gps_compass
+        - joint
+        - is_holding
+    environment:
+        max_episode_steps: 4500
+    dataset:
+        type: RearrangeDataset-v0
+        split: train
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
+        scenes_dir: data/replica_cad/
+    task:
+        type: RearrangeCompositeTask-v0
+        reward_measure: move_obj_reward
+        success_measure: composite_success
+        success_reward: 100.0
+        slack_reward: -0.01
+        end_on_success: true
+        count_obj_collisions: true
+        constraint_violation_ends_episode: false
+        base_angle_noise: 0.15
+        base_noise: 0.05
+        easy_init: false
+        task_spec_base_path: tasks/rearrange/pddl/
+        task_spec: set_table
+        pddl_domain_def: replica_cad
+        sensors:
+        - relative_resting_pos_sensor
+        - target_start_sensor
+        - goal_sensor
+        - joint_sensor
+        - is_holding_sensor
+        - end_effector_sensor
+        - target_start_gps_compass_sensor
+        - target_goal_gps_compass_sensor
+        force_terminate:
+            type: ForceTerminate
+            max_accum_force: -1.0
+        robot_force:
+            type: RobotForce
+            min_force: 20.0
+        measurements:
+        - object_to_goal_distance
+        - robot_force
+        - force_terminate
+        - robot_colls
+        - end_effector_to_object_distance
+        - does_want_terminate
+        - composite_success
+        - composite_bad_called_terminate
+        - num_steps
+        - did_violate_hold_constraint
+        - move_objects_reward
+        - composite_stage_goals
+        actions:
+            arm_action:
+                type: ArmAction
+                arm_controller: ArmRelPosAction
+                grip_controller: MagicGraspAction
+                arm_joint_dimensionality: 7
+                grasp_thresh_dist: 0.15
+                disable_grip: false
+                delta_pos_limit: 0.0125
+                ee_ctrl_lim: 0.015
+            base_velocity:
+                type: BaseVelAction
+                lin_speed: 10.0
+                ang_speed: 10.0
+                allow_dyn_slide: true
+                end_on_stop: false
+                allow_back: true
+                min_abs_lin_speed: 1.0
+                min_abs_ang_speed: 1.0
+            rearrange_stop:
+                type: RearrangeStopAction
+        possible_actions:
+        - arm_action
+        - base_velocity
+        - rearrange_stop
+        move_objects_reward:
+            type: MoveObjectsReward
+            pick_reward: 1.0
+            success_dist: 0.15
+            single_rearrange_reward: 1.0
+            dist_reward: 1.0
+            constraint_violate_pen: 10.0
+            force_pen: 0.0
+            max_force_pen: 1.0
+            force_end_pen: 10.0
+    simulator:
+        additional_object_paths:
+            - "data/objects/ycb/configs/"
+        action_space_config: v0
+        grasp_impulse: 1000.0
+        hold_thresh: 0.09
+        ac_freq_ratio: 4
+        debug_render: false
+        debug_render_goal: true
+        agents:
+        - agent_0
+        concur_render: true
+        auto_sleep: true
+        agent_0:
+            height: 1.5
+            is_set_start_state: false
+            radius: 0.3
+            sensors:
+            - head_depth_sensor
+            start_position:
+            - 0
+            - 0
+            - 0
+            start_rotation:
+            - 0
+            - 0
+            - 0
+            - 1
+            robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+            robot_type: FetchRobot
+            ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+        head_rgb_sensor:
+            width: 128
+            height: 128
+        head_depth_sensor:
+            width: 128
+            height: 128
+            min_depth: 0.0
+            max_depth: 10.0
+            normalize_depth: true
+        arm_depth_sensor:
+            height: 128
+            max_depth: 10.0
+            min_depth: 0.0
+            normalize_depth: true
+            width: 128
+        arm_rgb_sensor:
+            height: 128
+            width: 128
+        ctrl_freq: 120.0
+        default_agent_id: 0
+        forward_step_size: 0.25
+        habitat_sim_v0:
+            allow_sliding: false
+            enable_physics: true
+            gpu_device_id: 0
+            gpu_gpu: false
+            physics_config_file: ./data/default.physics_config.json
+        seed: 100
+        type: RearrangeSim-v0

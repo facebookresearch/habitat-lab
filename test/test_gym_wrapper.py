@@ -42,7 +42,7 @@ importlib.reload(habitat.utils.gym_adapter)
         (
             "tasks/rearrange/pick.yaml",
             [
-                "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "habitat.task.actions.arm_action.grip_controller",
                 "SuctionGraspAction",
             ],
             8,
@@ -63,7 +63,7 @@ def test_gym_wrapper_contract_continuous(
     Test the Gym wrapper returns the right things and works with overrides.
     """
     config = habitat.get_config(config_file, overrides)
-    env_class_name = _get_env_name(config)
+    env_class_name = _get_env_name(config.habitat)
     env_class = get_env_class(env_class_name)
 
     env = habitat.utils.env_utils.make_env_fn(
@@ -112,7 +112,7 @@ def test_gym_wrapper_contract_discrete(
     Test the Gym wrapper returns the right things and works with overrides.
     """
     config = habitat.get_config(config_file, overrides)
-    env_class_name = _get_env_name(config)
+    env_class_name = _get_env_name(config.habitat)
     env_class = get_env_class(env_class_name)
 
     env = habitat.utils.env_utils.make_env_fn(
@@ -142,7 +142,7 @@ def test_gym_wrapper_contract_discrete(
         [
             "tasks/rearrange/pick.yaml",
             [
-                "TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER",
+                "habitat.task.actions.arm_action.grip_controller",
                 "SuctionGraspAction",
             ],
         ],
@@ -184,16 +184,16 @@ def test_auto_gym_wrapper(test_cfg_path):
     Test all defined automatic Gym wrappers work
     """
     config = habitat.get_config(test_cfg_path)
-    if "GYM" not in config or config.GYM.AUTO_NAME == "":
+    if "gym" not in config or config.habitat.gym.auto_name == "":
         pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
     pytest.importorskip("pygame")
     for prefix in ["", "Render"]:
-        full_gym_name = f"Habitat{prefix}{config.GYM.AUTO_NAME}-v0"
+        full_gym_name = f"Habitat{prefix}{config.habitat.gym.auto_name}-v0"
 
         hab_gym = gym.make(
             full_gym_name,
             # Test sometimes fails with concurrent rendering.
-            override_options=["SIMULATOR.CONCUR_RENDER", False],
+            override_options=["habitat.simulator.concur_render", False],
         )
         hab_gym.reset()
         done = False

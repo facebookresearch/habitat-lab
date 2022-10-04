@@ -73,14 +73,14 @@ class HierarchicalPolicy(Policy):
         self._high_level_policy: HighLevelPolicy = high_level_cls(
             config.high_level_policy,
             osp.join(
-                full_config.TASK_CONFIG.TASK.TASK_SPEC_BASE_PATH,
-                full_config.TASK_CONFIG.TASK.TASK_SPEC + ".yaml",
+                full_config.habitat.task.task_spec_base_path,
+                full_config.habitat.task.task_spec + ".yaml",
             ),
             num_envs,
             self._name_to_idx,
         )
         self._stop_action_idx, _ = find_action_range(
-            action_space, "REARRANGE_STOP"
+            action_space, "rearrange_stop"
         )
 
     def eval(self):
@@ -225,9 +225,9 @@ class HierarchicalPolicy(Policy):
         **kwargs,
     ):
         return cls(
-            config.RL.POLICY,
+            config.rl.policy,
             config,
             observation_space,
             orig_action_space,
-            config.NUM_ENVIRONMENTS,
+            config.num_environments,
         )

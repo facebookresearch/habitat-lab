@@ -13,44 +13,48 @@ import habitat
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
-TELEPORT_POSITION = np.array(
+teleport_position = np.array(
     [-3.2890449, 0.15067159, 11.124366], dtype=np.float32
 )
-TELEPORT_ROTATION = np.array([0.92035, 0, -0.39109465, 0], dtype=np.float32)
+teleport_ROTATION = np.array([0.92035, 0, -0.39109465, 0], dtype=np.float32)
 
 
 def test_task_actions():
     config = habitat.get_config(config_paths=CFG_TEST)
     config.defrost()
-    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["TELEPORT"]
+    config.habitat.task.possible_actions = (
+        config.habitat.task.possible_actions + ["teleport"]
+    )
     config.freeze()
 
     with habitat.Env(config=config) as env:
         env.reset()
         action = {
-            "action": "TELEPORT",
+            "action": "teleport",
             "action_args": {
-                "position": TELEPORT_POSITION,
-                "rotation": TELEPORT_ROTATION,
+                "position": teleport_position,
+                "rotation": teleport_ROTATION,
             },
         }
         assert env.action_space.contains(action)
         env.step(action)
         agent_state = env.sim.get_agent_state()
         assert np.allclose(
-            np.array(TELEPORT_POSITION, dtype=np.float32), agent_state.position
+            np.array(teleport_position, dtype=np.float32), agent_state.position
         ), "mismatch in position after teleport"
         assert np.allclose(
-            np.array(TELEPORT_ROTATION, dtype=np.float32),
+            np.array(teleport_ROTATION, dtype=np.float32),
             np.array([*agent_state.rotation.imag, agent_state.rotation.real]),
         ), "mismatch in rotation after teleport"
-        env.step("TURN_RIGHT")
+        env.step("turn_right")
 
 
 def test_task_actions_sampling_for_teleport():
     config = habitat.get_config(config_paths=CFG_TEST)
     config.defrost()
-    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + ["TELEPORT"]
+    config.habitat.task.possible_actions = (
+        config.habitat.task.possible_actions + ["teleport"]
+    )
     config.freeze()
 
     with habitat.Env(config=config) as env:
@@ -79,11 +83,13 @@ def test_task_actions_sampling_for_teleport():
 def test_task_actions_sampling(config_file):
     config = habitat.get_config(config_paths=config_file)
     if not os.path.exists(
-        config.DATASET.DATA_PATH.format(split=config.DATASET.SPLIT)
+        config.habitat.dataset.data_path.format(
+            split=config.habitat.dataset.split
+        )
     ):
         pytest.skip(
             f"Please download dataset to data folder "
-            f"{config.DATASET.DATA_PATH}."
+            f"{config.habitat.dataset.data_path}."
         )
 
     with habitat.Env(config=config) as env:

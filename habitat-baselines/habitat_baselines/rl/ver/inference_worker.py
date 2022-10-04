@@ -75,7 +75,7 @@ class InferenceWorkerProcess(ProcessBase):
     def __attrs_post_init__(self):
         if self.device.type == "cuda":
             torch.cuda.set_device(self.device)
-        self._overlapped = self.config.RL.VER.overlap_rollouts_and_learn
+        self._overlapped = self.config.rl.ver.overlap_rollouts_and_learn
         with inference_mode():
             self.actor_critic = baseline_registry.get_policy(
                 self.policy_name
@@ -109,7 +109,7 @@ class InferenceWorkerProcess(ProcessBase):
 
         self.min_wait_time = 0.01
         self.obs_transforms = get_active_obs_transforms(self.config)
-        self._variable_experience = self.config.RL.VER.variable_experience
+        self._variable_experience = self.config.rl.ver.variable_experience
 
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = False
@@ -422,7 +422,7 @@ class InferenceWorkerProcess(ProcessBase):
             # Give the replay steps to the last inference worker as this
             # one is guaranteed to not be the main process (when there's more than 1)
             if self.inference_worker_idx == (
-                self.config.RL.VER.num_inference_workers - 1
+                self.config.rl.ver.num_inference_workers - 1
             ):
                 while not self.queues.inference.empty():
                     self.new_reqs += self.queues.inference.get_many()

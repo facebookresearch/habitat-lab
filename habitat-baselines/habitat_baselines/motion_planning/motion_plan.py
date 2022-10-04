@@ -58,7 +58,7 @@ class MotionPlanner:
         self._ignore_names: List[str] = []
         self.traj_viz_id: Optional[int] = None
         self._sim = sim
-        os.makedirs(self._config.DEBUG_DIR, exist_ok=True)
+        os.makedirs(self._config.debug_dir, exist_ok=True)
 
         self._use_sim = self._get_sim()
         self.grasp_gen: Optional[GraspGenerator] = None
@@ -66,14 +66,14 @@ class MotionPlanner:
     def set_should_render(self, should_render: bool):
         self._should_render = should_render
         if self._should_render:
-            for f in glob.glob(f"{self._config.DEBUG_DIR}/*"):
+            for f in glob.glob(f"{self._config.debug_dir}/*"):
                 os.remove(f)
 
     def _log(self, txt: str):
         """
         Logs text to console only if logging is enabled.
         """
-        if self._config.VERBOSE:
+        if self._config.verbose:
             print("MP:", txt)
 
     @property
@@ -92,7 +92,7 @@ class MotionPlanner:
             pic = pic[:, :, :3]
         im = Image.fromarray(pic)
         save_name = "%s/%s%s_%s.jpeg" % (
-            self._config.DEBUG_DIR,
+            self._config.debug_dir,
             before_txt,
             str(uuid.uuid4())[:4],
             add_txt,
@@ -121,7 +121,7 @@ class MotionPlanner:
         self._use_sim.micro_step()
 
         did_collide, coll_details = self._use_sim.get_collisions(
-            self._config.COUNT_OBJ_COLLISIONS, self._ignore_names, True
+            self._config.count_obj_collisions, self._ignore_names, True
         )
         if (
             self._ignore_first
@@ -184,9 +184,9 @@ class MotionPlanner:
             self._should_render,
             grasp_thresh,
             n_gen_grasps,
-            self._config.MP_SIM_TYPE == "Priv",
-            self._config.DEBUG_DIR,
-            self._config.GRASP_GEN_IS_VERBOSE,
+            self._config.mp_sim_type == "Priv",
+            self._config.debug_dir,
+            self._config.grasp_gen_is_verbose,
         )
 
     def setup_ee_margin(self, obj_id_target: int):
@@ -285,7 +285,7 @@ class MotionPlanner:
 
         if joint_plan is None:
             self._mp_space.render_start_targ(
-                self._run_cfg.VIDEO_DIR,
+                self._run_cfg.video_dir,
                 "mp_fail",
                 robot_target.ee_target_pos,
                 f"ep{self._sim.ep_info['episode_id']}",
@@ -364,7 +364,7 @@ class MotionPlanner:
         else:
             dist_to_goal = -1.0  # type: ignore[assignment]
 
-        save_dir = osp.join(self._run_cfg.VIDEO_DIR, "mp_plans")
+        save_dir = osp.join(self._run_cfg.video_dir, "mp_plans")
         os.makedirs(save_dir, exist_ok=True)
         mp_name = "ep%s_%i_%.3f" % (
             self._sim.ep_info["episode_id"],
@@ -380,7 +380,7 @@ class MotionPlanner:
         """
         The two different simulators used for planning.
         """
-        if self._config.MP_SIM_TYPE == "Priv":
+        if self._config.mp_sim_type == "Priv":
             return HabMpSim(self._sim)
         else:
             raise ValueError("Unrecognized simulator type")

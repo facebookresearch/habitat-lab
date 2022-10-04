@@ -135,7 +135,7 @@ class NnSkillPolicy(SkillPolicy):
             policy_cfg = ckpt_dict["config"]
         policy = baseline_registry.get_policy(config.name)
 
-        expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
+        expected_obs_keys = policy_cfg.habitat.gym.obs_keys
         filtered_obs_space = spaces.Dict(
             OrderedDict(
                 [(k, observation_space.spaces[k]) for k in expected_obs_keys]
@@ -154,19 +154,18 @@ class NnSkillPolicy(SkillPolicy):
             OrderedDict(
                 [
                     (k, action_space[k])
-                    for k in policy_cfg.TASK_CONFIG.TASK.POSSIBLE_ACTIONS
+                    for k in policy_cfg.habitat.task.possible_actions
                 ]
             )
         )
 
-        if "ARM_ACTION" in filtered_action_space.spaces and (
-            policy_cfg.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER
-            is None
+        if "arm_action" in filtered_action_space.spaces and (
+            policy_cfg.habitat.task.actions.arm_action.grip_controller is None
         ):
-            filtered_action_space["ARM_ACTION"] = spaces.Dict(
+            filtered_action_space["arm_action"] = spaces.Dict(
                 {
                     k: v
-                    for k, v in filtered_action_space["ARM_ACTION"].items()
+                    for k, v in filtered_action_space["arm_action"].items()
                     if k != "grip_action"
                 }
             )

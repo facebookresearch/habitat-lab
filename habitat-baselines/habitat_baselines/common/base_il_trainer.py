@@ -39,7 +39,7 @@ class BaseILTrainer(BaseTrainer):
         r"""Makes directories for log files, checkpoints & results."""
         self._make_log_dir()
         self._make_ckpt_dir()
-        if self.config.EVAL_SAVE_RESULTS:
+        if self.config.eval_save_results:
             self._make_results_dir()
 
     def _make_log_dir(self) -> None:
@@ -51,8 +51,8 @@ class BaseILTrainer(BaseTrainer):
 
     def _make_ckpt_dir(self) -> None:
         r"""Makes directory for saving model checkpoints."""
-        if not os.path.isdir(self.config.CHECKPOINT_FOLDER):
-            os.makedirs(self.config.CHECKPOINT_FOLDER)
+        if not os.path.isdir(self.config.checkpoint_folder):
+            os.makedirs(self.config.checkpoint_folder)
 
     def _make_results_dir(self) -> None:
         r"""Makes directory for saving eval results."""
@@ -92,7 +92,7 @@ class BaseILTrainer(BaseTrainer):
             None
         """
         torch.save(
-            state_dict, os.path.join(self.config.CHECKPOINT_FOLDER, file_name)
+            state_dict, os.path.join(self.config.checkpoint_folder, file_name)
         )
 
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:

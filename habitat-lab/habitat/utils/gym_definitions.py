@@ -20,26 +20,30 @@ gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:
-    if "GYM" in cfg and "AUTO_NAME" in cfg["GYM"]:
-        return cfg["GYM"]["AUTO_NAME"]
+    if "habitat" in cfg:
+        cfg = cfg.habitat
+    if "gym" in cfg and "auto_name" in cfg["gym"]:
+        return cfg["gym"]["auto_name"]
     return None
 
 
 def _get_env_name(cfg: Config) -> Optional[str]:
-    return cfg["ENV_TASK"]
+    if "habitat" in cfg:
+        cfg = cfg.habitat
+    return cfg["env_task"]
 
 
 def make_gym_from_config(config: Config) -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """
-    if "TASK_CONFIG" in config:
-        config = config.TASK_CONFIG
+    if "habitat" in config:
+        config = config.habitat
     env_class_name = _get_env_name(config)
     env_class = get_env_class(env_class_name)
     assert (
         env_class is not None
-    ), f"No environment class with name `{env_class_name}` was found, you need to specify a valid one with ENV_TASK"
+    ), f"No environment class with name `{env_class_name}` was found, you need to specify a valid one with env_task"
     return habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
     )
@@ -55,13 +59,13 @@ def _make_habitat_gym_env(
 
     config = habitat.get_config(cfg_file_path)
 
-    sensors = config["SIMULATOR"]["AGENT_0"]["SENSORS"]
+    sensors = config.habitat.simulator.agent_0.sensors
 
     if use_render_mode:
         override_options.extend(
             [
-                "SIMULATOR.AGENT_0.SENSORS",
-                [*sensors, "THIRD_RGB_SENSOR"],
+                "habitat.simulator.agent_0.sensors",
+                [*sensors, "third_rgb_sensor"],
             ]
         )
 

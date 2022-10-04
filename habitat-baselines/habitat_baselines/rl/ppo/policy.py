@@ -87,7 +87,7 @@ class NetPolicy(nn.Module, Policy):
             self.action_distribution = GaussianNet(
                 self.net.output_size,
                 self.dim_actions,
-                policy_config.ACTION_DIST,
+                policy_config.action_dist,
             )
         else:
             ValueError(
@@ -259,8 +259,8 @@ class PointNavBaselinePolicy(NetPolicy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
-            hidden_size=config.RL.PPO.hidden_size,
-            aux_loss_config=config.RL.auxiliary_losses,
+            hidden_size=config.rl.ppo.hidden_size,
+            aux_loss_config=config.rl.auxiliary_losses,
         )
 
 

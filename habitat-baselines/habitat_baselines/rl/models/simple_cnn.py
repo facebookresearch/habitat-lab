@@ -136,7 +136,7 @@ class SimpleCNN(nn.Module):
         cnn_input = []
         if self._n_input_rgb > 0:
             rgb_observations = observations["rgb"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT x WIDTH]
             rgb_observations = rgb_observations.permute(0, 3, 1, 2)
             rgb_observations = (
                 rgb_observations.float() / 255.0
@@ -145,7 +145,7 @@ class SimpleCNN(nn.Module):
 
         if self._n_input_depth > 0:
             depth_observations = observations["depth"]
-            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT X WIDTH]
+            # permute tensor to dimension [BATCH x CHANNEL x HEIGHT x WIDTH]
             depth_observations = depth_observations.permute(0, 3, 1, 2)
             cnn_input.append(depth_observations)
 

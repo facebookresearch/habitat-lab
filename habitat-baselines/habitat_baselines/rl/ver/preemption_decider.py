@@ -137,7 +137,7 @@ class PreemptionDeciderProcess(ProcessBase):
         # The maximum number of steps we can collect from 1 env. This
         # is rollout length + 1 times the maximum difference in
         # env speed. We also have an additional scaling factor
-        max_possible_steps = (self.config.RL.PPO.num_steps + 1) * (
+        max_possible_steps = (self.config.rl.ppo.num_steps + 1) * (
             self._ver_extra_steps_scaling
             * np.max(all_step_averages)
             / np.min(all_step_averages)
@@ -160,8 +160,8 @@ class PreemptionDeciderProcess(ProcessBase):
 
         # Mask out options where we collect too many steps
         valids = candidate_length_steps <= (
-            self.config.RL.PPO.num_steps
-            * self.config.NUM_ENVIRONMENTS
+            self.config.rl.ppo.num_steps
+            * self.config.num_environments
             * self.world_size
         )
 
@@ -182,7 +182,7 @@ class PreemptionDeciderProcess(ProcessBase):
         candidate_lengths = candidate_lengths[valids]
         candidate_length_steps = candidate_length_steps[valids]
 
-        if not self.config.RL.VER.overlap_rollouts_and_learn:
+        if not self.config.rl.ver.overlap_rollouts_and_learn:
             # The total rollout time is time to collect + learning
             # + some error factor
             total_time = (
@@ -330,11 +330,11 @@ class PreemptionDeciderProcess(ProcessBase):
         self.response_queue.put(None)
 
         self.step_averages = [
-            WindowedRunningMean(5 * self.config.RL.PPO.num_steps)
-            for _ in range(self.config.NUM_ENVIRONMENTS)
+            WindowedRunningMean(5 * self.config.rl.ppo.num_steps)
+            for _ in range(self.config.num_environments)
         ]
         self.last_step_times = np.zeros(
-            (self.config.NUM_ENVIRONMENTS,), dtype=np.float64
+            (self.config.num_environments,), dtype=np.float64
         )
 
         self.started = False

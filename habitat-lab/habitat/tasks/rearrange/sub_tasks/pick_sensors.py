@@ -101,14 +101,14 @@ class RearrangePickReward(RearrangeReward):
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
-                self._metric += self._config.PICK_REWARD
+                self._metric += self._config.pick_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self.cur_dist = -1
             else:
                 # picked the wrong object
-                self._metric -= self._config.WRONG_PICK_PEN
-                if self._config.WRONG_PICK_SHOULD_END:
+                self._metric -= self._config.wrong_pick_pen
+                if self._config.wrong_pick_should_end:
                     rearrange_logger.debug(
                         "Grasped wrong object, ending episode."
                     )
@@ -117,7 +117,7 @@ class RearrangePickReward(RearrangeReward):
                 self.cur_dist = -1
                 return
 
-        if self._config.USE_DIFF:
+        if self._config.use_diff:
             if self.cur_dist < 0:
                 dist_diff = 0.0
             else:
@@ -125,15 +125,15 @@ class RearrangePickReward(RearrangeReward):
 
             # Filter out the small fluctuations
             dist_diff = round(dist_diff, 3)
-            self._metric += self._config.DIST_REWARD * dist_diff
+            self._metric += self._config.dist_reward * dist_diff
         else:
-            self._metric -= self._config.DIST_REWARD * dist_to_goal
+            self._metric -= self._config.dist_reward * dist_to_goal
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
             # Dropped the object
-            self._metric -= self._config.DROP_PEN
-            if self._config.DROP_OBJ_SHOULD_END:
+            self._metric -= self._config.drop_pen
+            if self._config.drop_obj_should_end:
                 self._task.should_end = True
             self._prev_picked = cur_picked
             self.cur_dist = -1
@@ -182,7 +182,7 @@ class RearrangePickSuccess(Measure):
         self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            and ee_to_rest_distance < self._config.EE_RESTING_SUCCESS_THRESHOLD
+            and ee_to_rest_distance < self._config.ee_resting_success_threshold
         )
 
         self._prev_ee_pos = observations["ee_pos"]

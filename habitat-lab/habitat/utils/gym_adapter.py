@@ -167,23 +167,23 @@ class HabGymWrapper(gym.Env):
     Configuration allows filtering the included observations, specifying goals,
     or filtering actions. Listed below are the
     config keys:
-    - `OBS_KEYS`: Which observation names from the wrapped environment
+    - `obs_keys`: Which observation names from the wrapped environment
       to include. The order of the key names is kept in the output observation
       array. If not specified, all observations are included.
-    - `DESIRED_GOAL_KEYS`: By default is an empty list. If not empty,
+    - `desired_goal_keys`: By default is an empty list. If not empty,
       any observations are returned in the `desired_goal` returned key of the
       observation.
-    - `ACTION_KEYS`: Include a subset of the allowed actions in the
+    - `action_keys`: Include a subset of the allowed actions in the
       wrapped environment. If not specified, all actions are included.
     Example usage:
     """
 
     def __init__(self, env, save_orig_obs: bool = False):
-        gym_config = env.config.GYM
-        self._gym_goal_keys = gym_config.DESIRED_GOAL_KEYS
-        self._gym_achieved_goal_keys = gym_config.ACHIEVED_GOAL_KEYS
-        self._gym_action_keys = gym_config.ACTION_KEYS
-        self._gym_obs_keys = gym_config.OBS_KEYS
+        gym_config = env.config.gym
+        self._gym_goal_keys = gym_config.desired_goal_keys
+        self._gym_achieved_goal_keys = gym_config.achieved_goal_keys
+        self._gym_action_keys = gym_config.action_keys
+        self._gym_obs_keys = gym_config.obs_keys
 
         if self._gym_obs_keys is None:
             self._gym_obs_keys = list(env.observation_space.spaces.keys())

@@ -39,11 +39,11 @@ def safe_mkdir(path):
 def _generate_fn(scene):
     cfg = habitat.get_config()
     cfg.defrost()
-    cfg.SIMULATOR.SCENE = scene
-    cfg.SIMULATOR.AGENT_0.SENSORS = []
+    cfg.habitat.simulator.scene = scene
+    cfg.habitat.simulator.agent_0.sensors = []
     cfg.freeze()
 
-    sim = habitat.sims.make_sim("Sim-v0", config=cfg.SIMULATOR)
+    sim = habitat.sims.make_sim("Sim-v0", config=cfg.habitat.simulator)
 
     dset = habitat.datasets.make_dataset("PointNav-v1")
     dset.episodes = list(

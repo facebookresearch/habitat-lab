@@ -1,28 +1,29 @@
-TASK:
-  TYPE: EQA-v0
-  SENSORS: ['QUESTION_SENSOR']
-  POSSIBLE_ACTIONS: ['MOVE_FORWARD', 'TURN_LEFT', 'TURN_RIGHT', 'ANSWER']
-  MEASUREMENTS: ['EPISODE_INFO', 'DISTANCE_TO_GOAL', 'ANSWER_ACCURACY']
+habitat:
+  task:
+    type: EQA-v0
+    sensors: ['question_sensor']
+    possible_actions: ['move_forward', 'turn_left', 'turn_right', 'answer']
+    measurements: ['episode_info', 'distance_to_goal', 'answer_accuracy']
 
-ENVIRONMENT:
-  ITERATOR_OPTIONS:
-    SHUFFLE: False
+  environment:
+    iterator_options:
+      shuffle: False
 
-SIMULATOR:
-  SCENE: data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb
-  FORWARD_STEP_SIZE: 0.1
-  TURN_ANGLE: 9
-  AGENT_0:
-    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
-  RGB_SENSOR:
-    HEIGHT: 512
-    WIDTH: 512
-    HFOV: 45
-    POSITION: [0, 1.09, 0]
-    TYPE: HabitatSimRGBSensor
+  simulator:
+    scene: data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb
+    forward_step_size: 0.1
+    turn_angle: 9
+    agent_0:
+      sensors: ['rgb_sensor', 'depth_sensor', 'semantic_sensor']
+    rgb_sensor:
+      height: 512
+      width: 512
+      hfov: 45
+      position: [0, 1.09, 0]
+      type: HabitatSimRGBSensor
 
-DATASET:
-  TYPE: MP3DEQA-v1
-  SPLIT: val
-  DATA_PATH: "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
-  SCENES_DIR: "data/scene_datasets/"
+  dataset:
+    type: MP3DEQA-v1
+    split: val
+    data_path: "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
+    scenes_dir: "data/scene_datasets/"

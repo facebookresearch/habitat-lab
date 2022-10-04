@@ -51,7 +51,7 @@ class PddlDomain:
     ):
         """
         :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
-        :param cur_task_config: The task config (`TASK_CONFIG.TASK`). This is
+        :param cur_task_config: The task config (`habitat.task`). This is
             used when the action initializes a task via `PddlAction::init_task`. If
             this is not used, `cur_task_config` can be None.
         """
@@ -295,9 +295,9 @@ class PddlDomain:
             dataset=dataset,
             env=env,
             episode=episode,
-            obj_thresh=self._config.OBJ_SUCC_THRESH,
-            art_thresh=self._config.ART_SUCC_THRESH,
-            robot_at_thresh=self._config.ROBOT_AT_THRESH,
+            obj_thresh=self._config.obj_succ_thresh,
+            art_thresh=self._config.art_succ_thresh,
+            robot_at_thresh=self._config.robot_at_thresh,
             expr_types=self.expr_types,
             obj_ids=sim.ref_handle_to_rigid_obj_id,
             target_ids={
@@ -307,7 +307,7 @@ class PddlDomain:
             art_handles={k.handle: i for i, k in enumerate(sim.art_objs)},
             marker_handles=sim.get_all_markers(),
             robot_ids={
-                f"ROBOT_{robot_id}": robot_id
+                f"robot_{robot_id}": robot_id
                 for robot_id in range(sim.num_robots)
             },
             all_entities=self.all_entities,

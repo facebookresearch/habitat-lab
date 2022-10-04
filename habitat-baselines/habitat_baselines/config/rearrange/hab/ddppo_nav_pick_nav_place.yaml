@@ -1,39 +1,39 @@
-VERBOSE: False
-BASE_TASK_CONFIG_PATH: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
-TRAINER_NAME: "ddppo"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb"
-VIDEO_DIR: "video_dir"
-VIDEO_FPS: 30
-VIDEO_RENDER_TOP_DOWN: False
-VIDEO_RENDER_ALL_INFO: True
-VIDEO_RENDER_VIEWS:
-  - "THIRD_RGB_SENSOR"
-TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 32
-WRITER_TYPE: 'tb'
+verbose: False
+base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
+trainer_name: "ddppo"
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: ["disk"]
+tensorboard_dir: "tb"
+video_dir: "video_dir"
+video_fps: 30
+video_render_top_down: False
+video_render_all_info: True
+video_render_views:
+  - "third_rgb_sensor"
+test_episode_count: -1
+eval_ckpt_path_dir: "data/new_checkpoints"
+num_environments: 32
+writer_type: 'tb'
 # Visual sensors to include
-SENSORS: ["HEAD_DEPTH_SENSOR"]
-CHECKPOINT_FOLDER: "data/new_checkpoints"
-NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1.0e8
-LOG_INTERVAL: 10
-NUM_CHECKPOINTS: 20
+sensors: ["head_depth_sensor"]
+checkpoint_folder: "data/new_checkpoints"
+num_updates: -1
+total_num_steps: 1.0e8
+log_interval: 10
+num_checkpoints: 20
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
-EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
+force_torch_single_threaded: True
+eval_keys_to_include_in_name: ['reward', 'force', 'success']
 
-RL:
-  POLICY:
+rl:
+  policy:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
-      ACTION_DIST:
+      action_dist:
          use_log_std: True
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2
@@ -60,7 +60,7 @@ RL:
     # policy inference time during rollout generation
     use_double_buffered_sampler: False
 
-  DDPPO:
+  ddppo:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
     distrib_backend: NCCL

@@ -51,7 +51,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
             keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
 
-            if to_target < self._config.GRASP_THRESH_DIST:
+            if to_target < self._config.grasp_thresh_dist:
                 self.cur_grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx],
                     force=False,
@@ -72,7 +72,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
-            if to_target < self._config.GRASP_THRESH_DIST:
+            if to_target < self._config.grasp_thresh_dist:
                 self.cur_robot.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 

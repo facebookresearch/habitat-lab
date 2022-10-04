@@ -90,7 +90,7 @@ class OracleNavAction(BaseVelAction):
             self._poss_actions
         ):
             if is_last_action:
-                return self._sim.step(HabitatSimActions.BASE_VELOCITY)
+                return self._sim.step(HabitatSimActions.base_velocity)
             else:
                 return {}
         nav_to_target_idx = int(nav_to_target_idx[0]) - 1
@@ -119,23 +119,23 @@ class OracleNavAction(BaseVelAction):
             (final_nav_targ - robot_pos)[[0, 2]]
         )
         at_goal = (
-            dist_to_final_nav_targ < self._config.DIST_THRESH
-            and angle_to_obj < self._config.TURN_THRESH
+            dist_to_final_nav_targ < self._config.dist_thresh
+            and angle_to_obj < self._config.turn_thresh
         )
 
         if not at_goal:
-            if dist_to_final_nav_targ < self._config.DIST_THRESH:
+            if dist_to_final_nav_targ < self._config.dist_thresh:
                 # Look at the object
                 vel = compute_turn(
-                    rel_pos, self._config.TURN_VELOCITY, robot_forward
+                    rel_pos, self._config.turn_velocity, robot_forward
                 )
-            elif angle_to_target < self._config.TURN_THRESH:
+            elif angle_to_target < self._config.turn_thresh:
                 # Move towards the target
-                vel = [self._config.FORWARD_VELOCITY, 0]
+                vel = [self._config.forward_velocity, 0]
             else:
                 # Look at the target waypoint.
                 vel = compute_turn(
-                    rel_targ, self._config.TURN_VELOCITY, robot_forward
+                    rel_targ, self._config.turn_velocity, robot_forward
                 )
         else:
             vel = [0, 0]

@@ -1,5 +1,6 @@
-DATASET:
-  TYPE: RearrangeDataset-v0
-  SPLIT: train
-  DATA_PATH: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
-  SCENES_DIR: "data/replica_cad/"
+habitat:
+  dataset:
+    type: RearrangeDataset-v0
+    split: train
+    data_path: data/datasets/rearrange_pick/replica_cad/v0/{split}/{split}_counter_L_analysis_5000_500.json.gz
+    scenes_dir: "data/replica_cad/"

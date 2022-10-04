@@ -387,7 +387,7 @@ def generate_video(
         images: list of images to be converted to video.
         episode_id: episode id for video naming.
         checkpoint_idx: checkpoint index for video naming.
-        metric_name: name of the performance metric, e.g. "spl".
+        metric_name: name of the performance metric, e.g. "SPL".
         metric_value: value of metric.
         tb_writer: tensorboard writer object for uploading video.
         fps: fps for generated video.
@@ -652,7 +652,7 @@ def action_to_velocity_control(
     lin_vel, ang_vel = torch.clip(action, min=-1, max=1)
     step_action = {
         "action": {
-            "action": "VELOCITY_CONTROL",
+            "action": "velocity_control",
             "action_args": {
                 "linear_velocity": lin_vel.item(),
                 "angular_velocity": ang_vel.item(),

@@ -29,7 +29,7 @@ class RearrangeGraspManager:
     def __init__(self, sim, config: Config, robot) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
-        :param config: The task's "SIMULATOR" subconfig node. Defines grasping parameters.
+        :param config: The task's "simulator" subconfig node. Defines grasping parameters.
         """
         self._sim = sim
         self._snapped_obj_id: Optional[int] = None
@@ -66,14 +66,14 @@ class RearrangeGraspManager:
         ee_pos = self._managed_robot.ee_transform.translation
         if self._snapped_obj_id is not None and (
             np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
-            >= self._config.HOLD_THRESH
+            >= self._config.hold_thresh
         ):
             return True
         if self._snapped_marker_id is not None:
             marker = self._sim.get_marker(self._snapped_marker_id)
             if (
                 np.linalg.norm(ee_pos - marker.get_current_position())
-                >= self._config.HOLD_THRESH
+                >= self._config.hold_thresh
             ):
                 return True
 
@@ -100,7 +100,7 @@ class RearrangeGraspManager:
                 rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._leave_info = None
         if (
-            self._sim.habitat_config.KINEMATIC_MODE
+            self._sim.habitat_config.kinematic_mode
             and self._snapped_obj_id is not None
         ):
             self.update_object_to_grasp()
@@ -184,7 +184,7 @@ class RearrangeGraspManager:
         marker = self._sim.get_marker(marker_name)
         self._snapped_marker_id = marker_name
         self._managed_robot.open_gripper()
-        if self._sim.habitat_config.KINEMATIC_MODE:
+        if self._sim.habitat_config.kinematic_mode:
             return
 
         self._snap_constraints = [
@@ -226,7 +226,7 @@ class RearrangeGraspManager:
         c.frame_a = mn.Matrix3.identity_init()
         if rotation_lock_b is not None:
             c.frame_b = rotation_lock_b
-        c.max_impulse = self._config.GRASP_IMPULSE
+        c.max_impulse = self._config.grasp_impulse
         c.constraint_type = constraint_type
 
         if constraint_type == RigidConstraintType.Fixed:
@@ -309,7 +309,7 @@ class RearrangeGraspManager:
 
         self._managed_robot.open_gripper()
 
-        if self._sim.habitat_config.KINEMATIC_MODE:
+        if self._sim.habitat_config.kinematic_mode:
             return
 
         # Set collision group to GraspedObject so that it doesn't collide

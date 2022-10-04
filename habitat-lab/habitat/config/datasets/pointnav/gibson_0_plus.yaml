@@ -1,4 +1,5 @@
-DATASET:
-  TYPE: PointNav-v1
-  SPLIT: train_extra_large
-  DATA_PATH: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
+habitat:
+  dataset:
+    type: PointNav-v1
+    split: train_extra_large
+    data_path: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz

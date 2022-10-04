@@ -32,8 +32,8 @@ class PointNavDatasetV1(Dataset):
     @staticmethod
     def check_config_paths_exist(config: Config) -> bool:
         return os.path.exists(
-            config.DATA_PATH.format(split=config.SPLIT)
-        ) and os.path.exists(config.SCENES_DIR)
+            config.data_path.format(split=config.split)
+        ) and os.path.exists(config.scenes_dir)
 
     @classmethod
     def get_scenes_to_load(cls, config: Config) -> List[str]:
@@ -41,7 +41,7 @@ class PointNavDatasetV1(Dataset):
         episodes.
         """
         dataset_dir = os.path.dirname(
-            config.DATA_PATH.format(split=config.SPLIT)
+            config.data_path.format(split=config.split)
         )
         if not cls.check_config_paths_exist(config):
             raise FileNotFoundError(
@@ -50,7 +50,7 @@ class PointNavDatasetV1(Dataset):
 
         cfg = config.clone()
         cfg.defrost()
-        cfg.CONTENT_SCENES = []
+        cfg.content_scenes = []
         dataset = cls(cfg)
         has_individual_scene_files = os.path.exists(
             dataset.content_scenes_path.split("{scene}")[0].format(
@@ -64,7 +64,7 @@ class PointNavDatasetV1(Dataset):
             )
         else:
             # Load the full dataset, things are not split into separate files
-            cfg.CONTENT_SCENES = [ALL_SCENES_MASK]
+            cfg.content_scenes = [ALL_SCENES_MASK]
             dataset = cls(cfg)
             return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
@@ -92,9 +92,9 @@ class PointNavDatasetV1(Dataset):
         if config is None:
             return
 
-        datasetfile_path = config.DATA_PATH.format(split=config.SPLIT)
+        datasetfile_path = config.data_path.format(split=config.split)
         with gzip.open(datasetfile_path, "rt") as f:
-            self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+            self.from_json(f.read(), scenes_dir=config.scenes_dir)
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
@@ -104,7 +104,7 @@ class PointNavDatasetV1(Dataset):
             )
         )
         if has_individual_scene_files:
-            scenes = config.CONTENT_SCENES
+            scenes = config.content_scenes
             if ALL_SCENES_MASK in scenes:
                 scenes = self._get_scenes_from_folder(
                     content_scenes_path=self.content_scenes_path,
@@ -116,7 +116,7 @@ class PointNavDatasetV1(Dataset):
                     data_path=dataset_dir, scene=scene
                 )
                 with gzip.open(scene_filename, "rt") as f:
-                    self.from_json(f.read(), scenes_dir=config.SCENES_DIR)
+                    self.from_json(f.read(), scenes_dir=config.scenes_dir)
 
         else:
             self.episodes = list(

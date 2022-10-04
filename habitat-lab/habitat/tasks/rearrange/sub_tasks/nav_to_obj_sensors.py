@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 
-BASE_ACTION_NAME = "BASE_VELOCITY"
+BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_sensor
@@ -92,14 +92,14 @@ class NavToSkillSensor(Sensor):
 
     def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(
-            shape=(self._config.NUM_SKILLS,),
+            shape=(self._config.num_skills,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
         )
 
     def get_observation(self, task, *args, **kwargs):
-        ret = np.zeros(self._config.NUM_SKILLS, dtype=np.float32)
+        ret = np.zeros(self._config.num_skills, dtype=np.float32)
         if self._action_names is None:
             self._action_names = list(task.pddl_problem.actions.keys())
 
@@ -164,7 +164,7 @@ class NavGoalSensor(Sensor):
         )
 
     def _generate_targets(self, task):
-        robot_entity = task.pddl_problem.all_entities["ROBOT_0"]
+        robot_entity = task.pddl_problem.all_entities["robot_0"]
         poss_actions = task.pddl_problem.get_possible_actions(
             allowed_action_names=["nav", "nav_to_receptacle"],
             filter_entities=[robot_entity],
@@ -298,7 +298,7 @@ class NavToObjReward(RearrangeReward):
         else:
             dist_diff = self._prev_dist - cur_dist
 
-        reward += self._config.DIST_REWARD * dist_diff
+        reward += self._config.dist_reward * dist_diff
         self._prev_dist = cur_dist
 
         bad_terminate_pen = task.measurements.measures[
@@ -307,8 +307,8 @@ class NavToObjReward(RearrangeReward):
         reward -= bad_terminate_pen
 
         if (
-            self._config.SHOULD_REWARD_TURN
-            and cur_dist < self._config.TURN_REWARD_DIST
+            self._config.should_reward_turn
+            and cur_dist < self._config.turn_reward_dist
         ):
             self._give_turn_reward = True
 
@@ -321,7 +321,7 @@ class NavToObjReward(RearrangeReward):
             else:
                 angle_diff = self._cur_angle_dist - angle_dist
 
-            reward += self._config.ANGLE_DIST_REWARD * angle_diff
+            reward += self._config.angle_dist_reward * angle_diff
             self._cur_angle_dist = angle_dist
 
         self._metric = reward
@@ -410,9 +410,9 @@ class BadCalledTerminate(GeoMeasure):
             and not success_measure.get_metric()
         ):
             assert (
-                not self._config.DECAY_BAD_TERM
-            ), "DECAY_BAD_TERM is not supported for this measure"
-            self.reward_pen = self._config.BAD_TERM_PEN
+                not self._config.decay_bad_term
+            ), "decay_bad_term is not supported for this measure"
+            self.reward_pen = self._config.bad_term_pen
             self._metric = 1.0
         else:
             self._metric = 0.0
@@ -442,7 +442,7 @@ class NavToPosSucc(GeoMeasure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
-        self._metric = dist < self._config.SUCCESS_DISTANCE
+        self._metric = dist < self._config.success_distance
 
 
 @registry.register_measure
@@ -478,16 +478,16 @@ class NavToObjSuccess(GeoMeasure):
             NavToPosSucc.cls_uuid
         ].get_metric()
 
-        if self._config.MUST_LOOK_AT_TARG:
+        if self._config.must_look_at_targ:
             self._metric = (
-                nav_pos_succ and angle_dist < self._config.SUCCESS_ANGLE_DIST
+                nav_pos_succ and angle_dist < self._config.success_angle_dist
             )
         else:
             self._metric = nav_pos_succ
 
         called_stop = self.does_action_want_stop(task, observations)
 
-        if self._config.MUST_CALL_STOP:
+        if self._config.must_call_stop:
             if called_stop:
                 if self._end_on_stop:
                     task.should_end = True
@@ -496,6 +496,6 @@ class NavToObjSuccess(GeoMeasure):
 
     def does_action_want_stop(self, task, obs):
         assert (
-            not self._config.HEURISTIC_STOP
-        ), "HEURISTIC_STOP not supported in this metric"
+            not self._config.heuristic_stop
+        ), "heuristic_stop not supported in this metric"
         return task.actions[BASE_ACTION_NAME].does_want_terminate

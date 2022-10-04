@@ -14,9 +14,9 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 def test_demo_notebook():
     config = habitat.get_config("tasks/pointnav_mp3d.yaml")
     config.defrost()
-    config.DATASET.SPLIT = "val"
+    config.habitat.dataset.split = "val"
 
-    if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+    if not PointNavDatasetV1.check_config_paths_exist(config.habitat.dataset):
         pytest.skip(
             "Please download the Matterport3D PointNav val dataset and Matterport3D val scenes"
         )

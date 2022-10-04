@@ -94,13 +94,13 @@ class PointNavResNetPolicy(NetPolicy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
-            hidden_size=config.RL.PPO.hidden_size,
-            rnn_type=config.RL.DDPPO.rnn_type,
-            num_recurrent_layers=config.RL.DDPPO.num_recurrent_layers,
-            backbone=config.RL.DDPPO.backbone,
-            force_blind_policy=config.FORCE_BLIND_POLICY,
-            policy_config=config.RL.POLICY,
-            aux_loss_config=config.RL.auxiliary_losses,
+            hidden_size=config.rl.ppo.hidden_size,
+            rnn_type=config.rl.ddppo.rnn_type,
+            num_recurrent_layers=config.rl.ddppo.num_recurrent_layers,
+            backbone=config.rl.ddppo.backbone,
+            force_blind_policy=config.force_blind_policy,
+            policy_config=config.rl.policy,
+            aux_loss_config=config.rl.auxiliary_losses,
             fuse_keys=None,
         )
 

@@ -5,11 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 import pytest
+from gym import spaces
 
 try:
     import torch
     import torch.distributed
-    from gym import spaces
 
     from habitat_baselines.rl.ddppo.policy.resnet import resnet18, resnet50
     from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder

@@ -14,10 +14,10 @@ export OMP_NUM_THREADS=2
 export MAGNUM_LOG=quiet
 export HABITAT_SIM_LOG=quiet
 
-NO_SLEEP=("SIMULATOR.AUTO_SLEEP" False)
-NO_CONCUR=("SIMULATOR.CONCUR_RENDER" False)
-#NO_PHYSICS=("SIMULATOR.STEP_PHYSICS" False) #disables simulation step and robot update
-#NO_ROBOT_UPDATE=("SIMULATOR.UPDATE_ROBOT" False) #only disables robot update
+NO_SLEEP=("habitat.simulator.auto_sleep" False)
+NO_CONCUR=("habitat.simulator.concur_render" False)
+#NO_PHYSICS=("habitat.simulator.step_physics" False) #disables simulation step and robot update
+#NO_ROBOT_UPDATE=("habitat.simulator.update_robot" False) #only disables robot update
 
 #number of processes
 # shellcheck disable=SC2043

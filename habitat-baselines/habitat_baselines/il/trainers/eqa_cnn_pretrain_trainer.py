@@ -37,7 +37,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         super().__init__(config)
 
         self.device = (
-            torch.device("cuda", self.config.TORCH_GPU_ID)
+            torch.device("cuda", self.config.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -114,7 +114,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         with TensorboardWriter(
-            config.TENSORBOARD_DIR, flush_secs=self.flush_secs
+            config.tensorboard_dir, flush_secs=self.flush_secs
         ) as writer:
             while epoch <= config.IL.EQACNNPretrain.max_epochs:
                 start_time = time.time()
@@ -141,7 +141,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
                     avg_loss += loss.item()
 
-                    if t % config.LOG_INTERVAL == 0:
+                    if t % config.log_interval == 0:
                         logger.info(
                             "[ Epoch: {}; iter: {}; loss: {:.3f} ]".format(
                                 epoch, t, loss.item()
@@ -194,7 +194,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         config = self.config
 
         config.defrost()
-        config.TASK_CONFIG.DATASET.SPLIT = self.config.EVAL.SPLIT
+        config.habitat.dataset.split = self.config.eval.split
         config.freeze()
 
         eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(config, mode="val")
@@ -249,14 +249,14 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                 avg_l2 += l2.item()
                 avg_l3 += l3.item()
 
-                if t % config.LOG_INTERVAL == 0:
+                if t % config.log_interval == 0:
                     logger.info(
                         "[ Iter: {}; loss: {:.3f} ]".format(t, loss.item()),
                     )
 
                 if (
-                    config.EVAL_SAVE_RESULTS
-                    and t % config.EVAL_SAVE_RESULTS_INTERVAL == 0
+                    config.eval_save_results
+                    and t % config.eval_save_results_interval == 0
                 ):
 
                     result_id = "ckpt_{}_{}".format(

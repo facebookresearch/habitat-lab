@@ -79,19 +79,19 @@ class RearrangeTask(NavigationTask):
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
         self._ignore_collisions: List[Any] = []
-        self._desired_resting = np.array(self._config.DESIRED_RESTING_POSITION)
+        self._desired_resting = np.array(self._config.desired_resting_position)
         self._sim_reset = True
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
 
-        data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
+        data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
             osp.dirname(data_path), f"{fname}_robot_start.pickle"
         )
 
-        if self._config.CACHE_ROBOT_INIT or osp.exists(cache_path):
+        if self._config.cache_robot_init or osp.exists(cache_path):
             self._robot_init_cache = CacheHelper(
                 cache_path,
                 def_val={},
@@ -130,14 +130,14 @@ class RearrangeTask(NavigationTask):
         if (
             self._robot_pos_start is None
             or start_ident not in self._robot_pos_start
-            or self._config.FORCE_REGENERATE
+            or self._config.force_regenerate
         ):
             robot_pos, robot_rot = self._sim.set_robot_base_to_random_point(
                 agent_idx=agent_idx
             )
             if (
                 self._robot_pos_start is not None
-                and self._config.SHOULD_SAVE_TO_CACHE
+                and self._config.should_save_to_cache
             ):
                 self._robot_pos_start[start_ident] = (robot_pos, robot_rot)
                 self._robot_init_cache.save(self._robot_pos_start)
@@ -191,7 +191,7 @@ class RearrangeTask(NavigationTask):
         for grasp_mgr in self._sim.robots_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
-                and self._config.CONSTRAINT_VIOLATION_DROPS_OBJECT
+                and self._config.constraint_violation_drops_object
             ):
                 grasp_mgr.desnap(True)
 
@@ -212,7 +212,7 @@ class RearrangeTask(NavigationTask):
         for grasp_mgr in self._sim.robots_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
-                and self._config.CONSTRAINT_VIOLATION_ENDS_EPISODE
+                and self._config.constraint_violation_ends_episode
             ):
                 done = True
                 break
@@ -263,7 +263,7 @@ class RearrangeTask(NavigationTask):
 
     def get_cur_collision_info(self, agent_idx) -> CollisionDetails:
         _, coll_details = rearrange_collision(
-            self._sim, self._config.COUNT_OBJ_COLLISIONS, agent_idx=agent_idx
+            self._sim, self._config.count_obj_collisions, agent_idx=agent_idx
         )
         return coll_details
 

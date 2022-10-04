@@ -33,7 +33,7 @@ Controls:
 Change the task with `--cfg tasks/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/tasks/rearrange/` folder).
 
 Change the grip type:
-- Suction gripper `TASK.ACTIONS.ARM_ACTION.GRIP_CONTROLLER "SuctionGraspAction"`
+- Suction gripper `task.actions.arm_action.grip_controller "SuctionGraspAction"`
 
 To record a video: `--save-obs` This will save the video to file under `data/vids/` specified by `--save-obs-fname` (by default `vid.mp4`).
 
@@ -82,16 +82,16 @@ def get_input_vel_ctlr(
     skip_pygame, arm_action, env, not_block_input, agent_to_control
 ):
     if skip_pygame:
-        return step_env(env, "EMPTY", {}), None, False
+        return step_env(env, "empty", {}), None, False
     multi_agent = len(env._sim.robots_mgr) > 1
 
-    arm_action_name = "ARM_ACTION"
-    base_action_name = "BASE_VELOCITY"
+    arm_action_name = "arm_action"
+    base_action_name = "base_velocity"
     arm_key = "arm_action"
     grip_key = "grip_action"
     base_key = "base_vel"
     if multi_agent:
-        agent_k = f"AGENT_{agent_to_control}"
+        agent_k = f"agent_{agent_to_control}"
         arm_action_name = f"{agent_k}_{arm_action_name}"
         base_action_name = f"{agent_k}_{base_action_name}"
         arm_key = f"{agent_k}_{arm_key}"
@@ -502,7 +502,9 @@ def play_env(env, args, config):
         )
     if gfx_measure is not None:
         gfx_str = gfx_measure.get_metric(force_get=True)
-        write_gfx_replay(gfx_str, config.TASK, env.current_episode.episode_id)
+        write_gfx_replay(
+            gfx_str, config.habitat.task, env.current_episode.episode_id
+        )
 
     if not args.no_render:
         pygame.quit()
@@ -582,26 +584,26 @@ if __name__ == "__main__":
     config = habitat.get_config(args.cfg, args.opts)
     config.defrost()
     if not args.same_task:
-        config.SIMULATOR.THIRD_RGB_SENSOR.WIDTH = args.play_cam_res
-        config.SIMULATOR.THIRD_RGB_SENSOR.HEIGHT = args.play_cam_res
-        config.SIMULATOR.AGENT_0.SENSORS.append("THIRD_RGB_SENSOR")
-        config.SIMULATOR.DEBUG_RENDER = True
-        config.TASK.COMPOSITE_SUCCESS.MUST_CALL_STOP = False
-        config.TASK.REARRANGE_NAV_TO_OBJ_SUCCESS.MUST_CALL_STOP = False
-        config.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
-        config.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
+        config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
+        config.habitat.simulator.third_rgb_sensor.height = args.play_cam_res
+        config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
+        config.habitat.simulator.debug_render = True
+        config.habitat.task.composite_success.must_call_stop = False
+        config.habitat.task.rearrange_nav_to_obj_success.must_call_stop = False
+        config.habitat.task.force_terminate.max_accum_force = -1.0
+        config.habitat.task.force_terminate.max_instant_force = -1.0
     if args.gfx:
-        config.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = True
-        config.TASK.MEASUREMENTS.append("GFX_REPLAY_MEASURE")
+        config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = True
+        config.habitat.task.measurements.append("gfx_replay_measure")
     if args.never_end:
-        config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
+        config.habitat.environment.max_episode_steps = 0
     if args.add_ik:
-        if "ARM_ACTION" not in config.TASK.ACTIONS:
+        if "arm_action" not in config.habitat.task.actions:
             raise ValueError(
                 "Action space does not have any arm control so incompatible with `--add-ik` option"
             )
-        config.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmEEAction"
-        config.SIMULATOR.IK_ARM_URDF = (
+        config.habitat.task.actions.arm_action.arm_controller = "ArmEEAction"
+        config.habitat.simulator.ik_arm_urdf = (
             "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
         )
     config.freeze()

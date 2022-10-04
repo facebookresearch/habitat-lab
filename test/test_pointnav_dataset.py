@@ -49,7 +49,7 @@ def check_json_serialization(dataset: habitat.Dataset):
 
 
 def test_single_pointnav_dataset():
-    dataset_config = get_config().DATASET
+    dataset_config = get_config().habitat.dataset
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
@@ -65,7 +65,7 @@ def test_single_pointnav_dataset():
 
 
 def test_multiple_files_scene_path():
-    dataset_config = get_config(CFG_MULTI_TEST).DATASET
+    dataset_config = get_config(CFG_MULTI_TEST).habitat.dataset
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
@@ -73,13 +73,13 @@ def test_multiple_files_scene_path():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
-    dataset_config.SCENES_DIR = os.path.join(
+    dataset_config.content_scenes = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.scenes_dir = os.path.join(
         os.getcwd(), DEFAULT_SCENE_PATH_PREFIX
     )
     dataset_config.freeze()
     partial_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     assert (
         len(partial_dataset.scene_ids) == PARTIAL_LOAD_SCENES
@@ -93,7 +93,7 @@ def test_multiple_files_scene_path():
 
 
 def test_multiple_files_pointnav_dataset():
-    dataset_config = get_config(CFG_MULTI_TEST).DATASET
+    dataset_config = get_config(CFG_MULTI_TEST).habitat.dataset
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
@@ -101,10 +101,10 @@ def test_multiple_files_pointnav_dataset():
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
     dataset_config.defrost()
-    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.content_scenes = scenes[:PARTIAL_LOAD_SCENES]
     dataset_config.freeze()
     partial_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     assert (
         len(partial_dataset.scene_ids) == PARTIAL_LOAD_SCENES
@@ -114,9 +114,9 @@ def test_multiple_files_pointnav_dataset():
 
 @pytest.mark.parametrize("split", ["train", "val"])
 def test_dataset_splitting(split):
-    dataset_config = get_config(CFG_MULTI_TEST).DATASET
+    dataset_config = get_config(CFG_MULTI_TEST).habitat.dataset
     dataset_config.defrost()
-    dataset_config.SPLIT = split
+    dataset_config.split = split
 
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
@@ -126,27 +126,27 @@ def test_dataset_splitting(split):
         len(scenes) > 0
     ), "Expected dataset contains separate episode file per scene."
 
-    dataset_config.CONTENT_SCENES = scenes[:PARTIAL_LOAD_SCENES]
+    dataset_config.content_scenes = scenes[:PARTIAL_LOAD_SCENES]
     full_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     full_episodes = {
         (ep.scene_id, ep.episode_id) for ep in full_dataset.episodes
     }
 
-    dataset_config.CONTENT_SCENES = scenes[: PARTIAL_LOAD_SCENES // 2]
+    dataset_config.content_scenes = scenes[: PARTIAL_LOAD_SCENES // 2]
     split1_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     split1_episodes = {
         (ep.scene_id, ep.episode_id) for ep in split1_dataset.episodes
     }
 
-    dataset_config.CONTENT_SCENES = scenes[
+    dataset_config.content_scenes = scenes[
         PARTIAL_LOAD_SCENES // 2 : PARTIAL_LOAD_SCENES
     ]
     split2_dataset = make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     split2_episodes = {
         (ep.scene_id, ep.episode_id) for ep in split2_dataset.episodes
@@ -192,18 +192,18 @@ def check_shortest_path(env, episode):
 def test_pointnav_episode_generator():
     config = get_config(CFG_TEST)
     config.defrost()
-    config.DATASET.SPLIT = "val"
-    config.ENVIRONMENT.MAX_EPISODE_STEPS = 500
+    config.habitat.dataset.split = "val"
+    config.habitat.environment.max_episode_steps = 500
     config.freeze()
-    if not PointNavDatasetV1.check_config_paths_exist(config.DATASET):
+    if not PointNavDatasetV1.check_config_paths_exist(config.habitat.dataset):
         pytest.skip("Test skipped as dataset files are missing.")
     with habitat.Env(config) as env:
-        env.seed(config.SEED)
-        random.seed(config.SEED)
+        env.seed(config.habitat.seed)
+        random.seed(config.habitat.seed)
         generator = pointnav_generator.generate_pointnav_episode(
             sim=env.sim,
-            shortest_path_success_distance=config.TASK.SUCCESS.SUCCESS_DISTANCE,
-            shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
+            shortest_path_success_distance=config.habitat.task.success.success_distance,
+            shortest_path_max_steps=config.habitat.environment.max_episode_steps,
         )
         episodes = []
         for _ in range(NUM_EPISODES):
@@ -213,8 +213,8 @@ def test_pointnav_episode_generator():
         for episode in pointnav_generator.generate_pointnav_episode(
             sim=env.sim,
             num_episodes=NUM_EPISODES,
-            shortest_path_success_distance=config.TASK.SUCCESS.SUCCESS_DISTANCE,
-            shortest_path_max_steps=config.ENVIRONMENT.MAX_EPISODE_STEPS,
+            shortest_path_success_distance=config.habitat.task.success.success_distance,
+            shortest_path_max_steps=config.habitat.environment.max_episode_steps,
             geodesic_to_euclid_min_ratio=0,
         ):
             episodes.append(episode)

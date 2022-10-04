@@ -1,30 +1,30 @@
-BASE_TASK_CONFIG_PATH: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
-TRAINER_NAME: "vqa"
+base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
+trainer_name: "vqa"
 
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
+simulator_gpu_id: 0
+torch_gpu_id: 0
 
-ONLY_VQA_TASK: False # if True, only last `num_frames` will be saved to disk.
+ONLY_VQA_task: False # if True, only last `num_frames` will be saved to disk.
 #if False, all frames for each episode are saved to disk (for NAV task later)
-DATASET_PATH: "data/datasets/eqa/frame_dataset/{split}/{split}.db"
-FRAME_DATASET_PATH: "data/datasets/eqa/frame_dataset/{split}"
-EVAL_CKPT_PATH_DIR: "data/eqa/vqa/checkpoints/"
+dataset_PATH: "data/datasets/eqa/frame_dataset/{split}/{split}.db"
+FRAME_dataset_PATH: "data/datasets/eqa/frame_dataset/{split}"
+eval_ckpt_path_dir: "data/eqa/vqa/checkpoints/"
 EQA_CNN_PRETRAIN_CKPT_PATH: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
 
-SENSORS: ["RGB_SENSOR"]
-CHECKPOINT_FOLDER: "data/eqa/vqa/checkpoints/"
-TENSORBOARD_DIR: "data/eqa/vqa/tb"
+sensors: ["rgb_sensor"]
+checkpoint_folder: "data/eqa/vqa/checkpoints/"
+tensorboard_dir: "data/eqa/vqa/tb"
 RESULTS_DIR: "data/eqa/vqa/results/{split}"
 
 LOG_METRICS: True
 OUTPUT_LOG_DIR: "data/eqa/vqa/logs"
-LOG_INTERVAL: 100
-EVAL_SAVE_RESULTS: True
-EVAL_SAVE_RESULTS_INTERVAL: 10
+log_interval: 100
+eval_save_results: True
+eval_save_results_interval: 10
 
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
 IL:
   VQA:

@@ -1,22 +1,22 @@
-BASE_TASK_CONFIG_PATH: "tasks/imagenav.yaml"
-TRAINER_NAME: "ppo"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: []
-TENSORBOARD_DIR: ""
-EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ppo/imagenav/ckpt.0.pth"
-NUM_ENVIRONMENTS: 1
-CHECKPOINT_FOLDER: "data/test_checkpoints/ppo/imagenav/"
-NUM_UPDATES: 2
-LOG_INTERVAL: 100
-NUM_CHECKPOINTS: 2
-TEST_EPISODE_COUNT: 2
+base_task_config_path: "tasks/imagenav.yaml"
+trainer_name: "ppo"
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: []
+tensorboard_dir: ""
+eval_ckpt_path_dir: "data/test_checkpoints/ppo/imagenav/ckpt.0.pth"
+num_environments: 1
+checkpoint_folder: "data/test_checkpoints/ppo/imagenav/"
+num_updates: 2
+log_interval: 100
+num_checkpoints: 2
+test_episode_count: 2
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
-RL:
-  PPO:
+rl:
+  ppo:
     # ppo params
     clip_param: 0.1
     ppo_epoch: 4

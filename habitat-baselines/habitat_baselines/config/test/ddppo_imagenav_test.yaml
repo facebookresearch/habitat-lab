@@ -1,30 +1,30 @@
-BASE_TASK_CONFIG_PATH: "tasks/imagenav.yaml"
-TRAINER_NAME: "ddppo"
-SIMULATOR_GPU_ID: 0
-TORCH_GPU_ID: 0
-VIDEO_OPTION: []
-TENSORBOARD_DIR: ""
-VIDEO_DIR: ""
-SENSORS: ["RGB_SENSOR", "DEPTH_SENSOR"]
-EVAL_CKPT_PATH_DIR: "data/test_checkpoints/ddppo/imagenav/ckpt.0.pth"
-NUM_ENVIRONMENTS: 1
-CHECKPOINT_FOLDER: "data/test_checkpoints/ddppo/imagenav/"
-NUM_UPDATES: 2
-LOG_INTERVAL: 100
-NUM_CHECKPOINTS: 2
-TEST_EPISODE_COUNT: 2
+base_task_config_path: "tasks/imagenav.yaml"
+trainer_name: "ddppo"
+simulator_gpu_id: 0
+torch_gpu_id: 0
+video_option: []
+tensorboard_dir: ""
+video_dir: ""
+sensors: ["rgb_sensor", "depth_sensor"]
+eval_ckpt_path_dir: "data/test_checkpoints/ddppo/imagenav/ckpt.0.pth"
+num_environments: 1
+checkpoint_folder: "data/test_checkpoints/ddppo/imagenav/"
+num_updates: 2
+log_interval: 100
+num_checkpoints: 2
+test_episode_count: 2
 # Force PyTorch to be single threaded as
 # this improves performance considerably
-FORCE_TORCH_SINGLE_THREADED: True
+force_torch_single_threaded: True
 
 
-RL:
-  SUCCESS_REWARD: 2.5
+rl:
+  success_reward: 2.5
 
-  POLICY:
+  policy:
     name: "PointNavResNetPolicy"
 
-  PPO:
+  ppo:
     # ppo params
     clip_param: 0.2
     ppo_epoch: 2
@@ -46,7 +46,7 @@ RL:
 
     hidden_size: 512
 
-  DDPPO:
+  ddppo:
     sync_frac: 0.6
     # The PyTorch distributed backend to use
     distrib_backend: GLOO

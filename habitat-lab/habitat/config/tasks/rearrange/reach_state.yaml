@@ -1,123 +1,121 @@
-GYM:
-    AUTO_NAME: "ReachState"
-    OBS_KEYS: ['joint', 'relative_resting_position']
-    ACTION_KEYS: ['ARM_ACTION']
-ENVIRONMENT:
-    MAX_EPISODE_STEPS: 20
-DATASET:
-    TYPE: RearrangeDataset-v0
-    SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/empty_1k_100.json.gz
-    SCENES_DIR: "data/replica_cad/"
-TASK:
-    BASE_ANGLE_NOISE: 0.0
-    BASE_NOISE: 0.0
-    TYPE: RearrangeReachTask-v0
-    RENDER_TARGET: True
-    EE_SAMPLE_FACTOR: 0.2
-    EE_EXCLUDE_REGION: 0.0
+habitat:
+    gym:
+        auto_name: "ReachState"
+        obs_keys: ['joint', 'relative_resting_position']
+        action_keys: ['arm_action']
+    environment:
+        max_episode_steps: 20
+    dataset:
+        type: RearrangeDataset-v0
+        split: train
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/empty_1k_100.json.gz
+        scenes_dir: "data/replica_cad/"
+    task:
+        base_angle_noise: 0.0
+        base_noise: 0.0
+        type: RearrangeReachTask-v0
+        render_target: True
+        ee_sample_factor: 0.2
+        ee_exclude_region: 0.0
 
-    REWARD_MEASURE: "rearrange_reach_reward"
-    SUCCESS_MEASURE: "rearrange_reach_success"
-    SUCCESS_REWARD: 10.0
-    END_ON_SUCCESS: True
+        reward_measure: "rearrange_reach_reward"
+        success_measure: "rearrange_reach_success"
+        success_reward: 10.0
+        end_on_success: True
 
-    JOINT_SENSOR:
-        TYPE: "JointSensor"
-        DIMENSIONALITY: 7
-    RELATIVE_RESTING_POS_SENSOR:
-        TYPE: "RelativeRestingPositionSensor"
-    RESTING_POS_SENSOR:
-        TYPE: "RestingPositionSensor"
-    END_EFFECTOR_SENSOR:
-        TYPE: "EEPositionSensor"
-    JOINT_VELOCITY_SENSOR:
-        TYPE: "JointVelocitySensor"
-        DIMENSIONALITY: 7
-    SENSORS: ["JOINT_SENSOR", "JOINT_VELOCITY_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+        joint_sensor:
+            type: "JointSensor"
+            dimensionality: 7
+        relative_resting_pos_sensor:
+            type: "RelativeRestingPositionSensor"
+        resting_pos_sensor:
+            type: "RestingPositionSensor"
+        end_effector_sensor:
+            type: "EEPositionSensor"
+        joint_velocity_sensor:
+            type: "JointVelocitySensor"
+            dimensionality: 7
+        sensors: ["joint_sensor", "joint_velocity_sensor", "relative_resting_pos_sensor"]
 
-    END_EFFECTOR_TO_REST_DISTANCE:
-        TYPE: "EndEffectorToRestDistance"
-    REARRANGE_REACH_REWARD:
-        TYPE: "RearrangeReachReward"
-        SCALE: 1.0
-        DIFF_REWARD: True
-        SPARSE_REWARD: False
-    REARRANGE_REACH_SUCCESS:
-        TYPE: "RearrangeReachSuccess"
-        SUCC_THRESH: 0.2
-    NUM_STEPS:
-        TYPE: "NumStepsMeasure"
-    MEASUREMENTS:
-        - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "REARRANGE_REACH_SUCCESS"
-        - "REARRANGE_REACH_REWARD"
-        - "NUM_STEPS"
-    ACTIONS:
-        ARM_ACTION:
-            TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosAction"
-            ARM_JOINT_DIMENSIONALITY: 7
-            GRIP_CONTROLLER: null
-            GRASP_THRESH_DIST: 0.15
-            SHOULD_CLIP: True
-            DELTA_POS_LIMIT: 0.0125
-            RENDER_EE_TARGET: True
-            EE_CTRL_LIM: 0.015
-    POSSIBLE_ACTIONS:
-        - ARM_ACTION
+        end_effector_to_rest_distance:
+            type: "EndEffectorToRestDistance"
+        rearrange_reach_reward:
+            type: "RearrangeReachReward"
+            scale: 1.0
+            diff_reward: True
+            sparse_reward: False
+        rearrange_reach_success:
+            type: "RearrangeReachSuccess"
+            succ_thresh: 0.2
+        num_steps:
+            type: "NumStepsMeasure"
+        measurements:
+            - "end_effector_to_rest_distance"
+            - "rearrange_reach_success"
+            - "rearrange_reach_reward"
+            - "num_steps"
+        actions:
+            arm_action:
+                type: "ArmAction"
+                arm_controller: "ArmRelPosAction"
+                arm_joint_dimensionality: 7
+                grip_controller: null
+                grasp_thresh_dist: 0.15
+                should_clip: True
+                delta_pos_limit: 0.0125
+                render_ee_target: True
+                ee_ctrl_lim: 0.015
+        possible_actions:
+            - arm_action
 
-SIMULATOR:
-    ACTION_SPACE_CONFIG: v0
-    AGENTS: ['AGENT_0']
-    ROBOT_JOINT_START_NOISE: 0.0
-    CONCUR_RENDER: True
-    AUTO_SLEEP: True
-    DEBUG_RENDER: False
-    DEBUG_RENDER_GOAL: True
-    AGENT_0:
-        HEIGHT: 1.5
-        IS_SET_START_STATE: True
-        RADIUS: 0.3
-        SENSORS: [HEAD_DEPTH_SENSOR]
-        START_POSITION: [0.0, 0.0, 2.0]
-        START_ROTATION: [0.0, 0.0, 0.0, 1.0]
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-        IK_ARM_URDF: null
-        ROBOT_TYPE: "FetchRobot"
-    HEAD_DEPTH_SENSOR:
-        WIDTH: 32
-        HEIGHT: 32
-        MIN_DEPTH: 0.0
-        MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: True
+    simulator:
+        action_space_config: v0
+        agents: ['agent_0']
+        concur_render: True
+        auto_sleep: True
+        debug_render: False
+        debug_render_goal: True
+        agent_0:
+            height: 1.5
+            is_set_start_state: True
+            radius: 0.3
+            sensors: [head_depth_sensor]
+            start_position: [0.0, 0.0, 2.0]
+            start_rotation: [0.0, 0.0, 0.0, 1.0]
+            robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+            ik_arm_urdf: null
+            robot_type: "FetchRobot"
+        head_depth_sensor:
+            width: 32
+            height: 32
+            min_depth: 0.0
+            max_depth: 10.0
+            normalize_depth: True
 
-    # Agent setup
-    CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 8
-    FORWARD_STEP_SIZE: 0.25
-    LAG_OBSERVATIONS: 0
-    LOAD_OBJS: False
+        # Agent setup
+        ctrl_freq: 120.0
+        ac_freq_ratio: 8
+        forward_step_size: 0.25
 
-    # Grasping
-    HOLD_THRESH: 0.09
-    GRASP_IMPULSE: 1000.0
+        # Grasping
+        hold_thresh: 0.09
+        grasp_impulse: 1000.0
 
-    DEFAULT_AGENT_ID: 0
-    HABITAT_SIM_V0:
-        ALLOW_SLIDING: False
-        ENABLE_PHYSICS: True
-        GPU_DEVICE_ID: 0
-        GPU_GPU: False
-        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    SEED: 100
-    SEMANTIC_SENSOR:
-        HEIGHT: 480
-        HFOV: 90
-        ORIENTATION: [0.0, 0.0, 0.0]
-        POSITION: [0, 1.25, 0]
-        TYPE: HabitatSimSemanticSensor
-        WIDTH: 640
-    TILT_ANGLE: 15
-    TURN_ANGLE: 10
-    TYPE: RearrangeSim-v0
+        default_agent_id: 0
+        habitat_sim_v0:
+            allow_sliding: False
+            enable_physics: True
+            gpu_device_id: 0
+            gpu_gpu: False
+            physics_config_file: ./data/default.physics_config.json
+        seed: 100
+        semantic_sensor:
+            height: 480
+            hfov: 90
+            orientation: [0.0, 0.0, 0.0]
+            position: [0, 1.25, 0]
+            type: HabitatSimSemanticSensor
+            width: 640
+        tilt_angle: 15
+        turn_angle: 10
+        type: RearrangeSim-v0

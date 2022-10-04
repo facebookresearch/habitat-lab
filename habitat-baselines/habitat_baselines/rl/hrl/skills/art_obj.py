@@ -42,7 +42,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
             torch.norm(
                 cur_resting_pos - self._episode_start_resting_pos, dim=-1
             )
-            > self._config.START_ZONE_RADIUS
+            > self._config.start_zone_radius
         )
         self._did_leave_start_zone = torch.logical_or(
             self._did_leave_start_zone, did_leave_start_zone

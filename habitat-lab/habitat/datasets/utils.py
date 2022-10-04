@@ -193,7 +193,7 @@ def get_action_shortest_path(
     step_count = 0
     action = follower.get_next_action(goal_position)
     while (
-        action is not HabitatSimActions.STOP and step_count < max_episode_steps
+        action is not HabitatSimActions.stop and step_count < max_episode_steps
     ):
         state = sim.get_agent_state()
         shortest_path.append(
