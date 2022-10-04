@@ -12,6 +12,7 @@ import gym
 import numba
 import numpy as np
 from gym import spaces
+from omegaconf import read_write
 
 from habitat.config import Config
 from habitat.core.dataset import BaseEpisode, Dataset, Episode, EpisodeIterator
@@ -92,12 +93,12 @@ class Env:
             ), "dataset should have non-empty episodes list"
             self._setup_episode_iterator()
             self.current_episode = next(self.episode_iterator)
-            self._config.defrost()
-            self._config.simulator.scene_dataset = (
-                self.current_episode.scene_dataset_config
-            )
-            self._config.simulator.scene = self.current_episode.scene_id
-            self._config.freeze()
+            # with read_write(self._config):
+            if True:
+                self._config.simulator.scene_dataset = (
+                    self.current_episode.scene_dataset_config
+                )
+                self._config.simulator.scene = self.current_episode.scene_id
 
             self.number_of_episodes = len(self.episodes)
         else:
@@ -329,11 +330,11 @@ class Env:
     def reconfigure(self, config: Config) -> None:
         self._config = config
 
-        self._config.defrost()
-        self._config.simulator = self._task.overwrite_sim_config(
-            self._config.simulator, self.current_episode
-        )
-        self._config.freeze()
+        # with read_write(self._config):
+        if True:
+            self._config.simulator = self._task.overwrite_sim_config(
+                self._config.simulator, self.current_episode
+            )
 
         self._sim.reconfigure(self._config.simulator)
 

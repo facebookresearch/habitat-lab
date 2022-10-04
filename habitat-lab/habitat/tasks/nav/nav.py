@@ -12,6 +12,7 @@ import attr
 import numpy as np
 import quaternion
 from gym import spaces
+from omegaconf import read_write
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
@@ -59,20 +60,20 @@ MAP_THICKNESS_SCALAR: int = 128
 
 
 def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
-    sim_config.defrost()
-    sim_config.scene = episode.scene_id
-    sim_config.freeze()
+    # with read_write(sim_config):
+    if True:
+        sim_config.scene = episode.scene_id
     if (
         episode.start_position is not None
         and episode.start_rotation is not None
     ):
         agent_name = sim_config.agents[sim_config.default_agent_id]
         agent_cfg = getattr(sim_config, agent_name)
-        agent_cfg.defrost()
-        agent_cfg.start_position = episode.start_position
-        agent_cfg.start_rotation = episode.start_rotation
-        agent_cfg.is_set_start_state = True
-        agent_cfg.freeze()
+        # with read_write(agent_cfg):
+        if True:
+            agent_cfg.start_position = episode.start_position
+            agent_cfg.start_rotation = episode.start_rotation
+            agent_cfg.is_set_start_state = True
     return sim_config
 
 

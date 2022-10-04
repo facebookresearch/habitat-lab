@@ -1036,5 +1036,5 @@ def get_config(
     if opts:
         config.merge_from_list(opts)
 
-    config.freeze()
+    # config.freeze()
     return config
