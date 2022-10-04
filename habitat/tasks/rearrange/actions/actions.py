@@ -405,13 +405,26 @@ class BaseVelAction(RobotAction):
                     # Get the final movement vector
                     move_vec = target_pos - proj_pot
                     move_vec[1] = 0
-                    end_pos = rigid_state.translation + move_vec
+                    # Project the move vector the plane
+                    v0 = (
+                        move_dir[0] * n_vec[0]
+                        + move_dir[1] * n_vec[1]
+                        + move_dir[2] * n_vec[2]
+                    )
+                    v1 = n_vec[0] ** 2 + n_vec[1] ** 2 + n_vec[2] ** 2
+                    proj_move_vec_plane = move_dir - v0 / v1 * n_vec
+                    proj_move_vec_plane[1] = 0
+                    # Add together
+                    end_pos = (
+                        rigid_state.translation
+                        + 0.1 * move_vec
+                        + 0.1 * proj_move_vec_plane
+                    )
                 proposed_target_trans = mn.Matrix4.from_(
                     target_rigid_state.rotation.to_matrix(), end_pos
                 )
                 self._sim.robot.sim_obj.transformation = proposed_target_trans
                 if self._sim.contact_test(self.cur_robot.sim_obj.object_id):
-                    # import pdb; pdb.set_trace()
                     self.end_pos = self.prev_collision_free_point
 
             self.prev_collision_free_point = rigid_state.translation
