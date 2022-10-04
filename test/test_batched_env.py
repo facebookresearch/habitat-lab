@@ -168,14 +168,13 @@ class FakeBatchEnvironmentState:
         return env_state
 
 
-def test_get_batch_dones_rewards_resets():
+def test_get_batch_dones_rewards_resets(*args):
 
     exp_config = "habitat_baselines/config/rearrange/gala_kinematic_ddppo.yaml"
     exp_config_local = (
         "habitat_baselines/config/rearrange/gala_kinematic_local.yaml"
     )
-    opts = None
-    config = get_config([exp_config, exp_config_local], opts)
+    config = get_config([exp_config, exp_config_local], list(args))
 
     batched_env = BatchedEnv(config)
 
@@ -200,7 +199,7 @@ def test_get_batch_dones_rewards_resets():
     dones_count = 0
     success_count = 0
 
-    for i in range(1000):
+    for i in range(5000):
 
         # actions = torch.tensor(np.zeros((batched_env._num_envs, batched_env.action_dim), dtype=float))
         actions = (
@@ -262,10 +261,26 @@ def test_get_batch_dones_rewards_resets():
         prev_batch_env_state = batch_env_state
 
     assert dones_count >= 10
+    print(f"Success count {success_count}, Arguments : {list(args)}")
     assert success_count >= 10
 
 
 if __name__ == "__main__":
-    test_benchmark()
+    # test_benchmark()
     # test_basic()
+    print("\n ##### \n")
     # test_get_batch_dones_rewards_resets()
+    # test_get_batch_dones_rewards_resets("TASK_HAS_SIMPLE_PLACE", True)
+    # test_get_batch_dones_rewards_resets("TASK_HAS_SIMPLE_PLACE", True, "DO_NOT_END_IF_DROP_WRONG", True)
+    # test_get_batch_dones_rewards_resets("PREVENT_STOP_ACTION", True, "TASK_NO_END_ACTION", True)
+    test_get_batch_dones_rewards_resets(
+        "TASK_HAS_SIMPLE_PLACE",
+        True,
+        "DO_NOT_END_IF_DROP_WRONG",
+        True,
+        "PREVENT_STOP_ACTION",
+        True,
+        "TASK_NO_END_ACTION",
+        True,
+    )
+    print("All tests passed")

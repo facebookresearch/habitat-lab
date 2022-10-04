@@ -24,7 +24,8 @@ from habitat_sim.utils.common import quat_from_magnum
 
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
-use_batch_dones_rewards_resets = False
+use_batch_dones_rewards_resets = True
+log_infos_in_batch = True
 
 
 class Camera:  # noqa: SIM119
@@ -637,7 +638,8 @@ class BatchedEnv:
             (self._num_envs, self.action_dim), dtype=float
         )
         self._past_pick_success = np.zeros((self._num_envs), dtype=bool)
-        self._drop_position = np.zeros((self._num_envs, 3), dtype=float)
+        self._drop_position_arr = np.zeros((self._num_envs, 3), dtype=float)
+        self._drop_position_single = [None] * self._num_envs
         self._has_drop_position = np.zeros((self._num_envs), dtype=bool)
         self._object_dropped_properly = np.zeros((self._num_envs), dtype=bool)
         self._stagger_agents = np.zeros((self._num_envs), dtype=int)
@@ -762,9 +764,9 @@ class BatchedEnv:
         config_grasp_threshold = self._config.get("GRASP_THRESHOLD", 0.02)
         drop_grasp_action_idx = 0
 
-        actions = actions.cpu().numpy()
+        np_actions = actions.cpu().numpy()
 
-        continuous_action_norm = actions
+        continuous_action_norm = np_actions
         # continuous_action_l2 = sum(c * c for c in continuous_action_norm)
         # continuous_action_l2 = np.sum(np.dot(continuous_action_norm))
         continuous_action_l2 = np.sum(
@@ -779,10 +781,10 @@ class BatchedEnv:
         # )
 
         end_episode_action = (
-            actions[:, self.action_dim - 1] > config_end_action_threshold
+            np_actions[:, self.action_dim - 1] > config_end_action_threshold
         )
 
-        original_drop_grasp = actions[:, drop_grasp_action_idx]
+        original_drop_grasp = np_actions[:, drop_grasp_action_idx]
 
         modified_drop_grasp = np.where(
             original_drop_grasp < config_drop_threshold, -1.0, 0.0
@@ -793,7 +795,7 @@ class BatchedEnv:
             modified_drop_grasp,
         )
 
-        actions[:, drop_grasp_action_idx] = modified_drop_grasp
+        np_actions[:, drop_grasp_action_idx] = modified_drop_grasp
 
         end_episode_action = np.logical_and(
             end_episode_action, np.greater(state.episode_step_idx, 5)
@@ -818,6 +820,7 @@ class BatchedEnv:
         # )
 
         is_holding_correct = state.target_obj_idx == state.held_obj_idx
+        is_not_holding_an_object = state.held_obj_idx == -1
         # was_holding_correct = False
         # if prev_state is not None:
         #     was_holding_correct = (
@@ -850,72 +853,48 @@ class BatchedEnv:
         )
 
         bad_attempt_penalty = np.zeros_like(has_valid_prev_state, dtype=float)
-        # todo: port this to tensor ops
-        assert not self._config.get("DO_NOT_END_IF_DROP_WRONG", False)
-        # if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
-        #     object_is_in_drop_position = (
-        #         np.sqrt(
-        #             (state.goal_pos[0] - obj_pos[0]) ** 2
-        #             + (state.goal_pos[2] - obj_pos[2]) ** 2
-        #         )
-        #         < self._config.NPNP_SUCCESS_THRESH
-        #         and (obj_pos[1] - state.goal_pos[1]) > 0
-        #         and (obj_pos[1] - state.goal_pos[1])
-        #         < self._config.NPNP_SUCCESS_THRESH
-        #     )
-        #     if (
-        #         is_holding_correct
-        #         and not object_is_in_drop_position
-        #         and actions[(b * self.action_dim)] <= 0.0
-        #     ):
-        #         bad_attempt_penalty = self._config.get(
-        #             "DROP_WRONG_PENALTY", 0.1
-        #         )
-        #         # keep holding
-        #         actions[(b * self.action_dim)] = 1.0
-        #     elif (
-        #         is_holding_correct
-        #         and object_is_in_drop_position
-        #         and actions[(b * self.action_dim)] <= 0.0
-        #     ):
-        #         self._object_dropped_properly[b] = True
 
-        do_set_drop_pos = np.logical_and(
-            np.equal(modified_drop_grasp, -1.0),
-            is_holding_correct,
-            np.logical_not(self._has_drop_position),
+        do_set_drop_pos = (
+            np.equal(modified_drop_grasp, -1.0)
+            & is_holding_correct
+            & np.logical_not(self._has_drop_position)
         )
 
-        self._drop_position = np.where(
+        self._drop_position_arr = np.where(
             np.expand_dims(do_set_drop_pos, axis=1),
             obj_pos,
-            self._drop_position,
+            self._drop_position_arr,
         )
         self._has_drop_position = np.logical_or(
             do_set_drop_pos, self._has_drop_position
         )
 
-        success = np.logical_and(end_episode_action, object_is_close_to_goal)
+        # todo: port this to tensor ops
+        if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
+            assert self._config.get("TASK_HAS_SIMPLE_PLACE", False)
 
-        assert not self._config.get(
-            "TASK_HAS_SIMPLE_PLACE", False
-        )  # todo: port code
-        # if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
-        #     success = False
-        #     if self._drop_position[b] is not None:
-        #         drop_to_goal = self._drop_position[b] - state.goal_pos
-        #         drop_success = (
-        #             np.sqrt(drop_to_goal[0] ** 2 + drop_to_goal[2] ** 2)
-        #             < self._config.NPNP_SUCCESS_THRESH
-        #         )
-        #         drop_success = drop_success and drop_to_goal[1] > 0
-        #         drop_success = (
-        #             drop_success
-        #             and drop_to_goal[1]
-        #             < 2 * self._config.NPNP_SUCCESS_THRESH
-        #         )
+        success = object_is_close_to_goal
+        if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
+            success = success.fill(False)
+            drop_to_goal = self._drop_position_arr - state.goal_pos
+            drop_success = (
+                np.linalg.norm(drop_to_goal[:, (0, 2)], axis=1)
+                < self._config.NPNP_SUCCESS_THRESH
+            )
+            drop_success &= drop_to_goal[:, 1] > 0
+            drop_success &= drop_to_goal[:, 1] < (
+                2 * self._config.NPNP_SUCCESS_THRESH
+            )
+            success = drop_success & self._has_drop_position
+            if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
+                self._has_drop_position &= drop_success
+                np_actions[:, drop_grasp_action_idx] = np.where(
+                    ~drop_success, 1.0, np_actions[:, drop_grasp_action_idx]
+                )
+                assert self._config.get("DROP_WRONG_PENALTY", 0.0) == 0.0
 
-        #         success = end_episode_action and drop_success
+        if not self._config.get("TASK_NO_END_ACTION", False):
+            success = success & end_episode_action
 
         # todo: port code
         assert not self._config.get(
@@ -927,13 +906,8 @@ class BatchedEnv:
         #     success = is_holding_correct and end_episode_action
 
         # todo: port code
-        assert not self._config.get("TASK_IS_PLACE", False)
-        # if self._config.get("TASK_IS_PLACE", False):
-        #     success = (
-        #         success
-        #         and (state.held_obj_idx == -1)
-        #         # and self._past_pick_success[b]
-        #     )
+        if self._config.get("TASK_IS_PLACE", False):
+            success = np.logical_and(success, is_not_holding_an_object)
 
         if self._config.get("TASK_IS_NAV_PICK_NAV_REACH", False):
             success = object_is_close_to_goal
@@ -942,26 +916,23 @@ class BatchedEnv:
             success = is_holding_correct
 
         if self._config.get("PREVENT_STOP_ACTION", False):
+            assert self._config.get("TASK_NO_END_ACTION", False)
             #     end_episode_action = False
             end_episode_action.fill(False)
 
-        # todo: port code
-        assert not self._config.get("DROP_IS_FAIL", False)
-        # if self._config.get("DROP_IS_FAIL", True):
-        #     failure = (
-        #         (
-        #             state.did_drop
-        #             and (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
-        #         )
-        #         or (
-        #             state.target_obj_idx != state.held_obj_idx
-        #             and state.held_obj_idx != -1
-        #         )
-        #         or (end_episode_action and not success)
-        #     )
-        # else:
-        #     failure = end_episode_action and not success
-        failure = np.logical_and(end_episode_action, np.logical_not(success))
+        if self._config.get("DROP_IS_FAIL", True):
+            failure = (
+                (
+                    state.did_drop
+                    & (obj_to_goal >= self._config.NPNP_SUCCESS_THRESH)
+                )
+                | (~is_holding_correct & ~is_not_holding_an_object)
+                | end_episode_action
+            )
+            failure = failure & ~success
+
+        else:
+            failure = end_episode_action & ~success
 
         # todo: port code
         assert not self._config.get(
@@ -1082,32 +1053,34 @@ class BatchedEnv:
                 )
                 _rew -= bad_attempt_penalty[b]
                 self.rewards[b] = _rew
-                # self.infos[b] = {
-                #     "success": float(success),
-                #     "failure": float(failure),
-                #     "pick_success": float(self._past_pick_success[b]),
-                #     "episode_steps": state.episode_step_idx,
-                #     "distance_to_start": ee_to_start,
-                #     "distance_to_goal": obj_to_goal,
-                #     "try_grasp": actions[(b * self.action_dim)]
-                #     > self._config.get("GRASP_THRESHOLD", 0.02),
-                #     "try_drop": actions[(b * self.action_dim)]
-                #     < self._config.get("DROP_THRESHOLD", 0.01),
-                #     "is_holding_correct": float(is_holding_correct),
-                #     "was_holding_correct": float(was_holding_correct),
-                #     "end_action": float(end_episode_action),
-                #     # "_continuous_action_norm_mean": continuous_action_norm_mean,
-                #     # "_continuous_action_norm_median": continuous_action_norm_median,
-                #     "_continuous_action_l2": continuous_action_l2,
-                #     "_original_drop_grasp": original_drop_grasp,
-                #     "_state.did_grasp": state.did_grasp,
-                #     "_state.did_attempt_grasp": state.did_attempt_grasp,
-                #     "_state.did_collide": state.did_collide,
-                # }
+                if log_infos_in_batch:
+                    self.infos[b] = {
+                        "success": float(success[b]),
+                        "failure": float(failure[b]),
+                        "pick_success": float(self._past_pick_success[b]),
+                        "episode_steps": state.episode_step_idx[b],
+                        "distance_to_start": curr_dist_ee_to_obj[b],
+                        "distance_to_goal": obj_to_goal[b],
+                        # "try_grasp": actions[(b * self.action_dim)]
+                        # > self._config.get("GRASP_THRESHOLD", 0.02),
+                        # "try_drop": actions[(b * self.action_dim)]
+                        # < self._config.get("DROP_THRESHOLD", 0.01),
+                        "is_holding_correct": float(is_holding_correct[b]),
+                        # "was_holding_correct": float(was_holding_correct),
+                        "end_action": float(end_episode_action[b]),
+                        # "_continuous_action_norm_mean": continuous_action_norm_mean,
+                        # "_continuous_action_norm_median": continuous_action_norm_median,
+                        # "_continuous_action_l2": continuous_action_l2,
+                        "_original_drop_grasp": float(original_drop_grasp[b]),
+                        # "_state.did_grasp": state.did_grasp,
+                        # "_state.did_attempt_grasp": state.did_attempt_grasp,
+                        # "_state.did_collide": state.did_collide,
+                    }
                 self._previous_state[b] = None
                 self._previous_action[b] = None
                 self._past_pick_success[b] = False
-                self._drop_position[b] = None
+                self._drop_position_arr[b] = None
+                self._has_drop_position[b] = False
                 self._object_dropped_properly[b] = False
 
                 next_episode = self.get_next_episode()
@@ -1123,32 +1096,33 @@ class BatchedEnv:
                     self._current_episodes[b].set_disabled()
 
             else:
-                # self.infos[b] = {
-                #     "success": 0.0,
-                #     "failure": 0.0,
-                #     "pick_success": float(self._past_pick_success[b]),
-                #     "episode_steps": state.episode_step_idx,
-                #     "distance_to_start": ee_to_start,
-                #     "distance_to_goal": obj_to_goal,
-                #     "try_grasp": actions[(b * self.action_dim)]
-                #     > self._config.get("GRASP_THRESHOLD", 0.02),
-                #     "try_drop": actions[(b * self.action_dim)]
-                #     < self._config.get("DROP_THRESHOLD", 0.01),
-                #     "is_holding_correct": float(is_holding_correct),
-                #     "was_holding_correct": float(was_holding_correct),
-                #     "end_action": float(end_episode_action),
-                #     "_continuous_action_norm_mean": continuous_action_norm_mean,
-                #     "_continuous_action_norm_median": continuous_action_norm_median,
-                #     "_continuous_action_l2": continuous_action_l2,
-                #     "_original_drop_grasp": original_drop_grasp,
-                #     "_state.did_grasp": state.did_grasp,
-                #     "_state.did_attempt_grasp": state.did_attempt_grasp,
-                #     "_state.did_collide": state.did_collide,
-                # }
-                pass
+                if log_infos_in_batch:
+                    self.infos[b] = {
+                        "success": float(success[b]),
+                        "failure": float(failure[b]),
+                        "pick_success": float(self._past_pick_success[b]),
+                        "episode_steps": state.episode_step_idx[b],
+                        "distance_to_start": curr_dist_ee_to_obj[b],
+                        "distance_to_goal": obj_to_goal[b],
+                        # "try_grasp": actions[(b * self.action_dim)]
+                        # > self._config.get("GRASP_THRESHOLD", 0.02),
+                        # "try_drop": actions[(b * self.action_dim)]
+                        # < self._config.get("DROP_THRESHOLD", 0.01),
+                        "is_holding_correct": float(is_holding_correct[b]),
+                        # "was_holding_correct": float(was_holding_correct),
+                        "end_action": float(end_episode_action[b]),
+                        # "_continuous_action_norm_mean": continuous_action_norm_mean,
+                        # "_continuous_action_norm_median": continuous_action_norm_median,
+                        # "_continuous_action_l2": continuous_action_l2,
+                        "_original_drop_grasp": float(original_drop_grasp[b]),
+                        # "_state.did_grasp": state.did_grasp,
+                        # "_state.did_attempt_grasp": state.did_attempt_grasp,
+                        # "_state.did_collide": state.did_collide,
+                    }
+        return np_actions
 
     def get_dones_rewards_resets(self, env_states, actions):
-        assert not use_batch_dones_rewards_resets
+        # assert not use_batch_dones_rewards_resets
         for (b, state) in enumerate(env_states):
             if self._current_episodes[b].is_disabled():
                 # let this episode continue in the sim; ignore the results
@@ -1228,15 +1202,17 @@ class BatchedEnv:
             if (
                 actions[(b * self.action_dim)] == -1.0
                 and is_holding_correct
-                and self._drop_position[b] is None
+                and self._drop_position_single[b] is None
             ):
-                self._drop_position[b] = obj_pos
+                self._drop_position_single[b] = obj_pos
 
             bad_attempt_penalty = 0.0
             if self._config.get("DO_NOT_END_IF_DROP_WRONG", False):
                 assert self._config.get("TASK_HAS_SIMPLE_PLACE", False)
-                if self._drop_position[b] is not None:
-                    drop_to_goal = self._drop_position[b] - state.goal_pos
+                if self._drop_position_single[b] is not None:
+                    drop_to_goal = (
+                        self._drop_position_single[b] - state.goal_pos
+                    )
                     drop_success = (
                         np.sqrt(drop_to_goal[0] ** 2 + drop_to_goal[2] ** 2)
                         < self._config.NPNP_SUCCESS_THRESH
@@ -1248,44 +1224,19 @@ class BatchedEnv:
                         < 2 * self._config.NPNP_SUCCESS_THRESH
                     )
                     if not drop_success:
-                        self._drop_position[b] = None
+                        self._drop_position_single[b] = None
                         actions[(b * self.action_dim)] = 1.0
                         bad_attempt_penalty = self._config.get(
                             "DROP_WRONG_PENALTY", 0.0
                         )
 
-                # object_is_in_drop_position = (
-                #     np.sqrt(
-                #         (state.goal_pos[0] - obj_pos[0]) ** 2
-                #         + (state.goal_pos[2] - obj_pos[2]) ** 2
-                #     )
-                #     < self._config.NPNP_SUCCESS_THRESH
-                #     and (obj_pos[1] - state.goal_pos[1]) > 0
-                #     and (obj_pos[1] - state.goal_pos[1])
-                #     < self._config.NPNP_SUCCESS_THRESH
-                # )
-                # if (
-                #     is_holding_correct
-                #     and not object_is_in_drop_position
-                #     and actions[(b * self.action_dim)] <= 0.0
-                # ):
-                #     bad_attempt_penalty = self._config.get(
-                #         "DROP_WRONG_PENALTY", 0.1
-                #     )
-                #     # keep holding
-                #     actions[(b * self.action_dim)] = 1.0
-                # elif (
-                #     is_holding_correct
-                #     and object_is_in_drop_position
-                #     and actions[(b * self.action_dim)] <= 0.0
-                # ):
-                #     self._object_dropped_properly[b] = True
-
             success = object_is_close_to_goal
             if self._config.get("TASK_HAS_SIMPLE_PLACE", False):
                 success = False
-                if self._drop_position[b] is not None:
-                    drop_to_goal = self._drop_position[b] - state.goal_pos
+                if self._drop_position_single[b] is not None:
+                    drop_to_goal = (
+                        self._drop_position_single[b] - state.goal_pos
+                    )
                     drop_success = (
                         np.sqrt(drop_to_goal[0] ** 2 + drop_to_goal[2] ** 2)
                         < self._config.NPNP_SUCCESS_THRESH
@@ -1384,7 +1335,7 @@ class BatchedEnv:
                 self._previous_state[b] = None
                 self._previous_action[b] = None
                 self._past_pick_success[b] = False
-                self._drop_position[b] = None
+                self._drop_position_single[b] = None
                 self._object_dropped_properly[b] = False
 
                 next_episode = self.get_next_episode()
@@ -1502,8 +1453,6 @@ class BatchedEnv:
         if self._config.HACK_ACTION_SCALE != 1.0:
             actions = torch.mul(actions, scale)
 
-        actions_flat_list = actions.flatten().tolist()
-        assert len(actions_flat_list) == self.num_envs * self.action_dim
         if self._bsim:
             assert self._config.OVERLAP_PHYSICS
             self._bsim.wait_step_physics_or_reset()
@@ -1511,12 +1460,19 @@ class BatchedEnv:
             env_states = self._bsim.get_environment_states()
             self.get_nonpixel_observations(env_states, self._observations)
             if use_batch_dones_rewards_resets:
-                self.get_batch_dones_rewards_resets(actions)
+                modified_actions = self.get_batch_dones_rewards_resets(actions)
+                self._bsim.start_step_physics_or_reset(
+                    modified_actions.flatten().tolist(), self.resets
+                )
             else:
+                actions_flat_list = actions.flatten().tolist()
+                assert (
+                    len(actions_flat_list) == self.num_envs * self.action_dim
+                )
                 self.get_dones_rewards_resets(env_states, actions_flat_list)
-            self._bsim.start_step_physics_or_reset(
-                actions_flat_list, self.resets
-            )
+                self._bsim.start_step_physics_or_reset(
+                    actions_flat_list, self.resets
+                )
 
     def fix_up_depth(self, raw_depth):
         obs = raw_depth.clamp(self.depth_sensor_config.MIN_DEPTH, self.depth_sensor_config.MAX_DEPTH)  # type: ignore[attr-defined]
