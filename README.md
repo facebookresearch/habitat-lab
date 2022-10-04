@@ -78,7 +78,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       ```bash
       git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
       cd habitat-lab
-      pip install -e habitat-lab  # install habitat_lab
+      pip install -e .  # install habitat_lab
       ```
 1. **Install habitat-baselines**.
 
