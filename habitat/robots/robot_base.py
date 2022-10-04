@@ -64,8 +64,6 @@ class RobotBase(RobotInterface):
                     if sensor_name.startswith(camera_prefix):
                         self._cameras[camera_prefix].append(sensor_name)
 
-        self.prev_collision_free_point = None
-
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         if self.sim_obj is None or not self.sim_obj.is_alive:
@@ -268,6 +266,21 @@ class RobotBase(RobotInterface):
                 f"Requested joint {joint} not in joint motors with indices (keys {self.joint_motors.keys()}) and {self.joint_motors}"
             )
 
+    def _vector_to_plane_proj(self, u, n):
+        """
+        u: vector to be projected
+        n: normal vector
+        """
+        return u - (np.dot(u, n) / (n.length()) ** 2) * n
+
+    def _dot_to_plane_proj(self, q, n, p):
+        """
+        q: point to be projected
+        n: normal vector
+        p: point on the plane
+        """
+        return q + (np.dot(n, p - q) / (n.length()) ** 2) * n
+
     def update_base(self, rigid_state, target_rigid_state):
 
         cur_state = self._sim.robot.sim_obj.transformation
@@ -296,22 +309,21 @@ class RobotBase(RobotInterface):
             did_collide = self._sim.contact_test(self.sim_obj.object_id)
             robot_id = self.sim_obj.object_id
             end_pos = target_rigid_state.translation
-
+            # If there is a collision, we do projection
             if did_collide:
                 cur_pos = rigid_state.translation
                 target_pos = target_rigid_state.translation
-                move_dir = target_pos - cur_pos
-
-                # Find the point that is closed to the move_dir
+                # Find the contact point
                 contact_points = self._sim.get_physics_contact_points()
                 num_contact_points = len(
                     self._sim.get_physics_contact_points()
                 )
                 robot_contact_list = []
+                # Find the contact point associated robot ID
                 for i in range(num_contact_points):
                     if robot_id == contact_points[i].object_id_a:
                         robot_contact_list.append(contact_points[i])
-                # Perform sliding
+                # Perform projection
                 contact_points = robot_contact_list
                 if len(contact_points) != 0:
                     # Get the average normal vector
@@ -320,20 +332,19 @@ class RobotBase(RobotInterface):
                         n_vec += contact_points[i].contact_normal_on_b_in_ws
                     n_vec = n_vec / len(contact_points)
                     # Get the average contact point
-                    c_pot = contact_points[0].position_on_a_in_ws
+                    c_dot = contact_points[0].position_on_a_in_ws
                     for i in range(1, len(contact_points)):
-                        c_pot += contact_points[i].position_on_a_in_ws
-                    c_pot = c_pot / len(contact_points)
-                    # Get the next target point
-                    p_pot = target_rigid_state.translation
+                        c_dot += contact_points[i].position_on_a_in_ws
+                    c_dot = c_dot / len(contact_points)
                     # Do the projection
-                    s0 = n_vec[0] * c_pot[0] - n_vec[0] * p_pot[0]
-                    s2 = n_vec[2] * c_pot[2] - n_vec[2] * p_pot[2]
-                    s = s0 + s2
-                    proj_pot = p_pot + s * n_vec
-                    # Get the final movement vector
-                    move_vec = target_pos - proj_pot
+                    proj_dot = self._dot_to_plane_proj(
+                        target_rigid_state.translation, n_vec, c_dot
+                    )
+                    # Get a vector that points from target next point to the projected point
+                    move_vec = target_pos - proj_dot
+                    # Not consider z direction
                     move_vec[1] = 0
+                    # Move the point
                     end_pos = rigid_state.translation + move_vec
             target_trans = mn.Matrix4.from_(
                 target_rigid_state.rotation.to_matrix(), end_pos
@@ -342,28 +353,27 @@ class RobotBase(RobotInterface):
         elif (
             has_attr
             and self._sim.habitat_config.COLLISION_DETECTION_METHOD
-            == "ContactTestProjRevert"
+            == "ContactTestProjSliding"
         ):
             did_collide = self._sim.contact_test(self.sim_obj.object_id)
             robot_id = self.sim_obj.object_id
             end_pos = target_rigid_state.translation
-
+            # If there is a collision, we do projection
             if did_collide:
-                # import pdb;pdb.set_trace()
                 cur_pos = rigid_state.translation
                 target_pos = target_rigid_state.translation
                 move_dir = target_pos - cur_pos
-
-                # Find the point that is closed to the move_dir
+                # Find the contact point
                 contact_points = self._sim.get_physics_contact_points()
                 num_contact_points = len(
                     self._sim.get_physics_contact_points()
                 )
                 robot_contact_list = []
+                # Find the contact point associated robot ID
                 for i in range(num_contact_points):
                     if robot_id == contact_points[i].object_id_a:
                         robot_contact_list.append(contact_points[i])
-                # Perform sliding
+                # Perform projection and sliding
                 contact_points = robot_contact_list
                 if len(contact_points) != 0:
                     # Get the average normal vector
@@ -372,105 +382,30 @@ class RobotBase(RobotInterface):
                         n_vec += contact_points[i].contact_normal_on_b_in_ws
                     n_vec = n_vec / len(contact_points)
                     # Get the average contact point
-                    c_pot = contact_points[0].position_on_a_in_ws
+                    c_dot = contact_points[0].position_on_a_in_ws
                     for i in range(1, len(contact_points)):
-                        c_pot += contact_points[i].position_on_a_in_ws
-                    c_pot = c_pot / len(contact_points)
-                    # Get the next target point
-                    p_pot = target_rigid_state.translation
+                        c_dot += contact_points[i].position_on_a_in_ws
+                    c_dot = c_dot / len(contact_points)
                     # Do the projection
-                    s0 = n_vec[0] * c_pot[0] - n_vec[0] * p_pot[0]
-                    s2 = n_vec[2] * c_pot[2] - n_vec[2] * p_pot[2]
-                    s = s0 + s2
-                    proj_pot = p_pot + s * n_vec
-                    # Get the final movement vector
-                    move_vec = target_pos - proj_pot
+                    proj_dot = self._dot_to_plane_proj(
+                        target_rigid_state.translation, n_vec, c_dot
+                    )
+                    # Get a vector that points from target next point to the projected point
+                    move_vec = target_pos - proj_dot
+                    # Project the vector from the current to target points
+                    proj_move_vec_plane = self._vector_to_plane_proj(
+                        move_dir, n_vec
+                    )
+                    # Combine final move direction.
+                    move_vec = 0.1 * move_vec + 0.1 * proj_move_vec_plane
+                    # Not consider z direction
                     move_vec[1] = 0
-                    # Project the move vector the plane
-                    v0 = (
-                        move_dir[0] * n_vec[0]
-                        + move_dir[1] * n_vec[1]
-                        + move_dir[2] * n_vec[2]
-                    )
-                    v1 = n_vec[0] ** 2 + n_vec[1] ** 2 + n_vec[2] ** 2
-                    proj_move_vec_plane = move_dir - v0 / v1 * n_vec
-                    proj_move_vec_plane[1] = 0
                     # Add together
-                    end_pos = (
-                        rigid_state.translation
-                        + 0.1 * move_vec
-                        + 0.1 * proj_move_vec_plane
-                    )
-                proposed_target_trans = mn.Matrix4.from_(
-                    target_rigid_state.rotation.to_matrix(), end_pos
-                )
-                self._sim.robot.sim_obj.transformation = proposed_target_trans
-                if self._sim.contact_test(self.sim_obj.object_id):
-                    self.end_pos = self.prev_collision_free_point
-
-            self.prev_collision_free_point = rigid_state.translation
+                    end_pos = rigid_state.translation + move_vec
             target_trans = mn.Matrix4.from_(
                 target_rigid_state.rotation.to_matrix(), end_pos
             )
             self.sim_obj.transformation = target_trans
-
-        elif (
-            has_attr
-            and self._sim.habitat_config.COLLISION_DETECTION_METHOD
-            == "ContactTestProjPreCheckRevert"
-        ):
-            end_pos = target_rigid_state.translation
-            proposed_target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), end_pos
-            )
-            self._sim.robot.sim_obj.transformation = proposed_target_trans
-            if self._sim.contact_test(self.sim_obj.object_id):
-                cur_pos = rigid_state.translation
-                target_pos = target_rigid_state.translation
-                move_dir = target_pos - cur_pos
-
-                # Find the point that is closed to the move_dir
-                contact_points = self._sim.get_physics_contact_points()
-                num_contact_points = len(
-                    self._sim.get_physics_contact_points()
-                )
-                robot_id = self.sim_obj.object_id
-                robot_contact_list = []
-                for i in range(num_contact_points):
-                    # if robot_id == contact_points[i].object_id_a:
-                    robot_contact_list.append(contact_points[i])
-                # Perform sliding
-                contact_points = robot_contact_list
-                if len(contact_points) != 0:
-                    # Get the average normal vector
-                    n_vec = contact_points[0].contact_normal_on_b_in_ws
-                    for i in range(1, len(contact_points)):
-                        n_vec += contact_points[i].contact_normal_on_b_in_ws
-                    n_vec = n_vec / len(contact_points)
-                    # Get the average contact point
-                    c_pot = contact_points[0].position_on_a_in_ws
-                    for i in range(1, len(contact_points)):
-                        c_pot += contact_points[i].position_on_a_in_ws
-                    c_pot = c_pot / len(contact_points)
-                    # Get the next target point
-                    p_pot = target_rigid_state.translation
-                    # Do the projection
-                    s0 = n_vec[0] * c_pot[0] - n_vec[0] * p_pot[0]
-                    s2 = n_vec[2] * c_pot[2] - n_vec[2] * p_pot[2]
-                    s = s0 + s2
-                    proj_pot = p_pot + s * n_vec
-                    # Get the final movement vector
-                    move_vec = target_pos - proj_pot
-                    move_vec[1] = 0
-                    end_pos = rigid_state.translation + move_vec
-                # Check the proposed projection point
-                proposed_target_trans = mn.Matrix4.from_(
-                    target_rigid_state.rotation.to_matrix(), end_pos
-                )
-                self._sim.robot.sim_obj.transformation = proposed_target_trans
-                # If it collides, we should revert to its previous state
-                if self._sim.contact_test(self.sim_obj.object_id):
-                    self._sim.robot.sim_obj.transformation = cur_state
         elif (
             ~has_attr
             or self._sim.habitat_config.COLLISION_DETECTION_METHOD == "NevMesh"
@@ -485,5 +420,6 @@ class RobotBase(RobotInterface):
             )
             self.sim_obj.transformation = target_trans
 
-        # Fix the leg joints
-        self.leg_joint_pos = [0.0, 0.7, -1.5] * 4
+        if self._base_type == "leg":
+            # Fix the leg joints
+            self.leg_joint_pos = [0.0, 0.7, -1.5] * 4

@@ -191,6 +191,6 @@ SIMULATOR:
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
     SEED: 100
     TYPE: RearrangeSim-v0
-    # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjRevert, ContactTestProjPreCheckRevert, NevMesh]
+    # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
     # for the collision detection.
-    COLLISION_DETECTION_METHOD: "NevMesh"
+    COLLISION_DETECTION_METHOD: "ContactTestProjSliding"
