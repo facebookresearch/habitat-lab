@@ -524,6 +524,27 @@ class BaseVelAction(RobotAction):
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
+    def check_step(self):
+        before_trans_state = self._capture_robot_state()
+        trans = self.cur_robot.sim_obj.transformation
+
+        if not self._config.get("ALLOW_DYN_SLIDE", True):
+            # Check if in the new robot state the arm collides with anything.
+            # If so we have to revert back to the previous transform
+            self._sim.internal_step(-1)
+            colls = self._sim.get_collisions()
+            did_coll, _ = rearrange_collision(
+                colls, self._sim.snapped_obj_id, False
+            )
+            if did_coll:
+                # Don't allow the step, revert back.
+                self._set_robot_state(before_trans_state)
+                self.cur_robot.sim_obj.transformation = trans
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            # object.
+            self.cur_grasp_mgr.update_object_to_grasp()
+
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._config.LIN_SPEED
@@ -543,7 +564,15 @@ class BaseVelAction(RobotAction):
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
         if lin_vel != 0.0 or ang_vel != 0.0:
-            self.update_base()
+            trans = self.cur_robot.sim_obj.transformation
+            rigid_state = habitat_sim.RigidState(
+                mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+            )
+            target_rigid_state = self.base_vel_ctrl.integrate_transform(
+                1 / self._sim.ctrl_freq, rigid_state
+            )
+            self.cur_robot.update_base(rigid_state, target_rigid_state)
+            self.check_step()
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.BASE_VELOCITY)

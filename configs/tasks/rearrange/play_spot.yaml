@@ -193,4 +193,4 @@ SIMULATOR:
     TYPE: RearrangeSim-v0
     # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjRevert, ContactTestProjPreCheckRevert, NevMesh]
     # for the collision detection.
-    COLLISION_DETECTION_METHOD: "ContactTestProjRevert"
+    COLLISION_DETECTION_METHOD: "NevMesh"
