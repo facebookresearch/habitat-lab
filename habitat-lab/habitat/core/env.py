@@ -67,12 +67,12 @@ class Env:
             ``_episodes`` should be populated from outside.
         """
 
-        assert config.is_frozen(), (
-            "Freeze the config before creating the "
-            "environment, use config.freeze()."
-        )
         if "habitat" in config:
             config = config.habitat
+        # assert config.is_frozen(), (
+        #     "Freeze the config before creating the "
+        #     "environment, use config.freeze()."
+        # )
         self._config = config
         self._dataset = dataset
         if self._dataset is None and config.dataset.type:

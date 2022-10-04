@@ -1,12 +1,17 @@
 from dataclasses import dataclass, field
-from typing import Optional, List, Any
+from typing import Any, List, Optional
 
-from omegaconf import MISSING
 from hydra.core.config_store import ConfigStore
+from omegaconf import MISSING
 
 
 @dataclass
-class IteratorOptions:
+class HabitatBaseConfig:
+    pass
+
+
+@dataclass
+class IteratorOptionsConfig(HabitatBaseConfig):
     cycle: bool = True
     shuffle: bool = True
     group_by_scene: bool = True
@@ -17,27 +22,27 @@ class IteratorOptions:
 
 
 @dataclass
-class Environment:
+class EnvironmentConfig(HabitatBaseConfig):
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
-    iterator_options: IteratorOptions = IteratorOptions()
+    iterator_options: IteratorOptionsConfig = IteratorOptionsConfig()
 
 
 # -----------------------------------------------------------------------------
 # # Actions
 # -----------------------------------------------------------------------------
 @dataclass
-class Action:
+class ActionConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
 @dataclass
-class StopAction(Action):
+class StopActionConfig(ActionConfig):
     type: str = "StopAction"
 
 
 @dataclass
-class EmptyAction(Action):
+class EmptyActionConfig(ActionConfig):
     type: str = "EmptyAction"
 
 
@@ -45,42 +50,42 @@ class EmptyAction(Action):
 # # NAVIGATION actions
 # -----------------------------------------------------------------------------
 @dataclass
-class MoveForwardAction(Action):
+class MoveForwardActionConfig(ActionConfig):
     type: str = "MoveForwardAction"
 
 
 @dataclass
-class TurnLeftAction(Action):
+class TurnLeftActionConfig(ActionConfig):
     type: str = "TurnLeftAction"
 
 
 @dataclass
-class TurnRightAction(Action):
+class TurnRightActionConfig(ActionConfig):
     type: str = "TurnRightAction"
 
 
 @dataclass
-class LookUpAction(Action):
+class LookUpActionConfig(ActionConfig):
     type: str = "LookUpAction"
 
 
 @dataclass
-class LookDownAction(Action):
+class LookDownActionConfig(ActionConfig):
     type: str = "LookDownAction"
 
 
 @dataclass
-class TeleportAction(Action):
+class TeleportActionConfig(ActionConfig):
     type: str = "TeleportAction"
 
 
 @dataclass
-class VelocityControlAction(Action):
+class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     # meters/sec
-    lin_vel_range: list[float] = field(default_factory=lambda: [0.0, 0.25])
+    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.25])
     # deg/sec
-    ang_vel_range: list[float] = field(default_factory=lambda: [-10.0, 10.0])
+    ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 1.0  # seconds
@@ -90,7 +95,7 @@ class VelocityControlAction(Action):
 # # REARRANGE actions
 # -----------------------------------------------------------------------------
 @dataclass
-class ArmAction(Action):
+class ArmActionConfig(ActionConfig):
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
     grip_controller: Optional[str] = None
@@ -104,7 +109,7 @@ class ArmAction(Action):
 
 
 @dataclass
-class BaseVelocityAction(Action):
+class BaseVelocityActionConfig(ActionConfig):
     type: str = "BaseVelAction"
     lin_speed: float = 10.0
     ang_speed: float = 10.0
@@ -116,18 +121,19 @@ class BaseVelocityAction(Action):
 
 
 @dataclass
-class RearrangeStopAction(Action):
+class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
 
 
 @dataclass
-class OracleNavAction(Action):
+class OracleNavActionConfig(ActionConfig):
     """
     Oracle navigation action.
     This action takes as input a discrete ID which refers to an object in the
     PDDL domain. The oracle navigation controller then computes the actions to
     navigate to that desired object.
     """
+
     type: str = "OracleNavAction"
     turn_velocity: float = 1.0
     forward_velocity: float = 1.0
@@ -146,7 +152,7 @@ class OracleNavAction(Action):
 # # EQA actions
 # -----------------------------------------------------------------------------
 @dataclass
-class AnswerAction(Action):
+class AnswerActionConfig(ActionConfig):
     type: str = "AnswerAction"
 
 
@@ -154,200 +160,200 @@ class AnswerAction(Action):
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
 @dataclass
-class Sensor:
+class SensorConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
 @dataclass
-class PointGoalSensor(Sensor):
+class PointGoalSensorConfig(SensorConfig):
     type: str = "PointGoalSensor"
     goal_format: str = "POLAR"
     dimensionality: int = 2
 
 
 @dataclass
-class PointGoalWithGPSCompassSensor(PointGoalSensor):
+class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     type: str = "PointGoalWithGPSCompassSensor"
 
 
-class ObjectGoalSensor(Sensor):
+class ObjectGoalSensorConfig(SensorConfig):
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
 
 
 @dataclass
-class ImageGoalSensor(Sensor):
+class ImageGoalSensorConfig(SensorConfig):
     type: str = "ImageGoalSensor"
 
 
 @dataclass
-class InstanceImageGoalSensor(Sensor):
+class InstanceImageGoalSensorConfig(SensorConfig):
     type: str = "InstanceImageGoalSensor"
 
 
 @dataclass
-class InstanceImageGoalHFOVSensor(Sensor):
+class InstanceImageGoalHFOVSensorConfig(SensorConfig):
     type: str = "InstanceImageGoalHFOVSensor"
 
 
 @dataclass
-class HeadingSensor(Sensor):
+class HeadingSensorConfig(SensorConfig):
     type: str = "HeadingSensor"
 
 
 @dataclass
-class CompassSensor(Sensor):
+class CompassSensorConfig(SensorConfig):
     type: str = "CompassSensor"
 
 
 @dataclass
-class GPSSensorSensor(Sensor):
+class GPSSensorSensorConfig(SensorConfig):
     type: str = "GPSSensor"
     dimensionality: int = 2
 
 
 @dataclass
-class ProximitySensor(Sensor):
+class ProximitySensorConfig(SensorConfig):
     type: str = "ProximitySensor"
     max_detection_radius: float = 2.0
 
 
 @dataclass
-class JointSensor(Sensor):
+class JointSensorConfig(SensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
 
 
 @dataclass
-class EEPositionSensor(Sensor):
+class EEPositionSensorConfig(SensorConfig):
     type: str = "EEPositionSensor"
 
 
 @dataclass
-class IsHoldingSensor(Sensor):
+class IsHoldingSensorConfig(SensorConfig):
     type: str = "IsHoldingSensor"
 
 
 @dataclass
-class RelativeRestingPositionSensor(Sensor):
+class RelativeRestingPositionSensorConfig(SensorConfig):
     type: str = "RelativeRestingPositionSensor"
 
 
 @dataclass
-class JointVelocitySensor(Sensor):
+class JointVelocitySensorConfig(SensorConfig):
     type: str = "JointVelocitySensor"
     dimensionality: int = 7
 
 
 @dataclass
-class OracleNavigationActionSensor(Sensor):
+class OracleNavigationActionSensorConfig(SensorConfig):
     type: str = "OracleNavigationActionSensor"
 
 
 @dataclass
-class RestingPositionSensor(Sensor):
+class RestingPositionSensorConfig(SensorConfig):
     type: str = "RestingPositionSensor"
 
 
 @dataclass
-class ArtJointSensor(Sensor):
+class ArtJointSensorConfig(SensorConfig):
     type: str = "ArtJointSensor"
 
 
 @dataclass
-class NavGoalSensor(Sensor):
+class NavGoalSensorConfig(SensorConfig):
     type: str = "NavGoalSensor"
 
 
 @dataclass
-class ArtJointSensorNoVelSensor(Sensor):
+class ArtJointSensorNoVelSensorConfig(SensorConfig):
     type: str = "ArtJointSensorNoVel"  # TODO: add "Sensor" suffix
 
 
 @dataclass
-class MarkerRelPosSensor(Sensor):
+class MarkerRelPosSensorConfig(SensorConfig):
     type: str = "MarkerRelPosSensor"
 
 
 @dataclass
-class TargetStartSensor(Sensor):
+class TargetStartSensorConfig(SensorConfig):
     type: str = "TargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class TargetCurrentSensor(Sensor):
+class TargetCurrentSensorConfig(SensorConfig):
     type: str = "TargetCurrentSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class GoalSensor(Sensor):
+class GoalSensorConfig(SensorConfig):
     type: str = "GoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class TargetOrGoalStartPointGoalSensor(Sensor):
+class TargetOrGoalStartPointGoalSensorConfig(SensorConfig):
     type: str = "TargetOrGoalStartPointGoalSensor"
 
 
 @dataclass
-class GlobalPredicatesSensor(Sensor):
+class GlobalPredicatesSensorConfig(SensorConfig):
     type: str = "GlobalPredicatesSensor"
 
 
 @dataclass
-class TargetStartGpsCompassSensor(Sensor):
+class TargetStartGpsCompassSensorConfig(SensorConfig):
     type: str = "TargetStartGpsCompassSensor"
 
 
 @dataclass
-class TargetGoalGpsCompassSensor(Sensor):
+class TargetGoalGpsCompassSensorConfig(SensorConfig):
     type: str = "TargetGoalGpsCompassSensor"
 
 
 @dataclass
-class NavToSkillSensor(Sensor):
+class NavToSkillSensorConfig(SensorConfig):
     type: str = "NavToSkillSensor"
     num_skills: int = 8
 
 
 @dataclass
-class AbsTargetStartSensor(Sensor):
+class AbsTargetStartSensorConfig(SensorConfig):
     type: str = "AbsTargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class AbsGoalSensor(Sensor):
+class AbsGoalSensorConfig(SensorConfig):
     type: str = "AbsGoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class DistToNavGoalSensor(Sensor):
+class DistToNavGoalSensorConfig(SensorConfig):
     type: str = "DistToNavGoalSensor"
 
 
 @dataclass
-class LocalizationSensor(Sensor):
+class LocalizationSensorConfig(SensorConfig):
     type: str = "LocalizationSensor"
 
 
 @dataclass
-class QuestionSensor(Sensor):
+class QuestionSensorConfig(SensorConfig):
     type: str = "QuestionSensor"
 
 
 @dataclass
-class InstructionSensor(Sensor):
+class InstructionSensorConfig(SensorConfig):
     type: str = "InstructionSensor"
     instruction_sensor_uuid: str = "instruction"
 
@@ -356,23 +362,23 @@ class InstructionSensor(Sensor):
 # Measurements
 # -----------------------------------------------------------------------------
 @dataclass
-class Measurement:
+class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
 @dataclass
-class SuccessMeasurement(Measurement):
+class SuccessMeasurementConfig(MeasurementConfig):
     type: str = "Success"
     success_distance: float = 0.2
 
 
 @dataclass
-class SPLMeasurement(Measurement):
+class SPLMeasurementConfig(MeasurementConfig):
     type: str = "SPL"
 
 
 @dataclass
-class SoftSPLMeasurement(Measurement):
+class SoftSPLMeasurementConfig(MeasurementConfig):
     type: str = "SoftSPL"
 
 
@@ -384,9 +390,9 @@ class FogOfWarConfig:
 
 
 @dataclass
-class TopDownMapMeasurement(Measurement):
+class TopDownMapMeasurementConfig(MeasurementConfig):
     type: str = "TopDownMap"
-    max_episode_steps: int = Environment.max_episode_steps
+    max_episode_steps: int = EnvironmentConfig.max_episode_steps
     map_padding: int = 3
     map_resolution: int = 1024
     draw_source: bool = True
@@ -400,73 +406,73 @@ class TopDownMapMeasurement(Measurement):
 
 
 @dataclass
-class CollisionsMeasurement(Measurement):
+class CollisionsMeasurementConfig(MeasurementConfig):
     type: str = "Collisions"
 
 
 @dataclass
-class RobotForceMeasurement(Measurement):
+class RobotForceMeasurementConfig(MeasurementConfig):
     type: str = "RobotForce"
     min_force: float = 20.0
 
 
 @dataclass
-class ForceTerminateMeasurement(Measurement):
+class ForceTerminateMeasurementConfig(MeasurementConfig):
     type: str = "ForceTerminate"
     max_accum_force: float = -1.0
     max_instant_force: float = -1.0
 
 
 @dataclass
-class RobotCollisionsMeasurement(Measurement):
+class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
 
 
 @dataclass
-class ObjectToGoalDistanceMeasurement(Measurement):
+class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "ObjectToGoalDistance"
 
 
 @dataclass
-class EndEffectorToObjectDistanceMeasurement(Measurement):
+class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
 
 
 @dataclass
-class EndEffectorToRestDistanceMeasurement(Measurement):
+class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToRestDistance"
 
 
 @dataclass
-class ArtObjAtDesiredStateMeasurement(Measurement):
+class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
 
 
 @dataclass
-class GfxReplayMeasureMeasurement(Measurement):
+class GfxReplayMeasureMeasurementConfig(MeasurementConfig):
     type: str = "GfxReplayMeasure"
 
 
 @dataclass
-class EndEffectorDistToMarkerMeasurement(Measurement):
+class EndEffectorDistToMarkerMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorDistToMarker"
 
 
 @dataclass
-class ArtObjStateMeasurement(Measurement):
+class ArtObjStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjState"
 
 
 @dataclass
-class ArtObjSuccessMeasurement(Measurement):
+class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
 
 
 @dataclass
-class ArtObjRewardMeasurement(Measurement):
+class ArtObjRewardMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjReward"
     dist_reward: float = 1.0
     wrong_grasp_end: bool = False
@@ -484,30 +490,30 @@ class ArtObjRewardMeasurement(Measurement):
 
 
 @dataclass
-class RotDistToGoalMeasurement(Measurement):
+class RotDistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "RotDistToGoal"
 
 
 @dataclass
-class DistToGoalMeasurement(Measurement):
+class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
 
 
 @dataclass
-class BadCalledTerminateMeasurement(Measurement):
+class BadCalledTerminateMeasurementConfig(MeasurementConfig):
     type: str = "BadCalledTerminate"
     bad_term_pen: float = 0.0
     decay_bad_term: bool = False
 
 
 @dataclass
-class NavToPosSuccMeasurement(Measurement):
+class NavToPosSuccMeasurementConfig(MeasurementConfig):
     type: str = "NavToPosSucc"
     success_distance: float = 0.2
 
 
 @dataclass
-class NavToObjRewardMeasurement(Measurement):
+class NavToObjRewardMeasurementConfig(MeasurementConfig):
     type: str = "NavToObjReward"
     # reward the agent for facing the object?
     should_reward_turn: bool = True
@@ -523,7 +529,7 @@ class NavToObjRewardMeasurement(Measurement):
 
 
 @dataclass
-class NavToObjSuccessMeasurement(Measurement):
+class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     type: str = "NavToObjSuccess"
     must_look_at_targ: bool = True
     must_call_stop: bool = True
@@ -533,7 +539,7 @@ class NavToObjSuccessMeasurement(Measurement):
 
 
 @dataclass
-class RearrangeReachRewardMeasurement(Measurement):
+class RearrangeReachRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangeReachReward"
     scale: float = 1.0
     diff_reward: bool = True
@@ -541,28 +547,28 @@ class RearrangeReachRewardMeasurement(Measurement):
 
 
 @dataclass
-class RearrangeReachSuccessMeasurement(Measurement):
+class RearrangeReachSuccessMeasurementConfig(MeasurementConfig):
     type: str = "RearrangeReachSuccess"
     succ_thresh: float = 0.2
 
 
 @dataclass
-class NumStepsMeasurement(Measurement):
+class NumStepsMeasurementConfig(MeasurementConfig):
     type: str = "NumStepsMeasure"
 
 
 @dataclass
-class DidPickObjectMeasurement(Measurement):
+class DidPickObjectMeasurementConfig(MeasurementConfig):
     type: str = "DidPickObjectMeasure"
 
 
 @dataclass
-class DidViolateHoldConstraintMeasurement(Measurement):
+class DidViolateHoldConstraintMeasurementConfig(MeasurementConfig):
     type: str = "DidViolateHoldConstraintMeasure"
 
 
 @dataclass
-class MoveObjectsRewardMeasurement(Measurement):
+class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     type: str = "MoveObjectsReward"
     pick_reward: float = 1.0
     success_dist: float = 0.15
@@ -575,7 +581,7 @@ class MoveObjectsRewardMeasurement(Measurement):
 
 
 @dataclass
-class RearrangePickRewardMeasurement(Measurement):
+class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickReward"
     dist_reward: float = 20.0
     succ_reward: float = 10.0
@@ -593,19 +599,19 @@ class RearrangePickRewardMeasurement(Measurement):
 
 
 @dataclass
-class RearrangeReachSuccessMeasurement(Measurement):
+class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
 
 
 @dataclass
-class ObjAtGoalMeasurement(Measurement):
+class ObjAtGoalMeasurementConfig(MeasurementConfig):
     type: str = "ObjAtGoal"
     succ_thresh: float = 0.15
 
 
 @dataclass
-class PlaceRewardMeasurement(Measurement):
+class PlaceRewardMeasurementConfig(MeasurementConfig):
     type: str = "PlaceReward"
     dist_reward: float = 20.0
     succ_reward: float = 10.0
@@ -620,72 +626,72 @@ class PlaceRewardMeasurement(Measurement):
 
 
 @dataclass
-class PlaceSuccessMeasurement(Measurement):
+class PlaceSuccessMeasurementConfig(MeasurementConfig):
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
 
 
 @dataclass
-class CompositeNodeIdxMeasurement(Measurement):
+class CompositeNodeIdxMeasurementConfig(MeasurementConfig):
     type: str = "CompositeNodeIdx"
 
 
 @dataclass
-class CompositeStageGoalsMeasurement(Measurement):
+class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
     type: str = "CompositeStageGoals"
 
 
 @dataclass
-class CompositeSuccessMeasurement(Measurement):
+class CompositeSuccessMeasurementConfig(MeasurementConfig):
     type: str = "CompositeSuccess"
     must_call_stop: bool = True
 
 
 @dataclass
-class CompositeRewardMeasurement(Measurement):
+class CompositeRewardMeasurementConfig(MeasurementConfig):
     type: str = "CompositeReward"
     must_call_stop: bool = True
     success_reward: float = 10.0
 
 
 @dataclass
-class DoesWantTerminateMeasurement(Measurement):
+class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     type: str = "DoesWantTerminate"
 
 
 @dataclass
-class CompositeBadCalledTerminateMeasurement(Measurement):
+class CompositeBadCalledTerminateMeasurementConfig(MeasurementConfig):
     type: str = "CompositeBadCalledTerminate"
 
 
 @dataclass
-class CorrectAnswerMeasurement(Measurement):
+class CorrectAnswerMeasurementConfig(MeasurementConfig):
     type: str = "CorrectAnswer"
 
 
 @dataclass
-class EpisodeInfoMeasurement(Measurement):
+class EpisodeInfoMeasurementConfig(MeasurementConfig):
     type: str = "EpisodeInfo"
 
 
 @dataclass
-class DistanceToGoalMeasurement(Measurement):
+class DistanceToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToGoal"
     distance_to: str = "POINT"
 
 
 @dataclass
-class DistanceToGoalRewardMeasurement(Measurement):
+class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToGoalReward"
 
 
 @dataclass
-class AnswerAccuracyMeasurement(Measurement):
+class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
 
 
 @dataclass
-class Task:
+class TaskConfig(HabitatBaseConfig):
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
     success_reward: float = 2.5
@@ -693,10 +699,10 @@ class Task:
     end_on_success: bool = False
     # NAVIGATION task
     type: str = "Nav-v0"
-    sensors: list[str] = field(default_factory=list)
-    measurements: list[str] = field(default_factory=list)
+    sensors: List[str] = field(default_factory=list)
+    measurements: List[str] = field(default_factory=list)
     goal_sensor_uuid: str = "pointgoal"
-    possible_actions: list[str] = field(
+    possible_actions: List[str] = field(
         default_factory=lambda: [
             "stop",
             "move_forward",
@@ -724,7 +730,7 @@ class Task:
     base_noise: float = 0.05
     spawn_region_scale: float = 0.2
     joint_max_impulse: float = -1.0
-    desired_resting_position: list[float] = field(
+    desired_resting_position: List[float] = field(
         default_factory=lambda: [0.5, 0.0, 1.0]
     )
     use_marker_t: bool = True
@@ -743,67 +749,67 @@ class Task:
     obj_succ_thresh: float = 0.3
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
-    filter_nav_to_tasks: list = field(default_factory=list)
+    filter_nav_to_tasks: List = field(default_factory=list)
     actions: Any = MISSING
 
 
 @dataclass
-class SimulatorSensor:
+class SimulatorSensorConfig(HabitatBaseConfig):
     type: str = MISSING
     height: int = 480
     width: int = 640
-    position: list[float] = field(default_factory=lambda: [0.0, 1.25, 0.0])
+    position: List[float] = field(default_factory=lambda: [0.0, 1.25, 0.0])
     # Euler's angles:
-    orientation: list[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
+    orientation: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
 
 
 @dataclass
-class SimulatorCameraSensor(SimulatorSensor):
+class SimulatorCameraSensorConfig(SimulatorSensorConfig):
     hfov: int = 90  # horizontal field of view in degrees
     sensor_subtype: str = "PINHOLE"
 
 
 @dataclass
-class SimulatorDepthSensor(SimulatorSensor):
+class SimulatorDepthSensorConfig(SimulatorSensorConfig):
     min_depth: float = 0.0
     max_depth: float = 10.0
     normalize_depth: bool = True
 
 
 @dataclass
-class HabitatSimRGBSensor(SimulatorCameraSensor):
+class HabitatSimRGBSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimRGBSensor"
 
 
 @dataclass
-class HabitatSimDepthSensor(SimulatorDepthSensor):
+class HabitatSimDepthSensorConfig(SimulatorDepthSensorConfig):
     type: str = "HabitatSimDepthSensor"
 
 
 @dataclass
-class HabitatSimSemanticSensor(SimulatorSensor):
+class HabitatSimSemanticSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimSemanticSensor"
 
 
 @dataclass
-class HabitatSimEquirectangularRGBSensor(SimulatorSensor):
+class HabitatSimEquirectangularRGBSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularRGBSensor"
 
 
 @dataclass
-class HabitatSimEquirectangularDepthSensor(SimulatorDepthSensor):
+class HabitatSimEquirectangularDepthSensorConfig(SimulatorDepthSensorConfig):
     type: str = "HabitatSimEquirectangularDepthSensor"
 
 
 @dataclass
-class HabitatSimEquirectangularSemanticSensor(SimulatorSensor):
+class HabitatSimEquirectangularSemanticSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularSemanticSensor"
 
 
 @dataclass
-class SimulatorFisheyeSensor(SimulatorSensor):
+class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimFisheyeSensor"
-    height: int = SimulatorSensor.width
+    height: int = SimulatorSensorConfig.width
     # The default value (alpha, xi) is set to match the lens  "GoPro" found in
     # Table 3 of this paper: Vladyslav Usenko, Nikolaus Demmel and
     # Daniel Cremers: The Double Sphere Camera Model,
@@ -812,71 +818,71 @@ class SimulatorFisheyeSensor(SimulatorSensor):
     # in the same table as well.
     xi: float = -0.27
     alpha: float = 0.57
-    focal_length: list[float] = field(default_factory=lambda: [364.84, 364.86])
+    focal_length: List[float] = field(default_factory=lambda: [364.84, 364.86])
     # Place camera at center of screen
     # Can be specified, otherwise is calculated automatically.
     # principal_point_offset defaults to (h/2,w/2)
-    principal_point_offset: Optional[list[float]] = None
+    principal_point_offset: Optional[List[float]] = None
     sensor_model_type: str = "DOUBLE_SPHERE"
 
 
 @dataclass
-class HabitatSimFisheyeRGBSensor(SimulatorFisheyeSensor):
+class HabitatSimFisheyeRGBSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeRGBSensor"
 
 
 @dataclass
-class SimulatorFisheyeDepthSensor(SimulatorFisheyeSensor):
+class SimulatorFisheyeDepthSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeDepthSensor"
-    min_depth: float = SimulatorDepthSensor.min_depth
-    max_depth: float = SimulatorDepthSensor.max_depth
-    normalize_depth: bool = SimulatorDepthSensor.normalize_depth
+    min_depth: float = SimulatorDepthSensorConfig.min_depth
+    max_depth: float = SimulatorDepthSensorConfig.max_depth
+    normalize_depth: bool = SimulatorDepthSensorConfig.normalize_depth
 
 
 @dataclass
-class HabitatSimFisheyeSemanticSensor(SimulatorFisheyeSensor):
+class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeSemanticSensor"
 
 
 @dataclass
-class HeadRGBSensor(HabitatSimRGBSensor):
+class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_head_rgb"
 
 
 @dataclass
-class HeadDepthSensor(HabitatSimDepthSensor):
+class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_head_depth"
 
 
 @dataclass
-class ArmRGBSensor(HabitatSimRGBSensor):
+class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_arm_rgb"
 
 
 @dataclass
-class ArmDepthSensor(HabitatSimDepthSensor):
+class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_arm_depth"
 
 
 @dataclass
-class ThirdRGBSensor(HabitatSimRGBSensor):
+class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
 
 
 @dataclass
-class ThirdDepthSensor(HabitatSimDepthSensor):
+class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_third_depth"  # TODO: robot_third_rgb on the main branch
-                                     #  check if it won't cause any errors
+    #  check if it won't cause any errors
 
 
 @dataclass
-class Agent:
+class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
-    sensors: list[str] = field(default_factory=lambda: ["rgb_sensor"])
+    sensors: List[str] = field(default_factory=lambda: ["rgb_sensor"])
     is_set_start_state: bool = False
-    start_position: list[float] = field(default_factory=lambda: [0, 0, 0])
-    start_rotation: list[float] = field(default_factory=lambda: [0, 0, 0, 1])
+    start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
+    start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.0
     robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     robot_type: str = "FetchRobot"
@@ -884,7 +890,7 @@ class Agent:
 
 
 @dataclass
-class HabitatSimV0:
+class HabitatSimV0Config(HabitatBaseConfig):
     gpu_device_id: int = 0
     # Use Habitat-Sim's GPU->GPU copy mode to return rendering results in
     # pytorch tensors. Requires Habitat-Sim to be built with --with-cuda.
@@ -905,7 +911,7 @@ class HabitatSimV0:
 
 
 @dataclass
-class Simulator:
+class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
     action_space_config: str = "v0"
     forward_step_size: float = 0.25  # in metres
@@ -925,7 +931,7 @@ class Simulator:
     scene_dataset: str = "default"
     # A list of directory or config paths to search in addition to the dataset
     # for object configs. should match the generated episodes for the task:
-    additional_object_paths: list = field(default_factory=list)
+    additional_object_paths: List = field(default_factory=list)
     # Use config.seed (can't reference Config.seed) or define via code
     # otherwise it leads to circular references:
     # seed = Config.seed
@@ -946,44 +952,40 @@ class Simulator:
     # Rearrange agent grasping
     hold_thresh: float = 0.09
     grasp_impulse: float = 1000.0
-    agents: list[str] = field(default_factory=lambda: ["agent_0"])
-    agent_0: Agent = Agent()
-    rgb_sensor: HabitatSimRGBSensor = HabitatSimRGBSensor()
-    depth_sensor: HabitatSimDepthSensor = HabitatSimDepthSensor()
-    habitat_sim_v0: HabitatSimV0 = HabitatSimV0()
+    agents: List[str] = field(default_factory=lambda: ["agent_0"])
+    agent_0: AgentConfig = AgentConfig()
+    rgb_sensor: HabitatSimRGBSensorConfig = HabitatSimRGBSensorConfig()
+    depth_sensor: HabitatSimDepthSensorConfig = HabitatSimDepthSensorConfig()
+    habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
 
 
 @dataclass
-class Pyrobot:
+class PyrobotConfig(HabitatBaseConfig):
     # types of robots supported:
-    robots: list[str] = field(default_factory=lambda: ["locobot"])
+    robots: List[str] = field(default_factory=lambda: ["locobot"])
     robot: str = "locobot"
-    sensors: list[str] = field(
-        default_factory=lambda: [
-            "rgb_sensor",
-            "depth_sensor",
-            "bump_sensor"
-        ]
+    sensors: List[str] = field(
+        default_factory=lambda: ["rgb_sensor", "depth_sensor", "bump_sensor"]
     )
     base_controller: str = "proportional"
     base_planner: str = "none"
 
 
 @dataclass
-class PyrobotVisualSensor:
+class PyrobotVisualSensorConfig(HabitatBaseConfig):
     type: str = MISSING
     height: int = 480
     width: int = 640
 
 
 @dataclass
-class PyrobotRGBSensor(PyrobotVisualSensor):
+class PyrobotRGBSensorConfig(PyrobotVisualSensorConfig):
     type: str = "PyRobotRGBSensor"
     center_crop: bool = False
 
 
 @dataclass
-class PyrobotDepthSensor(PyrobotVisualSensor):
+class PyrobotDepthSensorConfig(PyrobotVisualSensorConfig):
     type: str = "PyRobotDepthSensor"
     min_depth: float = 0.0
     max_depth: float = 5.0
@@ -992,54 +994,46 @@ class PyrobotDepthSensor(PyrobotVisualSensor):
 
 
 @dataclass
-class PyrobotBumpSensor:
+class PyrobotBumpSensorConfig(HabitatBaseConfig):
     type: str = "PyRobotBumpSensor"
 
 
 @dataclass
-class Locobot:
-    actions: list[str] = field(
-        default_factory=lambda: [
-            "base_actions",
-            "camera_actions"
-        ]
+class LocobotConfig(HabitatBaseConfig):
+    actions: List[str] = field(
+        default_factory=lambda: ["base_actions", "camera_actions"]
     )
-    base_actions: list[str] = field(
-        default_factory=lambda: [
-            "go_to_relative",
-            "go_to_absolute"
-        ]
+    base_actions: List[str] = field(
+        default_factory=lambda: ["go_to_relative", "go_to_absolute"]
     )
-    camera_actions: list[str] = field(
-        default_factory=lambda: [
-            "set_pan",
-            "set_tilt",
-            "set_pan_tilt"
-        ]
+    camera_actions: List[str] = field(
+        default_factory=lambda: ["set_pan", "set_tilt", "set_pan_tilt"]
     )
 
 
 @dataclass
-class Dataset:
+class DatasetConfig(HabitatBaseConfig):
     type: str = "PointNav-v1"
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
-    content_scenes: list[str] = field(default_factory=lambda: ["*"])
-    data_path: str = "data/datasets/pointnav/" \
-                "habitat-test-scenes/v1/{split}/{split}.json.gz"
+    content_scenes: List[str] = field(default_factory=lambda: ["*"])
+    data_path: str = (
+        "data/datasets/pointnav/"
+        "habitat-test-scenes/v1/{split}/{split}.json.gz"
+    )
 
 
 @dataclass
-class Gym:
+class GymConfig(HabitatBaseConfig):
     auto_name: str = ""
-    obs_keys: Optional[list[str]] = None
-    action_keys: Optional[list[str]] = None
-    achieved_goal_keys: list = field(default_factory=list)
-    desired_goal_keys: list[str] = field(default_factory=list)
+    obs_keys: Optional[List[str]] = None
+    action_keys: Optional[List[str]] = None
+    achieved_goal_keys: List = field(default_factory=list)
+    desired_goal_keys: List[str] = field(default_factory=list)
 
 
 @dataclass
-class Config:
+class HabitatConfig(HabitatBaseConfig):
     seed: int = 100
     # GymHabitatEnv works for all Habitat tasks, including Navigation and
     # Rearrange. To use a gym environment from the registry, use the
@@ -1048,52 +1042,48 @@ class Config:
     # The dependencies for launching the GymRegistryEnv environments.
     # Modules listed here will be imported prior to making the environment with
     # gym.make()
-    env_task_gym_dependencies: list = field(default_factory=list)
+    env_task_gym_dependencies: List = field(default_factory=list)
     # The key of the gym environment in the registry to use in GymRegistryEnv
     # for example: `Cartpole-v0`
     env_task_gym_id: str = ""
-    environment: Environment = Environment()
-    simulator: Simulator = Simulator()
-    task: Task = Task()
-    dataset: Dataset = Dataset()
+    environment: EnvironmentConfig = EnvironmentConfig()
+    simulator: SimulatorConfig = SimulatorConfig()
+    task: TaskConfig = TaskConfig()
+    dataset: DatasetConfig = DatasetConfig()
 
 
 # -----------------------------------------------------------------------------
 # Register configs in the Hydra ConfigStore
 # -----------------------------------------------------------------------------
 cs = ConfigStore.instance()
-cs.store(
-    group="habitat",
-    name="config",
-    node=Config
-)
+cs.store(group="habitat", name="config", node=HabitatConfig)
 cs.store(
     group="habitat",
     name="environment",
-    node=Environment,
+    node=EnvironmentConfig,
 )
 cs.store(
     group="habitat",
     name="task",
-    node=Task,
+    node=TaskConfig,
 )
 cs.store(
     group="habitat.task.actions.stop",
     name="stop",
-    node=StopAction,
+    node=StopActionConfig,
 )
 cs.store(
     group="habitat.task.actions.move_forward",
     name="move_forward",
-    node=MoveForwardAction,
+    node=MoveForwardActionConfig,
 )
 cs.store(
     group="habitat.task.actions.turn_left",
     name="turn_left",
-    node=TurnLeftAction,
+    node=TurnLeftActionConfig,
 )
 cs.store(
     group="habitat.task.actions.turn_right",
     name="turn_right",
-    node=TurnRightAction,
+    node=TurnRightActionConfig,
 )
