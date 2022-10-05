@@ -460,7 +460,7 @@ class PointNavResNetNet(Net):
             fuse_states = torch.cat(
                 [observations[k] for k in self._fuse_keys_1d], dim=-1
             )
-            x.append(fuse_states)
+            x.append(fuse_states.float())
 
         if IntegratedPointGoalGPSAndCompassSensor.cls_uuid in observations:
             goal_observations = observations[
