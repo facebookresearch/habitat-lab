@@ -92,7 +92,7 @@ class GymRegistryEnv(gym.Wrapper):
     def __init__(self, config: Config, dataset: Optional[Dataset] = None):
         for dependency in config["env_task_gym_dependencies"]:
             importlib.import_module(dependency)
-            env_name = config["env_task_gym_id"]
+        env_name = config["env_task_gym_id"]
         gym_env = gym.make(env_name)
         super().__init__(gym_env)
 

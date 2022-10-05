@@ -151,8 +151,9 @@ def test_trainers(config_path, num_updates, trainer_name):
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
 @pytest.mark.parametrize("env_key", ["CartPole-v0"])
+@pytest.mark.parametrize("dependencies", [[], ["pygame"]])
 def test_trainers_gym_registry(
-    config_path, num_updates, trainer_name, env_key
+    config_path, num_updates, trainer_name, env_key, dependencies
 ):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
@@ -173,7 +174,7 @@ def test_trainers_gym_registry(
             "habitat.env_task",
             "GymRegistryEnv",
             "habitat.env_task_gym_dependencies",
-            ["pygame"],
+            dependencies,
             "habitat.env_task_gym_id",
             env_key,
         ],
