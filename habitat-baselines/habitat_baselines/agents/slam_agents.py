@@ -610,8 +610,8 @@ def main():
 
     config = get_config()
     agent_config = cfg_baseline()
-    config.defrost()
-    config.BASELINE = agent_config.BASELINE
+    with habitat.config.read_write(config):
+        config.BASELINE = agent_config.BASELINE
     make_good_config_for_orbslam2(config)
 
     if args.agent_type == "blind":

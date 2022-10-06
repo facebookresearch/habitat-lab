@@ -37,35 +37,34 @@ def test_ppo_agents(input_type, resolution):
 
     agent_config = ppo_agents.get_default_config()
     agent_config.MODEL_PATH = ""
-    agent_config.defrost()
-    config_env = habitat.get_config(config_paths=CFG_TEST)
-    if not os.path.exists(config_env.habitat.simulator.scene):
-        pytest.skip("Please download Habitat test data to data folder.")
+    with habitat.config.read_write(agent_config):
+        config_env = habitat.get_config(config_paths=CFG_TEST)
+        if not os.path.exists(config_env.habitat.simulator.scene):
+            pytest.skip("Please download Habitat test data to data folder.")
 
-    benchmark = habitat.Benchmark(config_paths=CFG_TEST)
+        benchmark = habitat.Benchmark(config_paths=CFG_TEST)
+        with habitat.config.read_write(config_env):
+            config_env.habitat.simulator.agent_0.sensors = []
+            if input_type in ["rgb", "rgbd"]:
+                config_env.habitat.simulator.agent_0.sensors += ["rgb_sensor"]
+                agent_config.RESOLUTION = resolution
+                config_env.habitat.simulator.rgb_sensor.width = resolution
+                config_env.habitat.simulator.rgb_sensor.height = resolution
+            if input_type in ["depth", "rgbd"]:
+                config_env.habitat.simulator.agent_0.sensors += [
+                    "depth_sensor"
+                ]
+                agent_config.RESOLUTION = resolution
+                config_env.habitat.simulator.depth_sensor.width = resolution
+                config_env.habitat.simulator.depth_sensor.height = resolution
 
-    config_env.defrost()
-    config_env.habitat.simulator.agent_0.sensors = []
-    if input_type in ["rgb", "rgbd"]:
-        config_env.habitat.simulator.agent_0.sensors += ["rgb_sensor"]
-        agent_config.RESOLUTION = resolution
-        config_env.habitat.simulator.rgb_sensor.width = resolution
-        config_env.habitat.simulator.rgb_sensor.height = resolution
-    if input_type in ["depth", "rgbd"]:
-        config_env.habitat.simulator.agent_0.sensors += ["depth_sensor"]
-        agent_config.RESOLUTION = resolution
-        config_env.habitat.simulator.depth_sensor.width = resolution
-        config_env.habitat.simulator.depth_sensor.height = resolution
+        del benchmark._env
+        benchmark._env = habitat.Env(config=config_env)
+        agent_config.INPUT_TYPE = input_type
 
-    config_env.freeze()
-
-    del benchmark._env
-    benchmark._env = habitat.Env(config=config_env)
-    agent_config.INPUT_TYPE = input_type
-
-    agent = ppo_agents.PPOAgent(agent_config)
-    habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
-    benchmark._env.close()
+        agent = ppo_agents.PPOAgent(agent_config)
+        habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
+        benchmark._env.close()
 
 
 @pytest.mark.skipif(

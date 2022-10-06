@@ -351,9 +351,8 @@ class PACMANTrainer(BaseILTrainer):
         """
         config = self.config
 
-        config.defrost()
-        config.habitat.dataset.split = self.config.eval.split
-        config.freeze()
+        with habitat.config.read_write(config):
+            config.habitat.dataset.split = self.config.eval.split
 
         with habitat.Env(config.habitat) as env:
             nav_dataset = NavDataset(

@@ -33,6 +33,7 @@ except ImportError:
     baseline_installed = False
 
 from habitat import make_dataset
+from habitat.config import read_write
 from habitat.utils.gym_definitions import make_gym_from_config
 
 
@@ -195,42 +196,41 @@ def test_cubemap_stiching(
     test_cfg_path: str, mode: str, camera: str, sensor_type: str
 ):
     meta_config = get_config(config_paths=test_cfg_path)
-    meta_config.defrost()
-    config = meta_config.habitat
-    CAMERA_NUM = 6
-    orient = [
-        [0, math.pi, 0],  # Back
-        [-math.pi / 2, 0, 0],  # Down
-        [0, 0, 0],  # Front
-        [0, math.pi / 2, 0],  # Right
-        [0, 3 / 2 * math.pi, 0],  # Left
-        [math.pi / 2, 0, 0],  # Up
-    ]
-    sensor_uuids = []
+    with read_write(meta_config):
+        config = meta_config.habitat
+        CAMERA_NUM = 6
+        orient = [
+            [0, math.pi, 0],  # Back
+            [-math.pi / 2, 0, 0],  # Down
+            [0, 0, 0],  # Front
+            [0, math.pi / 2, 0],  # Right
+            [0, 3 / 2 * math.pi, 0],  # Left
+            [math.pi / 2, 0, 0],  # Up
+        ]
+        sensor_uuids = []
 
-    if f"{sensor_type}_sensor" not in config.simulator.agent_0.sensors:
-        config.simulator.agent_0.sensors.append(f"{sensor_type}_sensor")
-    sensor = getattr(config.simulator, f"{sensor_type}_sensor")
-    for camera_id in range(CAMERA_NUM):
-        camera_template = f"{sensor_type}_{camera_id}"
-        camera_config = deepcopy(sensor)
-        camera_config.orientation = orient[camera_id]
-        camera_config.uuid = camera_template.lower()
-        sensor_uuids.append(camera_config.uuid)
-        setattr(config.simulator, camera_template, camera_config)
-        config.simulator.agent_0.sensors.append(camera_template)
+        if f"{sensor_type}_sensor" not in config.simulator.agent_0.sensors:
+            config.simulator.agent_0.sensors.append(f"{sensor_type}_sensor")
+        sensor = getattr(config.simulator, f"{sensor_type}_sensor")
+        for camera_id in range(CAMERA_NUM):
+            camera_template = f"{sensor_type}_{camera_id}"
+            camera_config = deepcopy(sensor)
+            camera_config.orientation = orient[camera_id]
+            camera_config.uuid = camera_template.lower()
+            sensor_uuids.append(camera_config.uuid)
+            setattr(config.simulator, camera_template, camera_config)
+            config.simulator.agent_0.sensors.append(camera_template)
 
-    meta_config.habitat = config
-    meta_config.sensors = config.simulator.agent_0.sensors
-    if camera == "equirect":
-        meta_config.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
-            sensor_uuids
-        )
-    elif camera == "fisheye":
-        meta_config.rl.policy.obs_transforms.cube2fish.sensor_uuids = tuple(
-            sensor_uuids
-        )
-    meta_config.freeze()
+        meta_config.habitat = config
+        meta_config.sensors = config.simulator.agent_0.sensors
+        if camera == "equirect":
+            meta_config.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
+                sensor_uuids
+            )
+        elif camera == "fisheye":
+            meta_config.rl.policy.obs_transforms.cube2fish.sensor_uuids = (
+                tuple(sensor_uuids)
+            )
     if camera in ["equirect", "fisheye"]:
         execute_exp(meta_config, mode)
         # Deinit processes group
@@ -244,9 +244,8 @@ def test_cubemap_stiching(
         env_fn_args = []
         for split in ["train", "val"]:
             tmp_config = config.clone()
-            tmp_config.defrost()
-            tmp_config.dataset["split"] = split
-            tmp_config.freeze()
+            with read_write(tmp_config):
+                tmp_config.dataset["split"] = split
             env_fn_args.append((tmp_config,))
 
         with VectorEnv(

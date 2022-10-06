@@ -12,9 +12,8 @@ import gym
 import numba
 import numpy as np
 from gym import spaces
-from omegaconf import read_write
 
-from habitat.config import Config
+from habitat.config import Config, read_write
 from habitat.core.dataset import BaseEpisode, Dataset, Episode, EpisodeIterator
 from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
@@ -70,10 +69,6 @@ class Env:
 
         if "habitat" in config:
             config = config.habitat
-        # assert config.is_frozen(), (
-        #     "Freeze the config before creating the "
-        #     "environment, use config.freeze()."
-        # )
         self._config = config
         self._dataset = dataset
         if self._dataset is None and config.dataset.type:
@@ -93,8 +88,7 @@ class Env:
             ), "dataset should have non-empty episodes list"
             self._setup_episode_iterator()
             self.current_episode = next(self.episode_iterator)
-            # with read_write(self._config):
-            if True:
+            with read_write(self._config):
                 self._config.simulator.scene_dataset = (
                     self.current_episode.scene_dataset_config
                 )
@@ -330,8 +324,7 @@ class Env:
     def reconfigure(self, config: Config) -> None:
         self._config = config
 
-        # with read_write(self._config):
-        if True:
+        with read_write(self._config):
             self._config.simulator = self._task.overwrite_sim_config(
                 self._config.simulator, self.current_episode
             )

@@ -23,7 +23,7 @@ def my_app_compose_api() -> DictConfig:
             ]
         )
 
-    # OmegaConf.set_readonly(cfg, True)
+    OmegaConf.set_readonly(cfg, True)
 
     return cfg
 

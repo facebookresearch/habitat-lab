@@ -13,6 +13,7 @@ from numpy import ndarray
 from torch import Tensor
 
 from habitat import Config, logger
+from habitat.config import read_write
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
@@ -71,11 +72,10 @@ class BaseTrainer:
             logger.info("Saved config is outdated, using solely eval config")
             config = self.config.clone()
             config.merge_from_list(eval_cmd_opts)
-        config.defrost()
-        if config.habitat.dataset.split == "train":
-            config.habitat.dataset.split = "val"
-        config.habitat.simulator.agent_0.sensors = self.config.sensors
-        config.freeze()
+        with read_write(config):
+            if config.habitat.dataset.split == "train":
+                config.habitat.dataset.split = "val"
+            config.habitat.simulator.agent_0.sensors = self.config.sensors
 
         return config
 

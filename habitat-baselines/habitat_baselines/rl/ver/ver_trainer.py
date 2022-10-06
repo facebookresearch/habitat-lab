@@ -16,6 +16,7 @@ from gym import spaces
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import logger
+from habitat.config import read_write
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.ddp_utils import (
@@ -73,14 +74,13 @@ class VERTrainer(PPOTrainer):
         if self._is_distributed:
             local_rank, world_rank, _ = get_distrib_size()
 
-            self.config.defrost()
-            self.config.torch_gpu_id = local_rank
-            self.config.simulator_gpu_id = local_rank
-            # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.habitat.seed += (
-                world_rank * self.config.num_environments
-            )
-            self.config.freeze()
+            with read_write(self.config):
+                self.config.torch_gpu_id = local_rank
+                self.config.simulator_gpu_id = local_rank
+                # Multiply by the number of simulators to make sure they also get unique seeds
+                self.config.habitat.seed += (
+                    world_rank * self.config.num_environments
+                )
 
         random.seed(self.config.habitat.seed)
         np.random.seed(self.config.habitat.seed)
