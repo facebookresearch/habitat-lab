@@ -25,7 +25,6 @@ from habitat_sim.utils.common import quat_from_magnum
 import torch  # isort:skip # noqa: F401  must import torch before importing bps_pytorch
 
 use_batch_dones_rewards_resets = True
-log_infos_in_batch = True
 
 
 class Camera:  # noqa: SIM119
@@ -1053,7 +1052,10 @@ class BatchedEnv:
                 )
                 _rew -= bad_attempt_penalty[b]
                 self.rewards[b] = _rew
-                if log_infos_in_batch:
+                if (
+                    self._config.LOG_INFO
+                    and b < self._config.LOG_INFO_NUM_ENVS
+                ):
                     self.infos[b] = {
                         "success": float(success[b]),
                         "failure": float(failure[b]),
@@ -1096,7 +1098,10 @@ class BatchedEnv:
                     self._current_episodes[b].set_disabled()
 
             else:
-                if log_infos_in_batch:
+                if (
+                    self._config.LOG_INFO
+                    and b < self._config.LOG_INFO_NUM_ENVS
+                ):
                     self.infos[b] = {
                         "success": float(success[b]),
                         "failure": float(failure[b]),

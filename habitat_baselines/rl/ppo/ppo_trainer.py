@@ -368,8 +368,8 @@ class PPOTrainer(BaseRLTrainer):
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(
-            count=torch.zeros(self.envs.num_envs, 1),
-            reward=torch.zeros(self.envs.num_envs, 1),
+            count=torch.zeros(self.config.LOG_INFO_NUM_ENVS, 1),
+            reward=torch.zeros(self.config.LOG_INFO_NUM_ENVS, 1),
         )
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=ppo_cfg.reward_window_size)
@@ -533,7 +533,7 @@ class PPOTrainer(BaseRLTrainer):
         profiling_wrapper.range_pop()  # save to rollout storage
 
     def _collect_environment_result(self, buffer_index: int = 0):
-        num_envs = self.envs.num_envs
+        num_envs = self.config.LOG_INFO_NUM_ENVS  # self.envs.num_envs
         env_slice = slice(
             int(buffer_index * num_envs / self._nbuffers),
             int((buffer_index + 1) * num_envs / self._nbuffers),
@@ -584,11 +584,13 @@ class PPOTrainer(BaseRLTrainer):
         )
         done_masks = torch.logical_not(not_done_masks)
 
-        self.current_episode_reward[env_slice] += rewards
+        reward_subset = rewards[: self.config.LOG_INFO_NUM_ENVS]
+        done_subset = done_masks[: self.config.LOG_INFO_NUM_ENVS]
+        self.current_episode_reward[env_slice] += reward_subset
         current_ep_reward = self.current_episode_reward[env_slice]
-        self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
-        self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-        if True:
+        self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_subset, current_ep_reward.new_zeros(()))  # type: ignore
+        self.running_episode_stats["count"][env_slice] += done_subset  # type: ignore
+        if self.config.LOG_INFO:
             for k, v_k in self._extract_scalars_from_infos(infos).items():
                 v = torch.tensor(
                     v_k,
@@ -599,10 +601,9 @@ class PPOTrainer(BaseRLTrainer):
                     self.running_episode_stats[k] = torch.zeros_like(
                         self.running_episode_stats["count"]
                     )
+                self.running_episode_stats[k][env_slice] += v.where(done_subset, v.new_zeros(()))  # type: ignore
 
-                self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
-
-        self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
+        self.current_episode_reward[env_slice].masked_fill_(done_subset, 0.0)
 
         profiling_wrapper.range_pop()  # rewards, done_masks, stats
 
