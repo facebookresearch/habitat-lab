@@ -52,7 +52,6 @@ from collections import defaultdict
 
 import magnum as mn
 import numpy as np
-from omegaconf import read_write
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
@@ -583,7 +582,7 @@ if __name__ == "__main__":
         )
 
     config = habitat.get_config(args.cfg, args.opts)
-    with read_write(config):
+    with habitat.config.read_write(config):
         if not args.same_task:
             config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
             config.habitat.simulator.third_rgb_sensor.height = (

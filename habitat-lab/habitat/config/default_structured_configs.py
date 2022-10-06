@@ -1101,6 +1101,6 @@ class DatasetConfigPlugin(SearchPathPlugin):
         )
 
 
-def register_my_hydra_plugin(plugin) -> None:
+def register_hydra_plugin(plugin) -> None:
     """Hydra users should call this function before invoking @hydra.main"""
-    Plugins.instance().register(DatasetConfigPlugin)
+    Plugins.instance().register(plugin)

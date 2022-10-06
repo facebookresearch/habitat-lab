@@ -14,7 +14,6 @@ We will use the strafe action outline in the habitat_sim example
 
 import attr
 import numpy as np
-from omegaconf import read_write
 
 import habitat
 import habitat_sim
@@ -150,7 +149,7 @@ def main():
     HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
     config = habitat.get_config(config_paths="tasks/pointnav.yaml")
-    with read_write(config):
+    with habitat.config.read_write(config):
         config.habitat.task.possible_actions = (
             config.habitat.task.possible_actions
             + [
@@ -169,7 +168,7 @@ def main():
         env.step("STRAFE_LEFT")
         env.step("STRAFE_RIGHT")
 
-    with read_write(config):
+    with habitat.config.read_write(config):
         config.habitat.simulator.action_space_config = "NoiseStrafe"
 
     with habitat.Env(config=config) as env:
