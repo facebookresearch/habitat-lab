@@ -1008,7 +1008,6 @@ class PPOTrainer(BaseRLTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
         for orig, map_to in map_sensors.items():
             print(map_to, list(batch[map_to].view(-1).cpu().numpy()))
-        raise ValueError()
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"
         )
@@ -1062,22 +1061,24 @@ class PPOTrainer(BaseRLTrainer):
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
+            if batch["step_count_remaining"][0][0].item() < 0:
+                actions = prev_actions
+            else:
+                with torch.no_grad():
+                    (
+                        _,
+                        actions,
+                        _,
+                        test_recurrent_hidden_states,
+                    ) = self.actor_critic.act(
+                        batch,
+                        test_recurrent_hidden_states,
+                        prev_actions,
+                        not_done_masks,
+                        deterministic=False,
+                    )
 
-            with torch.no_grad():
-                (
-                    _,
-                    actions,
-                    _,
-                    test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
-                    batch,
-                    test_recurrent_hidden_states,
-                    prev_actions,
-                    not_done_masks,
-                    deterministic=False,
-                )
-
-                prev_actions.copy_(actions)  # type: ignore
+                    prev_actions.copy_(actions)  # type: ignore
 
             # To fix the action sequence
             # actions = torch.zeros((1, 11))

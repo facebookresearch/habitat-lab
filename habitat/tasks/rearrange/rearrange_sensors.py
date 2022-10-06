@@ -48,7 +48,9 @@ def get_rel_coord(source_position, goal_position, source_rotation):
 
 def get_ee_local(robot):
     ee_T = robot.ee_transform
-    return ee_T.translation, mn.Quaternion.from_matrix(ee_T.rotation())
+    ee_rot = mn.Quaternion.from_matrix(ee_T.rotation())
+    ee_rot = ee_rot * mn.Quaternion.rotation(mn.Deg(90.0), mn.Vector3(1, 0, 0))
+    return ee_T.translation, ee_rot
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -150,6 +152,9 @@ class PositionGpsCompassSensor(Sensor):
         rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
 
         if self._config.get("CARTESIAN", False):
+            robot_pos, robot_rot = get_robot_local(self._sim.robot)
+            rel_pos = get_rel_coord(robot_pos, pos[0], robot_rot)
+
             if self._config.get("INCLUDE_Z", True):
                 return rel_pos
             else:
@@ -209,9 +214,6 @@ class GoalSensor(MultiObjSensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         _, pos = self._sim.get_targets()
         ee_pos, ee_rot = get_ee_local(self._sim.robot)
-
-        def mtoq(m):
-            return mn.Quaternion.from_matrix(m.rotation)
 
         return get_rel_coord(ee_pos, pos[0], ee_rot)
 
@@ -292,7 +294,11 @@ class StepCountSensor(Sensor):
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        episode_step_idx = task._cur_episode_step
+        step_idx = task._cur_episode_step
+        episode_step_idx = step_idx - 1
+        if episode_step_idx < 0:
+            return np.array([-1.0, -1.0, -1.0])
+
         max_episode_length = self.config.MAX_STEPS
         fraction_steps_left = (
             (max_episode_length - episode_step_idx) * 1.0 / max_episode_length
