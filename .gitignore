@@ -4,7 +4,7 @@ __pycache__/
 
 # C extensions
 *.so
-
+wandb
 # Distribution / packaging
 .Python
 */env/
