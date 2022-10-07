@@ -795,6 +795,9 @@ class BatchedEnv:
         )
 
         np_actions[:, drop_grasp_action_idx] = modified_drop_grasp
+        if self._config.get("LOCK_BASE", False):
+            np_actions[:, 1] = 0
+            np_actions[:, 2] = 0
 
         end_episode_action = np.logical_and(
             end_episode_action, np.greater(state.episode_step_idx, 5)
@@ -1168,6 +1171,10 @@ class BatchedEnv:
                 actions[b * self.action_dim] = 1.0
             else:
                 actions[b * self.action_dim] = 0.0
+
+            if self._config.get("LOCK_BASE", False):
+                actions[b * self.action_dim + 1] = 0
+                actions[b * self.action_dim + 2] = 0
 
             end_episode_action = (
                 end_episode_action and state.episode_step_idx > 5
