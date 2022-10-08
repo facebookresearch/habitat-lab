@@ -33,7 +33,6 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
 
         sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
-        sim.internal_step(-1)
 
         self.was_prev_holding = self.targ_idx
 

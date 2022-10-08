@@ -1,5 +1,5 @@
 VERBOSE: False
-TRAINER_NAME: "ddppo"
+TRAINER_NAME: "ver"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
@@ -31,8 +31,6 @@ RL:
   POLICY:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
-      ACTION_DIST:
-         use_log_std: True
 
   PPO:
     # ppo params

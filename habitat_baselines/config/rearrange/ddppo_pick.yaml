@@ -1,6 +1,6 @@
 VERBOSE: False
 BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick.yaml
-TRAINER_NAME: "ddppo"
+TRAINER_NAME: "ver"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
@@ -13,7 +13,7 @@ VIDEO_RENDER_VIEWS:
   - "THIRD_RGB_SENSOR"
 TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 32
+NUM_ENVIRONMENTS: 16
 # Visual sensors to include
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
@@ -31,10 +31,7 @@ RL:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
       ACTION_DIST:
-         use_log_std: True
-         clamp_std: True
          std_init: -1.0
-         use_std_param: True
   PPO:
     # ppo params
     clip_param: 0.2

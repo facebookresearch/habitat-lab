@@ -7,11 +7,11 @@ GYM:
     - is_holding
     - relative_resting_position
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 200
+    MAX_EPISODE_STEPS: 300
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v2/{split}/rearrange_easy.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangePlaceTask-v0
@@ -20,19 +20,19 @@ TASK:
 
     # SPAWN PARAMETERS
     BASE_ANGLE_NOISE: 0.15
-    BASE_NOISE: 0.05
     FORCE_REGENERATE: false
-    SPAWN_MAX_DIST_TO_OBJ: 3.0
+    SPAWN_MAX_DISTS_TO_OBJ: [2.0]
     PHYSICS_STABILITY_STEPS: 1
-    NUM_SPAWN_ATTEMPTS: 200
-    SHOULD_SAVE_TO_CACHE: True
+    NUM_SPAWN_ATTEMPTS: [200]
+    SHOULD_SAVE_TO_CACHE: False
 
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: true
+
     REWARD_MEASURE: place_reward
     SUCCESS_MEASURE: place_success
     SUCCESS_REWARD: 10.0
-    SLACK_REWARD: 0.0
+    SLACK_REWARD: -0.005
     END_ON_SUCCESS: true
 
     JOINT_VELOCITY_SENSOR:
@@ -47,30 +47,21 @@ TASK:
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
     - OBJECT_SENSOR
-    ROBOT_FORCE:
-        TYPE: RobotForce
-        MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: 5000.0
-    OBJ_AT_GOAL:
-        TYPE: ObjAtGoal
-        SUCC_THRESH: 0.15
+        MAX_ACCUM_FORCE: 10_000.0
+        MAX_INSTANT_FORCE: 10_000.0
     PLACE_REWARD:
         TYPE: PlaceReward
-        DIST_REWARD: 20.0
-        SUCC_REWARD: 10.0
-        PLACE_REWARD: 20.0
+        DIST_REWARD: 2.0
+        PLACE_REWARD: 2.0
         DROP_PEN: 0.0
         USE_DIFF: true
         WRONG_DROP_SHOULD_END: false
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.15
+        FORCE_PEN: 0.0001
+        MAX_FORCE_PEN: 0.01
+        FORCE_END_PEN: 1.0
     MEASUREMENTS:
     - ROBOT_FORCE
     - FORCE_TERMINATE
@@ -111,10 +102,6 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
-    CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
-    FORWARD_STEP_SIZE: 0.25
-    DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
         ALLOW_SLIDING: false
         ENABLE_PHYSICS: true

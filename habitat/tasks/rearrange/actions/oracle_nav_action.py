@@ -65,7 +65,6 @@ class OracleNavAction(BaseVelAction):
             start_pos, _, _ = get_robot_spawns(
                 np.array(obj_pos),
                 0.0,
-                0.0,
                 self._config.SPAWN_MAX_DIST_TO_OBJ,
                 self._sim,
                 self._config.NUM_SPAWN_ATTEMPTS,

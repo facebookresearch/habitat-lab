@@ -57,9 +57,8 @@ class RearrangePickTaskV1(RearrangeTask):
 
         start_pos, angle_to_obj, was_succ = get_robot_spawns(
             snap_pos,
-            self._config.BASE_NOISE,
             self._config.BASE_ANGLE_NOISE,
-            self._config.SPAWN_MAX_DIST_TO_OBJ,
+            self._config.SPAWN_MAX_DISTS_TO_OBJ,
             sim,
             self._config.NUM_SPAWN_ATTEMPTS,
             self._config.PHYSICS_STABILITY_STEPS,
@@ -100,15 +99,8 @@ class RearrangePickTaskV1(RearrangeTask):
 
         self.prev_colls = 0
 
-        cache_data = self._get_cached_robot_start()
-
-        if self.force_set_idx is not None or cache_data is None:
-            sel_idx = self._sample_idx(sim)
-            start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
-            if self.force_set_idx is None:
-                self._cache_robot_start((start_pos, start_rot, sel_idx))
-        else:
-            start_pos, start_rot, sel_idx = cache_data
+        sel_idx = self._sample_idx(sim)
+        start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot

@@ -122,7 +122,7 @@ class ResNetEncoder(nn.Module):
             for k, v in observation_space.spaces.items()
             if len(v.shape) > 1
             and k != ImageGoalSensor.cls_uuid
-            and "debug" not in k
+            and k not in ["robot_third_rgb"]
         ]
         self.key_needs_rescaling = {k: None for k in self.visual_keys}
         for k, v in observation_space.spaces.items():

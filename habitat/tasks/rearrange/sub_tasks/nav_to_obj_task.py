@@ -113,17 +113,13 @@ class DynNavRLEnv(RearrangeTask):
         sim = self._sim
         super().reset(episode, fetch_observations=False)
 
-        self._nav_to_info = self._get_cached_robot_start()
-        if self._nav_to_info is None or self.force_obj_to_idx is not None:
-            self._nav_to_info = self._generate_nav_start_goal(
-                episode, force_idx=self.force_obj_to_idx
-            )
-            if self.force_obj_to_idx is None:
-                self._cache_robot_start(self._nav_to_info)
-        else:
-            self._nav_to_info.start_hold_obj_idx = self._generate_snap_to_obj()
-            sim.robot.base_pos = self._nav_to_info.robot_start_pos
-            sim.robot.base_rot = self._nav_to_info.robot_start_angle
+        self._nav_to_info = self._generate_nav_start_goal(
+            episode, force_idx=self.force_obj_to_idx
+        )
+
+        self._nav_to_info.start_hold_obj_idx = self._generate_snap_to_obj()
+        sim.robot.base_pos = self._nav_to_info.robot_start_pos
+        sim.robot.base_rot = self._nav_to_info.robot_start_angle
 
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:

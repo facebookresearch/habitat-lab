@@ -273,7 +273,7 @@ class PPO(nn.Module):
 
                     learner_metrics["value_loss"].append(value_loss)
                     learner_metrics["action_loss"].append(action_loss)
-                    learner_metrics["dist_entopy"].append(dist_entropy)
+                    learner_metrics["dist_entropy"].append(dist_entropy)
                     if epoch == (self.ppo_epoch - 1):
                         learner_metrics["ppo_fraction_clipped"].append(
                             (ratio > (1.0 + self.clip_param)).float().mean()
