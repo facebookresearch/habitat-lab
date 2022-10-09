@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import json
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 import numpy as np
@@ -15,9 +15,11 @@ from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.logging import logger
 from habitat.core.registry import registry
+from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
+from habitat.tasks.nav.object_nav_task import ObjectGoal, ObjectViewLocation
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -51,6 +53,9 @@ class ObjectRearrangeEpisode(RearrangeEpisode):
     object_category: Optional[str] = None
     start_recep_category: Optional[str] = None
     goal_recep_category: Optional[str] = None
+    candidate_objects: Optional[List[ObjectGoal]] = None
+    candidate_start_receps: Optional[List[ObjectGoal]] = None
+    candidate_goal_receps: Optional[List[ObjectGoal]] = None
 
 
 @registry.register_dataset(name="RearrangeDataset-v0")
@@ -83,7 +88,6 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         self, json_str: str, scenes_dir: Optional[str] = None
     ) -> None:
         deserialized = json.loads(json_str)
-
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
@@ -105,10 +109,20 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
 
     def __init__(self, config: Optional[Config] = None) -> None:
         self.config = config
-
         check_and_gen_physics_config()
 
         super().__init__(config)
+
+    @staticmethod
+    def __deserialize_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
+        g = ObjectGoal(**serialized_goal)
+
+        for vidx, view in enumerate(g.view_points):
+            view_location = ObjectViewLocation(**view)  # type: ignore
+            view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
+            g.view_points[vidx] = view_location
+
+        return g
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
@@ -127,4 +141,18 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         for i, episode in enumerate(deserialized["episodes"]):
             rearrangement_episode = ObjectRearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
+            for goal_type in [
+                "candidate_objects",
+                "candidate_start_receps",
+                "candidate_goal_receps",
+            ]:
+                if goal_type in episode:
+                    setattr(
+                        rearrangement_episode,
+                        goal_type,
+                        [
+                            self.__deserialize_goal(g)
+                            for g in episode["candidate_objects"]
+                        ],
+                    )
             self.episodes.append(rearrangement_episode)

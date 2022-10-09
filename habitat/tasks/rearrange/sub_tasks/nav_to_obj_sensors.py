@@ -250,10 +250,8 @@ class GeoMeasure(Measure):
 
     def _get_cur_geo_dist(self, task):
         distance_to_target = self._sim.geodesic_distance(
-            self._get_agent_pos(),
-            task.nav_target_pos,
+            self._get_agent_pos(), task.nav_target_pos
         )
-
         if distance_to_target == np.inf:
             distance_to_target = self._prev_dist
         if distance_to_target is None:
@@ -276,9 +274,15 @@ class NavToObjReward(RearrangeReward):
                 NavToObjSuccess.cls_uuid,
                 BadCalledTerminate.cls_uuid,
                 DistToGoal.cls_uuid,
-                RotDistToGoal.cls_uuid,
             ],
         )
+        if self._config.SHOULD_REWARD_TURN:
+            task.measurements.check_measure_dependencies(
+                self.uuid,
+                [
+                    RotDistToGoal.cls_uuid,
+                ],
+            )
         self._cur_angle_dist = -1.0
         self._give_turn_reward = False
         self._prev_dist = -1.0
@@ -457,8 +461,13 @@ class NavToObjSuccess(GeoMeasure):
         # Get the end_on_stop property from the action
         task.measurements.check_measure_dependencies(
             self.uuid,
-            [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
+            [NavToPosSucc.cls_uuid],
         )
+        if self._config.MUST_LOOK_AT_TARG:
+            task.measurements.check_measure_dependencies(
+                self.uuid,
+                [RotDistToGoal.cls_uuid],
+            )
         self._end_on_stop = task.actions[BASE_ACTION_NAME].end_on_stop
 
         super().reset_metric(
@@ -470,15 +479,16 @@ class NavToObjSuccess(GeoMeasure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        angle_dist = task.measurements.measures[
-            RotDistToGoal.cls_uuid
-        ].get_metric()
 
         nav_pos_succ = task.measurements.measures[
             NavToPosSucc.cls_uuid
         ].get_metric()
 
         if self._config.MUST_LOOK_AT_TARG:
+            angle_dist = task.measurements.measures[
+                RotDistToGoal.cls_uuid
+            ].get_metric()
+
             self._metric = (
                 nav_pos_succ and angle_dist < self._config.SUCCESS_ANGLE_DIST
             )
