@@ -27,6 +27,8 @@ from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     GoalReceptacleSensor,
     ObjectCategorySensor,
+    ObjectEmbeddingSensor,
+    StartReceptacleSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
@@ -80,6 +82,7 @@ class PointNavResNetPolicy(NetPolicy):
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
+                no_downscaling=policy_config.no_downscaling,
             ),
             action_space=action_space,
             policy_config=policy_config,
@@ -116,9 +119,10 @@ class ResNetEncoder(nn.Module):
         ngroups: int = 32,
         spatial_size: int = 128,
         make_backbone=None,
+        no_downscaling=False,
     ):
         super().__init__()
-
+        self.no_downscaling = no_downscaling
         # Determine which visual observations are present
         self.visual_keys = [
             k
@@ -126,6 +130,7 @@ class ResNetEncoder(nn.Module):
             if len(v.shape) > 1
             and k != ImageGoalSensor.cls_uuid
             and "debug" not in k
+            and "third" not in k
         ]
         self.key_needs_rescaling = {k: None for k in self.visual_keys}
         for k, v in observation_space.spaces.items():
@@ -145,12 +150,15 @@ class ResNetEncoder(nn.Module):
             self.running_mean_and_var = nn.Sequential()
 
         if not self.is_blind:
-            spatial_size_h = (
-                observation_space.spaces[self.visual_keys[0]].shape[0] // 2
-            )
-            spatial_size_w = (
-                observation_space.spaces[self.visual_keys[0]].shape[1] // 2
-            )
+            spatial_size_h = observation_space.spaces[
+                self.visual_keys[0]
+            ].shape[0]
+            spatial_size_w = observation_space.spaces[
+                self.visual_keys[0]
+            ].shape[1]
+            if not no_downscaling:
+                spatial_size_h = spatial_size_h // 2
+                spatial_size_w = spatial_size_w // 2
             self.backbone = make_backbone(
                 self._n_input_channels, baseplanes, ngroups
             )
@@ -215,7 +223,8 @@ class ResNetEncoder(nn.Module):
             cnn_input.append(obs_k)
 
         x = torch.cat(cnn_input, dim=1)
-        x = F.avg_pool2d(x, 2)
+        if not self.no_downscaling:
+            x = F.avg_pool2d(x, 2)
 
         x = self.running_mean_and_var(x)
         x = self.backbone(x)
@@ -243,6 +252,7 @@ class PointNavResNetNet(Net):
         fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
+        no_downscaling: bool = False,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -269,6 +279,7 @@ class PointNavResNetNet(Net):
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid,
                 ObjectGoalSensor.cls_uuid,
                 ObjectCategorySensor.cls_uuid,
+                StartReceptacleSensor.cls_uuid,
                 GoalReceptacleSensor.cls_uuid,
                 EpisodicGPSSensor.cls_uuid,
                 PointGoalSensor.cls_uuid,
@@ -276,10 +287,13 @@ class PointNavResNetNet(Net):
                 ProximitySensor.cls_uuid,
                 EpisodicCompassSensor.cls_uuid,
                 ImageGoalSensor.cls_uuid,
+                ObjectEmbeddingSensor.cls_uuid,
             }
             fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
         self._fuse_keys_1d: List[str] = [
-            k for k in fuse_keys if len(observation_space.spaces[k].shape) == 1
+            k
+            for k in fuse_keys
+            if len(observation_space.spaces[k].shape) == 1 and "third" not in k
         ]
         if len(self._fuse_keys_1d) != 0:
             rnn_input_size += sum(
@@ -312,6 +326,11 @@ class PointNavResNetNet(Net):
             )
             rnn_input_size += 32
 
+        if ObjectEmbeddingSensor.cls_uuid in observation_space.spaces:
+            rnn_input_size += observation_space.spaces[
+                ObjectEmbeddingSensor.cls_uuid
+            ].shape[0]
+
         if ObjectCategorySensor.cls_uuid in observation_space.spaces:
             self._n_rearrange_obj_categories = (
                 int(
@@ -323,6 +342,20 @@ class PointNavResNetNet(Net):
             )
             self.rearrange_obj_categories_embedding = nn.Embedding(
                 self._n_rearrange_obj_categories, 32
+            )
+            rnn_input_size += 32
+
+        if StartReceptacleSensor.cls_uuid in observation_space.spaces:
+            self._n_start_receptacles = (
+                int(
+                    observation_space.spaces[
+                        StartReceptacleSensor.cls_uuid
+                    ].high[0]
+                )
+                + 1
+            )
+            self.start_receptacles_embedding = nn.Embedding(
+                self._n_start_receptacles, 32
             )
             rnn_input_size += 32
 
@@ -389,6 +422,7 @@ class PointNavResNetNet(Net):
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
                 make_backbone=getattr(resnet, backbone),
+                no_downscaling=no_downscaling,
             )
 
             self.goal_visual_fc = nn.Sequential(
@@ -419,6 +453,7 @@ class PointNavResNetNet(Net):
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
+            no_downscaling=no_downscaling,
         )
 
         if not self.visual_encoder.is_blind:
@@ -547,10 +582,23 @@ class PointNavResNetNet(Net):
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()
             x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
 
+        if ObjectEmbeddingSensor.cls_uuid in observations:
+            x.append(observations[ObjectEmbeddingSensor.cls_uuid])
+
         if ObjectCategorySensor.cls_uuid in observations:
             object_goal = observations[ObjectCategorySensor.cls_uuid].long()
             x.append(
                 self.rearrange_obj_categories_embedding(object_goal).squeeze(
+                    dim=1
+                )
+            )
+
+        if StartReceptacleSensor.cls_uuid in observations:
+            start_receptacle = observations[
+                StartReceptacleSensor.cls_uuid
+            ].long()
+            x.append(
+                self.start_receptacles_embedding(start_receptacle).squeeze(
                     dim=1
                 )
             )

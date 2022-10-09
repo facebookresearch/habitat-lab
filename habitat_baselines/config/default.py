@@ -28,7 +28,7 @@ _C.TORCH_GPU_ID = 0
 _C.VIDEO_OPTION = ["disk", "tensorboard"]
 _C.VIDEO_RENDER_VIEWS = []
 _C.TENSORBOARD_DIR = "tb"
-_C.WRITER_TYPE = "tb"
+_C.WRITER_TYPE = "wb"
 _C.VIDEO_DIR = "video_dir"
 _C.VIDEO_FPS = 10
 _C.VIDEO_RENDER_TOP_DOWN = True
@@ -63,7 +63,7 @@ _C.FORCE_TORCH_SINGLE_THREADED = False
 # -----------------------------------------------------------------------------
 _C.WB = CN()
 # The name of the project on W&B.
-_C.WB.PROJECT_NAME = ""
+_C.WB.PROJECT_NAME = "object_rearrangement"
 # Logging entity (like your username or team name)
 _C.WB.ENTITY = "language-rearrangement"
 # The group ID to assign to the run. Optional to specify.
@@ -107,6 +107,7 @@ _C.RL.preemption.save_state_batch_only = False
 _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
 _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
+_C.RL.POLICY.no_downscaling = False
 # If the list is empty, all keys will be included.
 # For gaussian action distribution:
 _C.RL.POLICY.ACTION_DIST = CN()
