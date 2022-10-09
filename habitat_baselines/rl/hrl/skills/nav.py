@@ -52,8 +52,8 @@ class NavSkillPolicy(NnSkillPolicy):
             ]
         return ret_obs
 
-    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
-        return self._cur_skill_args[batch_idx].obj_idx
+    def _get_multi_sensor_index(self, batch_idx):
+        return [self._cur_skill_args[i].obj_idx for i in batch_idx]
 
     def _is_skill_done(
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx

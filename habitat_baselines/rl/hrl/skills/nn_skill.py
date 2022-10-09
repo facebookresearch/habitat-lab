@@ -138,9 +138,7 @@ class NnSkillPolicy(SkillPolicy):
 
         expected_obs_keys = policy_cfg.TASK_CONFIG.GYM.OBS_KEYS
         filtered_obs_space = spaces.Dict(
-            OrderedDict(
-                [(k, observation_space.spaces[k]) for k in expected_obs_keys]
-            )
+            {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
 
         for k in config.OBS_SKILL_INPUTS:

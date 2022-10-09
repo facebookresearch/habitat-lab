@@ -116,7 +116,6 @@ class NavToObjReward(RearrangeReward):
             ],
         )
         self._cur_angle_dist = -1.0
-        self._give_turn_reward = False
         self._prev_dist = -1.0
         super().reset_metric(
             *args,
@@ -141,8 +140,6 @@ class NavToObjReward(RearrangeReward):
             self._config.SHOULD_REWARD_TURN
             and cur_dist < self._config.TURN_REWARD_DIST
         ):
-            self._give_turn_reward = True
-
             angle_dist = task.measurements.measures[
                 RotDistToGoal.cls_uuid
             ].get_metric()

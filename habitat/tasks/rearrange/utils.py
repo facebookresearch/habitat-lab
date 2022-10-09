@@ -388,13 +388,21 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
 
 
 def get_robot_spawns(
-    targ_pos,
-    rot_perturb_noise,
-    dist_threshs,
+    targ_pos: np.ndarray,
+    rot_perturb_noise: float,
+    dist_threshs: List[int],
     sim,
-    all_num_spawn_attemps,
-    physics_stability_steps,
+    all_num_spawn_attemps: List[int],
+    physics_stability_steps: int,
 ):
+    """
+    :param dist_threshs: Will try sampling the robot at the distance thresholds
+        from first to last. This list should be in increasing order because this
+        means more aggressive (closer to the `targ_pos`) samples are attempted
+        first.
+    :param all_num_spawn_attemps: The number of sample attempts per distance threshold.
+    """
+
     forward = np.array([1.0, 0])
     state = sim.capture_state()
 

@@ -161,8 +161,8 @@ class OracleNavPolicy(NnSkillPolicy):
             match_i, is_target_obj, targ_obj_idx
         )
 
-    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
-        return self._cur_skill_args[batch_idx].target_idx
+    def _get_multi_sensor_index(self, batch_idx):
+        return [self._cur_skill_args[i].target_idx for i in batch_idx]
 
     def _internal_act(
         self,

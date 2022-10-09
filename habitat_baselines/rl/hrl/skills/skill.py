@@ -49,7 +49,7 @@ class SkillPolicy(Policy):
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
         )
 
-    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
+    def _get_multi_sensor_index(self, batch_idx: List[int]) -> List[int]:
         """
         Gets the index to select the observation object index in `_select_obs`.
         Used when there are multiple possible goals in the scene, such as
@@ -173,7 +173,7 @@ class SkillPolicy(Policy):
         """
         for k in self._config.OBS_SKILL_INPUTS:
             cur_multi_sensor_index = self._get_multi_sensor_index(
-                cur_batch_idx, k
+                cur_batch_idx
             )
             if k not in obs:
                 raise ValueError(

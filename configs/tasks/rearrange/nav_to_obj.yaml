@@ -30,7 +30,7 @@ TASK:
     REWARD_MEASURE: nav_to_obj_reward
     SUCCESS_MEASURE: nav_to_obj_success
     SUCCESS_REWARD: 10.0
-    SLACK_REWARD: 0.0
+    SLACK_REWARD: -0.005
     END_ON_SUCCESS: true
     JOINT_SENSOR:
         TYPE: JointSensor
@@ -46,9 +46,9 @@ TASK:
     REARRANGE_NAV_TO_OBJ_REWARD:
         TYPE: NavToObjReward
         SHOULD_REWARD_TURN: true
-        TURN_REWARD_DIST: 2.0
+        TURN_REWARD_DIST: 3.0
 
-        ANGLE_DIST_REWARD: 0.1
+        ANGLE_DIST_REWARD: 1.0
         DIST_REWARD: 1.0
         CONSTRAINT_VIOLATE_PEN: 1.0
         FORCE_PEN: 0.0
