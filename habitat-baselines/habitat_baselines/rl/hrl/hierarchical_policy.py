@@ -225,9 +225,9 @@ class HierarchicalPolicy(Policy):
         **kwargs,
     ):
         return cls(
-            config.rl.policy,
+            config.habitat_baselines.rl.policy,
             config,
             observation_space,
             orig_action_space,
-            config.num_environments,
+            config.habitat_baselines.num_environments,
         )

@@ -34,7 +34,7 @@ class VQATrainer(BaseILTrainer):
         super().__init__(config)
 
         self.device = (
-            torch.device("cuda", self.config.torch_gpu_id)
+            torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -177,7 +177,7 @@ class VQATrainer(BaseILTrainer):
             model.cnn.eval()
 
         with TensorboardWriter(
-            config.tensorboard_dir, flush_secs=self.flush_secs
+            config.habitat_baselines.tensorboard_dir, flush_secs=self.flush_secs
         ) as writer:
             while epoch <= config.IL.VQA.max_epochs:
                 start_time = time.time()
@@ -214,7 +214,7 @@ class VQATrainer(BaseILTrainer):
                     avg_mean_rank += mean_rank
                     avg_mean_reciprocal_rank += mean_reciprocal_rank
 
-                    if t % config.log_interval == 0:
+                    if t % config.habitat_baselines.log_interval == 0:
                         logger.info("Epoch: {}".format(epoch))
                         logger.info(metrics.get_stat_string())
 
@@ -283,7 +283,7 @@ class VQATrainer(BaseILTrainer):
         config = self.config
 
         config.defrost()
-        config.habitat.dataset.split = self.config.eval.split
+        config.habitat.dataset.split = self.config.habitat_baselines.eval.split
         config.freeze()
 
         vqa_dataset = (
@@ -374,13 +374,13 @@ class VQATrainer(BaseILTrainer):
                 avg_mean_rank += mean_rank
                 avg_mean_reciprocal_rank += mean_reciprocal_rank
 
-                if t % config.log_interval == 0:
+                if t % config.habitat_baselines.log_interval == 0:
                     logger.info(metrics.get_stat_string(mode=0))
                     metrics.dump_log()
 
                 if (
-                    config.eval_save_results
-                    and t % config.eval_save_results_interval == 0
+                    config.habitat_baselines.eval_save_results
+                    and t % config.habitat_baselines.eval_save_results_interval == 0
                 ):
 
                     self._save_vqa_results(

@@ -103,7 +103,7 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
             [
                 "habitat.simulator.habitat_sim_v0.gpu_gpu",
                 str(gpu2gpu),
-                "rl.policy.obs_transforms.enabled_transforms",
+                "habitat_baselines.rl.policy.obs_transforms.enabled_transforms",
                 str(tuple(observation_transforms)),
             ],
         )
@@ -140,23 +140,23 @@ def test_ver_trainer(
             test_cfg_path,
             "train",
             [
-                "num_environments",
+                "habitat_baselines.num_environments",
                 4,
-                "trainer_name",
+                "habitat_baselines.trainer_name",
                 "ver",
-                "rl.ver.variable_experience",
+                "habitat_baselines.rl.ver.variable_experience",
                 str(variable_experience),
-                "rl.ver.overlap_rollouts_and_learn",
+                "habitat_baselines.rl.ver.overlap_rollouts_and_learn",
                 str(overlap_rollouts_and_learn),
-                "rl.policy.obs_transforms.enabled_transforms",
+                "habitat_baselines.rl.policy.obs_transforms.enabled_transforms",
                 "['CenterCropper', 'ResizeShortestEdge']",
-                "num_updates",
+                "habitat_baselines.num_updates",
                 2,
-                "total_num_steps",
+                "habitat_baselines.total_num_steps",
                 -1.0,
-                "rl.preemption.save_state_batch_only",
+                "habitat_baselines.rl.preemption.save_state_batch_only",
                 True,
-                "rl.ppo.num_steps",
+                "habitat_baselines.rl.ppo.num_steps",
                 16,
             ],
         )
@@ -173,7 +173,7 @@ def test_cpca():
     run_exp(
         "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
         "train",
-        ["rl.auxiliary_losses.enabled", "['cpca']"],
+        ["habitat_baselines.rl.auxiliary_losses.enabled", "['cpca']"],
     )
 
 
@@ -221,13 +221,13 @@ def test_cubemap_stiching(
         config.simulator.agent_0.sensors.append(camera_template)
 
     meta_config.habitat = config
-    meta_config.sensors = config.simulator.agent_0.sensors
+    meta_config.habitat_baselines.sensors = config.simulator.agent_0.sensors
     if camera == "equirect":
-        meta_config.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
+        meta_config.habitat_baselines.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
             sensor_uuids
         )
     elif camera == "fisheye":
-        meta_config.rl.policy.obs_transforms.cube2fish.sensor_uuids = tuple(
+        meta_config.habitat_baselines.rl.policy.obs_transforms.cube2fish.sensor_uuids = tuple(
             sensor_uuids
         )
     meta_config.freeze()
@@ -299,25 +299,25 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["video_option", "[]"]
-    eval_opts = ["video_option", "['disk']"]
+    ckpt_opts = ["habitat_baselines.video_option", "[]"]
+    eval_opts = ["habitat_baselines.video_option", "['disk']"]
 
     ckpt_cfg = get_config(None, ckpt_opts)
-    assert ckpt_cfg.video_option == []
-    assert ckpt_cfg.cmd_trailing_opts == ["video_option", "[]"]
+    assert ckpt_cfg.habitat_baselines.video_option == []
+    assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == ["habitat_baselines.video_option", "[]"]
 
     eval_cfg = get_config(None, eval_opts)
-    assert eval_cfg.video_option == ["disk"]
-    assert eval_cfg.cmd_trailing_opts == ["video_option", "['disk']"]
+    assert eval_cfg.habitat_baselines.video_option == ["disk"]
+    assert eval_cfg.habitat_baselines.cmd_trailing_opts == ["habitat_baselines.video_option", "['disk']"]
 
     trainer = BaseRLTrainer(get_config())
-    assert trainer.config.video_option == ["disk", "tensorboard"]
+    assert trainer.config.habitat_baselines.video_option == ["disk", "tensorboard"]
     returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
-    assert returned_config.video_option == []
+    assert returned_config.habitat_baselines.video_option == []
 
     trainer = BaseRLTrainer(eval_cfg)
     returned_config = trainer._setup_eval_config(ckpt_cfg)
-    assert returned_config.video_option == ["disk"]
+    assert returned_config.habitat_baselines.video_option == ["disk"]
 
 
 def __do_pause_test(num_envs, envs_to_pause):

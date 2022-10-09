@@ -73,7 +73,7 @@ class MotionPlanner:
         """
         Logs text to console only if logging is enabled.
         """
-        if self._config.verbose:
+        if self._config.habitat_baselines.verbose:
             print("MP:", txt)
 
     @property

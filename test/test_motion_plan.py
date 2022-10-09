@@ -28,13 +28,15 @@ TEST_CFG = (
 def test_pick_motion_planning():
     config = get_config(TEST_CFG)
 
-    benchmark = Benchmark(config.base_task_config_path)
+    benchmark = Benchmark(config.habitat_baselines.base_task_config_path)
 
     def get_args(skill):
         target_idx = skill._sim.get_targets()[0][0]
         return {"obj": target_idx}
 
-    ac_cfg = get_config(config.base_task_config_path).task.actions
+    ac_cfg = get_config(
+        config.habitat_baselines.base_task_config_path
+    ).task.actions
     spa_cfg = config.SENSE_PLAN_ACT
     env = benchmark._env
     pick_skill = AgentComposition(

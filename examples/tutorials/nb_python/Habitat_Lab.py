@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
 # %%
 if __name__ == "__main__":
-    trainer_init = baseline_registry.get_trainer(config.trainer_name)
+    trainer_init = baseline_registry.get_trainer(config.habitat_baselines.trainer_name)
     trainer = trainer_init(config)
     trainer.train()
 

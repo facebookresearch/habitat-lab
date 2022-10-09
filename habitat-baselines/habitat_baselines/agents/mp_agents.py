@@ -89,7 +89,7 @@ class ParameterizedAgent(habitat.Agent):
         pass
 
     def _log(self, txt):
-        if self._config.verbose:
+        if self._config.habitat_baselines.verbose:
             print("%s: %s" % (str(self), txt))
 
     def act(self, observations: Observations) -> Dict[str, Any]:
@@ -294,7 +294,7 @@ class ArmTargModule(ParameterizedAgent):
         self._clean_viz_points()
 
     def _clean_viz_points(self):
-        if not self._config.verbose:
+        if not self._config.habitat_baselines.verbose:
             return
         rom = self._sim.get_rigid_object_manager()
         for viz_point_name in self._viz_points:
@@ -388,7 +388,7 @@ class SpaManipPick(ArmTargModule):
         self._targ_obj_idx = obj_idx
         self._robo_targ = robo_targ
 
-        if self._config.verbose:
+        if self._config.habitat_baselines.verbose:
             self._add_debug_viz_point(robo_targ.ee_target_pos)
 
         plan = self._mp.motion_plan(

@@ -259,8 +259,8 @@ class PointNavBaselinePolicy(NetPolicy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
-            hidden_size=config.rl.ppo.hidden_size,
-            aux_loss_config=config.rl.auxiliary_losses,
+            hidden_size=config.habitat_baselines.rl.ppo.hidden_size,
+            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
         )
 
 

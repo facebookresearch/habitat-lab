@@ -1025,6 +1025,7 @@ def get_config(
 
         for config_path in config_paths:
             config_path = _get_full_config_path(config_path)
+            print(config_path)
             if not osp.exists(config_path):
                 logger.warn(
                     f"Config file {config_path} could not be found. "

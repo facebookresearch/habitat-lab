@@ -24,7 +24,7 @@ def construct_envs(
     :return: VectorEnv object created according to specification.
     """
 
-    num_environments = config.num_environments
+    num_environments = config.habitat_baselines.num_environments
     configs = []
     dataset = make_dataset(config.habitat.dataset.type)
     scenes = config.habitat.dataset.content_scenes
@@ -74,10 +74,10 @@ def construct_envs(
             task_config.dataset.content_scenes = scene_splits[i]
 
         task_config.simulator.habitat_sim_v0.gpu_device_id = (
-            config.simulator_gpu_id
+            config.habitat_baselines.simulator_gpu_id
         )
 
-        task_config.simulator.agent_0.sensors = config.sensors
+        task_config.simulator.agent_0.sensors = config.habitat_baselines.sensors
 
         proc_config.freeze()
         configs.append(proc_config)
