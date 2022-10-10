@@ -44,7 +44,7 @@ class VQATrainer(BaseILTrainer):
 
     def _make_results_dir(self):
         r"""Makes directory for saving VQA eval results."""
-        dir_name = self.config.RESULTS_DIR.format(split="val")
+        dir_name = self.config.habitat_baselines.results_dir.format(split="val")
         os.makedirs(dir_name, exist_ok=True)
 
     def _save_vqa_results(
@@ -90,7 +90,7 @@ class VQATrainer(BaseILTrainer):
         logger.info("Predicted answer: {}".format(pred_answer))
         logger.info("Ground-truth answer: {}".format(gt_answer))
 
-        result_path = self.config.RESULTS_DIR.format(
+        result_path = self.config.habitat_baselines.results_dir.format(
             split=self.config.habitat.dataset.split
         )
 
@@ -116,7 +116,7 @@ class VQATrainer(BaseILTrainer):
             EQADataset(
                 config,
                 input_type="vqa",
-                num_frames=config.IL.VQA.num_frames,
+                num_frames=config.habitat_baselines.il.vqa.num_frames,
             )
             .shuffle(1000)
             .to_tuple(
@@ -129,7 +129,7 @@ class VQATrainer(BaseILTrainer):
         )
 
         train_loader = DataLoader(
-            vqa_dataset, batch_size=config.IL.VQA.batch_size
+            vqa_dataset, batch_size=config.habitat_baselines.il.vqa.batch_size
         )
 
         logger.info("train_loader has {} samples".format(len(vqa_dataset)))
@@ -139,8 +139,8 @@ class VQATrainer(BaseILTrainer):
         model_kwargs = {
             "q_vocab": q_vocab_dict.word2idx_dict,
             "ans_vocab": ans_vocab_dict.word2idx_dict,
-            "eqa_cnn_pretrain_ckpt_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
-            "freeze_encoder": config.IL.VQA.freeze_encoder,
+            "eqa_cnn_pretrain_ckpt_path": config.habitat_baselines.eqa_cnn_pretrain_ckpt_path,
+            "freeze_encoder": config.habitat_baselines.il.vqa.freeze_encoder,
         }
 
         model = VqaLstmCnnAttentionModel(**model_kwargs)
@@ -149,7 +149,7 @@ class VQATrainer(BaseILTrainer):
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
-            lr=float(config.IL.VQA.lr),
+            lr=float(config.habitat_baselines.il.vqa.lr),
         )
 
         metrics = VqaMetric(
@@ -160,7 +160,7 @@ class VQATrainer(BaseILTrainer):
                 "mean_rank",
                 "mean_reciprocal_rank",
             ],
-            log_json=os.path.join(config.OUTPUT_LOG_DIR, "train.json"),
+            log_json=os.path.join(config.habitat_baselines.output_log_dir, "train.json"),
         )
 
         t, epoch = 0, 1
@@ -173,13 +173,13 @@ class VQATrainer(BaseILTrainer):
         logger.info(model)
         model.train().to(self.device)
 
-        if config.IL.VQA.freeze_encoder:
+        if config.habitat_baselines.il.vqa.freeze_encoder:
             model.cnn.eval()
 
         with TensorboardWriter(
             config.habitat_baselines.tensorboard_dir, flush_secs=self.flush_secs
         ) as writer:
-            while epoch <= config.IL.VQA.max_epochs:
+            while epoch <= config.habitat_baselines.il.vqa.max_epochs:
                 start_time = time.time()
                 for batch in train_loader:
                     t += 1
@@ -230,7 +230,7 @@ class VQATrainer(BaseILTrainer):
                 # Dataloader length for IterableDataset doesn't take into
                 # account batch size for Pytorch v < 1.6.0
                 num_batches = math.ceil(
-                    len(vqa_dataset) / config.IL.VQA.batch_size
+                    len(vqa_dataset) / config.habitat_baselines.il.vqa.batch_size
                 )
 
                 avg_loss /= num_batches
@@ -290,7 +290,7 @@ class VQATrainer(BaseILTrainer):
             EQADataset(
                 config,
                 input_type="vqa",
-                num_frames=config.IL.VQA.num_frames,
+                num_frames=config.habitat_baselines.il.vqa.num_frames,
             )
             .shuffle(1000)
             .to_tuple(
@@ -303,7 +303,7 @@ class VQATrainer(BaseILTrainer):
         )
 
         eval_loader = DataLoader(
-            vqa_dataset, batch_size=config.IL.VQA.batch_size
+            vqa_dataset, batch_size=config.habitat_baselines.il.vqa.batch_size
         )
 
         logger.info("eval_loader has {} samples".format(len(vqa_dataset)))
@@ -313,7 +313,7 @@ class VQATrainer(BaseILTrainer):
         model_kwargs = {
             "q_vocab": q_vocab_dict.word2idx_dict,
             "ans_vocab": ans_vocab_dict.word2idx_dict,
-            "eqa_cnn_pretrain_ckpt_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
+            "eqa_cnn_pretrain_ckpt_path": config.habitat_baselines.eqa_cnn_pretrain_ckpt_path,
         }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
@@ -343,7 +343,7 @@ class VQATrainer(BaseILTrainer):
                 "mean_rank",
                 "mean_reciprocal_rank",
             ],
-            log_json=os.path.join(config.OUTPUT_LOG_DIR, "eval.json"),
+            log_json=os.path.join(config.habitat_baselines.output_log_dir, "eval.json"),
         )
         with torch.no_grad():
             for batch in eval_loader:
@@ -394,7 +394,7 @@ class VQATrainer(BaseILTrainer):
                         ans_vocab_dict,
                     )
 
-        num_batches = math.ceil(len(vqa_dataset) / config.IL.VQA.batch_size)
+        num_batches = math.ceil(len(vqa_dataset) / config.habitat_baselines.il.vqa.batch_size)
 
         avg_loss /= num_batches
         avg_accuracy /= num_batches

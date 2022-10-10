@@ -38,7 +38,7 @@ class EQADataset(wds.Dataset):
             num_frames (int): number of frames used as input to VQA model
             max_controller_actions (int):
         """
-        self.config = config.TASK_CONFIG
+        self.config = config.habitat
         self.input_type = input_type
         self.num_frames = num_frames
 
@@ -58,7 +58,7 @@ class EQADataset(wds.Dataset):
             else:
                 self.mode = "train"
 
-            self.frame_dataset_path = config.FRAME_DATASET_PATH.format(
+            self.frame_dataset_path = config.habitat_baselines.frame_dataset_path.format(
                 split=self.mode
             )
 
@@ -72,7 +72,7 @@ class EQADataset(wds.Dataset):
                 initial_pipeline=[group_by_keys()],
             )
 
-            self.only_vqa_task = config.ONLY_VQA_TASK
+            self.only_vqa_task = config.habitat_baselines.only_vqa_task
 
             self.scene_episode_dict = get_scene_episode_dict(self.episodes)
 

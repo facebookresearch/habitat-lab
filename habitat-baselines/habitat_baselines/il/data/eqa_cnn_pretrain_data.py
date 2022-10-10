@@ -22,8 +22,8 @@ class EQACNNPretrainDataset(Dataset):
             config: Config
             mode: 'train'/'val'
         """
-        self.config = config.TASK_CONFIG
-        self.dataset_path = config.DATASET_PATH.format(split=mode)
+        self.config = config.habitat
+        self.dataset_path = config.habitat_baselines.dataset_path.format(split=mode)
 
         if not self.cache_exists():
             """

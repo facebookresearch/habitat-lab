@@ -48,7 +48,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for s_type in ["rgb", "seg", "depth"]:
-            dir_name = self.config.RESULTS_DIR.format(split="val", type=s_type)
+            dir_name = self.config.habitat_baselines.results_dir.format(split="val", type=s_type)
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
 
@@ -90,7 +90,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         train_loader = DataLoader(
             eqa_cnn_pretrain_dataset,
-            batch_size=config.IL.EQACNNPretrain.batch_size,
+            batch_size=config.habitat_baselines.il.eqa_cnn_pretrain.batch_size,
             shuffle=True,
         )
 
@@ -105,7 +105,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
-            lr=float(config.IL.EQACNNPretrain.lr),
+            lr=float(config.habitat_baselines.il.eqa_cnn_pretrain.lr),
         )
 
         depth_loss = torch.nn.SmoothL1Loss()
@@ -116,7 +116,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         with TensorboardWriter(
             config.habitat_baselines.tensorboard_dir, flush_secs=self.flush_secs
         ) as writer:
-            while epoch <= config.IL.EQACNNPretrain.max_epochs:
+            while epoch <= config.habitat_baselines.il.eqa_cnn_pretrain.max_epochs:
                 start_time = time.time()
                 avg_loss = 0.0
 
@@ -201,7 +201,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         eval_loader = DataLoader(
             eqa_cnn_pretrain_dataset,
-            batch_size=config.IL.EQACNNPretrain.batch_size,
+            batch_size=config.habitat_baselines.il.eqa_cnn_pretrain.batch_size,
             shuffle=False,
         )
 
@@ -263,7 +263,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                         checkpoint_index, idx[0].item()
                     )
                     result_path = os.path.join(
-                        self.config.RESULTS_DIR, result_id
+                        self.config.habitat_baselines.results_dir, result_id
                     )
 
                     self._save_results(
