@@ -55,7 +55,7 @@ class NavDataset(wds.Dataset):
         self.q_vocab = self.env._dataset.question_vocab  # type:ignore
         self.ans_vocab = self.env._dataset.answer_vocab  # type:ignore
 
-        self.eval_save_results = config.habitat_baselines.eval_SAVE_RESULTS
+        self.eval_save_results = config.habitat_baselines.eval_save_results
 
         if self.config.DATASET.SPLIT == config.habitat_baselines.eval.SPLIT:
             self.mode = "val"

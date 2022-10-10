@@ -37,7 +37,7 @@ def test_pick_motion_planning():
     ac_cfg = get_config(
         config.habitat_baselines.base_task_config_path
     ).task.actions
-    spa_cfg = config.SENSE_PLAN_ACT
+    spa_cfg = config.habitat_baselines.sense_plan_act
     env = benchmark._env
     pick_skill = AgentComposition(
         [

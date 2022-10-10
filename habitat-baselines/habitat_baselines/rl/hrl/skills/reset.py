@@ -16,7 +16,7 @@ class ResetArmSkill(SkillPolicy):
         batch_size,
     ):
         super().__init__(config, action_space, batch_size, True)
-        self._target = np.array([float(x) for x in config.RESET_JOINT_STATE])
+        self._target = np.array([float(x) for x in config.reset_joint_state])
 
         self._ac_start = 0
         for k, space in action_space.items():

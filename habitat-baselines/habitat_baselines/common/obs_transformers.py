@@ -1275,4 +1275,4 @@ class AddVirtualKeys(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config):
-        return cls(config.habitat_baselines.rl.policy.obs_transforms.ADD_VIRTUAL_KEYS)
+        return cls(config.habitat_baselines.rl.policy.obs_transforms.add_virtual_keys)
