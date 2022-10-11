@@ -1,192 +1,193 @@
-verbose: False
-base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
-trainer_name: "ddppo"
-simulator_gpu_id: 0
-torch_gpu_id: 0
-video_option: ["disk"]
-tensorboard_dir: "tb"
-video_dir: "video_dir"
-video_fps: 30
-video_render_top_down: False
-video_render_all_info: True
-video_render_views:
-  - "third_rgb_sensor"
-sensors: ["head_depth_sensor"]
-test_episode_count: -1
-eval_ckpt_path_dir: ""
-num_environments: 1
-writer_type: 'tb'
-checkpoint_folder: "data/new_checkpoints"
-num_updates: -1
-total_num_steps: 1.0e8
-log_interval: 10
-num_checkpoints: 20
-force_torch_single_threaded: True
-eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
-eval:
-  use_ckpt_config: False
-  should_load_ckpt: False
-habitat:
-  # Add the oracle navigation action
-  task:
-    possible_actions:
-    - arm_action
-    - base_velocity
-    - rearrange_stop
-    - oracle_nav_action
+habitat_baselines:
+  verbose: False
+  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
+  trainer_name: "ddppo"
+  simulator_gpu_id: 0
+  torch_gpu_id: 0
+  video_option: ["disk"]
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  video_fps: 30
+  video_render_top_down: False
+  video_render_all_info: True
+  video_render_views:
+    - "third_rgb_sensor"
+  sensors: ["head_depth_sensor"]
+  test_episode_count: -1
+  eval_ckpt_path_dir: ""
+  num_environments: 1
+  writer_type: 'tb'
+  checkpoint_folder: "data/new_checkpoints"
+  num_updates: -1
+  total_num_steps: 1.0e8
+  log_interval: 10
+  num_checkpoints: 20
+  force_torch_single_threaded: True
+  eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
+  eval:
+    use_ckpt_config: False
+    should_load_ckpt: False
+  habitat:
+    # Add the oracle navigation action
+    task:
+      possible_actions:
+      - arm_action
+      - base_velocity
+      - rearrange_stop
+      - oracle_nav_action
 
-rl:
-  policy:
-      name: "HierarchicalPolicy"
-      high_level_policy:
-        name: "GtHighLevelPolicy"
-      obs_transforms:
-        enabled_transforms: ['AddVirtualKeys']
-        ADD_VIRTUAL_KEYS:
-          "nav_to_skill": 8
-          "object_to_agent_gps_compass": 2
-      DEFINED_SKILLS:
-        NN_OPEN_CAB:
-          skill_name: "ArtObjSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
-          OBS_SKILL_INPUTS: []
-          LOAD_CKPT_FILE: "data/models/open_cab.pth"
-          MAX_SKILL_STEPS: 200
-          start_zone_radius: 0.3
-          FORCE_END_ON_TIMEOUT: True
+  rl:
+    policy:
+        name: "HierarchicalPolicy"
+        high_level_policy:
+          name: "GtHighLevelPolicy"
+        obs_transforms:
+          enabled_transforms: ['AddVirtualKeys']
+          add_virtual_keys:
+            "nav_to_skill": 8
+            "object_to_agent_gps_compass": 2
+        defined_skills:
+          NN_OPEN_CAB:
+            skill_name: "ArtObjSkillPolicy"
+            name: "PointNavResNetPolicy"
+            action_distribution_type: "gaussian"
+            at_resting_threshold: 0.15
+            obs_skill_inputs: []
+            load_ckpt_file: "data/models/open_cab.pth"
+            max_skill_steps: 200
+            start_zone_radius: 0.3
+            force_end_on_timeout: True
 
-        NN_OPEN_FRIDGE:
-          skill_name: "ArtObjSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
-          OBS_SKILL_INPUTS: []
-          LOAD_CKPT_FILE: "data/models/open_fridge.pth"
-          MAX_SKILL_STEPS: 200
-          start_zone_radius: 0.3
-          FORCE_END_ON_TIMEOUT: True
+          NN_OPEN_FRIDGE:
+            skill_name: "ArtObjSkillPolicy"
+            name: "PointNavResNetPolicy"
+            action_distribution_type: "gaussian"
+            at_resting_threshold: 0.15
+            obs_skill_inputs: []
+            load_ckpt_file: "data/models/open_fridge.pth"
+            max_skill_steps: 200
+            start_zone_radius: 0.3
+            force_end_on_timeout: True
 
-        NN_CLOSE_CAB:
-          skill_name: "ArtObjSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.2
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          LOAD_CKPT_FILE: "data/models/close_cab.pth"
-          MAX_SKILL_STEPS: 200
-          start_zone_radius: 0.3
-          FORCE_END_ON_TIMEOUT: True
+          NN_CLOSE_CAB:
+            skill_name: "ArtObjSkillPolicy"
+            name: "PointNavResNetPolicy"
+            action_distribution_type: "gaussian"
+            at_resting_threshold: 0.2
+            obs_skill_inputs: ["obj_start_sensor"]
+            load_ckpt_file: "data/models/close_cab.pth"
+            max_skill_steps: 200
+            start_zone_radius: 0.3
+            force_end_on_timeout: True
 
-        NN_CLOSE_FRIDGE:
-          skill_name: "ArtObjSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.2
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          LOAD_CKPT_FILE: "data/models/close_fridge.pth"
-          MAX_SKILL_STEPS: 200
-          start_zone_radius: 0.3
-          FORCE_END_ON_TIMEOUT: True
+          NN_CLOSE_FRIDGE:
+            skill_name: "ArtObjSkillPolicy"
+            name: "PointNavResNetPolicy"
+            action_distribution_type: "gaussian"
+            at_resting_threshold: 0.2
+            obs_skill_inputs: ["obj_start_sensor"]
+            load_ckpt_file: "data/models/close_fridge.pth"
+            max_skill_steps: 200
+            start_zone_radius: 0.3
+            force_end_on_timeout: True
 
-        NN_PICK:
-          skill_name: "PickSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
-          OBS_SKILL_INPUTS: ["obj_start_sensor"]
-          LOAD_CKPT_FILE: "data/models/pick.pth"
-          MAX_SKILL_STEPS: 200
-          FORCE_END_ON_TIMEOUT: True
+          nn_pick:
+            skill_name: "PickSkillPolicy"
+            name: "PointNavResNetPolicy"
+            action_distribution_type: "gaussian"
+            at_resting_threshold: 0.15
+            obs_skill_inputs: ["obj_start_sensor"]
+            load_ckpt_file: "data/models/pick.pth"
+            max_skill_steps: 200
+            force_end_on_timeout: True
 
-        GT_NAV:
-          skill_name: "OracleNavPolicy"
-          OBS_SKILL_INPUTS: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-          goal_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
-          NAV_ACTION_NAME: "base_velocity"
-          MAX_SKILL_STEPS: 300
-          FORCE_END_ON_TIMEOUT: True
-          stop_angle_thresh: 0.2
-          stop_dist_thresh: 1.0
+          GT_NAV:
+            skill_name: "OracleNavPolicy"
+            obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+            goal_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
+            NAV_ACTION_NAME: "base_velocity"
+            max_skill_steps: 300
+            force_end_on_timeout: True
+            stop_angle_thresh: 0.2
+            stop_dist_thresh: 1.0
 
-        NN_PLACE:
-          skill_name: "PlaceSkillPolicy"
-          name: "PointNavResNetPolicy"
-          action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
-          OBS_SKILL_INPUTS: ["obj_goal_sensor"]
-          LOAD_CKPT_FILE: "data/models/place.pth"
-          MAX_SKILL_STEPS: 200
-          FORCE_END_ON_TIMEOUT: True
+          nn_place:
+            skill_name: "PlaceSkillPolicy"
+            name: "PointNavResNetPolicy"
+            action_distribution_type: "gaussian"
+            at_resting_threshold: 0.15
+            obs_skill_inputs: ["obj_goal_sensor"]
+            load_ckpt_file: "data/models/place.pth"
+            max_skill_steps: 200
+            force_end_on_timeout: True
 
-        WAIT_SKILL:
-          skill_name: "WaitSkillPolicy"
-          MAX_SKILL_STEPS: -1.0
-          FORCE_END_ON_TIMEOUT: False
+          wait_skill:
+            skill_name: "WaitSkillPolicy"
+            max_skill_steps: -1.0
+            force_end_on_timeout: False
 
-        RESET_ARM_SKILL:
-          skill_name: "ResetArmSkill"
-          MAX_SKILL_STEPS: 50
-          RESET_JOINT_STATE: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
-          FORCE_END_ON_TIMEOUT: False
+          reset_arm_skill:
+            skill_name: "ResetArmSkill"
+            max_skill_steps: 50
+            reset_joint_state: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+            force_end_on_timeout: False
 
-      USE_SKILLS:
-        # Uncomment if you are also using these skills
-        # open_cab: "NN_OPEN_CAB"
-        # open_fridge: "NN_OPEN_FRIDGE"
-        # close_cab: "NN_OPEN_CAB"
-        # close_fridge: "NN_OPEN_FRIDGE"
-        pick: "NN_PICK"
-        place: "NN_PLACE"
-        nav: "GT_NAV"
-        nav_to_receptacle: "GT_NAV"
-        wait: "WAIT_SKILL"
-        reset_arm: "RESET_ARM_SKILL"
+        use_skills:
+          # Uncomment if you are also using these skills
+          # open_cab: "NN_OPEN_CAB"
+          # open_fridge: "NN_OPEN_FRIDGE"
+          # close_cab: "NN_OPEN_CAB"
+          # close_fridge: "NN_OPEN_FRIDGE"
+          pick: "nn_pick"
+          place: "nn_place"
+          nav: "GT_NAV"
+          nav_to_receptacle: "GT_NAV"
+          wait: "wait_skill"
+          reset_arm: "reset_arm_skill"
 
-  ppo:
-    # ppo params
-    clip_param: 0.2
-    ppo_epoch: 2
-    num_mini_batch: 2
-    value_loss_coef: 0.5
-    entropy_coef: 0.0001
-    lr: 2.5e-4
-    eps: 1e-5
-    max_grad_norm: 0.2
-    num_steps: 128
-    use_gae: True
-    gamma: 0.99
-    tau: 0.95
-    use_linear_clip_decay: False
-    use_linear_lr_decay: False
-    reward_window_size: 50
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 2
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.0001
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: False
+      reward_window_size: 50
 
-    use_normalized_advantage: False
+      use_normalized_advantage: False
 
-    hidden_size: 512
+      hidden_size: 512
 
-    # Use double buffered sampling, typically helps
-    # when environment time is similar or large than
-    # policy inference time during rollout generation
-    use_double_buffered_sampler: False
+      # Use double buffered sampling, typically helps
+      # when environment time is similar or larger than
+      # policy inference time during rollout generation
+      use_double_buffered_sampler: False
 
-  ddppo:
-    sync_frac: 0.6
-    # The PyTorch distributed backend to use
-    distrib_backend: NCCL
-    # Visual encoder backbone
-    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
-    # Initialize with pretrained weights
-    pretrained: False
-    # Initialize just the visual encoder backbone with pretrained weights
-    pretrained_encoder: False
-    # Whether or not the visual encoder backbone will be trained.
-    train_encoder: True
-    # Whether or not to reset the critic linear layer
-    reset_critic: False
+    ddppo:
+      sync_frac: 0.6
+      # The PyTorch distributed backend to use
+      distrib_backend: NCCL
+      # Visual encoder backbone
+      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+      # Initialize with pretrained weights
+      pretrained: False
+      # Initialize just the visual encoder backbone with pretrained weights
+      pretrained_encoder: False
+      # Whether the visual encoder backbone will be trained.
+      train_encoder: True
+      # Whether to reset the critic linear layer
+      reset_critic: False
 
-    # Model parameters
-    backbone: resnet18
-    rnn_type: LSTM
-    num_recurrent_layers: 2
+      # Model parameters
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 2

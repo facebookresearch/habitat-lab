@@ -94,13 +94,13 @@ class PointNavResNetPolicy(NetPolicy):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
-            hidden_size=config.rl.ppo.hidden_size,
-            rnn_type=config.rl.ddppo.rnn_type,
-            num_recurrent_layers=config.rl.ddppo.num_recurrent_layers,
-            backbone=config.rl.ddppo.backbone,
-            force_blind_policy=config.force_blind_policy,
-            policy_config=config.rl.policy,
-            aux_loss_config=config.rl.auxiliary_losses,
+            hidden_size=config.habitat_baselines.rl.ppo.hidden_size,
+            rnn_type=config.habitat_baselines.rl.ddppo.rnn_type,
+            num_recurrent_layers=config.habitat_baselines.rl.ddppo.num_recurrent_layers,
+            backbone=config.habitat_baselines.rl.ddppo.backbone,
+            force_blind_policy=config.habitat_baselines.force_blind_policy,
+            policy_config=config.habitat_baselines.rl.policy,
+            aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
             fuse_keys=None,
         )
 

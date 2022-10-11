@@ -142,7 +142,9 @@ class ResizeShortestEdge(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        rs_config = config.rl.policy.obs_transforms.resize_shortest_edge
+        rs_config = (
+            config.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge
+        )
         return cls(
             rs_config.size,
             rs_config.channels_last,
@@ -223,7 +225,9 @@ class CenterCropper(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        cc_config = config.rl.policy.obs_transforms.center_cropper
+        cc_config = (
+            config.habitat_baselines.rl.policy.obs_transforms.center_cropper
+        )
         return cls(
             (cc_config.height, cc_config.width),
             cc_config.channels_last,
@@ -1003,7 +1007,9 @@ class CubeMap2Equirect(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-        cube2eq_config = config.rl.policy.obs_transforms.cube2eq
+        cube2eq_config = (
+            config.habitat_baselines.rl.policy.obs_transforms.cube2eq
+        )
         if hasattr(cube2eq_config, "target_uuids"):
             # Optional Config Value to specify target uuid
             target_uuids = cube2eq_config.target_uuids
@@ -1114,7 +1120,9 @@ class CubeMap2Fisheye(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-        cube2fish_config = config.rl.policy.obs_transforms.cube2fish
+        cube2fish_config = (
+            config.habitat_baselines.rl.policy.obs_transforms.cube2fish
+        )
         if hasattr(cube2fish_config, "target_uuids"):
             # Optional Config Value to specify target uuid
             target_uuids = cube2fish_config.target_uuids
@@ -1187,7 +1195,9 @@ class Equirect2CubeMap(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-        eq2cube_config = config.rl.policy.obs_transforms.eq2cube
+        eq2cube_config = (
+            config.habitat_baselines.rl.policy.obs_transforms.eq2cube
+        )
 
         if hasattr(eq2cube_config, "target_uuids"):
             # Optional Config Value to specify target uuid
@@ -1206,9 +1216,9 @@ class Equirect2CubeMap(ProjectionTransformer):
 
 def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
     active_obs_transforms = []
-    if hasattr(config.rl.policy, "obs_transforms"):
+    if hasattr(config.habitat_baselines.rl.policy, "obs_transforms"):
         obs_transform_names = (
-            config.rl.policy.obs_transforms.enabled_transforms
+            config.habitat_baselines.rl.policy.obs_transforms.enabled_transforms
         )
         for obs_transform_name in obs_transform_names:
             obs_trans_cls = baseline_registry.get_obs_transformer(
@@ -1275,4 +1285,6 @@ class AddVirtualKeys(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config):
-        return cls(config.rl.policy.obs_transforms.ADD_VIRTUAL_KEYS)
+        return cls(
+            config.habitat_baselines.rl.policy.obs_transforms.add_virtual_keys
+        )

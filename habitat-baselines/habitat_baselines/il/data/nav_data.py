@@ -42,7 +42,7 @@ class NavDataset(wds.Dataset):
             device: torch.device
             max_controller_actions (int)
         """
-        self.config = config.TASK_CONFIG
+        self.config = config.habitat
         self.env = env
         self.episodes = self.env._dataset.episodes  # type:ignore
         self.max_controller_actions = max_controller_actions
@@ -55,22 +55,22 @@ class NavDataset(wds.Dataset):
         self.q_vocab = self.env._dataset.question_vocab  # type:ignore
         self.ans_vocab = self.env._dataset.answer_vocab  # type:ignore
 
-        self.eval_save_results = config.EVAL_SAVE_RESULTS
+        self.eval_save_results = config.habitat_baselines.eval_save_results
 
-        if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
+        if self.config.DATASET.SPLIT == config.habitat_baselines.eval.SPLIT:
             self.mode = "val"
         else:
             self.mode = "train"
 
-        self.frame_dataset_path = config.FRAME_DATASET_PATH.format(
-            split=self.mode
+        self.frame_dataset_path = (
+            config.habitat_baselines.frame_dataset_path.format(split=self.mode)
         )
         self.calc_max_length()
         self.restructure_ans_vocab()
 
         cnn_kwargs = {
             "only_encoder": True,
-            "checkpoint_path": config.EQA_CNN_PRETRAIN_CKPT_PATH,
+            "checkpoint_path": config.habitat_baselines.eqa_cnn_pretrain_ckpt_path,
         }
         self.cnn = MultitaskCNN(**cnn_kwargs)
         self.cnn.eval()

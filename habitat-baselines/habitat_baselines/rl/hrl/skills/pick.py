@@ -20,7 +20,7 @@ class PickSkillPolicy(NnSkillPolicy):
         rel_resting_pos = torch.norm(
             observations[RelativeRestingPositionSensor.cls_uuid], dim=-1
         )
-        is_within_thresh = rel_resting_pos < self._config.AT_RESTING_THRESHOLD
+        is_within_thresh = rel_resting_pos < self._config.at_resting_threshold
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         return (is_holding * is_within_thresh).type(torch.bool)
 

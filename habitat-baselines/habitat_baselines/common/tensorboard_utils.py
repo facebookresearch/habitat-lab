@@ -18,9 +18,11 @@ except ImportError:
 
 
 def get_writer(config, **kwargs):
-    if config.writer_type == "tb":
-        return TensorboardWriter(config.tensorboard_dir, **kwargs)
-    elif config.writer_type == "wb":
+    if config.habitat_baselines.writer_type == "tb":
+        return TensorboardWriter(
+            config.habitat_baselines.tensorboard_dir, **kwargs
+        )
+    elif config.habitat_baselines.writer_type == "wb":
         return WeightsAndBiasesWriter(config)
     else:
         raise ValueError("Unrecongized writer")
@@ -93,14 +95,14 @@ class WeightsAndBiasesWriter:
         Integrates with https://wandb.ai logging service.
         """
         wb_kwargs = {}
-        if config.wb.project_name != "":
-            wb_kwargs["project"] = config.wb.project_name
-        if config.wb.run_name != "":
-            wb_kwargs["name"] = config.wb.run_name
-        if config.wb.entity != "":
-            wb_kwargs["entity"] = config.wb.entity
-        if config.wb.group != "":
-            wb_kwargs["group"] = config.wb.group
+        if config.habitat_baselines.wb.project_name != "":
+            wb_kwargs["project"] = config.habitat_baselines.wb.project_name
+        if config.habitat_baselines.wb.run_name != "":
+            wb_kwargs["name"] = config.habitat_baselines.wb.run_name
+        if config.habitat_baselines.wb.entity != "":
+            wb_kwargs["entity"] = config.habitat_baselines.wb.entity
+        if config.habitat_baselines.wb.group != "":
+            wb_kwargs["group"] = config.habitat_baselines.wb.group
         slurm_info_dict = {
             k[len("SLURM_") :]: v
             for k, v in os.environ.items()

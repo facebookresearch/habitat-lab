@@ -182,8 +182,8 @@ if __name__ == "__main__":
 
     config.defrost()
     config.habitat.seed = int(seed)
-    config.total_num_steps = int(steps_in_thousands)
-    config.log_interval = 1
+    config.habitat_baselines.total_num_steps = int(steps_in_thousands)
+    config.habitat_baselines.log_interval = 1
     config.freeze()
 
     random.seed(config.habitat.seed)
@@ -191,7 +191,9 @@ if __name__ == "__main__":
 
 # %%
 if __name__ == "__main__":
-    trainer_init = baseline_registry.get_trainer(config.trainer_name)
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
     trainer = trainer_init(config)
     trainer.train()
 

@@ -312,17 +312,17 @@ def _make_proc_config(config, rank, scenes=None, scene_splits=None):
         task_config.dataset.content_scenes = scene_splits[rank]
 
     task_config.simulator.habitat_sim_v0.gpu_device_id = (
-        config.simulator_gpu_id
+        config.habitat_baselines.simulator_gpu_id
     )
 
-    task_config.simulator.agent_0.sensors = config.sensors
+    task_config.simulator.agent_0.sensors = config.habitat_baselines.sensors
 
     proc_config.freeze()
     return proc_config
 
 
 def _create_worker_configs(config: Config):
-    num_environments = config.num_environments
+    num_environments = config.habitat_baselines.num_environments
 
     dataset = make_dataset(config.habitat.dataset.type)
     scenes = config.habitat.dataset.content_scenes

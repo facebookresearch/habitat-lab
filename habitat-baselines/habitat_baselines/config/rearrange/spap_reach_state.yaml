@@ -1,36 +1,34 @@
-base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml
-
-SENSE_PLAN_ACT:
-  verbose: True
-  RUN_FREQ: 4
-  KINEMATIC_CTrl: True
-  N_GRASPS: 100
-  MP_OBJ: True
-  MP_MARGIN: null
-  MP_RENDER: True
-  TIMEOUT: 3
-  EXEC_EE_THRESH: 0.1
-  # "Priv" or "Reg"
-  mp_sim_type: "Priv"
-  video_dir: 'data/vids'
-  debug_dir: "data/mp_test"
+habitat_baselines:
+  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml
+  video_dir: "data/vids/"
+  video_optionS: [ "disk" ]
   count_obj_collisions: True
-  grasp_gen_is_verbose: True
-  ik_dist_thresh: 0.1
-  IK_SPEED_FACTOR: 1.0
+
+  sense_plan_act:
+    verbose: True
+    run_freq: 4
+    n_grasps: 100
+    mp_obj: True
+    mp_margin: null
+    mp_render: True
+    timeout: 3
+    exec_ee_thresh: 0.1
+    # "Priv" or "Reg"
+    mp_sim_type: "Priv"
+    video_dir: 'data/vids'
+    debug_dir: "data/mp_test"
+    count_obj_collisions: True
+    grasp_gen_is_verbose: True
+    ik_dist_thresh: 0.1
+    ik_speed_factor: 1.0
 
 habitat:
-    reward_measure: "rearrange_reach_reward"
-    success_measure: "rearrange_reach_success"
-    success_reward: 10.0
-    slack_reward: -0.01
-    end_on_success: False
-    gym:
-      obs_keys: ['joint', 'ee_pos']
-      desired_goal_keys: ['resting_position']
-      action_keys: ['arm_action']
-
-video_dir: "data/vids/"
-video_optionS: ["disk"]
-
-count_obj_collisions: True
+  reward_measure: "rearrange_reach_reward"
+  success_measure: "rearrange_reach_success"
+  success_reward: 10.0
+  slack_reward: -0.01
+  end_on_success: False
+  gym:
+    obs_keys: [ 'joint', 'ee_pos' ]
+    desired_goal_keys: [ 'resting_position' ]
+    action_keys: [ 'arm_action' ]

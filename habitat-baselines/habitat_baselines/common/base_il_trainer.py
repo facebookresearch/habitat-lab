@@ -39,24 +39,26 @@ class BaseILTrainer(BaseTrainer):
         r"""Makes directories for log files, checkpoints & results."""
         self._make_log_dir()
         self._make_ckpt_dir()
-        if self.config.eval_save_results:
+        if self.config.habitat_baselines.eval_save_results:
             self._make_results_dir()
 
     def _make_log_dir(self) -> None:
         r"""Makes directory for writing log files."""
-        if self.config.LOG_METRICS and not os.path.isdir(
-            self.config.OUTPUT_LOG_DIR
+        if self.config.habitat_baselines.log_metrics and not os.path.isdir(
+            self.config.habitat_baselines.output_log_dir
         ):
-            os.makedirs(self.config.OUTPUT_LOG_DIR)
+            os.makedirs(self.config.habitat_baselines.output_log_dir)
 
     def _make_ckpt_dir(self) -> None:
         r"""Makes directory for saving model checkpoints."""
-        if not os.path.isdir(self.config.checkpoint_folder):
-            os.makedirs(self.config.checkpoint_folder)
+        if not os.path.isdir(self.config.habitat_baselines.checkpoint_folder):
+            os.makedirs(self.config.habitat_baselines.checkpoint_folder)
 
     def _make_results_dir(self) -> None:
         r"""Makes directory for saving eval results."""
-        dir_name = self.config.RESULTS_DIR.format(split="val")
+        dir_name = self.config.habitat_baselines.results_dir.format(
+            split="val"
+        )
         os.makedirs(dir_name, exist_ok=True)
 
     def train(self) -> None:
@@ -92,7 +94,10 @@ class BaseILTrainer(BaseTrainer):
             None
         """
         torch.save(
-            state_dict, os.path.join(self.config.checkpoint_folder, file_name)
+            state_dict,
+            os.path.join(
+                self.config.habitat_baselines.checkpoint_folder, file_name
+            ),
         )
 
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:
