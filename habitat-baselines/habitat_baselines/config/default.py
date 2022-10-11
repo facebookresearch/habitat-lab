@@ -20,8 +20,12 @@ CONFIG_FILE_SEPARATOR = ","
 _C = CN()
 _C.habitat_baselines = CN()
 # task config can be a list of conifgs like "A.yaml,B.yaml"
-_C.habitat_baselines.base_task_config_path = "habitat-lab/habitat/config/tasks/pointnav.yaml"
-_C.habitat_baselines.cmd_trailing_opts = []  # store command line options as list of strings
+_C.habitat_baselines.base_task_config_path = (
+    "habitat-lab/habitat/config/tasks/pointnav.yaml"
+)
+_C.habitat_baselines.cmd_trailing_opts = (
+    []
+)  # store command line options as list of strings
 _C.habitat_baselines.trainer_name = "ppo"
 _C.habitat_baselines.simulator_gpu_id = 0
 _C.habitat_baselines.torch_gpu_id = 0
@@ -34,7 +38,9 @@ _C.habitat_baselines.video_fps = 10
 _C.habitat_baselines.video_render_top_down = True
 _C.habitat_baselines.video_render_all_info = False
 _C.habitat_baselines.test_episode_count = -1
-_C.habitat_baselines.eval_ckpt_path_dir = "data/checkpoints"  # path to ckpt or path to ckpts dir
+_C.habitat_baselines.eval_ckpt_path_dir = (
+    "data/checkpoints"  # path to ckpt or path to ckpts dir
+)
 _C.habitat_baselines.num_environments = 16
 _C.habitat_baselines.num_processes = -1  # depricated
 _C.habitat_baselines.sensors = ["rgb_sensor", "depth_sensor"]
@@ -106,7 +112,9 @@ _C.habitat_baselines.rl.preemption.save_state_batch_only = False
 # -----------------------------------------------------------------------------
 _C.habitat_baselines.rl.policy = CN()
 _C.habitat_baselines.rl.policy.name = "PointNavResNetPolicy"
-_C.habitat_baselines.rl.policy.action_distribution_type = "categorical"  # or 'gaussian'
+_C.habitat_baselines.rl.policy.action_distribution_type = (
+    "categorical"  # or 'gaussian'
+)
 # If the list is empty, all keys will be included.
 # For gaussian action distribution:
 _C.habitat_baselines.rl.policy.action_dist = CN()
@@ -122,7 +130,9 @@ _C.habitat_baselines.rl.policy.action_dist.max_std = 1
 _C.habitat_baselines.rl.policy.action_dist.min_log_std = -5
 _C.habitat_baselines.rl.policy.action_dist.max_log_std = 2
 # For continuous action distributions (including gaussian):
-_C.habitat_baselines.rl.policy.action_dist.action_activation = "tanh"  # ['tanh', '']
+_C.habitat_baselines.rl.policy.action_dist.action_activation = (
+    "tanh"  # ['tanh', '']
+)
 _C.habitat_baselines.rl.policy.action_dist.scheduled_std = False
 # -----------------------------------------------------------------------------
 # obs_transforms CONFIG
@@ -132,7 +142,9 @@ _C.habitat_baselines.rl.policy.obs_transforms.enabled_transforms = tuple()
 _C.habitat_baselines.rl.policy.obs_transforms.center_cropper = CN()
 _C.habitat_baselines.rl.policy.obs_transforms.center_cropper.height = 256
 _C.habitat_baselines.rl.policy.obs_transforms.center_cropper.width = 256
-_C.habitat_baselines.rl.policy.obs_transforms.center_cropper.channels_last = True
+_C.habitat_baselines.rl.policy.obs_transforms.center_cropper.channels_last = (
+    True
+)
 _C.habitat_baselines.rl.policy.obs_transforms.center_cropper.trans_keys = (
     "rgb",
     "depth",
@@ -140,13 +152,17 @@ _C.habitat_baselines.rl.policy.obs_transforms.center_cropper.trans_keys = (
 )
 _C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge = CN()
 _C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge.size = 256
-_C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge.channels_last = True
+_C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge.channels_last = (
+    True
+)
 _C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge.trans_keys = (
     "rgb",
     "depth",
     "semantic",
 )
-_C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge.semantic_key = "semantic"
+_C.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge.semantic_key = (
+    "semantic"
+)
 _C.habitat_baselines.rl.policy.obs_transforms.cube2eq = CN()
 _C.habitat_baselines.rl.policy.obs_transforms.cube2eq.height = 256
 _C.habitat_baselines.rl.policy.obs_transforms.cube2eq.width = 512
@@ -162,7 +178,11 @@ _C.habitat_baselines.rl.policy.obs_transforms.cube2fish = CN()
 _C.habitat_baselines.rl.policy.obs_transforms.cube2fish.height = 256
 _C.habitat_baselines.rl.policy.obs_transforms.cube2fish.width = 256
 _C.habitat_baselines.rl.policy.obs_transforms.cube2fish.fov = 180
-_C.habitat_baselines.rl.policy.obs_transforms.cube2fish.params = (0.2, 0.2, 0.2)
+_C.habitat_baselines.rl.policy.obs_transforms.cube2fish.params = (
+    0.2,
+    0.2,
+    0.2,
+)
 _C.habitat_baselines.rl.policy.obs_transforms.cube2fish.sensor_uuids = [
     "BACK",
     "DOWN",
@@ -238,7 +258,9 @@ _C.habitat_baselines.rl.ddppo.distrib_backend = "GLOO"
 _C.habitat_baselines.rl.ddppo.rnn_type = "GRU"
 _C.habitat_baselines.rl.ddppo.num_recurrent_layers = 1
 _C.habitat_baselines.rl.ddppo.backbone = "resnet18"
-_C.habitat_baselines.rl.ddppo.pretrained_weights = "data/ddppo-models/gibson-2plus-resnet50.pth"
+_C.habitat_baselines.rl.ddppo.pretrained_weights = (
+    "data/ddppo-models/gibson-2plus-resnet50.pth"
+)
 # Loads pretrained weights
 _C.habitat_baselines.rl.ddppo.pretrained = False
 # Loads just the visual encoder backbone weights
@@ -253,7 +275,9 @@ _C.habitat_baselines.rl.ddppo.force_distributed = False
 # orbslam2 BASELINE
 # -----------------------------------------------------------------------------
 _C.habitat_baselines.orbslam2 = CN()
-_C.habitat_baselines.orbslam2.slam_vocab_path = "habitat_baselines/slambased/data/ORBvoc.txt"
+_C.habitat_baselines.orbslam2.slam_vocab_path = (
+    "habitat_baselines/slambased/data/ORBvoc.txt"
+)
 _C.habitat_baselines.orbslam2.slam_settings_path = (
     "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
 )
@@ -263,8 +287,12 @@ _C.habitat_baselines.orbslam2.camera_height = (
     get_task_config().habitat.simulator.depth_sensor.position[1]
 )
 _C.habitat_baselines.orbslam2.beta = 100
-_C.habitat_baselines.orbslam2.h_obstacle_min = 0.3 * _C.habitat_baselines.orbslam2.camera_height
-_C.habitat_baselines.orbslam2.h_obstacle_max = 1.0 * _C.habitat_baselines.orbslam2.camera_height
+_C.habitat_baselines.orbslam2.h_obstacle_min = (
+    0.3 * _C.habitat_baselines.orbslam2.camera_height
+)
+_C.habitat_baselines.orbslam2.h_obstacle_max = (
+    1.0 * _C.habitat_baselines.orbslam2.camera_height
+)
 _C.habitat_baselines.orbslam2.d_obstacle_min = 0.1
 _C.habitat_baselines.orbslam2.d_obstacle_max = 4.0
 _C.habitat_baselines.orbslam2.preprocess_map = True

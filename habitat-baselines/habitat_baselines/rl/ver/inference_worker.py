@@ -75,7 +75,9 @@ class InferenceWorkerProcess(ProcessBase):
     def __attrs_post_init__(self):
         if self.device.type == "cuda":
             torch.cuda.set_device(self.device)
-        self._overlapped = self.config.habitat_baselines.rl.ver.overlap_rollouts_and_learn
+        self._overlapped = (
+            self.config.habitat_baselines.rl.ver.overlap_rollouts_and_learn
+        )
         with inference_mode():
             self.actor_critic = baseline_registry.get_policy(
                 self.policy_name
@@ -109,7 +111,9 @@ class InferenceWorkerProcess(ProcessBase):
 
         self.min_wait_time = 0.01
         self.obs_transforms = get_active_obs_transforms(self.config)
-        self._variable_experience = self.config.habitat_baselines.rl.ver.variable_experience
+        self._variable_experience = (
+            self.config.habitat_baselines.rl.ver.variable_experience
+        )
 
         torch.backends.cudnn.enabled = True
         torch.backends.cudnn.benchmark = False

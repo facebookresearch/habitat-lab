@@ -53,13 +53,18 @@ class EQADataset(wds.Dataset):
 
             self.eval_save_results = config.habitat_baselines.eval_save_results
 
-            if self.config.DATASET.SPLIT == config.habitat_baselines.eval.SPLIT:
+            if (
+                self.config.DATASET.SPLIT
+                == config.habitat_baselines.eval.SPLIT
+            ):
                 self.mode = "val"
             else:
                 self.mode = "train"
 
-            self.frame_dataset_path = config.habitat_baselines.frame_dataset_path.format(
-                split=self.mode
+            self.frame_dataset_path = (
+                config.habitat_baselines.frame_dataset_path.format(
+                    split=self.mode
+                )
             )
 
             # [TODO] can be done in mp3d_eqa_dataset when loading

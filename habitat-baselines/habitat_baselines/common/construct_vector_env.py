@@ -77,7 +77,9 @@ def construct_envs(
             config.habitat_baselines.simulator_gpu_id
         )
 
-        task_config.simulator.agent_0.sensors = config.habitat_baselines.sensors
+        task_config.simulator.agent_0.sensors = (
+            config.habitat_baselines.sensors
+        )
 
         proc_config.freeze()
         configs.append(proc_config)

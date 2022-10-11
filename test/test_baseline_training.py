@@ -113,7 +113,10 @@ def test_trainers(config_path, num_updates, trainer_name):
     torch.manual_seed(config.habitat.seed)
     torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.habitat_baselines.force_torch_single_threaded and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
     assert config.habitat_baselines.trainer_name in (
@@ -121,8 +124,12 @@ def test_trainers(config_path, num_updates, trainer_name):
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.habitat_baselines.trainer_name)
-    assert trainer_init is not None, f"{config.habitat_baselines.trainer_name} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
@@ -184,7 +191,10 @@ def test_trainers_gym_registry(
     torch.manual_seed(config.habitat.seed)
     torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.habitat_baselines.force_torch_single_threaded and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
     assert config.habitat_baselines.trainer_name in (
@@ -192,8 +202,12 @@ def test_trainers_gym_registry(
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.habitat_baselines.trainer_name)
-    assert trainer_init is not None, f"{config.habitat_baselines.trainer_name} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
@@ -247,7 +261,10 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
     torch.manual_seed(config.habitat.seed)
     torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.habitat_baselines.force_torch_single_threaded and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
     assert config.habitat_baselines.trainer_name in (
@@ -255,8 +272,12 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.habitat_baselines.trainer_name)
-    assert trainer_init is not None, f"{config.habitat_baselines.trainer_name} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train

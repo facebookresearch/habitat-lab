@@ -225,7 +225,10 @@ class ReportWorkerProcess(ProcessBase):
             for k, v in preemption_decider_report.items():
                 writer.add_scalar(f"preemption_decider/{k}", v, n_steps)
 
-        if self.n_update_reports % self.config.habitat_baselines.log_interval == 0:
+        if (
+            self.n_update_reports % self.config.habitat_baselines.log_interval
+            == 0
+        ):
             if rank0_only():
                 logger.info(
                     "update: {}\tfps: {:.1f}\twindow fps: {:.1f}\tframes: {:d}".format(

@@ -130,7 +130,9 @@ class PPOTrainer(BaseRLTrainer):
         """
         logger.add_filehandler(self.config.habitat_baselines.log_file)
 
-        policy = baseline_registry.get_policy(self.config.habitat_baselines.rl.policy.name)
+        policy = baseline_registry.get_policy(
+            self.config.habitat_baselines.rl.policy.name
+        )
         observation_space = self.obs_space
         self.obs_transforms = get_active_obs_transforms(self.config)
         observation_space = apply_obs_transforms_obs_space(
@@ -151,7 +153,8 @@ class PPOTrainer(BaseRLTrainer):
             or self.config.habitat_baselines.rl.ddppo.pretrained
         ):
             pretrained_state = torch.load(
-                self.config.habitat_baselines.rl.ddppo.pretrained_weights, map_location="cpu"
+                self.config.habitat_baselines.rl.ddppo.pretrained_weights,
+                map_location="cpu",
             )
 
         if self.config.habitat_baselines.rl.ddppo.pretrained:
@@ -222,7 +225,8 @@ class PPOTrainer(BaseRLTrainer):
             self.config.habitat_baselines.simulator_gpu_id = local_rank
             # Multiply by the number of simulators to make sure they also get unique seeds
             self.config.habitat.seed += (
-                torch.distributed.get_rank() * self.config.habitat_baselines.num_environments
+                torch.distributed.get_rank()
+                * self.config.habitat_baselines.num_environments
             )
             self.config.freeze()
 
@@ -258,12 +262,16 @@ class PPOTrainer(BaseRLTrainer):
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
-            self.device = torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
+            self.device = torch.device(
+                "cuda", self.config.habitat_baselines.torch_gpu_id
+            )
             torch.cuda.set_device(self.device)
         else:
             self.device = torch.device("cpu")
 
-        if rank0_only() and not os.path.isdir(self.config.habitat_baselines.checkpoint_folder):
+        if rank0_only() and not os.path.isdir(
+            self.config.habitat_baselines.checkpoint_folder
+        ):
             os.makedirs(self.config.habitat_baselines.checkpoint_folder)
 
         self._setup_actor_critic_agent(ppo_cfg)
@@ -355,11 +363,16 @@ class PPOTrainer(BaseRLTrainer):
             checkpoint["extra_state"] = extra_state
 
         torch.save(
-            checkpoint, os.path.join(self.config.habitat_baselines.checkpoint_folder, file_name)
+            checkpoint,
+            os.path.join(
+                self.config.habitat_baselines.checkpoint_folder, file_name
+            ),
         )
         torch.save(
             checkpoint,
-            os.path.join(self.config.habitat_baselines.checkpoint_folder, "latest.pth"),
+            os.path.join(
+                self.config.habitat_baselines.checkpoint_folder, "latest.pth"
+            ),
         )
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
@@ -654,7 +667,10 @@ class PPOTrainer(BaseRLTrainer):
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
 
         # log stats
-        if self.num_updates_done % self.config.habitat_baselines.log_interval == 0:
+        if (
+            self.num_updates_done % self.config.habitat_baselines.log_interval
+            == 0
+        ):
             logger.info(
                 "update: {}\tfps: {:.3f}\t".format(
                     self.num_updates_done,
@@ -690,9 +706,11 @@ class PPOTrainer(BaseRLTrainer):
         # worker detects it will be a straggler, it preempts itself!
         return (
             rollout_step
-            >= self.config.habitat_baselines.rl.ppo.num_steps * self.SHORT_ROLLOUT_THRESHOLD
+            >= self.config.habitat_baselines.rl.ppo.num_steps
+            * self.SHORT_ROLLOUT_THRESHOLD
         ) and int(self.num_rollouts_done_store.get("num_done")) >= (
-            self.config.habitat_baselines.rl.ddppo.sync_frac * torch.distributed.get_world_size()
+            self.config.habitat_baselines.rl.ddppo.sync_frac
+            * torch.distributed.get_world_size()
         )
 
     @profiling_wrapper.RangeContext("train")
@@ -977,7 +995,9 @@ class PPOTrainer(BaseRLTrainer):
         if len(self.config.habitat_baselines.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
-        number_of_eval_episodes = self.config.habitat_baselines.test_episode_count
+        number_of_eval_episodes = (
+            self.config.habitat_baselines.test_episode_count
+        )
         evals_per_ep = self.config.habitat_baselines.eval.evals_per_ep
         if number_of_eval_episodes == -1:
             number_of_eval_episodes = sum(self.envs.number_of_episodes)

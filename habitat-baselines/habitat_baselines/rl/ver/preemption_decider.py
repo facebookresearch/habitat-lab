@@ -137,7 +137,9 @@ class PreemptionDeciderProcess(ProcessBase):
         # The maximum number of steps we can collect from 1 env. This
         # is rollout length + 1 times the maximum difference in
         # env speed. We also have an additional scaling factor
-        max_possible_steps = (self.config.habitat_baselines.rl.ppo.num_steps + 1) * (
+        max_possible_steps = (
+            self.config.habitat_baselines.rl.ppo.num_steps + 1
+        ) * (
             self._ver_extra_steps_scaling
             * np.max(all_step_averages)
             / np.min(all_step_averages)
@@ -330,7 +332,9 @@ class PreemptionDeciderProcess(ProcessBase):
         self.response_queue.put(None)
 
         self.step_averages = [
-            WindowedRunningMean(5 * self.config.habitat_baselines.rl.ppo.num_steps)
+            WindowedRunningMean(
+                5 * self.config.habitat_baselines.rl.ppo.num_steps
+            )
             for _ in range(self.config.habitat_baselines.num_environments)
         ]
         self.last_step_times = np.zeros(

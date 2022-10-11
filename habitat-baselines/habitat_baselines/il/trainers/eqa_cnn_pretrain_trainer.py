@@ -48,7 +48,9 @@ class EQACNNPretrainTrainer(BaseILTrainer):
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for s_type in ["rgb", "seg", "depth"]:
-            dir_name = self.config.habitat_baselines.results_dir.format(split="val", type=s_type)
+            dir_name = self.config.habitat_baselines.results_dir.format(
+                split="val", type=s_type
+            )
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
 
@@ -114,9 +116,13 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         with TensorboardWriter(
-            config.habitat_baselines.tensorboard_dir, flush_secs=self.flush_secs
+            config.habitat_baselines.tensorboard_dir,
+            flush_secs=self.flush_secs,
         ) as writer:
-            while epoch <= config.habitat_baselines.il.eqa_cnn_pretrain.max_epochs:
+            while (
+                epoch
+                <= config.habitat_baselines.il.eqa_cnn_pretrain.max_epochs
+            ):
                 start_time = time.time()
                 avg_loss = 0.0
 
@@ -256,7 +262,8 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
                 if (
                     config.habitat_baselines.eval_save_results
-                    and t % config.habitat_baselines.eval_save_results_interval == 0
+                    and t % config.habitat_baselines.eval_save_results_interval
+                    == 0
                 ):
 
                     result_id = "ckpt_{}_{}".format(

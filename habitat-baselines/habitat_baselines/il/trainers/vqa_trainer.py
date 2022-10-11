@@ -44,7 +44,9 @@ class VQATrainer(BaseILTrainer):
 
     def _make_results_dir(self):
         r"""Makes directory for saving VQA eval results."""
-        dir_name = self.config.habitat_baselines.results_dir.format(split="val")
+        dir_name = self.config.habitat_baselines.results_dir.format(
+            split="val"
+        )
         os.makedirs(dir_name, exist_ok=True)
 
     def _save_vqa_results(
@@ -160,7 +162,9 @@ class VQATrainer(BaseILTrainer):
                 "mean_rank",
                 "mean_reciprocal_rank",
             ],
-            log_json=os.path.join(config.habitat_baselines.output_log_dir, "train.json"),
+            log_json=os.path.join(
+                config.habitat_baselines.output_log_dir, "train.json"
+            ),
         )
 
         t, epoch = 0, 1
@@ -177,7 +181,8 @@ class VQATrainer(BaseILTrainer):
             model.cnn.eval()
 
         with TensorboardWriter(
-            config.habitat_baselines.tensorboard_dir, flush_secs=self.flush_secs
+            config.habitat_baselines.tensorboard_dir,
+            flush_secs=self.flush_secs,
         ) as writer:
             while epoch <= config.habitat_baselines.il.vqa.max_epochs:
                 start_time = time.time()
@@ -230,7 +235,8 @@ class VQATrainer(BaseILTrainer):
                 # Dataloader length for IterableDataset doesn't take into
                 # account batch size for Pytorch v < 1.6.0
                 num_batches = math.ceil(
-                    len(vqa_dataset) / config.habitat_baselines.il.vqa.batch_size
+                    len(vqa_dataset)
+                    / config.habitat_baselines.il.vqa.batch_size
                 )
 
                 avg_loss /= num_batches
@@ -343,7 +349,9 @@ class VQATrainer(BaseILTrainer):
                 "mean_rank",
                 "mean_reciprocal_rank",
             ],
-            log_json=os.path.join(config.habitat_baselines.output_log_dir, "eval.json"),
+            log_json=os.path.join(
+                config.habitat_baselines.output_log_dir, "eval.json"
+            ),
         )
         with torch.no_grad():
             for batch in eval_loader:
@@ -380,7 +388,8 @@ class VQATrainer(BaseILTrainer):
 
                 if (
                     config.habitat_baselines.eval_save_results
-                    and t % config.habitat_baselines.eval_save_results_interval == 0
+                    and t % config.habitat_baselines.eval_save_results_interval
+                    == 0
                 ):
 
                     self._save_vqa_results(
@@ -394,7 +403,9 @@ class VQATrainer(BaseILTrainer):
                         ans_vocab_dict,
                     )
 
-        num_batches = math.ceil(len(vqa_dataset) / config.habitat_baselines.il.vqa.batch_size)
+        num_batches = math.ceil(
+            len(vqa_dataset) / config.habitat_baselines.il.vqa.batch_size
+        )
 
         avg_loss /= num_batches
         avg_accuracy /= num_batches

@@ -62,8 +62,8 @@ class NavDataset(wds.Dataset):
         else:
             self.mode = "train"
 
-        self.frame_dataset_path = config.habitat_baselines.frame_dataset_path.format(
-            split=self.mode
+        self.frame_dataset_path = (
+            config.habitat_baselines.frame_dataset_path.format(split=self.mode)
         )
         self.calc_max_length()
         self.restructure_ans_vocab()

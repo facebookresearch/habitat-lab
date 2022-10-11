@@ -56,7 +56,9 @@ class BaseILTrainer(BaseTrainer):
 
     def _make_results_dir(self) -> None:
         r"""Makes directory for saving eval results."""
-        dir_name = self.config.habitat_baselines.results_dir.format(split="val")
+        dir_name = self.config.habitat_baselines.results_dir.format(
+            split="val"
+        )
         os.makedirs(dir_name, exist_ok=True)
 
     def train(self) -> None:
@@ -92,7 +94,10 @@ class BaseILTrainer(BaseTrainer):
             None
         """
         torch.save(
-            state_dict, os.path.join(self.config.habitat_baselines.checkpoint_folder, file_name)
+            state_dict,
+            os.path.join(
+                self.config.habitat_baselines.checkpoint_folder, file_name
+            ),
         )
 
     def load_checkpoint(self, checkpoint_path, *args, **kwargs) -> Dict:

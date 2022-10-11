@@ -304,14 +304,23 @@ def test_eval_config():
 
     ckpt_cfg = get_config(None, ckpt_opts)
     assert ckpt_cfg.habitat_baselines.video_option == []
-    assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == ["habitat_baselines.video_option", "[]"]
+    assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == [
+        "habitat_baselines.video_option",
+        "[]",
+    ]
 
     eval_cfg = get_config(None, eval_opts)
     assert eval_cfg.habitat_baselines.video_option == ["disk"]
-    assert eval_cfg.habitat_baselines.cmd_trailing_opts == ["habitat_baselines.video_option", "['disk']"]
+    assert eval_cfg.habitat_baselines.cmd_trailing_opts == [
+        "habitat_baselines.video_option",
+        "['disk']",
+    ]
 
     trainer = BaseRLTrainer(get_config())
-    assert trainer.config.habitat_baselines.video_option == ["disk", "tensorboard"]
+    assert trainer.config.habitat_baselines.video_option == [
+        "disk",
+        "tensorboard",
+    ]
     returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
     assert returned_config.habitat_baselines.video_option == []
 

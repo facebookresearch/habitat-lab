@@ -87,7 +87,9 @@ class VERTrainer(PPOTrainer):
         torch.manual_seed(self.config.habitat.seed)
 
         self.mp_ctx = torch.multiprocessing.get_context("forkserver")
-        self.queues = WorkerQueues(self.config.habitat_baselines.num_environments)
+        self.queues = WorkerQueues(
+            self.config.habitat_baselines.num_environments
+        )
         self.environment_workers = construct_environment_workers(
             self.config,
             self.mp_ctx,
@@ -191,12 +193,16 @@ class VERTrainer(PPOTrainer):
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
-            self.device = torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
+            self.device = torch.device(
+                "cuda", self.config.habitat_baselines.torch_gpu_id
+            )
             torch.cuda.set_device(self.device)
         else:
             self.device = torch.device("cpu")
 
-        if rank0_only() and not os.path.exists(self.config.habitat_baselines.checkpoint_folder):
+        if rank0_only() and not os.path.exists(
+            self.config.habitat_baselines.checkpoint_folder
+        ):
             os.makedirs(self.config.habitat_baselines.checkpoint_folder)
 
         actor_obs_space = init_reports[0]["obs_space"]

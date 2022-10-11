@@ -19,7 +19,9 @@ except ImportError:
 
 def get_writer(config, **kwargs):
     if config.habitat_baselines.writer_type == "tb":
-        return TensorboardWriter(config.habitat_baselines.tensorboard_dir, **kwargs)
+        return TensorboardWriter(
+            config.habitat_baselines.tensorboard_dir, **kwargs
+        )
     elif config.habitat_baselines.writer_type == "wb":
         return WeightsAndBiasesWriter(config)
     else:
