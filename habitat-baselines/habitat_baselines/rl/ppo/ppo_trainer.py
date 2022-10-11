@@ -19,6 +19,7 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
+from habitat.config import read_write
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
@@ -220,15 +221,14 @@ class PPOTrainer(BaseRLTrainer):
                     )
                 )
 
-            self.config.defrost()
-            self.config.habitat_baselines.torch_gpu_id = local_rank
-            self.config.habitat_baselines.simulator_gpu_id = local_rank
-            # Multiply by the number of simulators to make sure they also get unique seeds
-            self.config.habitat.seed += (
-                torch.distributed.get_rank()
-                * self.config.habitat_baselines.num_environments
-            )
-            self.config.freeze()
+            with read_write(self.config):
+                self.config.habitat_baselines.torch_gpu_id = local_rank
+                self.config.habitat_baselines.simulator_gpu_id = local_rank
+                # Multiply by the number of simulators to make sure they also get unique seeds
+                self.config.habitat.seed += (
+                    torch.distributed.get_rank()
+                    * self.config.habitat_baselines.num_environments
+                )
 
             random.seed(self.config.habitat.seed)
             np.random.seed(self.config.habitat.seed)
@@ -911,29 +911,26 @@ class PPOTrainer(BaseRLTrainer):
 
         ppo_cfg = config.habitat_baselines.rl.ppo
 
-        config.defrost()
-        config.habitat.dataset.split = config.habitat_baselines.eval.split
-        config.freeze()
+        with read_write(config):
+            config.habitat.dataset.split = config.habitat_baselines.eval.split
 
         if (
             len(self.config.habitat_baselines.video_option) > 0
             and self.config.habitat_baselines.video_render_top_down
         ):
-            config.defrost()
-            config.habitat.task.measurements.append("top_down_map")
-            config.habitat.task.measurements.append("collisions")
-            config.freeze()
+            with read_write(config):
+                config.habitat.task.measurements.append("top_down_map")
+                config.habitat.task.measurements.append("collisions")
 
         if (
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.video_option) > 0
         ):
-            config.defrost()
-            for render_view in config.habitat_baselines.video_render_views:
-                uuid = config.habitat.simulator[render_view].uuid
-                config.habitat.gym.obs_keys.append(uuid)
-                config.habitat_baselines.sensors.append(render_view)
-            config.freeze()
+            with read_write(config):
+                for render_view in config.habitat_baselines.video_render_views:
+                    uuid = config.habitat.simulator[render_view].uuid
+                    config.habitat.gym.obs_keys.append(uuid)
+                    config.habitat_baselines.sensors.append(render_view)
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {config}")

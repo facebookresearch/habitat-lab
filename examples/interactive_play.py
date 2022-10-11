@@ -582,31 +582,38 @@ if __name__ == "__main__":
         )
 
     config = habitat.get_config(args.cfg, args.opts)
-    config.defrost()
-    if not args.same_task:
-        config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
-        config.habitat.simulator.third_rgb_sensor.height = args.play_cam_res
-        config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
-        config.habitat.simulator.debug_render = True
-        config.habitat.task.composite_success.must_call_stop = False
-        config.habitat.task.rearrange_nav_to_obj_success.must_call_stop = False
-        config.habitat.task.force_terminate.max_accum_force = -1.0
-        config.habitat.task.force_terminate.max_instant_force = -1.0
-    if args.gfx:
-        config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = True
-        config.habitat.task.measurements.append("gfx_replay_measure")
-    if args.never_end:
-        config.habitat.environment.max_episode_steps = 0
-    if args.add_ik:
-        if "arm_action" not in config.habitat.task.actions:
-            raise ValueError(
-                "Action space does not have any arm control so incompatible with `--add-ik` option"
+    with habitat.config.read_write(config):
+        if not args.same_task:
+            config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
+            config.habitat.simulator.third_rgb_sensor.height = (
+                args.play_cam_res
             )
-        config.habitat.task.actions.arm_action.arm_controller = "ArmEEAction"
-        config.habitat.simulator.ik_arm_urdf = (
-            "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
-        )
-    config.freeze()
+            config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
+            config.habitat.simulator.debug_render = True
+            config.habitat.task.composite_success.must_call_stop = False
+            config.habitat.task.rearrange_nav_to_obj_success.must_call_stop = (
+                False
+            )
+            config.habitat.task.force_terminate.max_accum_force = -1.0
+            config.habitat.task.force_terminate.max_instant_force = -1.0
+        if args.gfx:
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
+                True
+            )
+            config.habitat.task.measurements.append("gfx_replay_measure")
+        if args.never_end:
+            config.habitat.environment.max_episode_steps = 0
+        if args.add_ik:
+            if "arm_action" not in config.habitat.task.actions:
+                raise ValueError(
+                    "Action space does not have any arm control so incompatible with `--add-ik` option"
+                )
+            config.habitat.task.actions.arm_action.arm_controller = (
+                "ArmEEAction"
+            )
+            config.habitat.simulator.ik_arm_urdf = (
+                "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+            )
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

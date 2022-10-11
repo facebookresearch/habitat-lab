@@ -180,11 +180,10 @@ if __name__ == "__main__":
     seed = "42"  # @param {type:"string"}
     steps_in_thousands = "10"  # @param {type:"string"}
 
-    config.defrost()
-    config.habitat.seed = int(seed)
-    config.habitat_baselines.total_num_steps = int(steps_in_thousands)
-    config.habitat_baselines.log_interval = 1
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.seed = int(seed)
+        config.habitat_baselines.total_num_steps = int(steps_in_thousands)
+        config.habitat_baselines.log_interval = 1
 
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
@@ -268,9 +267,8 @@ class NewNavigationTask(NavigationTask):
 
 
 if __name__ == "__main__":
-    config.defrost()
-    config.habitat.task.type = "TestNav-v0"
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.type = "TestNav-v0"
 
     try:
         env.close()
@@ -345,14 +343,15 @@ if __name__ == "__main__":
         config_paths="./test/habitat_all_sensors_test.yaml"
     )
 
-    config.defrost()
-    # Now define the config for the sensor
-    config.habitat.task.agent_position_sensor = habitat.Config()
-    # Use the custom name
-    config.habitat.task.agent_position_sensor.type = "agent_position_sensor"
-    # Add the sensor to the list of sensors in use
-    config.habitat.task.sensors.append("agent_position_sensor")
-    config.freeze()
+    with habitat.config.read_write(config):
+        # Now define the config for the sensor
+        config.habitat.task.agent_position_sensor = habitat.Config()
+        # Use the custom name
+        config.habitat.task.agent_position_sensor.type = (
+            "agent_position_sensor"
+        )
+        # Add the sensor to the list of sensors in use
+        config.habitat.task.sensors.append("agent_position_sensor")
 
     try:
         env.close()

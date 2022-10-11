@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from habitat import logger
+from habitat.config import read_write
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -199,9 +200,10 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         """
         config = self.config
 
-        config.defrost()
-        config.habitat.dataset.split = self.config.habitat_baselines.eval.split
-        config.freeze()
+        with read_write(config):
+            config.habitat.dataset.split = (
+                self.config.habitat_baselines.eval.split
+            )
 
         eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(config, mode="val")
 

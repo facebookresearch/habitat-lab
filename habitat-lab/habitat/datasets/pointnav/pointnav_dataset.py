@@ -9,7 +9,7 @@ import json
 import os
 from typing import List, Optional
 
-from habitat.config import Config
+from habitat.config import Config, read_write
 from habitat.core.dataset import ALL_SCENES_MASK, Dataset
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import (
@@ -49,24 +49,24 @@ class PointNavDatasetV1(Dataset):
             )
 
         cfg = config.clone()
-        cfg.defrost()
-        cfg.content_scenes = []
-        dataset = cls(cfg)
-        has_individual_scene_files = os.path.exists(
-            dataset.content_scenes_path.split("{scene}")[0].format(
-                data_path=dataset_dir
-            )
-        )
-        if has_individual_scene_files:
-            return cls._get_scenes_from_folder(
-                content_scenes_path=dataset.content_scenes_path,
-                dataset_dir=dataset_dir,
-            )
-        else:
-            # Load the full dataset, things are not split into separate files
-            cfg.content_scenes = [ALL_SCENES_MASK]
+        with read_write(cfg):
+            cfg.content_scenes = []
             dataset = cls(cfg)
-            return list(map(cls.scene_from_scene_path, dataset.scene_ids))
+            has_individual_scene_files = os.path.exists(
+                dataset.content_scenes_path.split("{scene}")[0].format(
+                    data_path=dataset_dir
+                )
+            )
+            if has_individual_scene_files:
+                return cls._get_scenes_from_folder(
+                    content_scenes_path=dataset.content_scenes_path,
+                    dataset_dir=dataset_dir,
+                )
+            else:
+                # Load the full dataset, things are not split into separate files
+                cfg.content_scenes = [ALL_SCENES_MASK]
+                dataset = cls(cfg)
+                return list(map(cls.scene_from_scene_path, dataset.scene_ids))
 
     @staticmethod
     def _get_scenes_from_folder(

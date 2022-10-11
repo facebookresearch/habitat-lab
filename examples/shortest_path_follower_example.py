@@ -44,9 +44,8 @@ def draw_top_down_map(info, output_size):
 
 def shortest_path_example():
     config = habitat.get_config(config_paths="tasks/pointnav.yaml")
-    config.defrost()
-    config.habitat.task.measurements.append("top_down_map")
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.measurements.append("top_down_map")
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
         if goal_radius is None:

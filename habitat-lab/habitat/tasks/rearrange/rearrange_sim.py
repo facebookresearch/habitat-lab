@@ -13,6 +13,7 @@ import numpy as np
 import numpy.typing as npt
 
 import habitat_sim
+from habitat.config import read_write
 from habitat.config.default import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
@@ -46,20 +47,19 @@ class RearrangeSim(HabitatSim):
 
     def __init__(self, config: Config):
         if len(config.agents) > 1:
-            config.defrost()
-            all_new_sensor_names = []
-            for agent in config.agents:
-                agent_cfg = config[agent]
-                for orig_sensor_name in config.agent_0.sensors:
-                    full_name = f"{agent}_{orig_sensor_name}"
-                    orig_sensor_id = config[orig_sensor_name].uuid
-                    new_sensor_cfg = config[orig_sensor_name].clone()
-                    new_sensor_cfg.uuid = f"{agent}_{orig_sensor_id}"
-                    config[full_name] = new_sensor_cfg
-                    all_new_sensor_names.append(full_name)
+            with read_write(config):
+                all_new_sensor_names = []
+                for agent in config.agents:
+                    agent_cfg = config[agent]
+                    for orig_sensor_name in config.agent_0.sensors:
+                        full_name = f"{agent}_{orig_sensor_name}"
+                        orig_sensor_id = config[orig_sensor_name].uuid
+                        new_sensor_cfg = config[orig_sensor_name].clone()
+                        new_sensor_cfg.uuid = f"{agent}_{orig_sensor_id}"
+                        config[full_name] = new_sensor_cfg
+                        all_new_sensor_names.append(full_name)
 
-            config.agent_0.sensors = all_new_sensor_names
-            config.freeze()
+                config.agent_0.sensors = all_new_sensor_names
         super().__init__(config)
 
         self.first_setup = True

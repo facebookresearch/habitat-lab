@@ -55,13 +55,12 @@ def test_state_sensors():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.sensors = [
-        "heading_sensor",
-        "compass_sensor",
-        "gps_sensor",
-    ]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.sensors = [
+            "heading_sensor",
+            "compass_sensor",
+            "gps_sensor",
+        ]
     with habitat.Env(config=config, dataset=None) as env:
         env.reset()
         random.seed(123)
@@ -98,9 +97,8 @@ def test_tactile():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.sensors = ["proximity_sensor"]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.sensors = ["proximity_sensor"]
     with habitat.Env(config=config, dataset=None) as env:
         env.reset()
         random.seed(1234)
@@ -120,9 +118,8 @@ def test_collisions():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.measurements = ["collisions"]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.measurements = ["collisions"]
     with habitat.Env(config=config, dataset=None) as env:
         env.reset()
 
@@ -160,11 +157,10 @@ def test_pointgoal_sensor():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.sensors = ["pointgoal_sensor"]
-    config.habitat.task.pointgoal_sensor.dimensionality = 3
-    config.habitat.task.pointgoal_sensor.goal_format = "CARTESIAN"
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.sensors = ["pointgoal_sensor"]
+        config.habitat.task.pointgoal_sensor.dimensionality = 3
+        config.habitat.task.pointgoal_sensor.goal_format = "CARTESIAN"
     with habitat.Env(config=config, dataset=None) as env:
 
         # start position is checked for validity for the specific test scene
@@ -200,24 +196,25 @@ def test_pointgoal_with_gps_compass_sensor():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.sensors = [
-        "pointgoal_with_gps_compass_sensor",
-        "compass_sensor",
-        "gps_sensor",
-        "pointgoal_sensor",
-    ]
-    config.habitat.task.pointgoal_with_gps_compass_sensor.dimensionality = 3
-    config.habitat.task.pointgoal_with_gps_compass_sensor.goal_format = (
-        "CARTESIAN"
-    )
+    with habitat.config.read_write(config):
+        config.habitat.task.sensors = [
+            "pointgoal_with_gps_compass_sensor",
+            "compass_sensor",
+            "gps_sensor",
+            "pointgoal_sensor",
+        ]
+        config.habitat.task.pointgoal_with_gps_compass_sensor.dimensionality = (
+            3
+        )
+        config.habitat.task.pointgoal_with_gps_compass_sensor.goal_format = (
+            "CARTESIAN"
+        )
 
-    config.habitat.task.pointgoal_sensor.dimensionality = 3
-    config.habitat.task.pointgoal_sensor.goal_format = "CARTESIAN"
+        config.habitat.task.pointgoal_sensor.dimensionality = 3
+        config.habitat.task.pointgoal_sensor.goal_format = "CARTESIAN"
 
-    config.habitat.task.gps_sensor.dimensionality = 3
+        config.habitat.task.gps_sensor.dimensionality = 3
 
-    config.freeze()
     with habitat.Env(config=config, dataset=None) as env:
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
@@ -264,10 +261,9 @@ def test_imagegoal_sensor():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.sensors = ["imagegoal_sensor"]
-    config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.sensors = ["imagegoal_sensor"]
+        config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
     with habitat.Env(config=config, dataset=None) as env:
 
         # start position is checked for validity for the specific test scene
@@ -324,10 +320,12 @@ def test_get_observations_at():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    config.defrost()
-    config.habitat.task.sensors = []
-    config.habitat.simulator.agent_0.sensors = ["rgb_sensor", "depth_sensor"]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.sensors = []
+        config.habitat.simulator.agent_0.sensors = [
+            "rgb_sensor",
+            "depth_sensor",
+        ]
     with habitat.Env(config=config, dataset=None) as env:
 
         # start position is checked for validity for the specific test scene
@@ -434,14 +432,13 @@ def test_smoke_not_pinhole_sensors(sensors, cuda):
     if not habitat_sim.cuda_enabled and cuda:
         pytest.skip("habitat_sim must be built with CUDA to test G2P2GPU")
     config = get_config()
-    config.defrost()
-    config.habitat.simulator.habitat_sim_v0.gpu_gpu = cuda
+    with habitat.config.read_write(config):
+        config.habitat.simulator.habitat_sim_v0.gpu_gpu = cuda
 
-    config.habitat.simulator.scene = (
-        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
-    )
-    config.habitat.simulator.agent_0.sensors = sensors
-    config.freeze()
+        config.habitat.simulator.scene = (
+            "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+        )
+        config.habitat.simulator.agent_0.sensors = sensors
     smoke_test_sensor(config)
 
 
@@ -455,14 +452,15 @@ def test_smoke_pinhole_sensors(sensor, sensor_subtype, cuda):
     if not habitat_sim.cuda_enabled and cuda:
         pytest.skip("habitat_sim must be built with CUDA")
     config = get_config()
-    config.defrost()
-    config.habitat.simulator.habitat_sim_v0.gpu_gpu = cuda
-    config.habitat.simulator.scene = (
-        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
-    )
-    config.habitat.simulator.agent_0.sensors = [sensor]
-    getattr(config.habitat.simulator, sensor).sensor_subtype = sensor_subtype
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.habitat_sim_v0.gpu_gpu = cuda
+        config.habitat.simulator.scene = (
+            "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+        )
+        config.habitat.simulator.agent_0.sensors = [sensor]
+        getattr(
+            config.habitat.simulator, sensor
+        ).sensor_subtype = sensor_subtype
     smoke_test_sensor(config)
 
 
@@ -471,12 +469,14 @@ def test_noise_models_rgbd():
     N_STEPS = 100
 
     config = get_config()
-    config.defrost()
-    config.habitat.simulator.scene = (
-        "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
-    )
-    config.habitat.simulator.agent_0.sensors = ["rgb_sensor", "depth_sensor"]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.scene = (
+            "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
+        )
+        config.habitat.simulator.agent_0.sensors = [
+            "rgb_sensor",
+            "depth_sensor",
+        ]
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -510,24 +510,24 @@ def test_noise_models_rgbd():
             no_noise_obs.append(env.step(action))
             no_noise_states.append(env.sim.get_agent_state())
 
-    config.defrost()
+    with habitat.config.read_write(config):
 
-    config.habitat.simulator.rgb_sensor.NOISE_MODEL = "GaussianNoiseModel"
-    config.habitat.simulator.rgb_sensor.NOISE_MODEL_KWARGS = habitat.Config()
-    config.habitat.simulator.rgb_sensor.NOISE_MODEL_KWARGS.INTENSITY_CONSTANT = (
-        0.5
-    )
-    config.habitat.simulator.depth_sensor.NOISE_MODEL = (
-        "RedwoodDepthNoiseModel"
-    )
+        config.habitat.simulator.rgb_sensor.NOISE_MODEL = "GaussianNoiseModel"
+        config.habitat.simulator.rgb_sensor.NOISE_MODEL_KWARGS = (
+            habitat.Config()
+        )
+        config.habitat.simulator.rgb_sensor.NOISE_MODEL_KWARGS.INTENSITY_CONSTANT = (
+            0.5
+        )
+        config.habitat.simulator.depth_sensor.NOISE_MODEL = (
+            "RedwoodDepthNoiseModel"
+        )
 
-    config.habitat.simulator.action_space_config = "pyrobotnoisy"
-    config.habitat.simulator.NOISE_MODEL = habitat.Config()
-    config.habitat.simulator.NOISE_MODEL.robot = "LoCoBot"
-    config.habitat.simulator.NOISE_MODEL.CONTROLLER = "Proportional"
-    config.habitat.simulator.NOISE_MODEL.NOISE_MULTIPLIER = 0.5
-
-    config.freeze()
+        config.habitat.simulator.action_space_config = "pyrobotnoisy"
+        config.habitat.simulator.NOISE_MODEL = habitat.Config()
+        config.habitat.simulator.NOISE_MODEL.robot = "LoCoBot"
+        config.habitat.simulator.NOISE_MODEL.CONTROLLER = "Proportional"
+        config.habitat.simulator.NOISE_MODEL.NOISE_MULTIPLIER = 0.5
 
     with habitat.Env(config=config, dataset=None) as env:
 

@@ -69,12 +69,12 @@ import argparse
 from typing import List, Optional, Union
 
 _C = habitat.get_config()
-_C.defrost()
-# Add new parameters to the config
-_C.habitat.task.episode_info = habitat.Config()
-_C.habitat.task.episode_info.type = "EpisodeInfo"
-_C.habitat.task.episode_info.VALUE = 5
-_C.habitat.task.measurements.append("episode_info")
+with habitat.config.read_write(_C):
+    # Add new parameters to the config
+    _C.habitat.task.episode_info = habitat.Config()
+    _C.habitat.task.episode_info.type = "EpisodeInfo"
+    _C.habitat.task.episode_info.VALUE = 5
+    _C.habitat.task.measurements.append("episode_info")
 
 # New function returning extended Habitat config that should be used instead
 # of habitat.get_config()
@@ -121,5 +121,6 @@ def main():
 ```"""
 
 from habitat.config.default import Config, get_config
+from habitat.config.read_write import read_write
 
-__all__ = ["Config", "get_config"]
+__all__ = ["Config", "get_config", "read_write"]

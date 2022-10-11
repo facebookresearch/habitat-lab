@@ -14,6 +14,7 @@ import attr
 import numpy as np
 
 from habitat import Config, RLEnv, logger, make_dataset
+from habitat.config import read_write
 from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.utils.gym_definitions import make_gym_from_config
@@ -304,20 +305,20 @@ def _construct_environment_workers_impl(
 
 def _make_proc_config(config, rank, scenes=None, scene_splits=None):
     proc_config = config.clone()
-    proc_config.defrost()
+    with read_write(proc_config):
+        task_config = proc_config.habitat
+        task_config.seed = task_config.seed + rank
+        if scenes is not None and len(scenes) > 0:
+            task_config.dataset.content_scenes = scene_splits[rank]
 
-    task_config = proc_config.habitat
-    task_config.seed = task_config.seed + rank
-    if scenes is not None and len(scenes) > 0:
-        task_config.dataset.content_scenes = scene_splits[rank]
+        task_config.simulator.habitat_sim_v0.gpu_device_id = (
+            config.habitat_baselines.simulator_gpu_id
+        )
 
-    task_config.simulator.habitat_sim_v0.gpu_device_id = (
-        config.habitat_baselines.simulator_gpu_id
-    )
+        task_config.simulator.agent_0.sensors = (
+            config.habitat_baselines.sensors
+        )
 
-    task_config.simulator.agent_0.sensors = config.habitat_baselines.sensors
-
-    proc_config.freeze()
     return proc_config
 
 
