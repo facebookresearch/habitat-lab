@@ -353,7 +353,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     rl: RLConfig = RLConfig()
 
     orbslam2: ORBSLAMConfig = ORBSLAMConfig()
-    profiling = ProfilingConfig()
+    profiling: ProfilingConfig = ProfilingConfig()
 
 
 cs = ConfigStore.instance()
