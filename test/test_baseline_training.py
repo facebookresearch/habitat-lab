@@ -169,7 +169,7 @@ def test_trainers_gym_registry(
     config = get_config(
         config_path,
         [
-            "num_updates",
+            "habitat_baselines.num_updates",
             num_updates,
             "habitat_baselines.total_num_steps",
             -1.0,
@@ -246,7 +246,7 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
     config = get_config(
         config_path,
         [
-            "num_updates",
+            "habitat_baselines.num_updates",
             num_updates,
             "habitat_baselines.total_num_steps",
             -1.0,
