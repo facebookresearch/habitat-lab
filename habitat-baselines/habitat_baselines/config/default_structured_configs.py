@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Any, List, Tuple
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING, II
+from omegaconf import II, MISSING
 
 
 @dataclass
@@ -14,6 +14,7 @@ class HabitatBaselinesBaseConfig:
 @dataclass
 class WBConfig(HabitatBaselinesBaseConfig):
     """Weights and Biases config"""
+
     # The name of the project on W&B.
     project_name: str = ""
     # Logging entity (like your username or team name)
@@ -103,14 +104,16 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
 class Cube2EqConfig(ObsTransformConfig):
     height: int = 256
     width: int = 512
-    sensor_uuids: List[str] = field(default_factory=lambda: [
-        "BACK",
-        "DOWN",
-        "FRONT",
-        "LEFT",
-        "RIGHT",
-        "UP",
-    ])
+    sensor_uuids: List[str] = field(
+        default_factory=lambda: [
+            "BACK",
+            "DOWN",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "UP",
+        ]
+    )
 
 
 @dataclass
@@ -119,28 +122,32 @@ class Cube2FishConfig(ObsTransformConfig):
     width: int = 256
     fov: int = 180
     params: Tuple[float] = (0.2, 0.2, 0.2)
-    sensor_uuids: List[str] = field(default_factory=lambda: [
-        "BACK",
-        "DOWN",
-        "FRONT",
-        "LEFT",
-        "RIGHT",
-        "UP",
-    ])
+    sensor_uuids: List[str] = field(
+        default_factory=lambda: [
+            "BACK",
+            "DOWN",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "UP",
+        ]
+    )
 
 
 @dataclass
 class Eq2CubeConfig(ObsTransformConfig):
     height: int = 256
     width: int = 256
-    sensor_uuids: List[str] = field(default_factory=lambda: [
-        "BACK",
-        "DOWN",
-        "FRONT",
-        "LEFT",
-        "RIGHT",
-        "UP",
-    ])
+    sensor_uuids: List[str] = field(
+        default_factory=lambda: [
+            "BACK",
+            "DOWN",
+            "FRONT",
+            "LEFT",
+            "RIGHT",
+            "UP",
+        ]
+    )
 
 
 @dataclass
@@ -156,6 +163,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class PPOConfig(HabitatBaselinesBaseConfig):
     """Proximal policy optimization config"""
+
     clip_param: float = 0.2
     ppo_epoch: int = 4
     num_mini_batch: int = 2
@@ -186,6 +194,7 @@ class PPOConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class VERConfig(HabitatBaselinesBaseConfig):
     """Variable experience rollout config"""
+
     variable_experience: bool = True
     num_inference_workers: int = 2
     overlap_rollouts_and_learn: bool = False
@@ -199,6 +208,7 @@ class AuxLossConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class CPCALossConfig(AuxLossConfig):
     """Action-conditional contrastive predictive coding loss"""
+
     k: int = 20
     time_subsample: int = 6
     future_subsample: int = 2
@@ -208,6 +218,7 @@ class CPCALossConfig(AuxLossConfig):
 @dataclass
 class DDPPOConfig(HabitatBaselinesBaseConfig):
     """Decentralized distributed proximal policy optimization config"""
+
     sync_frac: float = 0.6
     distrib_backend: str = "GLOO"
     rnn_type: str = "GRU"
@@ -229,6 +240,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
+
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()
@@ -242,9 +254,11 @@ class RLConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class ORBSLAMConfig(HabitatBaselinesBaseConfig):
     """ORB-SLAM config"""
+
     slam_vocab_path: str = "habitat_baselines/slambased/data/ORBvoc.txt"
-    slam_settings_path: str = "habitat_baselines/" \
-                              "slambased/data/mp3d3_small1k.yaml"
+    slam_settings_path: str = (
+        "habitat_baselines/" "slambased/data/mp3d3_small1k.yaml"
+    )
     map_cell_size: float = 0.1
     map_size: int = 40
     # camera_height = (
@@ -288,16 +302,16 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
-    base_task_config_path: str = "habitat-lab/" \
-                                 "habitat/config/tasks/pointnav.yaml"
+    base_task_config_path: str = (
+        "habitat-lab/" "habitat/config/tasks/pointnav.yaml"
+    )
     cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
     simulator_gpu_id: int = 0
     torch_gpu_id: int = 0
-    video_option: List[str] = field(default_factory=lambda: [
-        "disk",
-        "tensorboard"
-    ])
+    video_option: List[str] = field(
+        default_factory=lambda: ["disk", "tensorboard"]
+    )
     video_render_views: List[str] = field(default_factory=list)
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
@@ -310,9 +324,9 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
-    sensors: List[str] = field(default_factory=lambda: [
-        "rgb_sensor", "depth_sensor"
-    ])
+    sensors: List[str] = field(
+        default_factory=lambda: ["rgb_sensor", "depth_sensor"]
+    )
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10
@@ -346,21 +360,19 @@ cs = ConfigStore.instance()
 cs.store(
     group="habitat_baselines",
     name="habitat_baselines_config_base",
-    node=HabitatBaselinesConfig
+    node=HabitatBaselinesConfig,
 )
 cs.store(
-    group="habitat_baselines/rl/policy",
-    name="policy_base",
-    node=PolicyConfig
+    group="habitat_baselines/rl/policy", name="policy_base", node=PolicyConfig
 )
 
 cs.store(
     group="habitat_baselines/rl/policy/obs_transforms/center_cropper",
     name="center_cropper_base",
-    node=CenterCropperConfig
+    node=CenterCropperConfig,
 )
 cs.store(
     group="habitat_baselines/rl/auxiliary_losses/cpca",
     name="cpca_loss_base",
-    node=CPCALossConfig
+    node=CPCALossConfig,
 )

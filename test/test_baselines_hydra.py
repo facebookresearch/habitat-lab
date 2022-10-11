@@ -2,8 +2,7 @@ from hydra import compose, initialize
 from omegaconf import DictConfig, OmegaConf
 
 # NOTE: import required to register structured configs
-# import habitat.config.default_structured_configs
-import habitat_baselines.config.default_structured_configs
+import habitat_baselines.config.default_structured_configs  # noqa: F401
 
 
 def my_app_compose_api() -> DictConfig:
@@ -16,7 +15,7 @@ def my_app_compose_api() -> DictConfig:
             overrides=[
                 "+habitat_baselines=habitat_baselines_config_base",
                 "+habitat_baselines/rl/auxiliary_losses/cpca=cpca_loss_base",
-                "+habitat_baselines/rl/policy/obs_transforms/center_cropper=center_cropper_base"
+                "+habitat_baselines/rl/policy/obs_transforms/center_cropper=center_cropper_base",
             ]
         )
 
