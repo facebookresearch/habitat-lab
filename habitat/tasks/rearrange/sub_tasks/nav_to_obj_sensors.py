@@ -15,8 +15,8 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface
-from habitat.tasks.utils import cartesian_to_polar, get_angle
+from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
+from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "BASE_VELOCITY"
 
@@ -190,6 +190,10 @@ class DistToGoal(Measure):
 class RotDistToGoal(Measure):
     cls_uuid: str = "rot_dist_to_goal"
 
+    def __init__(self, *args, sim, **kwargs):
+        self._sim = sim
+        super().__init__(*args, sim=sim, **kwargs)
+
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return RotDistToGoal.cls_uuid
@@ -201,8 +205,10 @@ class RotDistToGoal(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        forward = np.array([1.0, 0])
-        angle = get_angle(forward, task.nav_goal_pos[[0, 2]])
+        targ = task.nav_goal_pos
+        robot = self._sim.robot
+        T = robot.base_transformation
+        angle = get_angle_to_pos(T.transform_vector(targ))
         self._metric = np.abs(float(angle))
 
 

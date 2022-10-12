@@ -403,7 +403,6 @@ def get_robot_spawns(
     :param all_num_spawn_attemps: The number of sample attempts per distance threshold.
     """
 
-    forward = np.array([1.0, 0])
     state = sim.capture_state()
 
     for num_spawn_attempts, dist_thresh in zip(
@@ -419,11 +418,7 @@ def get_robot_spawns(
 
             rel_targ = targ_pos - start_pos
 
-            rel_targ_2d = rel_targ[[0, 2]]
-            angle_to_obj = get_angle(forward, rel_targ_2d)
-
-            if np.cross(forward, rel_targ_2d) > 0:
-                angle_to_obj *= -1.0
+            angle_to_obj = get_angle_to_pos(rel_targ)
 
             targ_dist = np.linalg.norm((start_pos - targ_pos)[[0, 2]])
 
@@ -461,3 +456,16 @@ def get_robot_spawns(
 
     sim.set_state(state)
     return start_pos, start_rot, True
+
+
+def get_angle_to_pos(rel_pos: np.ndarray) -> float:
+    forward = np.array([1.0, 0, 0])
+    rel_pos = np.array(rel_pos)
+    forward = forward[[0, 2]]
+    rel_pos = rel_pos[[0, 2]]
+
+    heading_angle = get_angle(forward, rel_pos)
+    c = np.cross(forward, rel_pos) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    return heading_angle
