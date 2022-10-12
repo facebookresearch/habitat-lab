@@ -103,18 +103,17 @@ class VERTrainer(PPOTrainer):
             add_signal_handlers()
 
         if self._is_distributed:
-            #  os.environ["TORCH_DISTRIBUTED_DEBUG"] = "DETAIL"
             local_rank, tcp_store = init_distrib_slurm(
                 self.config.rl.ddppo.distrib_backend
             )
             if rank0_only():
                 logger.info(
-                    "Initialized ver+DD-PPO with {} workers".format(
+                    "Initialized VER+DD-PPO with {} workers".format(
                         torch.distributed.get_world_size()
                     )
                 )
         else:
-            logger.info("Initialized ver")
+            logger.info("Initialized VER")
             tcp_store = None
 
         self._last_should_end_val = None
@@ -210,6 +209,7 @@ class VERTrainer(PPOTrainer):
 
         rollouts_obs_space = copy.deepcopy(self.obs_space)
         if self._static_encoder:
+            self._encoder = self.actor_critic.net.visual_encoder
             rollouts_obs_space = spaces.Dict(
                 {
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
