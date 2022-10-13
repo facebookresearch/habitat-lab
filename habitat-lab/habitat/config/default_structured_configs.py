@@ -1093,7 +1093,7 @@ from hydra.core.plugins import Plugins
 from hydra.plugins.search_path_plugin import SearchPathPlugin
 
 
-class DatasetConfigPlugin(SearchPathPlugin):
+class HabitatConfigPlugin(SearchPathPlugin):
     def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
         search_path.append(
             provider="habitat",
