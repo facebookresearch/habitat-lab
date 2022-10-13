@@ -29,6 +29,6 @@ If you use VER or the model-weights in your research, please cite the following 
     @inproceedings{wijmans2022ver,
       title = {{ver}: {S}caling On-Policy RL Leads to the Emergence of Navigation in Embodied Rearrangement},
       author =  {Erik Wijmans and Irfan Essa and Dhruv Batra},
-      booktitle = {arXiv},
+      booktitle = {NeurIPS},
       year =    {2022}
     }
