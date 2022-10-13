@@ -1,7 +1,7 @@
 GYM:
     AUTO_NAME: NavToObj
     OBS_KEYS:
-    - robot_head_depth
+    - robot_head_rgb
     - object_to_agent_gps_compass
     - joint
     - nav_to_skill
@@ -16,7 +16,7 @@ TASK:
     TYPE: NavToObjTask-v0
     MUST_LOOK_AT_TARG: true
     FORCE_REGENERATE: false
-    OBJECT_IN_HAND_SAMPLE_PROB: 0.167
+    OBJECT_IN_HAND_SAMPLE_PROB: 0.35
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: true
     COUNT_OBJ_COLLISIONS: true
@@ -49,8 +49,8 @@ TASK:
         MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: -1.0
-        MAX_INSTANT_FORCE: 10000.0
+        MAX_ACCUM_FORCE: 35_000.0
+        MAX_INSTANT_FORCE: 8_000.0
     ROBOT_COLLS:
         TYPE: RobotCollisions
     OBJECT_TO_GOAL_DISTANCE:

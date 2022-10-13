@@ -1,7 +1,7 @@
 GYM:
     AUTO_NAME: Place
     OBS_KEYS:
-    - robot_head_depth
+    - robot_head_rgb
     - obj_goal_sensor
     - joint
     - is_holding
@@ -18,8 +18,8 @@ TASK:
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     SHOULD_ENFORCE_TARGET_WITHIN_REACH: false
-    BASE_ANGLE_NOISE: 0.15
-    BASE_NOISE: 0.05
+    BASE_ANGLE_NOISE: 0.75
+    BASE_NOISE: 0.25
     FORCE_REGENERATE: false
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: true
@@ -75,7 +75,7 @@ TASK:
         MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: 5000.0
+        MAX_ACCUM_FORCE: 2500.0
     ROBOT_COLLS:
         TYPE: RobotCollisions
     OBJECT_TO_GOAL_DISTANCE:
@@ -99,7 +99,7 @@ TASK:
         FORCE_END_PEN: 10.0
     PLACE_SUCCESS:
         TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.15
+        EE_RESTING_SUCCESS_THRESHOLD: 0.13
     NUM_STEPS:
         TYPE: NumStepsMeasure
     MEASUREMENTS:
@@ -122,9 +122,18 @@ TASK:
             DISABLE_GRIP: false
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: BaseVelAction
+            LIN_SPEED: 3.0
+            ANG_SPEED: 3.0
+            ALLOW_DYN_SLIDE: true
+            ALLOW_BACK: true
+            END_ON_STOP: false
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
-    - ARM_ACTION
-SIMULATOR:
+        - ARM_ACTION
+        - BASE_VELOCITY
     ADDITIONAL_OBJECT_PATHS:
     - data/objects/ycb/configs/
     DEBUG_RENDER: false
@@ -147,6 +156,9 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
+    HEAD_RGB_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     FORWARD_STEP_SIZE: 0.25
