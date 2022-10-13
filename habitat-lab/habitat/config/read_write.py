@@ -10,7 +10,6 @@ from habitat.config.default import Config
 # TODO : Delete this when migration to hydra is complete
 @contextmanager
 def read_write(config: Union[Node, Config]) -> Generator[Node, None, None]:
-    print(">>>>", type(config))
     if isinstance(config, Node):
         prev_state = config._get_node_flag("readonly")
         try:
