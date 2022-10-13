@@ -626,6 +626,12 @@ class PPOTrainer(BaseRLTrainer):
 
         self.pth_time += time.time() - t_update_stats
 
+        num_envs = self.envs.num_envs
+        env_slice = slice(
+            int(buffer_index * num_envs / self._nbuffers),
+            int((buffer_index + 1) * num_envs / self._nbuffers),
+        )
+
         return env_slice.stop - env_slice.start
 
     @profiling_wrapper.RangeContext("rollout step")

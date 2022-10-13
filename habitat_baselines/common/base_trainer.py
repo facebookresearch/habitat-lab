@@ -124,13 +124,18 @@ class BaseTrainer:
                         self.config.EVAL_CKPT_PATH_DIR + "/history_of_success"
                     )
                 prev_ckpt_ind = -1
-                while True:
+                over = False
+                while not over:
                     current_ckpt = None
-                    while current_ckpt is None:
+                    if current_ckpt is None:
                         current_ckpt, ckpt_ind = poll_checkpoint_folder(
                             self.config.EVAL_CKPT_PATH_DIR, prev_ckpt_ind
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
+                    if current_ckpt is None:
+                        over = True
+                        print("No checkpoint found. Exiting...")
+                        break
                     logger.info(f"=======current_ckpt: {current_ckpt}=======")
                     prev_ckpt_ind = ckpt_ind
                     success_counter, aggregated_stats = self._eval_checkpoint(
