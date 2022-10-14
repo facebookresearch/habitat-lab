@@ -257,7 +257,7 @@ class ORBSLAMConfig(HabitatBaselinesBaseConfig):
 
     slam_vocab_path: str = "habitat_baselines/slambased/data/ORBvoc.txt"
     slam_settings_path: str = (
-        "habitat_baselines/" "slambased/data/mp3d3_small1k.yaml"
+        "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
     )
     map_cell_size: float = 0.1
     map_size: int = 40
@@ -303,7 +303,7 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     base_task_config_path: str = (
-        "habitat-lab/" "habitat/config/tasks/pointnav.yaml"
+        "habitat-lab/habitat/config/tasks/pointnav.yaml"
     )
     cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
