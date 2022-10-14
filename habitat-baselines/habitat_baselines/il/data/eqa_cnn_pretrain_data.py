@@ -135,9 +135,9 @@ class EQACNNPretrainDataset(Dataset):
 
     def load_scene(self, scene) -> None:
         self.config.defrost()
-        self.config.SIMULATOR.SCENE = scene
+        self.config.simulator.scene = scene
         self.config.freeze()
-        self.env.sim.reconfigure(self.config.SIMULATOR)
+        self.env.sim.reconfigure(self.config.simulator)
 
     def __len__(self) -> int:
         return self.dataset_length

@@ -57,7 +57,7 @@ class NavDataset(wds.Dataset):
 
         self.eval_save_results = config.habitat_baselines.eval_save_results
 
-        if self.config.DATASET.SPLIT == config.habitat_baselines.eval.SPLIT:
+        if self.config.dataset.split == config.habitat_baselines.eval.split:
             self.mode = "val"
         else:
             self.mode = "train"
@@ -413,9 +413,9 @@ class NavDataset(wds.Dataset):
 
     def load_scene(self, scene: str) -> None:
         self.config.defrost()
-        self.config.SIMULATOR.SCENE = scene
+        self.config.simulator.scene = scene
         self.config.freeze()
-        self.env.sim.reconfigure(self.config.SIMULATOR)
+        self.env.sim.reconfigure(self.config.simulator)
 
     def map_dataset_sample(self, x: Dict) -> Tuple:
         """Mapper function to pre-process webdataset sample, example:
@@ -444,12 +444,12 @@ class NavDataset(wds.Dataset):
             actions = self.episodes[idx].actions
             action_length = self.episodes[idx].action_length
             scene = self.episodes[idx].scene_id
-            if scene != self.config.SIMULATOR.SCENE:
+            if scene != self.config.simulator.scene:
                 logger.info("[ Loading scene - {}]".format(scene))
                 self.config.defrost()
-                self.config.SIMULATOR.SCENE = scene
+                self.config.simulator.scene = scene
                 self.config.freeze()
-                self.env.sim.reconfigure(self.config.SIMULATOR)
+                self.env.sim.reconfigure(self.config.simulator)
 
             goal_pos = self.episodes[idx].goals[0].position
 

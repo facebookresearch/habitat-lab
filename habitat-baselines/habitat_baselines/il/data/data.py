@@ -54,8 +54,8 @@ class EQADataset(wds.Dataset):
             self.eval_save_results = config.habitat_baselines.eval_save_results
 
             if (
-                self.config.DATASET.SPLIT
-                == config.habitat_baselines.eval.SPLIT
+                self.config.dataset.split
+                == config.habitat_baselines.eval.split
             ):
                 self.mode = "val"
             else:
@@ -251,9 +251,9 @@ class EQADataset(wds.Dataset):
 
     def load_scene(self, scene) -> None:
         self.config.defrost()
-        self.config.SIMULATOR.SCENE = scene
+        self.config.simulator.scene = scene
         self.config.freeze()
-        self.env.sim.reconfigure(self.config.SIMULATOR)
+        self.env.sim.reconfigure(self.config.simulator)
 
     def __len__(self) -> int:
         return len(self.episodes)
