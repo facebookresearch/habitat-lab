@@ -28,6 +28,14 @@ For training on sample data please follow steps in the repository README. You sh
 python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type train
 ```
 
+You can reduce training time by changing the trainer from the default implement to [VER](/habitat-baselines/habitat_baselines/rl/ver/README.md) by
+setting `trainer_name` to `"ver"` in either the config or via the command line.
+
+```bash
+python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type train \
+  trainer_name ver
+```
+
 **test**:
 ```bash
 python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type eval

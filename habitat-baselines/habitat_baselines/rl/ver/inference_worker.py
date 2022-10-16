@@ -9,7 +9,7 @@ import queue
 import time
 from multiprocessing import SimpleQueue
 from multiprocessing.context import BaseContext
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 import attr
 import numpy as np
@@ -27,6 +27,7 @@ from habitat_baselines.common.tensor_dict import (
     iterate_dicts_recursively,
 )
 from habitat_baselines.common.windowed_running_mean import WindowedRunningMean
+from habitat_baselines.rl.ddppo.policy.resnet_policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ver.task_enums import (
     EnvironmentWorkerTasks,
@@ -69,6 +70,10 @@ class InferenceWorkerProcess(ProcessBase):
     timer: Timing = attr.Factory(Timing)
     _n_replay_steps: int = 0
     actor_critic: NetPolicy = attr.ib(init=False)
+    visual_encoder: Optional[torch.nn.Module] = attr.ib(
+        init=False, default=None
+    )
+    _static_encoder: bool = attr.ib(init=False, default=False)
     transfer_buffers: NDArrayDict = attr.ib(default=None, init=False)
     incoming_transfer_buffers: NDArrayDict = attr.ib(default=None, init=False)
 
@@ -83,6 +88,9 @@ class InferenceWorkerProcess(ProcessBase):
             self.actor_critic.eval()
             self.actor_critic.aux_loss_modules.clear()
             self.actor_critic.to(device=self.device)
+            if not self.config.rl.ddppo.train_encoder:
+                self._static_encoder = True
+                self.visual_encoder = self.actor_critic.net.visual_encoder
 
         self.transfer_buffers = self._torch_transfer_buffers.numpy()
         self.incoming_transfer_buffers = self.transfer_buffers.slice_keys(
@@ -298,6 +306,10 @@ class InferenceWorkerProcess(ProcessBase):
                 environment_ids
             ]
             prev_actions = self.rollouts.next_prev_actions[environment_ids]
+            if self._static_encoder:
+                obs[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self.visual_encoder(obs)
 
             (
                 values,
