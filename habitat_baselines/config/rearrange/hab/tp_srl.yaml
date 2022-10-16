@@ -105,12 +105,12 @@ RL:
           skill_name: "NavSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
+          OBS_SKILL_INPUTS: ["goal_to_agent_gps_compass"]
           OBS_SKILL_INPUT_DIM: 2
-          LIN_SPEED_STOP: 0.067
-          ANG_SPEED_STOP: 0.067
+          LIN_SPEED_STOP: -1.0
+          ANG_SPEED_STOP: -1.0
           LOAD_CKPT_FILE: "data/models/nav.pth"
-          MAX_SKILL_STEPS: 300
+          MAX_SKILL_STEPS: 400
           FORCE_END_ON_TIMEOUT: False
 
         WAIT_SKILL:

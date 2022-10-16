@@ -50,6 +50,7 @@ class NnSkillPolicy(SkillPolicy):
         self._filtered_action_space = filtered_action_space
         self._ac_start = 0
         self._ac_len = get_num_actions(filtered_action_space)
+        self._did_want_done = torch.zeros(self._batch_size)
 
         for k, space in action_space.items():
             if k not in filtered_action_space.spaces.keys():
@@ -76,8 +77,26 @@ class NnSkillPolicy(SkillPolicy):
 
     def to(self, device):
         super().to(device)
+        self._did_want_done = self._did_want_done.to(device)
         if self._wrap_policy is not None:
             self._wrap_policy.to(device)
+
+    def on_enter(
+        self,
+        skill_arg,
+        batch_idxs,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+    ):
+        super().on_enter(
+            skill_arg,
+            batch_idxs,
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+        )
+        self._did_want_done *= 0.0
 
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         return TensorDict(
@@ -112,6 +131,9 @@ class NnSkillPolicy(SkillPolicy):
         )
         full_action = torch.zeros(prev_actions.shape, device=masks.device)
         full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
+        self._did_want_done[cur_batch_idx] = full_action[
+            cur_batch_idx, self._stop_action_idx
+        ]
         return full_action, rnn_hidden_states
 
     @classmethod

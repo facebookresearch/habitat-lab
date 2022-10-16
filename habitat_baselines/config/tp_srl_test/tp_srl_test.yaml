@@ -54,7 +54,7 @@ RL:
           skill_name: "NavSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          OBS_SKILL_INPUTS: ["object_to_agent_gps_compass"]
+          OBS_SKILL_INPUTS: ["goal_to_agent_gps_compass"]
           OBS_SKILL_INPUT_DIM: 2
           LIN_SPEED_STOP: 0.067
           ANG_SPEED_STOP: 0.067

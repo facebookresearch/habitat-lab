@@ -43,13 +43,14 @@ class NavSkillPolicy(NnSkillPolicy):
         ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
 
         if NavGoalPointGoalSensor.cls_uuid in ret_obs:
-            if self._cur_skill_args[cur_batch_idx].is_target:
-                replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
-            else:
-                replace_sensor = TargetStartGpsCompassSensor.cls_uuid
-            ret_obs[NavGoalPointGoalSensor.cls_uuid] = observations[
-                replace_sensor
-            ]
+            for i in cur_batch_idx:
+                if self._cur_skill_args[cur_batch_idx[i]].is_target:
+                    replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
+                else:
+                    replace_sensor = TargetStartGpsCompassSensor.cls_uuid
+                ret_obs[NavGoalPointGoalSensor.cls_uuid][i] = observations[
+                    replace_sensor
+                ][i]
         return ret_obs
 
     def _get_multi_sensor_index(self, batch_idx):
@@ -58,19 +59,7 @@ class NavSkillPolicy(NnSkillPolicy):
     def _is_skill_done(
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
-        filtered_prev_actions = prev_actions[
-            :, self._ac_start : self._ac_start + self._ac_len
-        ]
-
-        lin_vel, ang_vel = (
-            filtered_prev_actions[:, 0],
-            filtered_prev_actions[:, 1],
-        )
-        should_stop = (
-            torch.abs(lin_vel) < self._config.LIN_SPEED_STOP
-            and torch.abs(ang_vel) < self._config.ANG_SPEED_STOP
-        )
-        return should_stop
+        return (self._did_want_done[batch_idx] > 0.0).to(masks.device)
 
     def _parse_skill_arg(self, skill_arg):
         targ_name, targ_idx = skill_arg[-2].split("|")

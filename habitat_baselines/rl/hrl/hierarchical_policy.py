@@ -150,6 +150,8 @@ class HierarchicalPolicy(Policy):
                 "prev_actions": prev_actions,
                 "masks": masks,
             },
+            # Only decide on skill termination if the episode is active.
+            should_adds=(~masks),
         )
 
         # Check if skills should terminate.
@@ -229,8 +231,11 @@ class HierarchicalPolicy(Policy):
                 masks=batch_dat["masks"],
                 cur_batch_idx=batch_ids,
             )
+
+            # LL skills are not allowed to terminate the overall episode.
             actions[batch_ids] = tmp_actions
             rnn_hidden_states[batch_ids] = tmp_rnn
+        actions[:, self._stop_action_idx] = 0.0
 
         should_terminate = bad_should_terminate | hl_terminate
         if should_terminate.sum() > 0:
