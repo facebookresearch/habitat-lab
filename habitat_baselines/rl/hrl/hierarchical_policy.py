@@ -151,7 +151,7 @@ class HierarchicalPolicy(Policy):
                 "masks": masks,
             },
             # Only decide on skill termination if the episode is active.
-            should_adds=(~masks),
+            should_adds=masks,
         )
 
         # Check if skills should terminate.

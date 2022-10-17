@@ -209,7 +209,6 @@ class RearrangeTask(NavigationTask):
                 grasp_mgr.is_violating_hold_constraint()
                 and self._config.CONSTRAINT_VIOLATION_DROPS_OBJECT
             ):
-                print("CONSTRAINT VIOLATE")
                 grasp_mgr.desnap(True)
 
         return obs
