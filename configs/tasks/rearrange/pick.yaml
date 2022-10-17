@@ -1,7 +1,7 @@
 GYM:
     AUTO_NAME: "Pick"
     #OBS_KEYS: ['robot_head_rgb', 'robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
-    OBS_KEYS: ['robot_head_rgb', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+    OBS_KEYS: ['robot_head_depth', 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 200
 DATASET:
@@ -17,8 +17,8 @@ TASK:
     SHOULD_ENFORCE_TARGET_WITHIN_REACH: False
 
     # In radians
-    BASE_ANGLE_NOISE: 0.15
-    BASE_NOISE: 0.05
+    BASE_ANGLE_NOISE: 0.45
+    BASE_NOISE: 0.15
     FORCE_REGENERATE: False
 
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
@@ -128,7 +128,7 @@ TASK:
             MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
         - ARM_ACTION
-        - BASE_VELOCITY
+        #- BASE_VELOCITY
 
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:

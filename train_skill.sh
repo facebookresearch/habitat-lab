@@ -1,14 +1,15 @@
 #!/bin/bash
 ## SLURM scripts have a specific format. 
 
-#SBATCH --job-name=pick_rgb_only
-#SBATCH --output=../rearrange_trains/pick_rgb_only/slurm.out
-#SBATCH --error=../rearrange_trains/pick_rgb_only/slurm.err
+#SBATCH --job-name=pick_depth_scaled_no_base_mov
+#SBATCH --output=../rearrange_trains/pick_depth_scaled_no_base_mov/slurm.out
+#SBATCH --error=../rearrange_trains/pick_depth_scaled_no_base_mov/slurm.err
 #SBATCH --partition=learnfair
 #SBATCH --nodes=8
-#SBATCH --ntasks-per-node=1
 #SBATCH --gpus-per-node=8
-#SBATCH --cpus-per-task=70
+#SBATCH --ntasks-per-node=4
+#SBATCH --gpus-per-task=2
+#SBATCH --cpus-per-task=17
 #SBATCH --open-mode=append
 #SBATCH --time=24:00:00
 #SBATCH --signal=USR1@60

@@ -3,19 +3,20 @@ TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb"
-VIDEO_DIR: "../rearrange_trains/nav_rgb_only/video_dir"
+TENSORBOARD_DIR: ""
+WRITER_TYPE: "wb"
+VIDEO_DIR: "../rearrange_trains/nav_depth_scaled/video_dir"
 VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 VIDEO_RENDER_VIEWS:
   - "THIRD_RGB_SENSOR"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "../rearrange_trains/nav_rgb_only/checkpoints"
+EVAL_CKPT_PATH_DIR: "../rearrange_trains/nav_depth_scaled/checkpoints"
 NUM_ENVIRONMENTS: 8
 # Visual sensors to include
-SENSORS: ["HEAD_RGB_SENSOR"]
-CHECKPOINT_FOLDER: "../rearrange_trains/nav_rgb_only/checkpoints"
+SENSORS: ["HEAD_DEPTH_SENSOR"]
+CHECKPOINT_FOLDER: "../rearrange_trains/nav_depth_scaled/checkpoints"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 5.0e8
 LOG_INTERVAL: 10
@@ -29,8 +30,8 @@ BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/nav_to_obj.yaml
 
 WB:
   PROJECT_NAME: 'rearrangement_skill_training'
-  RUN_NAME: 'rgb'
-  GROUP: 'nav_ddppo_rearrange'
+  RUN_NAME: 'nav_depth_scaled'
+  GROUP: 'nav_policies'
 
 RL:
   POLICY:
@@ -42,7 +43,7 @@ RL:
   PPO:
     # ppo params
     clip_param: 0.2
-    ppo_epoch: 2
+    ppo_epoch: 3
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.0001
@@ -53,11 +54,11 @@ RL:
     use_gae: True
     gamma: 0.99
     tau: 0.95
-    use_linear_clip_decay: True
+    use_linear_clip_decay: False
     use_linear_lr_decay: True
     reward_window_size: 50
 
-    use_normalized_advantage: True
+    use_normalized_advantage: False
 
     hidden_size: 512
 
@@ -82,6 +83,6 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet18
-    rnn_type: LSTM
-    num_recurrent_layers: 2
+    backbone: resnet50
+    rnn_type: GRU
+    num_recurrent_layers: 3

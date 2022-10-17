@@ -71,7 +71,6 @@ DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
-
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
 

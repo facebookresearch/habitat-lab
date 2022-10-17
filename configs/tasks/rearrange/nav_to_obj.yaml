@@ -1,7 +1,7 @@
 GYM:
     AUTO_NAME: NavToObj
     OBS_KEYS:
-    - robot_head_rgb
+    - robot_head_depth
     - object_to_agent_gps_compass
     - joint
     - nav_to_skill
