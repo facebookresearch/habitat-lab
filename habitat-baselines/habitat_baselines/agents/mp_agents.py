@@ -89,7 +89,7 @@ class ParameterizedAgent(habitat.Agent):
         pass
 
     def _log(self, txt):
-        if self._config.verbose:
+        if self._config.habitat_baselines.verbose:
             print("%s: %s" % (str(self), txt))
 
     def act(self, observations: Observations) -> Dict[str, Any]:
@@ -182,7 +182,7 @@ class ArmTargModule(ParameterizedAgent):
         self._viz_points = []
 
         self._mp = MotionPlanner(self._sim, self._config)
-        self._mp.set_should_render(self._config.MP_RENDER)
+        self._mp.set_should_render(self._config.mp_render)
         self._enter_kwargs = None
 
     @property
@@ -294,7 +294,7 @@ class ArmTargModule(ParameterizedAgent):
         self._clean_viz_points()
 
     def _clean_viz_points(self):
-        if not self._config.verbose:
+        if not self._config.habitat_baselines.verbose:
             return
         rom = self._sim.get_rigid_object_manager()
         for viz_point_name in self._viz_points:
@@ -314,7 +314,7 @@ class ArmTargModule(ParameterizedAgent):
 
     @property
     def adjusted_plan_idx(self) -> bool:
-        return self._plan_idx // self._config.RUN_FREQ
+        return self._plan_idx // self._config.run_freq
 
     @abc.abstractmethod
     def _generate_plan(self, observations, **kwargs) -> np.ndarray:
@@ -336,7 +336,7 @@ class IkMoveArm(ArmTargModule):
             return None
         ee_pos = observations[EEPositionSensor.cls_uuid]
         to_target = self._robot_target - ee_pos
-        to_target = self._config.IK_SPEED_FACTOR * (
+        to_target = self._config.ik_speed_factor * (
             to_target / np.linalg.norm(to_target)
         )
         return to_target
@@ -377,10 +377,10 @@ class SpaManipPick(ArmTargModule):
         self._set_info("execute_ee_dist", 0)
 
         self._mp.set_config(
-            self._config.MP_MARGIN,
-            self._config.MP_OBJ,
+            self._config.mp_margin,
+            self._config.mp_obj,
             self._grasp_thresh,
-            self._config.N_GRASPS,
+            self._config.n_grasps,
             self._config,
         )
         obj_idx = self._sim.scene_obj_ids[obj]
@@ -388,13 +388,13 @@ class SpaManipPick(ArmTargModule):
         self._targ_obj_idx = obj_idx
         self._robo_targ = robo_targ
 
-        if self._config.verbose:
+        if self._config.habitat_baselines.verbose:
             self._add_debug_viz_point(robo_targ.ee_target_pos)
 
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
             robo_targ,
-            timeout=self._config.TIMEOUT,
+            timeout=self._config.timeout,
         )
 
         for k, v in self._mp.get_recent_plan_stats(plan, robo_targ).items():
@@ -414,7 +414,7 @@ class SpaManipPick(ArmTargModule):
         ee_dist_to_obj = np.linalg.norm(obj.translation - cur_ee)
         if (
             ee_dist_to_obj < self._grasp_thresh
-            and ee_dist < self._config.EXEC_EE_THRESH
+            and ee_dist < self._config.exec_ee_thresh
         ):
             self._set_info("execute_failure", 0)
             self._set_info("execute_bad_coll_failure", 0)
@@ -448,10 +448,10 @@ class SpaResetModule(ArmTargModule):
 
     def _generate_plan(self, observations, **kwargs):
         self._mp.set_config(
-            self._config.MP_MARGIN,
-            self._config.MP_OBJ,
+            self._config.mp_margin,
+            self._config.mp_obj,
             self._grasp_thresh,
-            self._config.N_GRASPS,
+            self._config.n_grasps,
             self._config,
             ignore_first=self._ignore_first,
             use_prev=True,
@@ -463,7 +463,7 @@ class SpaResetModule(ArmTargModule):
         plan = self._mp.motion_plan(
             self._sim.robot.arm_joint_pos,
             robo_targ,
-            timeout=self._config.TIMEOUT,
+            timeout=self._config.timeout,
         )
 
         for k, v in self._mp.get_recent_plan_stats(

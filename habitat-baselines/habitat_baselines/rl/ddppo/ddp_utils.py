@@ -22,6 +22,7 @@ from typing import (
 import ifcfg
 import numpy as np
 import torch
+from omegaconf import DictConfig
 from torch import distributed as distrib
 
 from habitat import Config, logger
@@ -69,10 +70,17 @@ def is_slurm_batch_job() -> bool:
 def resume_state_filename(config: Config, filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
-    if is_slurm_job() and config.rl.preemption.append_slurm_job_id:
+    if (
+        is_slurm_job()
+        and config.habitat_baselines.rl.preemption.append_slurm_job_id
+    ):
         fname += "-{}".format(SLURM_JOBID)
 
-    return osp.join(config.checkpoint_folder, fname) + filename_key + ".pth"
+    return (
+        osp.join(config.habitat_baselines.checkpoint_folder, fname)
+        + filename_key
+        + ".pth"
+    )
 
 
 @overload
@@ -178,7 +186,7 @@ def save_resume_state(
     :param filename_or_config: The filename of the saved state or the config to construct it.
     :param filename_key: If generating the filename from the config, append this to the name.
     """
-    if isinstance(filename_or_config, Config):
+    if isinstance(filename_or_config, (Config, DictConfig)):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
@@ -196,7 +204,7 @@ def load_resume_state(
 
     :return: The saved state if the file exists, else none
     """
-    if isinstance(filename_or_config, Config):
+    if isinstance(filename_or_config, (Config, DictConfig)):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config

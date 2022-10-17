@@ -11,3 +11,5 @@ imageio-ffmpeg>=0.2.0
 scipy>=1.0.0
 tqdm>=4.0.0
 numba>=0.44.0
+hydra-core==1.2.0
+omegaconf==2.2.3

@@ -22,8 +22,10 @@ class EQACNNPretrainDataset(Dataset):
             config: Config
             mode: 'train'/'val'
         """
-        self.config = config.TASK_CONFIG
-        self.dataset_path = config.DATASET_PATH.format(split=mode)
+        self.config = config.habitat
+        self.dataset_path = config.habitat_baselines.dataset_path.format(
+            split=mode
+        )
 
         if not self.cache_exists():
             """
@@ -133,9 +135,9 @@ class EQACNNPretrainDataset(Dataset):
 
     def load_scene(self, scene) -> None:
         self.config.defrost()
-        self.config.SIMULATOR.SCENE = scene
+        self.config.simulator.scene = scene
         self.config.freeze()
-        self.env.sim.reconfigure(self.config.SIMULATOR)
+        self.env.sim.reconfigure(self.config.simulator)
 
     def __len__(self) -> int:
         return self.dataset_length

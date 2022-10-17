@@ -38,7 +38,7 @@ class EQADataset(wds.Dataset):
             num_frames (int): number of frames used as input to VQA model
             max_controller_actions (int):
         """
-        self.config = config.TASK_CONFIG
+        self.config = config.habitat
         self.input_type = input_type
         self.num_frames = num_frames
 
@@ -51,15 +51,20 @@ class EQADataset(wds.Dataset):
             self.q_vocab = self.env._dataset.question_vocab
             self.ans_vocab = self.env._dataset.answer_vocab
 
-            self.eval_save_results = config.EVAL_SAVE_RESULTS
+            self.eval_save_results = config.habitat_baselines.eval_save_results
 
-            if self.config.DATASET.SPLIT == config.EVAL.SPLIT:
+            if (
+                self.config.dataset.split
+                == config.habitat_baselines.eval.split
+            ):
                 self.mode = "val"
             else:
                 self.mode = "train"
 
-            self.frame_dataset_path = config.FRAME_DATASET_PATH.format(
-                split=self.mode
+            self.frame_dataset_path = (
+                config.habitat_baselines.frame_dataset_path.format(
+                    split=self.mode
+                )
             )
 
             # [TODO] can be done in mp3d_eqa_dataset when loading
@@ -72,7 +77,7 @@ class EQADataset(wds.Dataset):
                 initial_pipeline=[group_by_keys()],
             )
 
-            self.only_vqa_task = config.ONLY_VQA_TASK
+            self.only_vqa_task = config.habitat_baselines.only_vqa_task
 
             self.scene_episode_dict = get_scene_episode_dict(self.episodes)
 
@@ -246,9 +251,9 @@ class EQADataset(wds.Dataset):
 
     def load_scene(self, scene) -> None:
         self.config.defrost()
-        self.config.SIMULATOR.SCENE = scene
+        self.config.simulator.scene = scene
         self.config.freeze()
-        self.env.sim.reconfigure(self.config.SIMULATOR)
+        self.env.sim.reconfigure(self.config.simulator)
 
     def __len__(self) -> int:
         return len(self.episodes)

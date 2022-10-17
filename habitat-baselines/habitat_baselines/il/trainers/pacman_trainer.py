@@ -45,7 +45,7 @@ class PACMANTrainer(BaseILTrainer):
         super().__init__(config)
 
         self.device = (
-            torch.device("cuda", self.config.torch_gpu_id)
+            torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -148,7 +148,8 @@ class PACMANTrainer(BaseILTrainer):
             nav_dataset = nav_dataset.map(nav_dataset.map_dataset_sample)
 
             train_loader = DataLoader(
-                nav_dataset, batch_size=config.IL.NAV.batch_size
+                nav_dataset,
+                batch_size=config.habitat_baselines.il.nav.batch_size,
             )
 
             logger.info("train_loader has {} samples".format(len(nav_dataset)))
@@ -163,13 +164,15 @@ class PACMANTrainer(BaseILTrainer):
 
             optim = torch.optim.Adam(
                 filter(lambda p: p.requires_grad, model.parameters()),
-                lr=float(config.IL.NAV.lr),
+                lr=float(config.habitat_baselines.il.nav.lr),
             )
 
             metrics = NavMetric(
                 info={"split": "train"},
                 metric_names=["planner_loss", "controller_loss"],
-                log_json=os.path.join(config.OUTPUT_LOG_DIR, "train.json"),
+                log_json=os.path.join(
+                    config.habitat_baselines.output_log_dir, "train.json"
+                ),
             )
 
             epoch = 1
@@ -182,12 +185,12 @@ class PACMANTrainer(BaseILTrainer):
 
             with TensorboardWriter(
                 "train_{}/{}".format(
-                    config.tensorboard_dir,
+                    config.habitat_baselines.tensorboard_dir,
                     datetime.today().strftime("%Y-%m-%d-%H:%M"),
                 ),
                 flush_secs=self.flush_secs,
             ) as writer:
-                while epoch <= config.IL.NAV.max_epochs:
+                while epoch <= config.habitat_baselines.il.nav.max_epochs:
                     start_time = time.time()
                     for t, batch in enumerate(train_loader):
                         batch = (
@@ -288,7 +291,7 @@ class PACMANTrainer(BaseILTrainer):
                         avg_p_loss += planner_loss
                         avg_c_loss += controller_loss
 
-                        if t % config.log_interval == 0:
+                        if t % config.habitat_baselines.log_interval == 0:
                             logger.info("Epoch: {}".format(epoch))
                             logger.info(metrics.get_stat_string())
 
@@ -302,7 +305,8 @@ class PACMANTrainer(BaseILTrainer):
                     # Dataloader length for IterableDataset doesn't take into
                     # account batch size for Pytorch v < 1.6.0
                     num_batches = math.ceil(
-                        len(nav_dataset) / config.IL.NAV.batch_size
+                        len(nav_dataset)
+                        / config.habitat_baselines.il.nav.batch_size
                     )
 
                     avg_p_loss /= num_batches
@@ -326,7 +330,10 @@ class PACMANTrainer(BaseILTrainer):
 
                     print("-----------------------------------------")
 
-                    if epoch % config.checkpoint_interval == 0:
+                    if (
+                        epoch % config.habitat_baselines.checkpoint_interval
+                        == 0
+                    ):
                         self.save_checkpoint(
                             model.state_dict(), "epoch_{}.ckpt".format(epoch)
                         )
@@ -351,9 +358,10 @@ class PACMANTrainer(BaseILTrainer):
         """
         config = self.config
 
-        config.defrost()
-        config.habitat.dataset.split = self.config.eval.split
-        config.freeze()
+        with habitat.config.read_write(config):
+            config.habitat.dataset.split = (
+                self.config.habitat_baselines.eval.split
+            )
 
         with habitat.Env(config.habitat) as env:
             nav_dataset = NavDataset(
@@ -379,8 +387,10 @@ class PACMANTrainer(BaseILTrainer):
             model.load_state_dict(state_dict)
             model.eval().to(self.device)
 
-            results_dir = config.RESULTS_DIR.format(split="val")
-            video_option = self.config.video_option
+            results_dir = config.habitat_baselines.results_dir.format(
+                split="val"
+            )
+            video_option = self.config.habitat_baselines.video_option
 
             metrics = NavMetric(
                 info={"split": "val"},
@@ -393,7 +403,9 @@ class PACMANTrainer(BaseILTrainer):
                         *[w for w in ["stop", "ep_len"] if z == ""],
                     ]
                 ],
-                log_json=os.path.join(config.OUTPUT_LOG_DIR, "eval.json"),
+                log_json=os.path.join(
+                    config.habitat_baselines.output_log_dir, "eval.json"
+                ),
             )
 
             for t, batch in enumerate(eval_loader):
@@ -421,7 +433,7 @@ class PACMANTrainer(BaseILTrainer):
                             idx.item(),
                             actions[0, : action_length.item()].numpy(),
                             i if i != "rand_init" else action_length.item(),
-                            config.IL.NAV.max_controller_actions,
+                            config.habitat_baselines.il.nav.max_controller_actions,
                         )
                         if j == "pred":
                             planner_actions_in = planner_actions_in.to(
@@ -465,10 +477,13 @@ class PACMANTrainer(BaseILTrainer):
                         if j == "pred":
                             planner_actions, controller_actions = [], []
 
-                            if config.IL.NAV.max_controller_actions > 1:
+                            if (
+                                config.habitat_baselines.il.nav.max_controller_actions
+                                > 1
+                            ):
                                 controller_action_counter = (
                                     controller_action_counter
-                                    % config.IL.NAV.max_controller_actions
+                                    % config.habitat_baselines.il.nav.max_controller_actions
                                 )
                                 controller_action_counter = max(
                                     controller_action_counter - 1, 0
@@ -483,7 +498,7 @@ class PACMANTrainer(BaseILTrainer):
 
                         img = None
                         for episode_length in range(
-                            config.IL.NAV.max_episode_length
+                            config.habitat_baselines.il.nav.max_episode_length
                         ):
                             if j == "pred":
                                 if not first_step:
@@ -522,7 +537,7 @@ class PACMANTrainer(BaseILTrainer):
                                     if (
                                         controller_action == 1
                                         and controller_action_counter
-                                        < config.IL.NAV.max_controller_actions
+                                        < config.habitat_baselines.il.nav.max_controller_actions
                                         - 1
                                     ):
                                         controller_action_counter += 1
@@ -565,7 +580,7 @@ class PACMANTrainer(BaseILTrainer):
                             episode_done = (
                                 action == 3
                                 or episode_length
-                                >= config.IL.NAV.max_episode_length
+                                >= config.habitat_baselines.il.nav.max_episode_length
                             )
 
                             agent_pos = env.sim.get_agent_state().position
@@ -627,7 +642,7 @@ class PACMANTrainer(BaseILTrainer):
                 # update metrics
                 metrics.update(metrics_list)
 
-                if t % config.log_interval == 0:
+                if t % config.habitat_baselines.log_interval == 0:
                     logger.info(
                         "Valid cases: {}; Invalid cases: {}".format(
                             (t + 1) * 8 - len(invalids), len(invalids)
@@ -643,8 +658,9 @@ class PACMANTrainer(BaseILTrainer):
                     )
 
                 if (
-                    config.eval_save_results
-                    and t % config.eval_save_results_interval == 0
+                    config.habitat_baselines.eval_save_results
+                    and t % config.habitat_baselines.eval_save_results_interval
+                    == 0
                 ):
                     q_string = q_vocab_dict.token_idx_2_string(question[0])
                     logger.info("Question: {}".format(q_string))

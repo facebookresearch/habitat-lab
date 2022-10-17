@@ -13,6 +13,7 @@ from numpy import ndarray
 from torch import Tensor
 
 from habitat import Config, logger
+from habitat.config import read_write
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
@@ -59,8 +60,8 @@ class BaseTrainer:
 
         config = self.config.clone()
 
-        ckpt_cmd_opts = checkpoint_config.cmd_trailing_opts
-        eval_cmd_opts = config.cmd_trailing_opts
+        ckpt_cmd_opts = checkpoint_config.habitat_baselines.cmd_trailing_opts
+        eval_cmd_opts = config.habitat_baselines.cmd_trailing_opts
 
         try:
             config.merge_from_other_cfg(checkpoint_config)
@@ -71,11 +72,12 @@ class BaseTrainer:
             logger.info("Saved config is outdated, using solely eval config")
             config = self.config.clone()
             config.merge_from_list(eval_cmd_opts)
-        config.defrost()
-        if config.habitat.dataset.split == "train":
-            config.habitat.dataset.split = "val"
-        config.habitat.simulator.agent_0.sensors = self.config.sensors
-        config.freeze()
+        with read_write(config):
+            if config.habitat.dataset.split == "train":
+                config.habitat.dataset.split = "val"
+            config.habitat.simulator.agent_0.sensors = (
+                self.config.habitat_baselines.sensors
+            )
 
         return config
 
@@ -106,32 +108,36 @@ class BaseTrainer:
             prev_ckpt_ind = -1
 
         self.device = (
-            torch.device("cuda", self.config.torch_gpu_id)
+            torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
 
-        if "tensorboard" in self.config.video_option:
+        if "tensorboard" in self.config.habitat_baselines.video_option:
             assert (
-                len(self.config.tensorboard_dir) > 0
+                len(self.config.habitat_baselines.tensorboard_dir) > 0
             ), "Must specify a tensorboard directory for video display"
-            os.makedirs(self.config.tensorboard_dir, exist_ok=True)
-        if "disk" in self.config.video_option:
+            os.makedirs(
+                self.config.habitat_baselines.tensorboard_dir, exist_ok=True
+            )
+        if "disk" in self.config.habitat_baselines.video_option:
             assert (
-                len(self.config.video_dir) > 0
+                len(self.config.habitat_baselines.video_dir) > 0
             ), "Must specify a directory for storing videos on disk"
 
         with get_writer(self.config, flush_secs=self.flush_secs) as writer:
             if (
-                os.path.isfile(self.config.eval_ckpt_path_dir)
-                or not self.config.eval.should_load_ckpt
+                os.path.isfile(
+                    self.config.habitat_baselines.eval_ckpt_path_dir
+                )
+                or not self.config.habitat_baselines.eval.should_load_ckpt
             ):
                 # evaluate single checkpoint. If `should_load_ckpt=False` then
                 # the `eval_ckpt_path_dir` will be ignored.
 
-                if self.config.eval.should_load_ckpt:
+                if self.config.habitat_baselines.eval.should_load_ckpt:
                     proposed_index = get_checkpoint_id(
-                        self.config.eval_ckpt_path_dir
+                        self.config.habitat_baselines.eval_ckpt_path_dir
                     )
                 else:
                     proposed_index = None
@@ -141,7 +147,7 @@ class BaseTrainer:
                 else:
                     ckpt_idx = 0
                 self._eval_checkpoint(
-                    self.config.eval_ckpt_path_dir,
+                    self.config.habitat_baselines.eval_ckpt_path_dir,
                     writer,
                     checkpoint_index=ckpt_idx,
                 )
@@ -151,7 +157,8 @@ class BaseTrainer:
                     current_ckpt = None
                     while current_ckpt is None:
                         current_ckpt = poll_checkpoint_folder(
-                            self.config.eval_ckpt_path_dir, prev_ckpt_ind
+                            self.config.habitat_baselines.eval_ckpt_path_dir,
+                            prev_ckpt_ind,
                         )
                         time.sleep(2)  # sleep for 2 secs before polling again
                     logger.info(f"=======current_ckpt: {current_ckpt}=======")  # type: ignore
@@ -174,7 +181,9 @@ class BaseTrainer:
                         filename_key="eval",
                     )
 
-                    if (prev_ckpt_ind + 1) == self.config.num_checkpoints:
+                    if (
+                        prev_ckpt_ind + 1
+                    ) == self.config.habitat_baselines.num_checkpoints:
                         break
 
     def _eval_checkpoint(
@@ -213,52 +222,76 @@ class BaseRLTrainer(BaseTrainer):
         self.num_steps_done = 0
         self._last_checkpoint_percent = -1.0
 
-        if config.num_updates != -1 and config.total_num_steps != -1:
+        if (
+            config.habitat_baselines.num_updates != -1
+            and config.habitat_baselines.total_num_steps != -1
+        ):
             raise RuntimeError(
                 "num_updates and total_num_steps are both specified.  One must be -1.\n"
                 " num_updates: {} total_num_steps: {}".format(
-                    config.num_updates, config.total_num_steps
+                    config.habitat_baselines.num_updates,
+                    config.habitat_baselines.total_num_steps,
                 )
             )
 
-        if config.num_updates == -1 and config.total_num_steps == -1:
+        if (
+            config.habitat_baselines.num_updates == -1
+            and config.habitat_baselines.total_num_steps == -1
+        ):
             raise RuntimeError(
                 "One of num_updates and total_num_steps must be specified.\n"
                 " num_updates: {} total_num_steps: {}".format(
-                    config.num_updates, config.total_num_steps
+                    config.habitat_baselines.num_updates,
+                    config.habitat_baselines.total_num_steps,
                 )
             )
 
-        if config.num_checkpoints != -1 and config.checkpoint_interval != -1:
+        if (
+            config.habitat_baselines.num_checkpoints != -1
+            and config.habitat_baselines.checkpoint_interval != -1
+        ):
             raise RuntimeError(
                 "num_checkpoints and checkpoint_interval are both specified."
                 "  One must be -1.\n"
                 " num_checkpoints: {} checkpoint_interval: {}".format(
-                    config.num_checkpoints, config.checkpoint_interval
+                    config.habitat_baselines.num_checkpoints,
+                    config.habitat_baselines.checkpoint_interval,
                 )
             )
 
-        if config.num_checkpoints == -1 and config.checkpoint_interval == -1:
+        if (
+            config.habitat_baselines.num_checkpoints == -1
+            and config.habitat_baselines.checkpoint_interval == -1
+        ):
             raise RuntimeError(
                 "One of num_checkpoints and checkpoint_interval must be specified"
                 " num_checkpoints: {} checkpoint_interval: {}".format(
-                    config.num_checkpoints, config.checkpoint_interval
+                    config.habitat_baselines.num_checkpoints,
+                    config.habitat_baselines.checkpoint_interval,
                 )
             )
 
     def percent_done(self) -> float:
-        if self.config.num_updates != -1:
-            return self.num_updates_done / self.config.num_updates
+        if self.config.habitat_baselines.num_updates != -1:
+            return (
+                self.num_updates_done
+                / self.config.habitat_baselines.num_updates
+            )
         else:
-            return self.num_steps_done / self.config.total_num_steps
+            return (
+                self.num_steps_done
+                / self.config.habitat_baselines.total_num_steps
+            )
 
     def is_done(self) -> bool:
         return self.percent_done() >= 1.0
 
     def should_checkpoint(self) -> bool:
         needs_checkpoint = False
-        if self.config.num_checkpoints != -1:
-            checkpoint_every = 1 / self.config.num_checkpoints
+        if self.config.habitat_baselines.num_checkpoints != -1:
+            checkpoint_every = (
+                1 / self.config.habitat_baselines.num_checkpoints
+            )
             if (
                 self._last_checkpoint_percent + checkpoint_every
                 < self.percent_done()
@@ -267,7 +300,8 @@ class BaseRLTrainer(BaseTrainer):
                 self._last_checkpoint_percent = self.percent_done()
         else:
             needs_checkpoint = (
-                self.num_updates_done % self.config.checkpoint_interval
+                self.num_updates_done
+                % self.config.habitat_baselines.checkpoint_interval
             ) == 0
 
         return needs_checkpoint
@@ -275,13 +309,13 @@ class BaseRLTrainer(BaseTrainer):
     def _should_save_resume_state(self) -> bool:
         return SAVE_STATE.is_set() or (
             (
-                not self.config.rl.preemption.save_state_batch_only
+                not self.config.habitat_baselines.rl.preemption.save_state_batch_only
                 or is_slurm_batch_job()
             )
             and (
                 (
                     int(self.num_updates_done + 1)
-                    % self.config.rl.preemption.save_resume_state_interval
+                    % self.config.habitat_baselines.rl.preemption.save_resume_state_interval
                 )
                 == 0
             )

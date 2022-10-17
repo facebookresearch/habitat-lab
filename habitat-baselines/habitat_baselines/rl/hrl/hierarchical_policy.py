@@ -46,12 +46,12 @@ class HierarchicalPolicy(Policy):
         self._name_to_idx: Dict[str, int] = {}
 
         for i, (skill_id, use_skill_name) in enumerate(
-            config.USE_SKILLS.items()
+            config.use_skills.items()
         ):
             if use_skill_name == "":
                 # Skip loading this skill if no name is provided
                 continue
-            skill_config = config.DEFINED_SKILLS[use_skill_name]
+            skill_config = config.defined_skills[use_skill_name]
 
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
@@ -225,9 +225,9 @@ class HierarchicalPolicy(Policy):
         **kwargs,
     ):
         return cls(
-            config.rl.policy,
+            config.habitat_baselines.rl.policy,
             config,
             observation_space,
             orig_action_space,
-            config.num_environments,
+            config.habitat_baselines.num_environments,
         )

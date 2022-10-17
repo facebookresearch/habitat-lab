@@ -77,15 +77,18 @@ def _load_test_data():
             )
         )
 
-        config.defrost()
-        config.habitat.simulator.scene = datasets[-1].episodes[0].scene_id
-        # remove the teleport action that makes the action space continuous
-        config.habitat.task.possible_actions = [
-            a for a in config.habitat.task.possible_actions if a != "teleport"
-        ]
-        if not os.path.exists(config.habitat.simulator.scene):
-            pytest.skip("Please download Habitat test data to data folder.")
-        config.freeze()
+        with habitat.config.read_write(config):
+            config.habitat.simulator.scene = datasets[-1].episodes[0].scene_id
+            # remove the teleport action that makes the action space continuous
+            config.habitat.task.possible_actions = [
+                a
+                for a in config.habitat.task.possible_actions
+                if a != "teleport"
+            ]
+            if not os.path.exists(config.habitat.simulator.scene):
+                pytest.skip(
+                    "Please download Habitat test data to data folder."
+                )
         configs.append(config)
 
     return configs, datasets
@@ -94,9 +97,8 @@ def _load_test_data():
 def _vec_env_test_fn(configs, datasets, multiprocessing_start_method, gpu2gpu):
     num_envs = len(configs)
     for cfg in configs:
-        cfg.defrost()
-        cfg.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-        cfg.freeze()
+        with habitat.config.read_write(cfg):
+            cfg.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
 
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
     with habitat.VectorEnv(
@@ -195,12 +197,11 @@ def test_env(gpu2gpu):
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    config.defrost()
-    config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-    config.habitat.task.possible_actions = [
-        a for a in config.habitat.task.possible_actions if a != "teleport"
-    ]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+        config.habitat.task.possible_actions = [
+            a for a in config.habitat.task.possible_actions if a != "teleport"
+        ]
     with habitat.Env(config=config, dataset=None) as env:
         env.episodes = [
             NavigationEpisode(
@@ -248,10 +249,9 @@ def test_rl_vectorized_envs(gpu2gpu):
 
     configs, datasets = _load_test_data()
     for config in configs:
-        config.defrost()
-        config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-        config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
-        config.freeze()
+        with habitat.config.read_write(config):
+            config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+            config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
@@ -299,12 +299,11 @@ def test_rl_env(gpu2gpu):
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
-    config.defrost()
-    config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-    config.habitat.task.possible_actions = [
-        a for a in config.habitat.task.possible_actions if a != "teleport"
-    ]
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+        config.habitat.task.possible_actions = [
+            a for a in config.habitat.task.possible_actions if a != "teleport"
+        ]
 
     with _make_dummy_env_func(config=config, dataset=None) as env:
         env.episodes = [

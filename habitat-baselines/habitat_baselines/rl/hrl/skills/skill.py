@@ -95,9 +95,9 @@ class SkillPolicy(Policy):
             device=self._cur_skill_step.device,
             dtype=torch.bool,
         )
-        if self._config.MAX_SKILL_STEPS > 0:
-            over_max_len = self._cur_skill_step > self._config.MAX_SKILL_STEPS
-            if self._config.FORCE_END_ON_TIMEOUT:
+        if self._config.max_skill_steps > 0:
+            over_max_len = self._cur_skill_step > self._config.max_skill_steps
+            if self._config.force_end_on_timeout:
                 bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len
@@ -174,7 +174,7 @@ class SkillPolicy(Policy):
         """
         Selects out the part of the observation that corresponds to the current goal of the skill.
         """
-        for k in self._config.OBS_SKILL_INPUTS:
+        for k in self._config.obs_skill_inputs:
             cur_multi_sensor_index = self._get_multi_sensor_index(
                 cur_batch_idx, k
             )
@@ -183,7 +183,7 @@ class SkillPolicy(Policy):
                     f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
                 )
             entity_positions = obs[k].view(
-                1, -1, self._config.get("OBS_SKILL_INPUT_DIM", 3)
+                1, -1, self._config.get("obs_skill_input_dim", 3)
             )
             obs[k] = entity_positions[:, cur_multi_sensor_index]
         return obs

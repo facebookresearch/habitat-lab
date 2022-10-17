@@ -11,6 +11,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from habitat import logger
+from habitat.config import read_write
 from habitat_baselines.common.base_il_trainer import BaseILTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
@@ -37,7 +38,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         super().__init__(config)
 
         self.device = (
-            torch.device("cuda", self.config.torch_gpu_id)
+            torch.device("cuda", self.config.habitat_baselines.torch_gpu_id)
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
@@ -48,7 +49,9 @@ class EQACNNPretrainTrainer(BaseILTrainer):
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for s_type in ["rgb", "seg", "depth"]:
-            dir_name = self.config.RESULTS_DIR.format(split="val", type=s_type)
+            dir_name = self.config.habitat_baselines.results_dir.format(
+                split="val", type=s_type
+            )
             if not os.path.isdir(dir_name):
                 os.makedirs(dir_name)
 
@@ -90,7 +93,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         train_loader = DataLoader(
             eqa_cnn_pretrain_dataset,
-            batch_size=config.IL.EQACNNPretrain.batch_size,
+            batch_size=config.habitat_baselines.il.eqa_cnn_pretrain.batch_size,
             shuffle=True,
         )
 
@@ -105,7 +108,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         optim = torch.optim.Adam(
             filter(lambda p: p.requires_grad, model.parameters()),
-            lr=float(config.IL.EQACNNPretrain.lr),
+            lr=float(config.habitat_baselines.il.eqa_cnn_pretrain.lr),
         )
 
         depth_loss = torch.nn.SmoothL1Loss()
@@ -114,9 +117,13 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
         epoch, t = 1, 0
         with TensorboardWriter(
-            config.tensorboard_dir, flush_secs=self.flush_secs
+            config.habitat_baselines.tensorboard_dir,
+            flush_secs=self.flush_secs,
         ) as writer:
-            while epoch <= config.IL.EQACNNPretrain.max_epochs:
+            while (
+                epoch
+                <= config.habitat_baselines.il.eqa_cnn_pretrain.max_epochs
+            ):
                 start_time = time.time()
                 avg_loss = 0.0
 
@@ -141,7 +148,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
 
                     avg_loss += loss.item()
 
-                    if t % config.log_interval == 0:
+                    if t % config.habitat_baselines.log_interval == 0:
                         logger.info(
                             "[ Epoch: {}; iter: {}; loss: {:.3f} ]".format(
                                 epoch, t, loss.item()
@@ -193,15 +200,16 @@ class EQACNNPretrainTrainer(BaseILTrainer):
         """
         config = self.config
 
-        config.defrost()
-        config.habitat.dataset.split = self.config.eval.split
-        config.freeze()
+        with read_write(config):
+            config.habitat.dataset.split = (
+                self.config.habitat_baselines.eval.split
+            )
 
         eqa_cnn_pretrain_dataset = EQACNNPretrainDataset(config, mode="val")
 
         eval_loader = DataLoader(
             eqa_cnn_pretrain_dataset,
-            batch_size=config.IL.EQACNNPretrain.batch_size,
+            batch_size=config.habitat_baselines.il.eqa_cnn_pretrain.batch_size,
             shuffle=False,
         )
 
@@ -249,21 +257,22 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                 avg_l2 += l2.item()
                 avg_l3 += l3.item()
 
-                if t % config.log_interval == 0:
+                if t % config.habitat_baselines.log_interval == 0:
                     logger.info(
                         "[ Iter: {}; loss: {:.3f} ]".format(t, loss.item()),
                     )
 
                 if (
-                    config.eval_save_results
-                    and t % config.eval_save_results_interval == 0
+                    config.habitat_baselines.eval_save_results
+                    and t % config.habitat_baselines.eval_save_results_interval
+                    == 0
                 ):
 
                     result_id = "ckpt_{}_{}".format(
                         checkpoint_index, idx[0].item()
                     )
                     result_path = os.path.join(
-                        self.config.RESULTS_DIR, result_id
+                        self.config.habitat_baselines.results_dir, result_id
                     )
 
                     self._save_results(

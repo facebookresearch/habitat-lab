@@ -84,12 +84,11 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 
 def insert_render_options(config):
     # Added settings to make rendering higher resolution for better visualization
-    config.defrost()
-    config.habitat.simulator.third_rgb_sensor.width = 512
-    config.habitat.simulator.third_rgb_sensor.height = 512
-    config.habitat.simulator.concur_render = False
-    config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.third_rgb_sensor.width = 512
+        config.habitat.simulator.third_rgb_sensor.height = 512
+        config.habitat.simulator.concur_render = False
+        config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
     return config
 
 

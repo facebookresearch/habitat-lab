@@ -77,25 +77,23 @@ class AgentPositionSensor(habitat.Sensor):
 def main():
     # Get the default config node
     config = habitat.get_config(config_paths="tasks/pointnav.yaml")
-    config.defrost()
+    with habitat.config.read_write(config):
+        # Add things to the config to for the measure
+        config.habitat.task.episode_info_example = habitat.Config()
+        # The type field is used to look-up the measure in the registry.
+        # By default, the things are registered with the class name
+        config.habitat.task.episode_info_example.type = "EpisodeInfoExample"
+        config.habitat.task.episode_info_example.VALUE = 5
+        # Add the measure to the list of measures in use
+        config.habitat.task.measurements.append("episode_info_example")
 
-    # Add things to the config to for the measure
-    config.habitat.task.episode_info_example = habitat.Config()
-    # The type field is used to look-up the measure in the registry.
-    # By default, the things are registered with the class name
-    config.habitat.task.episode_info_example.type = "EpisodeInfoExample"
-    config.habitat.task.episode_info_example.VALUE = 5
-    # Add the measure to the list of measures in use
-    config.habitat.task.measurements.append("episode_info_example")
-
-    # Now define the config for the sensor
-    config.habitat.task.agent_position_sensor = habitat.Config()
-    # Use the custom name
-    config.habitat.task.agent_position_sensor.type = "my_supercool_sensor"
-    config.habitat.task.agent_position_sensor.answer_to_life = 42
-    # Add the sensor to the list of sensors in use
-    config.habitat.task.sensors.append("agent_position_sensor")
-    config.freeze()
+        # Now define the config for the sensor
+        config.habitat.task.agent_position_sensor = habitat.Config()
+        # Use the custom name
+        config.habitat.task.agent_position_sensor.type = "my_supercool_sensor"
+        config.habitat.task.agent_position_sensor.answer_to_life = 42
+        # Add the sensor to the list of sensors in use
+        config.habitat.task.sensors.append("agent_position_sensor")
 
     with habitat.Env(config=config) as env:
         print(env.reset()["agent_position"])

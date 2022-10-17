@@ -10,6 +10,7 @@ import os
 import numpy as np
 import pytest
 
+from habitat.config import read_write
 from habitat.config.default import get_config
 from habitat.sims import make_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
@@ -75,14 +76,14 @@ def test_sim_trajectory():
 
 def test_sim_no_sensors():
     config = get_config()
-    config.defrost()
-    config.habitat.simulator.agent_0.sensors = []
-    if not os.path.exists(config.habitat.simulator.scene):
-        pytest.skip("Please download Habitat test data to data folder.")
-    with make_sim(
-        config.habitat.simulator.type, config=config.habitat.simulator
-    ) as sim:
-        sim.reset()
+    with read_write(config):
+        config.habitat.simulator.agent_0.sensors = []
+        if not os.path.exists(config.habitat.simulator.scene):
+            pytest.skip("Please download Habitat test data to data folder.")
+        with make_sim(
+            config.habitat.simulator.type, config=config.habitat.simulator
+        ) as sim:
+            sim.reset()
 
 
 def test_sim_geodesic_distance():

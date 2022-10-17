@@ -206,6 +206,8 @@ jobs:
       - run:
           name: Download test data
           command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat
               if [ ! -f ./habitat-sim/data/scene_datasets/habitat-test-scenes/van-gogh-room.glb ]
               then
                 cd habitat-sim
@@ -216,14 +218,10 @@ jobs:
               fi
               if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
               then
-                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                . activate habitat
                 python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
               fi
               if [ ! -f ./habitat-sim/data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf ]
               then
-                export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                . activate habitat
                 python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/
               fi
       - run:

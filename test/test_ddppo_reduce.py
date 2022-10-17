@@ -63,7 +63,7 @@ def _worker_fn(
         actor_critic.unused = nn.Linear(64, 64)
 
     actor_critic.to(device=device)
-    ppo_cfg = config.rl.ppo
+    ppo_cfg = config.habitat_baselines.rl.ppo
     agent = DDPPO(
         actor_critic=actor_critic,
         clip_param=ppo_cfg.clip_param,

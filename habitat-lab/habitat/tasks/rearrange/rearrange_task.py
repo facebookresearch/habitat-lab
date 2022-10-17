@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 from gym import spaces
 
+from habitat.config import read_write
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
@@ -27,9 +28,8 @@ from habitat.tasks.rearrange.utils import (
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
-    sim_config.defrost()
-    sim_config.ep_info = [episode.__dict__]
-    sim_config.freeze()
+    with read_write(sim_config):
+        sim_config.ep_info = [episode.__dict__]
     return sim_config
 
 

@@ -225,7 +225,10 @@ class ReportWorkerProcess(ProcessBase):
             for k, v in preemption_decider_report.items():
                 writer.add_scalar(f"preemption_decider/{k}", v, n_steps)
 
-        if self.n_update_reports % self.config.log_interval == 0:
+        if (
+            self.n_update_reports % self.config.habitat_baselines.log_interval
+            == 0
+        ):
             if rank0_only():
                 logger.info(
                     "update: {}\tfps: {:.1f}\twindow fps: {:.1f}\tframes: {:d}".format(
@@ -327,7 +330,7 @@ class ReportWorkerProcess(ProcessBase):
 
         self.response_queue.put(None)
 
-        ppo_cfg = self.config.rl.ppo
+        ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         self.steps_delta = 0
         if rank0_only():
@@ -335,7 +338,7 @@ class ReportWorkerProcess(ProcessBase):
                 functools.partial(
                     WindowedRunningMean,
                     ppo_cfg.reward_window_size
-                    * self.config.num_environments
+                    * self.config.habitat_baselines.num_environments
                     * self.world_size,
                 )
             )

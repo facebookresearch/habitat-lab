@@ -119,13 +119,13 @@ class NnSkillPolicy(SkillPolicy):
         cls, config, observation_space, action_space, batch_size, full_config
     ):
         # Load the wrap policy from file
-        if len(config.LOAD_CKPT_FILE) == 0:
+        if len(config.load_ckpt_file) == 0:
             ckpt_dict = {}
-            policy_cfg = get_config(config.FORCE_CONFIG_FILE)
+            policy_cfg = get_config(config.force_config_file)
         else:
             try:
                 ckpt_dict = torch.load(
-                    config.LOAD_CKPT_FILE, map_location="cpu"
+                    config.load_ckpt_file, map_location="cpu"
                 )
             except FileNotFoundError as e:
                 raise FileNotFoundError(
@@ -142,7 +142,7 @@ class NnSkillPolicy(SkillPolicy):
             )
         )
 
-        for k in config.OBS_SKILL_INPUTS:
+        for k in config.obs_skill_inputs:
             space = filtered_obs_space.spaces[k]
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)
@@ -188,7 +188,7 @@ class NnSkillPolicy(SkillPolicy):
 
             except Exception as e:
                 raise ValueError(
-                    f"Could not load checkpoint for skill {config.skill_name} from {config.LOAD_CKPT_FILE}"
+                    f"Could not load checkpoint for skill {config.skill_name} from {config.load_ckpt_file}"
                 ) from e
 
         return cls(

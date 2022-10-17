@@ -61,11 +61,18 @@ def execute_exp(config: Config, run_type: str) -> None:
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
     torch.manual_seed(config.habitat.seed)
-    if config.force_torch_single_threaded and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
-    trainer_init = baseline_registry.get_trainer(config.trainer_name)
-    assert trainer_init is not None, f"{config.trainer_name} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     if run_type == "train":
@@ -79,7 +86,7 @@ def run_exp(exp_config: str, run_type: str, opts=None) -> None:
 
     Args:
         exp_config: path to config file.
-        run_type: "train" or "eval.
+        run_type: "train" or "eval".
         opts: list of strings of additional config options.
 
     Returns:

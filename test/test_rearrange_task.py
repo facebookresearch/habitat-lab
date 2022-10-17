@@ -87,10 +87,9 @@ def test_rearrange_baseline_envs(test_cfg_path):
     Test the Habitat Baseline environments
     """
     config = baselines_get_config(test_cfg_path)
-    config.defrost()
-    config.habitat.gym.obs_keys = None
-    config.habitat.gym.desired_goal_keys = []
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.gym.obs_keys = None
+        config.habitat.gym.desired_goal_keys = []
 
     env_class = get_env_class(config.habitat.env_task)
 
@@ -208,7 +207,7 @@ def test_tp_srl(test_cfg_path, mode):
     run_exp(
         test_cfg_path,
         mode,
-        ["eval.split", "train"],
+        ["habitat_baselines.eval.split", "train"],
     )
 
     # Needed to destroy the trainer

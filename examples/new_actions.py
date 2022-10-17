@@ -149,30 +149,27 @@ def main():
     HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
     config = habitat.get_config(config_paths="tasks/pointnav.yaml")
-    config.defrost()
-
-    config.habitat.task.possible_actions = (
-        config.habitat.task.possible_actions
-        + [
-            "STRAFE_LEFT",
-            "STRAFE_RIGHT",
-        ]
-    )
-    config.habitat.task.actions.STRAFE_LEFT = habitat.config.Config()
-    config.habitat.task.actions.STRAFE_LEFT.type = "StrafeLeft"
-    config.habitat.task.actions.STRAFE_RIGHT = habitat.config.Config()
-    config.habitat.task.actions.STRAFE_RIGHT.type = "StrafeRight"
-    config.habitat.simulator.action_space_config = "NoNoiseStrafe"
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.possible_actions = (
+            config.habitat.task.possible_actions
+            + [
+                "STRAFE_LEFT",
+                "STRAFE_RIGHT",
+            ]
+        )
+        config.habitat.task.actions.STRAFE_LEFT = habitat.config.Config()
+        config.habitat.task.actions.STRAFE_LEFT.type = "StrafeLeft"
+        config.habitat.task.actions.STRAFE_RIGHT = habitat.config.Config()
+        config.habitat.task.actions.STRAFE_RIGHT.type = "StrafeRight"
+        config.habitat.simulator.action_space_config = "NoNoiseStrafe"
 
     with habitat.Env(config=config) as env:
         env.reset()
         env.step("STRAFE_LEFT")
         env.step("STRAFE_RIGHT")
 
-    config.defrost()
-    config.habitat.simulator.action_space_config = "NoiseStrafe"
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.action_space_config = "NoiseStrafe"
 
     with habitat.Env(config=config) as env:
         env.reset()
