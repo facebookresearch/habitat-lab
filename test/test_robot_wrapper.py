@@ -5,10 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import sys
 from os import path as osp
 
 import numpy as np
 import pytest
+
+sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
+sys.path.append("/Users/jimmytyyang/Habitat/habitat-lab/habitat-lab")
 
 import habitat.robots.fetch_robot as fetch_robot
 import habitat.robots.franka_robot as franka_robot
