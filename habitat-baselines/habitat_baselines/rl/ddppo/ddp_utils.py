@@ -22,6 +22,7 @@ from typing import (
 import ifcfg
 import numpy as np
 import torch
+from omegaconf import DictConfig
 from torch import distributed as distrib
 
 from habitat import Config, logger
@@ -185,7 +186,7 @@ def save_resume_state(
     :param filename_or_config: The filename of the saved state or the config to construct it.
     :param filename_key: If generating the filename from the config, append this to the name.
     """
-    if isinstance(filename_or_config, Config):
+    if isinstance(filename_or_config, (Config, DictConfig)):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
@@ -203,7 +204,7 @@ def load_resume_state(
 
     :return: The saved state if the file exists, else none
     """
-    if isinstance(filename_or_config, Config):
+    if isinstance(filename_or_config, (Config, DictConfig)):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
