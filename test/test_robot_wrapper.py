@@ -4,6 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import sys
+
+sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
+sys.path.append("/Users/jimmytyyang/Habitat/habitat-lab/habitat-lab")
 
 from os import path as osp
 
@@ -13,6 +17,7 @@ import pytest
 import habitat.robots.fetch_robot as fetch_robot
 import habitat.robots.franka_robot as franka_robot
 import habitat.robots.spot_robot as spot_robot
+import habitat.robots.stretch_robot as stretch_robot
 import habitat_sim
 import habitat_sim.agent
 
@@ -669,5 +674,146 @@ def test_spot_robot_wrapper(fixed_base):
                 "color_sensor",
                 "color",
                 "test_spot_robot_wrapper__fixed_base=" + str(fixed_base),
+                open_vid=True,
+            )
+
+
+@pytest.mark.skipif(
+    not habitat_sim.built_with_bullet,
+    reason="Robot wrapper API requires Bullet physics.",
+)
+@pytest.mark.parametrize("fixed_base", [True, False])
+def test_stretch_robot_wrapper(fixed_base):
+    # set this to output test results as video for easy investigation
+    produce_debug_video = True
+    observations = []
+    cfg_settings = default_sim_settings.copy()
+    cfg_settings["scene"] = "NONE"
+    cfg_settings["enable_physics"] = True
+
+    # loading the physical scene
+    hab_cfg = make_cfg(cfg_settings)
+
+    with habitat_sim.Simulator(hab_cfg) as sim:
+        obj_template_mgr = sim.get_object_template_manager()
+        rigid_obj_mgr = sim.get_rigid_object_manager()
+
+        # setup the camera for debug video (looking at 0,0,0)
+        sim.agents[0].scene_node.translation = [0.0, -1.0, 2.0]
+
+        # add a ground plane
+        cube_handle = obj_template_mgr.get_template_handles("cubeSolid")[0]
+        cube_template_cpy = obj_template_mgr.get_template_by_handle(
+            cube_handle
+        )
+        cube_template_cpy.scale = np.array([5.0, 0.2, 5.0])
+        obj_template_mgr.register_template(cube_template_cpy)
+        ground_plane = rigid_obj_mgr.add_object_by_template_handle(cube_handle)
+        ground_plane.translation = [0.0, -0.2, 0.0]
+        ground_plane.motion_type = habitat_sim.physics.MotionType.STATIC
+
+        # compute a navmesh on the ground plane
+        navmesh_settings = habitat_sim.NavMeshSettings()
+        navmesh_settings.set_defaults()
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
+        sim.navmesh_visualization = True
+        # add the robot to the world via the wrapper
+        robot_path = "/Users/jimmytyyang/Documents/chris_code/hab_stretch/urdf/hab_stretch.urdf"
+        stretch = stretch_robot.StretchRobot(
+            robot_path, sim, fixed_base=fixed_base
+        )
+        stretch.reconfigure()
+        assert stretch.get_robot_sim_id() == 1  # 0 is the ground plane
+        print(stretch.get_link_and_joint_names())
+
+        # set base ground position from navmesh
+        target_base_pos = sim.pathfinder.snap_point(
+            stretch.sim_obj.translation
+        )
+        stretch.base_pos = target_base_pos
+        assert stretch.base_pos == target_base_pos
+        observations += simulate(sim, 1.0, produce_debug_video)
+        if fixed_base:
+            assert np.allclose(stretch.base_pos, target_base_pos)
+        else:
+            assert not np.allclose(stretch.base_pos, target_base_pos)
+
+        observations += stretch._interpolate_arm_control(
+            [0.0],
+            [
+                stretch.params.arm_joints[0],
+                stretch.params.arm_joints[1],
+                stretch.params.arm_joints[2],
+                stretch.params.arm_joints[3],
+            ],
+            1,  # seconds
+            30,  # control frequency
+            produce_debug_video,
+        )
+
+        observations += stretch._interpolate_arm_control(
+            [0.15],
+            [
+                stretch.params.arm_joints[0],
+                stretch.params.arm_joints[1],
+                stretch.params.arm_joints[2],
+                stretch.params.arm_joints[3],
+            ],
+            1,
+            30,
+            produce_debug_video,
+        )
+
+        stretch.arm_motor_pos = np.zeros(len(stretch.params.arm_joints))
+        observations += simulate(sim, 1.0, produce_debug_video)
+
+        # test gripper state
+        stretch.open_gripper()
+        observations += simulate(sim, 1.0, produce_debug_video)
+        assert stretch.is_gripper_open
+        assert not stretch.is_gripper_closed
+        stretch.close_gripper()
+        observations += simulate(sim, 1.0, produce_debug_video)
+        assert stretch.is_gripper_closed
+        assert not stretch.is_gripper_open
+
+        # halfway open
+        stretch.set_gripper_target_state(0.5)
+        observations += simulate(sim, 0.5, produce_debug_video)
+        assert not stretch.is_gripper_open
+        assert not stretch.is_gripper_closed
+
+        # kinematic open/close (checked before simulation)
+        stretch.gripper_joint_pos = stretch.params.gripper_open_state
+        assert np.allclose(
+            stretch.gripper_joint_pos, stretch.params.gripper_open_state
+        )
+        assert stretch.is_gripper_open
+        observations += simulate(sim, 0.2, produce_debug_video)
+        stretch.gripper_joint_pos = stretch.params.gripper_closed_state
+        assert stretch.is_gripper_closed
+        observations += simulate(sim, 0.2, produce_debug_video)
+
+        # end effector queries
+        print(f" End effector link id = {stretch.ee_link_id}")
+        print(f" End effector local offset = {stretch.ee_local_offset}")
+        print(f" End effector transform = {stretch.ee_transform}")
+        print(
+            f" End effector translation (at current state) = {stretch.calculate_ee_forward_kinematics(stretch.sim_obj.joint_positions)}"
+        )
+        invalid_ef_target = np.array([100.0, 200.0, 300.0])
+        print(
+            f" Clip end effector target ({invalid_ef_target}) to reach = {stretch.clip_ee_to_workspace(invalid_ef_target)}"
+        )
+
+        # produce some test debug video
+        if produce_debug_video:
+            from habitat_sim.utils import viz_utils as vut
+
+            vut.make_video(
+                observations,
+                "color_sensor",
+                "color",
+                "test_stretch_robot_wrapper__fixed_base=" + str(fixed_base),
                 open_vid=True,
             )
