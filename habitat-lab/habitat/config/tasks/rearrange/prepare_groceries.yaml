@@ -1,4 +1,4 @@
-habitat:
+# @package habitat
     gym:
         auto_name: PrepareGroceries
         obs_keys:

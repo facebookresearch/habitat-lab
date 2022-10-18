@@ -1,5 +1,5 @@
 # The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
-habitat:
+# @package habitat
     environment:
         max_episode_steps: 30
     dataset:

@@ -1,4 +1,5 @@
-habitat:
+# @package habitat
+
     environment:
         # Endless episode
         max_episode_steps: 0

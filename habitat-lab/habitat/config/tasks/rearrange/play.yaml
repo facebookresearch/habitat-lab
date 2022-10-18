@@ -1,4 +1,4 @@
-habitat:
+# @package habitat
     # Config for empty task to explore the scene.
     environment:
         max_episode_steps: 0
