@@ -272,30 +272,8 @@ class BaseVelAction(RobotAction):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
 
-    def update_base(self):
-
-        ctrl_freq = self._sim.ctrl_freq
-
-        before_trans_state = self._capture_robot_state()
-
-        trans = self.cur_robot.sim_obj.transformation
-        rigid_state = habitat_sim.RigidState(
-            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
-        )
-
-        target_rigid_state = self.base_vel_ctrl.integrate_transform(
-            1 / ctrl_freq, rigid_state
-        )
-        end_pos = self._sim.step_filter(
-            rigid_state.translation, target_rigid_state.translation
-        )
-
-        target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(), end_pos
-        )
-        self.cur_robot.sim_obj.transformation = target_trans
-
-        if not self._config.get("allow_dyn_slide", True):
+    def _check_step(self, before_trans_state, trans):
+        if not self._config.get("ALLOW_DYN_SLIDE", True):
             # Check if in the new robot state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
@@ -330,8 +308,18 @@ class BaseVelAction(RobotAction):
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
+        # Backward support for the old yaml file
         if lin_vel != 0.0 or ang_vel != 0.0:
-            self.update_base()
+            before_trans_state = self._capture_robot_state()
+            trans = self.cur_robot.sim_obj.transformation
+            rigid_state = habitat_sim.RigidState(
+                mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+            )
+            target_rigid_state = self.base_vel_ctrl.integrate_transform(
+                1 / self._sim.ctrl_freq, rigid_state
+            )
+            self.cur_robot.update_base(rigid_state, target_rigid_state)
+            self._check_step(before_trans_state, trans)
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)

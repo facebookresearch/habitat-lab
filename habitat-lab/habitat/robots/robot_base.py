@@ -225,18 +225,6 @@ class RobotBase(RobotInterface):
             self.sim_obj.get_link_name(link_id) in self.params.base_link_names
         )
 
-    def _update_motor_settings_cache(self):
-        """Updates the JointMotorSettings cache for cheaper future updates"""
-        self.joint_motors = {}
-        for (
-            motor_id,
-            joint_id,
-        ) in self.sim_obj.existing_joint_motor_ids.items():
-            self.joint_motors[joint_id] = (
-                motor_id,
-                self.sim_obj.get_joint_motor_settings(motor_id),
-            )
-
     def _validate_ctrl_input(self, ctrl: List[float], joints: List[int]):
         """
         Raises an exception if the control input is NaN or does not match the
@@ -249,112 +237,17 @@ class RobotBase(RobotInterface):
         if np.any(np.isnan(ctrl)):
             raise ValueError("Control is NaN")
 
-    def _get_motor_pos(self, joint):
-        self._validate_joint_idx(joint)
-        return self.joint_motors[joint][1].position_target
-
-    def _set_motor_pos(self, joint, ctrl):
-        self._validate_joint_idx(joint)
-        self.joint_motors[joint][1].position_target = ctrl
-        self.sim_obj.update_joint_motor(
-            self.joint_motors[joint][0], self.joint_motors[joint][1]
-        )
-
-    def _validate_joint_idx(self, joint):
-        if joint not in self.joint_motors:
-            raise ValueError(
-                f"Requested joint {joint} not in joint motors with indices (keys {self.joint_motors.keys()}) and {self.joint_motors}"
-            )
-
-    def _vector_to_plane_proj(self, u, n):
-        """
-        u: vector to be projected
-        n: normal vector
-        """
-        return u - (np.dot(u, n) / (n.length()) ** 2) * n
-
-    def _dot_to_plane_proj(self, q, n, p):
-        """
-        q: point to be projected
-        n: normal vector
-        p: point on the plane
-        """
-        return q + (np.dot(n, p - q) / (n.length()) ** 2) * n
-
     def update_base(self, rigid_state, target_rigid_state):
 
+        before_trans_state = self._capture_robot_state()
         cur_state = self._sim.robot.sim_obj.transformation
 
         # Conduct the collision detection
-        has_attr = hasattr(
-            self._sim.habitat_config, "COLLISION_DETECTION_METHOD"
+        has_attr_contact_test = hasattr(
+            self._sim.habitat_config, "CONTACT_TEST"
         )
-        if (
-            has_attr
-            and self._sim.habitat_config.COLLISION_DETECTION_METHOD
-            == "ContactTestRevert"
-        ):
-            end_pos = target_rigid_state.translation
-            proposed_target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), end_pos
-            )
-            self._sim.robot.sim_obj.transformation = proposed_target_trans
-            if self._sim.contact_test(self.sim_obj.object_id):
-                self._sim.robot.sim_obj.transformation = cur_state
-        elif (
-            has_attr
-            and self._sim.habitat_config.COLLISION_DETECTION_METHOD
-            == "ContactTestProj"
-        ):
-            did_collide = self._sim.contact_test(self.sim_obj.object_id)
-            robot_id = self.sim_obj.object_id
-            end_pos = target_rigid_state.translation
-            # If there is a collision, we do projection
-            if did_collide:
-                cur_pos = rigid_state.translation
-                target_pos = target_rigid_state.translation
-                # Find the contact point
-                contact_points = self._sim.get_physics_contact_points()
-                num_contact_points = len(
-                    self._sim.get_physics_contact_points()
-                )
-                robot_contact_list = []
-                # Find the contact point associated robot ID
-                for i in range(num_contact_points):
-                    if robot_id == contact_points[i].object_id_a:
-                        robot_contact_list.append(contact_points[i])
-                # Perform projection
-                contact_points = robot_contact_list
-                if len(contact_points) != 0:
-                    # Get the average normal vector
-                    n_vec = contact_points[0].contact_normal_on_b_in_ws
-                    for i in range(1, len(contact_points)):
-                        n_vec += contact_points[i].contact_normal_on_b_in_ws
-                    n_vec = n_vec / len(contact_points)
-                    # Get the average contact point
-                    c_dot = contact_points[0].position_on_a_in_ws
-                    for i in range(1, len(contact_points)):
-                        c_dot += contact_points[i].position_on_a_in_ws
-                    c_dot = c_dot / len(contact_points)
-                    # Do the projection
-                    proj_dot = self._dot_to_plane_proj(
-                        target_rigid_state.translation, n_vec, c_dot
-                    )
-                    # Get a vector that points from target next point to the projected point
-                    move_vec = target_pos - proj_dot
-                    # Not consider z direction
-                    move_vec[1] = 0
-                    # Move the point
-                    end_pos = rigid_state.translation + move_vec
-            target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), end_pos
-            )
-            self.sim_obj.transformation = target_trans
-        elif (
-            has_attr
-            and self._sim.habitat_config.COLLISION_DETECTION_METHOD
-            == "ContactTestProjSliding"
-        ):
+        has_attr_navmesh = hasattr(self._sim.habitat_config, "NAV_MESH")
+        if has_attr_contact_test and self._sim.habitat_config.CONTACT_TEST:
             did_collide = self._sim.contact_test(self.sim_obj.object_id)
             robot_id = self.sim_obj.object_id
             end_pos = target_rigid_state.translation
@@ -407,8 +300,33 @@ class RobotBase(RobotInterface):
             )
             self.sim_obj.transformation = target_trans
         elif (
-            ~has_attr
-            or self._sim.habitat_config.COLLISION_DETECTION_METHOD == "NevMesh"
+            has_attr_contact_test
+            and has_attr_navmesh
+            and self._sim.habitat_config.CONTACT_TEST
+            and self._sim.habitat_config.NAV_MESH
+        ):
+            # First, do navMesh
+            end_pos = self._sim.step_filter(
+                rigid_state.translation, target_rigid_state.translation
+            )
+            # Offset the end position
+            end_pos -= self.params.base_offset
+            target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self.sim_obj.transformation = target_trans
+            # Then, do contact test
+            did_collide = self._sim.contact_test(self.sim_obj.object_id)
+            if did_collide:
+                # Do not allow the step, revert back
+                self.sim_obj.joint_positions = before_trans_state["forces"]
+                self.sim_obj.joint_velocities = before_trans_state["vel"]
+                self.sim_obj.joint_forces = before_trans_state["pos"]
+                self.sim_obj.transformation = cur_state
+        elif (
+            ~has_attr_contact_test
+            or ~has_attr_navmesh
+            or self._sim.habitat_config.NAV_MESH
         ):
             end_pos = self._sim.step_filter(
                 rigid_state.translation, target_rigid_state.translation
