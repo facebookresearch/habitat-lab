@@ -239,15 +239,19 @@ class RobotBase(RobotInterface):
 
     def update_base(self, rigid_state, target_rigid_state):
 
-        before_trans_state = self._capture_robot_state()
         cur_state = self._sim.robot.sim_obj.transformation
 
         # Conduct the collision detection
         has_attr_contact_test = hasattr(
-            self._sim.habitat_config, "CONTACT_TEST"
+            self._sim.habitat_config, "contact_test"
         )
-        has_attr_navmesh = hasattr(self._sim.habitat_config, "NAV_MESH")
-        if has_attr_contact_test and self._sim.habitat_config.CONTACT_TEST:
+        has_attr_navmesh = hasattr(self._sim.habitat_config, "nav_mesh")
+        if (
+            has_attr_contact_test and self._sim.habitat_config.contact_test
+        ) and (
+            (has_attr_navmesh and not self._sim.habitat_config.nav_mesh)
+            or (not has_attr_navmesh)
+        ):
             did_collide = self._sim.contact_test(self.sim_obj.object_id)
             robot_id = self.sim_obj.object_id
             end_pos = target_rigid_state.translation
@@ -302,10 +306,9 @@ class RobotBase(RobotInterface):
         elif (
             has_attr_contact_test
             and has_attr_navmesh
-            and self._sim.habitat_config.CONTACT_TEST
-            and self._sim.habitat_config.NAV_MESH
+            and self._sim.habitat_config.contact_test
+            and self._sim.habitat_config.nav_mesh
         ):
-            # First, do navMesh
             end_pos = self._sim.step_filter(
                 rigid_state.translation, target_rigid_state.translation
             )
@@ -315,19 +318,10 @@ class RobotBase(RobotInterface):
                 target_rigid_state.rotation.to_matrix(), end_pos
             )
             self.sim_obj.transformation = target_trans
-            # Then, do contact test
-            did_collide = self._sim.contact_test(self.sim_obj.object_id)
-            if did_collide:
-                # Do not allow the step, revert back
-                self.sim_obj.joint_positions = before_trans_state["forces"]
-                self.sim_obj.joint_velocities = before_trans_state["vel"]
-                self.sim_obj.joint_forces = before_trans_state["pos"]
-                self.sim_obj.transformation = cur_state
-        elif (
-            ~has_attr_contact_test
-            or ~has_attr_navmesh
-            or self._sim.habitat_config.NAV_MESH
-        ):
+            # if collide, revet the step back
+            if self._sim.contact_test(self.sim_obj.object_id):
+                self._sim.robot.sim_obj.transformation = cur_state
+        else:
             end_pos = self._sim.step_filter(
                 rigid_state.translation, target_rigid_state.translation
             )

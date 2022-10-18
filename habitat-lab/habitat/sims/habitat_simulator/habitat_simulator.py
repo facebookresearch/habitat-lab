@@ -281,9 +281,7 @@ def check_sim_obs(
     )
 
 
-registry.register_sensor
-
-
+@registry.register_sensor
 class HabitatSimHeadStereoLeftRGBSensor(HabitatSimRGBSensor):
     def _get_uuid(self, *args, **kwargs):
         return "robot_head_stereo_left_rgb"
@@ -298,11 +296,11 @@ class HabitatSimHeadStereoRightRGBSensor(HabitatSimRGBSensor):
 @registry.register_sensor
 class SpotDepthSensor(HabitatSimDepthSensor):
     def __init__(self, config, *args, **kwargs):
-        if "MAX_ZERO" in config:
-            self.max_zero = config.MAX_ZERO
+        if "max_zero" in config:
+            self.max_zero = config.max_zero
             # We need to delete it because this sensor does not allow for new
             # params in the config.
-            del config["MAX_ZERO"]
+            del config["max_zero"]
         else:
             self.max_zero = False
         super().__init__(config, *args, **kwargs)
@@ -315,13 +313,13 @@ class SpotDepthSensor(HabitatSimDepthSensor):
         assert isinstance(obs, np.ndarray)
 
         # Spot blacks out far pixels
-        obs[obs > self.config.MAX_DEPTH] = 0.0
-        obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+        obs[obs > self.config.max_depth] = 0.0
+        obs = np.clip(obs, self.config.min_depth, self.config.max_depth)
         obs = np.expand_dims(obs, axis=2)  # make depth observation a 3D array
-        if self.config.NORMALIZE_DEPTH:
+        if self.config.normalize_depth:
             # normalize depth observation to [0, 1]
-            obs = (obs - self.config.MIN_DEPTH) / (
-                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            obs = (obs - self.config.min_depth) / (
+                self.config.max_depth - self.config.min_depth
             )
         if self.max_zero:
             obs[obs == 0.0] = 1.0
@@ -359,7 +357,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         for sensor_name in agent_config.sensors:
             sensor_cfg = getattr(self.habitat_config, sensor_name)
             sensor_type = registry.get_sensor(sensor_cfg.type)
-
             assert sensor_type is not None, "invalid sensor type {}".format(
                 sensor_cfg.type
             )

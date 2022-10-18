@@ -169,3 +169,5 @@ habitat:
             physics_config_file: ./data/default.physics_config.json
         seed: 100
         type: RearrangeSim-v0
+        #CONTACT_TEST: True
+        #NAV_MESH: True

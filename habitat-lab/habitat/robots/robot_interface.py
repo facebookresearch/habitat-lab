@@ -84,3 +84,10 @@ class RobotInterface(ABC):
         p: point on the plane
         """
         return q + (np.dot(n, p - q) / (n.length()) ** 2) * n
+
+    def _capture_robot_state(self):
+        return {
+            "forces": self.sim_obj.joint_forces,
+            "vel": self.sim_obj.joint_velocities,
+            "pos": self.sim_obj.joint_positions,
+        }
