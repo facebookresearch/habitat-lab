@@ -1,9 +1,9 @@
 import math
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import II, MISSING
+from omegaconf import II
 
 
 @dataclass
@@ -151,13 +151,19 @@ class Eq2CubeConfig(ObsTransformConfig):
 
 
 @dataclass
+class TmpObsTransformConfig(HabitatBaselinesBaseConfig):
+    # TODO : Make this a dict of str:ObsTransformConfig rather than use an enabled_transforms list
+    enabled_transforms: List[str] = field(default_factory=lambda: [])
+
+
+@dataclass
 class PolicyConfig(HabitatBaselinesBaseConfig):
     name: str = "PointNavResNetPolicy"
     action_distribution_type: str = "categorical"  # or 'gaussian'
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
-    obs_transforms: Any = MISSING
+    obs_transforms: TmpObsTransformConfig = TmpObsTransformConfig()
 
 
 @dataclass
@@ -198,6 +204,11 @@ class VERConfig(HabitatBaselinesBaseConfig):
     variable_experience: bool = True
     num_inference_workers: int = 2
     overlap_rollouts_and_learn: bool = False
+
+
+@dataclass
+class TmpAuxLossConfig(HabitatBaselinesBaseConfig):
+    enabled: List[str] = field(default_factory=lambda: [])
 
 
 @dataclass
@@ -247,7 +258,9 @@ class RLConfig(HabitatBaselinesBaseConfig):
     ver: VERConfig = VERConfig()
 
     # Auxiliary Losses
-    auxiliary_losses: Any = MISSING
+    # auxiliary_losses: Any = MISSING
+    # TODO : Replace TmpAuxLossConfig with AuxLossConfig
+    auxiliary_losses: TmpAuxLossConfig = TmpAuxLossConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
 
 
@@ -307,7 +320,6 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     )
     cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
-    simulator_gpu_id: int = 0
     torch_gpu_id: int = 0
     video_option: List[str] = field(
         default_factory=lambda: ["disk", "tensorboard"]
@@ -324,9 +336,6 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
-    sensors: List[str] = field(
-        default_factory=lambda: ["rgb_sensor", "depth_sensor"]
-    )
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10

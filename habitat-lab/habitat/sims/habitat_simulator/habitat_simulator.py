@@ -263,8 +263,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         agent_config = self._get_agent_config()
 
         sim_sensors = []
-        for sensor_name in agent_config.sensors:
-            sensor_cfg = getattr(self.habitat_config, sensor_name)
+
+        for sensor_cfg in agent_config.camera_sensors.values():
             sensor_type = registry.get_sensor(sensor_cfg.type)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
@@ -314,6 +314,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "is_set_start_state",
                 # This is the Sensor Config. Unpacked below
                 "sensors",
+                "camera_sensors",
                 "start_position",
                 "start_rotation",
                 "robot_urdf",

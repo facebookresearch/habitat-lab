@@ -66,7 +66,7 @@ class RearrangeEpisodeGenerator:
         """
         # load and cache the config
         self.cfg = cfg
-        self.start_cfg = self.cfg.clone()
+        self.start_cfg = self.cfg.copy()
         self._limit_scene_set = limit_scene_set
 
         # debug visualization settings

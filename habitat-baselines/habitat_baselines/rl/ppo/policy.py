@@ -90,7 +90,7 @@ class NetPolicy(nn.Module, Policy):
                 policy_config.action_dist,
             )
         else:
-            ValueError(
+            raise ValueError(
                 f"Action distribution {self.action_distribution_type}"
                 "not supported."
             )

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, Dict, List, Optional
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
@@ -699,28 +699,21 @@ class TaskConfig(HabitatBaseConfig):
     end_on_success: bool = False
     # NAVIGATION task
     type: str = "Nav-v0"
-    sensors: List[str] = field(default_factory=list)
-    measurements: List[str] = field(default_factory=list)
+    # Temporary structure for sensors
+    state_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    measurements: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     goal_sensor_uuid: str = "pointgoal"
-    possible_actions: List[str] = field(
-        default_factory=lambda: [
-            "stop",
-            "move_forward",
-            "turn_left",
-            "turn_right",
-        ]
-    )
     # REARRANGE task
     count_obj_collisions: bool = True
-    settle_steps = 5
-    constraint_violation_ends_episode = True
-    constraint_violation_drops_object = False
+    settle_steps: int = 5
+    constraint_violation_ends_episode: bool = True
+    constraint_violation_drops_object: bool = False
     # Forced to regenerate the starts even if they are already cached
-    force_regenerate = False
+    force_regenerate: bool = False
     # Saves the generated starts to a cache if they are not already generated
-    should_save_to_cache = True
-    must_look_at_targ = True
-    object_in_hand_sample_prob = 0.167
+    should_save_to_cache: bool = True
+    must_look_at_targ: bool = True
+    object_in_hand_sample_prob: float = 0.167
     gfx_replay_dir = "data/replays"
     render_target: bool = True
     ee_sample_factor: float = 0.2
@@ -750,7 +743,7 @@ class TaskConfig(HabitatBaseConfig):
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = field(default_factory=list)
-    actions: Any = MISSING
+    actions: Dict[str, Dict[str, Any]] = MISSING
 
 
 @dataclass
@@ -879,7 +872,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
-    sensors: List[str] = field(default_factory=lambda: ["rgb_sensor"])
+    camera_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
@@ -957,6 +950,9 @@ class SimulatorConfig(HabitatBaseConfig):
     rgb_sensor: HabitatSimRGBSensorConfig = HabitatSimRGBSensorConfig()
     depth_sensor: HabitatSimDepthSensorConfig = HabitatSimDepthSensorConfig()
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
+    # ep_info is added to the condif in some rearrange tasks inside
+    # merge_sim_episode_with_object_config
+    ep_info: Optional[Any] = None
 
 
 @dataclass
@@ -1050,6 +1046,7 @@ class HabitatConfig(HabitatBaseConfig):
     simulator: SimulatorConfig = SimulatorConfig()
     task: TaskConfig = TaskConfig()
     dataset: DatasetConfig = DatasetConfig()
+    gym: GymConfig = GymConfig()
 
 
 # -----------------------------------------------------------------------------

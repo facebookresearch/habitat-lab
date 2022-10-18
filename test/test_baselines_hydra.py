@@ -3,6 +3,11 @@ from omegaconf import DictConfig, OmegaConf
 
 # NOTE: import required to register structured configs
 import habitat_baselines.config.default_structured_configs  # noqa: F401
+from habitat.config.default_structured_configs import (
+    HabitatConfigPlugin,
+    register_hydra_plugin,
+)
+from habitat_baselines.run import execute_exp
 
 
 def my_app_compose_api() -> DictConfig:
@@ -14,8 +19,12 @@ def my_app_compose_api() -> DictConfig:
         cfg = compose(
             overrides=[
                 "+habitat_baselines=habitat_baselines_config_base",
-                "+habitat_baselines/rl/auxiliary_losses/cpca=cpca_loss_base",
-                "+habitat_baselines/rl/policy/obs_transforms/center_cropper=center_cropper_base",
+                "habitat_baselines.num_updates=2",
+                "habitat_baselines.num_environments=4",
+                "habitat_baselines.total_num_steps=-1.0",
+                "habitat_baselines.rl.policy.action_distribution_type=gaussian",
+                "+habitat=config",
+                "+tasks/rearrange@habitat=pick",
             ]
         )
 
@@ -24,8 +33,12 @@ def my_app_compose_api() -> DictConfig:
 
 
 def test_hydra_configs():
+    # Manually register the habitat configs so we can use the task configs (`+habitat=config"`)
+    register_hydra_plugin(HabitatConfigPlugin)
+
     cfg = my_app_compose_api()
     print(OmegaConf.to_yaml(cfg))
+    execute_exp(cfg, "train")
 
 
 if __name__ == "__main__":

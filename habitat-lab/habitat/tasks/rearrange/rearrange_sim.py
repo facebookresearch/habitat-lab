@@ -54,7 +54,7 @@ class RearrangeSim(HabitatSim):
                     for orig_sensor_name in config.agent_0.sensors:
                         full_name = f"{agent}_{orig_sensor_name}"
                         orig_sensor_id = config[orig_sensor_name].uuid
-                        new_sensor_cfg = config[orig_sensor_name].clone()
+                        new_sensor_cfg = config[orig_sensor_name].copy()
                         new_sensor_cfg.uuid = f"{agent}_{orig_sensor_id}"
                         config[full_name] = new_sensor_cfg
                         all_new_sensor_names.append(full_name)

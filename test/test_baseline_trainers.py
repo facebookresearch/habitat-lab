@@ -245,7 +245,7 @@ def test_cubemap_stiching(
         # 3) Compare the input and output cubemap
         env_fn_args = []
         for split in ["train", "val"]:
-            tmp_config = config.clone()
+            tmp_config = config.copy()
             with read_write(tmp_config):
                 tmp_config.dataset["split"] = split
             env_fn_args.append((tmp_config,))

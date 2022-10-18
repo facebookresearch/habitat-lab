@@ -58,7 +58,7 @@ class BaseTrainer:
             Config: merged config for eval.
         """
 
-        config = self.config.clone()
+        config = self.config.copy()
 
         ckpt_cmd_opts = checkpoint_config.habitat_baselines.cmd_trailing_opts
         eval_cmd_opts = config.habitat_baselines.cmd_trailing_opts
@@ -70,14 +70,11 @@ class BaseTrainer:
             config.merge_from_list(eval_cmd_opts)
         except KeyError:
             logger.info("Saved config is outdated, using solely eval config")
-            config = self.config.clone()
+            config = self.config.copy()
             config.merge_from_list(eval_cmd_opts)
         with read_write(config):
             if config.habitat.dataset.split == "train":
                 config.habitat.dataset.split = "val"
-            config.habitat.simulator.agent_0.sensors = (
-                self.config.habitat_baselines.sensors
-            )
 
         return config
 

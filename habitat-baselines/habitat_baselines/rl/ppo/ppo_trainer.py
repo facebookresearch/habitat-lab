@@ -907,7 +907,7 @@ class PPOTrainer(BaseRLTrainer):
         if self.config.habitat_baselines.eval.use_ckpt_config:
             config = self._setup_eval_config(ckpt_dict["config"])
         else:
-            config = self.config.clone()
+            config = self.config.copy()
 
         ppo_cfg = config.habitat_baselines.rl.ppo
 
