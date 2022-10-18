@@ -707,6 +707,8 @@ _C.habitat.simulator.additional_object_paths = (
     []
 )  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
 _C.habitat.simulator.seed = _C.habitat.seed
+_C.habitat.simulator.contact_test = False
+_C.habitat.simulator.nav_mesh = True
 _C.habitat.simulator.turn_angle = (
     10  # angle to rotate left or right in degrees
 )
