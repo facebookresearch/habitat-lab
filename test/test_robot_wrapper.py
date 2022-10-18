@@ -4,11 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import sys
-
-sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
-sys.path.append("/Users/jimmytyyang/Habitat/habitat-lab/habitat-lab")
-
 from os import path as osp
 
 import numpy as np
