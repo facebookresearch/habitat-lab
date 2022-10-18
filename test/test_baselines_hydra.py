@@ -23,7 +23,6 @@ def my_app_compose_api() -> DictConfig:
                 "habitat_baselines.num_environments=4",
                 "habitat_baselines.total_num_steps=-1.0",
                 "habitat_baselines.rl.policy.action_distribution_type=gaussian",
-                "+habitat=config",
                 "+tasks/rearrange@habitat=pick",
             ]
         )

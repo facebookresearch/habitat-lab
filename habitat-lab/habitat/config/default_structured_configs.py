@@ -947,8 +947,6 @@ class SimulatorConfig(HabitatBaseConfig):
     grasp_impulse: float = 1000.0
     agents: List[str] = field(default_factory=lambda: ["agent_0"])
     agent_0: AgentConfig = AgentConfig()
-    rgb_sensor: HabitatSimRGBSensorConfig = HabitatSimRGBSensorConfig()
-    depth_sensor: HabitatSimDepthSensorConfig = HabitatSimDepthSensorConfig()
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
     # ep_info is added to the condif in some rearrange tasks inside
     # merge_sim_episode_with_object_config
@@ -1053,7 +1051,7 @@ class HabitatConfig(HabitatBaseConfig):
 # Register configs in the Hydra ConfigStore
 # -----------------------------------------------------------------------------
 cs = ConfigStore.instance()
-cs.store(group="habitat", name="config", node=HabitatConfig)
+cs.store(group="habitat", name="habitat_config_base", node=HabitatConfig)
 cs.store(
     group="habitat",
     name="environment",

@@ -1,0 +1,8 @@
+
+
+hfov: 90
+sensor_subtype: PINHOLE
+height: 480
+width: 640
+position: [0, 1.25, 0]
+orientation: [0.0, 0.0, 0.0]

@@ -2,15 +2,13 @@ import pytest
 from gym import spaces
 from gym.vector.utils.spaces import batch_space
 
+from habitat.config.default import get_config
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (  # get_active_obs_transforms,
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
 )
 from habitat_baselines.common.tensor_dict import TensorDict
-
-# from habitat.config.default import _C as default_config
-from habitat_baselines.config.default import _C as default_config
 
 
 @pytest.mark.parametrize(
@@ -25,6 +23,7 @@ from habitat_baselines.config.default import _C as default_config
 )
 def test_transforms(obs_transform_key: str):
     transformer_cls = baseline_registry.get_obs_transformer(obs_transform_key)
+    default_config = get_config("habitat/habitat_config_base")
     transformer = transformer_cls.from_config(default_config)
     obs_space = spaces.Dict(
         {

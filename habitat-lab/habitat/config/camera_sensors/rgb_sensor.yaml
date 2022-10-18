@@ -1,0 +1,8 @@
+# @package habitat.simulator.agent_0.camera_sensors.rgb_sensor
+
+
+defaults:
+ - base_camera_sensor
+ - _self_
+
+type: HabitatSimRGBSensor

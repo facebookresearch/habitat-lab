@@ -6,11 +6,13 @@
 
 import inspect
 import os.path as osp
-from typing import List, Optional, Union
 
 import yacs.config
 
-from habitat.core.logging import logger
+# from typing import Optional
+
+
+# from habitat.core.logging import logger
 
 
 # Default Habitat config node
@@ -1001,40 +1003,70 @@ def _get_full_config_path(config_path: str) -> str:
     raise RuntimeError(f"No file found for config '{config_path}'")
 
 
+# def get_config(
+#     config_paths: Optional[Union[List[str], str]] = None,
+#     opts: Optional[list] = None,
+# ) -> CN:
+#     r"""Create a unified config with default values overwritten by values from
+#     :p:`config_paths` and overwritten by options from :p:`opts`.
+
+#     :param config_paths: List of config paths or string that contains comma
+#         separated list of config paths.
+#     :param opts: Config options (keys, values) in a list (e.g., passed from
+#         command line into the config. For example,
+#         :py:`opts = ['FOO.BAR', 0.5]`. Argument can be used for parameter
+#         sweeping or quick tests.
+#     """
+#     config = _C.clone()
+#     if config_paths:
+#         if isinstance(config_paths, str):
+#             if CONFIG_FILE_SEPARATOR in config_paths:
+#                 config_paths = config_paths.split(CONFIG_FILE_SEPARATOR)
+#             else:
+#                 config_paths = [config_paths]
+
+#         for config_path in config_paths:
+#             config_path = _get_full_config_path(config_path)
+#             if not osp.exists(config_path):
+#                 logger.warn(
+#                     f"Config file {config_path} could not be found. "
+#                     "Note that configuration files were moved to "
+#                     "the `habitat-lab/habitat/config` folder."
+#                 )
+#             config.merge_from_file(config_path)
+
+#     if opts:
+#         config.merge_from_list(opts)
+
+#     config.freeze()
+#     return config
+
+
+from typing import Optional
+
+from hydra import compose, initialize_config_dir
+from omegaconf import DictConfig, OmegaConf
+
+from habitat.config.default_structured_configs import (
+    HabitatConfigPlugin,
+    register_hydra_plugin,
+)
+
+
 def get_config(
-    config_paths: Optional[Union[List[str], str]] = None,
-    opts: Optional[list] = None,
-) -> CN:
-    r"""Create a unified config with default values overwritten by values from
-    :p:`config_paths` and overwritten by options from :p:`opts`.
+    config_paths: str,
+    overrides: Optional[list] = None,
+) -> DictConfig:
 
-    :param config_paths: List of config paths or string that contains comma
-        separated list of config paths.
-    :param opts: Config options (keys, values) in a list (e.g., passed from
-        command line into the config. For example,
-        :py:`opts = ['FOO.BAR', 0.5]`. Argument can be used for parameter
-        sweeping or quick tests.
-    """
-    config = _C.clone()
-    if config_paths:
-        if isinstance(config_paths, str):
-            if CONFIG_FILE_SEPARATOR in config_paths:
-                config_paths = config_paths.split(CONFIG_FILE_SEPARATOR)
-            else:
-                config_paths = [config_paths]
+    config_path = _get_full_config_path(config_paths)
+    register_hydra_plugin(HabitatConfigPlugin)
+    with initialize_config_dir(version_base=None, config_dir="/"):
 
-        for config_path in config_paths:
-            config_path = _get_full_config_path(config_path)
-            if not osp.exists(config_path):
-                logger.warn(
-                    f"Config file {config_path} could not be found. "
-                    "Note that configuration files were moved to "
-                    "the `habitat-lab/habitat/config` folder."
-                )
-            config.merge_from_file(config_path)
+        cfg = compose(
+            config_name=config_path,
+            overrides=overrides if overrides is not None else [],
+        )
 
-    if opts:
-        config.merge_from_list(opts)
+    OmegaConf.set_readonly(cfg, True)
 
-    config.freeze()
-    return config
+    return cfg
