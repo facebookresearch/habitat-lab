@@ -1,7 +1,8 @@
 # @package habitat
 
     defaults:
-     - /habitat/config
+     # habitat_config_base is in the group habitat and @ nothing since we want it at the root
+     - /habitat/habitat_config_base@
 
     gym:
         auto_name: "Pick"
