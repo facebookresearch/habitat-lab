@@ -315,9 +315,9 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
-    base_task_config_path: str = (
-        "habitat-lab/habitat/config/tasks/pointnav.yaml"
-    )
+    # base_task_config_path: str = (
+    #     "habitat-lab/habitat/config/tasks/pointnav.yaml"
+    # )
     cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
@@ -385,3 +385,15 @@ cs.store(
     name="cpca_loss_base",
     node=CPCALossConfig,
 )
+
+
+from hydra.core.config_search_path import ConfigSearchPath
+from hydra.plugins.search_path_plugin import SearchPathPlugin
+
+
+class HabitatBaselinesConfigPlugin(SearchPathPlugin):
+    def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
+        search_path.append(
+            provider="habitat",
+            path="pkg://habitat_baselines/config/",
+        )

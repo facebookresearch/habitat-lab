@@ -4,10 +4,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Optional, Union
+# from typing import Optional
 
 # from habitat import get_config as get_task_config
-from habitat.config import Config as CN
+# from habitat.config import Config as CN
 
 # import numpy as np
 
@@ -376,10 +376,34 @@ CONFIG_FILE_SEPARATOR = ","
 #     config.freeze()
 #     return config
 
+from typing import Optional
+
+from hydra import compose, initialize_config_dir
+from omegaconf import DictConfig, OmegaConf
+
+from habitat.config.default_structured_configs import (
+    HabitatConfigPlugin,
+    register_hydra_plugin,
+)
+from habitat_baselines.config.default_structured_configs import (
+    HabitatBaselinesConfigPlugin,
+)
+
 
 def get_config(
-    config_paths: Optional[Union[List[str], str]] = None,
-    opts: Optional[list] = None,
-) -> CN:
+    config_paths: str,
+    overrides: Optional[list] = None,
+) -> DictConfig:
 
-    raise NotImplementedError
+    register_hydra_plugin(HabitatConfigPlugin)
+    register_hydra_plugin(HabitatBaselinesConfigPlugin)
+    with initialize_config_dir(version_base=None, config_dir="/"):
+
+        cfg = compose(
+            config_name=config_paths,
+            overrides=overrides if overrides is not None else [],
+        )
+
+    OmegaConf.set_readonly(cfg, True)
+
+    return cfg

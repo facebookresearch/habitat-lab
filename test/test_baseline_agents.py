@@ -93,7 +93,7 @@ def test_simple_agents():
         simple_agents.RandomForwardAgent,
     ]:
         agent = agent_class(
-            config_env.habitat.task.success.success_distance,
+            config_env.habitat.task.measurements.success.success_distance,
             config_env.habitat.task.goal_sensor_uuid,
         )
         habitat.logger.info(agent_class.__name__)

@@ -83,7 +83,13 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
 
-    config = get_config(test_cfg_path).habitat.dataset
+    test_cfg_cleaned_path = test_cfg_path.replace(
+        "habitat-baselines/habitat_baselines/config/", ""
+    )
+    from omegaconf import OmegaConf
+
+    print(">>>>>\n", OmegaConf.to_yaml(get_config(test_cfg_cleaned_path)))
+    config = get_config(test_cfg_cleaned_path).habitat.dataset
     dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
         pytest.skip("Test skipped as dataset files are missing.")
@@ -99,13 +105,11 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
 
     try:
         run_exp(
-            test_cfg_path,
+            test_cfg_cleaned_path,
             mode,
             [
-                "habitat.simulator.habitat_sim_v0.gpu_gpu",
-                str(gpu2gpu),
-                "habitat_baselines.rl.policy.obs_transforms.enabled_transforms",
-                str(tuple(observation_transforms)),
+                f"habitat.simulator.habitat_sim_v0.gpu_gpu={str(gpu2gpu)}",
+                f"habitat_baselines.rl.policy.obs_transforms.enabled_transforms={str(tuple(observation_transforms))}",
             ],
         )
     finally:
