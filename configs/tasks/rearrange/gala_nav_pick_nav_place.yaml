@@ -15,14 +15,15 @@ DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
     #DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/test.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/test.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
     REWARD_MEASURE: move_obj_reward
     SUCCESS_MEASURE: composite_success
-    #START_CACHE: ../gala_kinematic/data/tidy_house_100ep.episode_set.json
-    START_CACHE: ../gala_kinematic/data/test.json
+    # START_CACHE: ../gala_kinematic/data/tidy_house_100ep.episode_set.json
+    # START_CACHE: ../gala_kinematic/data/test.json
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
@@ -38,7 +39,7 @@ TASK:
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
-    TASK_SPEC: nav_pick_nav_place
+    TASK_SPEC: gala
     PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
@@ -163,6 +164,7 @@ TASK:
         TYPE: RearrangePickSuccess
         EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
+    GEN_NAVMESH: False
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"
     ACTION_SPACE_CONFIG: v0
@@ -217,7 +219,7 @@ SIMULATOR:
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
-        ALLOW_SLIDING: false
+        ALLOW_SLIDING: true
         ENABLE_PHYSICS: true
         GPU_DEVICE_ID: 0
         GPU_GPU: false

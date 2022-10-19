@@ -28,6 +28,16 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 
+def interp_step(scale_val, set_pos):
+    set_pos = np.clip(set_pos, -1.0, 1.0)
+    # To [0,1]
+    set_pos = (set_pos + 1.0) / 2.0
+
+    for i in range(len(set_pos)):
+        set_pos[i] = mn.math.lerp(-scale_val[i], scale_val[i], set_pos[i])
+    return set_pos
+
+
 @registry.register_task_action
 class EmptyAction(SimulatorTaskAction):
     """A No-op action useful for testing and in some controllers where we want
@@ -217,13 +227,7 @@ class GalaArmKinematicAction(SimulatorTaskAction):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
 
-        set_pos = np.clip(set_pos, -1.0, 1.0)
-        # To [0,1]
-        set_pos = (set_pos + 1.0) / 2.0
-
-        for i in range(len(set_pos)):
-            scale_val = self._config.SCALING
-            set_pos[i] = mn.math.lerp(-scale_val[i], scale_val[i], set_pos[i])
+        set_pos = interp_step(self._config.SCALING, set_pos)
 
         set_arm_pos = set_pos + self._sim.robot.arm_joint_pos
         self._sim.robot.arm_joint_pos = set_arm_pos
@@ -320,23 +324,10 @@ class BaseVelAction(SimulatorTaskAction):
             self._sim.grasp_mgr.update_object_to_grasp()
 
     def step(self, base_vel, *args, is_last_action, **kwargs):
-        base_vel = np.clip(base_vel, -1, 1)
+        base_vel = interp_step(
+            [self._config.ANG_SPEED, self._config.LIN_SPEED], base_vel
+        )
         ang_vel, lin_vel = base_vel
-        # scale_factor = self._sim.ctrl
-        # lin_speed = self._config.LIN_SPEED * (
-        ang_vel = mn.math.lerp(
-            -self._config.ANG_SPEED, self._config.ANG_SPEED, ang_vel
-        )
-        lin_vel = mn.math.lerp(
-            -self._config.LIN_SPEED, self._config.LIN_SPEED, lin_vel
-        )
-
-        # for i in range(len(set_pos)):
-        #     scale_val = self._config.SCALING
-        #     set_pos[i] = mn.math.lerp(-scale_val[i], scale_val[i], set_pos[i])
-
-        # if not self._config.ALLOW_BACK:
-        #     lin_vel = np.maximum(lin_vel, 0)
 
         self.does_want_terminate = False
 

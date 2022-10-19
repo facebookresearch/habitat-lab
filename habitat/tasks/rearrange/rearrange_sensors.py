@@ -295,9 +295,7 @@ class StepCountSensor(Sensor):
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
         step_idx = task._cur_episode_step
-        episode_step_idx = step_idx - 1
-        if episode_step_idx < 0:
-            return np.array([-1.0, -1.0, -1.0])
+        episode_step_idx = step_idx
 
         max_episode_length = self.config.MAX_STEPS
         fraction_steps_left = (
@@ -339,11 +337,6 @@ class EEPositionSensor(Sensor):
         robot_pos, robot_rot = get_robot_local(self._sim.robot)
         ee_pos = self._sim.robot.ee_transform.translation
         return get_rel_coord(robot_pos, ee_pos, robot_rot)
-
-        # trans = self._sim.robot.base_transformation
-        # local_ee_pos = trans.inverted().transform_point(ee_pos)
-
-        # return np.array(local_ee_pos)
 
 
 @registry.register_sensor

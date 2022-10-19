@@ -920,7 +920,7 @@ class PPOTrainer(BaseRLTrainer):
 
         config.defrost()
         #################################
-        # Gala specific options
+        # Gala specific options. Map gala config options to H2.0 config.
         if config.EVAL.SPLIT == "val":
             config.EVAL.SPLIT = "eval"
         config.RL.POLICY.name = raw_cfg.RL.POLICY.name
@@ -946,6 +946,12 @@ class PPOTrainer(BaseRLTrainer):
         self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
         self.config.RL.POLICY.SENSOR_ORDERING = fuse_keys
         self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
+        config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_PICK_THRESH = (
+            raw_cfg.GRASP_THRESHOLD
+        )
+        config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_DROP_THRESH = (
+            raw_cfg.DROP_THRESHOLD
+        )
         self.config.freeze()
 
         #################################
@@ -1061,7 +1067,7 @@ class PPOTrainer(BaseRLTrainer):
             and self.envs.num_envs > 0
         ):
             current_episodes = self.envs.current_episodes()
-            if batch["step_count_remaining"][0][0].item() < 0:
+            if False and batch["step_count_remaining"][0][0].item() < 0:
                 actions = prev_actions
             else:
                 with torch.no_grad():
@@ -1082,10 +1088,10 @@ class PPOTrainer(BaseRLTrainer):
 
             # To fix the action sequence
             # actions = torch.zeros((1, 11))
-            # actions[:, -8:-1] = 0.01
+            # actions[:, 1:-1] = 0.1
             # print("\n" * 3)
             # print("Pre step", list(batch["joint"].view(-1).cpu().numpy()))
-            # print("Actions", list(actions[:, -8:-1].view(-1).cpu().numpy()))
+            # print("Actions", list(actions.view(-1).cpu().numpy()))
 
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
