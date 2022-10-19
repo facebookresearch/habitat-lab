@@ -3,6 +3,7 @@
     defaults:
      # habitat_config_base is in the group habitat and @ nothing since we want it at the root
      - /habitat/habitat_config_base@
+     - /camera_sensors/head_depth_sensor
 
     gym:
         auto_name: "Pick"
@@ -118,31 +119,33 @@
             ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
             camera_sensors:
                 head_depth_sensor:
-                    type: HabitatSimDepthSensor
-                    uuid: robot_head_depth
                     width: 256
                     height: 256
-                    min_depth: 0.0
-                    max_depth: 10.0
-                    normalize_depth: True
-                head_rgb_sensor:
-                    type: HabitatSimRGBSensor
-                    uuid: robot_head_rgb
-                    width: 256
-                    height: 256
-                arm_depth_sensor:
-                    type: HabitatSimDepthSensor
-                    uuid: robot_arm_depth
-                    height: 128
-                    max_depth: 10.0
-                    min_depth: 0.0
-                    normalize_depth: true
-                    width: 128
-                arm_rgb_sensor:
-                    type: HabitatSimRGBSensor
-                    uuid: robot_arm_rgb
-                    height: 128
-                    width: 128
+            # camera_sensors:
+            #     head_depth_sensor:
+            #         type: HabitatSimDepthSensor
+            #         uuid: robot_head_depth
+            #         width: 256
+            #         height: 256
+            #         min_depth: 0.0
+            #         max_depth: 10.0
+            #         normalize_depth: True
+            #     # head_rgb_sensor:
+            #     #     width: 700 #256
+            #     #     height: 256
+            #     # arm_depth_sensor:
+            #     #     type: HabitatSimDepthSensor
+            #     #     uuid: robot_arm_depth
+            #     #     height: 128
+            #     #     max_depth: 10.0
+            #     #     min_depth: 0.0
+            #     #     normalize_depth: true
+            #     #     width: 128
+            #     # arm_rgb_sensor:
+            #     #     type: HabitatSimRGBSensor
+            #     #     uuid: robot_arm_rgb
+            #     #     height: 128
+            #     #     width: 128
 
         # Agent setup
         ctrl_freq: 120.0

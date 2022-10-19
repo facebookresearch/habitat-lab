@@ -1,0 +1,9 @@
+# @package habitat.simulator.agent_0.camera_sensors.third_rgb_sensor
+
+
+defaults:
+ - base_camera_sensor
+ - _self_
+
+type: HabitatSimRGBSensor
+uuid: robot_third_rgb
