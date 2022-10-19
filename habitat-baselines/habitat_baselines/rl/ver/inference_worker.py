@@ -90,7 +90,7 @@ class InferenceWorkerProcess(ProcessBase):
             self.actor_critic.eval()
             self.actor_critic.aux_loss_modules.clear()
             self.actor_critic.to(device=self.device)
-            if not self.config.rl.ddppo.train_encoder:
+            if not self.config.habitat_baselines.rl.ddppo.train_encoder:
                 self._static_encoder = True
                 self.visual_encoder = self.actor_critic.net.visual_encoder
 
