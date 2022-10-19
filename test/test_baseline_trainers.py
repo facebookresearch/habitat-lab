@@ -47,7 +47,7 @@ def download_data():
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "test_cfg_path,gpu2gpu,observation_transforms,mode",
+    "test_cfg_path,gpu2gpu,observation_transforms_overrides,mode",
     list(
         itertools.product(
             glob("habitat-baselines/habitat_baselines/config/test/*"),
@@ -55,8 +55,8 @@ def download_data():
             [
                 [],
                 [
-                    "CenterCropper",
-                    "ResizeShortestEdge",
+                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
+                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
                 ],
             ],
             ["train", "eval"],
@@ -71,15 +71,17 @@ def download_data():
             [
                 [],
                 [
-                    "CenterCropper",
-                    "ResizeShortestEdge",
+                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
+                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
                 ],
             ],
             ["train", "eval"],
         )
     ),
 )
-def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
+def test_trainers(
+    test_cfg_path, gpu2gpu, observation_transforms_overrides, mode
+):
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
 
@@ -88,7 +90,17 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
     )
     from omegaconf import OmegaConf
 
-    print(">>>>>\n", OmegaConf.to_yaml(get_config(test_cfg_cleaned_path)))
+    print(
+        ">>>>>\n",
+        OmegaConf.to_yaml(
+            get_config(
+                test_cfg_cleaned_path,
+                [
+                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base"
+                ],
+            )
+        ),
+    )
     config = get_config(test_cfg_cleaned_path).habitat.dataset
     dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
@@ -109,8 +121,8 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
             mode,
             [
                 f"habitat.simulator.habitat_sim_v0.gpu_gpu={str(gpu2gpu)}",
-                f"habitat_baselines.rl.policy.obs_transforms.enabled_transforms={str(tuple(observation_transforms))}",
-            ],
+            ]
+            + observation_transforms_overrides,
         )
     finally:
         # Needed to destroy the trainer

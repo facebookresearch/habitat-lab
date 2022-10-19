@@ -397,10 +397,21 @@ def get_config(
 
     register_hydra_plugin(HabitatConfigPlugin)
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
-    with initialize_config_dir(version_base=None, config_dir="/"):
+
+    import inspect
+    import os.path as osp
+
+    config_dir = osp.dirname(inspect.getabsfile(inspect.currentframe()))
+
+    with initialize_config_dir(
+        version_base=None,
+        config_dir=config_dir + "/" + osp.dirname(config_paths),
+    ):
+        # with initialize(version_base=None, config_path="."):
 
         cfg = compose(
-            config_name=config_paths,
+            config_name=osp.basename(config_paths),
+            # config_name=config_paths,
             overrides=overrides if overrides is not None else [],
         )
 

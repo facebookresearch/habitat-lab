@@ -1,4 +1,6 @@
-habitat_baselines:
+# @package habitat_baselines
+
+
   base_task_config_path: "tasks/pointnav.yaml"
   trainer_name: "ppo"
   simulator_gpu_id: 0

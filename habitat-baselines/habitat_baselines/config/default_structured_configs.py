@@ -1,9 +1,11 @@
 import math
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import II
+
+cs = ConfigStore.instance()
 
 
 @dataclass
@@ -88,6 +90,13 @@ class CenterCropperConfig(ObsTransformConfig):
     )
 
 
+cs.store(
+    group="habitat_baselines/rl/policy/obs_transforms/center_cropper",
+    name="center_cropper_base",
+    node=CenterCropperConfig,
+)
+
+
 @dataclass
 class ResizeShortestEdgeConfig(ObsTransformConfig):
     size: int = 256
@@ -98,6 +107,13 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
         "semantic",
     )
     semantic_key: str = "semantic"
+
+
+cs.store(
+    group="habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge",
+    name="resize_shorter_edge_base",
+    node=ResizeShortestEdgeConfig,
+)
 
 
 @dataclass
@@ -114,6 +130,13 @@ class Cube2EqConfig(ObsTransformConfig):
             "UP",
         ]
     )
+
+
+cs.store(
+    group="habitat_baselines/rl/policy/obs_transforms/cube_2_eq",
+    name="cube_2_eq_base",
+    node=Cube2EqConfig,
+)
 
 
 @dataclass
@@ -134,6 +157,26 @@ class Cube2FishConfig(ObsTransformConfig):
     )
 
 
+cs.store(
+    group="habitat_baselines/rl/policy/obs_transforms/cube_2_fish",
+    name="cube_2_fish_base",
+    node=Cube2FishConfig,
+)
+
+
+@dataclass
+class AddVirtualKeysConfig(ObsTransformConfig):
+    # This is kept as reference to rememver this obs_transformer exists
+    pass
+
+
+cs.store(
+    group="habitat_baselines/rl/policy/obs_transforms/add_virtual_keys",
+    name="add_virtual_keys_base",
+    node=Cube2FishConfig,
+)
+
+
 @dataclass
 class Eq2CubeConfig(ObsTransformConfig):
     height: int = 256
@@ -150,10 +193,11 @@ class Eq2CubeConfig(ObsTransformConfig):
     )
 
 
-@dataclass
-class TmpObsTransformConfig(HabitatBaselinesBaseConfig):
-    # TODO : Make this a dict of str:ObsTransformConfig rather than use an enabled_transforms list
-    enabled_transforms: List[str] = field(default_factory=lambda: [])
+cs.store(
+    group="habitat_baselines/rl/policy/obs_transforms/eq_2_cube",
+    name="eq_2_cube_base",
+    node=Eq2CubeConfig,
+)
 
 
 @dataclass
@@ -163,7 +207,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
-    obs_transforms: TmpObsTransformConfig = TmpObsTransformConfig()
+    obs_transforms: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -365,7 +409,6 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     profiling: ProfilingConfig = ProfilingConfig()
 
 
-cs = ConfigStore.instance()
 cs.store(
     group="habitat_baselines",
     name="habitat_baselines_config_base",
@@ -375,11 +418,6 @@ cs.store(
     group="habitat_baselines/rl/policy", name="policy_base", node=PolicyConfig
 )
 
-cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/center_cropper",
-    name="center_cropper_base",
-    node=CenterCropperConfig,
-)
 cs.store(
     group="habitat_baselines/rl/auxiliary_losses/cpca",
     name="cpca_loss_base",
