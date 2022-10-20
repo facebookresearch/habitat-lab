@@ -74,7 +74,9 @@ class NetPolicy(nn.Module, Policy):
         if policy_config is None:
             self.action_distribution_type = "categorical"
         else:
-            self.action_distribution_type = policy_config.action_distribution_type
+            self.action_distribution_type = (
+                policy_config.action_distribution_type
+            )
 
         if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
@@ -95,7 +97,8 @@ class NetPolicy(nn.Module, Policy):
             )
         else:
             ValueError(
-                f"Action distribution {self.action_distribution_type}" "not supported."
+                f"Action distribution {self.action_distribution_type}"
+                "not supported."
             )
 
         self.critic = CriticHead(self.net.output_size)
@@ -138,7 +141,9 @@ class NetPolicy(nn.Module, Policy):
         return value, action, action_log_probs, rnn_hidden_states
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        features, _ = self.net(observations, rnn_hidden_states, prev_actions, masks)
+        features, _ = self.net(
+            observations, rnn_hidden_states, prev_actions, masks
+        )
         return self.critic(features)
 
     def evaluate_actions(
@@ -193,7 +198,9 @@ class PointNavBaselinePolicy(NetPolicy):
         )
 
     @classmethod
-    def from_config(cls, config: Config, observation_space: spaces.Dict, action_space):
+    def from_config(
+        cls, config: Config, observation_space: spaces.Dict, action_space
+    ):
         return cls(
             observation_space=observation_space,
             action_space=action_space,
@@ -321,6 +328,8 @@ class PointNavBaselineNet(Net):
         #### [gala_kinematic] End of manually adding sensors in there
 
         x_out = torch.cat(x, dim=1)
-        x_out, rnn_hidden_states = self.state_encoder(x_out, rnn_hidden_states, masks)
+        x_out, rnn_hidden_states = self.state_encoder(
+            x_out, rnn_hidden_states, masks
+        )
 
         return x_out, rnn_hidden_states

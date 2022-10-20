@@ -55,6 +55,8 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 return
 
         # Get markers we are close to.
+        if not self._config.ALLOW_MARKER_GRASP:
+            return
         markers = self._sim.get_all_markers()
         if len(markers) > 0:
             names = list(markers.keys())
@@ -89,15 +91,14 @@ class GalaMagicGraspAction(MagicGraspAction):
         if grip_action is None:
             return
 
-        if (
-            grip_action > self._config.GRASP_PICK_THRESH
-            and not self._sim.grasp_mgr.is_grasped
-        ):
+        # Check the grip is discrete action.
+        grip_action_int = int(grip_action[0])
+        if grip_action[0] - float(grip_action_int) > 1e-5:
+            raise ValueError(f"Got unexpected grip action {grip_action}")
+
+        if grip_action_int == 1 and not self._sim.grasp_mgr.is_grasped:
             self._grasp()
-        elif (
-            grip_action < self._config.GRASP_DROP_THRESH
-            and self._sim.grasp_mgr.is_grasped
-        ):
+        elif grip_action_int == 0 and self._sim.grasp_mgr.is_grasped:
             self._ungrasp()
 
 

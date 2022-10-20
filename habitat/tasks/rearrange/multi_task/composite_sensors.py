@@ -244,7 +244,9 @@ class CompositeSuccess(Measure):
         does_action_want_stop = task.measurements.measures[
             DoesWantTerminate.cls_uuid
         ].get_metric()
-        self._metric = task.is_goal_state_satisfied() and does_action_want_stop
+        self._metric = task.is_goal_state_satisfied()
+        if self._config.REQUIRES_STOP:
+            self._metric = self._metric and does_action_want_stop
         if does_action_want_stop:
             task.should_end = True
 

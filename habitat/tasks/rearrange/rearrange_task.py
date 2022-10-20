@@ -108,8 +108,6 @@ class RearrangeTask(NavigationTask):
                     [start_pos[0], valid_y, start_pos[1]]
                 )
                 self._sim.robot.base_rot = start_rot
-
-                print(f"{check_pos} versus {self._sim.get_targets()[1][0]}")
             else:
                 self._sim.set_robot_base_to_random_point()
 

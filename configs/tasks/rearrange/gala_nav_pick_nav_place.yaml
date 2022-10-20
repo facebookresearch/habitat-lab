@@ -88,8 +88,13 @@ TASK:
     ROBOT_FORCE:
         TYPE: RobotForce
         MIN_FORCE: 20.0
+    COMPOSITE_SUCCESS:
+        REQUIRES_STOP: False
+    MIN_OBJ_TO_GOAL_DIST:
+        TYPE: MinObjectToGoalDistance
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
+    - MIN_OBJ_TO_GOAL_DIST
     - ROBOT_FORCE
     - FORCE_TERMINATE
     - ROBOT_COLLS
@@ -109,8 +114,9 @@ TASK:
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
             GRASP_PICK_THRESH: 0.9
-            GRASP_DROP_THRESH: -0.9
+            GRASP_DROP_THRESH: 0.1
             SCALING: [0.196, 0.196, 0.196, 0.196, 0.196, 0.262, 0.196]
+            ALLOW_MARKER_GRASP: False
             # DELTA_POS_LIMIT: 0.0125
         BASE_VELOCITY:
             TYPE: BaseVelAction

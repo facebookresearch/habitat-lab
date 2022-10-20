@@ -491,6 +491,42 @@ class ObjectToGoalDistance(Measure):
 
 
 @registry.register_measure
+class MinObjectToGoalDistance(Measure):
+    """
+    Euclidean distance from the target object to the goal.
+    """
+
+    cls_uuid: str = "min_obj_goal_dist"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return MinObjectToGoalDistance.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = None
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        obj_to_goal_dists = task.measurements.measures[
+            ObjectToGoalDistance.cls_uuid
+        ].get_metric()
+        if self._metric is None:
+            self._metric = {
+                k: obj_to_goal_dists[k] for k in obj_to_goal_dists.keys()
+            }
+        else:
+            self._metric = {
+                k: min(obj_to_goal_dists[k], self._metric[k])
+                for k in obj_to_goal_dists.keys()
+            }
+
+
+@registry.register_measure
 class ObjAtGoal(Measure):
     """
     Returns if the target object is at the goal (binary) for each of the target

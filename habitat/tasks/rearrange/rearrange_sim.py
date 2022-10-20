@@ -342,7 +342,9 @@ class RearrangeSim(HabitatSim):
             scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
             base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
 
-            navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+            navmesh_path = osp.join(
+                base_dir, "navmeshes", scene_name + ".navmesh"
+            )
             self.pathfinder.load_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
