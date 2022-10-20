@@ -2,7 +2,6 @@ habitat_baselines:
   base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
   trainer_name: "eqa-cnn-pretrain"
 
-  simulator_gpu_id: 0
   torch_gpu_id: 0
 
   dataset_path: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"

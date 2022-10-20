@@ -2,7 +2,6 @@ habitat_baselines:
   base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
   trainer_name: "pacman"
 
-  simulator_gpu_id: 0
   torch_gpu_id: 0
 
   only_vqa_task: False # if True, only last `num_frames` will be saved to disk.

@@ -32,10 +32,6 @@ class WBConfig(HabitatBaselinesBaseConfig):
 class EvalConfig(HabitatBaselinesBaseConfig):
     # The split to evaluate on
     split: str = "val"
-    # Whether to use the config in the checkpoint. Setting this to False
-    # is useful if some code changes necessitate a new config but the weights
-    # are still valid.
-    use_ckpt_config: bool = True
     should_load_ckpt: bool = True
     # The number of time to run each episode through evaluation.
     # Only works when evaluating on all episodes.
@@ -80,6 +76,7 @@ class ObsTransformConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class CenterCropperConfig(ObsTransformConfig):
+    type: str = "CenterCropper"
     height: int = 256
     width: int = 256
     channels_last: bool = True
@@ -99,6 +96,7 @@ cs.store(
 
 @dataclass
 class ResizeShortestEdgeConfig(ObsTransformConfig):
+    type: str = "ResizeShortestEdge"
     size: int = 256
     channels_last: bool = True
     trans_keys: Tuple[str] = (
@@ -118,6 +116,7 @@ cs.store(
 
 @dataclass
 class Cube2EqConfig(ObsTransformConfig):
+    type: str = "CubeMap2Equirect"
     height: int = 256
     width: int = 512
     sensor_uuids: List[str] = field(
@@ -141,6 +140,7 @@ cs.store(
 
 @dataclass
 class Cube2FishConfig(ObsTransformConfig):
+    type: str = "CubeMap2Fisheye"
     height: int = 256
     width: int = 256
     fov: int = 180
@@ -167,7 +167,7 @@ cs.store(
 @dataclass
 class AddVirtualKeysConfig(ObsTransformConfig):
     # This is kept as reference to rememver this obs_transformer exists
-    pass
+    type: str = "AddVirtualKeys"
 
 
 cs.store(
@@ -179,6 +179,7 @@ cs.store(
 
 @dataclass
 class Eq2CubeConfig(ObsTransformConfig):
+    type: str = "Equirect2CubeMap"
     height: int = 256
     width: int = 256
     sensor_uuids: List[str] = field(
@@ -402,6 +403,9 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     force_torch_single_threaded: bool = False
     # Weights and Biases config
     wb: WBConfig = WBConfig()
+    # When resuming training or evaluating, will use the original
+    # training config if load_resume_state_config is True
+    load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
     rl: RLConfig = RLConfig()
 
