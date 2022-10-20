@@ -1203,10 +1203,14 @@ def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
     active_obs_transforms = []
     obs_trans_conf = config.habitat_baselines.rl.policy.obs_transforms
     if hasattr(config.habitat_baselines.rl.policy, "obs_transforms"):
-        for obs_transform_name, obs_transform_config in obs_trans_conf.items():
+        for obs_transform_config in obs_trans_conf.values():
             obs_trans_cls = baseline_registry.get_obs_transformer(
-                obs_transform_name
+                obs_transform_config.type
             )
+            if obs_trans_cls is None:
+                raise ValueError(
+                    f"Unkown ObservationTransform with name {obs_transform_config.type}."
+                )
             obs_transform = obs_trans_cls.from_config(obs_transform_config)
             active_obs_transforms.append(obs_transform)
     return active_obs_transforms

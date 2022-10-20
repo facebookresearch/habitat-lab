@@ -56,7 +56,7 @@ def download_data():
                 [],
                 [
                     "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
-                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
+                    "+habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
                 ],
             ],
             ["train", "eval"],
@@ -72,7 +72,7 @@ def download_data():
                 [],
                 [
                     "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
-                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
+                    "+habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
                 ],
             ],
             ["train", "eval"],
