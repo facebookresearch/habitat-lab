@@ -202,7 +202,9 @@ class PPOTrainer(BaseRLTrainer):
             resume_state = load_resume_state(self.config)
 
         if resume_state is not None:
-            self.config: Config = resume_state["config"]
+            self.config = self._get_resume_state_config_or_new_config(
+                resume_state["config"]
+            )
 
         if self.config.habitat_baselines.rl.ddppo.force_distributed:
             self._is_distributed = True
@@ -905,10 +907,9 @@ class PPOTrainer(BaseRLTrainer):
         else:
             ckpt_dict = {}
 
-        if self.config.habitat_baselines.eval.use_ckpt_config:
-            config = self._setup_eval_config(ckpt_dict["config"])
-        else:
-            config = self.config.copy()
+        config = self._get_resume_state_config_or_new_config(
+            ckpt_dict["config"]
+        )
 
         ppo_cfg = config.habitat_baselines.rl.ppo
 
