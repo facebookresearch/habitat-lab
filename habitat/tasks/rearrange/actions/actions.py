@@ -22,6 +22,7 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
+    GazeGraspAction
 )
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -176,6 +177,59 @@ class ArmRelPosKinematicAction(RobotAction):
         self.cur_robot.arm_joint_pos = set_arm_pos
         self.cur_robot.fix_joint_values = set_arm_pos
 
+@registry.register_task_action
+class ArmRelPosKinematicReducedAction(RobotAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, *args, **kwargs):
+        if self._config.get("SHOULD_CLIP", True):
+            # clip from -1 to 1
+            delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
+        self._sim: RearrangeSim
+
+
+        # # clip from -1 to 1
+        # delta_pos = np.clip(delta_pos, -1, 1)
+        # delta_pos *= self._config.DELTA_POS_LIMIT
+        # # The actual joint positions
+        # self._sim: RearrangeSim
+        # self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
+
+
+        # Expand delta_pos based on mask
+        expanded_delta_pos = np.zeros(len(self._config.ARM_JOINT_MASK))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._config.ARM_JOINT_MASK:
+            if mask == 0:
+                tgt_idx += 1
+                continue
+            expanded_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        min_limit, max_limit = self.cur_robot.arm_joint_limits
+        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+        # Reset to zero based on the mask
+        for i, v in enumerate(self._config.ARM_JOINT_MASK):
+            if v == 0:
+                set_arm_pos[i] = 0
+        self.cur_robot.arm_motor_pos = set_arm_pos
+        #self.cur_robot.fix_joint_values = set_arm_pos
 
 @registry.register_task_action
 class ArmAbsPosAction(RobotAction):
@@ -240,6 +294,10 @@ class BaseVelAction(RobotAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
         self.prev_collision_free_point = None
+
+        self.data_time_1 = []
+        self.data_time_2 = []
+        self.counter = 0
 
     @property
     def end_on_stop(self):
@@ -320,8 +378,25 @@ class BaseVelAction(RobotAction):
             target_rigid_state = self.base_vel_ctrl.integrate_transform(
                 1 / self._sim.ctrl_freq, rigid_state
             )
+            import time
+            start_time = time.time()
+            self._sim.contact_test(self.cur_robot.sim_obj.object_id)
+            elapsed_time_1 = time.time() - start_time
+            start_time = time.time()
+            self._sim.step_filter(rigid_state.translation, target_rigid_state.translation)
+            elapsed_time_2 = time.time() - start_time
+
             self.cur_robot.update_base(rigid_state, target_rigid_state)
+
+            self.data_time_1.append(elapsed_time_1)
+            self.data_time_2.append(elapsed_time_2)
             self.check_step()
+
+        self.counter += 1
+        print(self.counter)
+        if self.counter == 1000:
+            print("Average time contact test", np.sum(self.data_time_1)/self.counter)
+            print("Average time step filter", np.sum(self.data_time_2)/self.counter)
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.BASE_VELOCITY)
