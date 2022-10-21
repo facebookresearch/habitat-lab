@@ -55,6 +55,9 @@ class PPO(nn.Module):
         )
         self.device = next(actor_critic.parameters()).device
         self.use_normalized_advantage = use_normalized_advantage
+    
+    def parameters(self):
+        return self.actor_critic.parameters()
 
     def forward(self, *x):
         raise NotImplementedError
@@ -83,6 +86,11 @@ class PPO(nn.Module):
             )
 
             for batch in data_generator:
+                if 'recurrent_hidden_states_2' in batch:
+                    rnn_hs = batch["recurrent_hidden_states_2"]
+                else:
+                    rnn_hs = batch["recurrent_hidden_states"]
+                
                 (
                     values,
                     action_log_probs,
@@ -90,7 +98,7 @@ class PPO(nn.Module):
                     _,
                 ) = self._evaluate_actions(
                     batch["observations"],
-                    batch["recurrent_hidden_states"],
+                    rnn_hs,
                     batch["prev_actions"],
                     batch["masks"],
                     batch["actions"],

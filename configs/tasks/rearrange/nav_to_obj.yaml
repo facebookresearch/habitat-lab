@@ -3,10 +3,9 @@ GYM:
     OBS_KEYS:
     - robot_head_depth
     - object_to_agent_gps_compass
-    - joint
     - nav_to_skill
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 400
+    MAX_EPISODE_STEPS: 600
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
@@ -30,7 +29,7 @@ TASK:
     REWARD_MEASURE: nav_to_obj_reward
     SUCCESS_MEASURE: nav_to_obj_success
     SUCCESS_REWARD: 10.0
-    SLACK_REWARD: 0.0
+    SLACK_REWARD: -0.002
     END_ON_SUCCESS: true
     TARGET_START_POINT_GOAL_SENSOR:
         TYPE: TargetOrGoalStartPointGoalSensor
@@ -72,9 +71,9 @@ TASK:
         ANGLE_DIST_REWARD: 1.0
         DIST_REWARD: 10.0
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 5.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: .2
+        FORCE_END_PEN: 10.0
     NAV_TO_POS_SUCC:
         TYPE: NavToPosSucc
         SUCCESS_DISTANCE: 0.3
@@ -98,8 +97,8 @@ TASK:
     ACTIONS:
         BASE_VELOCITY:
             TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
+            LIN_SPEED: 3.0
+            ANG_SPEED: 3.0
             ALLOW_DYN_SLIDE: true
             ALLOW_BACK: true
             END_ON_STOP: true

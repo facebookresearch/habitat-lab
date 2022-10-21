@@ -55,6 +55,9 @@ from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
+from habitat_baselines.rl.thrl.trained_hierarchichal_policy import (  # noqa: F401.
+    TrainedHierarchicalPolicy,
+)
 from habitat_baselines.rl.ppo import PPO
 from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.utils.common import (
@@ -138,7 +141,6 @@ class PPOTrainer(BaseRLTrainer):
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
-
         self.actor_critic = policy.from_config(
             self.config,
             observation_space,
@@ -302,6 +304,11 @@ class PPOTrainer(BaseRLTrainer):
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
 
+        try:
+            recurrent_hidden_states_2 = ppo_cfg.use_recurrent_hidden_states_2
+        except:
+            recurrent_hidden_states_2 = False
+
         self.rollouts = RolloutStorage(
             ppo_cfg.num_steps,
             self.envs.num_envs,
@@ -312,6 +319,7 @@ class PPOTrainer(BaseRLTrainer):
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
             action_shape=action_shape,
             discrete_actions=discrete_actions,
+            recurrent_hidden_states_2 = recurrent_hidden_states_2
         )
         self.rollouts.to(self.device)
 
@@ -434,6 +442,10 @@ class PPOTrainer(BaseRLTrainer):
                 env_slice,
             ]
 
+            if 'recurrent_hidden_states_2' in step_batch:
+                rnn_h_s = (step_batch['recurrent_hidden_states'], step_batch['recurrent_hidden_states_2'])
+            else:
+                rnn_h_s = step_batch['recurrent_hidden_states']
             profiling_wrapper.range_push("compute actions")
             (
                 values,
@@ -442,7 +454,7 @@ class PPOTrainer(BaseRLTrainer):
                 recurrent_hidden_states,
             ) = self.actor_critic.act(
                 step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
+                rnn_h_s,
                 step_batch["prev_actions"],
                 step_batch["masks"],
             )
@@ -565,13 +577,21 @@ class PPOTrainer(BaseRLTrainer):
                 self.rollouts.current_rollout_step_idx
             ]
 
-            next_value = self.actor_critic.get_value(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
-            )
+            if 'recurrent_hidden_states_2' in step_batch:
+                next_value = self.actor_critic.get_value(
+                    step_batch["observations"],
+                    step_batch["recurrent_hidden_states_2"],
+                    step_batch["prev_actions"],
+                    step_batch["masks"])
+            else:
+                next_value = self.actor_critic.get_value(
+                    step_batch["observations"],
+                    step_batch["recurrent_hidden_states"],
+                    step_batch["prev_actions"],
+                    step_batch["masks"],
+                )
 
+            
         self.rollouts.compute_returns(
             next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
         )
@@ -717,10 +737,30 @@ class PPOTrainer(BaseRLTrainer):
         count_checkpoints = 0
         prev_time = 0
 
-        lr_scheduler = LambdaLR(
-            optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: 1 - self.percent_done(),
-        )
+        try:
+            if self.config.RL.PPO.use_cosine_decay_lr:
+                from math import pi, cos
+                
+                def decay_function(step):
+                    alpha = self.config.RL.PPO.lr_cosine_decay_alpha
+                    decay_steps = self.config.TOTAL_NUM_STEPS
+                    step = min(step, decay_steps)
+                    cosine_decay = 0.5 * (1 + cos(pi * step / decay_steps))
+                    decayed = (1 - alpha) * cosine_decay + alpha
+                    return decayed
+            else:
+                def decay_function(x):
+                    return 1 - self.percent_done()
+            lr_scheduler = LambdaLR(
+                optimizer=self.agent.optimizer,
+                lr_lambda=decay_function
+            )
+        except:
+            if self.config.RL.PPO.use_linear_lr_decay:
+                lr_scheduler = LambdaLR(
+                    optimizer=self.agent.optimizer,
+                    lr_lambda= lambda x: 1 - self.percent_done()
+                )
 
         resume_state = load_resume_state(self.config)
         if resume_state is not None:
@@ -837,7 +877,7 @@ class PPOTrainer(BaseRLTrainer):
                     dist_entropy,
                 ) = self._update_agent()
 
-                if ppo_cfg.use_linear_lr_decay:
+                if ppo_cfg.use_linear_lr_decay or ppo_cfg.use_cosine_decay_lr:
                     lr_scheduler.step()  # type: ignore
 
                 self.num_updates_done += 1
@@ -964,6 +1004,9 @@ class PPOTrainer(BaseRLTrainer):
             ppo_cfg.hidden_size,
             device=self.device,
         )
+        if self.config.RL.PPO.use_recurrent_hidden_states_2:
+            test_recurrent_hidden_states = (test_recurrent_hidden_states,test_recurrent_hidden_states)
+
         prev_actions = torch.zeros(
             self.config.NUM_ENVIRONMENTS,
             *action_shape,
@@ -1011,7 +1054,7 @@ class PPOTrainer(BaseRLTrainer):
         ):
             current_episodes = self.envs.current_episodes()
 
-            with torch.no_grad():
+            with torch.no_grad():                    
                 (
                     _,
                     actions,

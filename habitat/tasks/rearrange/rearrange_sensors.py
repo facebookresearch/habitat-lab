@@ -887,4 +887,6 @@ class RearrangeReward(UsesRobotInterface, Measure):
                 self._config.MAX_FORCE_PEN,
             ),
         )
+
+
         return reward

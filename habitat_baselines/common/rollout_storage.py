@@ -27,6 +27,7 @@ class RolloutStorage:
         action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
         discrete_actions: bool = True,
+        recurrent_hidden_states_2 = False
     ):
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()
@@ -49,6 +50,22 @@ class RolloutStorage:
             num_recurrent_layers,
             recurrent_hidden_state_size,
         )
+
+        if recurrent_hidden_states_2:
+            self.buffers["recurrent_hidden_states_2"] = torch.zeros(
+                numsteps + 1,
+                num_envs,
+                num_recurrent_layers,
+                recurrent_hidden_state_size,
+            )
+
+        #self.buffers["recurrent_hidden_states"] = torch.zeros(
+        #    numsteps + 1,
+        #    2,
+        #    num_envs,
+        #    num_recurrent_layers,
+        #    recurrent_hidden_state_size,
+        #)
 
         self.buffers["rewards"] = torch.zeros(numsteps + 1, num_envs, 1)
         self.buffers["value_preds"] = torch.zeros(numsteps + 1, num_envs, 1)
@@ -112,12 +129,21 @@ class RolloutStorage:
         if not self.is_double_buffered:
             assert buffer_index == 0
 
-        next_step = dict(
-            observations=next_observations,
-            recurrent_hidden_states=next_recurrent_hidden_states,
-            prev_actions=actions,
-            masks=next_masks,
-        )
+        if next_recurrent_hidden_states is not None and len(next_recurrent_hidden_states.size()) == 4:
+            next_step = dict(
+                        observations=next_observations,
+                        recurrent_hidden_states=next_recurrent_hidden_states[0],
+                        recurrent_hidden_states_2=next_recurrent_hidden_states[1],
+                        prev_actions=actions,
+                        masks=next_masks,
+                    )
+        else:
+            next_step = dict(
+                observations=next_observations,
+                recurrent_hidden_states=next_recurrent_hidden_states,
+                prev_actions=actions,
+                masks=next_masks,
+            )
 
         current_step = dict(
             actions=actions,
@@ -213,8 +239,11 @@ class RolloutStorage:
             batch["advantages"] = advantages[
                 0 : self.current_rollout_step_idx, inds
             ]
-            batch["recurrent_hidden_states"] = batch[
-                "recurrent_hidden_states"
-            ][0:1]
+            if "recurrent_hidden_states_2" in batch:
+                batch["recurrent_hidden_states"] = batch["recurrent_hidden_states_2"][0:1]
+            else:
+                batch["recurrent_hidden_states"] = batch[
+                    "recurrent_hidden_states"
+                ][0:1]
 
             yield batch.map(lambda v: v.flatten(0, 1))

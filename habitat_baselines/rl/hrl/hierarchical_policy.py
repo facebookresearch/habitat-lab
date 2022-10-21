@@ -52,7 +52,6 @@ class HierarchicalPolicy(Policy):
                 # Skip loading this skill if no name is provided
                 continue
             skill_config = config.DEFINED_SKILLS[use_skill_name]
-
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config,
@@ -61,6 +60,11 @@ class HierarchicalPolicy(Policy):
                 self._num_envs,
                 full_config,
             )
+            try:
+                for param in skill_policy.parameters():
+                    param.requires_grad = False
+            except AttributeError:
+                pass
             self._skills[i] = skill_policy
             self._name_to_idx[skill_id] = i
 
@@ -85,6 +89,9 @@ class HierarchicalPolicy(Policy):
 
     def eval(self):
         pass
+
+    def forward(self, *x):
+        raise NotImplementedError
 
     @property
     def num_recurrent_layers(self):
@@ -111,7 +118,6 @@ class HierarchicalPolicy(Policy):
         masks,
         deterministic=False,
     ):
-
         self._high_level_policy.apply_mask(masks)
         use_device = prev_actions.device
 
@@ -179,6 +185,16 @@ class HierarchicalPolicy(Policy):
                     batched_rnn_hidden_states[new_skill_batch_idx],
                     batched_prev_actions[new_skill_batch_idx],
                 )
+                '''
+                batched_rnn_hidden_states = torch.zeros(
+                    1,
+                    batched_rnn_hidden_states.size()[1],
+                    skill.num_recurrent_layers if skill.num_recurrent_layers > 0 else batched_rnn_hidden_states.size()[2],
+                    batched_rnn_hidden_states.size()[3],
+                    device=batched_rnn_hidden_states[new_skill_batch_idx].device.type,
+                )
+                '''
+
             self._cur_skills = (
                 (~self._call_high_level) * self._cur_skills
             ) + (self._call_high_level * new_skills)
@@ -212,7 +228,7 @@ class HierarchicalPolicy(Policy):
             None,
             actions,
             None,
-            batched_rnn_hidden_states.view(rnn_hidden_states.shape),
+            batched_rnn_hidden_states.squeeze(1),
         )
 
     @classmethod

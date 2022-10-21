@@ -11,7 +11,9 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
+from habitat.tasks.rearrange.rearrange_sensors import (
+    RearrangeReward
+)
 from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 
@@ -133,8 +135,7 @@ class DistToNavGoalSensor(Sensor):
     def get_observation(self, task, *args, **kwargs):
         agent_pos = self._sim.safe_snap_point(self._sim.robot.base_pos)
         distance_to_target = self._sim.geodesic_distance(
-            agent_pos,
-            task.nav_target_pos,
+            agent_pos, task.nav_target_pos
         )
         return np.array([distance_to_target])
 
@@ -250,8 +251,7 @@ class GeoMeasure(Measure):
 
     def _get_cur_geo_dist(self, task):
         distance_to_target = self._sim.geodesic_distance(
-            self._get_agent_pos(),
-            task.nav_target_pos,
+            self._get_agent_pos(), task.nav_target_pos
         )
 
         if distance_to_target == np.inf:
@@ -433,8 +433,7 @@ class NavToPosSucc(GeoMeasure):
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
-            self.uuid,
-            [DistToGoal.cls_uuid],
+            self.uuid, [DistToGoal.cls_uuid]
         )
 
         super().reset_metric(
@@ -461,8 +460,7 @@ class NavToObjSuccess(GeoMeasure):
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         # Get the end_on_stop property from the action
         task.measurements.check_measure_dependencies(
-            self.uuid,
-            [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
+            self.uuid, [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid]
         )
         self._end_on_stop = task.actions[BASE_ACTION_NAME].end_on_stop
 

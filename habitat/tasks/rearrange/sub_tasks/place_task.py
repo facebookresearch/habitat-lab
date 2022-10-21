@@ -9,7 +9,6 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
 
-
 @registry.register_task(name="RearrangePlaceTask-v0")
 class RearrangePlaceTaskV1(RearrangePickTaskV1):
     def _get_targ_pos(self, sim):

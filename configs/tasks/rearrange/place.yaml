@@ -1,7 +1,7 @@
 GYM:
     AUTO_NAME: Place
     OBS_KEYS:
-    - robot_head_rgb
+    - robot_head_depth
     - obj_goal_sensor
     - joint
     - is_holding
@@ -12,21 +12,21 @@ DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
     DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    SCENES_DIR: data/replica_cad/
+    SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangePlaceTask-v0
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
     SHOULD_ENFORCE_TARGET_WITHIN_REACH: false
-    BASE_ANGLE_NOISE: 0.75
-    BASE_NOISE: 0.25
+    BASE_ANGLE_NOISE: 0.45
+    BASE_NOISE: 0.15
     FORCE_REGENERATE: false
     CONSTRAINT_VIOLATION_ENDS_EPISODE: false
     CONSTRAINT_VIOLATION_DROPS_OBJECT: true
     REWARD_MEASURE: place_reward
     SUCCESS_MEASURE: place_success
-    SUCCESS_REWARD: 10.0
-    SLACK_REWARD: 0.0
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -.01
     END_ON_SUCCESS: true
     EASY_INIT: false
     TARGET_START_SENSOR:
@@ -84,13 +84,13 @@ TASK:
         TYPE: EndEffectorToRestDistance
     OBJ_AT_GOAL:
         TYPE: ObjAtGoal
-        SUCC_THRESH: 0.15
+        SUCC_THRESH: 0.13
     PLACE_REWARD:
         TYPE: PlaceReward
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
         PLACE_REWARD: 20.0
-        DROP_PEN: 0.0
+        DROP_PEN: 1.0
         USE_DIFF: true
         WRONG_DROP_SHOULD_END: false
         CONSTRAINT_VIOLATE_PEN: 10.0
@@ -99,7 +99,7 @@ TASK:
         FORCE_END_PEN: 10.0
     PLACE_SUCCESS:
         TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.13
+        EE_RESTING_SUCCESS_THRESHOLD: 0.2
     NUM_STEPS:
         TYPE: NumStepsMeasure
     MEASUREMENTS:
@@ -134,6 +134,8 @@ TASK:
     POSSIBLE_ACTIONS:
         - ARM_ACTION
         - BASE_VELOCITY
+
+SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
     - data/objects/ycb/configs/
     DEBUG_RENDER: false

@@ -81,7 +81,7 @@ TASK:
         DIST_REWARD: 20.0
         SUCC_REWARD: 10.0
         PICK_REWARD: 20.0
-        DROP_PEN: 5.0
+        DROP_PEN: 15.0
         WRONG_PICK_PEN: 5.0
         USE_DIFF: True
         DROP_OBJ_SHOULD_END: True
@@ -89,7 +89,7 @@ TASK:
 
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
-        FORCE_PEN: 0.001
+        FORCE_PEN: 0.002
         MAX_FORCE_PEN: 1.0
         FORCE_END_PEN: 10.0
 
@@ -124,11 +124,11 @@ TASK:
             ALLOW_DYN_SLIDE: true
             ALLOW_BACK: true
             END_ON_STOP: false
-            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_LIN_SPEED: 1.0 
             MIN_ABS_ANG_SPEED: 1.0
     POSSIBLE_ACTIONS:
         - ARM_ACTION
-        #- BASE_VELOCITY
+        - BASE_VELOCITY
 
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
