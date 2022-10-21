@@ -17,6 +17,7 @@ class StretchRobot(MobileManipulator):
         return MobileManipulatorParams(
             arm_joints=[28, 27, 26, 25, 23, 31, 7, 8],
             gripper_joints=[34, 36],
+            # camera_joints=[7, 8]
             wheel_joints=[4, 40],
             arm_init_params=np.array(
                 [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
@@ -29,18 +30,18 @@ class StretchRobot(MobileManipulator):
             # Camera color optical frame...
             # correct angles
             cameras={
-                "robot_arm": RobotCameraParams(
+                "robot_head": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
                     cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
-                    attached_link_id=14,
+                    attached_link_id=8,  # 14
                     relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
                     @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
-                "robot_head": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(0.25, 1.2, 0.0),
-                    cam_look_at_pos=mn.Vector3(0.75, 1.0, 0.0),
-                    attached_link_id=-1,
-                ),
+                # "robot_arm": RobotCameraParams(
+                #     cam_offset_pos=mn.Vector3(0.25, 1.2, 0.0),
+                #     cam_look_at_pos=mn.Vector3(0.75, 1.0, 0.0),
+                #     attached_link_id=34, # -1
+                # ),
                 "robot_third": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
