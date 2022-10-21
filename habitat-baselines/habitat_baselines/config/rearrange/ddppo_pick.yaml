@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /habitat/tasks/pick@habitat
+  - /habitat/tasks/rearrange/pick@habitat
   - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
   - _self_
 
