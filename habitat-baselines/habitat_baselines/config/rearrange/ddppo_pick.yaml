@@ -1,6 +1,14 @@
+# @package _global_
+
+defaults:
+  - /habitat/tasks/pick@habitat
+  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
+  - _self_
+
+
+
 habitat_baselines:
   verbose: False
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
@@ -13,8 +21,6 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 32
-  # Visual sensors to include
-  sensors: ["head_depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1.0e8
