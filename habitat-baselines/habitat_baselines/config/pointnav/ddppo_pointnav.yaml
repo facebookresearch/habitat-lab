@@ -1,6 +1,13 @@
+# @package _global_
+
+defaults:
+  - /habitat/tasks/pointnav_gibson@habitat
+  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
+  - _self_
+
+
 habitat_baselines:
   verbose: False
-  base_task_config_path: "tasks/pointnav_gibson.yaml"
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"

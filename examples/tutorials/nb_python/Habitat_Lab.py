@@ -170,9 +170,7 @@ if __name__ == "__main__":
 
 # %%
 if __name__ == "__main__":
-    config = get_baselines_config(
-        "./habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
-    )
+    config = get_baselines_config("pointnav/ppo_pointnav_example.yaml")
 
 # %%
 # set random seeds
@@ -345,13 +343,9 @@ if __name__ == "__main__":
 
     with habitat.config.read_write(config):
         # Now define the config for the sensor
-        config.habitat.task.agent_position_sensor = habitat.Config()
-        # Use the custom name
-        config.habitat.task.agent_position_sensor.type = (
-            "agent_position_sensor"
-        )
-        # Add the sensor to the list of sensors in use
-        config.habitat.task.sensors.append("agent_position_sensor")
+        config.habitat.task.state_sensors["agent_position_sensor"] = {
+            "type": "agent_position_sensor"
+        }
 
     try:
         env.close()

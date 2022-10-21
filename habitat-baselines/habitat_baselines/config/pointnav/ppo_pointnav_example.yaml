@@ -1,8 +1,15 @@
 # Note:  This is an example config, see habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav.yaml
 # for better hyperparameters for actual training
 
+# @package _global_
+
+defaults:
+  - /habitat/tasks/pointnav@habitat
+  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
+  - _self_
+
+
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/tasks/pointnav.yaml"
   trainer_name: "ppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
@@ -11,7 +18,6 @@ habitat_baselines:
   test_episode_count: 2
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 1
-  sensors: ["rgb_sensor", "depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1e6
