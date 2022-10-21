@@ -1,8 +1,18 @@
+# @package _global_
+
+defaults:
+  - /habitat/tasks/instance_imagenav_hm3d@habitat
+  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
+  - _self_
+
+habitat:
+  dataset:
+    split: minival
+  task:
+    success_reward: 2.5
+    slack_reward: -1e-3
+
 habitat_baselines:
-  base_task_config_path: tasks/instance_imagenav_hm3d.yaml
-  habitat:
-    dataset:
-      split: minival
 
   torch_gpu_id: 0
   tensorboard_dir: ""
@@ -12,7 +22,6 @@ habitat_baselines:
   num_environments: 1
   checkpoint_folder: data/test_checkpoints/ddppo/instance_imagenav
   trainer_name: ddppo
-  sensors: [depth_sensor, rgb_sensor]
   num_updates: 2
   log_interval: 10
   num_checkpoints: 2
@@ -21,8 +30,6 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   rl:
-    success_reward: 2.5
-    slack_reward: -1e-3
 
     policy:
       name: PointNavResNetPolicy

@@ -88,6 +88,19 @@ def test_trainers(
     test_cfg_cleaned_path = test_cfg_path.replace(
         "habitat-baselines/habitat_baselines/config/", ""
     )
+    from omegaconf import OmegaConf
+
+    print(
+        ">>>>>\n",
+        OmegaConf.to_yaml(
+            get_config(
+                test_cfg_cleaned_path,
+                [
+                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base"
+                ],
+            )
+        ),
+    )
     config = get_config(test_cfg_cleaned_path).habitat.dataset
     dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
@@ -126,8 +139,8 @@ def test_trainers(
 @pytest.mark.parametrize(
     "test_cfg_path",
     (
-        "habitat-baselines/habitat_baselines/config/test/ddppo_pointnav_test.yaml",
-        "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml",
+        "test/ddppo_pointnav_test.yaml",
+        "rearrange/ddppo_pick.yaml",
     ),
 )
 @pytest.mark.parametrize("variable_experience", [True, False])
@@ -144,24 +157,16 @@ def test_ver_trainer(
             test_cfg_path,
             "train",
             [
-                "habitat_baselines.num_environments",
-                4,
-                "habitat_baselines.trainer_name",
-                "ver",
-                "habitat_baselines.rl.ver.variable_experience",
-                str(variable_experience),
-                "habitat_baselines.rl.ver.overlap_rollouts_and_learn",
-                str(overlap_rollouts_and_learn),
-                "habitat_baselines.rl.policy.obs_transforms.enabled_transforms",
-                "['CenterCropper', 'ResizeShortestEdge']",
-                "habitat_baselines.num_updates",
-                2,
-                "habitat_baselines.total_num_steps",
-                -1.0,
-                "habitat_baselines.rl.preemption.save_state_batch_only",
-                True,
-                "habitat_baselines.rl.ppo.num_steps",
-                16,
+                "habitat_baselines.num_environments=4",
+                "habitat_baselines.trainer_name=ver",
+                f"habitat_baselines.rl.ver.variable_experience={str(variable_experience)}",
+                f"habitat_baselines.rl.ver.overlap_rollouts_and_learn={str(overlap_rollouts_and_learn)}",
+                "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
+                "+habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
+                "habitat_baselines.num_updates=2",
+                "habitat_baselines.total_num_steps=-1",
+                "habitat_baselines.rl.preemption.save_state_batch_only=True",
+                "habitat_baselines.rl.ppo.num_steps=16",
             ],
         )
     finally:
