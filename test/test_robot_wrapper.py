@@ -547,7 +547,7 @@ def test_franka_robot_wrapper():
 @pytest.mark.parametrize("fixed_base", [True, False])
 def test_spot_robot_wrapper(fixed_base):
     # set this to output test results as video for easy investigation
-    produce_debug_video = False
+    produce_debug_video = True
     observations = []
     cfg_settings = default_sim_settings.copy()
     cfg_settings["scene"] = "NONE"
@@ -587,7 +587,6 @@ def test_spot_robot_wrapper(fixed_base):
         print(spot.get_link_and_joint_names())
 
         # set the motor angles
-        print(spot.leg_joint_pos)
         spot.leg_joint_pos = [0.0, 0.7, -1.5] * 4
 
         # set base ground position from navmesh
@@ -618,11 +617,20 @@ def test_spot_robot_wrapper(fixed_base):
             produce_debug_video,
         )
 
-        # setting arm motor positions
+        # arm joint queries and setters
+        print(f" Arm joint velocities = {spot.arm_velocity}")
+        # Kinematically set the arm (cannot set to np.ones due to physcial limit)
+        spot.arm_joint_pos = np.zeros(len(spot.params.arm_joints))
+        # Dynamically set the arm
         spot.arm_motor_pos = np.zeros(len(spot.params.arm_joints))
-        observations += simulate(sim, 1.0, produce_debug_video)
+        # Additional test
+        spot.arm_motor_pos = np.array([0, 0, 0, 0, 0, 0, 2.87])
+        print(f" Arm joint positions (should be ones) = {spot.arm_joint_pos}")
+        print(f" Arm joint limits = {spot.arm_joint_limits}")
+        spot.arm_motor_pos = spot.arm_motor_pos
+        observations += simulate(sim, 10.0, produce_debug_video)
 
-        # test gripper state
+        # # test gripper state
         spot.open_gripper()
         observations += simulate(sim, 1.0, produce_debug_video)
         assert spot.is_gripper_open

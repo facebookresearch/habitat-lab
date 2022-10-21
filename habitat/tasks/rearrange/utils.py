@@ -278,7 +278,6 @@ class IkHelper:
         self._arm_start = arm_start
         self._arm_len = 7
         self.pc_id = p.connect(p.DIRECT)
-
         self.robo_id = p.loadURDF(
             only_arm_urdf,
             basePosition=[0, 0, 0],

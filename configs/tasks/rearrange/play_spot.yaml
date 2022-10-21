@@ -134,7 +134,7 @@ SIMULATOR:
     AGENT_0:
         IS_SET_START_STATE: False
         RADIUS: 0.3
-        SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR"]
+        SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR", "SEMANTIC_SENSOR"]
         ROBOT_URDF: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         ROBOT_TYPE: "SpotRobot"
         IK_ARM_URDF: data/robots/hab_spot_arm/urdf/hab_spot_onlyarm.urdf
@@ -180,6 +180,9 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         NORMALIZE_DEPTH: True
         MAX_ZERO: False
+    SEMANTIC_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
     CTRL_FREQ: 120.0
     DEFAULT_AGENT_ID: 0
     FORWARD_STEP_SIZE: 0.25
@@ -193,4 +196,4 @@ SIMULATOR:
     TYPE: RearrangeSim-v0
     # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
     # for the collision detection.
-    COLLISION_DETECTION_METHOD: "ContactTestProjSliding"
+    COLLISION_DETECTION_METHOD: "NevMesh"

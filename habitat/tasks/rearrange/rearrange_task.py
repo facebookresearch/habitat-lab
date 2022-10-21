@@ -168,7 +168,6 @@ class RearrangeTask(NavigationTask):
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:
-            self._sim.maybe_update_robot()
             return self._get_observations(episode)
         else:
             return None
@@ -185,7 +184,6 @@ class RearrangeTask(NavigationTask):
 
     def step(self, action: Dict[str, Any], episode: Episode):
         obs = super().step(action=action, episode=episode)
-
         self.prev_coll_accum = copy.copy(self.coll_accum)
         self._cur_episode_step += 1
         for grasp_mgr in self._sim.robots_mgr.grasp_iter:
@@ -194,7 +192,6 @@ class RearrangeTask(NavigationTask):
                 and self._config.CONSTRAINT_VIOLATION_DROPS_OBJECT
             ):
                 grasp_mgr.desnap(True)
-
         return obs
 
     def _check_episode_is_active(

@@ -32,7 +32,6 @@ class RearrangePickTaskV1(RearrangeTask):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(config=config, *args, dataset=dataset, **kwargs)
         data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
-
         fname = data_path.split("/")[-1].split(".")[0]
         save_dir = osp.dirname(data_path)
         self.cache = CacheHelper(
@@ -131,6 +130,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
             sim.robot.base_pos = start_pos
 
+
             # Face the robot towards the object.
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
             sim.robot.base_rot = angle_to_obj + rot_noise
@@ -188,7 +188,6 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def step(self, action, episode):
         action_args = action["action_args"]
-
         if self._should_prevent_grip(action_args):
             # No releasing the object once it is held.
             action_args["grip_action"] = None
@@ -278,7 +277,10 @@ class RearrangePickTaskV1(RearrangeTask):
                 self.cache.save(self.start_states)
 
         sim.robot.base_pos = start_pos
-        sim.robot.base_rot = start_rot
+        if "hab_stretch_obj.urdf" in sim.robot.urdf_path:
+            sim.robot.base_rot = 1.57 * 1.5
+        else:
+            sim.robot.base_rot = start_rot
 
         self._targ_idx = sel_idx
 

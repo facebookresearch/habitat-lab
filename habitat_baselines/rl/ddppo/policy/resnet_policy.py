@@ -134,6 +134,11 @@ class ResNetEncoder(nn.Module):
             observation_space.spaces[k].shape[2] for k in self.visual_keys
         )
 
+        # Debug mode that the observation added robot_third_rgb
+        if "robot_third_rgb" in self.visual_keys:
+            self._n_input_channels -= 3
+            self.visual_keys.remove("robot_third_rgb")
+            
         if self._n_input_channels > 0:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_channels
@@ -217,6 +222,7 @@ class ResNetEncoder(nn.Module):
         x = self.running_mean_and_var(x)
         x = self.backbone(x)
         x = self.compression(x)
+
         return x
 
 
@@ -394,7 +400,6 @@ class PointNavResNetNet(Net):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
         )
-
         if not self.visual_encoder.is_blind:
             self.visual_fc = nn.Sequential(
                 nn.Flatten(),
@@ -564,11 +569,10 @@ class PointNavResNetNet(Net):
             )
 
         x.append(prev_actions)
-
         out = torch.cat(x, dim=1)
         out, rnn_hidden_states = self.state_encoder(
             out, rnn_hidden_states, masks, rnn_build_seq_info
         )
         aux_loss_state["rnn_output"] = out
-
+        
         return out, rnn_hidden_states, aux_loss_state

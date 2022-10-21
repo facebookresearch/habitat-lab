@@ -4,13 +4,26 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Sequence,
+    Set,
+    Union,
+    cast,
+)
 
 import numpy as np
 from gym import spaces
+from gym.spaces.box import Box
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.core.simulator import Sensor, SensorTypes
+from habitat.core.simulator import Sensor, SensorTypes, DepthSensor
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -20,7 +33,21 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar, get_angle
-
+from habitat.sims.habitat_simulator.habitat_simulator import HabitatSimDepthSensor
+import habitat_sim
+from habitat.core.simulator import (
+    AgentState,
+    Config,
+    DepthSensor,
+    Observations,
+    RGBSensor,
+    SemanticSensor,
+    Sensor,
+    SensorSuite,
+    ShortestPathPoint,
+    Simulator,
+    VisualObservation,
+)
 
 class MultiObjSensor(PointGoalSensor):
     """
@@ -87,6 +114,7 @@ class TargetStartSensor(UsesRobotInterface, MultiObjSensor):
         global_T = self._sim.get_robot_data(self.robot_id).robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
+
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
@@ -214,6 +242,93 @@ class JointSensor(UsesRobotInterface, Sensor):
         ).robot.arm_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
+class HabitatSimSensor:
+    sim_sensor_type: habitat_sim.SensorType
+    _get_default_spec = Callable[..., habitat_sim.sensor.SensorSpec]
+    _config_ignore_keys = {"height", "type", "width"}
+
+@registry.register_sensor
+class ArmDepthSensor(UsesRobotInterface, DepthSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    _config_ignore_keys = {
+        "max_depth",
+        "min_depth",
+        "normalize_depth",
+    }.union(HabitatSimSensor._config_ignore_keys)
+    sim_sensor_type = habitat_sim.SensorType.DEPTH
+
+    min_depth_value: float
+    max_depth_value: float
+
+    def __init__(self, sim, config, *args, **kwargs):
+        if config.NORMALIZE_DEPTH:
+            self.min_depth_value = 0
+            self.max_depth_value = 1
+        else:
+            self.min_depth_value = config.MIN_DEPTH
+            self.max_depth_value = config.MAX_DEPTH
+
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "robot_arm_depth"
+
+    def _get_observation_space(self, *args: Any, config, **kwargs: Any) -> Box:
+        return spaces.Box(
+            low=self.min_depth_value,
+            high=self.max_depth_value,
+            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        obs = cast(Optional[VisualObservation], observations.get(self.uuid, None))
+        # Here, the observation has been processed by the habitat_simulator,
+        # so we do not need to normalized again
+        if np.max(obs) < 1:
+            return obs
+        if isinstance(obs, np.ndarray):
+            obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
+            #bug here
+            # obs = np.expand_dims(
+            #     obs, axis=2
+            # )  # make depth observation a 3D array
+        else:
+            obs = obs.clamp(self.config.MIN_DEPTH, self.config.MAX_DEPTH)  # type: ignore[attr-defined, unreachable]
+
+            obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
+
+        if self.config.NORMALIZE_DEPTH:
+            # normalize depth observation to [0, 1]
+            obs = (obs - self.config.MIN_DEPTH) / (
+                self.config.MAX_DEPTH - self.config.MIN_DEPTH
+            )
+
+        return obs
+
+@registry.register_sensor
+class ArmSemanticSensor(UsesRobotInterface, SemanticSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.SEMANTIC
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "robot_arm_semantic"
+
+    def _get_observation_space(self, *args: Any, config, **kwargs: Any) -> Box:
+        return spaces.Box(
+            low=np.iinfo(np.uint32).min,
+            high=np.iinfo(np.uint32).max,
+            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
+            dtype=np.int32,
+        )
+    def get_observation(self, observations, episode, *args, **kwargs):
+        obs = cast(Optional[VisualObservation], observations.get(self.uuid, None))
+        return obs
 
 @registry.register_sensor
 class JointVelocitySensor(UsesRobotInterface, Sensor):
@@ -307,7 +422,20 @@ class RelativeRestingPositionSensor(UsesRobotInterface, Sensor):
         local_ee_pos = base_trans.inverted().transform_point(ee_pos)
 
         relative_desired_resting = task.desired_resting - local_ee_pos
+        # print("relative_resting_position:", np.array(relative_desired_resting, dtype=np.float32))
 
+        # idxs, _ = self._sim.get_targets()
+        # scene_pos = self._sim.get_scene_pos()
+        # target_pos = scene_pos[idxs]
+        # distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
+
+        # print("dist:", distances)
+
+        # arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        # arm_depth_cam_pos = arm_depth_state.position
+
+        # distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
+        # print("dist:", distances)
         return np.array(relative_desired_resting, dtype=np.float32)
 
 
@@ -404,6 +532,40 @@ class IsHoldingSensor(UsesRobotInterface, Sensor):
             dtype=np.float32,
         ).reshape((1,))
 
+
+@registry.register_sensor
+class CameraToTargetSensor(UsesRobotInterface, Sensor):
+    """
+    Binary if the robot is holding an object or grasped onto an articulated object.
+    """
+
+    cls_uuid: str = "camera_to_target"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return CameraToTargetSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        target_pos = scene_pos[idxs]
+
+        arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        arm_depth_cam_pos = arm_depth_state.position
+
+        distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
+
+
+        return distances
 
 @registry.register_measure
 class ObjectToGoalDistance(Measure):
@@ -530,6 +692,7 @@ class EndEffectorToObjectDistance(UsesRobotInterface, Measure):
         return EndEffectorToObjectDistance.cls_uuid
 
     def reset_metric(self, *args, episode, **kwargs):
+        self.counter = 0
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, episode, **kwargs):
@@ -542,6 +705,43 @@ class EndEffectorToObjectDistance(UsesRobotInterface, Measure):
         target_pos = scene_pos[idxs]
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
+
+        self.counter += 1
+
+        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+
+
+@registry.register_measure
+class CameraToTargetDistance(UsesRobotInterface, Measure):
+    """
+    Gets the distance between the end-effector and all current target object COMs.
+    """
+
+    cls_uuid: str = "camera_to_target_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CameraToTargetDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.counter = 0
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, episode, **kwargs):
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        target_pos = scene_pos[idxs]
+
+        arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        arm_depth_cam_pos = arm_depth_state.position
+
+        distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
 
         self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
 
@@ -792,6 +992,111 @@ class ForceTerminate(Measure):
             rearrange_logger.debug(
                 f"Force instant threshold={self._config.MAX_INSTANT_FORCE} exceeded with {instant_force}, ending episode"
             )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+
+@registry.register_measure
+class StepTerminate(Measure):
+    """
+    If the step of this episode exceeds the limit.
+    """
+
+    cls_uuid: str = "step_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return StepTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+
+        self._accum_step = 0
+
+        # task.measurements.check_measure_dependencies(
+        #     self.uuid,
+        #     [
+        #         RobotForce.cls_uuid,
+        #     ],
+        # )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._accum_step += 1
+
+
+        if (
+            self._config.MAX_STEP > 0
+            and self._accum_step > self._config.MAX_STEP
+        ):
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+@registry.register_measure
+class DistanceTerminate(UsesRobotInterface, Measure):
+    """
+    If the step of this episode exceeds the limit.
+    """
+
+    cls_uuid: str = "distance_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+        self.step = 0
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DistanceTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        ee_pos = self._sim.get_robot_data(
+            self.robot_id
+        ).robot.ee_transform.translation
+
+        idxs, _ = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        target_pos = scene_pos[idxs]
+
+        arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        arm_depth_cam_pos = arm_depth_state.position
+
+        distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
+        distance = distances[0]
+
+        if (
+            self._config.MAX_DIS > 0
+            and distance > self._config.MAX_DIS
+        ):
             self._task.should_end = True
             self._metric = True
         else:

@@ -95,6 +95,9 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
 
+        # Add the flag to record the previous reward value
+        self.reward_per_update = {}
+
     @property
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
@@ -137,6 +140,7 @@ class PPOTrainer(BaseRLTrainer):
             observation_space, self.obs_transforms
         )
 
+        # Pop the robot_third_rgb
         self.actor_critic = policy.from_config(
             self.config,
             observation_space,
@@ -573,7 +577,6 @@ class PPOTrainer(BaseRLTrainer):
         self.rollouts.compute_returns(
             next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
         )
-
         self.agent.train()
 
         losses = self.agent.update(self.rollouts)
@@ -637,6 +640,27 @@ class PPOTrainer(BaseRLTrainer):
             self.num_steps_done,
         )
 
+        # Compute the reward per each update
+        if "reward" not in self.reward_per_update:
+            self.reward_per_update["reward"] = []
+            self.reward_per_update["reward"].append(deltas["reward"])
+        else:
+            pre_value = self.reward_per_update["reward"][-1]
+            value = deltas["reward"]-pre_value
+            if value == 0:
+                value = pre_value
+            self.reward_per_update["reward"].append(value)
+
+        if "rearrangepick_reward" not in self.reward_per_update:
+            self.reward_per_update["rearrangepick_reward"] = []
+            self.reward_per_update["rearrangepick_reward"].append(deltas["reward"])
+        else:
+            pre_value = self.reward_per_update["rearrangepick_reward"][-1]
+            value = deltas["rearrangepick_reward"]-pre_value
+            if value == 0:
+                value = pre_value
+            self.reward_per_update["rearrangepick_reward"].append(value)
+
         # Check to see if there are any metrics
         # that haven't been logged yet
         metrics = {
@@ -649,6 +673,10 @@ class PPOTrainer(BaseRLTrainer):
             writer.add_scalar(f"metrics/{k}", v, self.num_steps_done)
         for k, v in losses.items():
             writer.add_scalar(f"learner/{k}", v, self.num_steps_done)
+
+        # Write to the tensorboard
+        for k, v in self.reward_per_update.items():
+            writer.add_scalar(f"metrics_per_update/{k}", v[-1], self.num_steps_done)
 
         fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
@@ -680,6 +708,17 @@ class PPOTrainer(BaseRLTrainer):
                         for k, v in deltas.items()
                         if k != "count"
                     ),
+                )
+            )
+            # Log the reward
+            logger.info(
+                "reward_step: {:.3f}\t".format(
+                    self.reward_per_update["reward"][-1],
+                )
+            )
+            logger.info(
+                "rearrangepick_reward_step: {:.3f}\t".format(
+                    self.reward_per_update["rearrangepick_reward"][-1],
                 )
             )
 
@@ -798,7 +837,6 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_push("_collect_rollout_step")
                 for buffer_index in range(self._nbuffers):
                     self._compute_actions_and_step_envs(buffer_index)
-
                 for step in range(ppo_cfg.num_steps):
                     is_last_step = (
                         self.should_end_early(step + 1)

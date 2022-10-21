@@ -167,7 +167,6 @@ class Benchmark:
             evaluation should be run.
         :return: dict containing metrics tracked by environment.
         """
-
         if self._eval_remote is True:
             return self.remote_evaluate(agent, num_episodes)
         else:

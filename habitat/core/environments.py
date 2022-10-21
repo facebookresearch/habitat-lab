@@ -47,6 +47,7 @@ class RLTaskEnv(habitat.RLEnv):
 
     def reset(self):
         observations = super().reset()
+        self.count = 0
         return observations
 
     def step(self, *args, **kwargs):
@@ -64,6 +65,7 @@ class RLTaskEnv(habitat.RLEnv):
 
         if self._episode_success():
             reward += self.config.TASK.SUCCESS_REWARD
+        self.count +=1
 
         return reward
 

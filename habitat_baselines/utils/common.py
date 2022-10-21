@@ -161,7 +161,6 @@ class GaussianNet(nn.Module):
             std = torch.exp(std)
         if self.use_softplus:
             std = torch.nn.functional.softplus(std)
-
         return CustomNormal(mu, std, validate_args=False)
 
 

@@ -192,6 +192,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     ) -> VisualObservation:
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
+
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
 
@@ -208,7 +209,6 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
             obs = (obs - self.config.MIN_DEPTH) / (
                 self.config.MAX_DEPTH - self.config.MIN_DEPTH
             )
-
         return obs
 
 

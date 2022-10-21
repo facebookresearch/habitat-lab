@@ -308,7 +308,6 @@ class Env:
         )
 
         self._update_step_stats()
-
         return observations
 
     @staticmethod

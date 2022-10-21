@@ -83,7 +83,8 @@ def construct_envs(
         configs.append(proc_config)
 
     vector_env_cls: Type[Any]
-    if int(os.environ.get("HABITAT_ENV_DEBUG", 0)):
+    # if int(os.environ.get("HABITAT_ENV_DEBUG", 0)):
+    if os.environ.get("HABITAT_ENV_DEBUG", 0) == "enable":
         logger.warn(
             "Using the debug Vector environment interface. Expect slower performance."
         )

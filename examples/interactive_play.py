@@ -68,10 +68,18 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
+#DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/pick_spot.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
+#DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
+
+import os
+# Quiet the Habitat simulator logging
+os.environ["MAGNUM_LOG"] = "quiet"
+os.environ["HABITAT_SIM_LOG"] = "quiet"
 
 
 def step_env(env, action_name, action_args):
@@ -178,6 +186,48 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+        elif arm_action_space.shape[0] == 8:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[1] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[1] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[2] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[2] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[3] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[3] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_y]:
+                arm_action[5] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_u]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[6] = -1.0
+
+            elif keys[pygame.K_8]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_9]:
+                arm_action[6] = -1.0
+
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
             # End effector control
@@ -602,7 +652,7 @@ if __name__ == "__main__":
             )
         config.TASK.ACTIONS.ARM_ACTION.ARM_CONTROLLER = "ArmEEAction"
         config.SIMULATOR.IK_ARM_URDF = (
-            "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+            "data/robots/hab_spot_arm/urdf/hab_spot_onlyarm.urdf"
         )
     config.freeze()
 

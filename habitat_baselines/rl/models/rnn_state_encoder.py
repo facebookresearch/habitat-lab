@@ -367,7 +367,6 @@ class RNNStateEncoder(nn.Module):
             )
 
         hidden_states = hidden_states.permute(1, 0, 2)
-
         return x, hidden_states
 
 

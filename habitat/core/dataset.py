@@ -441,6 +441,13 @@ class EpisodeIterator(Iterator[T]):
         self._forced_scene_switch_if()
 
         next_episode = next(self._iterator, None)
+        self.fix_episode = None
+        if self.fix_episode is None:
+            for epi in self.episodes:
+                if epi.episode_id == "454":
+                    self.fix_episode = epi
+        next_episode = self.fix_episode
+
         if next_episode is None:
             if not self.cycle:
                 raise StopIteration

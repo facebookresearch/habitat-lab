@@ -145,7 +145,8 @@ class Manipulator(RobotInterface):
                         link_trans = self.sim_obj.transformation
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
-                            self.params.ee_link
+                            #self.params.ee_link
+                            cam_info.attached_link_id
                         ).transformation
 
                     cam_transform = mn.Matrix4.look_at(

@@ -256,6 +256,10 @@ _C.TASK.END_EFFECTOR_SENSOR.TYPE = "EEPositionSensor"
 # -----------------------------------------------------------------------------
 _C.TASK.IS_HOLDING_SENSOR = CN()
 _C.TASK.IS_HOLDING_SENSOR.TYPE = "IsHoldingSensor"
+# CAMERA To TARGET SENSOR
+# -----------------------------------------------------------------------------
+_C.TASK.CAMERATOTARGETSENSOR = CN()
+_C.TASK.CAMERATOTARGETSENSOR.TYPE = "CameraToTargetSensor"
 # -----------------------------------------------------------------------------
 # RELATIVE RESTING POSISITON SENSOR
 # -----------------------------------------------------------------------------
@@ -423,6 +427,14 @@ _C.TASK.FORCE_TERMINATE.TYPE = "ForceTerminate"
 _C.TASK.FORCE_TERMINATE.MAX_ACCUM_FORCE = -1.0
 _C.TASK.FORCE_TERMINATE.MAX_INSTANT_FORCE = -1.0
 
+_C.TASK.STEP_TERMINATE = CN()
+_C.TASK.STEP_TERMINATE.TYPE = "StepTerminate"
+_C.TASK.STEP_TERMINATE.MAX_STEP = -1
+
+_C.TASK.DISTANCE_TERMINATE = CN()
+_C.TASK.DISTANCE_TERMINATE.TYPE = "DistanceTerminate"
+_C.TASK.DISTANCE_TERMINATE.MAX_DIS = -1.0
+
 _C.TASK.ROBOT_COLLS = CN()
 _C.TASK.ROBOT_COLLS.TYPE = "RobotCollisions"
 _C.TASK.OBJECT_TO_GOAL_DISTANCE = CN()
@@ -431,6 +443,8 @@ _C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE = CN()
 _C.TASK.END_EFFECTOR_TO_OBJECT_DISTANCE.TYPE = "EndEffectorToObjectDistance"
 _C.TASK.END_EFFECTOR_TO_REST_DISTANCE = CN()
 _C.TASK.END_EFFECTOR_TO_REST_DISTANCE.TYPE = "EndEffectorToRestDistance"
+_C.TASK.CAMERA_TO_TARGET_DISTANCE = CN()
+_C.TASK.CAMERA_TO_TARGET_DISTANCE.TYPE = "CameraToTargetDistance"
 
 _C.TASK.ART_OBJ_AT_DESIRED_STATE = CN()
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.TYPE = "ArtObjAtDesiredState"
@@ -727,10 +741,24 @@ _C.SIMULATOR.DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
 # -----------------------------------------------------------------------------
+# ARM DEPTH SENSOR FOR TASK
+# -----------------------------------------------------------------------------
+#_C.TASK.ARM_DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
+#_C.TASK.ARM_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
+_C.TASK.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
+_C.TASK.ARM_DEPTH_SENSOR.TYPE = "ArmDepthSensor"
+_C.TASK.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
+# -----------------------------------------------------------------------------
 # SEMANTIC SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.SEMANTIC_SENSOR = CAMERA_SIM_SENSOR.clone()
 _C.SIMULATOR.SEMANTIC_SENSOR.TYPE = "HabitatSimSemanticSensor"
+# -----------------------------------------------------------------------------
+# SEMANTIC SENSOR FOR TASK
+# -----------------------------------------------------------------------------
+_C.TASK.ARM_SEMANTIC_SENSOR = _C.SIMULATOR.SEMANTIC_SENSOR.clone()
+_C.TASK.ARM_SEMANTIC_SENSOR.TYPE = "ArmSemanticSensor"
+_C.TASK.ARM_SEMANTIC_SENSOR.UUID = "robot_arm_semantic"
 # -----------------------------------------------------------------------------
 # EQUIRECT RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -776,6 +804,11 @@ _C.SIMULATOR.ARM_RGB_SENSOR.UUID = "robot_arm_rgb"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
 _C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
+# -----------------------------------------------------------------------------
+# ARM SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.ARM_SEMANTIC_SENSOR = _C.SIMULATOR.SEMANTIC_SENSOR.clone()
+_C.SIMULATOR.ARM_SEMANTIC_SENSOR.UUID = "robot_arm_semantic"
 # -----------------------------------------------------------------------------
 # 3rd RGB SENSOR
 # -----------------------------------------------------------------------------

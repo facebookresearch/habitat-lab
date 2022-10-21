@@ -198,7 +198,8 @@ def tile_images(render_obs_images: List[np.ndarray]) -> np.ndarray:
     for i in range(len(img_cols)):
         next_x = cur_x + col_widths[i]
         total_col_im = np.concatenate(img_cols[i], axis=0)
-        final_im[: total_col_im.shape[0], cur_x:next_x] = total_col_im
+        # Fix the bug here
+        final_im[: total_col_im.shape[0], cur_x:next_x] = total_col_im.squeeze()
         cur_x = next_x
     return final_im
 

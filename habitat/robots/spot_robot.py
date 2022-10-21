@@ -104,8 +104,8 @@ class SpotRobot(MobileManipulator):
             leg_joints=list(range(8, 20)),
             # NOTE: default to retracted arm. Zero vector is full extension.
             arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            # NOTE: default closed
-            gripper_init_params=[0.00],
+            # NOTE: default to open
+            gripper_init_params=[-1.56],
             # NOTE: default to rough standing pose with balance
             leg_init_params=[
                 0.0,
@@ -121,18 +121,17 @@ class SpotRobot(MobileManipulator):
                 0.7,
                 -1.5,
             ],
-            ee_offset=mn.Vector3(0.08, 0, 0),
-            ee_link=7,
+            ee_offset=mn.Vector3(0.2, 0, 0),
+            ee_link=6,
             # TODO: figure this one out if necessary
-            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
+            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [-.4, 1.5]]),
             # TODO: these need to be adjusted. Copied from Fetch currently.
             cameras={
                 "robot_arm": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
-                    cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
+                    cam_offset_pos=mn.Vector3(-0.05603 + .19, 0.0, 0.0375),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                     attached_link_id=6,
-                    relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
-                    @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
                 "robot_head_stereo_right": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(
@@ -160,7 +159,7 @@ class SpotRobot(MobileManipulator):
             },
             gripper_closed_state=[0.0],
             gripper_open_state=[-1.56],
-            gripper_state_eps=0.01,
+            gripper_state_eps=0.05,
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
             arm_mtr_max_impulse=10.0,
