@@ -4,6 +4,7 @@
     - /habitat/habitat_config_base@
     - /camera_sensors/rgb_sensor
     - /camera_sensors/depth_sensor
+    - /measurements/top_down_map
 
   environment:
     max_episode_steps: 500

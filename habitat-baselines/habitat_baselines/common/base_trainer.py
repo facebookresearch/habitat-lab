@@ -91,14 +91,14 @@ class BaseTrainer:
             else torch.device("cpu")
         )
 
-        if "tensorboard" in self.config.habitat_baselines.video_option:
+        if "tensorboard" in self.config.habitat_baselines.eval.video_option:
             assert (
                 len(self.config.habitat_baselines.tensorboard_dir) > 0
             ), "Must specify a tensorboard directory for video display"
             os.makedirs(
                 self.config.habitat_baselines.tensorboard_dir, exist_ok=True
             )
-        if "disk" in self.config.habitat_baselines.video_option:
+        if "disk" in self.config.habitat_baselines.eval.video_option:
             assert (
                 len(self.config.habitat_baselines.video_dir) > 0
             ), "Must specify a directory for storing videos on disk"

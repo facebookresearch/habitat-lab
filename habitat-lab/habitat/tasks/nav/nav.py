@@ -57,6 +57,10 @@ cv2 = try_cv2_import()
 
 MAP_THICKNESS_SCALAR: int = 128
 
+# These metrics are not scalars and cannot be easily reported
+# (unless using videos)
+NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
+
 
 def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
     with read_write(sim_config):

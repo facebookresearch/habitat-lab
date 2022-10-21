@@ -1,7 +1,6 @@
 habitat_baselines:
   base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml
   video_dir: "data/vids/"
-  video_optionS: [ "disk" ]
   count_obj_collisions: True
 
   sense_plan_act:
@@ -21,6 +20,9 @@ habitat_baselines:
     grasp_gen_is_verbose: True
     ik_dist_thresh: 0.1
     ik_speed_factor: 1.0
+
+  eval:
+    video_option: ["disk"]
 
 habitat:
   reward_measure: "rearrange_reach_reward"

@@ -3,12 +3,11 @@ habitat_baselines:
   base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  video_option: ["disk"]
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-  video_render_top_down: False
-  video_render_all_info: True
+
+
   video_render_views:
     - "third_rgb_sensor"
   sensors: ["head_depth_sensor"]
@@ -26,6 +25,7 @@ habitat_baselines:
   eval:
     use_ckpt_config: False
     should_load_ckpt: False
+    video_option: ["disk"]
 
   rl:
     policy:

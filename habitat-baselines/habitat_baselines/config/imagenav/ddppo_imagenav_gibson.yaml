@@ -3,7 +3,6 @@ habitat_baselines:
   base_task_config_path: "habitat-lab/habitat/config/tasks/imagenav_gibson.yaml"
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  video_option: []
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   test_episode_count: -1

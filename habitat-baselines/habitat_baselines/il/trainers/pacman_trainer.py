@@ -390,7 +390,7 @@ class PACMANTrainer(BaseILTrainer):
             results_dir = config.habitat_baselines.results_dir.format(
                 split="val"
             )
-            video_option = self.config.habitat_baselines.video_option
+            video_option = self.config.habitat_baselines.eval.video_option
 
             metrics = NavMetric(
                 info={"split": "val"},

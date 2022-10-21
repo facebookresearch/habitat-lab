@@ -2,7 +2,6 @@ habitat_baselines:
   base_task_config_path: "habitat-lab/habitat/config/tasks/imagenav.yaml"
   trainer_name: "ppo"
   torch_gpu_id: 0
-  video_option: ["disk", "tensorboard"]
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   test_episode_count: 2
@@ -17,6 +16,9 @@ habitat_baselines:
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
+
+  eval:
+    video_option: ["disk", "tensorboard"]
 
   rl:
     ppo:

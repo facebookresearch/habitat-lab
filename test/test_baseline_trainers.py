@@ -88,19 +88,6 @@ def test_trainers(
     test_cfg_cleaned_path = test_cfg_path.replace(
         "habitat-baselines/habitat_baselines/config/", ""
     )
-    from omegaconf import OmegaConf
-
-    print(
-        ">>>>>\n",
-        OmegaConf.to_yaml(
-            get_config(
-                test_cfg_cleaned_path,
-                [
-                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base"
-                ],
-            )
-        ),
-    )
     config = get_config(test_cfg_cleaned_path).habitat.dataset
     dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
@@ -316,34 +303,34 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["habitat_baselines.video_option", "[]"]
-    eval_opts = ["habitat_baselines.video_option", "['disk']"]
+    ckpt_opts = ["habitat_baselines.eval.video_option", "[]"]
+    eval_opts = ["habitat_baselines.eval.video_option", "['disk']"]
 
     ckpt_cfg = get_config(None, ckpt_opts)
     assert ckpt_cfg.habitat_baselines.video_option == []
     assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == [
-        "habitat_baselines.video_option",
+        "habitat_baselines.eval.video_option",
         "[]",
     ]
 
     eval_cfg = get_config(None, eval_opts)
     assert eval_cfg.habitat_baselines.video_option == ["disk"]
     assert eval_cfg.habitat_baselines.cmd_trailing_opts == [
-        "habitat_baselines.video_option",
+        "habitat_baselines.eval.video_option",
         "['disk']",
     ]
 
     trainer = BaseRLTrainer(get_config())
-    assert trainer.config.habitat_baselines.video_option == [
+    assert trainer.config.habitat_baselines.eval.video_option == [
         "disk",
         "tensorboard",
     ]
     returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
-    assert returned_config.habitat_baselines.video_option == []
+    assert returned_config.habitat_baselines.eval.video_option == []
 
     trainer = BaseRLTrainer(eval_cfg)
     returned_config = trainer._setup_eval_config(ckpt_cfg)
-    assert returned_config.habitat_baselines.video_option == ["disk"]
+    assert returned_config.habitat_baselines.eval.video_option == ["disk"]
 
 
 def __do_pause_test(num_envs, envs_to_pause):

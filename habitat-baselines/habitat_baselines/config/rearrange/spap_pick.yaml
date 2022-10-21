@@ -1,7 +1,6 @@
 habitat_baselines:
   base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
   video_dir: "data/vids/"
-  video_optionS: [ "disk" ]
   count_obj_collisions: True
 
   sense_plan_act:
@@ -25,6 +24,9 @@ habitat_baselines:
     # If true, does not care about navigability or collisions with objects when spawning
     # robot
     easy_init: False
+
+  eval:
+    video_option: ["disk"]
 
 habitat:
   success_reward: 2000.0

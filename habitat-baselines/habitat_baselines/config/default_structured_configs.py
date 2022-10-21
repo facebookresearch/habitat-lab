@@ -36,6 +36,10 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     # The number of time to run each episode through evaluation.
     # Only works when evaluating on all episodes.
     evals_per_ep: int = 1
+    video_option: List[str] = field(
+        # available options are "disk" and "tensorboard"
+        default_factory=lambda: []
+    )
 
 
 @dataclass
@@ -366,16 +370,11 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
-    video_option: List[str] = field(
-        default_factory=lambda: ["disk", "tensorboard"]
-    )
     video_render_views: List[str] = field(default_factory=list)
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
     video_dir: str = "video_dir"
     video_fps: int = 10
-    video_render_top_down: bool = True
-    video_render_all_info: bool = False
     test_episode_count: int = -1
     # path to ckpt or path to ckpts dir
     eval_ckpt_path_dir: str = "data/checkpoints"
