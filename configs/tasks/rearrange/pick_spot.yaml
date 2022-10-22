@@ -1,0 +1,246 @@
+GYM:
+    AUTO_NAME: "Pick"
+    # OBS_KEYS: ['robot_arm_depth', 'obj_start_sensor', 'joint', 'is_holding', 'camera_to_target', 'relative_resting_position', 'ee_pos'] # This is the true observation of the policy
+    # obj_start_sensor: Relative position from end effector to target object
+    # joint: self._sim.robot.arm_joint_pos
+    # is_holding: self._sim.grasp_mgr.is_grasped
+    # relative_resting_position: ee distance to the target ee position in x,y,z
+    # ee_pos: ee position
+    #OBS_KEYS: [ 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
+    #OBS_KEYS: ['robot_head_stereo_left_depth', 'robot_head_stereo_right_depth', 'robot_arm_depth', 'joint', 'is_holding', 'camera_to_target', 'ee_pos'] # This is the true observation of the policy
+    OBS_KEYS: ['robot_arm_depth', 'joint', 'is_holding', 'robot_arm_semantic'] # This is the true observation of the policy
+    CLASS_NAME: ["RearrangeRLEnv"]
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 500 # Default value is 200
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
+    SCENES_DIR: "data/replica_cad/"
+EVAL:
+    SPLIT: train # train or val
+TASK:
+    TYPE: RearrangePickTask-v0
+    COUNT_OBJ_COLLISIONS: True
+    COUNT_ROBOT_OBJ_COLLS: False
+    DESIRED_RESTING_POSITION: [0.5, 0.0, 0.4]
+
+    SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
+
+    # In radians
+    BASE_ANGLE_NOISE: 0.0 # 0.15
+    BASE_NOISE: 0.0 #0.05
+    FORCE_REGENERATE: True
+
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: false  # We do not want to drop the object here
+
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 100.0 # 100
+    SLACK_REWARD: -0.01
+    END_ON_SUCCESS: True
+
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+
+    TARGET_START_SENSOR:
+        TYPE: "TargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    GOAL_SENSOR:
+        TYPE: "GoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_TARGET_START_SENSOR:
+        TYPE: "AbsTargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_GOAL_SENSOR:
+        TYPE: "AbsGoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    JOINT_SENSOR:
+        TYPE: "JointSensor"
+        DIMENSIONALITY: 7
+    END_EFFECTOR_SENSOR:
+        TYPE: "EEPositionSensor"
+    IS_HOLDING_SENSOR:
+        TYPE: "IsHoldingSensor"
+    CAMERATOTARGETSENSOR:
+        TYPE: "CameraToTargetSensor"
+    RELATIVE_RESTING_POS_SENSOR:
+        TYPE: "RelativeRestingPositionSensor"
+    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "ARM_DEPTH_SENSOR", "CAMERATOTARGETSENSOR", "ARM_SEMANTIC_SENSOR"]
+    #SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "CAMERATOTARGETSENSOR"]
+    ARM_DEPTH_SENSOR:
+      HEIGHT: 128
+      WIDTH: 128
+      MAX_DEPTH: 10.0
+      MIN_DEPTH: 0.0
+      NORMALIZE_DEPTH: True
+    ARM_SEMANTIC_SENSOR:
+      HEIGHT: 128
+      WIDTH: 128
+    ROBOT_FORCE:
+        TYPE: "RobotForce"
+        MIN_FORCE: 20.0
+    # FORCE_TERMINATE:
+    #     TYPE: "ForceTerminate"
+    #     MAX_ACCUM_FORCE: 50000.0 #5000.0
+    # STEP_TERMINATE:
+    #     TYPE: "StepTerminate"
+    #     MAX_STEP: 5000
+    DISTANCE_TERMINATE:
+        TYPE: "DistanceTerminate"
+        MAX_DIS: 2.0
+    END_EFFECTOR_TO_OBJECT_DISTANCE:
+        TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
+    DID_PICK_OBJECT:
+        TYPE: "DidPickObjectMeasure"
+    NUM_STEPS:
+        TYPE: "NumStepsMeasure"
+    CAMERA_TO_TARGET_DISTANCE:
+        TYPE: "CameraToTargetDistance"
+    DID_VIOLATE_HOLD_CONSTRAINT:
+        TYPE: "DidViolateHoldConstraintMeasure"
+    PICK_REWARD:
+        TYPE: "RearrangePickReward"
+        DIST_REWARD: 20.0 # 0.1 -> 0.3
+        SUCC_REWARD: 100.0
+        PICK_REWARD: 100.0
+        DROP_PEN: 0.0 #5.0
+        WRONG_PICK_PEN: 0.0 #5.0
+        USE_DIFF: True # use for the reward
+        DROP_OBJ_SHOULD_END: False
+        WRONG_PICK_SHOULD_END: False
+
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 0.0 #10.0
+        FORCE_PEN: 0.0 # 0.001
+        MAX_FORCE_PEN: 0.0 # 1.0
+        FORCE_END_PEN: 0.0 #10.0
+
+    PICK_SUCCESS:
+        TYPE: "RearrangePickSuccess"
+        EE_RESTING_SUCCESS_THRESHOLD: 0.2
+
+    MEASUREMENTS:
+        - "ROBOT_FORCE"
+        - "FORCE_TERMINATE"
+        #- "STEP_TERMINATE"
+        - "DISTANCE_TERMINATE"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "DID_PICK_OBJECT"
+        - "PICK_SUCCESS"
+        - "PICK_REWARD"
+        - "DID_VIOLATE_HOLD_CONSTRAINT"
+        - "NUM_STEPS"
+        - "CAMERA_TO_TARGET_DISTANCE"
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosKinematicReducedAction"
+            #ARM_CONTROLLER: "ArmRelPosAction"
+            SHOULD_CLIP: False
+            ARM_JOINT_MASK: [1,1,0,1,0,1,0] # Ideally sums to JOINT_SENSOR DIMENSIONALITY
+            GRIP_CONTROLLER: "MagicGraspAction" # "SuctionGraspAction" #
+            #GRIP_CONTROLLER: "GazeGraspAction"
+            GAZE_DISTANCE_RANGE: [0.3, 0.75]
+            CENTER_CONE_ANGLE: 20
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15 #0.15
+            DISABLE_GRIP: False # We want to disable the grip so that we focus on the Spot control
+            DELTA_POS_LIMIT: 0.005 #0.025 -> 0.1
+            EE_CTRL_LIM: 0.015
+            RENDER_EE_TARGET: True
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
+
+SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
+    ACTION_SPACE_CONFIG: v0
+    AGENTS: ['AGENT_0']
+    DEBUG_RENDER: False
+    DEBUG_RENDER_GOAL: True
+    NEEDS_MARKERS: False
+    AGENT_0:
+        HEIGHT: 1.5
+        RADIUS: 0.3
+        SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR", "ARM_SEMANTIC_SENSOR"]
+        ROBOT_URDF: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        ROBOT_TYPE: "SpotRobot"
+        IK_ARM_URDF: data/robots/hab_spot_arm/urdf/hab_spot_onlyarm.urdf
+    HEAD_RGB_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 128
+        HEIGHT: 128
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+        MAX_DEPTH: 10.0
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: True
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+    HEAD_STEREO_LEFT_RGB_SENSOR:
+        WIDTH: 120 # 120
+        HEIGHT: 212 # 212
+        HFOV: 58
+    HEAD_STEREO_RIGHT_RGB_SENSOR:
+        WIDTH: 120 # 120
+        HEIGHT: 212 # 212
+        HFOV: 58
+    HEAD_STEREO_LEFT_DEPTH_SENSOR:
+        WIDTH: 120 # 120
+        HEIGHT: 212 # 212
+        HFOV: 58
+        MAX_DEPTH: 3.5
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: True
+        MAX_ZERO: False
+    HEAD_STEREO_RIGHT_DEPTH_SENSOR:
+        WIDTH: 120 # 120
+        HEIGHT: 212 # 212
+        HFOV: 58
+        MAX_DEPTH: 3.5
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: True
+        MAX_ZERO: False
+    ARM_SEMANTIC_SENSOR:
+      HEIGHT: 128
+      WIDTH: 128
+
+    # Agent setup
+    CTRL_FREQ: 120.0
+    AC_FREQ_RATIO: 4
+    FORWARD_STEP_SIZE: 0.25
+
+    # Grasping
+    HOLD_THRESH: 0.09 #0.2
+    GRASP_IMPULSE: 1000.0 #10000.0
+
+    DEFAULT_AGENT_ID: 0
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: True
+        ENABLE_PHYSICS: True
+        GPU_DEVICE_ID: 0
+        GPU_GPU: False
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    SEED: 100
+    TYPE: RearrangeSim-v0
+    # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
+    # for the collision detection.
+    COLLISION_DETECTION_METHOD: "NevMesh"

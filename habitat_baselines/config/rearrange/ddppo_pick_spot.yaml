@@ -1,0 +1,94 @@
+VERBOSE: False
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick_spot.yaml
+TRAINER_NAME: "ddppo"
+SIMULATOR_GPU_ID: 0
+TORCH_GPU_ID: 0
+VIDEO_OPTION: ["disk"]
+TENSORBOARD_DIR: "/Users/jimmytyyang/Documents/log_data/tb_pick_0421_v5_smallAction_conservative"
+VIDEO_DIR: "/Users/jimmytyyang/Documents/log_data/video_dir_pick_0421_v5_smallAction_conservative"
+VIDEO_FPS: 30
+VIDEO_RENDER_TOP_DOWN: False
+VIDEO_RENDER_ALL_INFO: True
+VIDEO_RENDER_VIEWS:
+  - "THIRD_RGB_SENSOR"
+TEST_EPISODE_COUNT: -1
+EVAL_CKPT_PATH_DIR: #"/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_0421_v5_conservative/ckpt.10.pth"
+NUM_ENVIRONMENTS: 20
+# Visual sensors to include
+SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR", "ARM_SEMANTIC_SENSOR"]
+CHECKPOINT_FOLDER: "/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_0421_v5_smallAction_conservative"
+NUM_UPDATES: -1
+TOTAL_NUM_STEPS: 1.0e9
+LOG_INTERVAL: 10 # This is based on the PPO  num_steps
+NUM_CHECKPOINTS: 40000
+# Force PyTorch to be single threaded as
+# this improves performance considerably
+FORCE_TORCH_SINGLE_THREADED: True
+EVAL_KEYS_TO_INCLUDE_IN_NAME: ['reward', 'force', 'success']
+
+RL:
+  POLICY:
+      name: "PointNavResNetPolicy"
+      action_distribution_type: "gaussian"
+      ACTION_DIST:
+         use_log_std: True
+         clamp_std: True # If True, the std will be clamped to the specified min and max std values
+        #  std_init: -1.0 #-1.0
+        #  use_std_param: False # If True, the std will be a parameter not conditioned on state
+        #  use_log_std: True
+        #  use_softplus: False
+        #  log_std_init: 0.5
+        #  min_std: 1e-6
+        #  max_std: 1
+        #  min_log_std: -1
+        #  max_log_std: 2
+        #  # For continuous action distributions (including gaussian):
+        #  action_activation: "tanh"  # ['tanh', '']
+        #  scheduled_std: False
+
+  PPO:
+    # ppo params
+    clip_param: 0.2
+    ppo_epoch: 2
+    num_mini_batch: 2
+    value_loss_coef: 0.5
+    entropy_coef: 0.0001
+    lr: 0.00025 # default 0.00025
+    eps: 1e-5
+    max_grad_norm: 0.2 # 0.2
+    num_steps: 128 # number of steps used in PPO training
+    use_gae: True
+    gamma: 0.99
+    tau: 0.95
+    use_linear_clip_decay: False
+    use_linear_lr_decay: False
+    reward_window_size: 50
+    entropy_target_factor: 0.0
+    use_adaptive_entropy_pen: False
+    use_clipped_value_loss: True
+    use_normalized_advantage: False
+    hidden_size: 512
+    # Use double buffered sampling, typically helps
+    # when environment time is similar or large than
+    # policy inference time during rollout generation
+    use_double_buffered_sampler: False
+
+  DDPPO:
+    sync_frac: 0.6
+    # The PyTorch distributed backend to use
+    distrib_backend: NCCL
+    # Visual encoder backbone
+    pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+    # Initialize with pretrained weights
+    pretrained: False
+    # Initialize just the visual encoder backbone with pretrained weights
+    pretrained_encoder: False
+    # Whether or not the visual encoder backbone will be trained.
+    train_encoder: True
+    # Whether or not to reset the critic linear layer
+    reset_critic: False
+
+    # Model parameters
+    backbone: resnet18
+    rnn_type: LSTM
+    num_recurrent_layers: 2
