@@ -288,16 +288,37 @@ class RobotEESensorConfig(StateSensorConfig):
 
 
 class JointSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        retval = batch_states.robot_joint_positions[:, -9:-2]
+        return retval
+
     def get_obs(self, state):
         return state.robot_joint_positions[-9:-2]
 
 
 class HoldingSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        return np.not_equal(batch_states.held_obj_idx, -1)
+
     def get_obs(self, state):
         return (float(state.held_obj_idx != -1),)
 
 
 class StepCountSensorConfig(StateSensorConfig):
+    def get_batch_obs(self, states, batch_states):
+        fraction_steps_left = (
+            (self.max_episode_length - batch_states.episode_step_idx)
+            * 1.0
+            / self.max_episode_length
+        )
+        arrays = (
+            np.minimum(1.0, fraction_steps_left),
+            np.minimum(1.0, fraction_steps_left * 5.0),
+            np.minimum(1.0, fraction_steps_left * 50.0),
+        )
+        retval = np.stack(arrays, axis=1)
+        return retval
+
     def get_obs(self, state):
         fraction_steps_left = (
             (self.max_episode_length - state.episode_step_idx)
@@ -1447,7 +1468,7 @@ class BatchedEnv:
         if self._bsim:
             self._bsim.reset(self.resets)
             self._bsim.start_render()
-            env_states = self._bsim.get_environment_states()
+            env_states = None  # self._bsim.get_environment_states()
             self.get_nonpixel_observations(env_states, self._observations)
             self._bsim.wait_render()
             self.get_pixel_observations(self._observations)
@@ -1469,7 +1490,7 @@ class BatchedEnv:
             assert self._config.OVERLAP_PHYSICS
             self._bsim.wait_step_physics_or_reset()
             self._bsim.start_render()
-            env_states = self._bsim.get_environment_states()
+            env_states = None  # self._bsim.get_environment_states()
             self.get_nonpixel_observations(env_states, self._observations)
             if use_batch_dones_rewards_resets:
                 modified_actions = self.get_batch_dones_rewards_resets(actions)
