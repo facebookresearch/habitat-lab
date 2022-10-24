@@ -27,7 +27,7 @@ from habitat.utils.geometry_utils import (
 )
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
-CFG_MULTI_TEST = "datasets/pointnav/gibson.yaml"
+CFG_MULTI_TEST = "dataset/pointnav/gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
 NUM_EPISODES = 10
 

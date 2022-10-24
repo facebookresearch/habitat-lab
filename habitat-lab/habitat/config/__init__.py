@@ -106,7 +106,7 @@ def main():
         "--task-config",
         type=str,
         default="habitat-lab/habitat/config/task/pointnav.yaml,"
-                "habitat-lab/habitat/config/datasets/pointnav/habitat_test.yaml",
+                "habitat-lab/habitat/config/dataset/pointnav/habitat_test.yaml",
     )
     parser.add_argument(
         "opts",
