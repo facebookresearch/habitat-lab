@@ -25,8 +25,6 @@ TASK:
     COUNT_OBJ_COLLISIONS: true
     COUNT_ROBOT_OBJ_COLLS: false
 
-    OBJ_SUCC_THRESH: 0.3
-    ART_SUCC_THRESH: 0.15
     REWARD_MEASURE: nav_to_obj_reward
     SUCCESS_MEASURE: nav_to_obj_success
     SUCCESS_REWARD: 10.0
@@ -51,14 +49,14 @@ TASK:
         ANGLE_DIST_REWARD: 1.0
         DIST_REWARD: 1.0
         CONSTRAINT_VIOLATE_PEN: 1.0
-        FORCE_PEN: 0.0
+        FORCE_PEN: 0.0001
         MAX_FORCE_PEN: 0.01
         FORCE_END_PEN: 1.0
 
     # Success criteria
     NAV_TO_POS_SUCC:
         TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 2.0
+        SUCCESS_DISTANCE: 1.5
 
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: NavToObjSuccess
