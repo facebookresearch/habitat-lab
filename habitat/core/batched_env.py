@@ -298,7 +298,7 @@ class JointSensorConfig(StateSensorConfig):
 
 class HoldingSensorConfig(StateSensorConfig):
     def get_batch_obs(self, states, batch_states):
-        return np.not_equal(batch_states.held_obj_idx, -1)
+        return np.expand_dims(np.not_equal(batch_states.held_obj_idx, -1), 1)
 
     def get_obs(self, state):
         return (float(state.held_obj_idx != -1),)
@@ -783,10 +783,19 @@ class BatchedEnv:
         config_drop_threshold = self._config.get("DROP_THRESHOLD", 0.01)
         config_grasp_threshold = self._config.get("GRASP_THRESHOLD", 0.02)
         drop_grasp_action_idx = 0
+        end_action_index = self.action_dim - 1
 
         np_actions = actions.cpu().numpy()
 
         continuous_action_norm = np_actions
+
+        continuous_action_norm[
+            :, drop_grasp_action_idx
+        ] = 0.0  # no penalty on the grasp action
+        continuous_action_norm[
+            :, end_action_index
+        ] = 0.0  # no penalty on the end action
+
         # continuous_action_l2 = sum(c * c for c in continuous_action_norm)
         # continuous_action_l2 = np.sum(np.dot(continuous_action_norm))
         continuous_action_l2 = np.sum(
@@ -801,7 +810,7 @@ class BatchedEnv:
         # )
 
         end_episode_action = (
-            np_actions[:, self.action_dim - 1] > config_end_action_threshold
+            np_actions[:, end_action_index] > config_end_action_threshold
         )
 
         original_drop_grasp = np_actions[:, drop_grasp_action_idx]

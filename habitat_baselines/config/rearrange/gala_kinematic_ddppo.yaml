@@ -129,7 +129,7 @@ RL:
     use_linear_lr_decay: True
     max_grad_norm: 2.0
   POLICY:
-    name: "PointNavResNetPolicy"
+    name: "PointNavResNetPolicy" # PointNavBaselinePolicy
     action_distribution_type: "gaussian_and_categorical"
   DDPPO:
     backbone: "resnet18"

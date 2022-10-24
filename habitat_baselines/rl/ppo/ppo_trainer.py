@@ -533,7 +533,9 @@ class PPOTrainer(BaseRLTrainer):
         profiling_wrapper.range_pop()  # save to rollout storage
 
     def _collect_environment_result(self, buffer_index: int = 0):
-        num_envs = self.config.LOG_INFO_NUM_ENVS  # self.envs.num_envs
+        num_envs = min(
+            self.config.LOG_INFO_NUM_ENVS, self.envs.num_envs
+        )  #  self.envs.num_envs
         env_slice = slice(
             int(buffer_index * num_envs / self._nbuffers),
             int((buffer_index + 1) * num_envs / self._nbuffers),
