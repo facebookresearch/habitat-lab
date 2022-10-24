@@ -403,15 +403,10 @@ def get_config(
 
     config_dir = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 
-    with initialize_config_dir(
-        version_base=None,
-        config_dir=config_dir + "/" + osp.dirname(config_paths),
-    ):
-        # with initialize(version_base=None, config_path="."):
+    with initialize_config_dir(version_base=None, config_dir=config_dir):
 
         cfg = compose(
-            config_name=osp.basename(config_paths),
-            # config_name=config_paths,
+            config_name=config_paths,
             overrides=overrides if overrides is not None else [],
         )
 

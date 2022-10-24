@@ -1,9 +1,16 @@
-# Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
+# @package _global_
 
+defaults:
+  - /habitat: habitat_config_base
+  - /benchmark: pointnav_habitat_test
+  - /habitat_baselines: habitat_baselines_config_base
+
+
+# Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
 habitat_baselines:
   verbose: False
 
-  base_task_config_path: "habitat-lab/habitat/config/task/pointnav_gibson.yaml"
+#  base_task_config_path: "habitat-lab/habitat/config/task/pointnav_gibson.yaml"
   trainer_name: "ppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
@@ -12,9 +19,9 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 6
-  sensors: ["depth_sensor"]
+#  sensors: ["depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
-  total_num_steps: 75e6
+#  total_num_steps: 75e6
   log_interval: 25
   num_checkpoints: 100
   # Force PyTorch to be single threaded as
