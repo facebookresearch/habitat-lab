@@ -1,6 +1,6 @@
 # @package habitat
     gym:
-        auto_name: SetTable
+        auto_name: PrepareGroceries
         obs_keys:
         - robot_head_depth
         - relative_resting_position
@@ -11,11 +11,11 @@
         - joint
         - is_holding
     environment:
-        max_episode_steps: 4500
+        max_episode_steps: 4000
     dataset:
         type: RearrangeDataset-v0
         split: train
-        data_path: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/prepare_groceries_10k_1k.json.gz
         scenes_dir: data/replica_cad/
     task:
         type: RearrangeCompositeTask-v0
@@ -29,8 +29,8 @@
         base_angle_noise: 0.15
         base_noise: 0.05
         easy_init: false
-        task_spec_base_path: tasks/rearrange/pddl/
-        task_spec: set_table
+        task_spec_base_path: task/rearrange/pddl/
+        task_spec: prepare_groceries
         pddl_domain_def: replica_cad
         sensors:
         - relative_resting_pos_sensor
@@ -110,19 +110,9 @@
         auto_sleep: true
         agent_0:
             height: 1.5
-            is_set_start_state: false
             radius: 0.3
             sensors:
             - head_depth_sensor
-            start_position:
-            - 0
-            - 0
-            - 0
-            start_rotation:
-            - 0
-            - 0
-            - 0
-            - 1
             robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
             robot_type: FetchRobot
             ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf

@@ -43,7 +43,7 @@ def draw_top_down_map(info, output_size):
 
 
 def shortest_path_example():
-    config = habitat.get_config(config_paths="tasks/pointnav.yaml")
+    config = habitat.get_config(config_paths="task/pointnav.yaml")
     with habitat.config.read_write(config):
         config.habitat.task.measurements.append("top_down_map")
     with SimpleRLEnv(config=config) as env:

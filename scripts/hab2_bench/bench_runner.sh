@@ -39,7 +39,7 @@ do
     python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
 
     # # Ours (RENDER_ONLY)
-    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
+    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/task/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
 
     ##################################
     # IDLE 1 sensor (head RGB)
@@ -55,7 +55,7 @@ do
     python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
 
     # # Ours (RENDER_ONLY)
-    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
+    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/task/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
 
     ##################################
     # INTERACT 4 sensors (arm + head, RGBD)

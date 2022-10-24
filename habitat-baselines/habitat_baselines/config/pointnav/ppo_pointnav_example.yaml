@@ -4,7 +4,7 @@
 # @package _global_
 
 defaults:
-  - /habitat/tasks/pointnav@habitat
+  - /habitat/task/pointnav@habitat
   - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
   - _self_
 

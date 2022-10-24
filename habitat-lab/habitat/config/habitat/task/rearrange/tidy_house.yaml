@@ -1,62 +1,71 @@
 # @package habitat
     gym:
-        auto_name: "NavPick"
+        auto_name: TidyHouse
         obs_keys:
         - robot_head_depth
         - relative_resting_position
         - obj_start_sensor
+        - obj_goal_sensor
         - obj_start_gps_compass
+        - obj_goal_gps_compass
         - joint
         - is_holding
     environment:
-        max_episode_steps: 500
+        max_episode_steps: 5000
     dataset:
         type: RearrangeDataset-v0
         split: train
-        data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
         scenes_dir: data/replica_cad/
     task:
         type: RearrangeCompositeTask-v0
-
-        reward_measure: "move_obj_reward"
-        success_measure: "composite_success"
+        reward_measure: move_obj_reward
+        success_measure: composite_success
         success_reward: 100.0
         slack_reward: -0.01
-        end_on_success: True
-
+        end_on_success: true
         count_obj_collisions: true
-        constraint_violation_ends_episode: False
+        constraint_violation_ends_episode: false
         base_angle_noise: 0.15
         base_noise: 0.05
         easy_init: false
-        task_spec_base_path: tasks/rearrange/pddl/
-        task_spec: nav_pick
+        task_spec_base_path: task/rearrange/pddl/
+        task_spec: tidy_house
         pddl_domain_def: replica_cad
+        obj_succ_thresh: 0.3
+        art_succ_thresh: 0.15
+        target_start_sensor:
+            type: TargetStartSensor
+            goal_format: CARTESIAN
+            dimensionality: 3
+        target_start_gps_compass_sensor:
+            type: TargetStartGpsCompassSensor
+        goal_sensor:
+            type: GoalSensor
+            goal_format: CARTESIAN
+            dimensionality: 3
+        joint_sensor:
+            type: JointSensor
+            dimensionality: 7
+        end_effector_sensor:
+            type: EEPositionSensor
+        is_holding_sensor:
+            type: IsHoldingSensor
         sensors:
         - relative_resting_pos_sensor
         - target_start_sensor
+        - goal_sensor
         - joint_sensor
         - is_holding_sensor
         - end_effector_sensor
         - target_start_gps_compass_sensor
+        - target_goal_gps_compass_sensor
         force_terminate:
             type: ForceTerminate
             max_accum_force: -1.0
         robot_force:
             type: RobotForce
             min_force: 20.0
-        move_objects_reward:
-            type: MoveObjectsReward
-            pick_reward: 1.0
-            success_dist: 0.15
-            single_rearrange_reward: 1.0
-            dist_reward: 1.0
-            # General Rearrange Reward config
-            constraint_violate_pen: 10.0
-            force_pen: 0.0
-            max_force_pen: 1.0
-            force_end_pen: 10.0
-
         measurements:
         - object_to_goal_distance
         - robot_force
@@ -70,7 +79,6 @@
         - did_violate_hold_constraint
         - move_objects_reward
         - composite_stage_goals
-
         actions:
             arm_action:
                 type: ArmAction
@@ -111,19 +119,9 @@
         auto_sleep: true
         agent_0:
             height: 1.5
-            is_set_start_state: false
             radius: 0.3
             sensors:
             - head_depth_sensor
-            start_position:
-            - 0
-            - 0
-            - 0
-            start_rotation:
-            - 0
-            - 0
-            - 0
-            - 1
             robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
             robot_type: FetchRobot
             ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf

@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /habitat/tasks/pointnav@habitat
+  - /habitat/task/pointnav@habitat
   - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
   - _self_
 
@@ -10,7 +10,7 @@ habitat:
     success_reward: 2.5
 
 habitat_baselines:
-  # base_task_config_path: "tasks/pointnav.yaml"
+  # base_task_config_path: "task/pointnav.yaml"
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: ""

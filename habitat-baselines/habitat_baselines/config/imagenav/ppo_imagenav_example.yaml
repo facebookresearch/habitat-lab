@@ -1,5 +1,5 @@
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/tasks/imagenav.yaml"
+  base_task_config_path: "habitat-lab/habitat/config/task/imagenav.yaml"
   trainer_name: "ppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"

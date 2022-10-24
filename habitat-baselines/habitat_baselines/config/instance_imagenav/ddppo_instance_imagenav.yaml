@@ -1,5 +1,5 @@
 habitat_baselines:
-  base_task_config_path: habitat-lab/habitat/config/tasks/instance_imagenav_hm3d.yaml
+  base_task_config_path: habitat-lab/habitat/config/task/instance_imagenav_hm3d.yaml
   cmd_trailing_opts: ["habitat.environment.iterator_options.max_scene_repeat_steps", "50000"]
   torch_gpu_id: 0
   tensorboard_dir: tb

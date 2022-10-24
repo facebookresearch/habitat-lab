@@ -365,7 +365,7 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     # base_task_config_path: str = (
-    #     "habitat-lab/habitat/config/tasks/pointnav.yaml"
+    #     "habitat-lab/habitat/config/task/pointnav.yaml"
     # )
     cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"

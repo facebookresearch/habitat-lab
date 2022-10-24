@@ -1,6 +1,6 @@
 # @package habitat
     gym:
-        auto_name: TidyHouse
+        auto_name: RearrangeEasy
         obs_keys:
         - robot_head_depth
         - relative_resting_position
@@ -11,11 +11,11 @@
         - joint
         - is_holding
     environment:
-        max_episode_steps: 5000
+        max_episode_steps: 1500
     dataset:
         type: RearrangeDataset-v0
         split: train
-        data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
         scenes_dir: data/replica_cad/
     task:
         type: RearrangeCompositeTask-v0
@@ -26,31 +26,15 @@
         end_on_success: true
         count_obj_collisions: true
         constraint_violation_ends_episode: false
+        constraint_violation_drops_object: True
         base_angle_noise: 0.15
         base_noise: 0.05
         easy_init: false
-        task_spec_base_path: tasks/rearrange/pddl/
-        task_spec: tidy_house
+        task_spec_base_path: task/rearrange/pddl/
+        task_spec: rearrange_easy
         pddl_domain_def: replica_cad
         obj_succ_thresh: 0.3
         art_succ_thresh: 0.15
-        target_start_sensor:
-            type: TargetStartSensor
-            goal_format: CARTESIAN
-            dimensionality: 3
-        target_start_gps_compass_sensor:
-            type: TargetStartGpsCompassSensor
-        goal_sensor:
-            type: GoalSensor
-            goal_format: CARTESIAN
-            dimensionality: 3
-        joint_sensor:
-            type: JointSensor
-            dimensionality: 7
-        end_effector_sensor:
-            type: EEPositionSensor
-        is_holding_sensor:
-            type: IsHoldingSensor
         sensors:
         - relative_resting_pos_sensor
         - target_start_sensor
@@ -62,10 +46,8 @@
         - target_goal_gps_compass_sensor
         force_terminate:
             type: ForceTerminate
-            max_accum_force: -1.0
-        robot_force:
-            type: RobotForce
-            min_force: 20.0
+            max_accum_force: 100_000.0
+            max_instant_force: 10_000.0
         measurements:
         - object_to_goal_distance
         - robot_force
@@ -78,12 +60,12 @@
         - num_steps
         - did_violate_hold_constraint
         - move_objects_reward
-        - composite_stage_goals
+        - gfx_replay_measure
         actions:
             arm_action:
                 type: ArmAction
                 arm_controller: ArmRelPosAction
-                grip_controller: MagicGraspAction
+                grip_controller: SuctionGraspAction
                 arm_joint_dimensionality: 7
                 grasp_thresh_dist: 0.15
                 disable_grip: false
@@ -104,45 +86,44 @@
         - arm_action
         - base_velocity
         - rearrange_stop
+        move_objects_reward:
+            type: MoveObjectsReward
+            pick_reward: 1.0
+            success_dist: 0.15
+            single_rearrange_reward: 1.0
+            dist_reward: 1.0
+            constraint_violate_pen: 10.0
+            force_pen: 0.0
+            max_force_pen: 1.0
+            force_end_pen: 10.0
     simulator:
         additional_object_paths:
             - "data/objects/ycb/configs/"
         action_space_config: v0
-        grasp_impulse: 1000.0
-        hold_thresh: 0.09
+        grasp_impulse: 10000.0
+        hold_thresh: 0.2
         ac_freq_ratio: 4
         debug_render: false
         debug_render_goal: true
         agents:
         - agent_0
-        concur_render: true
-        auto_sleep: true
         agent_0:
             height: 1.5
             radius: 0.3
             sensors:
             - head_depth_sensor
-            robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-            robot_type: FetchRobot
+            robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+            robot_type: FetchSuctionRobot
             ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
         head_rgb_sensor:
-            width: 128
-            height: 128
+            width: 256
+            height: 256
         head_depth_sensor:
-            width: 128
-            height: 128
+            width: 256
+            height: 256
             min_depth: 0.0
             max_depth: 10.0
             normalize_depth: true
-        arm_depth_sensor:
-            height: 128
-            max_depth: 10.0
-            min_depth: 0.0
-            normalize_depth: true
-            width: 128
-        arm_rgb_sensor:
-            height: 128
-            width: 128
         ctrl_freq: 120.0
         default_agent_id: 0
         forward_step_size: 0.25

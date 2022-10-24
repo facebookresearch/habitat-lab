@@ -16,7 +16,7 @@ import habitat.utils.env_utils
 from habitat.config.default import _HABITAT_CFG_DIR, Config
 from habitat.core.environments import get_env_class
 
-gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/")
+gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "task/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:

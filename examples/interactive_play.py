@@ -30,7 +30,7 @@ Controls:
     - B to reset the camera position
 - X to change the robot that is being controlled (if there are multiple robots).
 
-Change the task with `--cfg tasks/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/tasks/rearrange/` folder).
+Change the task with `--cfg task/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `task.actions.arm_action.grip_controller "SuctionGraspAction"`
@@ -68,7 +68,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "tasks/rearrange/play.yaml"
+DEFAULT_CFG = "task/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"

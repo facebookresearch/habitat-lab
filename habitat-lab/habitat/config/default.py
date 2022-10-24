@@ -105,7 +105,7 @@ _C.habitat.task.should_enforce_target_within_reach = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE task CONFIG
 # -----------------------------------------------------------------------------
-_C.habitat.task.task_spec_base_path = "tasks/rearrange/pddl/"
+_C.habitat.task.task_spec_base_path = "task/rearrange/pddl/"
 _C.habitat.task.task_spec = ""
 # PDDL domain params
 _C.habitat.task.pddl_domain_def = "replica_cad"

@@ -1,5 +1,5 @@
 habitat_baselines:
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
+  base_task_config_path: habitat-lab/habitat/config/task/rearrange/pick.yaml
   video_dir: "data/vids/"
   count_obj_collisions: True
 

@@ -1,5 +1,5 @@
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
+  base_task_config_path: "habitat-lab/habitat/config/task/eqa_mp3d.yaml"
   trainer_name: "pacman"
 
   torch_gpu_id: 0

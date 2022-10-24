@@ -30,7 +30,7 @@
         base_angle_noise: 0.15
         base_noise: 0.05
         easy_init: false
-        task_spec_base_path: tasks/rearrange/pddl/
+        task_spec_base_path: task/rearrange/pddl/
         task_spec: rearrange_easy
         pddl_domain_def: replica_cad
         obj_succ_thresh: 0.3

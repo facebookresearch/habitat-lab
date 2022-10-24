@@ -23,7 +23,7 @@ habitat_baselines:
   # this improves performance considerably
   force_torch_single_threaded: True
 
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml
+  base_task_config_path: habitat-lab/habitat/config/task/rearrange/reach_state.yaml
   rl:
     policy:
         name: "PointNavResNetPolicy"

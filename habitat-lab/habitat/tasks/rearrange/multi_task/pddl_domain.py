@@ -50,7 +50,7 @@ class PddlDomain:
         cur_task_config: Optional[Config] = None,
     ):
         """
-        :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
+        :param domain_file_path: Either an absolute path or a path relative to `habitat/task/rearrange/multi_task/domain_configs/`.
         :param cur_task_config: The task config (`habitat.task`). This is
             used when the action initializes a task via `PddlAction::init_task`. If
             this is not used, `cur_task_config` can be None.

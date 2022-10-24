@@ -735,7 +735,7 @@ class TaskConfig(HabitatBaseConfig):
     easy_init: bool = False
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
-    task_spec_base_path: str = "configs/tasks/rearrange/pddl/"
+    task_spec_base_path: str = "configs/task/rearrange/pddl/"
     task_spec: str = ""
     # PDDL domain params
     pddl_domain_def: str = "replica_cad"

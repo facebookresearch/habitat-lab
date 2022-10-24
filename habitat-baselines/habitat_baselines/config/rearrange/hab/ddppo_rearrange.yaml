@@ -1,6 +1,6 @@
 habitat_baselines:
   verbose: False
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/rearrange.yaml
+  base_task_config_path: habitat-lab/habitat/config/task/rearrange/rearrange.yaml
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"

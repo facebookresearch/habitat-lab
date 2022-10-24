@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /habitat/tasks/pointnav_gibson@habitat
+  - /habitat/task/pointnav_gibson@habitat
   - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
   - _self_
 

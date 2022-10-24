@@ -24,7 +24,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="tasks/pointnav.yaml",
+        default="task/pointnav.yaml",
     )
     args = parser.parse_args()
 

@@ -1,6 +1,6 @@
 # @package habitat
     gym:
-        auto_name: RearrangeEasy
+        auto_name: SetTable
         obs_keys:
         - robot_head_depth
         - relative_resting_position
@@ -11,11 +11,11 @@
         - joint
         - is_holding
     environment:
-        max_episode_steps: 1500
+        max_episode_steps: 4500
     dataset:
         type: RearrangeDataset-v0
         split: train
-        data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
+        data_path: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz
         scenes_dir: data/replica_cad/
     task:
         type: RearrangeCompositeTask-v0
@@ -26,15 +26,12 @@
         end_on_success: true
         count_obj_collisions: true
         constraint_violation_ends_episode: false
-        constraint_violation_drops_object: True
         base_angle_noise: 0.15
         base_noise: 0.05
         easy_init: false
-        task_spec_base_path: tasks/rearrange/pddl/
-        task_spec: rearrange_easy
+        task_spec_base_path: task/rearrange/pddl/
+        task_spec: set_table
         pddl_domain_def: replica_cad
-        obj_succ_thresh: 0.3
-        art_succ_thresh: 0.15
         sensors:
         - relative_resting_pos_sensor
         - target_start_sensor
@@ -46,8 +43,10 @@
         - target_goal_gps_compass_sensor
         force_terminate:
             type: ForceTerminate
-            max_accum_force: 100_000.0
-            max_instant_force: 10_000.0
+            max_accum_force: -1.0
+        robot_force:
+            type: RobotForce
+            min_force: 20.0
         measurements:
         - object_to_goal_distance
         - robot_force
@@ -60,12 +59,12 @@
         - num_steps
         - did_violate_hold_constraint
         - move_objects_reward
-        - gfx_replay_measure
+        - composite_stage_goals
         actions:
             arm_action:
                 type: ArmAction
                 arm_controller: ArmRelPosAction
-                grip_controller: SuctionGraspAction
+                grip_controller: MagicGraspAction
                 arm_joint_dimensionality: 7
                 grasp_thresh_dist: 0.15
                 disable_grip: false
@@ -100,30 +99,51 @@
         additional_object_paths:
             - "data/objects/ycb/configs/"
         action_space_config: v0
-        grasp_impulse: 10000.0
-        hold_thresh: 0.2
+        grasp_impulse: 1000.0
+        hold_thresh: 0.09
         ac_freq_ratio: 4
         debug_render: false
         debug_render_goal: true
         agents:
         - agent_0
+        concur_render: true
+        auto_sleep: true
         agent_0:
             height: 1.5
+            is_set_start_state: false
             radius: 0.3
             sensors:
             - head_depth_sensor
-            robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-            robot_type: FetchSuctionRobot
+            start_position:
+            - 0
+            - 0
+            - 0
+            start_rotation:
+            - 0
+            - 0
+            - 0
+            - 1
+            robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+            robot_type: FetchRobot
             ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
         head_rgb_sensor:
-            width: 256
-            height: 256
+            width: 128
+            height: 128
         head_depth_sensor:
-            width: 256
-            height: 256
+            width: 128
+            height: 128
             min_depth: 0.0
             max_depth: 10.0
             normalize_depth: true
+        arm_depth_sensor:
+            height: 128
+            max_depth: 10.0
+            min_depth: 0.0
+            normalize_depth: true
+            width: 128
+        arm_rgb_sensor:
+            height: 128
+            width: 128
         ctrl_freq: 120.0
         default_agent_id: 0
         forward_step_size: 0.25

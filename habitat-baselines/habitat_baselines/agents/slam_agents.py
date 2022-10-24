@@ -604,7 +604,7 @@ def main():
         choices=["blind", "orbslam2-rgbd", "orbslam2-rgb-monod"],
     )
     parser.add_argument(
-        "--task-config", type=str, default="tasks/pointnav_rgbd.yaml"
+        "--task-config", type=str, default="task/pointnav_rgbd.yaml"
     )
     args = parser.parse_args()
 

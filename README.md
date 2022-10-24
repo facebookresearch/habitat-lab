@@ -130,7 +130,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
 
     # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
     env = habitat.Env(
-        config=habitat.get_config("habitat-lab/habitat/config/tasks/rearrange/pick.yaml")
+        config=habitat.get_config("habitat-lab/habitat/config/task/rearrange/pick.yaml")
       )
 
     observations = env.reset()

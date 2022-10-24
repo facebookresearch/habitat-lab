@@ -21,7 +21,7 @@ CONFIG_FILE_SEPARATOR = ","
 # _C.habitat_baselines = CN()
 # # task config can be a list of conifgs like "A.yaml,B.yaml"
 # _C.habitat_baselines.base_task_config_path = (
-#     "habitat-lab/habitat/config/tasks/pointnav.yaml"
+#     "habitat-lab/habitat/config/task/pointnav.yaml"
 # )
 # _C.habitat_baselines.cmd_trailing_opts = (
 #     []

@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-r"""Implements tasks and measurements needed for training and benchmarking of
+r"""Implements task and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
@@ -199,7 +199,7 @@ class Measurements:
 
 
 class EmbodiedTask:
-    r"""Base class for embodied tasks. ``EmbodiedTask`` holds definition of
+    r"""Base class for embodied task. ``EmbodiedTask`` holds definition of
     a task that agent needs to solve: action space, observation space,
     measures, simulator usage. ``EmbodiedTask`` has :ref:`reset` and
     :ref:`step` methods that are called by ``Env``. ``EmbodiedTask`` is the
