@@ -25,7 +25,7 @@ def my_app_compose_api() -> DictConfig:
                 "habitat_baselines.rl.policy.action_distribution_type=gaussian",
                 # "+task/rearrange@habitat=pick",
                 "+habitat=task/rearrange/pick",
-                # "+camera_sensors@habitat.simulator.agent_0.camera_sensors.arm_rgb_sensor=arm_rgb_sensor",
+                # "+sim_sensors@habitat.simulator.agent_0.sim_sensors.arm_rgb_sensor=arm_rgb_sensor",
             ]
         )
 

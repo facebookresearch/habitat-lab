@@ -1,4 +1,4 @@
-# @package habitat.simulator.agent_0.camera_sensors.arm_depth_sensor
+# @package habitat.simulator.agent_0.sim_sensors.arm_depth_sensor
 
 
 defaults:

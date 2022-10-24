@@ -1,57 +1,21 @@
-# @package habitat
+defaults:
+ - task_config_base
+ - actions:
+   - stop
+   - move_forward
+   - turn_left
+   - turn_right
+ - measurements:
+   - distance_to_goal
+   - success
+   - spl
+   - distance_to_goal_reward
+ - lab_sensors:
+     - pointgoal_with_gps_compass_sensor
 
-  defaults:
-    - /habitat/habitat_config_base@
-    - /camera_sensors/rgb_sensor
-    - /camera_sensors/depth_sensor
-    - /measurements/top_down_map
 
-  environment:
-    max_episode_steps: 500
-  simulator:
-    agent_0:
-      camera_sensors:
-        rgb_sensor:
-          width: 256
-          height: 256
-        depth_sensor:
-          width: 256
-          height: 256
-    habitat_sim_v0:
-      gpu_device_id: 0
-  task:
-    type: Nav-v0
-    end_on_success: True
-    reward_measure: "distance_to_goal_reward"
-    success_measure: "spl"
-    state_sensors:
-      pointgoal_with_gps_compass_sensor:
-          type: "PointGoalWithGPSCompassSensor"
-          goal_format: "POLAR"
-          dimensionality: 2
-    goal_sensor_uuid: pointgoal_with_gps_compass
-
-    # measurements: ['distance_to_goal', 'success', 'spl', 'distance_to_goal_reward']
-    measurements:
-      distance_to_goal:
-        type: DistanceToGoal
-        distance_to: POINT
-      success:
-        type: Success
-        success_distance: 0.2
-      spl:
-        type: SPL
-      soft_spl:
-        type: SoftSPL
-      distance_to_goal_reward:
-        type: DistanceToGoalReward
-
-    actions:
-      stop:
-        type: StopAction
-      move_forward:
-        type: MoveForwardAction
-      turn_left:
-        type: TurnLeftAction
-      turn_right:
-        type: TurnRightAction
+type: Nav-v0
+end_on_success: True
+reward_measure: "distance_to_goal_reward"
+success_measure: "spl"
+goal_sensor_uuid: pointgoal_with_gps_compass

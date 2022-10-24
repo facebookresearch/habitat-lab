@@ -242,7 +242,7 @@ class EmbodiedTask:
 
         self.sensor_suite = SensorSuite(
             self._init_entities(
-                entities_configs=config.state_sensors,
+                entities_configs=config.lab_sensors,
                 register_func=registry.get_sensor,
             ).values()
         )

@@ -343,7 +343,7 @@ if __name__ == "__main__":
 
     with habitat.config.read_write(config):
         # Now define the config for the sensor
-        config.habitat.task.state_sensors["agent_position_sensor"] = {
+        config.habitat.task.lab_sensors["agent_position_sensor"] = {
             "type": "agent_position_sensor"
         }
 

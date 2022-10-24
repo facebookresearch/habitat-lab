@@ -1,0 +1,5 @@
+# @package _global_
+
+defaults:
+  - pointnav
+  - override /agent@habitat.simulator.agent_0: rgbd_agent

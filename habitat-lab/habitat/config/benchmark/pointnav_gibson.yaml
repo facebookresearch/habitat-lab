@@ -1,0 +1,5 @@
+# @package _global_
+
+defaults:
+  - pointnav
+  - /habitat/dataset/pointnav: gibson

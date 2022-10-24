@@ -3,7 +3,7 @@
     defaults:
      # habitat_config_base is in the group habitat and @ nothing since we want it at the root
      - /habitat/habitat_config_base@
-     - /camera_sensors/head_depth_sensor
+     - /sim_sensors/head_depth_sensor
 
     gym:
         auto_name: "Pick"
@@ -38,7 +38,7 @@
         # If true, does not care about navigability or collisions with objects when spawning
         # robot
         easy_init: False
-        state_sensors:
+        lab_sensors:
             target_start_sensor:
                 # _target_: TargetStartSensor
                 type: "TargetStartSensor"
@@ -117,11 +117,11 @@
             robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
             robot_type: FetchSuctionRobot
             ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
-            camera_sensors:
+            lab_sensors:
                 head_depth_sensor:
                     width: 256
                     height: 256
-            # camera_sensors:
+            # sim_sensors:
             #     head_depth_sensor:
             #         type: HabitatSimDepthSensor
             #         uuid: robot_head_depth

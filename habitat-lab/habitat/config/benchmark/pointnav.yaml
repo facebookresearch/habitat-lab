@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - /habitat/task: pointnav
+  - /agent@habitat.simulator.agent_0: rgb_agent
+
+habitat:
+  environment:
+    max_episode_steps: 500
+  simulator:
+    agent_0:
+      sim_sensors:
+        rgb_sensor:
+          width: 256
+          height: 256

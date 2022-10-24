@@ -1,0 +1,4 @@
+defaults:
+   - agent_base
+   - /habitat/simulator/sensors@sim_sensors.rgb_sensor: rgb_sensor
+   - /habitat/simulator/sensors@sim_sensors.depth_sensor: depth_sensor

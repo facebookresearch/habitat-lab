@@ -51,7 +51,7 @@ def _random_episode(env, config):
     )
 
 
-def test_state_sensors():
+def test_lab_sensors():
     config = get_config()
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")

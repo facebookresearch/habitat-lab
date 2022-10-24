@@ -1,4 +1,4 @@
-# @package habitat.simulator.agent_0.camera_sensors.head_rgb_sensor
+# @package habitat.simulator.agent_0.sim_sensors.head_rgb_sensor
 
 
 defaults:

@@ -402,7 +402,7 @@ class TopDownMapMeasurementConfig(MeasurementConfig):
     draw_goal_positions: bool = True
     # axes aligned bounding boxes
     draw_goal_aabbs: bool = True
-    fog_of_war = FogOfWarConfig()
+    fog_of_war: FogOfWarConfig = FogOfWarConfig()
 
 
 @dataclass
@@ -700,8 +700,8 @@ class TaskConfig(HabitatBaseConfig):
     # NAVIGATION task
     type: str = "Nav-v0"
     # Temporary structure for sensors
-    state_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    measurements: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    lab_sensors: Dict[str, SensorConfig] = field(default_factory=dict)
+    measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
     count_obj_collisions: bool = True
@@ -743,7 +743,7 @@ class TaskConfig(HabitatBaseConfig):
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = field(default_factory=list)
-    actions: Dict[str, Dict[str, Any]] = MISSING
+    actions: Dict[str, ActionConfig] = MISSING
 
 
 @dataclass
@@ -872,7 +872,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
-    camera_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
@@ -948,7 +948,7 @@ class SimulatorConfig(HabitatBaseConfig):
     agents: List[str] = field(default_factory=lambda: ["agent_0"])
     agent_0: AgentConfig = AgentConfig()
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
-    # ep_info is added to the condif in some rearrange tasks inside
+    # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
 
@@ -1042,8 +1042,8 @@ class HabitatConfig(HabitatBaseConfig):
     env_task_gym_id: str = ""
     environment: EnvironmentConfig = EnvironmentConfig()
     simulator: SimulatorConfig = SimulatorConfig()
-    task: TaskConfig = TaskConfig()
-    dataset: DatasetConfig = DatasetConfig()
+    task: TaskConfig = MISSING
+    dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
 
 
@@ -1053,35 +1053,104 @@ class HabitatConfig(HabitatBaseConfig):
 cs = ConfigStore.instance()
 cs.store(group="habitat", name="habitat_config_base", node=HabitatConfig)
 cs.store(
-    group="habitat",
-    name="environment",
+    group="habitat.environment",
+    name="environment_config_base",
     node=EnvironmentConfig,
 )
 cs.store(
-    group="habitat",
-    name="task",
+    package="habitat.task",
+    group="habitat/task",
+    name="task_config_base",
     node=TaskConfig,
 )
+
+# Agent Config
 cs.store(
-    group="habitat.task.actions.stop",
+    group="agent",
+    name="agent_base",
+    node=AgentConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.stop",
+    group="habitat/task/actions",
     name="stop",
     node=StopActionConfig,
 )
 cs.store(
-    group="habitat.task.actions.move_forward",
+    package="habitat.task.actions.move_forward",
+    group="habitat/task/actions",
     name="move_forward",
     node=MoveForwardActionConfig,
 )
 cs.store(
-    group="habitat.task.actions.turn_left",
+    package="habitat.task.actions.turn_left",
+    group="habitat/task/actions",
     name="turn_left",
     node=TurnLeftActionConfig,
 )
 cs.store(
-    group="habitat.task.actions.turn_right",
+    package="habitat.task.actions.turn_right",
+    group="habitat/task/actions",
     name="turn_right",
     node=TurnRightActionConfig,
 )
+
+# Simulator Sensors
+cs.store(
+    package="habitat.simulator.sensors.rgb_sensor",
+    group="habitat/simulator/sensors",
+    name="rgb_sensor",
+    node=HabitatSimRGBSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.sensors.depth_sensor",
+    group="habitat/simulator/sensors",
+    name="depth_sensor",
+    node=HabitatSimDepthSensorConfig,
+)
+
+# Task Sensors
+cs.store(
+    package="habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="pointgoal_with_gps_compass_sensor",
+    node=PointGoalWithGPSCompassSensorConfig,
+)
+
+# Task Measurements
+cs.store(
+    package="habitat.task.measurements.top_down_map",
+    group="habitat/task/measurements",
+    name="top_down_map_base",
+    node=TopDownMapMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.distance_to_goal",
+    group="habitat/task/measurements",
+    name="distance_to_goal",
+    node=DistanceToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.distance_to_goal_reward",
+    group="habitat/task/measurements",
+    name="distance_to_goal_reward",
+    node=DistanceToGoalRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.success",
+    group="habitat/task/measurements",
+    name="success",
+    node=SuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.spl",
+    group="habitat/task/measurements",
+    name="spl",
+    node=SPLMeasurementConfig,
+)
+
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins
