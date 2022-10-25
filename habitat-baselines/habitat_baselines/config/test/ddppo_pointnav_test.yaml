@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /habitat/task/pointnav@habitat
+  - /benchmark/pointnav_habitat_test
   - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
   - _self_
 

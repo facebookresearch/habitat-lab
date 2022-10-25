@@ -160,7 +160,7 @@ class AnswerActionConfig(ActionConfig):
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
 @dataclass
-class SensorConfig(HabitatBaseConfig):
+class SensorConfig(Dict[str, Any]):
     type: str = MISSING
 
 
@@ -362,7 +362,7 @@ class InstructionSensorConfig(SensorConfig):
 # Measurements
 # -----------------------------------------------------------------------------
 @dataclass
-class MeasurementConfig(HabitatBaseConfig):
+class MeasurementConfig(Dict[str, Any]):
     type: str = MISSING
 
 
@@ -392,7 +392,9 @@ class FogOfWarConfig:
 @dataclass
 class TopDownMapMeasurementConfig(MeasurementConfig):
     type: str = "TopDownMap"
-    max_episode_steps: int = EnvironmentConfig.max_episode_steps
+    max_episode_steps: int = (
+        EnvironmentConfig.max_episode_steps
+    )  # TODO : Use OmegaConf II()
     map_padding: int = 3
     map_resolution: int = 1024
     draw_source: bool = True
@@ -700,8 +702,8 @@ class TaskConfig(HabitatBaseConfig):
     # NAVIGATION task
     type: str = "Nav-v0"
     # Temporary structure for sensors
-    lab_sensors: Dict[str, SensorConfig] = field(default_factory=dict)
-    measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
+    lab_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    measurements: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
     count_obj_collisions: bool = True
@@ -872,7 +874,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
-    sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
+    sim_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
@@ -1051,10 +1053,11 @@ class HabitatConfig(HabitatBaseConfig):
 # Register configs in the Hydra ConfigStore
 # -----------------------------------------------------------------------------
 cs = ConfigStore.instance()
+
 cs.store(group="habitat", name="habitat_config_base", node=HabitatConfig)
 cs.store(
     group="habitat.environment",
-    name="environment_config_base",
+    name="environment_config_schema",
     node=EnvironmentConfig,
 )
 cs.store(
@@ -1094,6 +1097,14 @@ cs.store(
     group="habitat/task/actions",
     name="turn_right",
     node=TurnRightActionConfig,
+)
+
+# Dataset Config Schema
+cs.store(
+    package="habitat.dataset",
+    group="habitat/dataset",
+    name="dataset_config_schema",
+    node=DatasetConfig,
 )
 
 # Simulator Sensors

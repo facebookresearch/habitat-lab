@@ -12,7 +12,7 @@
 
   simulator:
     agent_0:
-      lab_sensors:
+      sim_sensors:
         rgb_sensor:
           width: 256
           height: 256

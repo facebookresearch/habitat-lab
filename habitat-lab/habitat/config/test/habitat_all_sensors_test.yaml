@@ -4,6 +4,18 @@
     - /habitat/habitat_config_base@
     - /sim_sensors/rgb_sensor
     - /sim_sensors/depth_sensor
+    - /habitat/task/lab_sensors:
+      - pointgoal_with_gps_compass_sensor
+    - /habitat/task/measurements:
+      - distance_to_goal
+      - success
+      - spl
+      - distance_to_goal_reward
+    - /habitat/task/actions:
+      - stop
+      - move_forward
+      - turn_left
+      - turn_right
     - _self_
 
   environment:
@@ -12,7 +24,7 @@
       shuffle: False
   simulator:
     agent_0:
-      lab_sensors:
+      sim_sensors:
         rgb_sensor:
           width: 256
           height: 256
@@ -36,27 +48,27 @@
     goal_sensor_uuid: pointgoal_with_gps_compass
 
     actions:
-      stop:
-        type: StopAction
-      move_forward:
-        type: MoveForwardAction
-      turn_left:
-        type: TurnLeftAction
-      turn_right:
-        type: TurnRightAction
+      # stop:
+      #   type: StopAction
+      # move_forward:
+      #   type: MoveForwardAction
+      # turn_left:
+      #   type: TurnLeftAction
+      # turn_right:
+      #   type: TurnRightAction
       teleport:
         type: TeleportAction
 
     measurements:
-      distance_to_goal:
-        distance_to: POINT
-        type: DistanceToGoal
+      # distance_to_goal:
+      #   distance_to: POINT
+      #   type: DistanceToGoal
       success:
-        type: Success
+        # type: Success
         success_distance: 0.2
-      spl:
-        type: SPL
+      # spl:
+      #   type: SPL
       soft_spl:
         type: SoftSPL
-      distance_to_goal_reward:
-        type: DistanceToGoalReward
+      # distance_to_goal_reward:
+      #   type: DistanceToGoalReward

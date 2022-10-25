@@ -1,5 +1,9 @@
 # @package habitat
 
+  defaults:
+    - /habitat/dataset/dataset_config_schema
+
+
   environment:
     max_episode_steps: 500
   simulator:

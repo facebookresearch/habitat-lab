@@ -13,7 +13,7 @@
     tilt_angle: 30
     action_space_config: v1
     agent_0:
-      lab_sensors:
+      sim_sensors:
         rgb_sensor:
           width: 640
           height: 480

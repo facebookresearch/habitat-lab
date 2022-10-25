@@ -38,7 +38,7 @@
         # If true, does not care about navigability or collisions with objects when spawning
         # robot
         easy_init: False
-        lab_sensors:
+        sim_sensors:
             target_start_sensor:
                 # _target_: TargetStartSensor
                 type: "TargetStartSensor"
