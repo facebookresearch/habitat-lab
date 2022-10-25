@@ -290,7 +290,7 @@ class RobotEESensorConfig(StateSensorConfig):
 class JointSensorConfig(StateSensorConfig):
     def get_batch_obs(self, states, batch_states):
         retval = batch_states.robot_joint_positions[:, -9:-2]
-        return retval
+        return retval.astype(np.float32)
 
     def get_obs(self, state):
         return state.robot_joint_positions[-9:-2]
@@ -298,7 +298,9 @@ class JointSensorConfig(StateSensorConfig):
 
 class HoldingSensorConfig(StateSensorConfig):
     def get_batch_obs(self, states, batch_states):
-        return np.expand_dims(np.not_equal(batch_states.held_obj_idx, -1), 1)
+        return np.expand_dims(
+            np.not_equal(batch_states.held_obj_idx, -1), 1
+        ).astype(np.float32)
 
     def get_obs(self, state):
         return (float(state.held_obj_idx != -1),)
@@ -316,7 +318,7 @@ class StepCountSensorConfig(StateSensorConfig):
             np.minimum(1.0, fraction_steps_left * 5.0),
             np.minimum(1.0, fraction_steps_left * 50.0),
         )
-        retval = np.stack(arrays, axis=1)
+        retval = np.stack(arrays, axis=1).astype(np.float32)
         return retval
 
     def get_obs(self, state):
@@ -787,7 +789,7 @@ class BatchedEnv:
 
         np_actions = actions.cpu().numpy()
 
-        continuous_action_norm = np_actions
+        continuous_action_norm = np_actions.copy()
 
         continuous_action_norm[
             :, drop_grasp_action_idx
@@ -813,7 +815,7 @@ class BatchedEnv:
             np_actions[:, end_action_index] > config_end_action_threshold
         )
 
-        original_drop_grasp = np_actions[:, drop_grasp_action_idx]
+        original_drop_grasp = np_actions[:, drop_grasp_action_idx].copy()
 
         modified_drop_grasp = np.where(
             original_drop_grasp < config_drop_threshold, -1.0, 0.0
@@ -1066,6 +1068,13 @@ class BatchedEnv:
 
         self.rewards += np.where(has_valid_prev_state, extra_reward_term, 0.0)
 
+        if self._config.LOG_INFO:
+            dist_to_start = np.linalg.norm(
+                state.target_obj_start_pos - state.ee_pos, axis=1
+            )
+        else:
+            dist_to_start = None
+
         for b in range(self.num_envs):
             if self._current_episodes[b].is_disabled():
                 # let this episode continue in the sim; ignore the results
@@ -1094,7 +1103,7 @@ class BatchedEnv:
                         "failure": float(failure[b]),
                         "pick_success": float(self._past_pick_success[b]),
                         "episode_steps": state.episode_step_idx[b],
-                        "distance_to_start": curr_dist_ee_to_obj[b],
+                        "distance_to_start": dist_to_start[b],
                         "distance_to_goal": obj_to_goal[b],
                         # "try_grasp": actions[(b * self.action_dim)]
                         # > self._config.get("GRASP_THRESHOLD", 0.02),
@@ -1140,7 +1149,7 @@ class BatchedEnv:
                         "failure": float(failure[b]),
                         "pick_success": float(self._past_pick_success[b]),
                         "episode_steps": state.episode_step_idx[b],
-                        "distance_to_start": curr_dist_ee_to_obj[b],
+                        "distance_to_start": dist_to_start[b],
                         "distance_to_goal": obj_to_goal[b],
                         # "try_grasp": actions[(b * self.action_dim)]
                         # > self._config.get("GRASP_THRESHOLD", 0.02),
