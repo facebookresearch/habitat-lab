@@ -1,52 +1,20 @@
-# @package habitat
+defaults:
+  - task_config_base
+  - actions:
+      - stop
+      - move_forward
+      - turn_left
+      - turn_right
+  - measurements:
+      - distance_to_goal
+      - success
+      - spl
+      - distance_to_goal_reward
+      - top_down_map
+  - lab_sensors:
+      - imagegoal_sensor
 
-  defaults:
-      - task_config_base
-      - actions:
-        - stop
-        - move_forward
-        - turn_left
-        - turn_right
-      - /habitat/task/measurements/top_down_map
-      - /sim_sensors:
-        - rgb_sensor
-        - depth_sensor
-
-
-  environment:
-    max_episode_steps: 1000
-
-  simulator:
-    agent_0:
-      sim_sensors:
-        rgb_sensor:
-          width: 256
-          height: 256
-        depth_sensor:
-          width: 256
-          height: 256
-
-  task:
-    type: Nav-v0
-
-    end_on_success: True
-    reward_measure: "distance_to_goal_reward"
-    success_measure: "spl"
-
-    lab_sensors:
-      imagegoal_sensor:
-        type: ImageGoalSensor
-
-    measurements:
-      distance_to_goal:
-        type: DistanceToGoal
-        distance_to: POINT
-      success:
-        type: Success
-        success_distance: 0.2
-      spl:
-        type: SPL
-      soft_spl:
-        type: SoftSPL
-      distance_to_goal_reward:
-        type: DistanceToGoalReward
+type: Nav-v0
+end_on_success: True
+reward_measure: "distance_to_goal_reward"
+success_measure: "spl"

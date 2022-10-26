@@ -3,10 +3,7 @@
 defaults:
   - /habitat/habitat_config_base
   - /habitat/task: pointnav
-  - /agent@habitat.simulator.agent_0: rgb_agent
-  - /sim_sensors:
-    - rgb_sensor
-    - depth_sensor
+  - /agent@habitat.simulator.agent_0: rgbd_agent
 
 habitat:
   environment:

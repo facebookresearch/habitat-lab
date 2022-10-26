@@ -702,8 +702,8 @@ class TaskConfig(HabitatBaseConfig):
     # NAVIGATION task
     type: str = "Nav-v0"
     # Temporary structure for sensors
-    lab_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
-    measurements: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    lab_sensors: Dict[str, SensorConfig] = field(default_factory=dict)
+    measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
     count_obj_collisions: bool = True
@@ -765,7 +765,7 @@ class SimulatorCameraSensorConfig(SimulatorSensorConfig):
 
 
 @dataclass
-class SimulatorDepthSensorConfig(SimulatorSensorConfig):
+class SimulatorDepthSensorConfig(SimulatorCameraSensorConfig):
     min_depth: float = 0.0
     max_depth: float = 10.0
     normalize_depth: bool = True
@@ -874,7 +874,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
-    sim_sensors: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+    sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
@@ -1098,6 +1098,18 @@ cs.store(
     name="turn_right",
     node=TurnRightActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.look_up",
+    group="habitat/task/actions",
+    name="look_up",
+    node=LookUpActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.look_down",
+    group="habitat/task/actions",
+    name="look_down",
+    node=LookDownActionConfig,
+)
 
 # Dataset Config Schema
 cs.store(
@@ -1124,10 +1136,40 @@ cs.store(
 
 # Task Sensors
 cs.store(
+    package="habitat.task.lab_sensors.gps_sensor",
+    group="habitat/task/lab_sensors",
+    name="gps_sensor",
+    node=GPSSensorSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="compass_sensor",
+    node=CompassSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor",
     group="habitat/task/lab_sensors",
     name="pointgoal_with_gps_compass_sensor",
     node=PointGoalWithGPSCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.imagegoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="imagegoal_sensor",
+    node=ImageGoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.instance_imagegoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="instance_imagegoal_sensor",
+    node=InstanceImageGoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.instance_imagegoal_hfov_sensor",
+    group="habitat/task/lab_sensors",
+    name="instance_imagegoal_hfov_sensor",
+    node=InstanceImageGoalHFOVSensorConfig,
 )
 
 # Task Measurements
@@ -1160,6 +1202,18 @@ cs.store(
     group="habitat/task/measurements",
     name="spl",
     node=SPLMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.soft_spl",
+    group="habitat/task/measurements",
+    name="soft_spl",
+    node=SoftSPLMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.num_steps",
+    group="habitat/task/measurements",
+    name="num_steps",
+    node=NumStepsMeasurementConfig,
 )
 
 
