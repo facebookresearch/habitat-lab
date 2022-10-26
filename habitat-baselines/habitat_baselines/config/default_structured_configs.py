@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import II
@@ -112,8 +112,8 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge",
-    name="resize_shorter_edge_base",
+    group="habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge",
+    name="resize_shortest_edge_base",
     node=ResizeShortestEdgeConfig,
 )
 
@@ -212,7 +212,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
-    obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
+    obs_transforms: Dict[str, Dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass

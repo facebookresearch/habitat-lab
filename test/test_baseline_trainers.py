@@ -56,7 +56,7 @@ def download_data():
                 [],
                 [
                     "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
-                    "+habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
+                    "+habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge@habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge=resize_shortest_edge_base",
                 ],
             ],
             ["train", "eval"],
@@ -72,7 +72,7 @@ def download_data():
                 [],
                 [
                     "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
-                    "+habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
+                    "+habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge@habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge=resize_shortest_edge_base",
                 ],
             ],
             ["train", "eval"],
@@ -88,19 +88,7 @@ def test_trainers(
     test_cfg_cleaned_path = test_cfg_path.replace(
         "habitat-baselines/habitat_baselines/config/", ""
     )
-    from omegaconf import OmegaConf
 
-    print(
-        ">>>>>\n",
-        OmegaConf.to_yaml(
-            get_config(
-                test_cfg_cleaned_path,
-                [
-                    "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base"
-                ],
-            )
-        ),
-    )
     config = get_config(test_cfg_cleaned_path).habitat.dataset
     dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
@@ -162,7 +150,7 @@ def test_ver_trainer(
                 f"habitat_baselines.rl.ver.variable_experience={str(variable_experience)}",
                 f"habitat_baselines.rl.ver.overlap_rollouts_and_learn={str(overlap_rollouts_and_learn)}",
                 "+habitat_baselines/rl/policy/obs_transforms/center_cropper@habitat_baselines.rl.policy.obs_transforms.center_cropper=center_cropper_base",
-                "+habitat_baselines/rl/policy/obs_transforms/resize_shorter_edge@habitat_baselines.rl.policy.obs_transforms.resize_shorter_edge=resize_shorter_edge_base",
+                "+habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge@habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge=resize_shortest_edge_base",
                 "habitat_baselines.num_updates=2",
                 "habitat_baselines.total_num_steps=-1",
                 "habitat_baselines.rl.preemption.save_state_batch_only=True",

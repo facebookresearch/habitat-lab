@@ -3,6 +3,8 @@
 defaults:
   - /habitat/task/instance_imagenav_hm3d@habitat
   - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
+  - /habitat_baselines/rl/policy/obs_transforms/center_cropper/center_cropper_base
+  - /habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge/resize_shortest_edge_base
   - _self_
 
 habitat:
@@ -30,11 +32,9 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   rl:
-
     policy:
       name: PointNavResNetPolicy
       obs_transforms:
-        enabled_transforms: [ResizeShortestEdge, CenterCropper]
         resize_shortest_edge:
           trans_keys: [rgb, depth, semantic, instance_imagegoal]
 
