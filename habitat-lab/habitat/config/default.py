@@ -1059,10 +1059,12 @@ def get_config(
 ) -> DictConfig:
 
     register_hydra_plugin(HabitatConfigPlugin)
-    with initialize_config_dir(version_base=None, config_dir=_HABITAT_CFG_DIR):
-
+    with initialize_config_dir(
+        version_base=None,
+        config_dir=osp.join(_HABITAT_CFG_DIR, osp.dirname(config_paths)),
+    ):
         cfg = compose(
-            config_name=config_paths,
+            config_name=osp.basename(config_paths),
             overrides=overrides if overrides is not None else [],
         )
 
