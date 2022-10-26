@@ -1,10 +1,16 @@
 # @package habitat
 
   defaults:
-    - /habitat/habitat_config_base@
-    - /sim_sensors/rgb_sensor
-    - /sim_sensors/depth_sensor
-    - /measurements/top_down_map
+      - task_config_base
+      - actions:
+        - stop
+        - move_forward
+        - turn_left
+        - turn_right
+      - /habitat/task/measurements/top_down_map
+      - /sim_sensors:
+        - rgb_sensor
+        - depth_sensor
 
 
   environment:
@@ -37,20 +43,10 @@
         distance_to: POINT
       success:
         type: Success
-        success_distance: 1.0
+        success_distance: 0.2
       spl:
         type: SPL
       soft_spl:
         type: SoftSPL
       distance_to_goal_reward:
         type: DistanceToGoalReward
-
-    actions:
-      stop:
-        type: StopAction
-      move_forward:
-        type: MoveForwardAction
-      turn_left:
-        type: TurnLeftAction
-      turn_right:
-        type: TurnRightAction

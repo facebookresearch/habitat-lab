@@ -1134,7 +1134,7 @@ cs.store(
 cs.store(
     package="habitat.task.measurements.top_down_map",
     group="habitat/task/measurements",
-    name="top_down_map_base",
+    name="top_down_map",
     node=TopDownMapMeasurementConfig,
 )
 cs.store(
