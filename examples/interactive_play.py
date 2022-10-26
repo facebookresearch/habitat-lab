@@ -68,7 +68,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "task/rearrange/play.yaml"
+DEFAULT_CFG = "habitat/task/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -584,8 +584,10 @@ if __name__ == "__main__":
     config = habitat.get_config(args.cfg, args.opts)
     with habitat.config.read_write(config):
         if not args.same_task:
-            config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
-            config.habitat.simulator.third_rgb_sensor.height = (
+            config.habitat.simulator.sim_sensors.third_rgb_sensor.width = (
+                args.play_cam_res
+            )
+            config.habitat.simulator.sim_sensors.third_rgb_sensor.height = (
                 args.play_cam_res
             )
             config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
