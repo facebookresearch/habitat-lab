@@ -1127,24 +1127,61 @@ cs.store(
 
 # Simulator Sensors
 cs.store(
-    package="habitat.simulator.sensors.rgb_sensor",
-    group="habitat/simulator/sensors",
+    package="habitat.simulator.agent_0.sim_sensors.rgb_sensor",
+    group="habitat/simulator/sim_sensors",
     name="rgb_sensor",
     node=HabitatSimRGBSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.sensors.depth_sensor",
-    group="habitat/simulator/sensors",
+    package="habitat.simulator.agent_0.sim_sensors.depth_sensor",
+    group="habitat/simulator/sim_sensors",
     name="depth_sensor",
     node=HabitatSimDepthSensorConfig,
 )
+
 cs.store(
-    package="habitat.simulator.sensors.head_depth_sensor",
-    group="habitat/simulator/sensors",
+    package="habitat.simulator.sim_sensors.arm_depth_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="arm_depth_sensor",
+    node=ArmDepthSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.sim_sensors.arm_rgb_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="arm_rgb_sensor",
+    node=ArmRGBSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.sim_sensors.head_depth_sensor",
+    group="habitat/simulator/sim_sensors",
     name="head_depth_sensor",
     node=HeadDepthSensorConfig,
 )
+
+cs.store(
+    package="habitat.simulator.sim_sensors.head_rgb_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="head_rgb_sensor",
+    node=HeadRGBSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.sim_sensors.third_depth_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="third_depth_sensor",
+    node=ThirdDepthSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.sim_sensors.third_rgb_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="third_rgb_sensor",
+    node=ThirdRGBSensorConfig,
+)
+
 
 # Task Sensors
 cs.store(

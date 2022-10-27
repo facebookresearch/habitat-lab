@@ -1,9 +1,0 @@
-
-
-defaults:
- - base_camera_sensor
- - _self_
-
-min_depth: 0.0
-max_depth: 10.0
-normalize_depth: True

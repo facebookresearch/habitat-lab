@@ -1,9 +1,0 @@
-# @package habitat.simulator.agent_0.sim_sensors.third_depth_sensor
-
-
-defaults:
- - base_depth_sensor
- - _self_
-
-type: HabitatSimDepthSensor
-uuid: robot_third_depth

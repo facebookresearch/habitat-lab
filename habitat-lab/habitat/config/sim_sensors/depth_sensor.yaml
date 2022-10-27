@@ -1,8 +1,0 @@
-# @package habitat.simulator.agent_0.sim_sensors.depth_sensor
-
-
-defaults:
- - base_depth_sensor
- - _self_
-
-type: HabitatSimDepthSensor

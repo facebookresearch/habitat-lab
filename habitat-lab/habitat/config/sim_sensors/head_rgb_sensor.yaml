@@ -1,9 +1,0 @@
-# @package habitat.simulator.agent_0.sim_sensors.head_rgb_sensor
-
-
-defaults:
- - base_camera_sensor
- - _self_
-
-type: HabitatSimRGBSensor
-uuid: robot_head_rgb
