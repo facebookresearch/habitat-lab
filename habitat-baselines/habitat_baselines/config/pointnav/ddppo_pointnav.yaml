@@ -1,10 +1,8 @@
 # @package _global_
 
 defaults:
-  - /habitat: habitat_config_base
-  - /benchmark: pointnav_gibson
-  - /habitat_baselines: habitat_baselines_config_base
-
+  - /benchmark/navigation/pointnav: pointnav_gibson
+  - /habitat_baselines: habitat_baselines_rl_config_base
 
 habitat_baselines:
   verbose: False
@@ -15,7 +13,6 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 4
-#  sensors: ["depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 2.5e9
@@ -26,8 +23,6 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   rl:
-    success_reward: 2.5
-
     policy:
       name: "PointNavResNetPolicy"
 

@@ -1,10 +1,8 @@
 # @package _global_
 
 defaults:
-  - /benchmark/navigation/imagenav/imagenav_test
-  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
-  - _self_
-
+  - /benchmark/navigation/imagenav: imagenav_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
 
 habitat_baselines:
   trainer_name: "ppo"

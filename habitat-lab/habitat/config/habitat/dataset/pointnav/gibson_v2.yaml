@@ -1,17 +1,8 @@
-# @package habitat
+# @package habitat.dataset
 
-  defaults:
-    - /habitat/dataset/dataset_config_schema
+defaults:
+  - /habitat/dataset: dataset_config_schema
 
-
-  environment:
-    max_episode_steps: 500
-  simulator:
-    agent_0:
-      height: 0.88
-      radius: 0.18
-
-  dataset:
-    type: PointNav-v1
-    split: train
-    data_path: data/datasets/pointnav/gibson/v2/{split}/{split}.json.gz
+type: PointNav-v1
+split: train
+data_path: data/datasets/pointnav/gibson/v2/{split}/{split}.json.gz

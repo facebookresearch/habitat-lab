@@ -2,4 +2,4 @@
 
 defaults:
   - imagenav_base
-  - /habitat/dataset/imagenav: hm3d
+  - /habitat/dataset/imagenav: gibson

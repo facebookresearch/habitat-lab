@@ -1,9 +1,9 @@
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import II
+from omegaconf import II, MISSING
 
 cs = ConfigStore.instance()
 
@@ -59,6 +59,7 @@ class PreemptionConfig(HabitatBaselinesBaseConfig):
 class ActionDistributionConfig(HabitatBaselinesBaseConfig):
     use_log_std: bool = True
     use_softplus: bool = False
+    std_init: float = MISSING
     log_std_init: float = 0.0
     # If True, the std will be a parameter not conditioned on state
     use_std_param: bool = False
@@ -284,8 +285,9 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     rnn_type: str = "GRU"
     num_recurrent_layers: int = 1
     backbone: str = "resnet18"
+    # Visual encoder backbone
     pretrained_weights: str = "data/ddppo-models/gibson-2plus-resnet50.pth"
-    # Loads pretrained weights
+    # Initialize with pretrained weights
     pretrained: bool = False
     # Loads just the visual encoder backbone weights
     pretrained_encoder: bool = False
@@ -304,13 +306,11 @@ class RLConfig(HabitatBaselinesBaseConfig):
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()
+    ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()
-
     # Auxiliary Losses
-    # auxiliary_losses: Any = MISSING
     # TODO : Replace TmpAuxLossConfig with AuxLossConfig
     auxiliary_losses: TmpAuxLossConfig = TmpAuxLossConfig()
-    ddppo: DDPPOConfig = DDPPOConfig()
 
 
 @dataclass
@@ -406,17 +406,41 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # training config if load_resume_state_config is True
     load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
-    rl: RLConfig = RLConfig()
-
-    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
     profiling: ProfilingConfig = ProfilingConfig()
 
 
+@dataclass
+class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
+    rl: RLConfig = RLConfig()
+
+
+@dataclass
+class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
+    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
+
+
+@dataclass
+class HabitatBaselinesILConfig(HabitatBaselinesConfig):
+    il: Any = MISSING
+
+
+# Register configs to config store
 cs.store(
     group="habitat_baselines",
-    name="habitat_baselines_config_base",
-    node=HabitatBaselinesConfig,
+    name="habitat_baselines_rl_config_base",
+    node=HabitatBaselinesRLConfig(),
 )
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_orbslam2_config_base",
+    node=HabitatBaselinesORBSLAMConfig,
+)
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_il_config_base",
+    node=HabitatBaselinesILConfig,
+)
+
 cs.store(
     group="habitat_baselines/rl/policy", name="policy_base", node=PolicyConfig
 )

@@ -1,9 +1,8 @@
 # @package habitat.dataset
 
-    defaults:
-     - /habitat/dataset/dataset_config_schema
+defaults:
+  - /habitat/dataset: dataset_config_schema
 
-
-    type: PointNav-v1
-    split: train
-    data_path: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
+type: PointNav-v1
+split: train
+data_path: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz

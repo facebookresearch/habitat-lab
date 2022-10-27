@@ -45,7 +45,7 @@
             type: AbsTargetStartSensor
             goal_format: CARTESIAN
             dimensionality: 3
-        ABS_goal_sensor:
+        abs_goal_sensor:
             type: AbsGoalSensor
             goal_format: CARTESIAN
             dimensionality: 3

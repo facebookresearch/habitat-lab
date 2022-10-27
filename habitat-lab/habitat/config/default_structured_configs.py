@@ -160,7 +160,7 @@ class AnswerActionConfig(ActionConfig):
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
 @dataclass
-class SensorConfig(Dict[str, Any]):
+class SensorConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
@@ -362,7 +362,7 @@ class InstructionSensorConfig(SensorConfig):
 # Measurements
 # -----------------------------------------------------------------------------
 @dataclass
-class MeasurementConfig(Dict[str, Any]):
+class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
@@ -926,7 +926,7 @@ class SimulatorConfig(HabitatBaseConfig):
     scene_dataset: str = "default"
     # A list of directory or config paths to search in addition to the dataset
     # for object configs. should match the generated episodes for the task:
-    additional_object_paths: List = field(default_factory=list)
+    additional_object_paths: List[str] = field(default_factory=list)
     # Use config.seed (can't reference Config.seed) or define via code
     # otherwise it leads to circular references:
     # seed = Config.seed
@@ -1110,6 +1110,12 @@ cs.store(
     name="look_down",
     node=LookDownActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.arm_action",
+    group="habitat/task/actions",
+    name="arm_action",
+    node=ArmActionConfig,
+)
 
 # Dataset Config Schema
 cs.store(
@@ -1132,6 +1138,12 @@ cs.store(
     group="habitat/simulator/sensors",
     name="depth_sensor",
     node=HabitatSimDepthSensorConfig,
+)
+cs.store(
+    package="habitat.simulator.sensors.head_depth_sensor",
+    group="habitat/simulator/sensors",
+    name="head_depth_sensor",
+    node=HeadDepthSensorConfig,
 )
 
 # Task Sensors
@@ -1170,6 +1182,54 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="instance_imagegoal_hfov_sensor",
     node=InstanceImageGoalHFOVSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.target_start_sensor",
+    group="habitat/task/lab_sensors",
+    name="target_start_sensor",
+    node=TargetStartSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="goal_sensor",
+    node=GoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.abs_target_start_sensor",
+    group="habitat/task/lab_sensors",
+    name="abs_target_start_sensor",
+    node=AbsTargetStartSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.abs_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="abs_goal_sensor",
+    node=AbsGoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.joint_sensor",
+    group="habitat/task/lab_sensors",
+    name="joint_sensor",
+    node=JointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.end_effector_sensor",
+    group="habitat/task/lab_sensors",
+    name="end_effector_sensor",
+    node=EEPositionSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.is_holding_sensor",
+    group="habitat/task/lab_sensors",
+    name="is_holding_sensor",
+    node=IsHoldingSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.relative_resting_pos_sensor",
+    group="habitat/task/lab_sensors",
+    name="relative_resting_pos_sensor",
+    node=RelativeRestingPositionSensorConfig,
 )
 
 # Task Measurements
@@ -1214,6 +1274,54 @@ cs.store(
     group="habitat/task/measurements",
     name="num_steps",
     node=NumStepsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.robot_force",
+    group="habitat/task/measurements",
+    name="robot_force",
+    node=RobotForceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.force_terminate",
+    group="habitat/task/measurements",
+    name="force_terminate",
+    node=ForceTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.end_effector_to_object_distance",
+    group="habitat/task/measurements",
+    name="end_effector_to_object_distance",
+    node=EndEffectorToObjectDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.end_effector_to_rest_distance",
+    group="habitat/task/measurements",
+    name="end_effector_to_rest_distance",
+    node=EndEffectorToRestDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.did_pick_object",
+    group="habitat/task/measurements",
+    name="did_pick_object",
+    node=DidPickObjectMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.did_violate_hold_constraint",
+    group="habitat/task/measurements",
+    name="did_violate_hold_constraint",
+    node=DidViolateHoldConstraintMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_reward",
+    group="habitat/task/measurements",
+    name="pick_reward",
+    node=RearrangePickRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_success",
+    group="habitat/task/measurements",
+    name="pick_success",
+    node=RearrangePickSuccessMeasurementConfig,
 )
 
 

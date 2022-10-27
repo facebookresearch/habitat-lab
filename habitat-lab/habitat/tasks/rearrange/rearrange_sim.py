@@ -182,7 +182,8 @@ class RearrangeSim(HabitatSim):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
-        config["scene"] = ep_info["scene_id"]
+        with read_write(config):
+            config["scene"] = ep_info["scene_id"]
 
         super().reconfigure(config, should_close_on_new_scene=False)
 

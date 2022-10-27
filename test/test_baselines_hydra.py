@@ -18,7 +18,7 @@ def my_app_compose_api() -> DictConfig:
 
         cfg = compose(
             overrides=[
-                "+habitat_baselines=habitat_baselines_config_base",
+                "+habitat_baselines=habitat_baselines_rl_config_base",
                 "habitat_baselines.num_updates=2",
                 "habitat_baselines.num_environments=4",
                 "habitat_baselines.total_num_steps=-1.0",

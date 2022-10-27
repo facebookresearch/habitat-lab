@@ -386,10 +386,10 @@ _C.habitat.task.abs_target_start_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # ABSOLUTE GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.habitat.task.ABS_goal_sensor = CN()
-_C.habitat.task.ABS_goal_sensor.type = "AbsGoalSensor"
-_C.habitat.task.ABS_goal_sensor.goal_format = "CARTESIAN"
-_C.habitat.task.ABS_goal_sensor.dimensionality = 3
+_C.habitat.task.abs_goal_sensor = CN()
+_C.habitat.task.abs_goal_sensor.type = "AbsGoalSensor"
+_C.habitat.task.abs_goal_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.abs_goal_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # DISTANCE TO NAVIGATION GOAL SENSOR
 # -----------------------------------------------------------------------------

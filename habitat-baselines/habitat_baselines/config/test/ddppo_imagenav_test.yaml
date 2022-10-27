@@ -1,13 +1,8 @@
 # @package _global_
 
 defaults:
-  - /benchmark/navigation/imagenav/imagenav_test
-  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
-  - _self_
-
-habitat:
-  task:
-    success_reward: 2.5
+  - /benchmark/navigation/imagenav: imagenav_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
 
 habitat_baselines:
   trainer_name: "ddppo"
@@ -24,6 +19,7 @@ habitat_baselines:
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
+
 
   rl:
     policy:

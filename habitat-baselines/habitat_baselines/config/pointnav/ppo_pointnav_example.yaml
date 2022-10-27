@@ -4,10 +4,8 @@
 # for better hyperparameters for actual training
 
 defaults:
-  - /habitat: habitat_config_base
-  - /benchmark: pointnav_habitat_test
-  - /habitat_baselines: habitat_baselines_config_base
-
+  - /benchmark/navigation/pointnav: pointnav_habitat_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
 
 habitat_baselines:
   trainer_name: "ppo"
@@ -28,7 +26,7 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   eval:
-    video_option: ["disk", "tensorboard"]
+    video_option: [ "disk", "tensorboard" ]
 
   rl:
     ppo:

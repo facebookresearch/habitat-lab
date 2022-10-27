@@ -1,10 +1,10 @@
 # @package _global_
 
 defaults:
-  - /benchmark/navigation/instance_imagenav/instance_imagenav_hm3d
-  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
-  - /habitat_baselines/rl/policy/obs_transforms/center_cropper/center_cropper_base
-  - /habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge/resize_shortest_edge_base
+  - /benchmark/navigation/instance_imagenav: instance_imagenav_hm3d
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/policy/obs_transforms/center_cropper: center_cropper_base
+  - /habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge: resize_shortest_edge_base
 
 habitat:
   dataset:
@@ -14,7 +14,6 @@ habitat:
     slack_reward: -1e-3
 
 habitat_baselines:
-
   torch_gpu_id: 0
   tensorboard_dir: ""
   video_dir: ""

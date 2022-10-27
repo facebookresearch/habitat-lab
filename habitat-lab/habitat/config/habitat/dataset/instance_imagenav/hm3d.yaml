@@ -1,5 +1,8 @@
 # @package habitat.dataset
 
-    type: InstanceImageNav-v1
-    split: train
-    data_path: data/datasets/instance_imagenav/hm3d/v1/{split}/{split}.json.gz
+defaults:
+  - /habitat/dataset: dataset_config_schema
+
+type: InstanceImageNav-v1
+split: train
+data_path: data/datasets/instance_imagenav/hm3d/v1/{split}/{split}.json.gz

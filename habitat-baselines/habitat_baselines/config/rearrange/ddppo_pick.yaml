@@ -1,11 +1,8 @@
 # @package _global_
 
 defaults:
-  - /habitat/task/rearrange/pick@habitat
-  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
-  - _self_
-
-
+  - /benchmark/rearrangement: pick
+  - /habitat_baselines: habitat_baselines_rl_config_base
 
 habitat_baselines:
   verbose: False
@@ -14,8 +11,8 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-
-
+  video_render_top_down: False
+  video_render_all_info: True
   video_render_views:
     - "third_rgb_sensor"
   test_episode_count: -1
@@ -29,7 +26,7 @@ habitat_baselines:
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['reward', 'force', 'success']
+  eval_keys_to_include_in_name: ["reward", "force", "success"]
 
   eval:
     video_option: ["disk"]

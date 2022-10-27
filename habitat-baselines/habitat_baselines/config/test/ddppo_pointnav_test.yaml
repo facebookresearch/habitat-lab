@@ -1,16 +1,14 @@
 # @package _global_
 
 defaults:
-  - /benchmark/navigation/pointnav/pointnav_habitat_test
-  - /habitat_baselines/habitat_baselines_config_base@habitat_baselines
-  - _self_
+  - /benchmark/navigation/pointnav: pointnav_habitat_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
 
 habitat:
   task:
     success_reward: 2.5
 
 habitat_baselines:
-  # base_task_config_path: "task/pointnav.yaml"
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: ""
@@ -26,7 +24,6 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   rl:
-
     policy:
       name: "PointNavResNetPolicy"
 
