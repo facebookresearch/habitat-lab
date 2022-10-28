@@ -367,7 +367,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # base_task_config_path: str = (
     #     "habitat-lab/habitat/config/task/pointnav.yaml"
     # )
-    cmd_trailing_opts: List[str] = field(default_factory=list)
+    # cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
     video_render_views: List[str] = field(default_factory=list)

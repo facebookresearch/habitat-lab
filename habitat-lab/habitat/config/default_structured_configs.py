@@ -176,6 +176,7 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     type: str = "PointGoalWithGPSCompassSensor"
 
 
+@dataclass
 class ObjectGoalSensorConfig(SensorConfig):
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
@@ -208,7 +209,7 @@ class CompassSensorConfig(SensorConfig):
 
 
 @dataclass
-class GPSSensorSensorConfig(SensorConfig):
+class GPSSensorConfig(SensorConfig):
     type: str = "GPSSensor"
     dimensionality: int = 2
 
@@ -1141,6 +1142,35 @@ cs.store(
 )
 
 cs.store(
+    package="habitat.simulator.agent_0.sim_sensors.semantic_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="semantic_sensor",
+    node=HabitatSimSemanticSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.agent_0.sim_sensors.equirect_rgb_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="equirect_rgb_sensor",
+    node=HabitatSimEquirectangularRGBSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.agent_0.sim_sensors.equirect_depth_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="equirect_depth_sensor",
+    node=HabitatSimEquirectangularDepthSensorConfig,
+)
+
+cs.store(
+    package="habitat.simulator.agent_0.sim_sensors.equirect_semantic_sensor",
+    group="habitat/simulator/sim_sensors",
+    name="equirect_semantic_sensor",
+    node=HabitatSimEquirectangularSemanticSensorConfig,
+)
+
+
+cs.store(
     package="habitat.simulator.agent_0.sim_sensors.arm_depth_sensor",
     group="habitat/simulator/sim_sensors",
     name="arm_depth_sensor",
@@ -1188,7 +1218,7 @@ cs.store(
     package="habitat.task.lab_sensors.gps_sensor",
     group="habitat/task/lab_sensors",
     name="gps_sensor",
-    node=GPSSensorSensorConfig,
+    node=GPSSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.compass_sensor",
@@ -1201,6 +1231,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="pointgoal_with_gps_compass_sensor",
     node=PointGoalWithGPSCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.OBJECTgoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="OBJECTgoal_sensor",
+    node=ObjectGoalSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.imagegoal_sensor",
