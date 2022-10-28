@@ -81,7 +81,7 @@ def test_sim_no_sensors():
         "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
     )
     with read_write(config):
-        config.habitat.simulator.agent_0.sensors = []
+        config.habitat.simulator.agent_0.sim_sensors = {}
         if not os.path.exists(config.habitat.simulator.scene):
             pytest.skip("Please download Habitat test data to data folder.")
         with make_sim(
