@@ -341,11 +341,16 @@ if __name__ == "__main__":
         config_paths="./test/habitat_all_sensors_test.yaml"
     )
 
+    from habitat.config.default_structured_configs import SensorConfig
+
+    # We use the base sensor config, but you could also define your own
+    # AgentPositionSensorConfig that inherits from SensorConfig
+
     with habitat.config.read_write(config):
         # Now define the config for the sensor
-        config.habitat.task.lab_sensors["agent_position_sensor"] = {
-            "type": "agent_position_sensor"
-        }
+        config.habitat.task.lab_sensors[
+            "agent_position_sensor"
+        ] = SensorConfig(type="agent_position_sensor")
 
     try:
         env.close()
