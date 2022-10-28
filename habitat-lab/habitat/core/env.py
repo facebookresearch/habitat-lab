@@ -146,6 +146,8 @@ class Env:
         # and then reset be called without the episode changing
         self._episode_from_iter_on_reset = False
         self._episode_force_changed = True
+        for k in episode.start_rotation:
+            assert type(k) == float
 
     @property
     def episode_iterator(self) -> Iterator[Episode]:
