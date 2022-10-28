@@ -1119,6 +1119,12 @@ cs.store(
     name="arm_action",
     node=ArmActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.answer",
+    group="habitat/task/actions",
+    name="answer",
+    node=AnswerActionConfig,
+)
 
 # Dataset Config Schema
 cs.store(
@@ -1306,6 +1312,19 @@ cs.store(
     name="relative_resting_pos_sensor",
     node=RelativeRestingPositionSensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.instruction_sensor",
+    group="habitat/task/lab_sensors",
+    name="instruction_sensor",
+    node=InstructionSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.question_sensor",
+    group="habitat/task/lab_sensors",
+    name="question_sensor",
+    node=QuestionSensorConfig,
+)
+
 
 # Task Measurements
 cs.store(
@@ -1397,6 +1416,18 @@ cs.store(
     group="habitat/task/measurements",
     name="pick_success",
     node=RearrangePickSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.answer_accuracy",
+    group="habitat/task/measurements",
+    name="answer_accuracy",
+    node=AnswerAccuracyMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.episode_info",
+    group="habitat/task/measurements",
+    name="episode_info",
+    node=EpisodeInfoMeasurementConfig,
 )
 
 

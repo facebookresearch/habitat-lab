@@ -1,16 +1,15 @@
 defaults:
   - task_config_base
   - actions:
-    - stop
     - move_forward
     - turn_left
     - turn_right
+    - answer
   - measurements:
     - distance_to_goal
-    - success
-    - spl
+    - episode_info
+    - answer_accuracy
   - lab_sensors:
-    - instruction_sensor
+    - question_sensor
 
-
-type: VLN-v0
+type: EQA-v0
