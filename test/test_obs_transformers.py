@@ -2,29 +2,36 @@ import pytest
 from gym import spaces
 from gym.vector.utils.spaces import batch_space
 
-from habitat.config.default import get_config
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (  # get_active_obs_transforms,
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
 )
 from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.config.default_structured_configs import (
+    CenterCropperConfig,
+    Cube2EqConfig,
+    Cube2FishConfig,
+    Eq2CubeConfig,
+    ResizeShortestEdgeConfig,
+)
 
 
 @pytest.mark.parametrize(
-    "obs_transform_key",
+    "obs_transform_config",
     [
-        "ResizeShortestEdge",
-        "CenterCropper",
-        "CubeMap2Equirect",
-        "CubeMap2Fisheye",
-        "Equirect2CubeMap",
+        ResizeShortestEdgeConfig(),
+        CenterCropperConfig(),
+        Cube2EqConfig(),
+        Cube2FishConfig(),
+        Eq2CubeConfig(),
     ],
 )
-def test_transforms(obs_transform_key: str):
-    transformer_cls = baseline_registry.get_obs_transformer(obs_transform_key)
-    default_config = get_config("habitat/habitat_config_base")
-    transformer = transformer_cls.from_config(default_config)
+def test_transforms(obs_transform_config: str):
+    transformer_cls = baseline_registry.get_obs_transformer(
+        obs_transform_config.type
+    )
+    transformer = transformer_cls.from_config(obs_transform_config)
     obs_space = spaces.Dict(
         {
             "BACK": spaces.Box(low=0, high=1, shape=(32, 16, 3)),
