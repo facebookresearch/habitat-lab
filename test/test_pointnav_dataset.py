@@ -49,7 +49,9 @@ def check_json_serialization(dataset: habitat.Dataset):
 
 
 def test_single_pointnav_dataset():
-    dataset_config = get_config().habitat.dataset
+    dataset_config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    ).habitat.dataset
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)

@@ -29,7 +29,9 @@ def my_app_compose_api() -> DictConfig:
 
 
 def run_example_pointnav_old_config():
-    config = habitat.get_config()
+    config = habitat.get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     with habitat.Env(config=config) as env:
         print("Environment creation successful")
         observations = env.reset()  # noqa: F841

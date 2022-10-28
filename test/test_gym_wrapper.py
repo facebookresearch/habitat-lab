@@ -98,7 +98,7 @@ def test_gym_wrapper_contract_continuous(
             dict,
         ),
         (
-            "task/pointnav.yaml",
+            "benchmark/navigation/pointnav/pointnav_habitat_test.yaml",
             [],
             4,
             dict,

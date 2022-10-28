@@ -52,7 +52,9 @@ def test_pyrobot(mocker):
 
         _try_register_pyrobot()
 
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     with make_sim("PyRobot-v0", config=config.habitat.pyrobot) as reality:
 
         _ = reality.reset()

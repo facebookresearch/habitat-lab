@@ -783,12 +783,12 @@ class HabitatSimDepthSensorConfig(SimulatorDepthSensorConfig):
 
 
 @dataclass
-class HabitatSimSemanticSensorConfig(SimulatorSensorConfig):
+class HabitatSimSemanticSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimSemanticSensor"
 
 
 @dataclass
-class HabitatSimEquirectangularRGBSensorConfig(SimulatorSensorConfig):
+class HabitatSimEquirectangularRGBSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimEquirectangularRGBSensor"
 
 
@@ -798,12 +798,14 @@ class HabitatSimEquirectangularDepthSensorConfig(SimulatorDepthSensorConfig):
 
 
 @dataclass
-class HabitatSimEquirectangularSemanticSensorConfig(SimulatorSensorConfig):
+class HabitatSimEquirectangularSemanticSensorConfig(
+    SimulatorCameraSensorConfig
+):
     type: str = "HabitatSimEquirectangularSemanticSensor"
 
 
 @dataclass
-class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
+class SimulatorFisheyeSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimFisheyeSensor"
     height: int = SimulatorSensorConfig.width
     # The default value (alpha, xi) is set to match the lens  "GoPro" found in

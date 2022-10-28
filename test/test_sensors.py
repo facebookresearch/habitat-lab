@@ -52,7 +52,9 @@ def _random_episode(env, config):
 
 
 def test_lab_sensors():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -94,7 +96,9 @@ def test_lab_sensors():
 
 
 def test_tactile():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -115,7 +119,9 @@ def test_tactile():
 
 
 def test_collisions():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -154,7 +160,9 @@ def test_collisions():
 
 
 def test_pointgoal_sensor():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -193,7 +201,9 @@ def test_pointgoal_sensor():
 
 
 def test_pointgoal_with_gps_compass_sensor():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -258,7 +268,9 @@ def test_pointgoal_with_gps_compass_sensor():
 
 
 def test_imagegoal_sensor():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -317,7 +329,9 @@ def test_imagegoal_sensor():
 
 
 def test_get_observations_at():
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
@@ -431,7 +445,9 @@ def test_smoke_not_pinhole_sensors(sensors, cuda):
     habitat_sim = pytest.importorskip("habitat_sim")
     if not habitat_sim.cuda_enabled and cuda:
         pytest.skip("habitat_sim must be built with CUDA to test G2P2GPU")
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     with habitat.config.read_write(config):
         config.habitat.simulator.habitat_sim_v0.gpu_gpu = cuda
 
@@ -451,7 +467,9 @@ def test_smoke_pinhole_sensors(sensor, sensor_subtype, cuda):
     habitat_sim = pytest.importorskip("habitat_sim")
     if not habitat_sim.cuda_enabled and cuda:
         pytest.skip("habitat_sim must be built with CUDA")
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     with habitat.config.read_write(config):
         config.habitat.simulator.habitat_sim_v0.gpu_gpu = cuda
         config.habitat.simulator.scene = (
@@ -468,7 +486,9 @@ def test_noise_models_rgbd():
     DEMO_MODE = False
     N_STEPS = 100
 
-    config = get_config()
+    config = get_config(
+        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+    )
     with habitat.config.read_write(config):
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
