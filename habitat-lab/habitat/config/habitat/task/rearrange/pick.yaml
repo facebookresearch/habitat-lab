@@ -28,8 +28,15 @@ reward_measure: "rearrangepick_reward"
 success_measure: "rearrangepick_success"
 success_reward: 100.0
 end_on_success: True
-#possible_actions:
-#  - arm_action
 actions:
   arm_action:
     grip_controller: SuctionGraspAction
+measurements:
+  pick_success:
+    ee_resting_success_threshold: 0.2
+  force_terminate:
+    max_accum_force: 5000.0
+  pick_reward:
+    use_diff: True
+    drop_obj_should_end: True
+    wrong_pick_should_end: True
