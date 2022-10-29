@@ -220,10 +220,10 @@ _C.habitat.task.pointgoal_with_gps_compass_sensor.type = (
 # -----------------------------------------------------------------------------
 # OBJECTGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.habitat.task.OBJECTgoal_sensor = CN()
-_C.habitat.task.OBJECTgoal_sensor.type = "ObjectGoalSensor"
-_C.habitat.task.OBJECTgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
-_C.habitat.task.OBJECTgoal_sensor.goal_spec_max_val = 50
+_C.habitat.task.objectgoal_sensor = CN()
+_C.habitat.task.objectgoal_sensor.type = "ObjectGoalSensor"
+_C.habitat.task.objectgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
+_C.habitat.task.objectgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
 # IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------

@@ -1,3 +1,9 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrangement: place
+  - /habitat_baselines: habitat_baselines_rl_config_base
+
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
@@ -5,8 +11,6 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-
-
   video_render_views:
     - "third_rgb_sensor"
   test_episode_count: -1
@@ -23,8 +27,6 @@ habitat_baselines:
   # this improves performance considerably
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'success']
-
-  base_task_config_path: habitat-lab/habitat/config/task/rearrange/place.yaml
 
   eval:
     video_option: ["disk"]

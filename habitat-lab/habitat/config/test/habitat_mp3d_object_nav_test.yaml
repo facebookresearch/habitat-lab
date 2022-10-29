@@ -36,7 +36,7 @@
     type: ObjectNav-v1
     possible_actions: ["stop", "move_forward", "turn_left", "turn_right", "look_up", "look_down"]
 
-    sensors: ['OBJECTgoal_sensor', 'compass_sensor', 'gps_sensor', 'distance_to_goal_reward']
+    sensors: ['objectgoal_sensor', 'compass_sensor', 'gps_sensor', 'distance_to_goal_reward']
     goal_sensor_uuid: objectgoal
 
     measurements: ['distance_to_goal', 'success', 'spl']

@@ -1241,9 +1241,9 @@ cs.store(
     node=PointGoalWithGPSCompassSensorConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.OBJECTgoal_sensor",
+    package="habitat.task.lab_sensors.objectgoal_sensor",
     group="habitat/task/lab_sensors",
-    name="OBJECTgoal_sensor",
+    name="objectgoal_sensor",
     node=ObjectGoalSensorConfig,
 )
 cs.store(
@@ -1323,6 +1323,18 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="question_sensor",
     node=QuestionSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.object_sensor",
+    group="habitat/task/lab_sensors",
+    name="object_sensor",
+    node=TargetCurrentSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.joint_velocity_sensor",
+    group="habitat/task/lab_sensors",
+    name="joint_velocity_sensor",
+    node=JointVelocitySensorConfig,
 )
 
 
@@ -1428,6 +1440,36 @@ cs.store(
     group="habitat/task/measurements",
     name="episode_info",
     node=EpisodeInfoMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.robot_colls",
+    group="habitat/task/measurements",
+    name="robot_colls",
+    node=RobotCollisionsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.object_to_goal_distance",
+    group="habitat/task/measurements",
+    name="object_to_goal_distance",
+    node=ObjectToGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.obj_at_goal",
+    group="habitat/task/measurements",
+    name="obj_at_goal",
+    node=ObjAtGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.place_success",
+    group="habitat/task/measurements",
+    name="place_success",
+    node=PlaceSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.place_reward",
+    group="habitat/task/measurements",
+    name="place_reward",
+    node=PlaceRewardMeasurementConfig,
 )
 
 

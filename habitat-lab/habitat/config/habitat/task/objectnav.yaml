@@ -15,7 +15,7 @@ defaults:
     - soft_spl
     - distance_to_goal_reward
   - lab_sensors:
-    - OBJECTgoal_sensor
+    - objectgoal_sensor
     - compass_sensor
     - gps_sensor
 
