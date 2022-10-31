@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import MISSING
+from omegaconf import II, MISSING
 
 
 @dataclass
@@ -935,7 +935,8 @@ class SimulatorConfig(HabitatBaseConfig):
     additional_object_paths: List[str] = field(default_factory=list)
     # Use config.seed (can't reference Config.seed) or define via code
     # otherwise it leads to circular references:
-    # seed = Config.seed
+    #
+    seed: int = II("habitat.seed")
     turn_angle: int = 10  # angle to rotate left or right in degrees
     tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
     default_agent_id: int = 0
@@ -1121,6 +1122,18 @@ cs.store(
     group="habitat/task/actions",
     name="arm_action",
     node=ArmActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_velocity",
+    group="habitat/task/actions",
+    name="base_velocity",
+    node=BaseVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.empty",
+    group="habitat/task/actions",
+    name="empty",
+    node=EmptyActionConfig,
 )
 cs.store(
     package="habitat.task.actions.answer",

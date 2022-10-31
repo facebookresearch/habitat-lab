@@ -14,7 +14,7 @@ defaults:
     - place_success
     - place_reward
     - num_steps
-  - /habitat/task/sensors:
+  - /habitat/task/lab_sensors:
     - target_start_sensor
     - goal_sensor
     - joint_sensor

@@ -6,7 +6,7 @@ defaults:
   - /habitat/simulator/sim_sensors:
     - head_depth_sensor
   - /habitat/task/rearrange: pick
-  - /habitat/dataset/rearrangepick: replica_cad
+  - /habitat/dataset/rearrangement: replica_cad
 
 habitat:
   gym:
