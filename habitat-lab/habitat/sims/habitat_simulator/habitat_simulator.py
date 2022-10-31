@@ -24,6 +24,8 @@ from gym.spaces.box import Box
 if TYPE_CHECKING:
     from torch import Tensor
 
+from omegaconf import DictConfig
+
 import habitat_sim
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -44,7 +46,7 @@ from habitat.core.spaces import Space
 
 
 def overwrite_config(
-    config_from: Config,
+    config_from: DictConfig,
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
     trans_dict: Optional[Dict[str, Callable]] = None,
@@ -61,7 +63,7 @@ def overwrite_config(
     """
 
     def if_config_to_lower(config):
-        if isinstance(config, Config):
+        if isinstance(config, DictConfig):
             return {key.lower(): val for key, val in config.items()}
         else:
             return config

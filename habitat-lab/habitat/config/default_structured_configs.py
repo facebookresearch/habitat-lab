@@ -763,10 +763,12 @@ class SimulatorSensorConfig(HabitatBaseConfig):
 class SimulatorCameraSensorConfig(SimulatorSensorConfig):
     hfov: int = 90  # horizontal field of view in degrees
     sensor_subtype: str = "PINHOLE"
+    noise_model: str = "None"
+    noise_model_kwargs: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
-class SimulatorDepthSensorConfig(SimulatorCameraSensorConfig):
+class SimulatorDepthSensorConfig(SimulatorSensorConfig):
     min_depth: float = 0.0
     max_depth: float = 10.0
     normalize_depth: bool = True
@@ -778,7 +780,9 @@ class HabitatSimRGBSensorConfig(SimulatorCameraSensorConfig):
 
 
 @dataclass
-class HabitatSimDepthSensorConfig(SimulatorDepthSensorConfig):
+class HabitatSimDepthSensorConfig(
+    SimulatorDepthSensorConfig, SimulatorCameraSensorConfig
+):
     type: str = "HabitatSimDepthSensor"
 
 
@@ -788,7 +792,7 @@ class HabitatSimSemanticSensorConfig(SimulatorCameraSensorConfig):
 
 
 @dataclass
-class HabitatSimEquirectangularRGBSensorConfig(SimulatorCameraSensorConfig):
+class HabitatSimEquirectangularRGBSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularRGBSensor"
 
 
@@ -798,14 +802,12 @@ class HabitatSimEquirectangularDepthSensorConfig(SimulatorDepthSensorConfig):
 
 
 @dataclass
-class HabitatSimEquirectangularSemanticSensorConfig(
-    SimulatorCameraSensorConfig
-):
+class HabitatSimEquirectangularSemanticSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularSemanticSensor"
 
 
 @dataclass
-class SimulatorFisheyeSensorConfig(SimulatorCameraSensorConfig):
+class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimFisheyeSensor"
     height: int = SimulatorSensorConfig.width
     # The default value (alpha, xi) is set to match the lens  "GoPro" found in
@@ -912,6 +914,7 @@ class HabitatSimV0Config(HabitatBaseConfig):
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
     action_space_config: str = "v0"
+    action_space_config_arguments: Dict[str, Any] = field(default_factory=dict)
     forward_step_size: float = 0.25  # in metres
     create_renderer: bool = False
     requires_textures: bool = True
