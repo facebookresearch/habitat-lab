@@ -103,7 +103,7 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 
 # %% [markdown]
 # # Local installation
-# Follow the steps on the [Habitat Lab README](https://github.com/facebookresearch/habitat-lab/tree/challenge_tasks#installation).
+# Follow the steps on the [Habitat Lab README](https://github.com/facebookresearch/habitat-lab#installation).
 
 # %% [markdown]
 # # Quickstart
