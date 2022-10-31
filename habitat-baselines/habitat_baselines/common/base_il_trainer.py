@@ -39,15 +39,15 @@ class BaseILTrainer(BaseTrainer):
         r"""Makes directories for log files, checkpoints & results."""
         self._make_log_dir()
         self._make_ckpt_dir()
-        if self.config.habitat_baselines.eval_save_results:
+        if self.config.habitat_baselines.il.eval_save_results:
             self._make_results_dir()
 
     def _make_log_dir(self) -> None:
         r"""Makes directory for writing log files."""
-        if self.config.habitat_baselines.log_metrics and not os.path.isdir(
-            self.config.habitat_baselines.output_log_dir
+        if self.config.habitat_baselines.il.log_metrics and not os.path.isdir(
+            self.config.habitat_baselines.il.output_log_dir
         ):
-            os.makedirs(self.config.habitat_baselines.output_log_dir)
+            os.makedirs(self.config.habitat_baselines.il.output_log_dir)
 
     def _make_ckpt_dir(self) -> None:
         r"""Makes directory for saving model checkpoints."""
@@ -56,7 +56,7 @@ class BaseILTrainer(BaseTrainer):
 
     def _make_results_dir(self) -> None:
         r"""Makes directory for saving eval results."""
-        dir_name = self.config.habitat_baselines.results_dir.format(
+        dir_name = self.config.habitat_baselines.il.results_dir.format(
             split="val"
         )
         os.makedirs(dir_name, exist_ok=True)

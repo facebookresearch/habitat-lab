@@ -205,9 +205,11 @@ def test_tp_srl(test_cfg_path, mode):
     os.environ["MAIN_PORT"] = str(find_free_port())
 
     run_exp(
-        test_cfg_path,
+        test_cfg_path.replace(
+            "habitat-baselines/habitat_baselines/config/", ""
+        ),
         mode,
-        ["habitat_baselines.eval.split", "train"],
+        ["habitat_baselines.eval.split=train"],
     )
 
     # Needed to destroy the trainer

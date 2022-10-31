@@ -415,13 +415,13 @@ class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
 
 
 @dataclass
-class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
-    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
+class HabitatBaselinesILConfig(HabitatBaselinesConfig):
+    il: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
-class HabitatBaselinesILConfig(HabitatBaselinesConfig):
-    il: Any = MISSING
+class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
+    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
 
 
 # Register configs to config store
