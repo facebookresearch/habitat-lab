@@ -572,14 +572,15 @@ def test_noise_models_rgbd():
 
     with habitat.config.read_write(config):
 
-        # TODO: Put those back properly
-        # config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.noise_model = "GaussianNoiseModel"
-        # config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
-        #     0.5
-        # )
-        # config.habitat.simulator.agent_0.sim_sensors.depth_sensor.noise_model = (
-        #     "RedwoodDepthNoiseModel"
-        # )
+        config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.noise_model = (
+            "GaussianNoiseModel"
+        )
+        config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
+            0.5
+        )
+        config.habitat.simulator.agent_0.sim_sensors.depth_sensor.noise_model = (
+            "RedwoodDepthNoiseModel"
+        )
 
         config.habitat.simulator.action_space_config = "pyrobotnoisy"
         config.habitat.simulator.action_space_config_arguments = {
