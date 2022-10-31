@@ -12,11 +12,11 @@ habitat:
   gym:
     auto_name: Place
     obs_keys:
-    - robot_head_depth
-    - obj_goal_sensor
-    - joint
-    - is_holding
-    - relative_resting_position
+      - robot_head_depth
+      - obj_goal_sensor
+      - joint
+      - is_holding
+      - relative_resting_position
   environment:
     max_episode_steps: 200
   simulator:
