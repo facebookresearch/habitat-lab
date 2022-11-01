@@ -590,10 +590,6 @@ def test_noise_models_rgbd():
                 "NOISE_MULTIPLIER": 0.5,
             }
         }
-    from omegaconf import OmegaConf
-
-    print(">>>", OmegaConf.to_yaml(config))
-
     with habitat.Env(config=config, dataset=None) as env:
 
         env.episode_iterator = iter([test_episode])
