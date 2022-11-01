@@ -665,6 +665,9 @@ class BatchedEnv:
         self._has_drop_position = np.zeros((self._num_envs), dtype=bool)
         self._object_dropped_properly = np.zeros((self._num_envs), dtype=bool)
         self._stagger_agents = np.zeros((self._num_envs), dtype=int)
+        self._previous_action_for_penalty = np.zeros(
+            (self._num_envs, self.action_dim), dtype=float
+        )
         if self._config.get("STAGGER", True):
             self._stagger_agents = np.array(
                 [i % self._max_episode_length for i in range(self._num_envs)]
@@ -789,7 +792,7 @@ class BatchedEnv:
 
         np_actions = actions.cpu().numpy()
 
-        continuous_action_norm = np_actions.copy()
+        continuous_action_norm = np_actions.clip(-1, 1)
 
         continuous_action_norm[
             :, drop_grasp_action_idx
@@ -798,12 +801,24 @@ class BatchedEnv:
             :, end_action_index
         ] = 0.0  # no penalty on the end action
 
+        if self._config.get("ACTION_PENALTY_ON_BASE", False):
+            continuous_action_norm[:, 1] = 0.0
+            continuous_action_norm[:, 2] = 0.0
+
         # continuous_action_l2 = sum(c * c for c in continuous_action_norm)
         # continuous_action_l2 = np.sum(np.dot(continuous_action_norm))
-        continuous_action_l2 = np.sum(
-            continuous_action_norm * continuous_action_norm, axis=1
-        )
-        action_penalty = config_action_penalty * continuous_action_l2
+        if self._config.get("ACTION_PENALTY_ON_DIFF", False):
+            action_diff = (
+                self._previous_action_for_penalty - continuous_action_norm
+            )
+            continuous_action_l2 = np.sum(action_diff * action_diff, axis=1)
+            action_penalty = config_action_penalty * continuous_action_l2
+            self._previous_action_for_penalty = continuous_action_norm
+        else:
+            continuous_action_l2 = np.sum(
+                continuous_action_norm * continuous_action_norm, axis=1
+            )
+            action_penalty = config_action_penalty * continuous_action_l2
         # continuous_action_norm_mean = sum(
         #     abs(c) for c in continuous_action_norm
         # ) / len(continuous_action_norm)
@@ -1126,6 +1141,7 @@ class BatchedEnv:
                 self._drop_position_arr[b] = None
                 self._has_drop_position[b] = False
                 self._object_dropped_properly[b] = False
+                self._previous_action_for_penalty[b].fill(0.0)
 
                 next_episode = self.get_next_episode()
                 if next_episode != -1:
