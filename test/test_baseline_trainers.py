@@ -168,9 +168,9 @@ def test_ver_trainer(
 
 def test_cpca():
     run_exp(
-        "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
+        "test/ppo_pointnav_test.yaml",
         "train",
-        ["habitat_baselines.rl.auxiliary_losses.enabled", "['cpca']"],
+        ["+habitat_baselines/rl/auxiliary_losses=cpca"],
     )
 
 
@@ -181,7 +181,7 @@ def test_cpca():
     "test_cfg_path,mode",
     [
         [
-            "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
+            "test/ppo_pointnav_test.yaml",
             "train",
         ],
     ],

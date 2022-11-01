@@ -98,15 +98,13 @@ class NetPolicy(nn.Module, Policy):
         self.critic = CriticHead(self.net.output_size)
 
         self.aux_loss_modules = nn.ModuleDict()
-        for aux_loss_name in (
-            () if aux_loss_config is None else aux_loss_config.enabled
-        ):
+        for aux_loss_name, cfg in aux_loss_config.items():
             aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
 
             self.aux_loss_modules[aux_loss_name] = aux_loss(
                 action_space,
                 self.net,
-                **getattr(aux_loss_config, aux_loss_name),
+                **cfg,
             )
 
     @property
