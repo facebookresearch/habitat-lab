@@ -39,16 +39,14 @@ force_regenerate: False
 # robot
 easy_init: False
 
+actions:
+  arm_action:
+    arm_controller: "ArmAbsPosKinematicAction"
+    grip_controller: "MagicGraspAction"
 measurements:
   pick_reward:
-    type: "RearrangePickReward"
     dist_reward: 10.0
     pick_reward: 5.0
     force_pen: 0.0
     max_force_pen: 0.0
     force_end_pen: 0.0
-
-actions:
-  arm_action:
-    arm_controller: "ArmAbsPosKinematicAction"
-    grip_controller: "MagicGraspAction"
