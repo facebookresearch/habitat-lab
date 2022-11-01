@@ -1511,6 +1511,30 @@ cs.store(
     name="target_goal_gps_compass_sensor",
     node=TargetGoalGpsCompassSensorConfig,
 )
+cs.store(
+    package="habitat.task.measurements.does_want_terminate",
+    group="habitat/task/measurements",
+    name="does_want_terminate",
+    node=DoesWantTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.composite_success",
+    group="habitat/task/measurements",
+    name="composite_success",
+    node=CompositeSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.composite_bad_called_terminate",
+    group="habitat/task/measurements",
+    name="composite_bad_called_terminate",
+    node=CompositeBadCalledTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.gfx_replay_measure",
+    group="habitat/task/measurements",
+    name="gfx_replay_measure",
+    node=GfxReplayMeasureMeasurementConfig,
+)
 
 
 from hydra.core.config_search_path import ConfigSearchPath
