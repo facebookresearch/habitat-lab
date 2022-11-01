@@ -257,11 +257,6 @@ class VERConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
-class TmpAuxLossConfig(HabitatBaselinesBaseConfig):
-    enabled: List[str] = field(default_factory=lambda: [])
-
-
-@dataclass
 class AuxLossConfig(HabitatBaselinesBaseConfig):
     pass
 
@@ -308,9 +303,7 @@ class RLConfig(HabitatBaselinesBaseConfig):
     ppo: PPOConfig = PPOConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()
-    # Auxiliary Losses
-    # TODO : Replace TmpAuxLossConfig with AuxLossConfig
-    auxiliary_losses: TmpAuxLossConfig = TmpAuxLossConfig()
+    auxiliary_losses: Dict[str, AuxLossConfig] = field(default_factory=dict)
 
 
 @dataclass
@@ -446,8 +439,9 @@ cs.store(
 )
 
 cs.store(
-    group="habitat_baselines/rl/auxiliary_losses/cpca",
-    name="cpca_loss_base",
+    package="habitat_baselines.rl.auxiliary_losses.cpca",
+    group="habitat_baselines/rl/auxiliary_losses",
+    name="cpca",
     node=CPCALossConfig,
 )
 

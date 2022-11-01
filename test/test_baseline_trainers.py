@@ -34,7 +34,15 @@ except ImportError:
 
 from habitat import make_dataset
 from habitat.config import read_write
+from habitat.config.default_structured_configs import (
+    HeadDepthSensorConfig,
+    HeadRGBSensorConfig,
+)
 from habitat.utils.gym_definitions import make_gym_from_config
+from habitat_baselines.config.default_structured_configs import (
+    Cube2EqConfig,
+    Cube2FishConfig,
+)
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -168,9 +176,9 @@ def test_ver_trainer(
 
 def test_cpca():
     run_exp(
-        "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
+        "test/ppo_pointnav_test.yaml",
         "train",
-        ["habitat_baselines.rl.auxiliary_losses.enabled", "['cpca']"],
+        ["+habitat_baselines/rl/auxiliary_losses=cpca"],
     )
 
 
@@ -181,7 +189,7 @@ def test_cpca():
     "test_cfg_path,mode",
     [
         [
-            "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
+            "test/ppo_pointnav_test.yaml",
             "train",
         ],
     ],
@@ -205,30 +213,48 @@ def test_cubemap_stiching(
         ]
         sensor_uuids = []
 
-        if f"{sensor_type}_sensor" not in config.simulator.agent_0.sensors:
-            config.simulator.agent_0.sensors.append(f"{sensor_type}_sensor")
-        sensor = getattr(config.simulator, f"{sensor_type}_sensor")
+        if sensor_type == "rgb":
+            config.simulator.agent_0.sim_sensors = {
+                "rgb_sensor": HeadRGBSensorConfig(width=256, height=256),
+            }
+        elif sensor_type == "depth":
+            config.simulator.agent_0.sim_sensors = {
+                "depth_sensor": HeadDepthSensorConfig(width=256, height=256),
+            }
+        else:
+            raise ValueError(
+                "Typo in the sensor type in test_cubemap_stiching"
+            )
+        sensor = getattr(
+            config.simulator.agent_0.sim_sensors, f"{sensor_type}_sensor"
+        )
         for camera_id in range(CAMERA_NUM):
             camera_template = f"{sensor_type}_{camera_id}"
             camera_config = deepcopy(sensor)
             camera_config.orientation = orient[camera_id]
             camera_config.uuid = camera_template.lower()
             sensor_uuids.append(camera_config.uuid)
-            setattr(config.simulator, camera_template, camera_config)
-            config.simulator.agent_0.sensors.append(camera_template)
+            setattr(
+                config.simulator.agent_0.sim_sensors,
+                camera_template,
+                camera_config,
+            )
 
         meta_config.habitat = config
-        meta_config.habitat_baselines.sensors = (
-            config.simulator.agent_0.sensors
-        )
+
         if camera == "equirect":
-            meta_config.habitat_baselines.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
-                sensor_uuids
-            )
+            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+                "cube2eq": Cube2EqConfig(
+                    sensor_uuids=sensor_uuids, width=256, height=256
+                )
+            }
         elif camera == "fisheye":
-            meta_config.habitat_baselines.rl.policy.obs_transforms.cube2fish.sensor_uuids = tuple(
-                sensor_uuids
-            )
+            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+                "cube2fish": Cube2FishConfig(
+                    sensor_uuids=sensor_uuids, width=256, height=256
+                )
+            }
+
     if camera in ["equirect", "fisheye"]:
         execute_exp(meta_config, mode)
         # Deinit processes group
