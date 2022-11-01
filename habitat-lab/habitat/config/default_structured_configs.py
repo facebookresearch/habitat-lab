@@ -1358,6 +1358,18 @@ cs.store(
     name="joint_velocity_sensor",
     node=JointVelocitySensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.target_start_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="target_start_gps_compass_sensor",
+    node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.target_goal_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="target_goal_gps_compass_sensor",
+    node=TargetGoalGpsCompassSensorConfig,
+)
 
 
 # Task Measurements
@@ -1498,18 +1510,6 @@ cs.store(
     group="habitat/task/measurements",
     name="move_objects_reward",
     node=MoveObjectsRewardMeasurementConfig,
-)
-cs.store(
-    package="habitat.task.measurements.target_start_gps_compass_sensor",
-    group="habitat/task/measurements",
-    name="target_start_gps_compass_sensor",
-    node=TargetStartGpsCompassSensorConfig,
-)
-cs.store(
-    package="habitat.task.measurements.target_goal_gps_compass_sensor",
-    group="habitat/task/measurements",
-    name="target_goal_gps_compass_sensor",
-    node=TargetGoalGpsCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.measurements.does_want_terminate",
