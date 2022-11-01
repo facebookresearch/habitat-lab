@@ -8,6 +8,7 @@
   - Robotics platform with a bunch of different stuff
   - [polymetis](https://github.com/facebookresearch/fairo/tree/main/polymetis)
   - [droidlet/lowlevel/hello_robot](https://github.com/facebookresearch/fairo/tree/main/droidlet/lowlevel/hello_robot)
+  - Austin's branch: austinw/hello_goto_odom
 - [hello-robot/stretch_body](https://github.com/hello-robot/stretch_body)
   - Some scripts for interacting with the Stretc
 - [hello-robot/stretch_firmware](https://github.com/hello-robot/stretch_firmware)
