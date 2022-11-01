@@ -1136,6 +1136,12 @@ cs.store(
     node=EmptyActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.rearrange_stop",
+    group="habitat/task/actions",
+    name="rearrange_stop",
+    node=RearrangeStopActionConfig,
+)
+cs.store(
     package="habitat.task.actions.answer",
     group="habitat/task/actions",
     name="answer",
@@ -1486,6 +1492,24 @@ cs.store(
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.move_objects_reward",
+    group="habitat/task/measurements",
+    name="move_objects_reward",
+    node=MoveObjectsRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.target_start_gps_compass_sensor",
+    group="habitat/task/measurements",
+    name="target_start_gps_compass_sensor",
+    node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.measurements.target_goal_gps_compass_sensor",
+    group="habitat/task/measurements",
+    name="target_goal_gps_compass_sensor",
+    node=TargetGoalGpsCompassSensorConfig,
 )
 
 
