@@ -43,7 +43,7 @@ CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
 
 @pytest.mark.parametrize(
     "config_path",
-    glob(_HABITAT_CFG_DIR + "/**/*.yaml", recursive=True),
+    glob(_HABITAT_CFG_DIR + "/benchmark/**/*.yaml", recursive=True),
 )
 def test_no_core_config_has_non_default_keys(config_path):
     if config_path in CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS:
