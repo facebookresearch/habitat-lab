@@ -963,19 +963,12 @@ class SimulatorConfig(HabitatBaseConfig):
 
 
 @dataclass
-class PyrobotConfig(HabitatBaseConfig):
-    # types of robots supported:
-    robots: List[str] = field(default_factory=lambda: ["locobot"])
-    robot: str = "locobot"
-    sensors: List[str] = field(
-        default_factory=lambda: ["rgb_sensor", "depth_sensor", "bump_sensor"]
-    )
-    base_controller: str = "proportional"
-    base_planner: str = "none"
+class PyrobotSensor(HabitatBaseConfig):
+    pass
 
 
 @dataclass
-class PyrobotVisualSensorConfig(HabitatBaseConfig):
+class PyrobotVisualSensorConfig(PyrobotSensor):
     type: str = MISSING
     height: int = 480
     width: int = 640
@@ -997,7 +990,7 @@ class PyrobotDepthSensorConfig(PyrobotVisualSensorConfig):
 
 
 @dataclass
-class PyrobotBumpSensorConfig(HabitatBaseConfig):
+class PyrobotBumpSensorConfig(PyrobotSensor):
     type: str = "PyRobotBumpSensor"
 
 
@@ -1012,6 +1005,23 @@ class LocobotConfig(HabitatBaseConfig):
     camera_actions: List[str] = field(
         default_factory=lambda: ["set_pan", "set_tilt", "set_pan_tilt"]
     )
+
+
+@dataclass
+class PyrobotConfig(HabitatBaseConfig):
+    # types of robots supported:
+    robots: List[str] = field(default_factory=lambda: ["locobot"])
+    robot: str = "locobot"
+    sensors: Dict[str, PyrobotSensor] = field(
+        default_factory=lambda: {
+            "rgb_sensor": PyrobotRGBSensorConfig(),
+            "depth_sensor": PyrobotDepthSensorConfig(),
+            "bump_sensor": PyrobotBumpSensorConfig(),
+        }
+    )
+    base_controller: str = "proportional"
+    base_planner: str = "none"
+    locobot: LocobotConfig = LocobotConfig()
 
 
 @dataclass

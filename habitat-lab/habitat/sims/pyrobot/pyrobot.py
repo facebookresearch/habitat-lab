@@ -171,8 +171,7 @@ class PyRobot(Simulator):
         self._config = config
 
         robot_sensors = []
-        for sensor_name in self._config.sensors:
-            sensor_cfg = getattr(self._config, sensor_name)
+        for sensor_cfg in self._config.sensors.values():
             sensor_type = registry.get_sensor(sensor_cfg.type)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
