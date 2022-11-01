@@ -322,33 +322,34 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["habitat_baselines.eval.video_option", "[]"]
-    eval_opts = ["habitat_baselines.eval.video_option", "['disk']"]
-
-    ckpt_cfg = get_config(None, ckpt_opts)
-    assert ckpt_cfg.habitat_baselines.video_option == []
-    assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == [
-        "habitat_baselines.eval.video_option",
-        "[]",
+    ckpt_opts = [
+        "habitat_baselines.eval.video_option=[]",
+        "habitat_baselines.load_resume_state_config=True",
+    ]
+    eval_opts = [
+        "habitat_baselines.eval.video_option=['disk']",
+        "habitat_baselines.load_resume_state_config=False",
     ]
 
-    eval_cfg = get_config(None, eval_opts)
-    assert eval_cfg.habitat_baselines.video_option == ["disk"]
-    assert eval_cfg.habitat_baselines.cmd_trailing_opts == [
-        "habitat_baselines.eval.video_option",
-        "['disk']",
-    ]
+    ckpt_cfg = get_config("test/ppo_pointnav_test.yaml", ckpt_opts)
+    assert ckpt_cfg.habitat_baselines.eval.video_option == []
 
-    trainer = BaseRLTrainer(get_config())
-    assert trainer.config.habitat_baselines.eval.video_option == [
-        "disk",
-        "tensorboard",
-    ]
-    returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
+    eval_cfg = get_config("test/ppo_pointnav_test.yaml", eval_opts)
+    assert eval_cfg.habitat_baselines.eval.video_option == ["disk"]
+
+    trainer = BaseRLTrainer(get_config("test/ppo_pointnav_test.yaml"))
+
+    returned_config = trainer._get_resume_state_config_or_new_config(
+        resume_state_config=ckpt_cfg
+    )
     assert returned_config.habitat_baselines.eval.video_option == []
 
     trainer = BaseRLTrainer(eval_cfg)
-    returned_config = trainer._setup_eval_config(ckpt_cfg)
+    # Load state config is false. This means that _get_resume_state_config_or_new_config
+    # should use the new (eval_cfg) config instead of the resume_state_config
+    returned_config = trainer._get_resume_state_config_or_new_config(
+        resume_state_config=ckpt_cfg
+    )
     assert returned_config.habitat_baselines.eval.video_option == ["disk"]
 
 

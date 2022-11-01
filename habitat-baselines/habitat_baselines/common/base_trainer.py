@@ -43,7 +43,9 @@ class BaseTrainer:
     def train(self) -> None:
         raise NotImplementedError
 
-    def _get_resume_state_config_or_new_config(self, resume_state_config):
+    def _get_resume_state_config_or_new_config(
+        self, resume_state_config: Config
+    ):
         if self.config.habitat_baselines.load_resume_state_config:
             if self.config != resume_state_config:
                 logger.warning(
