@@ -51,6 +51,9 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
     PointNavResNetPolicy,
 )
+from habitat_baselines.rl.hrl.wrapper_policy import (
+    WrapperPolicy,
+)  # noqa: F401.
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
@@ -183,8 +186,13 @@ class PPOTrainer(BaseRLTrainer):
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
+        if isinstance(self.actor_critic, WrapperPolicy):
+            ac = self.actor_critic._wrapped_policy
+        else:
+            ac = self.actor_critic
+
         self.agent = (DDPPO if self._is_distributed else PPO)(
-            actor_critic=self.actor_critic,
+            actor_critic=ac,
             clip_param=ppo_cfg.clip_param,
             ppo_epoch=ppo_cfg.ppo_epoch,
             num_mini_batch=ppo_cfg.num_mini_batch,
@@ -943,7 +951,10 @@ class PPOTrainer(BaseRLTrainer):
             fuse_keys.append(map_sensors[sensor])
 
         self.config.RL.POLICY.fuse_keys = fuse_keys
-        self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+        if self.config.RL.POLICY.name == "WrapperPolicy":
+            self.config.RL.POLICY.wrapped_name = raw_cfg.RL.POLICY.name
+        else:
+            self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
         self.config.RL.POLICY.SENSOR_ORDERING = fuse_keys
         self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
         config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_PICK_THRESH = (
@@ -1005,7 +1016,7 @@ class PPOTrainer(BaseRLTrainer):
 
         if self.agent.actor_critic.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])
-        self.actor_critic = self.agent.actor_critic
+        # self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
         batch = batch_obs(
@@ -1071,20 +1082,30 @@ class PPOTrainer(BaseRLTrainer):
                 actions = prev_actions
             else:
                 with torch.no_grad():
-                    (
-                        _,
-                        actions,
-                        _,
-                        test_recurrent_hidden_states,
-                    ) = self.actor_critic.act(
+                    res = self.actor_critic.act(
                         batch,
                         test_recurrent_hidden_states,
                         prev_actions,
                         not_done_masks,
                         deterministic=False,
                     )
+                    if len(res) == 4:
+                        _, actions, _, test_recurrent_hidden_states = res
+                        did_act = [
+                            True for _ in range(not_done_masks.shape[0])
+                        ]
+                    else:
+                        (
+                            _,
+                            actions,
+                            _,
+                            test_recurrent_hidden_states,
+                            did_act,
+                        ) = res
 
-                    prev_actions.copy_(actions)  # type: ignore
+                    for i, should_add in enumerate(did_act):
+                        if should_add:
+                            prev_actions[i].copy_(actions[i])  # type: ignore
 
             # To fix the action sequence
             # actions = torch.zeros((1, 11))

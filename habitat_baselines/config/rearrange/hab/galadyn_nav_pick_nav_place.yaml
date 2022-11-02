@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/gala_nav_pick_nav_place.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/galadyn_nav_pick_nav_place.yaml
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -33,8 +33,8 @@ EVAL:
 RL:
   POLICY:
       name: "WrapperPolicy"
-      wrapped_name: "PointNavBaselinePolicy"
       act_freq: 5
+      wrapped_name: "PointNavBaselinePolicy"
       action_distribution_type: "gaussian"
       include_visual_keys: ["robot_head_depth", "robot_head_rgb"]
       action_distribution_type: "gaussian_and_categorical"

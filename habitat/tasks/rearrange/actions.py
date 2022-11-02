@@ -162,6 +162,28 @@ class ArmRelPosAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
+class GalaArmDynAction(SimulatorTaskAction):
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, set_pos, *args, **kwargs):
+        # No clipping because the arm is being set to exactly where it needs to
+        # go.
+
+        delta_pos = interp_step(self._config.SCALING, set_pos)
+
+        self._sim.robot.arm_motor_pos = (
+            delta_pos + self._sim.robot.arm_motor_pos
+        )
+
+
+@registry.register_task_action
 class ArmRelPosKinematicAction(SimulatorTaskAction):
     """
     The arm motor targets are offset by the delta joint values specified by the

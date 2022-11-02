@@ -112,7 +112,7 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
-            ARM_CONTROLLER: GalaArmKinematicAction
+            ARM_CONTROLLER: GalaArmDynAction
             GRIP_CONTROLLER: GalaMagicGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15

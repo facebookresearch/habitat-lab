@@ -22,6 +22,7 @@ class GripSimulatorTaskAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
+        self.wants_grasp = False
 
     @property
     def requires_action(self):
@@ -90,6 +91,7 @@ class GalaMagicGraspAction(MagicGraspAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
+        self.wants_grasp = False
 
         # Check the grip is discrete action.
         grip_action_int = int(grip_action[0])
@@ -97,8 +99,12 @@ class GalaMagicGraspAction(MagicGraspAction):
             raise ValueError(f"Got unexpected grip action {grip_action}")
 
         if grip_action_int == 1 and not self._sim.grasp_mgr.is_grasped:
+            self.wants_grasp = True
             self._grasp()
         elif grip_action_int == 0 and self._sim.grasp_mgr.is_grasped:
+            print("UNGRASPING!!!")
+            breakpoint()
+            raise ValueError()
             self._ungrasp()
 
 

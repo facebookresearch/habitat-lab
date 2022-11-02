@@ -77,6 +77,7 @@ class NetPolicy(nn.Module, Policy):
             self.action_distribution_type = (
                 policy_config.action_distribution_type
             )
+        self._policy_cfg = policy_config
 
         if self.action_distribution_type == "categorical":
             self.action_distribution = CategoricalNet(
@@ -135,6 +136,9 @@ class NetPolicy(nn.Module, Policy):
                 action = distribution.mean
         else:
             action = distribution.sample()
+        if self._policy_cfg.NO_DROP:
+            is_holding = observations["is_holding"]
+            action[:, :1] = torch.clamp(action[:, :1] + is_holding, 0.0, 1.0)
 
         action_log_probs = distribution.log_probs(action)
 

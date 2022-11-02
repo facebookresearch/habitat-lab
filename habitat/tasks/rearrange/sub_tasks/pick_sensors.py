@@ -39,6 +39,25 @@ class DidPickObjectMeasure(Measure):
 
 
 @registry.register_measure
+class DoesWantPickMeasure(Measure):
+    cls_uuid: str = "wants_pick"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return DoesWantPickMeasure.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = float(task.actions['ARM_ACTION'].grip_ctrlr.wants_grasp)
+
+
+@registry.register_measure
 class RearrangePickReward(RearrangeReward):
     cls_uuid: str = "rearrangepick_reward"
 
