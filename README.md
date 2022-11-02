@@ -13,7 +13,7 @@
     - iphone_reader: iPhone slam module.
     - realsense_driver: A thin realsense wrapper
   - [droidlet/lowlevel/hello_robot](https://github.com/facebookresearch/fairo/tree/main/droidlet/lowlevel/hello_robot)
-  - Austin's branch: austinw/hello_goto_odom
+    - Austin's branch: austinw/hello_goto_odom
 - [hello-robot/stretch_body](https://github.com/hello-robot/stretch_body)
   - Base API for interacting with the Stretch robot
   - Some scripts for interacting with the Stretch
