@@ -1,5 +1,10 @@
 # Home Robot
 
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/fairinternal/home-robot/tree/main.svg?style=svg&circle-token=625410c58d3e31cedd2f6af22b4f27343d866a77)](https://dl.circleci.com/status-badge/redirect/gh/fairinternal/home-robot/tree/main)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+Mostly Hello Stretch infrastructure
+
 ## References
 
 - [cpaxton/home_robot](https://github.com/cpaxton/home_robot)
