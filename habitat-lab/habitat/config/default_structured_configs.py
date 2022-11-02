@@ -1545,6 +1545,12 @@ cs.store(
     name="gfx_replay_measure",
     node=GfxReplayMeasureMeasurementConfig,
 )
+cs.store(
+    package="habitat.task.measurements.composite_stage_goals",
+    group="habitat/task/measurements",
+    name="composite_stage_goals",
+    node=CompositeStageGoalsMeasurementConfig,
+)
 
 
 from hydra.core.config_search_path import ConfigSearchPath
