@@ -25,7 +25,7 @@ from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
-OLD_stop_ACTION_ID = 3
+OLD_STOP_ACTION_ID = 3
 
 
 # List of episodes each from unique house
@@ -174,8 +174,8 @@ def test_mp3d_eqa_sim():
             if not env.episode_over:
                 assert "rgb" in obs, "RGB image is missing in observation."
                 assert obs["rgb"].shape[:2] == (
-                    eqa_config.habitat.simulator.rgb_sensor.height,
-                    eqa_config.habitat.simulator.rgb_sensor.width,
+                    eqa_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height,
+                    eqa_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width,
                 ), (
                     "Observation resolution {} doesn't correspond to config "
                     "({}, {}).".format(
@@ -234,9 +234,9 @@ def test_mp3d_eqa_sim_correspondence():
                 cur_state = env.sim.get_agent_state()
 
                 logger.info(
-                    "diff position: {} diff rotation: {} "
-                    "cur_state.position: {} shortest_path.position: {} "
-                    "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
+                    "diff position: {} diff rotation: {} \n"
+                    "cur_state.position: {} shortest_path.position: {} \n"
+                    "cur_state.rotation: {} shortest_path.rotation: {} action: {}\n"
                     "".format(
                         cur_state.position - point.position,
                         angle_between_quaternions(
@@ -257,7 +257,7 @@ def test_mp3d_eqa_sim_correspondence():
                     atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
                 ), "Agent's path diverges from the shortest path."
 
-                if point.action != OLD_stop_ACTION_ID:
+                if point.action != OLD_STOP_ACTION_ID:
                     obs = env.step(action=point.action)
 
                 if not env.episode_over:
