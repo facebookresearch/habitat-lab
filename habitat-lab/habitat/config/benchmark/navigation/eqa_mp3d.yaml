@@ -8,6 +8,7 @@ defaults:
     - rgb_sensor
     - semantic_sensor
   - /habitat/dataset/eqa: mp3d
+  - _self_
 
 
 habitat:

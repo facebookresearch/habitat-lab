@@ -7,6 +7,7 @@ defaults:
     - depth_sensor
     - rgb_sensor
   - /habitat/dataset/pointnav: habitat_test
+  - _self_
 
 habitat:
   environment:

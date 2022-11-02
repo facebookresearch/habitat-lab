@@ -7,6 +7,7 @@ defaults:
     - head_depth_sensor
   - /habitat/task/rearrange: tidy_house
   - /habitat/dataset/rearrangement: replica_cad
+  - _self_
 
 habitat:
   gym:

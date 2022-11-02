@@ -13,6 +13,7 @@ defaults:
       - top_down_map
   - lab_sensors:
       - imagegoal_sensor
+  - _self_
 
 type: Nav-v0
 end_on_success: True

@@ -7,6 +7,7 @@ defaults:
     - depth_sensor
     - rgb_sensor
   - /habitat/dataset/instance_imagenav: hm3d
+  - _self_
 
 habitat:
   environment:

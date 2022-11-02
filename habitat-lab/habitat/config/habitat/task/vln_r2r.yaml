@@ -11,6 +11,7 @@ defaults:
     - spl
   - lab_sensors:
     - instruction_sensor
+  - _self_
 
 
 type: VLN-v0

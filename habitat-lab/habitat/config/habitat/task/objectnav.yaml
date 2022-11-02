@@ -18,7 +18,7 @@ defaults:
     - objectgoal_sensor
     - compass_sensor
     - gps_sensor
-
+  - _self_
 
 
 type: ObjectNav-v1

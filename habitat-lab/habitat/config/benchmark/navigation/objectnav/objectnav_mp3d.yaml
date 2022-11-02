@@ -7,6 +7,7 @@
       - depth_sensor
       - rgb_sensor
     - /habitat/dataset/objectnav: mp3d
+    - _self_
 
   habitat:
     environment:
