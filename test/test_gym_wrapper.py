@@ -28,28 +28,27 @@ importlib.reload(habitat.utils.gym_adapter)
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "task/rearrange/reach_state.yaml",
+            "benchmark/rearrangement/reach_state.yaml",
             [],
             7,
             np.ndarray,
         ),
         (
-            "task/rearrange/pick.yaml",
+            "benchmark/rearrangement/pick.yaml",
             [],
             8,
             dict,
         ),
         (
-            "task/rearrange/pick.yaml",
+            "benchmark/rearrangement/pick.yaml",
             [
-                "habitat.task.actions.arm_action.grip_controller",
-                "SuctionGraspAction",
+                "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
             8,
             dict,
         ),
         (
-            "task/rearrange/tidy_house.yaml",
+            "benchmark/rearrangement/tidy_house.yaml",
             [],
             11,  # 7 joints, 1 grip action, 2 base velocity, 1 stop action
             dict,
