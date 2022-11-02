@@ -1,0 +1,20 @@
+version: 2.1
+
+jobs:
+  formatting:
+    working_directory: ~/home-robot
+    resource_class: large
+    docker:
+      - image: circleci/python:3.8
+    steps:
+      - checkout
+      - run:
+          name: Run black formatting
+          command: |
+            pip install black==22.3.0
+            black --check .
+
+workflows:
+  main:
+    jobs:
+      - formatting
