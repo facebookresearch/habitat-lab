@@ -91,7 +91,7 @@ def test_gym_wrapper_contract_continuous(
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "task/imagenav.yaml",
+            "benchmark/navigation/imagenav/imagenav_test.yaml",
             [],
             4,
             dict,
@@ -139,13 +139,12 @@ def test_gym_wrapper_contract_discrete(
     "config_file,override_options",
     [
         [
-            "task/rearrange/pick.yaml",
+            "benchmark/rearrangement/pick.yaml",
             [
-                "habitat.task.actions.arm_action.grip_controller",
-                "SuctionGraspAction",
+                "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
         ],
-        ["task/rearrange/pick.yaml", []],
+        ["benchmark/rearrangement/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):
