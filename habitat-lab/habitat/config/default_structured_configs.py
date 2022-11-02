@@ -1246,7 +1246,7 @@ cs.store(
 )
 
 cs.store(
-    package="habitat.simulator.sim_sensors.third_rgb_sensor",
+    package="habitat.simulator.agent_0.sim_sensors.third_rgb_sensor",
     group="habitat/simulator/sim_sensors",
     name="third_rgb_sensor",
     node=ThirdRGBSensorConfig,

@@ -17,7 +17,7 @@ from habitat.config.default import _HABITAT_CFG_DIR, Config
 from habitat.config.default_structured_configs import ThirdRGBSensorConfig
 from habitat.core.environments import get_env_class
 
-gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "task/")
+gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "benchmark/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:
