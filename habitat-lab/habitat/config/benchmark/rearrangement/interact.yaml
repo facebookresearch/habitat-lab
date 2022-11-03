@@ -8,7 +8,7 @@ defaults:
     - head_depth_sensor
     - arm_rgb_sensor
     - arm_depth_sensor
-  - /habitat/task/rearrange: interact
+  - /habitat/task/rearrange/benchmark: interact
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
