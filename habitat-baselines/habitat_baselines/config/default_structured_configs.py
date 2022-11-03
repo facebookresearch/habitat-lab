@@ -420,6 +420,11 @@ class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
 # Register configs to config store
 cs.store(
     group="habitat_baselines",
+    name="habitat_baselines_config_base",
+    node=HabitatBaselinesConfig,
+)
+cs.store(
+    group="habitat_baselines",
     name="habitat_baselines_rl_config_base",
     node=HabitatBaselinesRLConfig(),
 )

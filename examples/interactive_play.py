@@ -30,7 +30,7 @@ Controls:
     - B to reset the camera position
 - X to change the robot that is being controlled (if there are multiple robots).
 
-Change the task with `--cfg task/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
+Change the task with `--cfg benchmark/rearrangement/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `task.actions.arm_action.grip_controller "SuctionGraspAction"`

@@ -1,5 +1,10 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrangement: reach_state
+  - /habitat_baselines: habitat_baselines_config_base
+
 habitat_baselines:
-  base_task_config_path: habitat-lab/habitat/config/task/rearrange/reach_state.yaml
   video_dir: "data/vids/"
   count_obj_collisions: True
 

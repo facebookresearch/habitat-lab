@@ -1,16 +1,18 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrangement: nav_pick_nav_place
+  - /habitat_baselines: habitat_baselines_rl_config_base
+
 habitat_baselines:
   verbose: False
-  base_task_config_path: habitat-lab/habitat/config/task/rearrange/nav_pick_nav_place.yaml
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-
-
   video_render_views:
     - "third_rgb_sensor"
-  sensors: ["head_depth_sensor"]
   test_episode_count: -1
   eval_ckpt_path_dir: ""
   num_environments: 1
