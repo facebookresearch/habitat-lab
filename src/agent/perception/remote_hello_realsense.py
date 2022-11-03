@@ -92,20 +92,27 @@ class RemoteHelloRealsense(object):
     def _connect_to_realsense(self):
         if self.use_ros_realsense:
             print("Creating cameras...")
-            self.rgb_cam = RosCamera('/camera/color')
-            self.dpt_cam = RosCamera('/camera/aligned_depth_to_color', buffer_size=5)
+            self.rgb_cam = RosCamera("/camera/color")
+            self.dpt_cam = RosCamera("/camera/aligned_depth_to_color", buffer_size=5)
 
             print("Waiting for camera images...")
             self.rgb_cam.wait_for_image()
             self.dpt_cam.wait_for_image()
 
-            self.intrinsic_mat = np.array([
-                [self.rgb_cam.fx, 0, self.rgb_cam.px],
-                [0, self.rgb_cam.fy, self.rgb_cam.py],
-                [0, 0, 1]]
+            self.intrinsic_mat = np.array(
+                [
+                    [self.rgb_cam.fx, 0, self.rgb_cam.px],
+                    [0, self.rgb_cam.fy, self.rgb_cam.py],
+                    [0, 0, 1],
+                ]
             )
             self.intrinsic_o3d = o3d.camera.PinholeCameraIntrinsic(
-                CW, CH, self.rgb_cam.fx, self.rgb_cam.fy, self.rgb_cam.px, self.rgb_cam.py
+                CW,
+                CH,
+                self.rgb_cam.fx,
+                self.rgb_cam.fy,
+                self.rgb_cam.px,
+                self.rgb_cam.py,
             )
 
         else:
@@ -127,8 +134,12 @@ class RemoteHelloRealsense(object):
             # we need to use the intrinsics of the color frame
             color_profile = rs.video_stream_profile(profile.get_stream(rs.stream.color))
             i = color_profile.get_intrinsics()
-            self.intrinsic_mat = np.array([[i.fx, 0, i.ppx], [0, i.fy, i.ppy], [0, 0, 1]])
-            self.intrinsic_o3d = o3d.camera.PinholeCameraIntrinsic(CW, CH, i.fx, i.fy, i.ppx, i.ppy)
+            self.intrinsic_mat = np.array(
+                [[i.fx, 0, i.ppx], [0, i.fy, i.ppy], [0, 0, 1]]
+            )
+            self.intrinsic_o3d = o3d.camera.PinholeCameraIntrinsic(
+                CW, CH, i.fx, i.fy, i.ppx, i.ppy
+            )
 
             align_to = rs.stream.color
             self.align = rs.align(align_to)
@@ -161,8 +172,8 @@ class RemoteHelloRealsense(object):
     def get_rgb_depth(self, rotate=True, compressed=False):
         if self.use_ros_realsense:
             depth_image = self.dpt_cam.get_filtered()
-            depth_image[depth_image < 0.1] = 0.
-            depth_image[depth_image > 4.0] = 0.
+            depth_image[depth_image < 0.1] = 0.0
+            depth_image[depth_image > 4.0] = 0.0
             color_image = self.rgb_cam.get()
 
         else:
@@ -224,7 +235,9 @@ class RemoteHelloRealsense(object):
         xyz = xyz.reshape(-1, 3)
         return xyz
 
-    def get_rgb_depth_optimized_for_habitat_transfer(self, rotate=True, compressed=False):
+    def get_rgb_depth_optimized_for_habitat_transfer(
+        self, rotate=True, compressed=False
+    ):
         tm = time.time()
         frames = None
         while not frames:
@@ -335,7 +348,9 @@ class RemoteHelloRealsense(object):
         extrinsic = np.linalg.inv(final_transform)
         # create point cloud
 
-        opcd = o3d.geometry.PointCloud.create_from_rgbd_image(orgbd, intrinsic, extrinsic)
+        opcd = o3d.geometry.PointCloud.create_from_rgbd_image(
+            orgbd, intrinsic, extrinsic
+        )
         return opcd
 
     def get_current_pcd(self):

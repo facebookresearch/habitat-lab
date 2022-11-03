@@ -8,7 +8,13 @@ from std_srvs.srv import Trigger, TriggerRequest
 from sensor_msgs.msg import JointState
 from control_msgs.msg import FollowJointTrajectoryGoal
 from trajectory_msgs.msg import JointTrajectoryPoint
-from geometry_msgs.msg import Pose, PoseStamped, Pose2D, PoseWithCovarianceStamped, Twist
+from geometry_msgs.msg import (
+    Pose,
+    PoseStamped,
+    Pose2D,
+    PoseWithCovarianceStamped,
+    Twist,
+)
 from nav_msgs.msg import Odometry
 import hello_helpers.hello_misc as hm
 from tf.transformations import euler_from_quaternion
@@ -114,7 +120,9 @@ class MoveNode(hm.HelloNode):
         w = cutoff_angle(t_curr - self._t_odom_prev, SLAM_CUTOFF_HZ)
         coeff = 1 / (w + 1)
 
-        pose_diff_log = coeff * pose_diff_odom.log() + (1 - coeff) * pose_diff_slam.log()
+        pose_diff_log = (
+            coeff * pose_diff_odom.log() + (1 - coeff) * pose_diff_slam.log()
+        )
         self._filtered_pose = self._filtered_pose * sp.SE3.exp(pose_diff_log)
         self._publish_filtered_state(ros_time)
 
@@ -216,7 +224,9 @@ class MoveNode(hm.HelloNode):
         self.trajectory_client.send_goal(trajectory_goal)
 
         rospy.loginfo(
-            "joint_name = {0}, trajectory_goal = {1}".format(joint_name, trajectory_goal)
+            "joint_name = {0}, trajectory_goal = {1}".format(
+                joint_name, trajectory_goal
+            )
         )
         rospy.loginfo("Done sending pose.")
 
@@ -230,14 +240,22 @@ class MoveNode(hm.HelloNode):
     def background_loop(self):
 
         rospy.Subscriber(
-            "/stretch/joint_states", JointState, self._joint_states_callback, queue_size=1
+            "/stretch/joint_states",
+            JointState,
+            self._joint_states_callback,
+            queue_size=1,
         )
         # This comes from hector_slam. It's a transform from src_frame = 'base_link', target_frame = 'map'
         rospy.Subscriber(
-            "/poseupdate", PoseWithCovarianceStamped, self._slam_pose_callback, queue_size=1
+            "/poseupdate",
+            PoseWithCovarianceStamped,
+            self._slam_pose_callback,
+            queue_size=1,
         )
         # this comes from lidar matching, i.e. no slam/global-optimization
-        rospy.Subscriber("/pose2D", Pose2D, self._scan_matched_pose_callback, queue_size=1)
+        rospy.Subscriber(
+            "/pose2D", Pose2D, self._scan_matched_pose_callback, queue_size=1
+        )
         # This comes from wheel odometry.
         rospy.Subscriber("/odom", Odometry, self._odom_callback, queue_size=1)
 
@@ -254,7 +272,10 @@ class MoveNode(hm.HelloNode):
 
     def start(self):
         hm.HelloNode.main(
-            self, "fairo_hello_proxy", "fairo_hello_proxy", wait_for_first_pointcloud=False
+            self,
+            "fairo_hello_proxy",
+            "fairo_hello_proxy",
+            wait_for_first_pointcloud=False,
         )
         self._thread = threading.Thread(target=self.background_loop, daemon=True)
         self._thread.start()

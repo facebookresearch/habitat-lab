@@ -68,7 +68,8 @@ class RemoteHelloRobot(object):
         angle in radians
         """
         print(
-            "[hello-robot] Setting tilt correction " "to angle: {} degrees".format(degrees(angle))
+            "[hello-robot] Setting tilt correction "
+            "to angle: {} degrees".format(degrees(angle))
         )
 
         self.tilt_correction = angle
@@ -251,7 +252,9 @@ class RemoteHelloRobot(object):
                 return self.cam.is_obstacle_in_front()
 
             try:
-                status = goto(self, list(xyt_position), dryrun=False, obstacle_fn=obstacle_fn)
+                status = goto(
+                    self, list(xyt_position), dryrun=False, obstacle_fn=obstacle_fn
+                )
                 self._done = True
             except Exception as e:
                 print(e)
