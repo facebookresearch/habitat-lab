@@ -31,7 +31,7 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
 
-CFG_TEST = "task/rearrange/pick.yaml"
+CFG_TEST = "benchmark/rearrangement/pick.yaml"
 GEN_TEST_CFG = (
     "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
 )

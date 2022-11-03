@@ -62,13 +62,13 @@ do
     ##################################
 
     # # Ours
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
 
   done
 done

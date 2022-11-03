@@ -116,7 +116,7 @@ importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
 with habitat.Env(
     config=insert_render_options(
         habitat.get_config(
-            "task/rearrange/pick.yaml",
+            "benchmark/rearrangement/pick.yaml",
         )
     )
 ) as env:
