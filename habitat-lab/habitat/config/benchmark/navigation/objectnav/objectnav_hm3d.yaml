@@ -9,6 +9,7 @@
       - depth_sensor
       - rgb_sensor
     - /habitat/dataset/objectnav: hm3d
+    - _self_
 
   habitat:
     environment:

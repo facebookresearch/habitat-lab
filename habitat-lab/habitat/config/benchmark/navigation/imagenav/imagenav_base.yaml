@@ -6,6 +6,7 @@ defaults:
   - /habitat/simulator/sim_sensors:
     - depth_sensor
     - rgb_sensor
+  - _self_
 
 habitat:
   environment:

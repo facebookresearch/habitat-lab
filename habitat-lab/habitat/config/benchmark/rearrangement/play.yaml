@@ -10,6 +10,7 @@ defaults:
     - arm_depth_sensor
   - /habitat/task/rearrange: play
   - /habitat/dataset/rearrangement: replica_cad
+  - _self_
 
 # Config for empty task to explore the scene.
 habitat:

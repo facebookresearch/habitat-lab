@@ -14,7 +14,6 @@ from habitat.config.default import _C, _HABITAT_CFG_DIR, get_config
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
 CFG_EQA = "test/habitat_mp3d_eqa_test.yaml"
-CFG_NEW_KEYS = "test/new_keys_test.yaml"
 MAX_TEST_STEPS_LIMIT = 3
 
 
@@ -30,9 +29,6 @@ def test_overwrite_options():
 
 
 CONFIGS_ALLOWED_TO_HAVE_NON_DEFAULT_KEYS = [
-    # new_keys_test.yaml excluded since it explicitely uses
-    # keys not present in the default for testing purposes
-    _HABITAT_CFG_DIR + "/test/new_keys_test.yaml",
     # Trainer excluded because does not use the default config
     _HABITAT_CFG_DIR + "/baselines/ppo.yaml",
     _HABITAT_CFG_DIR + "/task/rearrange/rearrange_easy_multi_agent.yaml",

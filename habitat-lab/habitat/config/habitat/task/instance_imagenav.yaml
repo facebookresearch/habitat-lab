@@ -19,6 +19,7 @@ defaults:
       - instance_imagegoal_hfov_sensor
       - compass_sensor
       - gps_sensor
+  - _self_
 
 type: InstanceImageNav-v1
 end_on_success: True

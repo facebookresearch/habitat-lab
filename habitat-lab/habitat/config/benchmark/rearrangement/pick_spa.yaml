@@ -11,6 +11,7 @@ defaults:
     - third_rgb_sensor
   - /habitat/task/rearrange: pick_spa
   - /habitat/dataset/rearrangement: replica_cad
+  - _self_
 
 # The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 habitat:
