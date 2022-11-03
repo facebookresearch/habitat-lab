@@ -1551,6 +1551,36 @@ cs.store(
     name="composite_stage_goals",
     node=CompositeStageGoalsMeasurementConfig,
 )
+cs.store(
+    package="habitat.task.measurements.ee_dist_to_marker",
+    group="habitat/task/measurements",
+    name="ee_dist_to_marker",
+    node=EndEffectorDistToMarkerMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.art_obj_at_desired_state",
+    group="habitat/task/measurements",
+    name="art_obj_at_desired_state",
+    node=ArtObjAtDesiredStateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.art_obj_state",
+    group="habitat/task/measurements",
+    name="art_obj_state",
+    node=ArtObjStateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.art_obj_success",
+    group="habitat/task/measurements",
+    name="art_obj_success",
+    node=ArtObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.art_obj_reward",
+    group="habitat/task/measurements",
+    name="art_obj_reward",
+    node=ArtObjRewardMeasurementConfig,
+)
 
 
 from hydra.core.config_search_path import ConfigSearchPath
