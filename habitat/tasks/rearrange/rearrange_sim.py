@@ -325,7 +325,7 @@ class RearrangeSim(HabitatSim):
             )
 
     def _load_navmesh(self):
-        if self.habitat_config.GEN_NAVMESH:
+        if self.habitat_config.get("GEN_NAVMESH", False):
             # NEED FOR GALA
             for art_obj in self.art_objs:
                 art_obj.motion_type = habitat_sim.physics.MotionType.STATIC

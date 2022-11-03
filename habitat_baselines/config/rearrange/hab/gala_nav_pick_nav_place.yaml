@@ -32,9 +32,7 @@ EVAL:
 
 RL:
   POLICY:
-      name: "WrapperPolicy"
-      wrapped_name: "PointNavBaselinePolicy"
-      act_freq: 5
+      name: "PointNavBaselinePolicy"
       action_distribution_type: "gaussian"
       include_visual_keys: ["robot_head_depth", "robot_head_rgb"]
       action_distribution_type: "gaussian_and_categorical"

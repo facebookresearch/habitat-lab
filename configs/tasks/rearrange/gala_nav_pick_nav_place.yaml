@@ -23,7 +23,7 @@ TASK:
     REWARD_MEASURE: move_obj_reward
     SUCCESS_MEASURE: composite_success
     # START_CACHE: ../gala_kinematic/data/tidy_house_100ep.episode_set.json
-    # START_CACHE: ../gala_kinematic/data/test.json
+    START_CACHE: null
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
@@ -206,6 +206,7 @@ SIMULATOR:
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
+        HFOV: 60
     HEAD_DEPTH_SENSOR:
         WIDTH: 128
         HEIGHT: 128

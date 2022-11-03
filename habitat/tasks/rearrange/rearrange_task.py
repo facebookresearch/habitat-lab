@@ -56,7 +56,7 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
-        if "START_CACHE" in self._config:
+        if self._config.get("START_CACHE", None) is not None:
             with open(self._config.START_CACHE, "r") as f:
                 ep_data = json.load(f)
                 eps = ep_data["episodeSet"]["episodes"]

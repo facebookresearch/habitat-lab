@@ -14,16 +14,14 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    #DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
     DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/test.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
     REWARD_MEASURE: move_obj_reward
     SUCCESS_MEASURE: composite_success
     # START_CACHE: ../gala_kinematic/data/tidy_house_100ep.episode_set.json
-    # START_CACHE: ../gala_kinematic/data/test.json
+    START_CACHE: null
     SUCCESS_REWARD: 100.0
     SLACK_REWARD: -0.01
     END_ON_SUCCESS: true
