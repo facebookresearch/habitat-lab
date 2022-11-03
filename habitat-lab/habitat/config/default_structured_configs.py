@@ -1617,6 +1617,30 @@ cs.store(
     name="rearrange_nav_to_obj_reward",
     node=NavToObjRewardMeasurementConfig,
 )
+cs.store(
+    package="habitat.task.measurements.bad_called_terminate",
+    group="habitat/task/measurements",
+    name="bad_called_terminate",
+    node=BadCalledTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.dist_to_goal",
+    group="habitat/task/measurements",
+    name="dist_to_goal",
+    node=DistToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rearrange_reach_reward",
+    group="habitat/task/measurements",
+    name="rearrange_reach_reward",
+    node=RearrangeReachRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rearrange_reach_success",
+    group="habitat/task/measurements",
+    name="rearrange_reach_success",
+    node=RearrangeReachSuccessMeasurementConfig,
+)
 
 
 from hydra.core.config_search_path import ConfigSearchPath

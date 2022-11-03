@@ -32,7 +32,7 @@ habitat:
       is_set_start_state: True
       start_position: [0.0, 0.0, 2.0]
       start_rotation: [0.0, 0.0, 0.0, 1.0]
-      ik_arm_urdf: null
+      ik_arm_urdf: ""
     # Agent setup
     ac_freq_ratio: 8
 

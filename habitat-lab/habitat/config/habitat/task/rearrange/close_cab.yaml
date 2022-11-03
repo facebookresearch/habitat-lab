@@ -1,4 +1,4 @@
-# @package habitat
+# @package habitat.task
 
 defaults:
   - /habitat/task: task_config_base
