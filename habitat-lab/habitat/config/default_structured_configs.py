@@ -1380,6 +1380,18 @@ cs.store(
     name="target_goal_gps_compass_sensor",
     node=TargetGoalGpsCompassSensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.nav_to_skill_sensor",
+    group="habitat/task/lab_sensors",
+    name="nav_to_skill_sensor",
+    node=NavToSkillSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.target_start_point_goal_sensor",
+    group="habitat/task/lab_sensors",
+    name="target_start_point_goal_sensor",
+    node=TargetOrGoalStartPointGoalSensorConfig,
+)
 
 
 # Task Measurements
@@ -1580,6 +1592,30 @@ cs.store(
     group="habitat/task/measurements",
     name="art_obj_reward",
     node=ArtObjRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nav_to_pos_succ",
+    group="habitat/task/measurements",
+    name="nav_to_pos_succ",
+    node=NavToPosSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rot_dist_to_goal",
+    group="habitat/task/measurements",
+    name="rot_dist_to_goal",
+    node=RotDistToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rearrange_nav_to_obj_success",
+    group="habitat/task/measurements",
+    name="rearrange_nav_to_obj_success",
+    node=NavToObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rearrange_nav_to_obj_reward",
+    group="habitat/task/measurements",
+    name="rearrange_nav_to_obj_reward",
+    node=NavToObjRewardMeasurementConfig,
 )
 
 
