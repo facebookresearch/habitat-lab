@@ -5,15 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import (
-    TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
-    List,
     Optional,
-    Sequence,
-    Set,
-    Union,
     cast,
 )
 
@@ -21,20 +15,9 @@ import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
 
+import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.core.simulator import Sensor, SensorTypes, DepthSensor
-from habitat.tasks.nav.nav import PointGoalSensor
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import (
-    CollisionDetails,
-    UsesRobotInterface,
-    batch_transform_point,
-    rearrange_logger,
-)
-from habitat.tasks.utils import cartesian_to_polar, get_angle
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSimDepthSensor
-import habitat_sim
 from habitat.core.simulator import (
     AgentState,
     Config,
@@ -44,10 +27,24 @@ from habitat.core.simulator import (
     SemanticSensor,
     Sensor,
     SensorSuite,
+    SensorTypes,
     ShortestPathPoint,
     Simulator,
     VisualObservation,
 )
+from habitat.sims.habitat_simulator.habitat_simulator import (
+    HabitatSimDepthSensor,
+)
+from habitat.tasks.nav.nav import PointGoalSensor
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import (
+    CollisionDetails,
+    UsesRobotInterface,
+    batch_transform_point,
+    rearrange_logger,
+)
+from habitat.tasks.utils import cartesian_to_polar, get_angle
+
 
 class MultiObjSensor(PointGoalSensor):
     """
@@ -242,10 +239,12 @@ class JointSensor(UsesRobotInterface, Sensor):
         ).robot.arm_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
+
 class HabitatSimSensor:
     sim_sensor_type: habitat_sim.SensorType
     _get_default_spec = Callable[..., habitat_sim.sensor.SensorSpec]
     _config_ignore_keys = {"height", "type", "width"}
+
 
 @registry.register_sensor
 class ArmDepthSensor(UsesRobotInterface, DepthSensor):
@@ -283,14 +282,16 @@ class ArmDepthSensor(UsesRobotInterface, DepthSensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        obs = cast(Optional[VisualObservation], observations.get(self.uuid, None))
+        obs = cast(
+            Optional[VisualObservation], observations.get(self.uuid, None)
+        )
         # Here, the observation has been processed by the habitat_simulator,
         # so we do not need to normalized again
         if np.max(obs) < 1:
             return obs
         if isinstance(obs, np.ndarray):
             obs = np.clip(obs, self.config.MIN_DEPTH, self.config.MAX_DEPTH)
-            #bug here
+            # bug here
             # obs = np.expand_dims(
             #     obs, axis=2
             # )  # make depth observation a 3D array
@@ -306,6 +307,7 @@ class ArmDepthSensor(UsesRobotInterface, DepthSensor):
             )
 
         return obs
+
 
 @registry.register_sensor
 class ArmSemanticSensor(UsesRobotInterface, SemanticSensor):
@@ -326,9 +328,13 @@ class ArmSemanticSensor(UsesRobotInterface, SemanticSensor):
             shape=(self.config.HEIGHT, self.config.WIDTH, 1),
             dtype=np.int32,
         )
+
     def get_observation(self, observations, episode, *args, **kwargs):
-        obs = cast(Optional[VisualObservation], observations.get(self.uuid, None))
+        obs = cast(
+            Optional[VisualObservation], observations.get(self.uuid, None)
+        )
         return obs
+
 
 @registry.register_sensor
 class JointVelocitySensor(UsesRobotInterface, Sensor):
@@ -422,7 +428,6 @@ class RelativeRestingPositionSensor(UsesRobotInterface, Sensor):
         local_ee_pos = base_trans.inverted().transform_point(ee_pos)
 
         relative_desired_resting = task.desired_resting - local_ee_pos
-        # print("relative_resting_position:", np.array(relative_desired_resting, dtype=np.float32))
 
         # idxs, _ = self._sim.get_targets()
         # scene_pos = self._sim.get_scene_pos()
@@ -559,13 +564,17 @@ class CameraToTargetSensor(UsesRobotInterface, Sensor):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
 
-        arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        arm_depth_state = self._sim.get_agent_state().sensor_states[
+            "robot_arm_depth"
+        ]
         arm_depth_cam_pos = arm_depth_state.position
 
-        distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
-
+        distances = np.linalg.norm(
+            target_pos - arm_depth_cam_pos, ord=2, axis=-1
+        )
 
         return distances
+
 
 @registry.register_measure
 class ObjectToGoalDistance(Measure):
@@ -738,10 +747,14 @@ class CameraToTargetDistance(UsesRobotInterface, Measure):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
 
-        arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        arm_depth_state = self._sim.get_agent_state().sensor_states[
+            "robot_arm_depth"
+        ]
         arm_depth_cam_pos = arm_depth_state.position
 
-        distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
+        distances = np.linalg.norm(
+            target_pos - arm_depth_cam_pos, ord=2, axis=-1
+        )
 
         self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
 
@@ -1038,7 +1051,6 @@ class StepTerminate(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._accum_step += 1
 
-
         if (
             self._config.MAX_STEP > 0
             and self._accum_step > self._config.MAX_STEP
@@ -1047,6 +1059,7 @@ class StepTerminate(Measure):
             self._metric = True
         else:
             self._metric = False
+
 
 @registry.register_measure
 class DistanceTerminate(UsesRobotInterface, Measure):
@@ -1077,7 +1090,6 @@ class DistanceTerminate(UsesRobotInterface, Measure):
             **kwargs,
         )
 
-
     def update_metric(self, *args, episode, task, observations, **kwargs):
         ee_pos = self._sim.get_robot_data(
             self.robot_id
@@ -1087,16 +1099,17 @@ class DistanceTerminate(UsesRobotInterface, Measure):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
 
-        arm_depth_state = self._sim.get_agent_state().sensor_states["robot_arm_depth"]
+        arm_depth_state = self._sim.get_agent_state().sensor_states[
+            "robot_arm_depth"
+        ]
         arm_depth_cam_pos = arm_depth_state.position
 
-        distances = np.linalg.norm(target_pos - arm_depth_cam_pos, ord=2, axis=-1)
+        distances = np.linalg.norm(
+            target_pos - arm_depth_cam_pos, ord=2, axis=-1
+        )
         distance = distances[0]
 
-        if (
-            self._config.MAX_DIS > 0
-            and distance > self._config.MAX_DIS
-        ):
+        if self._config.MAX_DIS > 0 and distance > self._config.MAX_DIS:
             self._task.should_end = True
             self._metric = True
         else:

@@ -430,6 +430,9 @@ class EpisodeIterator(Iterator[T]):
         self.step_repetition_range = step_repetition_range
         self._set_shuffle_intervals()
 
+        # Fix the specific episode.
+        self.fix_episode = None
+
     def __iter__(self) -> "EpisodeIterator":
         return self
 
@@ -441,12 +444,13 @@ class EpisodeIterator(Iterator[T]):
         self._forced_scene_switch_if()
 
         next_episode = next(self._iterator, None)
-        self.fix_episode = None
-        if self.fix_episode is None:
-            for epi in self.episodes:
-                if epi.episode_id == "454":
-                    self.fix_episode = epi
-        next_episode = self.fix_episode
+        # if self.fix_episode is None:
+        #     for epi in self.episodes:
+        #         if epi.episode_id == "454":
+        #             self.fix_episode = epi
+        # next_episode = self.fix_episode
+        if next_episode is not None:
+            print("Episode ID @ dataset.py:", next_episode.episode_id)
 
         if next_episode is None:
             if not self.cycle:

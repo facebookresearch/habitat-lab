@@ -8,6 +8,7 @@ import os.path as osp
 from collections import defaultdict
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import cv2
 import magnum as mn
 import numpy as np
 import numpy.typing as npt
@@ -34,7 +35,6 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
-import cv2
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
@@ -128,7 +128,7 @@ class RearrangeSim(HabitatSim):
 
     def _get_raw_target_trans(self):
         """
-        TODO: 
+        TODO:
         Description
         """
         # Preprocess the ep_info making necessary datatype conversions.
@@ -772,46 +772,52 @@ class RearrangeSim(HabitatSim):
         )
 
     def get_grasp_object_mask(self, abs_obj_idx, arm_depth_img=None):
-        #breakpoint()
+        # breakpoint()
         # Save object translation before poofing it
         # orig_target_obj_trans = np.array(self._sim.get_translation(abs_obj_idx))
-        orig_target_obj = self.get_rigid_object_manager().get_object_by_id(abs_obj_idx)
-        orig_target_obj_trans = np.array(orig_target_obj.translation) # TODO: why array
+        orig_target_obj = self.get_rigid_object_manager().get_object_by_id(
+            abs_obj_idx
+        )
+        orig_target_obj_trans = np.array(
+            orig_target_obj.translation
+        )  # TODO: why array
 
         if arm_depth_img is None:
             # Get depth image
             arm_depth_img = self._sensor_suite.get_observations(
                 self.get_sensor_observations()
             )["robot_arm_depth"]
-        #breakpoint()
-        #cv2.imwrite("ee_depth_test_1.png", (np.uint8(np.clip(arm_depth_img,0,1)*255)))
+        # breakpoint()
+        # cv2.imwrite("ee_depth_test_1.png", (np.uint8(np.clip(arm_depth_img,0,1)*255)))
 
         # Poof it beneath the floor where it won't be seen
         # self._sim.set_translation(np.array([0.0, -15.0, 0.0]), abs_obj_idx)
         orig_target_obj.translate(np.array([0.0, -15.0, 0.0]))
-        #self._sim.null_step_world()
+        # self._sim.null_step_world()
 
         # Get new depth image
         arm_depth_img_no_target_obj = self._sensor_suite.get_observations(
             self.get_sensor_observations()
         )["robot_arm_depth"]
-        #breakpoint()
-        #cv2.imwrite("ee_depth_test_2.png", (np.uint8(np.clip(arm_depth_img_no_target_obj,0,1)*255)))
+        # breakpoint()
+        # cv2.imwrite("ee_depth_test_2.png", (np.uint8(np.clip(arm_depth_img_no_target_obj,0,1)*255)))
 
         # Return the object to its original transformation
-        #self._sim.set_translation(orig_target_obj_trans, abs_obj_idx)
+        # self._sim.set_translation(orig_target_obj_trans, abs_obj_idx)
         orig_target_obj.translation = orig_target_obj_trans
-        #self._sim.null_step_world()
-        #breakpoint()
+        # self._sim.null_step_world()
+        # breakpoint()
         # Get binary absolute difference mask
-        abs_diff = np.uint8(np.abs(arm_depth_img - arm_depth_img_no_target_obj) * 255)
+        abs_diff = np.uint8(
+            np.abs(arm_depth_img - arm_depth_img_no_target_obj) * 255
+        )
         abs_diff[abs_diff > 0] = 255
 
         # Denoise mask
         abs_diff_denoised = cv2.blur(abs_diff, (5, 5))
         abs_diff_denoised[abs_diff_denoised < 255] = 0
 
-        #breakpoint()
-        #cv2.imwrite("ee_depth_test_3.png", abs_diff_denoised)
+        # breakpoint()
+        # cv2.imwrite("ee_depth_test_3.png", abs_diff_denoised)
 
         return abs_diff_denoised

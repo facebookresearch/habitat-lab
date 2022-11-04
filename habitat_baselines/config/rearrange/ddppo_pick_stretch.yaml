@@ -1,22 +1,22 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/pick_stretch.yaml
+BASE_TASK_CONFIG_PATH: /Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/rearrange/pick_stretch.yaml
 TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "/Users/jimmytyyang/Documents/log_data/tb_pick_0421_v4_stretch"
-VIDEO_DIR: "/Users/jimmytyyang/Documents/log_data/video_dir_pick_0421_v4_stretch"
+TENSORBOARD_DIR: "/Users/jimmytyyang/Documents/log_data/tb_pick_1003_v1"
+VIDEO_DIR: "/Users/jimmytyyang/Documents/log_data/video_dir_pick_1003_v1"
 VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 VIDEO_RENDER_VIEWS:
   - "THIRD_RGB_SENSOR"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: #"/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_0421_v4_stretch/ckpt.10.pth"
-NUM_ENVIRONMENTS: 2
+EVAL_CKPT_PATH_DIR: #"/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_0427_test/ckpt.10.pth"
+NUM_ENVIRONMENTS: 1
 # Visual sensors to include
-SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR", "ARM_SEMANTIC_SENSOR"]
-CHECKPOINT_FOLDER: "/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_0421_v4_stretch"
+SENSORS: ["HEAD_DEPTH_SENSOR", "HEAD_RGB_SENSOR"]
+CHECKPOINT_FOLDER: "/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_1003_v1"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 1.0e9
 LOG_INTERVAL: 10 # This is based on the PPO  num_steps
@@ -53,7 +53,7 @@ RL:
     num_mini_batch: 1
     value_loss_coef: 0.5
     entropy_coef: 0.0001
-    lr: 3e-4 # default 0.00025
+    lr: 0.00025 # default 0.00025
     eps: 1e-5
     max_grad_norm: 0.5 # 0.2
     num_steps: 128 # number of steps used in PPO training
@@ -66,7 +66,7 @@ RL:
     entropy_target_factor: 0.0
     use_adaptive_entropy_pen: False
     use_clipped_value_loss: True
-    use_normalized_advantage: True
+    use_normalized_advantage: False
     hidden_size: 128
     # Use double buffered sampling, typically helps
     # when environment time is similar or large than

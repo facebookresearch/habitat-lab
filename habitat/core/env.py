@@ -222,11 +222,7 @@ class Env:
         self._elapsed_steps = 0
         self._episode_over = False
 
-    def reset(self) -> Observations:
-        r"""Resets the environments and returns the initial observations.
-
-        :return: initial observations from the environment.
-        """
+    def episode_gen(self):
         self._reset_stats()
 
         # Delete the shortest path cache of the current episode
@@ -247,9 +243,26 @@ class Env:
         self._episode_force_changed = False
 
         assert self._current_episode is not None, "Reset requires an episode"
-        self.reconfigure(self._config)
 
+    def reset(self) -> Observations:
+        r"""Resets the environments and returns the initial observations.
+
+        :return: initial observations from the environment.
+        """
+
+        self.episode_gen()
+        self.reconfigure(self._config)
         observations = self.task.reset(episode=self.current_episode)
+        print("ee")
+        # Prevent the episode from fails
+        # while True:
+        #     if self.task.fail_pos_episode:
+        #         self.episode_gen()
+        #         self.reconfigure(self._config)
+        #         observations = self.task.reset(episode=self.current_episode)
+        #     else:
+        #         break
+
         self._task.measurements.reset_measures(
             episode=self.current_episode,
             task=self.task,

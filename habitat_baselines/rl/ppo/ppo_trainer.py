@@ -646,20 +646,22 @@ class PPOTrainer(BaseRLTrainer):
             self.reward_per_update["reward"].append(deltas["reward"])
         else:
             pre_value = self.reward_per_update["reward"][-1]
-            value = deltas["reward"]-pre_value
+            value = deltas["reward"] - pre_value
             if value == 0:
                 value = pre_value
             self.reward_per_update["reward"].append(value)
 
         if "rearrangepick_reward" not in self.reward_per_update:
             self.reward_per_update["rearrangepick_reward"] = []
-            self.reward_per_update["rearrangepick_reward"].append(deltas["reward"])
+            self.reward_per_update["rearrangepick_reward"].append(
+                deltas["reward"]
+            )
         else:
             pre_value = self.reward_per_update["rearrangepick_reward"][-1]
-            value = deltas["rearrangepick_reward"]-pre_value
-            if value == 0:
-                value = pre_value
-            self.reward_per_update["rearrangepick_reward"].append(value)
+            # value = deltas["rearrangepick_reward"]-pre_value
+            # if value == 0:
+            #     value = pre_value
+            self.reward_per_update["rearrangepick_reward"].append(0)
 
         # Check to see if there are any metrics
         # that haven't been logged yet
@@ -676,7 +678,9 @@ class PPOTrainer(BaseRLTrainer):
 
         # Write to the tensorboard
         for k, v in self.reward_per_update.items():
-            writer.add_scalar(f"metrics_per_update/{k}", v[-1], self.num_steps_done)
+            writer.add_scalar(
+                f"metrics_per_update/{k}", v[-1], self.num_steps_done
+            )
 
         fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
         writer.add_scalar("perf/fps", fps, self.num_steps_done)

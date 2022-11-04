@@ -52,6 +52,7 @@ from collections import defaultdict
 
 import magnum as mn
 import numpy as np
+import random
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
@@ -62,44 +63,103 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
-
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+import habitat_sim
 try:
     import pygame
 except ImportError:
     pygame = None
 
-# DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/check_nav_fetch.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/check_nav_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/pick_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/open_cab_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/open_cab.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/open_fridge_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/pick_spot_blind.yaml"
-DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
-# DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 import os
-
 # Quiet the Habitat simulator logging
 os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
 
+# How many random way points you want to generate
+LEN_WAY_POINT = 1000
 
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
 
 
+def waypoint_generator(env, args, config):
+    """Generate the waypoints that the robot should navigate"""
+    # Get the velocity of control
+    base_vel_ctrl = habitat_sim.physics.VelocityControl()
+    base_vel_ctrl.controlling_lin_vel = True
+    base_vel_ctrl.lin_vel_is_local = True
+    base_vel_ctrl.controlling_ang_vel = True
+    base_vel_ctrl.ang_vel_is_local = True
+
+    base_action_list = [[1, 0], [0, 1], [0, -1]]
+
+    visited_points = []
+    used_actions = []
+
+    while True:
+        before_base_pos = env.sim.robot.base_pos
+        before_base_rot = env.sim.robot.base_rot
+
+        base_action = random.choice(base_action_list)
+        lin_vel = base_action[0] * 10
+        ang_vel = base_action[1] * 10
+        base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        trans = env.sim.robot.sim_obj.transformation
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        target_rigid_state = base_vel_ctrl.integrate_transform(
+            1 / env.sim.ctrl_freq, rigid_state
+        )
+
+        new_pos = target_rigid_state.translation
+        new_pos[1] = env.sim.robot.base_pos[1]
+        env.sim.robot.base_pos = new_pos
+        env.sim.robot.base_rot = target_rigid_state.rotation.angle()
+
+        after_base_pos = env.sim.robot.base_pos
+        after_base_rot = env.sim.robot.base_rot
+
+        is_navigable = env.sim.pathfinder.is_navigable(after_base_pos)
+        is_contact = env.sim.contact_test(env.sim.robot.get_robot_sim_id())
+
+        if (not is_navigable) or (is_contact):
+            env.sim.robot.base_pos = before_base_pos
+            env.sim.robot.base_rot = before_base_rot
+        else:
+            visited_points.append([after_base_pos, after_base_rot])
+            used_actions.append(base_action)
+
+        if len(visited_points) >= LEN_WAY_POINT:
+            break
+
+    return visited_points, used_actions
+
+
+def distance_angle(alpha, beta):
+    alpha = float(alpha)
+    beta = float(beta)
+    phi = abs(beta - alpha) % (2*np.pi);       # This is either the distance or 360 - distance
+    if phi > np.pi:
+        return 2*np.pi - phi
+    else:
+        return phi
+
+def point2vel(action_list):
+    """The point2vel in pratice should take the input of waypoints, but here
+        I just use the ground-truth action control.
+    """
+    return action_list[0]
+
 def get_input_vel_ctlr(
-    skip_pygame, arm_action, env, not_block_input, agent_to_control
+    skip_pygame, arm_action, env, not_block_input, agent_to_control, base_action
 ):
     if skip_pygame:
         return step_env(env, "EMPTY", {}), None, False
@@ -123,11 +183,11 @@ def get_input_vel_ctlr(
             arm_key
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
-        base_action = None
+        #base_action = None
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
-        base_action = [0, 0]
+        #base_action = [0, 0]
 
     if arm_action is None:
         arm_action = np.zeros(arm_action_space.shape[0])
@@ -200,7 +260,6 @@ def get_input_vel_ctlr(
                 arm_action[6] = -1.0
         elif arm_action_space.shape[0] == 8:
             # Velocity control. A different key for each joint
-
             if keys[pygame.K_q]:
                 arm_action[0] = 1.0
             elif keys[pygame.K_1]:
@@ -237,9 +296,9 @@ def get_input_vel_ctlr(
                 arm_action[6] = -1.0
 
             elif keys[pygame.K_8]:
-                arm_action[7] = 1.0
+                arm_action[6] = 1.0
             elif keys[pygame.K_9]:
-                arm_action[7] = -1.0
+                arm_action[6] = -1.0
 
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
@@ -415,14 +474,15 @@ def play_env(env, args, config):
     )
     is_multi_agent = len(env._sim.robots_mgr) > 1
 
+    before_base_pos = env.sim.robot.base_pos
+    before_base_rot = env.sim.robot.base_rot
+
+    waypoint_list, used_action_list = waypoint_generator(env, args, config)
+
+    env.sim.robot.base_pos = before_base_pos
+    env.sim.robot.base_rot = before_base_rot
+
     while True:
-        # print(env.sim.robot.base_pos, env.sim.robot.base_rot)
-        # print("ee_transform:", env.sim.robot.ee_transform.translation)
-        trans = env.sim.robot.base_transformation
-        ee_pos = env.sim.robot.ee_transform.translation
-        local_ee_pos = trans.inverted().transform_point(ee_pos)
-        print("local_ee_pos:", local_ee_pos, ee_pos)
-        # print("rel target pos:", rel_targ_pos)
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
@@ -444,6 +504,13 @@ def play_env(env, args, config):
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )
 
+        # Here is the part to decide the velocity control.
+        if len(used_action_list) == 0:
+            base_action = [0, 0]
+        else:
+            base_action = point2vel(used_action_list)
+            used_action_list = used_action_list[1:]
+
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[update_idx]
@@ -452,6 +519,7 @@ def play_env(env, args, config):
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
+            base_action,
         )
 
         if not args.no_render and keys[pygame.K_c]:

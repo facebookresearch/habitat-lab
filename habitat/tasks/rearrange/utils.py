@@ -236,6 +236,7 @@ class CacheHelper:
             with open(self.cache_id, "rb") as f:
                 if self.verbose:
                     rearrange_logger.info(f"Loading cache @{self.cache_id}")
+                print(self.cache_id)
                 return pickle.load(f)
         except EOFError as e:
             if load_depth == 32:

@@ -36,6 +36,9 @@ def flatten_dict(d, parent_key=""):
 
 
 def smash_observation_space(obs_space, limit_keys):
+    import pdb
+
+    pdb.set_trace()
     obs_shapes = [obs_space.spaces[k].shape for k in limit_keys]
 
     def transform_shape(shape):

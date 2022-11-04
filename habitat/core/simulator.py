@@ -119,7 +119,7 @@ class Observations(Dict[str, Any]):
         :param sensors: list of sensors whose observations are fetched and
             packaged.
         """
-        #import pdb; pdb.set_trace()
+        # import pdb; pdb.set_trace()
 
         data = [
             (uuid, sensor.get_observation(*args, **kwargs))

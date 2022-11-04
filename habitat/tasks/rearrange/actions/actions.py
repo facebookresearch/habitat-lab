@@ -19,10 +19,10 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 # These actions need to be imported since there is a Python evaluation
 # statement which dynamically creates the desired grip controller.
 from habitat.tasks.rearrange.actions.grip_actions import (
+    GazeGraspAction,
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
-    GazeGraspAction
 )
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -177,6 +177,7 @@ class ArmRelPosKinematicAction(RobotAction):
         self.cur_robot.arm_joint_pos = set_arm_pos
         self.cur_robot.fix_joint_values = set_arm_pos
 
+
 @registry.register_task_action
 class ArmRelPosKinematicReducedAction(RobotAction):
     """
@@ -184,8 +185,17 @@ class ArmRelPosKinematicReducedAction(RobotAction):
     action
     """
 
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self.last_arm_action = None
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.last_arm_action = None
+
     @property
     def action_space(self):
+        self.step_c = 0
         return spaces.Box(
             shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
             low=-1,
@@ -200,7 +210,6 @@ class ArmRelPosKinematicReducedAction(RobotAction):
         delta_pos *= self._config.DELTA_POS_LIMIT
         self._sim: RearrangeSim
 
-
         # # clip from -1 to 1
         # delta_pos = np.clip(delta_pos, -1, 1)
         # delta_pos *= self._config.DELTA_POS_LIMIT
@@ -208,6 +217,23 @@ class ArmRelPosKinematicReducedAction(RobotAction):
         # self._sim: RearrangeSim
         # self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
 
+        # if self.step_c >= 100:
+        #     try:
+        #         print(self._sim.contact_test(self.cur_robot.sim_obj.object_id))
+        #     except:
+        #         print("ee")
+        #     try:
+        #         link_ids = self.cur_robot.sim_obj.get_link_ids()
+        #     except:
+        #         print("ee")
+        #     for ids in link_ids:
+        #         try:
+        #             if ids == 19:
+        #                 break
+        #             print(ids,'-',self._sim.contact_test(ids))
+        #         except:
+        #             print("ee")
+        # self.step_c += 1
 
         # Expand delta_pos based on mask
         expanded_delta_pos = np.zeros(len(self._config.ARM_JOINT_MASK))
@@ -228,8 +254,107 @@ class ArmRelPosKinematicReducedAction(RobotAction):
         for i, v in enumerate(self._config.ARM_JOINT_MASK):
             if v == 0:
                 set_arm_pos[i] = 0
+
         self.cur_robot.arm_motor_pos = set_arm_pos
-        #self.cur_robot.fix_joint_values = set_arm_pos
+        # #if self._config.PREVENT_PENETRATION:
+        # if False:
+        #     # Get the ee position
+        #     ee_pos = self._sim.robot.ee_transform.translation
+        #     # Get the arm bottom base position
+        #     arm_base_pos = self._sim.robot.sim_obj.get_link_scene_node(0).transformation
+        #     arm_base_pos.translation = arm_base_pos.transform_point(
+        #         self._sim.robot.ee_local_offset
+        #     )
+        #     arm_base_pos = arm_base_pos.translation
+        #     # Compute the directional vector for the arm and the base
+        #     ee_dir_vec = ee_pos - arm_base_pos # For ee vector
+        #     bs_dir_vec = self._sim.robot.base_pos - arm_base_pos # For base vector
+        #     bs_dir_vec[1] = 0.0 # Remove the z direction offset
+        #     # Find theta angle between two directional vectors
+        #     angle = self.arccos(ee_dir_vec, bs_dir_vec)
+        #     if angle <= np.pi/2.0:
+        #         self.cur_robot.arm_motor_pos = self.last_arm_action
+        #     elif angle > np.pi/2.0+0.05:
+        #         self.last_arm_action = self.cur_robot.arm_motor_pos
+
+    def arccos(self, v1, v2):
+        inner_product = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]
+        norm_v1 = (v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2) ** 0.5
+        norm_v2 = (v2[0] ** 2 + v2[1] ** 2 + v2[2] ** 2) ** 0.5
+        return np.arccos(inner_product / (norm_v1 * norm_v2))
+
+
+@registry.register_task_action
+class ArmRelPosKinematicReducedActionStretch(RobotAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self.last_arm_action = None
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.last_arm_action = None
+
+    @property
+    def action_space(self):
+        self.step_c = 0
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, *args, **kwargs):
+        if self._config.get("SHOULD_CLIP", True):
+            # clip from -1 to 1
+            delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
+        self._sim: RearrangeSim
+
+        # Expand delta_pos based on mask
+        expanded_delta_pos = np.zeros(len(self._config.ARM_JOINT_MASK))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._config.ARM_JOINT_MASK:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            expanded_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        min_limit, max_limit = self.cur_robot.arm_joint_limits
+        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        # print('1. expanded_delta_pos:', expanded_delta_pos)
+        # print('2. set_arm_pos:', set_arm_pos)
+        # Perform roll over to the joints
+        if expanded_delta_pos[0] >= 0:
+            for i in range(3):
+                if set_arm_pos[i] > max_limit[i]:
+                    set_arm_pos[i + 1] += set_arm_pos[i] - max_limit[i]
+                    set_arm_pos[i] = max_limit[i]
+        else:
+            for i in range(3):
+                if set_arm_pos[i] < min_limit[i]:
+                    set_arm_pos[i + 1] -= min_limit[i] - set_arm_pos[i]
+                    set_arm_pos[i] = min_limit[i]
+        # print('3. set_arm_pos:', set_arm_pos)
+        set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+
+        self.cur_robot.arm_motor_pos = set_arm_pos
+
+    def arccos(self, v1, v2):
+        inner_product = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]
+        norm_v1 = (v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2) ** 0.5
+        norm_v2 = (v2[0] ** 2 + v2[1] ** 2 + v2[2] ** 2) ** 0.5
+        return np.arccos(inner_product / (norm_v1 * norm_v2))
+
 
 @registry.register_task_action
 class ArmAbsPosAction(RobotAction):
@@ -367,6 +492,12 @@ class BaseVelAction(RobotAction):
         else:
             self.does_want_terminate = False
 
+        if self._config.VEL_BASE_MASK is not None:
+            if self._config.VEL_BASE_MASK[0] == 0:
+                lin_vel = 0.0
+            if self._config.VEL_BASE_MASK[1] == 0:
+                ang_vel = 0.0
+
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
@@ -378,25 +509,21 @@ class BaseVelAction(RobotAction):
             target_rigid_state = self.base_vel_ctrl.integrate_transform(
                 1 / self._sim.ctrl_freq, rigid_state
             )
-            import time
-            start_time = time.time()
-            self._sim.contact_test(self.cur_robot.sim_obj.object_id)
-            elapsed_time_1 = time.time() - start_time
-            start_time = time.time()
-            self._sim.step_filter(rigid_state.translation, target_rigid_state.translation)
-            elapsed_time_2 = time.time() - start_time
+            # import time
+            # start_time = time.time()
+            # self._sim.contact_test(self.cur_robot.sim_obj.object_id)
+            # elapsed_time_1 = time.time() - start_time
+            # start_time = time.time()
+            # self._sim.step_filter(rigid_state.translation, target_rigid_state.translation)
+            # elapsed_time_2 = time.time() - start_time
 
             self.cur_robot.update_base(rigid_state, target_rigid_state)
 
-            self.data_time_1.append(elapsed_time_1)
-            self.data_time_2.append(elapsed_time_2)
+            # self.data_time_1.append(elapsed_time_1)
+            # self.data_time_2.append(elapsed_time_2)
             self.check_step()
 
         self.counter += 1
-        print(self.counter)
-        if self.counter == 1000:
-            print("Average time contact test", np.sum(self.data_time_1)/self.counter)
-            print("Average time step filter", np.sum(self.data_time_2)/self.counter)
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.BASE_VELOCITY)

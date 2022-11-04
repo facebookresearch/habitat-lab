@@ -11,6 +11,7 @@ SIMULATOR:
   DEPTH_SENSOR:
     WIDTH: 256
     HEIGHT: 256
+  SCENE: "/Users/jimmytyyang/Habitat/habitat-lab/habitat-lab/data/datasets/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
 TASK:
   TYPE: Nav-v0
   END_ON_SUCCESS: True

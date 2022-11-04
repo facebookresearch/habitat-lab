@@ -144,8 +144,14 @@ class RearrangeTask(NavigationTask):
         else:
             robot_pos, robot_rot = self._robot_pos_start[start_ident]
         robot = self._sim.get_robot_data(agent_idx).robot
+
+        # robot_pos[0] = 2.7#2.59786
+        # robot_pos[2] = 0#6.2222
         robot.base_pos = robot_pos
+        # robot_rot = 2.50153708457947
         robot.base_rot = robot_rot
+
+        # 0.263743, 0.152255, 3.13788
 
     def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id

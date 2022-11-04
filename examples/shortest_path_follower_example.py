@@ -47,6 +47,9 @@ def shortest_path_example():
     config.defrost()
     config.TASK.MEASUREMENTS.append("TOP_DOWN_MAP")
     config.freeze()
+    import pdb
+
+    pdb.set_trace()
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
         if goal_radius is None:
@@ -70,9 +73,13 @@ def shortest_path_example():
                 best_action = follower.get_next_action(
                     env.habitat_env.current_episode.goals[0].position
                 )
+                print(env.habitat_env.current_episode.goals[0].position)
+                import pdb
+
+                pdb.set_trace()
                 if best_action is None:
                     break
-
+                print("best_action:", best_action)
                 observations, reward, done, info = env.step(best_action)
                 im = observations["rgb"]
                 top_down_map = draw_top_down_map(info, im.shape[0])

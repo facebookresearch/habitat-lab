@@ -325,7 +325,6 @@ class ArtObjReward(RearrangeReward):
 
         cur_dist = abs(link_state - task.success_js_state)
         prev_dist = abs(self._prev_art_state - task.success_js_state)
-
         # Dense reward to the target articulated object state.
         dist_diff = prev_dist - cur_dist
         if not is_art_obj_state_succ:

@@ -44,6 +44,10 @@ class RearrangePickTaskV1(RearrangeTask):
         self.force_set_idx = None
         self._add_cache_key: str = ""
 
+        self.fail_pos_episode = False
+
+        self.rel_target_position = None
+
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
         if ADD_CACHE_KEY in kwargs:
@@ -74,6 +78,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self, sim, is_easy_init, episode, sel_idx, force_snap_pos=None
     ):
         target_positions = self._get_targ_pos(sim)
+        # Target object position
         targ_pos = target_positions[sel_idx]
 
         if force_snap_pos is not None:
@@ -81,14 +86,16 @@ class RearrangePickTaskV1(RearrangeTask):
         else:
             snap_pos = targ_pos
 
+        # This generates a robot in front of the counter, OR just does snap_point.
         orig_start_pos = sim.safe_snap_point(snap_pos)
 
         state = sim.capture_state()
         start_pos = orig_start_pos
 
         forward = np.array([1.0, 0, 0])
-        dist_thresh = 0.1
+        dist_thresh = 1.0
         did_collide = False
+        is_contact = False
 
         if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
             # Setting so the object is within reach is harder and requires more
@@ -106,11 +113,21 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
+            # Move the object away from the target location
+            move_dir = targ_pos - start_pos
+            move_dir[1] = 0
+            move_dir = self._unit_vec(move_dir)
+            if "hab_spot_arm.urdf" in self._sim.robot.urdf_path:
+                start_pos -= move_dir * 0.25
+            else:
+                start_pos -= move_dir * 0.1
+            # Get heading that would point the robot towards the object
             rel_targ = targ_pos - start_pos
+
             angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
             if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
                 angle_to_obj *= -1.0
-
+            # Check if there is spawn noise
             if not self._is_there_spawn_noise:
                 rearrange_logger.debug(
                     "No spawn noise, returning first found position"
@@ -119,6 +136,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
             targ_dist = np.linalg.norm((start_pos - orig_start_pos)[[0, 2]])
 
+            # Check if the robot can navigate through the objects
             is_navigable = is_easy_init or sim.pathfinder.is_navigable(
                 start_pos
             )
@@ -127,13 +145,16 @@ class RearrangePickTaskV1(RearrangeTask):
                 continue
 
             sim.set_state(state)
-
+            # Set the robot base position
             sim.robot.base_pos = start_pos
-
 
             # Face the robot towards the object.
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
-            sim.robot.base_rot = angle_to_obj + rot_noise
+            if "hab_stretch_obj.urdf" in sim.robot.urdf_path:
+                angle_to_obj += 1.57
+                sim.robot.base_rot = angle_to_obj + rot_noise
+            else:
+                sim.robot.base_rot = angle_to_obj + rot_noise
 
             # Ensure the target is within reach
             is_within_bounds = True
@@ -143,8 +164,16 @@ class RearrangePickTaskV1(RearrangeTask):
                 eps = 1e-2
                 upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
                 is_within_bounds = (rel_targ_pos < upper_bound).all()
+                self.rel_target_position = targ_pos
                 if not is_within_bounds:
+                    # import pdb; pdb.set_trace()
+                    print("not within bound:", rel_targ_pos)
                     continue
+
+            # Check if the robot has a collision to the object
+            is_contact = sim.contact_test(sim.robot.get_robot_sim_id())
+            if is_contact:
+                continue
 
             # Make sure the robot is not colliding with anything in this
             # position.
@@ -170,14 +199,23 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos, angle_to_obj = self._gen_start_pos(
                 sim, True, episode, sel_idx
             )
-        elif not is_within_bounds or attempt == timeout or did_collide:
+        elif (
+            not is_within_bounds
+            or attempt == timeout
+            or did_collide
+            or is_contact
+        ):
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )
+            self.fail_pos_episode = True
 
         sim.set_state(state)
 
         return start_pos, angle_to_obj
+
+    def _unit_vec(self, v):
+        return v / (v[0] ** 2 + v[1] ** 2 + v[2] ** 2) ** 0.5
 
     def _should_prevent_grip(self, action_args):
         return (
@@ -206,6 +244,7 @@ class RearrangePickTaskV1(RearrangeTask):
     def reset(self, episode: Episode, fetch_observations: bool = True):
         sim = self._sim
 
+        self.fail_pos_episode = False
         assert isinstance(
             episode, RearrangeEpisode
         ), "Provided episode needs to be of type RearrangeEpisode for RearrangePickTaskV1"
@@ -278,7 +317,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
         sim.robot.base_pos = start_pos
         if "hab_stretch_obj.urdf" in sim.robot.urdf_path:
-            sim.robot.base_rot = 1.57 * 1.5
+            sim.robot.base_rot = start_rot  # + 1.57 #* 1.5
         else:
             sim.robot.base_rot = start_rot
 

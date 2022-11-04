@@ -157,6 +157,7 @@ _C.TASK.ACTIONS.BASE_VELOCITY.ALLOW_BACK = True
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_LIN_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.MIN_ABS_ANG_SPEED = 1.0
 _C.TASK.ACTIONS.BASE_VELOCITY.AGENT = None
+_C.TASK.ACTIONS.BASE_VELOCITY.VEL_BASE_MASK = None
 _C.TASK.ACTIONS.REARRANGE_STOP = CN()
 _C.TASK.ACTIONS.REARRANGE_STOP.TYPE = "RearrangeStopAction"
 # -----------------------------------------------------------------------------
@@ -743,8 +744,8 @@ _C.SIMULATOR.DEPTH_SENSOR.TYPE = "HabitatSimDepthSensor"
 # -----------------------------------------------------------------------------
 # ARM DEPTH SENSOR FOR TASK
 # -----------------------------------------------------------------------------
-#_C.TASK.ARM_DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
-#_C.TASK.ARM_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
+# _C.TASK.ARM_DEPTH_SENSOR = CAMERA_SIM_SENSOR.clone()
+# _C.TASK.ARM_DEPTH_SENSOR.merge_from_other_cfg(SIMULATOR_DEPTH_SENSOR)
 _C.TASK.ARM_DEPTH_SENSOR = _C.SIMULATOR.DEPTH_SENSOR.clone()
 _C.TASK.ARM_DEPTH_SENSOR.TYPE = "ArmDepthSensor"
 _C.TASK.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"

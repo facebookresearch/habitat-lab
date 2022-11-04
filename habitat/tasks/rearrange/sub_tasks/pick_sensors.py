@@ -8,9 +8,9 @@
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
+    CameraToTargetDistance,
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
-    CameraToTargetDistance,
     ForceTerminate,
     RearrangeReward,
     RobotForce,
@@ -89,26 +89,21 @@ class RearrangePickReward(RearrangeReward):
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
-        camera_to_object_distance = task.measurements.measures[
-            CameraToTargetDistance.cls_uuid
-        ].get_metric()
+        # camera_to_object_distance = task.measurements.measures[
+        #     CameraToTargetDistance.cls_uuid
+        # ].get_metric()
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
 
         if cur_picked:
-            dist_to_goal = 0 #ee_to_rest_distance #
+            dist_to_goal = ee_to_rest_distance  #
         else:
-            if ee_to_object_distance is not None:
-                dist_to_goal = ee_to_object_distance[str(task.abs_targ_idx)]
-                #dist_to_goal = camera_to_object_distance["0"]
-            else:
-                dist_to_goal = 1.0
+            dist_to_goal = ee_to_object_distance[str(task.abs_targ_idx)]
 
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
 
         did_pick = cur_picked and (not self._prev_picked)
-
         if did_pick:
             if snapped_id == abs_targ_obj_idx:
                 self._metric += self._config.PICK_REWARD
@@ -137,7 +132,7 @@ class RearrangePickReward(RearrangeReward):
             dist_diff = round(dist_diff, 3)
             self._metric += self._config.DIST_REWARD * dist_diff
         else:
-            self._metric += self._config.DIST_REWARD * dist_to_goal
+            self._metric -= self._config.DIST_REWARD * dist_to_goal
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
@@ -190,6 +185,7 @@ class RearrangePickSuccess(Measure):
         # Check that we are holding the right object and the object is actually
         # being held.
         # Update the metric here
+
         self._metric = (
             abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
