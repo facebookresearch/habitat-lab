@@ -29,7 +29,7 @@ class GotoVelocityController:
         self.control = DiffDriveVelocityControl(hz)
 
         # Publishers
-        rospy.init_node("state_estimator")
+        rospy.init_node("goto_controller")
         self._vel_command_pub = rospy.Publisher("/stretch/cmd_vel", Twist, queue_size=1)
 
         # Initialize
@@ -47,8 +47,6 @@ class GotoVelocityController:
         """
         Updates error based on robot localization
         """
-        xyt_loc_new = self.robot.get_estimator_pose()
-
         xyt_err = xyt_global_to_base(self.xyt_goal, self.xyt_loc)
         if not self.track_yaw:
             xyt_err[2] = 0.0
