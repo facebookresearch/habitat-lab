@@ -146,14 +146,6 @@ class ArmRelPosAction(RobotAction):
         delta_pos *= self._config.delta_pos_limit
         # The actual joint positions
         self._sim: RearrangeSim
-        final_action = delta_pos + self.cur_robot.arm_motor_pos
-        print(final_action)
-        final_action = np.clip(
-            final_action,
-            np.array([0, 0, 0, 0, 0, -1.75, -3.90, -1.52]),
-            np.array([0.129, 0.129, 0.129, 0.129, 1.1, 4, 1.5, 0.79]),
-        )
-        print(final_action)
         self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
 
 
