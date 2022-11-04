@@ -11,6 +11,17 @@ Mostly Hello Stretch infrastructure
 1. Install repo `pip install -e .`
 1. (optional) Install Mamba: `conda install -c conda-forge mamba`
 
+## Usage
+To launch the hardware stack:
+```
+mrp -f launch_hw.py
+```
+
+This launches:
+- Stretch ROS driver
+- Hector SLAM
+- State estimation node
+- Continuous controller node
 
 ## Code Contribution
 

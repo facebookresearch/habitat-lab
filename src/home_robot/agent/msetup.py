@@ -36,11 +36,5 @@ mrp.process(
     ),
 )
 
-# Hector SLAM (TODO: contain within Conda?)
-mrp.process(
-    name="hector_slam",
-    runtime=mrp.Host(run_command=["roslaunch", "stretch_hector_slam.launch"]),
-)
-
 if __name__ == "__main__":
     mrp.main()

@@ -9,5 +9,11 @@ mrp.process(
     runtime=mrp.Host(run_command=["roslaunch", "stretch_laser_odom_base.launch"]),
 )
 
+# Hector SLAM
+mrp.process(
+    name="stretch_hector_slam",
+    runtime=mrp.Host(run_command=["roslaunch", "stretch_hector_slam.launch"]),
+)
+
 if __name__ == "__main__":
     mrp.main()

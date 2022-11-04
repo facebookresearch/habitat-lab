@@ -7,9 +7,8 @@ Platform-agnostic robot control code that
 mrp up
 ```
 This launches:
-- Continuous controller node
 - State estimation node
-- Hector SLAM (WIP)
+- Continuous controller node
 
 ## Notes
 
