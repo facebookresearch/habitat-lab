@@ -84,8 +84,12 @@ class MoveObjectsReward(RearrangeReward):
         self._cur_rearrange_stage = 0
         self.update_target_object()
 
-        self._prev_obj_to_goal_dist = self.get_distance(task, ObjectToGoalDistance)
-        self._prev_ee_to_obj_dist = self.get_distance(task, EndEffectorToObjectDistance)
+        self._prev_obj_to_goal_dist = self.get_distance(
+            task, ObjectToGoalDistance
+        )
+        self._prev_ee_to_obj_dist = self.get_distance(
+            task, EndEffectorToObjectDistance
+        )
 
         self.update_metric(
             *args,
@@ -97,8 +101,8 @@ class MoveObjectsReward(RearrangeReward):
 
     def update_target_object(self):
         """
-            The agent just finished one rearrangement stage so it's time to 
-            update the target object for the next stage.
+        The agent just finished one rearrangement stage so it's time to
+        update the target object for the next stage.
         """
         # Get the next target object
         idxs, _ = self._sim.get_targets()
@@ -121,9 +125,9 @@ class MoveObjectsReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-        # If all the objects are in the right place but we haven't succeded in the task 
+        # If all the objects are in the right place but we haven't succeded in the task
         # (for example the agent hasn't called terminate) we give zero reward
-        
+
         if self._cur_rearrange_stage == self.num_targets:
             self._metric = 0
             return
@@ -145,8 +149,10 @@ class MoveObjectsReward(RearrangeReward):
         # PICK REWARD: Reward for picking up the object, only given once to avoid
         # reward hacking.
 
-        already_gave_reward = self._cur_rearrange_stage in self._gave_pick_reward
-        if (picked_up_obj and not already_gave_reward):
+        already_gave_reward = (
+            self._cur_rearrange_stage in self._gave_pick_reward
+        )
+        if picked_up_obj and not already_gave_reward:
             self._metric += self._config.pick_reward
             self._gave_pick_reward[self._cur_rearrange_stage] = True
 
@@ -154,7 +160,7 @@ class MoveObjectsReward(RearrangeReward):
         # We also udate the target object for the next stage.
 
         place_success = obj_to_goal_dist < self._config.success_dist
-        if (place_success and not is_holding_obj):
+        if place_success and not is_holding_obj:
             self._metric += self._config.single_rearrange_reward
             self._cur_rearrange_stage += 1
             if self._cur_rearrange_stage < self.num_targets:
@@ -162,8 +168,12 @@ class MoveObjectsReward(RearrangeReward):
 
         # Need to call the get_distance functions again because the target
         # object may have changed in the previous if statement.
-        self._prev_obj_to_goal_dist = self.get_distance(task, ObjectToGoalDistance)
-        self._prev_ee_to_obj_dist = self.get_distance(task, EndEffectorToObjectDistance)
+        self._prev_obj_to_goal_dist = self.get_distance(
+            task, ObjectToGoalDistance
+        )
+        self._prev_ee_to_obj_dist = self.get_distance(
+            task, EndEffectorToObjectDistance
+        )
         self._prev_holding_obj = is_holding_obj
 
 
