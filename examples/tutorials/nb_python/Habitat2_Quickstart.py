@@ -70,7 +70,6 @@ if "COLAB_GPU" in os.environ:
 import os
 
 import gym
-import gym.spaces as spaces
 import numpy as np
 from hydra.core.config_store import ConfigStore
 
@@ -78,7 +77,6 @@ import habitat
 import habitat.utils.gym_definitions
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.utils.render_wrapper import overlay_frame
@@ -246,6 +244,8 @@ class NavPickReward(RearrangeReward):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
+        # You can get you custom gonfiguration fields defined in NavPickRewardMeasurementConfig
+        self._scaling_factor = config.scaling_factor
         super().__init__(sim=sim, config=config, **kwargs)
 
     @staticmethod
@@ -267,7 +267,7 @@ class NavPickReward(RearrangeReward):
             DistanceToTargetObject.cls_uuid
         ].get_metric()
 
-        self._metric = -ee_to_object_distance
+        self._metric = -ee_to_object_distance * self._scaling_factor
 
 
 @registry.register_measure
