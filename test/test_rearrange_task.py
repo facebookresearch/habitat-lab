@@ -120,6 +120,13 @@ def test_rearrange_tasks(test_cfg_path):
         return
 
     config = get_config(test_cfg_path)
+    if (
+        config.habitat.dataset.data_path
+        == "data/ep_datasets/bench_scene.json.gz"
+    ):
+        pytest.skip(
+            "This config is only useful for examples and does not have the generated dataset"
+        )
 
     with habitat.Env(config=config) as env:
         for _ in range(5):
@@ -140,7 +147,7 @@ def test_composite_tasks(test_cfg_path):
         return
 
     config = get_config(
-        test_cfg_path, ["habitat.simulator.concur_render", False]
+        test_cfg_path, ["habitat.simulator.concur_render=False"]
     )
     if "task_spec" not in config.habitat.task:
         return
