@@ -22,7 +22,7 @@ end_on_success: True
 base_angle_noise: 0.0
 base_noise: 0.0
 actions:
-    arm_action:
-      grip_controller: null
-      should_clip: True
-      render_ee_target: True
+  arm_action:
+    grip_controller: null
+    should_clip: True
+    render_ee_target: True

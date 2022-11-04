@@ -16,8 +16,6 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 32
-  # Visual sensors to include
-  sensors: ["head_depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1e8

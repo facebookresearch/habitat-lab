@@ -32,6 +32,7 @@ class WBConfig(HabitatBaselinesBaseConfig):
 class EvalConfig(HabitatBaselinesBaseConfig):
     # The split to evaluate on
     split: str = "val"
+    use_ckpt_config: bool = True
     should_load_ckpt: bool = True
     # The number of time to run each episode through evaluation.
     # Only works when evaluating on all episodes.
@@ -417,12 +418,12 @@ class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
     orbslam2: ORBSLAMConfig = ORBSLAMConfig()
 
 
+@dataclass
+class HabitatBaselinesSPAConfig(HabitatBaselinesConfig):
+    sense_plan_act: Any = MISSING
+
+
 # Register configs to config store
-cs.store(
-    group="habitat_baselines",
-    name="habitat_baselines_config_base",
-    node=HabitatBaselinesConfig,
-)
 cs.store(
     group="habitat_baselines",
     name="habitat_baselines_rl_config_base",
@@ -437,6 +438,11 @@ cs.store(
     group="habitat_baselines",
     name="habitat_baselines_il_config_base",
     node=HabitatBaselinesILConfig,
+)
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_spa_config_base",
+    node=HabitatBaselinesSPAConfig,
 )
 
 cs.store(

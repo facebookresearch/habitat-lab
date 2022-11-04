@@ -2,11 +2,10 @@
 
 defaults:
   - /benchmark/rearrangement: reach_state
-  - /habitat_baselines: habitat_baselines_config_base
+  - /habitat_baselines: habitat_baselines_spa_config_base
 
 habitat_baselines:
   video_dir: "data/vids/"
-  count_obj_collisions: True
 
   sense_plan_act:
     verbose: True
