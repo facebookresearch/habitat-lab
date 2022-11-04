@@ -1,6 +1,6 @@
 # Home Robot
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/fairinternal/home-robot/tree/main.svg?style=shield&circle-token=625410c58d3e31cedd2f6af22b4f27343d866a77)](https://dl.circleci.com/status-badge/redirect/gh/fairinternal/home-robot/tree/main)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/facebookresearch/home-robot/tree/main.svg?style=shield&circle-token=282f21120e0b390d466913ef0c0a92f0048d52a3)](https://dl.circleci.com/status-badge/redirect/gh/facebookresearch/home-robot/tree/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Mostly Hello Stretch infrastructure
