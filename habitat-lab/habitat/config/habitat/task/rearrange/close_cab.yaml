@@ -22,6 +22,7 @@ defaults:
     - is_holding_sensor
     - end_effector_sensor
     - relative_resting_pos_sensor
+  - _self_
 
 type: RearrangeCloseDrawerTask-v0
 reward_measure: art_obj_reward

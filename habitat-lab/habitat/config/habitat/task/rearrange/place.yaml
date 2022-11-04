@@ -23,6 +23,7 @@ defaults:
     - end_effector_sensor
     - relative_resting_pos_sensor
     - object_sensor
+  - _self_
 
 type: RearrangePlaceTask-v0
 constraint_violation_ends_episode: False

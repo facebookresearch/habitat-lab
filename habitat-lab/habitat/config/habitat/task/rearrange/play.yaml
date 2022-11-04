@@ -10,6 +10,7 @@ defaults:
     - robot_force
   - /habitat/task/lab_sensors:
     - joint_sensor
+  - _self_
 
 # Config for empty task to explore the scene.
 type: RearrangeEmptyTask-v0

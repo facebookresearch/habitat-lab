@@ -152,6 +152,14 @@ def test_composite_tasks(test_cfg_path):
     if "task_spec" not in config.habitat.task:
         return
 
+    if (
+        config.habitat.dataset.data_path
+        == "data/ep_datasets/bench_scene.json.gz"
+    ):
+        pytest.skip(
+            "This config is only useful for examples and does not have the generated dataset"
+        )
+
     with habitat.Env(config=config) as env:
         if not isinstance(env.task, CompositeTask):
             return

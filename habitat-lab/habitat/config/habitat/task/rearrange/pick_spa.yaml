@@ -22,6 +22,7 @@ defaults:
     - relative_resting_pos_sensor
     - goal_sensor
     - object_sensor
+  - _self_
 
 # The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
 type: RearrangePickTask-v0

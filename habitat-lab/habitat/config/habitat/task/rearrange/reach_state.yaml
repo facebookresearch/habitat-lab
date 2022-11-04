@@ -13,6 +13,7 @@ defaults:
     - joint_sensor
     - joint_velocity_sensor
     - relative_resting_pos_sensor
+  - _self_
 
 type: RearrangeReachTask-v0
 reward_measure: "rearrange_reach_reward"

@@ -20,6 +20,7 @@ defaults:
     - target_start_point_goal_sensor
     - joint_sensor
     - nav_to_skill_sensor
+  - _self_
 
 type: NavToObjTask-v0
 reward_measure: nav_to_obj_reward

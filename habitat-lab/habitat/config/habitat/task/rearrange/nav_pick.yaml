@@ -26,6 +26,7 @@ defaults:
     - is_holding_sensor
     - end_effector_sensor
     - target_start_gps_compass_sensor
+  - _self_
 
 type: RearrangeCompositeTask-v0
 reward_measure: "move_obj_reward"
