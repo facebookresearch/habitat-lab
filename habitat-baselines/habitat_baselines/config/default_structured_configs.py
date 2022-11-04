@@ -94,7 +94,8 @@ class CenterCropperConfig(ObsTransformConfig):
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/center_cropper",
+    package="habitat_baselines.rl.policy.obs_transforms.center_cropper",
+    group="habitat_baselines/rl/policy/obs_transforms",
     name="center_cropper_base",
     node=CenterCropperConfig,
 )
@@ -114,7 +115,8 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/resize_shortest_edge",
+    package="habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge",
+    group="habitat_baselines/rl/policy/obs_transforms",
     name="resize_shortest_edge_base",
     node=ResizeShortestEdgeConfig,
 )
@@ -138,7 +140,8 @@ class Cube2EqConfig(ObsTransformConfig):
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/cube_2_eq",
+    package="habitat_baselines.rl.policy.obs_transforms.cube_2_eq",
+    group="habitat_baselines/rl/policy/obs_transforms",
     name="cube_2_eq_base",
     node=Cube2EqConfig,
 )
@@ -164,22 +167,23 @@ class Cube2FishConfig(ObsTransformConfig):
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/cube_2_fish",
+    package="habitat_baselines.rl.policy.obs_transforms.cube_2_fish",
+    group="habitat_baselines/rl/policy/obs_transforms",
     name="cube_2_fish_base",
     node=Cube2FishConfig,
 )
 
 
 @dataclass
-class AddVirtualKeysConfig(ObsTransformConfig):
-    # This is kept as reference to rememver this obs_transformer exists
+class AddVirtualKeysConfig(ObsTransformConfig, Dict[str, Any]):
     type: str = "AddVirtualKeys"
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/add_virtual_keys",
+    package="habitat_baselines.rl.policy.obs_transforms.add_virtual_keys",
+    group="habitat_baselines/rl/policy/obs_transforms",
     name="add_virtual_keys_base",
-    node=Cube2FishConfig,
+    node=AddVirtualKeysConfig,
 )
 
 
@@ -201,10 +205,18 @@ class Eq2CubeConfig(ObsTransformConfig):
 
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/eq_2_cube",
+    package="habitat_baselines.rl.policy.obs_transforms.eq_2_cube",
+    group="habitat_baselines/rl/policy/obs_transforms",
     name="eq_2_cube_base",
     node=Eq2CubeConfig,
 )
+
+
+@dataclass
+class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+    high_level_policy: Dict[str, Any] = MISSING
+    defined_skills: Dict[str, Any] = field(default_factory=dict)
+    use_skills: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -215,7 +227,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
-    high_level_policy: Dict[str, Any] = field(default_factory=dict)
+    hierarchical_policy: HierarchicalPolicy = MISSING
 
 
 @dataclass
@@ -445,7 +457,6 @@ cs.store(
     name="habitat_baselines_spa_config_base",
     node=HabitatBaselinesSPAConfig,
 )
-
 cs.store(
     group="habitat_baselines/rl/policy", name="policy_base", node=PolicyConfig
 )
