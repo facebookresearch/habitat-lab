@@ -47,24 +47,25 @@ Record and play back trajectories:
 import argparse
 import os
 import os.path as osp
+import random
 import time
 from collections import defaultdict
 
 import magnum as mn
 import numpy as np
-import random
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+import habitat_sim
 from habitat.core.logging import logger
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
-from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
-import habitat_sim
+
 try:
     import pygame
 except ImportError:
@@ -76,12 +77,14 @@ SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 import os
+
 # Quiet the Habitat simulator logging
 os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
 
 # How many random way points you want to generate
 LEN_WAY_POINT = 1000
+
 
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
@@ -146,20 +149,28 @@ def waypoint_generator(env, args, config):
 def distance_angle(alpha, beta):
     alpha = float(alpha)
     beta = float(beta)
-    phi = abs(beta - alpha) % (2*np.pi);       # This is either the distance or 360 - distance
+    phi = abs(beta - alpha) % (2 * np.pi)
+    # This is either the distance or 360 - distance
     if phi > np.pi:
-        return 2*np.pi - phi
+        return 2 * np.pi - phi
     else:
         return phi
 
+
 def point2vel(action_list):
     """The point2vel in pratice should take the input of waypoints, but here
-        I just use the ground-truth action control.
+    I just use the ground-truth action control.
     """
     return action_list[0]
 
+
 def get_input_vel_ctlr(
-    skip_pygame, arm_action, env, not_block_input, agent_to_control, base_action
+    skip_pygame,
+    arm_action,
+    env,
+    not_block_input,
+    agent_to_control,
+    base_action,
 ):
     if skip_pygame:
         return step_env(env, "EMPTY", {}), None, False
@@ -183,11 +194,11 @@ def get_input_vel_ctlr(
             arm_key
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
-        #base_action = None
+        # base_action = None
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
-        #base_action = [0, 0]
+        # base_action = [0, 0]
 
     if arm_action is None:
         arm_action = np.zeros(arm_action_space.shape[0])

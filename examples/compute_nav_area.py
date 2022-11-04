@@ -45,18 +45,20 @@ Record and play back trajectories:
 """
 
 import argparse
+import copy
 import os
-import os.path as osp
+import pickle
+import sys
 import time
 from collections import defaultdict
-import copy
-import pickle
 
 import magnum as mn
+import matplotlib.pyplot as plt
 import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+import habitat_sim
 from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -64,10 +66,7 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
-import habitat_sim
-import matplotlib.pyplot as plt
-import time
-import sys
+
 sys.setrecursionlimit(10000000)
 
 
@@ -76,15 +75,16 @@ try:
 except ImportError:
     pygame = None
 
-SAVE_NAME = 'spot_final'
+SAVE_NAME = "spot_final"
 DEFAULT_CFG = "configs/tasks/rearrange/check_nav_spot.yaml"
-#DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
-#DEFAULT_CFG = "configs/tasks/rearrange/check_nav_fetch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/check_nav_fetch.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
 import os
+
 # Quiet the Habitat simulator logging
 os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
@@ -95,8 +95,8 @@ def object_copy(instance, init_args=None):
         new_obj = instance.__class__(**init_args)
     else:
         new_obj = habitat.Env(config=init_args)
-    if hasattr(instance, '__dict__'):
-        for k in instance.__dict__ :
+    if hasattr(instance, "__dict__"):
+        for k in instance.__dict__:
             try:
                 attr_copy = copy.deepcopy(getattr(instance, k))
             except Exception as e:
@@ -111,12 +111,18 @@ def object_copy(instance, init_args=None):
     else:
         return instance
 
+
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
 
 
 def get_input_vel_ctlr(
-    skip_pygame, arm_action, env, not_block_input, agent_to_control, base_action
+    skip_pygame,
+    arm_action,
+    env,
+    not_block_input,
+    agent_to_control,
+    base_action,
 ):
 
     if skip_pygame:
@@ -136,11 +142,7 @@ def get_input_vel_ctlr(
         grip_key = f"{agent_k}_{grip_key}"
         base_key = f"{agent_k}_{base_key}"
 
-
-
-    arm_action_space = env.action_space.spaces[arm_action_name].spaces[
-        arm_key
-    ]
+    arm_action_space = env.action_space.spaces[arm_action_name].spaces[arm_key]
     arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
 
     if arm_action is None:
@@ -255,15 +257,15 @@ class FreeCamHelper:
 def distance_angle(alpha, beta):
     alpha = float(alpha)
     beta = float(beta)
-    phi = abs(beta - alpha) % (2*np.pi);       # This is either the distance or 360 - distance
+    phi = abs(beta - alpha) % (2 * np.pi)
+    # This is either the distance or 360 - distance
     if phi > np.pi:
-        return 2*np.pi - phi
+        return 2 * np.pi - phi
     else:
         return phi
 
+
 def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
-
-
 
     render_steps_limit = None
     if args.no_render:
@@ -274,8 +276,6 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
         with open(args.load_actions, "rb") as f:
             use_arm_actions = np.load(f)
             logger.info("Loaded arm actions")
-
-
 
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
@@ -298,10 +298,7 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
     )
     is_multi_agent = len(env._sim.robots_mgr) > 1
 
-    if (
-        args.save_actions
-        and len(all_arm_actions) > args.save_actions_count
-    ):
+    if args.save_actions and len(all_arm_actions) > args.save_actions_count:
         # quit the application when the action recording queue is full
         print("A")
         return
@@ -324,13 +321,11 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
     before_base_pos = env.sim.robot.base_pos
     before_base_rot = env.sim.robot.base_rot
 
-
     base_vel_ctrl = habitat_sim.physics.VelocityControl()
     base_vel_ctrl.controlling_lin_vel = True
     base_vel_ctrl.lin_vel_is_local = True
     base_vel_ctrl.controlling_ang_vel = True
     base_vel_ctrl.ang_vel_is_local = True
-
 
     is_navigable = env.sim.pathfinder.is_navigable(before_base_pos)
     is_contact = env.sim.contact_test(env.sim.robot.get_robot_sim_id())
@@ -355,7 +350,9 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
         env.sim.robot.base_rot = before_base_rot
 
         lin_vel = base_action[0] * 10
-        ang_vel = base_action[1] * 50 # This one needs to be big so that the agent can navigate from places
+        ang_vel = (
+            base_action[1] * 50
+        )  # This one needs to be big so that the agent can navigate from places
         # work v2: 10 and 100
         base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
@@ -386,8 +383,8 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
 
         # set the flag.
         flag_distinct = True
-        has_visited_threshold_pos = 0.01 #0.08333328578069245
-        has_visited_threshold_rot = 0.01 #0.08333349227905273
+        has_visited_threshold_pos = 0.01  # 0.08333328578069245
+        has_visited_threshold_rot = 0.01  # 0.08333349227905273
 
         # work v2: 0.05 and 0.05
 
@@ -396,16 +393,23 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
             diff_vec = np.array(pos) - np.array(vec2list(after_base_pos))
             diff_pos = 0
             for i in range(3):
-                diff_pos += diff_vec[i]**2
+                diff_pos += diff_vec[i] ** 2
             diff_pos = diff_pos**0.5
             diff_rot = distance_angle(rot, after_base_rot)
-            if diff_pos <= has_visited_threshold_pos and diff_rot <= has_visited_threshold_rot:
+            if (
+                diff_pos <= has_visited_threshold_pos
+                and diff_rot <= has_visited_threshold_rot
+            ):
                 flag_distinct = False
                 break
 
         if flag_distinct:
-            visit_pos_rot.append([vec2list(after_base_pos), float(after_base_rot)])
-        ans += play_env(env, args, config, level+1, visit_pos_rot, flag_distinct)
+            visit_pos_rot.append(
+                [vec2list(after_base_pos), float(after_base_rot)]
+            )
+        ans += play_env(
+            env, args, config, level + 1, visit_pos_rot, flag_distinct
+        )
 
     return ans
     # if end_ep:
@@ -415,19 +419,17 @@ def play_env(env, args, config, level, visit_pos_rot, flag_distinct):
     #         gfx_measure.get_metric(force_get=True)
     #     env.reset()
 
-
     if not args.no_render:
         pygame.event.pump()
     if env.episode_over:
-        import pdb; pdb.set_trace()
+        import pdb
+
+        pdb.set_trace()
         total_reward = 0
         env.reset()
 
-
     if not args.no_render:
         pygame.quit()
-
-
 
 
 def has_pygame():
@@ -540,7 +542,9 @@ if __name__ == "__main__":
         before_base_pos = env.sim.robot.base_pos
         before_base_rot = env.sim.robot.base_rot
         visited_list = []
-        visited_list.append([vec2list(before_base_pos), float(before_base_rot)])
+        visited_list.append(
+            [vec2list(before_base_pos), float(before_base_rot)]
+        )
         total_point = play_env(env, args, config, 0, visited_list, True)
 
     later = time.time()
@@ -550,7 +554,9 @@ if __name__ == "__main__":
     print("Length of visited list:", len(visited_list))
     print("Total time:", difference, "sec")
     print(DEFAULT_CFG)
-    with open("/Users/jimmytyyang/Documents/"+SAVE_NAME+'_visit_points.pkl', 'wb') as f:
+    with open(
+        "/Users/jimmytyyang/Documents/" + SAVE_NAME + "_visit_points.pkl", "wb"
+    ) as f:
         pickle.dump([difference, total_point, visited_list], f)
 
     x = []
@@ -559,6 +565,8 @@ if __name__ == "__main__":
         x.append(point[0][0])
         y.append(point[0][2])
 
-    plt.scatter(x, y, c ="red")
-    plt.savefig("/Users/jimmytyyang/Documents/"+SAVE_NAME+'_area.png')
-    import pdb; pdb.set_trace()
+    plt.scatter(x, y, c="red")
+    plt.savefig("/Users/jimmytyyang/Documents/" + SAVE_NAME + "_area.png")
+    import pdb
+
+    pdb.set_trace()
