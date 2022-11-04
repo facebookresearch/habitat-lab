@@ -136,7 +136,7 @@ class MoveObjectsReward(RearrangeReward):
         ee_to_obj_dist = self.get_distance(task, EndEffectorToObjectDistance)
 
         is_holding_obj = self._sim.grasp_mgr.snap_idx == self.abs_targ_obj_idx
-        picked_up_obj = is_holding_obj and not self._prev_is_holding_obj
+        picked_up_obj = is_holding_obj and not self._prev_holding_obj
 
         # DISTANCE REWARD: Steers the agent towards the object and then towards the goal
 
