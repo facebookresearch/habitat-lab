@@ -830,6 +830,7 @@ _C.habitat.simulator.third_depth_sensor = (
     _C.habitat.simulator.depth_sensor.clone()
 )
 _C.habitat.simulator.third_depth_sensor.uuid = "robot_third_rgb"
+
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
 # Camera Model, The International Conference on 3D Vision (3DV), 2018
