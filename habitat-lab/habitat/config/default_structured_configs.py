@@ -1157,6 +1157,12 @@ cs.store(
     name="answer",
     node=AnswerActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.oracle_nav_action",
+    group="habitat/task/actions",
+    name="oracle_nav_action",
+    node=OracleNavActionConfig,
+)
 
 # Dataset Config Schema
 cs.store(

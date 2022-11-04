@@ -215,6 +215,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
+    high_level_policy: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass

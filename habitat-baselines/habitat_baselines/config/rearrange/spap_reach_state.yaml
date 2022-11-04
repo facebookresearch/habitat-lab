@@ -29,12 +29,13 @@ habitat_baselines:
     video_option: ["disk"]
 
 habitat:
-  reward_measure: "rearrange_reach_reward"
-  success_measure: "rearrange_reach_success"
-  success_reward: 10.0
-  slack_reward: -0.01
-  end_on_success: False
   gym:
     obs_keys: [ 'joint', 'ee_pos' ]
     desired_goal_keys: [ 'resting_position' ]
     action_keys: [ 'arm_action' ]
+  task:
+    reward_measure: "rearrange_reach_reward"
+    success_measure: "rearrange_reach_success"
+    success_reward: 10.0
+    slack_reward: -0.01
+    end_on_success: False
