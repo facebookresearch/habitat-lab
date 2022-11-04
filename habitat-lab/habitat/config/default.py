@@ -996,13 +996,11 @@ def get_full_config_path(
     config_path: str, default_configs_dir: str = _HABITAT_CFG_DIR
 ) -> str:
     if osp.exists(config_path):
-        if not osp.isabs(config_path):
-            config_path = osp.abspath(config_path)
-        return config_path
+        return osp.abspath(config_path)
 
     proposed_full_path = osp.join(default_configs_dir, config_path)
     if osp.exists(proposed_full_path):
-        return proposed_full_path
+        return osp.abspath(proposed_full_path)
 
     raise RuntimeError(f"No file found for config '{config_path}'")
 
