@@ -109,7 +109,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/task/rearrange/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrangement/*"),
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
@@ -129,7 +129,7 @@ def test_rearrange_tasks(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/task/rearrange/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrangement/*"),
     ),
 )
 def test_composite_tasks(test_cfg_path):

@@ -75,7 +75,7 @@ class HierarchicalPolicy(Policy):
             config.hierarchical_policy.high_level_policy.name
         )
         self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.high_level_policy,
+            config.hierarchical_policy.high_level_policy,
             osp.join(
                 full_config.habitat.task.task_spec_base_path,
                 full_config.habitat.task.task_spec + ".yaml",

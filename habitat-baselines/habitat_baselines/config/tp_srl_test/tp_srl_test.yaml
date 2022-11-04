@@ -3,6 +3,8 @@
 defaults:
   - /benchmark/rearrangement: nav_pick_nav_place
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - add_virtual_keys_base
 
 habitat_baselines:
   trainer_name: "ppo"
@@ -17,6 +19,7 @@ habitat_baselines:
   log_interval: 100
   num_checkpoints: 2
   force_torch_single_threaded: True
+  load_resume_state_config: False
   eval:
     use_ckpt_config: False
     should_load_ckpt: False
@@ -26,7 +29,6 @@ habitat_baselines:
         name: "HierarchicalPolicy"
 
         obs_transforms:
-          enabled_transforms: ['AddVirtualKeys']
           add_virtual_keys:
             "nav_to_skill": 8
             "object_to_agent_gps_compass": 2

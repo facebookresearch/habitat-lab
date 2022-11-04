@@ -154,7 +154,7 @@ class NnSkillPolicy(SkillPolicy):
             OrderedDict(
                 [
                     (k, action_space[k])
-                    for k in policy_cfg.habitat.task.possible_actions
+                    for k in policy_cfg.habitat.task.actions.keys()
                 ]
             )
         )

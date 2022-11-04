@@ -3,6 +3,13 @@
 defaults:
   - /benchmark/rearrangement: nav_pick_nav_place
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - add_virtual_keys_base
+  - /habitat/task/actions:
+    - arm_action
+    - base_velocity
+    - rearrange_stop
+    - oracle_nav_action
 
 habitat_baselines:
   verbose: False
@@ -28,21 +35,11 @@ habitat_baselines:
     video_option: ["disk"]
     use_ckpt_config: False
     should_load_ckpt: False
-  habitat:
-    # Add the oracle navigation action
-    task:
-      possible_actions:
-      - arm_action
-      - base_velocity
-      - rearrange_stop
-      - oracle_nav_action
-
 
   rl:
     policy:
         name: "HierarchicalPolicy"
         obs_transforms:
-          enabled_transforms: ['AddVirtualKeys']
           add_virtual_keys:
             "nav_to_skill": 8
             "object_to_agent_gps_compass": 2

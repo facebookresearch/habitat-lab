@@ -1251,6 +1251,8 @@ class AddVirtualKeys(ObservationTransformer):
         self, observation_space: spaces.Dict, **kwargs
     ):
         for k, obs_dim in self._virtual_keys.items():
+            if k == "type":
+                continue
             observation_space[k] = spaces.Box(
                 shape=(obs_dim,),
                 low=np.finfo(np.float32).min,
@@ -1267,6 +1269,8 @@ class AddVirtualKeys(ObservationTransformer):
         device = first_obs.device
         batch_dim = first_obs.shape[0]
         for k, obs_dim in self._virtual_keys.items():
+            if k == "type":
+                continue
             observations[k] = torch.zeros((batch_dim, obs_dim), device=device)
         return observations
 

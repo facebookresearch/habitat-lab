@@ -174,7 +174,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habtiat-lab/habitat/config/task/**/*.yaml", recursive=True),
+        glob("habitat-lab/habitat/config/benchmark/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):
@@ -182,7 +182,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     Test all defined automatic Gym wrappers work
     """
     config = habitat.get_config(test_cfg_path)
-    if "gym" not in config or config.habitat.gym.auto_name == "":
+    if "gym" not in config.habitat or config.habitat.gym.auto_name == "":
         pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
     pytest.importorskip("pygame")
     for prefix in ["", "Render"]:
@@ -191,7 +191,7 @@ def test_auto_gym_wrapper(test_cfg_path):
         hab_gym = gym.make(
             full_gym_name,
             # Test sometimes fails with concurrent rendering.
-            override_options=["habitat.simulator.concur_render", False],
+            override_options=["habitat.simulator.concur_render=False"],
         )
         hab_gym.reset()
         done = False
