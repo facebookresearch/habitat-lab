@@ -992,11 +992,15 @@ _C.habitat.env_task_gym_dependencies = []
 _C.habitat.env_task_gym_id = ""
 
 
-def _get_full_config_path(config_path: str) -> str:
+def get_full_config_path(
+    config_path: str, default_configs_dir: str = _HABITAT_CFG_DIR
+) -> str:
     if osp.exists(config_path):
+        if not osp.isabs(config_path):
+            config_path = osp.abspath(config_path)
         return config_path
 
-    proposed_full_path = osp.join(_HABITAT_CFG_DIR, config_path)
+    proposed_full_path = osp.join(default_configs_dir, config_path)
     if osp.exists(proposed_full_path):
         return proposed_full_path
 
@@ -1057,14 +1061,15 @@ def get_config(
     config_paths: str,
     overrides: Optional[list] = None,
 ) -> DictConfig:
-
     register_hydra_plugin(HabitatConfigPlugin)
+
+    config_path = get_full_config_path(config_paths)
     with initialize_config_dir(
         version_base=None,
-        config_dir=osp.join(_HABITAT_CFG_DIR, osp.dirname(config_paths)),
+        config_dir=osp.dirname(config_path),
     ):
         cfg = compose(
-            config_name=osp.basename(config_paths),
+            config_name=osp.basename(config_path),
             overrides=overrides if overrides is not None else [],
         )
 

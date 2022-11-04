@@ -11,7 +11,7 @@ from typing import Dict, List, Optional, Union, cast
 import yaml  # type: ignore[import]
 
 from habitat import Config
-from habitat.config.default import _get_full_config_path
+from habitat.config.default import get_full_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_action import (
@@ -67,7 +67,7 @@ class PddlDomain:
         if "." not in domain_file_path:
             domain_file_path += ".yaml"
 
-        with open(_get_full_config_path(domain_file_path), "r") as f:
+        with open(get_full_config_path(domain_file_path), "r") as f:
             domain_def = yaml.safe_load(f)
 
         self._parse_expr_types(domain_def)
@@ -461,7 +461,7 @@ class PddlProblem(PddlDomain):
         cur_task_config: Optional[Config] = None,
     ):
         super().__init__(domain_file_path, cur_task_config)
-        with open(_get_full_config_path(problem_file_path), "r") as f:
+        with open(get_full_config_path(problem_file_path), "r") as f:
             problem_def = yaml.safe_load(f)
         self._objects = {
             o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])

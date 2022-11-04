@@ -10,8 +10,12 @@
 # from habitat.config import Config as CN
 
 # import numpy as np
+import inspect
+import os.path as osp
 
+from habitat.config.default import get_full_config_path
 
+_BASELINES_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 DEFAULT_CONFIG_DIR = "habitat-lab/habitat/config/"
 CONFIG_FILE_SEPARATOR = ","
 # # -----------------------------------------------------------------------------
@@ -394,21 +398,18 @@ def get_config(
     config_paths: str,
     overrides: Optional[list] = None,
 ) -> DictConfig:
-
     register_hydra_plugin(HabitatConfigPlugin)
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
 
-    import inspect
-    import os.path as osp
-
-    config_dir = osp.dirname(inspect.getabsfile(inspect.currentframe()))
-
+    config_path = get_full_config_path(
+        config_paths, default_configs_dir=_BASELINES_CFG_DIR
+    )
     with initialize_config_dir(
         version_base=None,
-        config_dir=config_dir + "/" + osp.dirname(config_paths),
+        config_dir=osp.dirname(config_path),
     ):
         cfg = compose(
-            config_name=osp.basename(config_paths),
+            config_name=osp.basename(config_path),
             overrides=overrides if overrides is not None else [],
         )
 

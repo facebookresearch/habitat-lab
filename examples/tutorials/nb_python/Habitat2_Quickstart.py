@@ -378,7 +378,7 @@ task:
         type: "DistanceToTargetObject"
     nav_pick_reward:
         type: "NavPickReward"
-        SCALING_FACTOR: 0.1
+        scaling_factor: 0.1
 
         # General Rearrange Reward config
         constraint_violate_pen: 10.0
