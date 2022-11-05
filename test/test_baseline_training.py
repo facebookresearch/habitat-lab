@@ -169,7 +169,7 @@ def test_trainers_gym_registry(
             f"habitat_baselines.trainer_name={trainer_name}",
             # Overwrite the gym_environment
             "habitat.env_task=GymRegistryEnv",
-            f"habitat.env_task_gym_dependencies{dependencies}",
+            f"habitat.env_task_gym_dependencies={dependencies}",
             f"habitat.env_task_gym_id={env_key}",
         ],
     )
