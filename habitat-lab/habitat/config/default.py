@@ -1044,6 +1044,7 @@ def get_full_config_path(
 #     return config
 
 
+import threading
 from typing import Optional
 
 from hydra import compose, initialize_config_dir
@@ -1054,6 +1055,8 @@ from habitat.config.default_structured_configs import (
     register_hydra_plugin,
 )
 
+lock = threading.Lock()
+
 
 def get_config(
     config_paths: str,
@@ -1062,7 +1065,9 @@ def get_config(
     register_hydra_plugin(HabitatConfigPlugin)
 
     config_path = get_full_config_path(config_paths)
-    with initialize_config_dir(
+    # If get_config is called from different threads, Hydra might
+    # get initialized twice leading to issues. This lock fixes it.
+    with lock, initialize_config_dir(
         version_base=None,
         config_dir=osp.dirname(config_path),
     ):

@@ -380,6 +380,7 @@ CONFIG_FILE_SEPARATOR = ","
 #     config.freeze()
 #     return config
 
+import threading
 from typing import Optional
 
 from hydra import compose, initialize_config_dir
@@ -393,6 +394,8 @@ from habitat_baselines.config.default_structured_configs import (
     HabitatBaselinesConfigPlugin,
 )
 
+lock = threading.Lock()
+
 
 def get_config(
     config_paths: str,
@@ -404,7 +407,9 @@ def get_config(
     config_path = get_full_config_path(
         config_paths, default_configs_dir=_BASELINES_CFG_DIR
     )
-    with initialize_config_dir(
+    # If get_config is called from different threads, Hydra might
+    # get initialized twice leading to issues. This lock fixes it.
+    with lock, initialize_config_dir(
         version_base=None,
         config_dir=osp.dirname(config_path),
     ):
