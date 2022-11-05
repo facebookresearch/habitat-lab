@@ -3,6 +3,7 @@
 defaults:
   - /benchmark/navigation/pointnav: pointnav_habitat_test
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
 
 habitat_baselines:
   trainer_name: "ppo"

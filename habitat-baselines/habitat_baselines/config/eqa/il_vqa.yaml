@@ -5,6 +5,7 @@ defaults:
  - /benchmark/navigation: eqa_rgbonly_mp3d
  - override /habitat/simulator/sim_sensors:
    - rgb_sensor
+ - _self_
 
 habitat_baselines:
   trainer_name: "vqa"

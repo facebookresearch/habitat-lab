@@ -11,5 +11,6 @@ defaults:
     - answer_accuracy
   - lab_sensors:
     - question_sensor
+  - _self_
 
 type: EQA-v0

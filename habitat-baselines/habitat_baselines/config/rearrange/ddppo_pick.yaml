@@ -3,6 +3,7 @@
 defaults:
   - /benchmark/rearrangement: pick
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
 
 habitat_baselines:
   verbose: False

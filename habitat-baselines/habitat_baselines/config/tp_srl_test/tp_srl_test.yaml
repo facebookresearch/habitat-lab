@@ -30,8 +30,9 @@ habitat_baselines:
 
         obs_transforms:
           add_virtual_keys:
-            "nav_to_skill": 8
-            "object_to_agent_gps_compass": 2
+            virtual_keys:
+              "nav_to_skill": 8
+              "object_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
             name: "GtHighLevelPolicy"

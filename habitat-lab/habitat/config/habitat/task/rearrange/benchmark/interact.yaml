@@ -4,6 +4,7 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
+  - _self_
 
 # No task logic, empty task
 type: RearrangeEmptyTask-v0

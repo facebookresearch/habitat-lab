@@ -3,6 +3,7 @@
 defaults:
   - /benchmark/rearrangement: pick
   - /habitat_baselines: habitat_baselines_spa_config_base
+  - _self_
 
 habitat_baselines:
   video_dir: "data/vids/"

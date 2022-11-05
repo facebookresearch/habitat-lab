@@ -175,8 +175,9 @@ cs.store(
 
 
 @dataclass
-class AddVirtualKeysConfig(ObsTransformConfig, Dict[str, Any]):
+class AddVirtualKeysConfig(ObsTransformConfig):
     type: str = "AddVirtualKeys"
+    virtual_keys: Dict[str, int] = field(default_factory=dict)
 
 
 cs.store(

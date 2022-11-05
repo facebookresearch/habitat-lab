@@ -10,6 +10,7 @@ defaults:
     - base_velocity
     - rearrange_stop
     - oracle_nav_action
+  - _self_
 
 habitat_baselines:
   verbose: False
@@ -41,8 +42,9 @@ habitat_baselines:
         name: "HierarchicalPolicy"
         obs_transforms:
           add_virtual_keys:
-            "nav_to_skill": 8
-            "object_to_agent_gps_compass": 2
+            virtual_keys:
+              "nav_to_skill": 8
+              "object_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
             name: "GtHighLevelPolicy"
