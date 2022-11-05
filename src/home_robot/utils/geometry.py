@@ -47,24 +47,13 @@ def xyt_base_to_global(out_XYT, current_pose):
     return XYT
 
 
-def pose_ros2sp(pose):
-    r_mat = R.from_quat(
-        (pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w)
-    ).as_matrix()
-    t_vec = np.array([pose.position.x, pose.position.y, pose.position.z])
-    return sp.SE3(r_mat, t_vec)
+def xyt2sophus(xyt):
+    x = np.array([xyt[0], xyt[1], 0.0])
+    r_mat = sp.SO3.exp([0.0, 0.0, xyt[2]]).matrix()
+    return sp.SE3(r_mat, x)
 
 
-def pose_sp2ros(pose_se3):
-    quat = R.from_matrix(pose_se3.so3().matrix()).as_quat()
-
-    pose = Pose()
-    pose.position.x = pose_se3.translation()[0]
-    pose.position.y = pose_se3.translation()[1]
-    pose.position.z = pose_se3.translation()[2]
-    pose.orientation.x = quat[0]
-    pose.orientation.y = quat[1]
-    pose.orientation.z = quat[2]
-    pose.orientation.w = quat[3]
-
-    return pose
+def sophus2xyt(se3):
+    x_vec = se3.translation()
+    r_vec = se3.so3().log()
+    return np.array([x_vec[0], x_vec[1], r_vec[2]])

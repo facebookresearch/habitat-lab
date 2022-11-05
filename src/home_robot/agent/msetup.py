@@ -1,24 +1,12 @@
 import mrp
 
-pip_deps = ["numpy", "scipy", "sophuspy"]
-
-control_shared_env = mrp.Conda.SharedEnv(
-    name="stretch_control_env",
-    channels=["conda-forge", "robostack"],
-    use_mamba=True,
-    dependencies=[
-        "python=3.8" "cmake",
-        "pybind11",
-        "ros-noetic-desktop",
-        {"pip": pip_deps},
-    ],
-)
+from home_robot.utils.mrp_shared_envs import control_env
 
 # State estimation node
 mrp.process(
     name="state_estimator",
     runtime=mrp.Conda(
-        shared_env=control_shared_env,
+        shared_env=control_env,
         run_command=[
             "python3",
             "-m",
@@ -31,7 +19,7 @@ mrp.process(
 mrp.process(
     name="goto_controller",
     runtime=mrp.Conda(
-        shared_env=control_shared_env,
+        shared_env=control_env,
         run_command=["python3", "-m", "home_robot.agent.control.goto_controller_node"],
     ),
 )

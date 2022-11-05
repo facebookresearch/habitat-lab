@@ -7,7 +7,7 @@ Mostly Hello Stretch infrastructure
 
 ## Installation
 
-1. Prepare a conda environment
+1. Prepare a conda environment (ex: `conda create -n home_robot python=3.8`)
 1. Install repo `pip install -e .`
 1. (optional) Install Mamba: `conda install -c conda-forge mamba`
 
