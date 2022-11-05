@@ -3,6 +3,14 @@ import mrp
 from home_robot.utils.mrp_shared_envs import control_env
 
 mrp.process(
+    name="roscore",
+    runtime=mrp.Conda(
+        shared_env=control_env,
+        run_command=["roscore"],
+    ),
+)
+
+mrp.process(
     name="fake_stretch",
     runtime=mrp.Conda(
         shared_env=control_env,

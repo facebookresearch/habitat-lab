@@ -48,12 +48,12 @@ class FakeStretch:
 
         # Ros stuff
         rospy.init_node("fake_stretch_hw")
-        self._hector_slam_pub = rospy.Subscriber(
+        self._hector_slam_pub = rospy.Publisher(
             "/poseupdate",
             PoseWithCovarianceStamped,
             queue_size=1,
         )
-        self._odom_pub = rospy.Subscriber("/odom", Odometry, queue_size=1)
+        self._odom_pub = rospy.Publisher("/odom", Odometry, queue_size=1)
 
     def _publish_slam(self, xyt, timestamp):
         msg = PoseWithCovarianceStamped()
@@ -68,7 +68,7 @@ class FakeStretch:
 
     def _vel_control_callback(self, cmd_vel):
         self._vel_cmd_cache[0] = cmd_vel.linear.x
-        self._vel_cmd_cache[1] = cmd_vel.orientation.z
+        self._vel_cmd_cache[1] = cmd_vel.angular.z
 
     def run(self):
         # Subscribers
@@ -84,8 +84,8 @@ class FakeStretch:
         while True:
             # Publish states
             ros_time = rospy.Time.now()
-            self._publish_odom(self.env.get_pose, ros_time)
-            self._publish_slam(self.env.get_pose, ros_time)
+            self._publish_odom(self.sim.get_pose(), ros_time)
+            self._publish_slam(self.sim.get_pose(), ros_time)
 
             # Apply control at control_hz
             vel_cmd = None

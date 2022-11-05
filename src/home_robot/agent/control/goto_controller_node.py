@@ -7,7 +7,7 @@ from geometry_msgs.msg import Twist, PoseStamped
 
 from home_robot.agent.control.diff_drive_vel_control import DiffDriveVelocityControl
 from home_robot.utils.geometry import xyt_global_to_base
-from home_robot.utils.ros_geometry import pose_ros2sp
+from home_robot.utils.ros_geometry import pose_ros2sophus
 
 
 CONTROL_HZ = 20
@@ -39,7 +39,7 @@ class GotoVelocityController:
         self.track_yaw = True
 
     def _pose_update_callback(self, pose):
-        pose_sp = pose_ros2sp(pose.pose)
+        pose_sp = pose_ros2sophus(pose.pose)
         self.xyt_loc = np.array(
             [pose_sp.translation()[0], pose_sp.translation()[1], pose_sp.so3().log()[2]]
         )
@@ -103,11 +103,13 @@ class GotoVelocityController:
         )
 
         # Services (Why is it so hard to provide a service in ROS?)
+        """
         rospy.Service("set_goal", TODO_SERVICE_TYPE, self.set_goal)
         rospy.Service("check_at_goal", TODO_SERVICE_TYPE, self.check_at_goal)
         rospy.Service(
             "enable_yaw_tracking", TODO_SERVICE_TYPE, self.enable_yaw_tracking
         )
+        """
 
         # Run controller
         self._run_control_loop()

@@ -1,5 +1,12 @@
 import mrp
 
+mrp.process(
+    name="roscore",
+    runtime=mrp.Host(
+        run_command=["roscore"],
+    ),
+)
+
 # Launches these nodes:
 # - stretch_core/launch/stretch_driver.launch
 # - stretch_core/launch/rplidar.launch

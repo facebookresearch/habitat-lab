@@ -30,7 +30,7 @@ from geometry_msgs.msg import Twist
 SLAM_CUTOFF_HZ = 0.2
 
 
-def pose_ros2sp(pose):
+def pose_ros2sophus(pose):
     r_mat = R.from_quat(
         (pose.orientation.x, pose.orientation.y, pose.orientation.z, pose.orientation.w)
     ).as_matrix()
@@ -38,7 +38,7 @@ def pose_ros2sp(pose):
     return sp.SE3(r_mat, t_vec)
 
 
-def pose_sp2ros(pose_se3):
+def pose_sophus2ros(pose_se3):
     quat = R.from_matrix(pose_se3.so3().matrix()).as_quat()
 
     pose = Pose()
@@ -95,7 +95,7 @@ class MoveNode(hm.HelloNode):
             self._slam_pose = pose
 
         # Update slam pose for filtering
-        self._slam_pose_sp = pose_ros2sp(pose.pose.pose)
+        self._slam_pose_sp = pose_ros2sophus(pose.pose.pose)
 
     def _scan_matched_pose_callback(self, pose):
         with self._lock:
@@ -112,7 +112,7 @@ class MoveNode(hm.HelloNode):
             self._angular_movement.append(abs(pose.twist.twist.angular.z))
 
         # Compute injected signals into filtered pose
-        pose_odom = pose_ros2sp(pose.pose.pose)
+        pose_odom = pose_ros2sophus(pose.pose.pose)
         pose_diff_odom = self._pose_odom_prev.inverse() * pose_odom
         pose_diff_slam = self._filtered_pose.inverse() * self._slam_pose_sp
 
@@ -133,7 +133,7 @@ class MoveNode(hm.HelloNode):
     def _publish_filtered_state(self, timestamp):
         pose_out = PoseStamped()
         pose_out.header.stamp = timestamp
-        pose_out.pose = pose_sp2ros(self._filtered_pose)
+        pose_out.pose = pose_sophus2ros(self._filtered_pose)
         self._estimator_pub.publish(pose_out)
 
     def set_velocity(self, v_m, w_r):
