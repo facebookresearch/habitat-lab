@@ -7,7 +7,6 @@ defaults:
 
 
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/task/eqa_mp3d.yaml"
   trainer_name: "eqa-cnn-pretrain"
 
   torch_gpu_id: 0
@@ -18,7 +17,6 @@ habitat_baselines:
 
 
 
-  log_metrics: True
   log_interval: 50
 
   # Force PyTorch to be single threaded as

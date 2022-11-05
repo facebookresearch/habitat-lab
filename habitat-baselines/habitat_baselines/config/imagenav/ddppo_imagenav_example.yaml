@@ -2,10 +2,15 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - /benchmark/navigation/imagenav: imagenav_test
+  - _self_
 
+habitat:
+  task:
+    success_reward: 2.5
+    slack_reward: -1e-3
 
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/task/imagenav.yaml"
   trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
@@ -13,7 +18,6 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 4
-  sensors: ["rgb_sensor", "depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1e6
@@ -25,8 +29,6 @@ habitat_baselines:
 
 
   rl:
-    success_reward: 2.5
-    slack_reward: -1e-4
 
     policy:
       name: "PointNavResNetPolicy"

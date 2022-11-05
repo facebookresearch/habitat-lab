@@ -2,10 +2,21 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - /benchmark/navigation/instance_imagenav: instance_imagenav_hm3d
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - center_cropper_base
+    - resize_shortest_edge_base
+  - _self_
+
+habitat:
+  environment:
+    iterator_options:
+      max_scene_repeat_steps: 50000
+  task:
+    success_reward: 2.5
+    slack_reward: -1e-3
 
 habitat_baselines:
-  base_task_config_path: habitat-lab/habitat/config/task/instance_imagenav.yaml
-  cmd_trailing_opts: ["habitat.environment.iterator_options.max_scene_repeat_steps", "50000"]
   torch_gpu_id: 0
   tensorboard_dir: tb
   video_dir: video_dir
@@ -14,7 +25,6 @@ habitat_baselines:
   num_environments: 4
   checkpoint_folder: data/new_checkpoints
   trainer_name: ddppo
-  sensors: [depth_sensor, rgb_sensor]
   num_updates: -1
   total_num_steps: 2.5e9
   log_interval: 10
@@ -27,13 +37,10 @@ habitat_baselines:
     split: val
 
   rl:
-    success_reward: 2.5
-    slack_reward: -1e-3
 
     policy:
       name: PointNavResNetPolicy
       obs_transforms:
-        enabled_transforms: [ResizeShortestEdge, CenterCropper]
         resize_shortest_edge:
           trans_keys: [rgb, depth, semantic, instance_imagegoal]
 
