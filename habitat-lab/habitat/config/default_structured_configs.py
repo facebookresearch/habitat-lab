@@ -956,6 +956,9 @@ class SimulatorConfig(HabitatBaseConfig):
     grasp_impulse: float = 1000.0
     agents: List[str] = field(default_factory=lambda: ["agent_0"])
     agent_0: AgentConfig = AgentConfig()
+    agent_1: AgentConfig = (
+        MISSING  # temporary multi-agent rearrangement config fix
+    )
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
