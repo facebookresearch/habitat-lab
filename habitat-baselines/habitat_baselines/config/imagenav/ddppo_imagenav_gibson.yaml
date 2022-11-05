@@ -1,3 +1,8 @@
+# @package _global_
+
+defaults:
+  - /habitat_baselines: habitat_baselines_rl_config_base
+
 habitat_baselines:
   verbose: False
   base_task_config_path: "habitat-lab/habitat/config/task/imagenav_gibson.yaml"

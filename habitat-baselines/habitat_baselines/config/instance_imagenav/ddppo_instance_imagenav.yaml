@@ -1,3 +1,8 @@
+# @package _global_
+
+defaults:
+  - /habitat_baselines: habitat_baselines_rl_config_base
+
 habitat_baselines:
   base_task_config_path: habitat-lab/habitat/config/task/instance_imagenav.yaml
   cmd_trailing_opts: ["habitat.environment.iterator_options.max_scene_repeat_steps", "50000"]
