@@ -22,7 +22,7 @@ TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
 FORCE_TORCH_SINGLE_THREADED: True
-EVAL_KEYS_TO_INCLUDE_IN_NAME: ['composite_success']
+EVAL_KEYS_TO_INCLUDE_IN_NAME: ['did_pick_object', 'composite_success']
 EVAL:
   USE_CKPT_CONFIG: False
   SHOULD_LOAD_CKPT: False
@@ -85,7 +85,7 @@ RL:
           skill_name: "PickSkillPolicy"
           name: "PointNavResNetPolicy"
           action_distribution_type: "gaussian"
-          AT_RESTING_THRESHOLD: 0.15
+          AT_RESTING_THRESHOLD: 0.2
           OBS_SKILL_INPUTS: ["obj_start_sensor"]
           LOAD_CKPT_FILE: "data/models/pick.pth"
           MAX_SKILL_STEPS: 200

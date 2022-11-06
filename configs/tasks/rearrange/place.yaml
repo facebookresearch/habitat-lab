@@ -19,7 +19,7 @@ TASK:
     COUNT_ROBOT_OBJ_COLLS: false
 
     # SPAWN PARAMETERS
-    BASE_ANGLE_NOISE: 0.15
+    BASE_ANGLE_NOISE: 0.785398
     FORCE_REGENERATE: false
     SPAWN_MAX_DISTS_TO_OBJ: [2.0]
     PHYSICS_STABILITY_STEPS: 1
@@ -53,12 +53,12 @@ TASK:
         MAX_INSTANT_FORCE: 10_000.0
     PLACE_REWARD:
         TYPE: PlaceReward
-        DIST_REWARD: 2.0
-        PLACE_REWARD: 2.0
-        DROP_PEN: 0.0
+        DIST_REWARD: 20.0
+        PLACE_REWARD: 5.0
+        DROP_PEN: 5.0
         USE_DIFF: true
         WRONG_DROP_SHOULD_END: false
-        CONSTRAINT_VIOLATE_PEN: 10.0
+        CONSTRAINT_VIOLATE_PEN: 5.0
         FORCE_PEN: 0.0001
         MAX_FORCE_PEN: 0.01
         FORCE_END_PEN: 1.0
@@ -88,6 +88,8 @@ SIMULATOR:
     AGENTS:
     - AGENT_0
     NEEDS_MARKERS: false
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3

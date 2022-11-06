@@ -47,8 +47,10 @@ TASK:
     - LOCALIZATION_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: 100_000.0
-        MAX_INSTANT_FORCE: 10_000.0
+        # MAX_ACCUM_FORCE: 100_000.0
+        # MAX_INSTANT_FORCE: 10_000.0
+        MAX_ACCUM_FORCE: -1.0
+        MAX_INSTANT_FORCE: -1.0
     MEASUREMENTS:
     - OBJECT_TO_GOAL_DISTANCE
     - ROBOT_FORCE
@@ -61,6 +63,7 @@ TASK:
     - NUM_STEPS
     - DID_VIOLATE_HOLD_CONSTRAINT
     - MOVE_OBJECTS_REWARD
+    - DID_PICK_OBJECT
     ACTIONS:
         ARM_ACTION:
             GRIP_CONTROLLER: SuctionGraspAction
@@ -82,16 +85,10 @@ TASK:
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
         - "data/objects/ycb/configs/"
-    ACTION_SPACE_CONFIG: v0
-    GRASP_IMPULSE: 10000.0
-    HOLD_THRESH: 0.2
-    AC_FREQ_RATIO: 4
     DEBUG_RENDER: false
     DEBUG_RENDER_GOAL: true
-    AGENTS:
-    - AGENT_0
-    CONCUR_RENDER: true
-    AUTO_SLEEP: true
+    CONCUR_RENDER: false
+    AUTO_SLEEP: false
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3
@@ -109,9 +106,6 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
-    CTRL_FREQ: 120.0
-    DEFAULT_AGENT_ID: 0
-    FORWARD_STEP_SIZE: 0.25
     HABITAT_SIM_V0:
         ALLOW_SLIDING: false
         ENABLE_PHYSICS: true

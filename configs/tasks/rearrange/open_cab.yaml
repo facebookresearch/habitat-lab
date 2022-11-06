@@ -15,7 +15,7 @@ DATASET:
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeOpenDrawerTask-v0
-    SETTLE_STEPS: 5
+    SETTLE_STEPS: 1
     BASE_ANGLE_NOISE: 0.15
     SPAWN_REGION_SCALE: 0.2
     JOINT_MAX_IMPULSE: -1.0
@@ -32,28 +32,20 @@ TASK:
     SUCCESS_REWARD: 10.0
     SLACK_REWARD: 0.0
     END_ON_SUCCESS: true
-    EASY_INIT: false
+
     JOINT_SENSOR:
         TYPE: JointSensor
         DIMENSIONALITY: 7
+
     SENSORS:
     - JOINT_SENSOR
     - IS_HOLDING_SENSOR
     - END_EFFECTOR_SENSOR
     - RELATIVE_RESTING_POS_SENSOR
-    ROBOT_FORCE:
-        TYPE: RobotForce
-        MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: ForceTerminate
-        MAX_ACCUM_FORCE: -1.0
-    ART_OBJ_AT_DESIRED_STATE:
-        TYPE: ArtObjAtDesiredState
-        USE_ABSOLUTE_DISTANCE: false
-        SUCCESS_DIST_THRESHOLD: 0.05
-    ART_OBJ_SUCCESS:
-        TYPE: ArtObjSuccess
-        REST_DIST_THRESHOLD: 0.15
+        MAX_ACCUM_FORCE: 20_000.0
+        MAX_INSTANT_FORCE: 10_000.0
     ART_OBJ_REWARD:
         TYPE: ArtObjReward
         WRONG_GRASP_END: true
@@ -93,9 +85,8 @@ SIMULATOR:
     - data/objects/ycb/configs/
     DEBUG_RENDER: false
     DEBUG_RENDER_GOAL: false
-    ACTION_SPACE_CONFIG: v0
-    AGENTS:
-    - AGENT_0
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3
@@ -110,10 +101,6 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: true
-    CTRL_FREQ: 120.0
-    AC_FREQ_RATIO: 4
-    FORWARD_STEP_SIZE: 0.25
-    DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
         ALLOW_SLIDING: false
         ENABLE_PHYSICS: true

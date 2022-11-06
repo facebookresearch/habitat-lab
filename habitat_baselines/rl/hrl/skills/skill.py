@@ -104,9 +104,6 @@ class SkillPolicy(Policy):
         if self._config.MAX_SKILL_STEPS > 0:
             over_max_len = self._cur_skill_step > self._config.MAX_SKILL_STEPS
             if self._config.FORCE_END_ON_TIMEOUT:
-                if over_max_len.sum() > 0.0:
-                    print(f"Over max with {self._cur_skill_step}")
-
                 bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len

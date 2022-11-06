@@ -55,10 +55,6 @@ TASK:
         MAX_FORCE_PEN: 0.01
         FORCE_END_PEN: 1.0
 
-    PICK_SUCCESS:
-        TYPE: "RearrangePickSuccess"
-        EE_RESTING_SUCCESS_THRESHOLD: 0.2
-
     MEASUREMENTS:
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
@@ -85,6 +81,8 @@ SIMULATOR:
     DEBUG_RENDER: False
     DEBUG_RENDER_GOAL: False
     NEEDS_MARKERS: False
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3
