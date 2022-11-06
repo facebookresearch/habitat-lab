@@ -14,8 +14,8 @@ export OMP_NUM_THREADS=2
 export MAGNUM_LOG=quiet
 export HABITAT_SIM_LOG=quiet
 
-NO_SLEEP=("habitat.simulator.auto_sleep" False)
-NO_CONCUR=("habitat.simulator.concur_render" False)
+NO_SLEEP="habitat.simulator.auto_sleep=False"
+NO_CONCUR="habitat.simulator.concur_render=False"
 #NO_PHYSICS=("habitat.simulator.step_physics" False) #disables simulation step and robot update
 #NO_ROBOT_UPDATE=("habitat.simulator.update_robot" False) #only disables robot update
 
@@ -33,10 +33,10 @@ do
     python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "$NO_CONCUR"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "$NO_SLEEP"
 
     # # Ours (RENDER_ONLY)
     # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
@@ -49,10 +49,10 @@ do
     python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "$NO_CONCUR"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "$NO_SLEEP"
 
     # # Ours (RENDER_ONLY)
     # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
@@ -65,10 +65,10 @@ do
     python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "$NO_CONCUR"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrangement/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "$NO_SLEEP"
 
   done
 done

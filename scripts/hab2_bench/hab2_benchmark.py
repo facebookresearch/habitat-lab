@@ -168,7 +168,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-name", type=str, default="")
     parser.add_argument(
-        "--cfg", type=str, default="benchmark/rearrangement/play.yaml"
+        "--cfg", type=str, default="benchmark/rearrangement/idle.yaml"
     )
 
     parser.add_argument(
