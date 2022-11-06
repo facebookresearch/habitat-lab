@@ -262,17 +262,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def __init__(self, config: Config) -> None:
         self.habitat_config = config
-        agent_config = self._get_agent_config()
 
         sim_sensors = []
+        for agent in self.habitat_config.agents:
+            for sensor_cfg in self.habitat_config[agent].sim_sensors.values():
+                sensor_type = registry.get_sensor(sensor_cfg.type)
 
-        for sensor_cfg in agent_config.sim_sensors.values():
-            sensor_type = registry.get_sensor(sensor_cfg.type)
-
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.type
-            )
-            sim_sensors.append(sensor_type(sensor_cfg))
+                assert (
+                    sensor_type is not None
+                ), "invalid sensor type {}".format(sensor_cfg.type)
+                sim_sensors.append(sensor_type(sensor_cfg))
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)

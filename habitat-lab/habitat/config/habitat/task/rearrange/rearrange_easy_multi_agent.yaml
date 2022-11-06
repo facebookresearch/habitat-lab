@@ -27,7 +27,7 @@ defaults:
   - _self_
 
 type: RearrangeCompositeTask-v0
-reward_measure: move_obj_reward
+reward_measure: composite_success
 success_measure: composite_success
 success_reward: 100.0
 slack_reward: -0.01
