@@ -1,6 +1,6 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/set_table.yaml
-TRAINER_NAME: "ddppo"
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/rearrange_easy.yaml
+TRAINER_NAME: "ver"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
@@ -19,7 +19,7 @@ WRITER_TYPE: 'tb'
 SENSORS: ["HEAD_DEPTH_SENSOR"]
 CHECKPOINT_FOLDER: "data/new_checkpoints"
 NUM_UPDATES: -1
-TOTAL_NUM_STEPS: 1.0e8
+TOTAL_NUM_STEPS: 2.0e8
 LOG_INTERVAL: 10
 NUM_CHECKPOINTS: 20
 # Force PyTorch to be single threaded as
@@ -33,7 +33,6 @@ RL:
       action_distribution_type: "gaussian"
       ACTION_DIST:
          use_log_std: True
-
   PPO:
     # ppo params
     clip_param: 0.2
@@ -77,6 +76,6 @@ RL:
     reset_critic: True
 
     # Model parameters
-    backbone: resnet50
+    backbone: resnet18
     rnn_type: LSTM
     num_recurrent_layers: 2
