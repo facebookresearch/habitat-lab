@@ -71,11 +71,11 @@ class Episode(BaseEpisode):
     additional_obj_config_paths: List[str] = attr.ib(
         default=[], validator=not_none_validator
     )
-    start_position: List[float] = attr.ib(
-        default=None, validator=not_none_validator
+    start_position: np.ndarray = np.asarray(
+        attr.ib(default=None, validator=not_none_validator)
     )
-    start_rotation: List[float] = attr.ib(
-        default=None, validator=not_none_validator
+    start_rotation: np.ndarray = np.asarray(
+        attr.ib(default=None, validator=not_none_validator)
     )
     info: Optional[Dict[str, Any]] = None
     _shortest_path_cache: Any = attr.ib(init=False, default=None)

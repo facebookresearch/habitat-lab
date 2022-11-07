@@ -1,5 +1,6 @@
 from typing import Tuple, Union
 
+import numpy as np
 from gym import Env, Wrapper, spaces
 from gym.core import ActType, ObsType
 
@@ -33,8 +34,8 @@ class EnvCountEpisodeWrapper(Wrapper):
             return Episode(
                 episode_id=str(self._current_episode),
                 scene_id="default",
-                start_position=[],
-                start_rotation=[],
+                start_position=np.array([]),
+                start_rotation=np.array([]),
             )
 
     @property

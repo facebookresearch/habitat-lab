@@ -237,8 +237,8 @@ class AgentState:
 
 @attr.s(auto_attribs=True)
 class ShortestPathPoint:
-    position: List[Any]
-    rotation: List[Any]
+    position: Union[List[Any], np.ndarray]
+    rotation: Union[List[Any], np.ndarray]
     action: Union[int, np.ndarray, None] = None
 
 
@@ -312,8 +312,8 @@ class Simulator:
 
     def get_observations_at(
         self,
-        position: List[float],
-        rotation: List[float],
+        position: Union[List[Any], np.ndarray],
+        rotation: Union[List[Any], np.ndarray],
         keep_agent_at_new_pose: bool = False,
     ) -> Optional[Observations]:
         """Returns the observation.
@@ -331,7 +331,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def sample_navigable_point(self) -> List[float]:
+    def sample_navigable_point(self) -> Union[List[Any], np.ndarray]:
         r"""Samples a navigable point from the simulator. A point is defined as
         navigable if the agent can be initialized at that point.
 
@@ -339,7 +339,7 @@ class Simulator:
         """
         raise NotImplementedError
 
-    def is_navigable(self, point: List[float]) -> bool:
+    def is_navigable(self, point: Union[List[Any], np.ndarray]) -> bool:
         r"""Return :py:`True` if the agent can stand at the specified point.
 
         :param point: the point to check.
@@ -361,8 +361,10 @@ class Simulator:
         raise NotImplementedError
 
     def get_straight_shortest_path_points(
-        self, position_a: List[float], position_b: List[float]
-    ) -> List[List[float]]:
+        self,
+        position_a: Union[List[Any], np.ndarray],
+        position_b: Union[List[Any], np.ndarray],
+    ) -> List[Union[List[Any], np.ndarray]]:
         r"""Returns points along the geodesic (shortest) path between two
         points irrespective of the angles between the waypoints.
 
