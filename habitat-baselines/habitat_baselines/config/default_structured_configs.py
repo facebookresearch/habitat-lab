@@ -39,7 +39,7 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     evals_per_ep: int = 1
     video_option: List[str] = field(
         # available options are "disk" and "tensorboard"
-        default_factory=lambda: []
+        default_factory=list
     )
 
 
