@@ -1,6 +1,6 @@
 import mrp
 
-from home_robot.utils.mrp_shared_envs import control_env
+from home_robot.utils.mrp.envs import control_env
 
 # State estimation node
 mrp.process(

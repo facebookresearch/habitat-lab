@@ -15,7 +15,7 @@ from geometry_msgs.msg import (
 from nav_msgs.msg import Odometry
 
 from home_robot.utils.geometry import xyt2sophus
-from home_robot.utils.ros_geometry import pose_sophus2ros
+from home_robot.utils.geometry.ros import pose_sophus2ros
 
 
 SIM_HZ = 240

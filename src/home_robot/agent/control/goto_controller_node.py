@@ -8,7 +8,7 @@ from geometry_msgs.msg import Twist, Pose, PoseStamped
 
 from home_robot.agent.control.diff_drive_vel_control import DiffDriveVelocityControl
 from home_robot.utils.geometry import xyt_global_to_base, sophus2xyt
-from home_robot.utils.ros_geometry import pose_ros2sophus
+from home_robot.utils.geometry.ros import pose_ros2sophus
 
 
 CONTROL_HZ = 20

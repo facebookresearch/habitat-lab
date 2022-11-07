@@ -1,12 +1,12 @@
 import mrp
 
-from home_robot.utils.mrp_shared_envs import control_env
+from home_robot.utils.mrp.envs import control_env
 
 mrp.process(
     name="roscore",
     runtime=mrp.Conda(
         shared_env=control_env,
-        run_command=["roscore"],
+        run_command=["python3", "-m", "home_robot.utils.mrp.roscore"],
     ),
 )
 
