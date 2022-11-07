@@ -1,6 +1,11 @@
-Hardware interfacing components for the Hello Stretch
+# Hardware interfacing components for the Hello Stretch
 
-TODO migrate here:
+## Installation
+
+TODO: instructions to install stretch_ros & Hector SLAM natively
+
+## Notes:
+TODO Migrate here:
 - Direct robot interfacing code in `facebookresearch/fairo/droidlet/lowlevel/remote`
   - `remote_hello_robot.py`
   - `stretch_ros_move_api.py`
