@@ -65,6 +65,7 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
+from scipy.spatial.transform import Rotation
 
 try:
     import pygame
@@ -83,8 +84,145 @@ os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
 
 # How many random way points you want to generate
-LEN_WAY_POINT = 1000
+LEN_WAY_POINT = 1500
 
+
+V_MAX_DEFAULT = 0.45  # base.params["motion"]["default"]["vel_m"]
+W_MAX_DEFAULT = 0.45  # (vel_m_max - vel_m_default) / wheel_separation_m
+ACC_LIN = 1.2  # 0.5 * base.params["motion"]["max"]["accel_m"]
+ACC_ANG = 1.2  # 0.5 * (accel_m_max - accel_m_default) / wheel_separation_m
+MAX_HEADING_ANG = np.pi #/ 4
+
+def transform_global_to_base(XYT, current_pose):
+    """
+    Transforms the point cloud into geocentric frame to account for
+    camera position
+    Input:
+        XYZ                     : ...x3
+        current_pose            : base position (x, y, theta (radians))
+    Output:
+        XYZ : ...x3
+    """
+
+    XYT = np.asarray(XYT, dtype=np.float32)
+    new_T = XYT[2] - current_pose[2]
+    R = Rotation.from_euler("Z", current_pose[2]).as_matrix()
+    XYT[0] = XYT[0] - current_pose[0]
+    XYT[1] = XYT[1] - current_pose[1]
+    out_XYT = np.matmul(XYT.reshape(-1, 3), R).reshape((-1, 3))
+    out_XYT = out_XYT.ravel()
+    return [out_XYT[0], out_XYT[1], new_T]
+
+class Controller:
+    def __init__(self, track_yaw=True):
+        self.track_yaw = track_yaw
+
+        # Params
+        self.v_max = V_MAX_DEFAULT
+        self.w_max = W_MAX_DEFAULT
+        self.lin_error_tol = self.v_max / 120
+        self.ang_error_tol = self.w_max / 120
+
+        # Init
+        self.xyt_goal = np.zeros(3)
+        self.dxyt_goal = np.zeros(3)
+
+    def set_goal(self, goal, vel_goal=None):
+        self.xyt_goal = goal
+        if vel_goal is not None:
+            self.dxyt_goal = vel_goal
+
+    def _compute_error_pose(self, xyt_base):
+        """
+        Updates error based on robot localization
+        """
+        xyt_err = transform_global_to_base(self.xyt_goal, xyt_base)
+        if not self.track_yaw:
+            xyt_err[2] = 0.0
+
+        return xyt_err
+
+    @staticmethod
+    def _velocity_feedback_control(x_err, a, v_max):
+        """
+        Computes velocity based on distance from target.
+        Used for both linear and angular motion.
+
+        Current implementation: Trapezoidal velocity profile
+        """
+        t = np.sqrt(2.0 * abs(x_err) / a)  # x_err = (1/2) * a * t^2
+        v = min(a * t, v_max)
+        return v * np.sign(x_err)
+
+    @staticmethod
+    def _turn_rate_limit(lin_err, heading_diff, w_max, tol=0.0):
+        """
+        Compute velocity limit that prevents path from overshooting goal
+
+        heading error decrease rate > linear error decrease rate
+        (w - v * np.sin(phi) / D) / phi > v * np.cos(phi) / D
+        v < (w / phi) / (np.sin(phi) / D / phi + np.cos(phi) / D)
+        v < w * D / (np.sin(phi) + phi * np.cos(phi))
+
+        (D = linear error, phi = angular error)
+        """
+        assert lin_err >= 0.0
+        assert heading_diff >= 0.0
+        #import pdb; pdb.set_trace()
+        if heading_diff > MAX_HEADING_ANG:
+            return 0.0
+        else:
+            return w_max * lin_err / (np.sin(heading_diff) + heading_diff * np.cos(heading_diff) + 1e-5)
+
+    def _feedback_traj_track(self, xyt_err):
+        xyt_err = self._compute_error_pose(xyt)
+        v_raw = V_MAX_DEFAULT * (K1 * xyt_err[0] + xyt_err[1] * np.tan(xyt_err[2])) / np.cos(xyt_err[2])
+        w_raw = V_MAX_DEFAULT * (K2 * xyt_err[1] + K3 * np.tan(xyt_err[2])) / np.cos(xyt_err[2])**2
+        v_out = min(v_raw, V_MAX_DEFAULT)
+        w_out = min(w_raw, W_MAX_DEFAULT)
+        return np.array([v_out, w_out])
+
+    def _feedback_simple(self, xyt_err):
+        v_cmd = w_cmd = 0
+
+        lin_err_abs = np.linalg.norm(xyt_err[0:2])
+        ang_err = xyt_err[2]
+
+        # Go to goal XY position if not there yet
+        if lin_err_abs > self.lin_error_tol:
+            heading_err = np.arctan2(xyt_err[1], xyt_err[0])
+            heading_err_abs = abs(heading_err)
+
+            # Compute linear velocity
+            v_raw = self._velocity_feedback_control(
+                lin_err_abs, ACC_LIN, self.v_max
+            )
+            v_limit = self._turn_rate_limit(
+                lin_err_abs,
+                heading_err_abs,
+                self.w_max / 2.0,
+                tol=self.lin_error_tol,
+            )
+            #import pdb; pdb.set_trace()
+            v_cmd = np.clip(v_raw, 0.0, v_limit)
+
+            # Compute angular velocity
+            w_cmd = self._velocity_feedback_control(
+                heading_err, ACC_ANG, self.w_max
+            )
+
+        # Rotate to correct yaw if yaw tracking is on and XY position is at goal
+        elif abs(ang_err) > self.ang_error_tol and self.track_yaw:
+            # Compute angular velocity
+            w_cmd = self._velocity_feedback_control(
+                ang_err, ACC_ANG, self.w_max
+            )
+
+        return v_cmd*10, w_cmd*10
+
+    def forward(self, xyt):
+        xyt_err = self._compute_error_pose(xyt)
+        return self._feedback_simple(xyt_err)
 
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
@@ -143,6 +281,9 @@ def waypoint_generator(env, args, config):
         if len(visited_points) >= LEN_WAY_POINT:
             break
 
+    visited_points = visited_points[0::10]
+    used_actions = used_actions[0::10]
+    print(visited_points)
     return visited_points, used_actions
 
 
@@ -385,6 +526,17 @@ def get_wrapped_prop(venv, prop):
     return None
 
 
+def reached(cur_pos, target_pos, cur_rot, target_rot):
+    p = 0
+    for i in range(3):
+        p += (cur_pos[i] - target_pos[i])**2
+
+    a = abs(float(cur_rot)-float(target_rot))
+    if p**0.5 <= 0.1 and a <= 0.1:
+        return True
+    else:
+        return False
+
 class FreeCamHelper:
     def __init__(self):
         self._is_free_cam_mode = False
@@ -493,6 +645,7 @@ def play_env(env, args, config):
     env.sim.robot.base_pos = before_base_pos
     env.sim.robot.base_rot = before_base_rot
 
+    first_flag = True
     while True:
         if (
             args.save_actions
@@ -519,8 +672,24 @@ def play_env(env, args, config):
         if len(used_action_list) == 0:
             base_action = [0, 0]
         else:
-            base_action = point2vel(used_action_list)
-            used_action_list = used_action_list[1:]
+            flag = reached(env.sim.robot.base_pos, waypoint_list[0][0], env.sim.robot.base_rot,  waypoint_list[0][1])
+            if flag or first_flag:
+                agent = Controller()
+                xyt_goal = [ waypoint_list[1][0][0],  waypoint_list[1][0][2],  float(waypoint_list[1][1])]
+                print("xyt_goal:", xyt_goal)
+                print("current:", env.sim.robot.base_pos, env.sim.robot.base_rot)
+                agent.set_goal(xyt_goal)
+                first_flag = False
+                waypoint_list = waypoint_list[1:]
+            xyt = [env.sim.robot.base_pos[0], env.sim.robot.base_pos[2], float(env.sim.robot.base_rot)]
+            base_action = agent.forward(xyt)
+
+            print("base_action:", base_action, xyt)
+            print("current:", env.sim.robot.base_pos, env.sim.robot.base_rot, xyt_goal)
+
+            # Mine
+            #base_action = point2vel(used_action_list)
+            #used_action_list = used_action_list[1:]
 
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
@@ -573,6 +742,15 @@ def play_env(env, args, config):
             if gfx_measure is not None:
                 gfx_measure.get_metric(force_get=True)
             env.reset()
+            before_base_pos = env.sim.robot.base_pos
+            before_base_rot = env.sim.robot.base_rot
+
+            waypoint_list, used_action_list = waypoint_generator(env, args, config)
+
+            env.sim.robot.base_pos = before_base_pos
+            env.sim.robot.base_rot = before_base_rot
+
+            first_flag = True
 
         if not args.no_render:
             step_result = free_cam.update(env, step_result, update_idx)

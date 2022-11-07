@@ -112,8 +112,8 @@ TASK:
             TYPE: "ArmAction"
             ARM_CONTROLLER: "ArmRelPosKinematicReducedActionStretch" #  or ArmRelPosAction
             GRIP_CONTROLLER: "MagicGraspAction"
-            ARM_JOINT_MASK: [1,0,0,0,1,1,1,1] # mask out the arm
-            ARM_JOINT_DIMENSIONALITY: 8
+            ARM_JOINT_MASK: [1,0,0,0,1,1,1,1,1,1] # mask out the arm
+            ARM_JOINT_DIMENSIONALITY: 10
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
@@ -150,7 +150,10 @@ SIMULATOR:
         RADIUS: 0.3
         SENSORS: [HEAD_RGB_SENSOR, HEAD_DEPTH_SENSOR]
         # ROBOT_URDF: /Users/jimmytyyang/Documents/chris_code/hab_stretch/urdf/hab_stretch_obj.urdf
-        ROBOT_URDF: /Users/jimmytyyang/Documents/chris_code/hab_stretch/urdf/hab_stretch_obj_v2.urdf
+        # ROBOT_URDF: /Users/jimmytyyang/Documents/chris_code/hab_stretch/urdf/hab_stretch_obj_v2.urdf
+        ROBOT_URDF: /Users/jimmytyyang/Documents/hab_stretch/urdf/hab_stretch.urdf
+        # ROBOT_URDF: /Users/jimmytyyang/Documents/chris_code/hab_stretch/urdf/stretch.urdf
+        #ROBOT_URDF: /Users/jimmytyyang/Documents/chris_code/hab_stretch/urdf/hab_stretch_dex_wrist.urdf
         ROBOT_TYPE: "StretchRobot"
         IK_ARM_URDF:
     HEAD_RGB_SENSOR:

@@ -16,20 +16,40 @@ from habitat_sim.utils.common import orthonormalize_rotation_shear
 class StretchRobot(MobileManipulator):
     def _get_fetch_params(self):
         return MobileManipulatorParams(
-            arm_joints=[28, 27, 26, 25, 23, 31, 7, 8],
-            gripper_joints=[34, 36],
-            wheel_joints=[4, 40],
+            # 28: joint_arm_l0
+            # 27: joint_arm_l1
+            # 26: joint_arm_l2
+            # 25: joint_arm_l3
+            # 23: joint_lift
+            # 31: joint_wrist_yaw
+            # 39: joint_wrist_pitch
+            # 40: joint_wrist_roll
+            # 7: joint_head_pan
+            # 8: joint_head_tilt
+            #arm_joints=[28, 27, 26, 25, 23, 31, 39, 40, 7, 8],
+            arm_joints=[28, 27, 26, 25, 23, 31, 33, 34, 7, 8],
+            # 34: joint_gripper_finger_left
+            # 36: joint_gripper_finger_right
+            #gripper_joints=[34, 36],
+            gripper_joints=[36, 38],
+            # 4: joint_left_wheel
+            # 44: joint_right_wheel
+            #wheel_joints=[4, 44],
+            wheel_joints=[4, 42],
             arm_init_params=np.array(
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 dtype=np.float32,
             ),
             gripper_init_params=np.array([0.0, 0.0], dtype=np.float32),
             ee_offset=mn.Vector3(0.08, 0, 0),
-            ee_link=34,
+            ee_link=36,
             # ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
             # inner-forward, left-right, height-high and down
+            # ee_constraint=np.array(
+            #     [[0.00, 0.23], [-0.74, -0.34], [-0.06, 1.03]]
+            # ),
             ee_constraint=np.array(
-                [[0.00, 0.23], [-0.74, -0.34], [-0.06, 1.03]]
+                [[-0.15, 0.32], [-0.90, -0.38], [0.02, 1.12]]
             ),
             # Camera color optical frame...
             # correct angles
@@ -82,7 +102,9 @@ class StretchRobot(MobileManipulator):
                 ),
             },
             gripper_closed_state=np.array([0.0, 0.0], dtype=np.float32),
-            gripper_open_state=np.array([0.6, 0.6], dtype=np.float32),
+            #gripper_open_state=np.array([0.6, 0.6], dtype=np.float32),
+            # Samller number to make it more relaisit
+            gripper_open_state=np.array([0.02, 0.02], dtype=np.float32),
             gripper_state_eps=0.1,
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,

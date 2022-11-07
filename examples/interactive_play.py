@@ -77,12 +77,13 @@ except ImportError:
 # DEFAULT_CFG = "configs/tasks/rearrange/open_cab.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/open_fridge_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_spot_blind.yaml"
-DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml" <- common one for the stretch
+DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
+#DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -240,6 +241,54 @@ def get_input_vel_ctlr(
                 arm_action[7] = 1.0
             elif keys[pygame.K_9]:
                 arm_action[7] = -1.0
+        elif arm_action_space.shape[0] == 10:
+            # Velocity control. A different key for each joint
+            # arm_control, arm_joints index, name
+            # 0 28: joint_arm_l0
+            # 1 27: joint_arm_l1
+            # 2 26: joint_arm_l2
+            # 3 25: joint_arm_l3
+            # 4 23: joint_lift
+            # 5 31: joint_wrist_yaw
+            # 6 39: joint_wrist_pitch
+            # 7 40: joint_wrist_roll
+            # 8 7: joint_head_pan
+            # 9 8: joint_head_tilt
+
+            if keys[pygame.K_q]: # joint_arm_l0, joint_arm_l1, joint_arm_l2, joint_arm_l3
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]: # joint_lift
+                arm_action[4] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_e]: # joint_wrist_yaw
+                arm_action[5] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_r]: # joint_wrist_pitch
+                arm_action[6] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[6] = -1.0
+
+            elif keys[pygame.K_t]: # joint_wrist_roll
+                arm_action[7] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[7] = -1.0
+
+            elif keys[pygame.K_y]: # joint_head_pan
+                arm_action[8] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[8] = -1.0
+
+            elif keys[pygame.K_u]: # joint_head_tilt
+                arm_action[9] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[9] = -1.0
 
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5

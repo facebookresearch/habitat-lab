@@ -150,7 +150,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
             # Face the robot towards the object.
             rot_noise = np.random.normal(0.0, self._config.BASE_ANGLE_NOISE)
-            if "hab_stretch_obj.urdf" in sim.robot.urdf_path:
+            if "stretch" in sim.robot.urdf_path:
                 angle_to_obj += 1.57
                 sim.robot.base_rot = angle_to_obj + rot_noise
             else:
