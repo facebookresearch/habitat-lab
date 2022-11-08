@@ -120,7 +120,7 @@ class RearrangePickTaskV1(RearrangeTask):
             if "hab_spot_arm.urdf" in self._sim.robot.urdf_path:
                 start_pos -= move_dir * 0.25
             else:
-                start_pos -= move_dir * 0.1
+                start_pos -= move_dir * 0.0
             # Get heading that would point the robot towards the object
             rel_targ = targ_pos - start_pos
 

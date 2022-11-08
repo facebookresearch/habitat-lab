@@ -761,6 +761,12 @@ _C.TASK.ARM_SEMANTIC_SENSOR = _C.SIMULATOR.SEMANTIC_SENSOR.clone()
 _C.TASK.ARM_SEMANTIC_SENSOR.TYPE = "ArmSemanticSensor"
 _C.TASK.ARM_SEMANTIC_SENSOR.UUID = "robot_arm_semantic"
 # -----------------------------------------------------------------------------
+# SEMANTIC SENSOR FOR TASK
+# -----------------------------------------------------------------------------
+_C.TASK.HEAD_SEMANTIC_SENSOR = _C.SIMULATOR.SEMANTIC_SENSOR.clone()
+_C.TASK.HEAD_SEMANTIC_SENSOR.TYPE = "HeadSemanticSensor"
+_C.TASK.HEAD_SEMANTIC_SENSOR.UUID = "robot_head_semantic"
+# -----------------------------------------------------------------------------
 # EQUIRECT RGB SENSOR
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.EQUIRECT_RGB_SENSOR = SIMULATOR_SENSOR.clone()
@@ -810,6 +816,11 @@ _C.SIMULATOR.ARM_DEPTH_SENSOR.UUID = "robot_arm_depth"
 # -----------------------------------------------------------------------------
 _C.SIMULATOR.ARM_SEMANTIC_SENSOR = _C.SIMULATOR.SEMANTIC_SENSOR.clone()
 _C.SIMULATOR.ARM_SEMANTIC_SENSOR.UUID = "robot_arm_semantic"
+# -----------------------------------------------------------------------------
+# HEAD SEMANTIC SENSOR
+# -----------------------------------------------------------------------------
+_C.SIMULATOR.HEAD_SEMANTIC_SENSOR = _C.SIMULATOR.SEMANTIC_SENSOR.clone()
+_C.SIMULATOR.HEAD_SEMANTIC_SENSOR.UUID = "robot_head_semantic"
 # -----------------------------------------------------------------------------
 # 3rd RGB SENSOR
 # -----------------------------------------------------------------------------
@@ -892,6 +903,7 @@ _C.SIMULATOR.FISHEYE_SEMANTIC_SENSOR.TYPE = "HabitatSimFisheyeSemanticSensor"
 _C.SIMULATOR.AGENT_0 = CN()
 _C.SIMULATOR.AGENT_0.HEIGHT = 1.5
 _C.SIMULATOR.AGENT_0.RADIUS = 0.1
+#_C.SIMULATOR.AGENT_0.INCLUDE_STATIC_OBJECT_IN_NAV_MESH = False
 _C.SIMULATOR.AGENT_0.SENSORS = ["RGB_SENSOR"]
 _C.SIMULATOR.AGENT_0.IS_SET_START_STATE = False
 _C.SIMULATOR.AGENT_0.START_POSITION = [0, 0, 0]

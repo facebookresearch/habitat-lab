@@ -9,7 +9,7 @@ GYM:
     #OBS_KEYS: [ 'obj_start_sensor', 'joint', 'is_holding', 'relative_resting_position']
     #OBS_KEYS: ['robot_head_stereo_left_depth', 'robot_head_stereo_right_depth', 'robot_arm_depth', 'joint', 'is_holding', 'camera_to_target', 'ee_pos'] # This is the true observation of the policy
     #OBS_KEYS: ['robot_head_depth', 'joint', 'is_holding'] # This is the true observation of the policy
-    OBS_KEYS: ['robot_head_depth', 'joint', 'is_holding', "relative_resting_position", "obj_start_sensor"] # This is the true observation of the policy
+    OBS_KEYS: ['robot_head_semantic', 'robot_head_depth', 'joint', 'is_holding', "relative_resting_position", "obj_start_sensor"] # This is the true observation of the policy
     CLASS_NAME: ["RearrangeRLEnv"]
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 500 # Default value is 200
@@ -25,7 +25,7 @@ TASK:
     TYPE: RearrangePickTask-v0
     COUNT_OBJ_COLLISIONS: True
     COUNT_ROBOT_OBJ_COLLS: False
-    DESIRED_RESTING_POSITION: [0.10, -0.34, -0.06] # the lowest position of the robot
+    DESIRED_RESTING_POSITION: [0.11, -0.38, 0.22] # the lowest position of the robot
 
     SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
 
@@ -65,7 +65,7 @@ TASK:
         DIMENSIONALITY: 3
     JOINT_SENSOR:
         TYPE: "JointSensor"
-        DIMENSIONALITY: 8
+        DIMENSIONALITY: 10
     END_EFFECTOR_SENSOR:
         TYPE: "EEPositionSensor"
     IS_HOLDING_SENSOR:
@@ -75,15 +75,6 @@ TASK:
     RELATIVE_RESTING_POS_SENSOR:
         TYPE: "RelativeRestingPositionSensor"
     SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
-    ARM_DEPTH_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        NORMALIZE_DEPTH: True
-    ARM_SEMANTIC_SENSOR:
-        HEIGHT: 128
-        WIDTH: 128
     ROBOT_FORCE:
         TYPE: "RobotForce"
         MIN_FORCE: 20.0
@@ -168,7 +159,7 @@ SIMULATOR:
         HEIGHT: 1.5
         RADIUS: 0.3
         # This one needs to consistent with with the task, or this one needs to be the superset of the task sensor
-        SENSORS: [HEAD_RGB_SENSOR, HEAD_DEPTH_SENSOR]
+        SENSORS: [HEAD_RGB_SENSOR, HEAD_DEPTH_SENSOR, HEAD_SEMANTIC_SENSOR]
         ROBOT_URDF: /Users/jimmytyyang/Documents/hab_stretch/urdf/hab_stretch.urdf
         ROBOT_TYPE: "StretchRobot"
         IK_ARM_URDF: #data/robots/hab_spot_arm/urdf/hab_spot_onlyarm.urdf
@@ -182,17 +173,9 @@ SIMULATOR:
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
         NORMALIZE_DEPTH: True
-    ARM_DEPTH_SENSOR:
+    HEAD_SEMANTIC_SENSOR:
         HEIGHT: 212
         WIDTH: 120
-        MAX_DEPTH: 10.0
-        MIN_DEPTH: 0.0
-        HFOV: 87
-        NORMALIZE_DEPTH: True
-    ARM_RGB_SENSOR:
-        HEIGHT: 212
-        WIDTH: 120
-        HFOV: 69
 
     # Agent setup
     CTRL_FREQ: 120.0

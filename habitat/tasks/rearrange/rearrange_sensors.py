@@ -335,6 +335,31 @@ class ArmSemanticSensor(UsesRobotInterface, SemanticSensor):
         )
         return obs
 
+@registry.register_sensor
+class HeadSemanticSensor(UsesRobotInterface, SemanticSensor):
+    _get_default_spec = habitat_sim.CameraSensorSpec
+    sim_sensor_type = habitat_sim.SensorType.SEMANTIC
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "robot_head_semantic"
+
+    def _get_observation_space(self, *args: Any, config, **kwargs: Any) -> Box:
+        return spaces.Box(
+            low=np.iinfo(np.uint32).min,
+            high=np.iinfo(np.uint32).max,
+            shape=(self.config.HEIGHT, self.config.WIDTH, 1),
+            dtype=np.int32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        obs = cast(
+            Optional[VisualObservation], observations.get(self.uuid, None)
+        )
+        return obs
 
 @registry.register_sensor
 class JointVelocitySensor(UsesRobotInterface, Sensor):

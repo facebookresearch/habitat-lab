@@ -4,8 +4,8 @@ TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "/Users/jimmytyyang/Documents/log_data/tb_pick_1003_v1"
-VIDEO_DIR: "/Users/jimmytyyang/Documents/log_data/video_dir_pick_1003_v1"
+TENSORBOARD_DIR: "/Users/jimmytyyang/Documents/log_data/tb_pick_1108_v1"
+VIDEO_DIR: "/Users/jimmytyyang/Documents/log_data/video_dir_pick_1108_v1"
 VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
@@ -15,8 +15,8 @@ TEST_EPISODE_COUNT: -1
 EVAL_CKPT_PATH_DIR: #"/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_0427_test/ckpt.10.pth"
 NUM_ENVIRONMENTS: 1
 # Visual sensors to include
-SENSORS: ["HEAD_DEPTH_SENSOR", "HEAD_RGB_SENSOR"]
-CHECKPOINT_FOLDER: "/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_1003_v1"
+SENSORS: ["HEAD_DEPTH_SENSOR", "HEAD_RGB_SENSOR", "HEAD_SEMANTIC_SENSOR"]
+CHECKPOINT_FOLDER: "/Users/jimmytyyang/Documents/log_data/new_checkpoints_pick_1108_v1"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 1.0e9
 LOG_INTERVAL: 10 # This is based on the PPO  num_steps

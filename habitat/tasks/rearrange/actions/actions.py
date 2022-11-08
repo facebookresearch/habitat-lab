@@ -498,6 +498,8 @@ class BaseVelAction(RobotAction):
             if self._config.VEL_BASE_MASK[1] == 0:
                 ang_vel = 0.0
 
+        print("@actions.py, lin_vel:", lin_vel)
+        print("@actions.py, ang_vel:", ang_vel)
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 

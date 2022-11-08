@@ -72,7 +72,8 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -86,12 +87,13 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 # How many random way points you want to generate
 LEN_WAY_POINT = 1500
 
-
-V_MAX_DEFAULT = 0.45  # base.params["motion"]["default"]["vel_m"]
-W_MAX_DEFAULT = 0.45  # (vel_m_max - vel_m_default) / wheel_separation_m
-ACC_LIN = 1.2  # 0.5 * base.params["motion"]["max"]["accel_m"]
-ACC_ANG = 1.2  # 0.5 * (accel_m_max - accel_m_default) / wheel_separation_m
-MAX_HEADING_ANG = np.pi #/ 4
+# The output limit
+V_MAX_DEFAULT = 1.0 #0.45  # base.params["motion"]["default"]["vel_m"]
+W_MAX_DEFAULT = 1.0 #0.45  # (vel_m_max - vel_m_default) / wheel_separation_m
+# The coeffcienet
+ACC_LIN = 0.1 #1.2  # 0.5 * base.params["motion"]["max"]["accel_m"]
+ACC_ANG = 0.1 #1.2  # 0.5 * (accel_m_max - accel_m_default) / wheel_separation_m
+MAX_HEADING_ANG = np.pi * 5 #/ 2.0
 
 def transform_global_to_base(XYT, current_pose):
     """
@@ -218,7 +220,8 @@ class Controller:
                 ang_err, ACC_ANG, self.w_max
             )
 
-        return v_cmd*10, w_cmd*10
+        # v_cmd and w_cmd will be clip for [-1, 1]
+        return v_cmd, w_cmd
 
     def forward(self, xyt):
         xyt_err = self._compute_error_pose(xyt)
@@ -283,7 +286,11 @@ def waypoint_generator(env, args, config):
 
     visited_points = visited_points[0::10]
     used_actions = used_actions[0::10]
-    print(visited_points)
+
+    visited_points = []
+    visited_points.append([[1.33366, 0.652255, 0.403866], 0.6732290])
+    visited_points.append([[-0.934055, 0.652255, 0.192359], 0.0718358])
+    visited_points.append([[-1.43059, 0.652255, -3.80539], 0.673224])
     return visited_points, used_actions
 
 
@@ -410,7 +417,7 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
-        elif arm_action_space.shape[0] == 8:
+        elif arm_action_space.shape[0] == 10:
             # Velocity control. A different key for each joint
             if keys[pygame.K_q]:
                 arm_action[0] = 1.0
@@ -528,7 +535,7 @@ def get_wrapped_prop(venv, prop):
 
 def reached(cur_pos, target_pos, cur_rot, target_rot):
     p = 0
-    for i in range(3):
+    for i in [0, 2]:
         p += (cur_pos[i] - target_pos[i])**2
 
     a = abs(float(cur_rot)-float(target_rot))
@@ -640,6 +647,12 @@ def play_env(env, args, config):
     before_base_pos = env.sim.robot.base_pos
     before_base_rot = env.sim.robot.base_rot
 
+    # Define the fixed starting points
+    before_base_pos[0] = 1.972760
+    before_base_pos[1] = 0.652255
+    before_base_pos[2] = 7.207250
+    before_base_rot = 0.673229
+
     waypoint_list, used_action_list = waypoint_generator(env, args, config)
 
     env.sim.robot.base_pos = before_base_pos
@@ -669,23 +682,33 @@ def play_env(env, args, config):
             )
 
         # Here is the part to decide the velocity control.
+        #import pdb; pdb.set_trace()
         if len(used_action_list) == 0:
             base_action = [0, 0]
         else:
-            flag = reached(env.sim.robot.base_pos, waypoint_list[0][0], env.sim.robot.base_rot,  waypoint_list[0][1])
-            if flag or first_flag:
+            flag = False
+            if len(waypoint_list) > 0:
+                flag = reached(env.sim.robot.base_pos, waypoint_list[0][0], env.sim.robot.base_rot,  waypoint_list[0][1])
+            if flag and len(waypoint_list) > 0:
+                waypoint_list = waypoint_list[1:]
+            if (flag or first_flag) and len(waypoint_list) > 0:
                 agent = Controller()
-                xyt_goal = [ waypoint_list[1][0][0],  waypoint_list[1][0][2],  float(waypoint_list[1][1])]
+                xyt_goal = [ waypoint_list[0][0][0],  waypoint_list[0][0][2],  float(waypoint_list[0][1])]
                 print("xyt_goal:", xyt_goal)
                 print("current:", env.sim.robot.base_pos, env.sim.robot.base_rot)
                 agent.set_goal(xyt_goal)
                 first_flag = False
-                waypoint_list = waypoint_list[1:]
             xyt = [env.sim.robot.base_pos[0], env.sim.robot.base_pos[2], float(env.sim.robot.base_rot)]
             base_action = agent.forward(xyt)
 
-            print("base_action:", base_action, xyt)
-            print("current:", env.sim.robot.base_pos, env.sim.robot.base_rot, xyt_goal)
+            if len(waypoint_list) == 0:
+                base_action = [0.0, 0.0]
+
+            print("base_action:", base_action)
+            print("current and goal:", env.sim.robot.base_pos, env.sim.robot.base_rot, xyt_goal)
+            print("reached:", flag)
+            # if flag:
+            #     import pdb; pdb.set_trace()
 
             # Mine
             #base_action = point2vel(used_action_list)

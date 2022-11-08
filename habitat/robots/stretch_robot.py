@@ -49,7 +49,8 @@ class StretchRobot(MobileManipulator):
             #     [[0.00, 0.23], [-0.74, -0.34], [-0.06, 1.03]]
             # ),
             ee_constraint=np.array(
-                [[-0.15, 0.32], [-0.90, -0.38], [0.02, 1.12]]
+                #[[-0.15, 0.32], [-0.90, -0.38], [0.02, 1.12]]
+                [[-0.08, 0.29], [-0.84, -0.27], [0.01, 1.12]]
             ),
             # Camera color optical frame...
             # correct angles
