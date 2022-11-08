@@ -1,3 +1,6 @@
+import abc
+from typing import Tuple
+
 import numpy as np
 
 V_MAX_DEFAULT = 0.2  # base.params["motion"]["default"]["vel_m"]
@@ -7,9 +10,20 @@ ACC_ANG = 1.2  # (accel_m_max - accel_m_default) / wheel_separation_m
 MAX_HEADING_ANG = np.pi / 4
 
 
-class DiffDriveVelocityControl:
+class DiffDriveVelocityController(abc.ABC):
     """
-    Control logic for differential drive robot velocity control
+    Abstract class for differential drive robot velocity controllers.
+    """
+
+    @abc.abstractmethod
+    def __call__(self, xyt_err) -> Tuple[float, float]:
+        pass
+
+
+class DDVelocityControlNoplan(DiffDriveVelocityController):
+    """
+    Control logic for differential drive robot velocity control.
+    Does not plan at all, instead uses heuristics to gravitate towards the goal.
     """
 
     def __init__(self, hz):

@@ -7,7 +7,7 @@ import rospy
 from std_srvs.srv import Trigger, TriggerResponse
 from geometry_msgs.msg import Twist, Pose, PoseStamped
 
-from home_robot.agent.control.diff_drive_vel_control import DiffDriveVelocityControl
+from home_robot.agent.control.velocity_controllers import DDVelocityControlNoplan
 from home_robot.utils.geometry import xyt_global_to_base, sophus2xyt
 from home_robot.utils.geometry.ros import pose_ros2sophus
 
@@ -31,7 +31,7 @@ class GotoVelocityController:
         self.dt = 1.0 / self.hz
 
         # Control module
-        self.control = DiffDriveVelocityControl(hz)
+        self.control = DDVelocityControlNoplan(hz)
 
         # Publishers
         rospy.init_node("goto_controller")
