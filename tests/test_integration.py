@@ -16,6 +16,7 @@ def home_robot_stack():
     mrp.cmd.up("fake_stretch")
     mrp.cmd.up("state_estimator")
     mrp.cmd.up("goto_controller")
+    mrp.cmd.wait()
 
 
 @pytest.fixture()
@@ -31,7 +32,7 @@ def test_goto(home_robot_stack, robot):
     robot.set_goal(xyt_goal)
 
     # Wait for robot to reach goal
-    time.sleep(4)
+    time.sleep(5)
 
     # Check that robot is at goal
     xyt_new = robot.get_base_state()
