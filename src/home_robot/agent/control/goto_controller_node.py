@@ -1,3 +1,4 @@
+import logging
 from typing import List, Optional
 import threading
 
@@ -10,6 +11,8 @@ from home_robot.agent.control.diff_drive_vel_control import DiffDriveVelocityCon
 from home_robot.utils.geometry import xyt_global_to_base, sophus2xyt
 from home_robot.utils.geometry.ros import pose_ros2sophus
 
+
+log = logging.getLogger(__name__)
 
 CONTROL_HZ = 20
 
@@ -46,6 +49,7 @@ class GotoVelocityController:
         self.xyt_loc = sophus2xyt(pose_sp)
 
     def _goal_update_callback(self, msg: Pose):
+        print(msg)
         pose_sp = pose_ros2sophus(msg)
         self.xyt_goal = sophus2xyt(pose_sp)
 
@@ -59,7 +63,7 @@ class GotoVelocityController:
 
     def _toggle_on_service(self, request):
         self.active = not self.active
-        status_str = ["STOPPED", "RUNNING"][int(self.track_yaw)]
+        status_str = ["STOPPED", "RUNNING"][int(self.active)]
         return TriggerResponse(
             success=True,
             message=f"Goto controller is now {status_str}",
@@ -117,7 +121,7 @@ class GotoVelocityController:
         )
 
         # Run controller
-        print("Goto Controller launched.")
+        log.info("Goto Controller launched.")
         self._run_control_loop()
 
 

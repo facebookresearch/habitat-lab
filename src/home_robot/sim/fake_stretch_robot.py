@@ -3,6 +3,7 @@ Launches a kinematic simulation that mimics:
 - stretch_ros: Publishes odometry information, subscribes to velocity commands
 - Hector slam: Publishes slam pose information
 """
+import logging
 import time
 
 import numpy as np
@@ -17,6 +18,8 @@ from nav_msgs.msg import Odometry
 from home_robot.utils.geometry import xyt2sophus
 from home_robot.utils.geometry.ros import pose_sophus2ros
 
+
+log = logging.getLogger(__name__)
 
 SIM_HZ = 240
 VEL_CONTROL_HZ = 20
@@ -42,8 +45,10 @@ class Env:
 
 class FakeStretch:
     def __init__(self, sim_hz, control_hz):
-        self.sim = Env(sim_hz)
+        self.sim_hz = sim_hz
         self.control_hz = control_hz
+
+        self.sim = Env(sim_hz)
         self._vel_cmd_cache = [0.0, 0.0]
 
         # Ros stuff
@@ -80,8 +85,10 @@ class FakeStretch:
         # Sim loop
         dt_control = 1 / self.control_hz
 
-        rate = rospy.Rate(self.control_hz)
+        rate = rospy.Rate(self.sim_hz)
         t_control_target = time.time()
+
+        log.info("Fake Stretch Sim launched.")
         while True:
             # Publish states
             ros_time = rospy.Time.now()

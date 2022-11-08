@@ -1,3 +1,4 @@
+import logging
 import time
 import threading
 
@@ -12,6 +13,8 @@ from geometry_msgs.msg import (
 )
 from nav_msgs.msg import Odometry
 
+
+log = logging.getLogger(__name__)
 
 SLAM_CUTOFF_HZ = 0.2
 
@@ -110,7 +113,7 @@ class NavStateEstimator:
         # This comes from wheel odometry.
         rospy.Subscriber("/odom", Odometry, self._odom_callback, queue_size=1)
 
-        print("State Estimator launched.")
+        log.info("State Estimator launched.")
         rospy.spin()
 
 

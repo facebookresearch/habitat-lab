@@ -21,7 +21,6 @@ def pose_ros2sophus(pose):
 
     r_mat = Rotation.from_quat(quat).as_matrix()
     t_vec = np.array([pose.position.x, pose.position.y, pose.position.z])
-
     return sp.SE3(r_mat, t_vec)
 
 
