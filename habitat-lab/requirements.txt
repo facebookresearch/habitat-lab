@@ -8,7 +8,6 @@ pickle5; python_version < '3.8'
 # visualization optional dependencies
 imageio>=2.2.0
 imageio-ffmpeg>=0.2.0
-pre-commit
 scipy>=1.0.0
 tqdm>=4.0.0
 numba>=0.44.0
