@@ -65,6 +65,7 @@ class FakeStretch:
         msg = Odometry()
         msg.header.stamp = timestamp
         msg.pose.pose = pose_sophus2ros(xyt2sophus(xyt))
+        self._odom_pub.publish(msg)
 
     def _vel_control_callback(self, cmd_vel):
         self._vel_cmd_cache[0] = cmd_vel.linear.x
