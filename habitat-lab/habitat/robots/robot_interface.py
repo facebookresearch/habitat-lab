@@ -1,10 +1,8 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
-
-import numpy as np
 
 from habitat_sim.physics import ManagedBulletArticulatedObject
 
@@ -69,21 +67,6 @@ class RobotInterface(ABC):
         self.sim_obj.update_joint_motor(
             self.joint_motors[joint][0], self.joint_motors[joint][1]
         )
-
-    def _vector_to_plane_proj(self, u, n):
-        """
-        u: vector to be projected
-        n: normal vector
-        """
-        return u - (np.dot(u, n) / (n.length()) ** 2) * n
-
-    def _dot_to_plane_proj(self, q, n, p):
-        """
-        q: point to be projected
-        n: normal vector
-        p: point on the plane
-        """
-        return q + (np.dot(n, p - q) / (n.length()) ** 2) * n
 
     def _capture_robot_state(self):
         return {

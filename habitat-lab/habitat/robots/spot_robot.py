@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -15,9 +15,8 @@ from habitat.robots.mobile_manipulator import (
 from habitat_sim.utils.common import orthonormalize_rotation_shear
 
 
-# TODO: refactor this class to support spherical joints: multiple dofs per link and #dofs != #positions
 @attr.s(auto_attribs=True, slots=True)
-class MobileManipulatorParams:
+class SpotParams:
     """Data to configure a mobile manipulator.
     :property arm_joints: The joint ids of the arm joints.
     :property gripper_joints: The habitat sim joint ids of any grippers.
@@ -41,6 +40,17 @@ class MobileManipulatorParams:
     :property arm_mtr_pos_gain: The position gain of the arm motor.
     :property arm_mtr_vel_gain: The velocity gain of the arm motor.
     :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
+    :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    :property base_link_names: The name of the links
+    :property leg_joints: The joint ids of the legs if applicable. If the legs are not controlled, then this should be None
+    :property leg_init_params: The starting joint positions of the leg joints. If None,
+        resets to 0.
+    :property leg_mtr_pos_gain: The position gain of the leg motor (if
+        there are legs).
+    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
+        there are legs).
+    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
+        there are legs).
     """
 
     arm_joints: List[int]
@@ -63,23 +73,6 @@ class MobileManipulatorParams:
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
 
-
-@attr.s(auto_attribs=True, slots=True)
-class BaseParams(MobileManipulatorParams):
-    """Data to configure a base.
-    :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
-    :property base_link_names: The name of the links
-    :property leg_joints: The joint ids of the legs if applicable. If the legs are not controlled, then this should be None
-    :property leg_init_params: The starting joint positions of the leg joints. If None,
-        resets to 0.
-    :property leg_mtr_pos_gain: The position gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_vel_gain: The velocity gain of the leg motor (if
-        there are legs).
-    :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
-        there are legs).
-    """
-
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
@@ -88,11 +81,6 @@ class BaseParams(MobileManipulatorParams):
     leg_mtr_pos_gain: Optional[float] = None
     leg_mtr_vel_gain: Optional[float] = None
     leg_mtr_max_impulse: Optional[float] = None
-
-
-@attr.s(auto_attribs=True, slots=True)
-class SpotParams(BaseParams):
-    pass
 
 
 class SpotRobot(MobileManipulator):

@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -16,18 +16,18 @@ from habitat_sim.utils.common import orthonormalize_rotation_shear
 class StretchRobot(MobileManipulator):
     def _get_fetch_params(self):
         return MobileManipulatorParams(
-            arm_joints=[28, 27, 26, 25, 23, 31, 7, 8],
-            gripper_joints=[34, 36],
-            wheel_joints=[4, 40],
+            arm_joints=[28, 27, 26, 25, 23, 31, 33, 34, 7, 8],
+            gripper_joints=[36, 38],
+            wheel_joints=[4, 42],
             arm_init_params=np.array(
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 dtype=np.float32,
             ),
             gripper_init_params=np.array([0.0, 0.0], dtype=np.float32),
             ee_offset=mn.Vector3(0.08, 0, 0),
-            ee_link=34,
+            ee_link=36,
             ee_constraint=np.array(
-                [[0.00, 0.23], [-0.74, -0.34], [-0.06, 1.03]]
+                [[-0.15, 0.32], [-0.90, -0.38], [0.02, 1.12]]
             ),
             cameras={
                 "robot_head": RobotCameraParams(

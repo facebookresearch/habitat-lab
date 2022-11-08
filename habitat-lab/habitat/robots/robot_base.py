@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -247,63 +247,6 @@ class RobotBase(RobotInterface):
         )
         has_attr_navmesh = hasattr(self._sim.habitat_config, "nav_mesh")
         if (
-            has_attr_contact_test and self._sim.habitat_config.contact_test
-        ) and (
-            (has_attr_navmesh and not self._sim.habitat_config.nav_mesh)
-            or (not has_attr_navmesh)
-        ):
-            did_collide = self._sim.contact_test(self.sim_obj.object_id)
-            robot_id = self.sim_obj.object_id
-            end_pos = target_rigid_state.translation
-            # If there is a collision, we do projection
-            if did_collide:
-                cur_pos = rigid_state.translation
-                target_pos = target_rigid_state.translation
-                move_dir = target_pos - cur_pos
-                # Find the contact point
-                contact_points = self._sim.get_physics_contact_points()
-                num_contact_points = len(
-                    self._sim.get_physics_contact_points()
-                )
-                robot_contact_list = []
-                # Find the contact point associated robot ID
-                for i in range(num_contact_points):
-                    if robot_id == contact_points[i].object_id_a:
-                        robot_contact_list.append(contact_points[i])
-                # Perform projection and sliding
-                contact_points = robot_contact_list
-                if len(contact_points) != 0:
-                    # Get the average normal vector
-                    n_vec = contact_points[0].contact_normal_on_b_in_ws
-                    for i in range(1, len(contact_points)):
-                        n_vec += contact_points[i].contact_normal_on_b_in_ws
-                    n_vec = n_vec / len(contact_points)
-                    # Get the average contact point
-                    c_dot = contact_points[0].position_on_a_in_ws
-                    for i in range(1, len(contact_points)):
-                        c_dot += contact_points[i].position_on_a_in_ws
-                    c_dot = c_dot / len(contact_points)
-                    # Do the projection
-                    proj_dot = self._dot_to_plane_proj(
-                        target_rigid_state.translation, n_vec, c_dot
-                    )
-                    # Get a vector that points from target next point to the projected point
-                    move_vec = target_pos - proj_dot
-                    # Project the vector from the current to target points
-                    proj_move_vec_plane = self._vector_to_plane_proj(
-                        move_dir, n_vec
-                    )
-                    # Combine final move direction.
-                    move_vec = 0.1 * move_vec + 0.1 * proj_move_vec_plane
-                    # Not consider z direction
-                    move_vec[1] = 0
-                    # Add together
-                    end_pos = rigid_state.translation + move_vec
-            target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), end_pos
-            )
-            self.sim_obj.transformation = target_trans
-        elif (
             has_attr_contact_test
             and has_attr_navmesh
             and self._sim.habitat_config.contact_test

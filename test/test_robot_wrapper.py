@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-
 from os import path as osp
 
 import numpy as np
@@ -675,13 +674,13 @@ def test_spot_robot_wrapper(fixed_base):
 
 @pytest.mark.skipif(
     not osp.exists("data/robots/hab_stretch"),
-    reason="Test requires Stretch w/ arm robot URDF and assets.",
+    reason="Test requires Stretch w/ robot URDF and assets.",
 )
 @pytest.mark.skipif(
     not habitat_sim.built_with_bullet,
     reason="Robot wrapper API requires Bullet physics.",
 )
-@pytest.mark.parametrize("fixed_base", [True])
+@pytest.mark.parametrize("fixed_base", [True, False])
 def test_stretch_robot_wrapper(fixed_base):
     # set this to output test results as video for easy investigation
     produce_debug_video = False
@@ -708,7 +707,7 @@ def test_stretch_robot_wrapper(fixed_base):
         cube_template_cpy.scale = np.array([5.0, 0.2, 5.0])
         obj_template_mgr.register_template(cube_template_cpy)
         ground_plane = rigid_obj_mgr.add_object_by_template_handle(cube_handle)
-        ground_plane.translation = [0.0, -0.2, 0.0]
+        ground_plane.translation = [0.0, -0.6, 0.0]
         ground_plane.motion_type = habitat_sim.physics.MotionType.STATIC
 
         # compute a navmesh on the ground plane
@@ -723,7 +722,6 @@ def test_stretch_robot_wrapper(fixed_base):
         )
         stretch.reconfigure()
         assert stretch.get_robot_sim_id() == 1  # 0 is the ground plane
-        print(stretch.get_link_and_joint_names())
 
         # set base ground position from navmesh
         target_base_pos = sim.pathfinder.snap_point(
@@ -745,8 +743,8 @@ def test_stretch_robot_wrapper(fixed_base):
                 stretch.params.arm_joints[2],
                 stretch.params.arm_joints[3],
             ],
-            1,  # seconds
-            30,  # control frequency
+            1,
+            30,
             produce_debug_video,
         )
 
