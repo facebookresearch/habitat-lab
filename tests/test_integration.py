@@ -15,8 +15,13 @@ def home_robot_stack():
 
 @pytest.fixture()
 def robot():
-    time.sleep(3)  # HACK: wait for processes to launch
-    return LocalHelloRobot()
+    robot = LocalHelloRobot()
+
+    # HACK: wait for controller to launch
+    while robot.get_base_state() is None:
+        time.sleep(0.2)
+
+    return robot
 
 
 def test_goto(home_robot_stack, robot):
@@ -31,7 +36,7 @@ def test_goto(home_robot_stack, robot):
 
     # Check that robot is at goal
     xyt_new = robot.get_base_state()
-    assert np.allclose(xyt_new, xyt_goal, atol=3e-3)  # 3mm
+    assert np.allclose(xyt_new, xyt_goal, atol=1e-2)  # 1cm
 
     # Down processes
     mrp.cmd.down()
