@@ -47,13 +47,19 @@ def xyt_base_to_global(out_XYT, current_pose):
     return XYT
 
 
-def xyt2sophus(xyt):
+def xyt2sophus(xyt: np.ndarray) -> sp.SE3:
+    """
+    Converts SE2 coordinates (x, y, rz) to an sophus SE3 pose object.
+    """
     x = np.array([xyt[0], xyt[1], 0.0])
     r_mat = sp.SO3.exp([0.0, 0.0, xyt[2]]).matrix()
     return sp.SE3(r_mat, x)
 
 
-def sophus2xyt(se3):
+def sophus2xyt(se3: sp.SE3) -> np.ndarray:
+    """
+    Converts an sophus SE3 pose object to SE2 coordinates (x, y, rz).
+    """
     x_vec = se3.translation()
     r_vec = se3.so3().log()
     return np.array([x_vec[0], x_vec[1], r_vec[2]])

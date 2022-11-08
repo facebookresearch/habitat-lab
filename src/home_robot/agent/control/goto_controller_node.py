@@ -49,7 +49,6 @@ class GotoVelocityController:
         self.xyt_loc = sophus2xyt(pose_sp)
 
     def _goal_update_callback(self, msg: Pose):
-        print(msg)
         pose_sp = pose_ros2sophus(msg)
         self.xyt_goal = sophus2xyt(pose_sp)
 

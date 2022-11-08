@@ -10,6 +10,11 @@ from home_robot.utils.geometry.ros import pose_sophus2ros, pose_ros2sophus
 
 
 class LocalHelloRobot:
+    """
+    ROS interface for robot base control
+    Currently only works with a local rosmaster
+    """
+
     def __init__(self):
         rospy.init_node("user")
 
@@ -34,23 +39,41 @@ class LocalHelloRobot:
         )
 
     def toggle_controller(self):
+        """
+        Turns goto controller on/off.
+        Robot always tries to move to goal if on.
+        """
         result = self._goto_service(TriggerRequest())
         print(result.message)
         return result.success
 
     def toggle_yaw_tracking(self):
+        """
+        Turns yaw tracking on/off.
+        Robot only tries to reach the xy position of goal if off.
+        """
         result = self._yaw_service(TriggerRequest())
         print(result.message)
         return result.success
 
     def get_base_state(self):
+        """
+        Returns base location in the form of [x, y, rz].
+        """
         return self._base_state
 
     def set_goal(self, xyt):
+        """
+        Sets the goal for the goto controller.
+        """
         msg = pose_sophus2ros(xyt2sophus(xyt))
         self._goal_pub.publish(msg)
 
     def set_velocity(self, v, w):
+        """
+        Directly sets the linear and angular velocity of robot base.
+        Command gets overwritten immediately if goto controller is on.
+        """
         msg = Twist()
         msg.linear.x = v
         msg.angular.z = w
@@ -62,6 +85,7 @@ class LocalHelloRobot:
 
 
 if __name__ == "__main__":
+    # Launches an interactive terminal if file is directly run
     robot = LocalHelloRobot()
 
     import code

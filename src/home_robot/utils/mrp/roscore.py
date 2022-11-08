@@ -1,5 +1,8 @@
+import os
+import sys
 import subprocess
 import signal
+import time
 
 
 class RoscoreWrapper:
@@ -17,8 +20,10 @@ class RoscoreWrapper:
     def _term_handler(self, *args):
         print("Terminating roscore...")
         self.roscore_proc.send_signal(signal.SIGINT)
-        self.roscore_proc.wait()
-        print("Starting roscore...")
+        time.sleep(2)
+        os.system("killall rosmaster rosout")
+        print("roscore terminated.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

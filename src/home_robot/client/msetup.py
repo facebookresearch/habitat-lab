@@ -9,7 +9,7 @@ mrp.process(
         run_command=[
             "python3",
             "-m",
-            "home_robot.client.local_cli",
+            "home_robot.client.local_hello_robot",
         ],
     ),
 )

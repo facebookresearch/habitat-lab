@@ -42,7 +42,10 @@ This launches:
 - State estimation node
 - Continuous controller node
 
-### Launching a simple local CLI on the robot:
+### Launching a simple local command line interface (CLI) on the robot:
+
+The CLI currently exposes a simple base control interface via the terminal.
+The interface `home_robot.client.LocalHelloRobot` can also be imported and used within user scripts.
 
 ```sh
 cd src/home_robot/client
@@ -51,11 +54,11 @@ mrp up local_cli --attach
 
 Available commands:
 ```py
-robot.get_base_state()
-robot.toggle_controller()
-robot.toggle_yaw_tracking()
-robot.set_goal(xyt: list)
-robot.set_velocity(v: float, w: float)
+robot.get_base_state()  # returns base location in the form of [x, y, rz]
+robot.toggle_controller()  # turns goto controller on/off (robot always tries to move to /goto_controller/goal if on)
+robot.toggle_yaw_tracking()  # turns yaw tracking on/off (robot only tries to reach the xy position of goal if off)
+robot.set_goal(xyt: list)  # sets the goal for the goto controller
+robot.set_velocity(v: float, w: float)  # directly sets the linear and angular velocity of robot base (command gets overwritten immediately if goto controller is on)
 ```
 
 ### Stopping all processes

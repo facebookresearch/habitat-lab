@@ -26,15 +26,28 @@ VEL_CONTROL_HZ = 20
 
 
 class Env:
+    """
+    Simple kinematic simulation of a diff drive robot base
+
+    state space: SE2 pose & velocity
+    action space: linear and angular velocity (robot can only move forward and rotate)
+    """
+
     def __init__(self, hz):
         self.pos_state = np.zeros(3)
         self.vel_state = np.zeros(2)
         self.dt = 1.0 / hz
 
     def get_pose(self):
+        """
+        Returns the SE2 pose of the robot base (x, y, rz)
+        """
         return self.pos_state
 
     def step(self, vel_input=None):
+        """
+        Performs one integration step of simulation
+        """
         if vel_input is not None:
             self.vel_state = vel_input
 
@@ -44,6 +57,14 @@ class Env:
 
 
 class FakeStretch:
+    """
+    A minimal kinematic simulation node.
+
+    Basically mimics (some) behaviors of stretch_ros with Hector SLAM.
+    Publishes 100% accurate odometry and slam information.
+    Accepts velocity control inputs.
+    """
+
     def __init__(self, sim_hz, control_hz):
         self.sim_hz = sim_hz
         self.control_hz = control_hz
@@ -77,6 +98,7 @@ class FakeStretch:
         self._vel_cmd_cache[1] = cmd_vel.angular.z
 
     def run(self):
+        """Launches the simulation loop"""
         # Subscribers
         rospy.Subscriber(
             "/stretch/cmd_vel", Twist, self._vel_control_callback, queue_size=1
