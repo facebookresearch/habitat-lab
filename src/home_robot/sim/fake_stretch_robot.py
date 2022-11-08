@@ -96,6 +96,9 @@ class FakeStretch:
             # Step sim
             self.sim.step(vel_cmd)
 
+            # Spin once
+            rate.sleep()
+
 
 if __name__ == "__main__":
     sim = FakeStretch(SIM_HZ, VEL_CONTROL_HZ)

@@ -77,6 +77,7 @@ class NavStateEstimator:
         pose_odom = pose_ros2sophus(pose.pose.pose)
         pose_diff_odom = self._pose_odom_prev.inverse() * pose_odom
         pose_diff_slam = self._filtered_pose.inverse() * self._slam_pose_sp
+        print(f"ODOM: {pose_odom}")
 
         # Update filtered pose
         w = cutoff_angle(t_curr - self._t_odom_prev, SLAM_CUTOFF_HZ)

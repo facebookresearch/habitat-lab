@@ -3,7 +3,8 @@ import mrp
 mrp.process(
     name="roscore",
     runtime=mrp.Host(
-        run_command=["roscore"],
+        shared_env=control_env,
+        run_command=["python3", "-m", "home_robot.utils.mrp.roscore"],
     ),
 )
 

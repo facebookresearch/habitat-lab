@@ -3,7 +3,7 @@ import threading
 
 import numpy as np
 import rospy
-from std_msgs.msg import Bool
+from std_srvs.srv import Trigger, TriggerResponse
 from geometry_msgs.msg import Twist, Pose, PoseStamped
 
 from home_robot.agent.control.diff_drive_vel_control import DiffDriveVelocityControl
@@ -32,11 +32,13 @@ class GotoVelocityController:
 
         # Publishers
         rospy.init_node("goto_controller")
-        self._vel_command_pub = rospy.Publisher("/stretch/cmd_vel", Twist, queue_size=1)
+        self.vel_command_pub = rospy.Publisher("/stretch/cmd_vel", Twist, queue_size=1)
 
         # Initialize
         self.xyt_loc = np.zeros(3)
         self.xyt_goal = None
+
+        self.active = False
         self.track_yaw = True
 
     def _pose_update_callback(self, msg: PoseStamped):
@@ -47,8 +49,21 @@ class GotoVelocityController:
         pose_sp = pose_ros2sophus(msg)
         self.xyt_goal = sophus2xyt(pose_sp)
 
-    def _yaw_toggle_callback(self, msg: Bool):
-        self.track_yaw = msg.data
+    def _yaw_tracking_service(self, request):
+        self.track_yaw = not self.track_yaw
+        status_str = ["OFF", "ON"][int(self.track_yaw)]
+        return TriggerResponse(
+            success=True,
+            message=f"Yaw tracking is now {status_str}",
+        )
+
+    def _toggle_on_service(self, request):
+        self.active = not self.active
+        status_str = ["STOPPED", "RUNNING"][int(self.track_yaw)]
+        return TriggerResponse(
+            success=True,
+            message=f"Goto controller is now {status_str}",
+        )
 
     def _compute_error_pose(self):
         """
@@ -64,7 +79,7 @@ class GotoVelocityController:
         cmd = Twist()
         cmd.linear.x = v_m
         cmd.angular.z = w_r
-        self._vel_command_pub.publish(cmd)
+        self.vel_command_pub.publish(cmd)
 
     def _run_control_loop(self):
         rate = rospy.Rate(self.hz)
@@ -94,11 +109,11 @@ class GotoVelocityController:
         rospy.Subscriber(
             "/goto_controller/goal", Pose, self._goal_update_callback, queue_size=1
         )
-        rospy.Subscriber(
-            "/goto_controller/yaw_tracking",
-            Bool,
-            self._yaw_toggle_callback,
-            queue_size=1,
+
+        # Services
+        rospy.Service("goto_controller/toggle_on", Trigger, self._toggle_on_service)
+        rospy.Service(
+            "goto_controller/toggle_yaw_tracking", Trigger, self._yaw_tracking_service
         )
 
         # Run controller
