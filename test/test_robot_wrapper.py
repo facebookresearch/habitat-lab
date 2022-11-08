@@ -3,6 +3,7 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+
 from os import path as osp
 
 import numpy as np
@@ -314,6 +315,7 @@ def test_fetch_robot_wrapper(fixed_base):
         robot_path = "data/robots/hab_fetch/robots/hab_fetch.urdf"
         fetch = fetch_robot.FetchRobot(robot_path, sim, fixed_base=fixed_base)
         fetch.reconfigure()
+        fetch.update()
         assert fetch.get_robot_sim_id() == 1  # 0 is the ground plane
         print(fetch.get_link_and_joint_names())
         observations += simulate(sim, 1.0, produce_debug_video)
@@ -463,6 +465,7 @@ def test_franka_robot_wrapper():
         robot_path = "data/robots/franka_panda/panda_arm.urdf"
         franka = franka_robot.FrankaRobot(urdf_path=robot_path, sim=sim)
         franka.reconfigure()
+        franka.update()
         assert franka.get_robot_sim_id() == 1  # 0 is the ground plane
         print(franka.get_link_and_joint_names())
         observations += simulate(sim, 1.0, produce_debug_video)
@@ -582,6 +585,7 @@ def test_spot_robot_wrapper(fixed_base):
         robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
         spot = spot_robot.SpotRobot(robot_path, sim, fixed_base=fixed_base)
         spot.reconfigure()
+        spot.update()
         assert spot.get_robot_sim_id() == 1  # 0 is the ground plane
         print(spot.get_link_and_joint_names())
 
@@ -721,6 +725,7 @@ def test_stretch_robot_wrapper(fixed_base):
             robot_path, sim, fixed_base=fixed_base
         )
         stretch.reconfigure()
+        stretch.update()
         assert stretch.get_robot_sim_id() == 1  # 0 is the ground plane
 
         # set base ground position from navmesh

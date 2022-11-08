@@ -12,7 +12,6 @@ from habitat.robots.mobile_manipulator import (
     MobileManipulator,
     RobotCameraParams,
 )
-from habitat_sim.utils.common import orthonormalize_rotation_shear
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -89,11 +88,8 @@ class SpotRobot(MobileManipulator):
             arm_joints=list(range(0, 7)),
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
-            # NOTE: default to retracted arm. Zero vector is full extension.
             arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            # NOTE: default closed
             gripper_init_params=[0.00],
-            # NOTE: default to rough standing pose with balance
             leg_init_params=[
                 0.0,
                 0.7,
@@ -110,9 +106,7 @@ class SpotRobot(MobileManipulator):
             ],
             ee_offset=mn.Vector3(0.08, 0, 0),
             ee_link=7,
-            # TODO: figure this one out if necessary
             ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
-            # TODO: these need to be adjusted. Copied from Fetch currently.
             cameras={
                 "robot_arm": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
@@ -151,12 +145,10 @@ class SpotRobot(MobileManipulator):
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
             arm_mtr_max_impulse=10.0,
-            # TODO: leg motor defaults for dynamic stability
             leg_mtr_pos_gain=2.0,
             leg_mtr_vel_gain=1.3,
             leg_mtr_max_impulse=100.0,
-            # NOTE: empirically set from default NavMesh error and initial leg pose.
-            base_offset=mn.Vector3(0, -0.50, 0.0),
+            base_offset=mn.Vector3(0.0, -0.5, 0.0),
             base_link_names={
                 "base",
             },
@@ -168,57 +160,6 @@ class SpotRobot(MobileManipulator):
             mn.Rad(-np.pi / 2), mn.Vector3(1.0, 0, 0)
         )
         return self.sim_obj.transformation @ add_rot
-
-    # For updating the camera angle for Spots
-    def update(self) -> None:
-        """Updates the camera transformations and performs necessary checks on
-        joint limits and sleep states.
-        """
-        agent_node = self._sim._default_agent.scene_node
-        inv_T = agent_node.transformation.inverted()
-
-        for cam_prefix, sensor_names in self._cameras.items():
-            for sensor_name in sensor_names:
-                sens_obj = self._sim._sensors[sensor_name]._sensor_object
-                cam_info = self.params.cameras[cam_prefix]
-
-                if cam_info.attached_link_id == -1:
-                    link_trans = self.sim_obj.transformation
-                else:
-                    link_trans = self.sim_obj.get_link_scene_node(
-                        self.params.ee_link
-                    ).transformation
-
-                if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-                    pos = cam_info.cam_offset_pos
-                    ori = cam_info.cam_orientation
-                    Mt = mn.Matrix4.translation(pos)
-                    Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                    My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                    Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                    cam_transform = Mt @ Mz @ My @ Mx
-                else:
-                    cam_transform = mn.Matrix4.look_at(
-                        cam_info.cam_offset_pos,
-                        cam_info.cam_look_at_pos,
-                        mn.Vector3(0, 1, 0),
-                    )
-                cam_transform = (
-                    link_trans @ cam_transform @ cam_info.relative_transform
-                )
-                cam_transform = inv_T @ cam_transform
-
-                sens_obj.node.transformation = orthonormalize_rotation_shear(
-                    cam_transform
-                )
-
-        if self._fix_joint_values is not None:
-            self.arm_joint_pos = self._fix_joint_values
-
-        if self._limit_robo_joints:
-            self.sim_obj.clamp_joint_limits()
-
-        self.sim_obj.awake = True
 
     def __init__(
         self, urdf_path, sim, limit_robo_joints=True, fixed_base=True

@@ -25,10 +25,10 @@ __all__ = [
     "MobileManipulator",
     "FetchRobot",
     "FetchRobotNoWheels",
+    "FrankaRobot",
     "SpotRobot",
     "StretchRobot",
     "RobotCameraParams",
     "StaticManipulatorParams",
     "StaticManipulator",
-    "FrankaRobot",
 ]

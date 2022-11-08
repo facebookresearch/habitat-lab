@@ -225,18 +225,6 @@ class RobotBase(RobotInterface):
             self.sim_obj.get_link_name(link_id) in self.params.base_link_names
         )
 
-    def _validate_ctrl_input(self, ctrl: List[float], joints: List[int]):
-        """
-        Raises an exception if the control input is NaN or does not match the
-        joint dimensions.
-        """
-        if len(ctrl) != len(joints):
-            raise ValueError(
-                f"Control dimension does not match joint dimension: {len(ctrl)} vs {len(joints)}"
-            )
-        if np.any(np.isnan(ctrl)):
-            raise ValueError("Control is NaN")
-
     def update_base(self, rigid_state, target_rigid_state):
 
         cur_state = self._sim.robot.sim_obj.transformation
@@ -278,3 +266,15 @@ class RobotBase(RobotInterface):
         if self._base_type == "leg":
             # Fix the leg joints
             self.leg_joint_pos = [0.0, 0.7, -1.5] * 4
+
+    def _validate_ctrl_input(self, ctrl: List[float], joints: List[int]):
+        """
+        Raises an exception if the control input is NaN or does not match the
+        joint dimensions.
+        """
+        if len(ctrl) != len(joints):
+            raise ValueError(
+                f"Control dimension does not match joint dimension: {len(ctrl)} vs {len(joints)}"
+            )
+        if np.any(np.isnan(ctrl)):
+            raise ValueError("Control is NaN")
