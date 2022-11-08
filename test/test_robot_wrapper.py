@@ -421,6 +421,10 @@ def test_fetch_robot_wrapper(fixed_base):
     not osp.exists("data/robots/franka_panda"),
     reason="Test requires Franka robot URDF and assets.",
 )
+@pytest.mark.skipif(
+    not habitat_sim.built_with_bullet,
+    reason="Robot wrapper API requires Bullet physics.",
+)
 def test_franka_robot_wrapper():
     """Test the franka robot."""
     # set this to output test results as video for easy investigation
@@ -674,10 +678,6 @@ def test_spot_robot_wrapper(fixed_base):
 
 @pytest.mark.skipif(
     not osp.exists("data/robots/hab_stretch"),
-    reason="Test requires Stretch w/ robot URDF and assets.",
-)
-@pytest.mark.skipif(
-    not osp.exists("data/robots/hab_stretch/urdf/hab_stretch.urdf"),
     reason="Test requires Stretch w/ robot URDF and assets.",
 )
 @pytest.mark.skipif(
