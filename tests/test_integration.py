@@ -11,11 +11,11 @@ from home_robot.client import LocalHelloRobot
 def home_robot_stack():
     mrp.import_msetup("../src/home_robot")
     mrp.cmd.up("sim_stack")
-    mrp.cmd.wait()
 
 
 @pytest.fixture()
 def robot():
+    time.sleep(3)  # HACK: wait for processes to launch
     return LocalHelloRobot()
 
 
@@ -35,7 +35,3 @@ def test_goto(home_robot_stack, robot):
 
     # Down processes
     mrp.cmd.down()
-
-
-if __name__ == "__main__":
-    mrp.main()
