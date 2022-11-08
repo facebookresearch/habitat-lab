@@ -63,6 +63,7 @@ class LocalHelloRobot:
 
 if __name__ == "__main__":
     robot = LocalHelloRobot()
-    import pdb
 
-    pdb.set_trace()
+    import code
+
+    code.interact(local=locals())
