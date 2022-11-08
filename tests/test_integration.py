@@ -9,13 +9,8 @@ from home_robot.client import LocalHelloRobot
 
 @pytest.fixture()
 def home_robot_stack():
-    mrp.import_msetup("../src/home_robot/agent")
-    mrp.import_msetup("../src/home_robot/sim/msetup_simple_sim.py")
-
-    mrp.cmd.up("roscore")
-    mrp.cmd.up("fake_stretch")
-    mrp.cmd.up("state_estimator")
-    mrp.cmd.up("goto_controller")
+    mrp.import_msetup("../src/home_robot")
+    mrp.cmd.up("sim_stack")
     mrp.cmd.wait()
 
 

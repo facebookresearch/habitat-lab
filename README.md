@@ -22,7 +22,7 @@ Mostly Hello Stretch infrastructure
 ### Launching the hardware stack:
 ```sh
 cd src/home_robot
-python msetup_hw.py up
+mrp up hw_stack
 ```
 
 This launches:
@@ -34,7 +34,7 @@ This launches:
 ### Launching a minimal kinematic simulation (no camera yet)
 ```sh
 cd src/home_robot
-python msetup_sim.py up
+mrp up sim_stack
 ```
 
 This launches:
