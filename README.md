@@ -11,10 +11,18 @@ Mostly Hello Stretch infrastructure
 1. Install repo `pip install -e .`
 1. (optional) Install Mamba: `conda install -c conda-forge mamba`
 
+### Additional instructions for setting up on hardware
+
+1. Setup the Stretch robot following official instructions [here](https://github.com/hello-robot/stretch_install)
+1. Install stretch_ros following official instructions [here](https://github.com/hello-robot/stretch_ros/blob/dev/noetic/install_noetic.md)
+1. Install Hector SLAM: `sudo apt install ros-noetic-hector-*`
+
 ## Usage
-To launch the hardware stack:
-```
-mrp -f launch_hw.py
+
+### Launching the hardware stack:
+```sh
+cd src/home_robot
+python msetup_hw.py up
 ```
 
 This launches:
@@ -22,6 +30,38 @@ This launches:
 - Hector SLAM
 - State estimation node
 - Continuous controller node
+
+### Launching a minimal kinematic simulation (no camera yet)
+```sh
+cd src/home_robot
+python msetup_sim.py up
+```
+
+This launches:
+- Fake stretch node (A kinematic simulation that publishes 100% accurate odometry and slam information and accepts velocity control inputs)
+- State estimation node
+- Continuous controller node
+
+### Launching a simple local CLI on the robot:
+
+```sh
+cd src/home_robot/client
+mrp up local_cli --attach
+```
+
+Available commands:
+```py
+robot.get_base_state()
+robot.toggle_controller()
+robot.toggle_yaw_tracking()
+robot.set_goal(xyt: list)
+robot.set_velocity(v: float, w: float)
+```
+
+### Stopping all processes
+```sh
+mrp down
+```
 
 ## Code Contribution
 
