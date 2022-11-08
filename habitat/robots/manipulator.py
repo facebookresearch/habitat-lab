@@ -149,11 +149,20 @@ class Manipulator(RobotInterface):
                             cam_info.attached_link_id
                         ).transformation
 
-                    cam_transform = mn.Matrix4.look_at(
-                        cam_info.cam_offset_pos,
-                        cam_info.cam_look_at_pos,
-                        mn.Vector3(0, 1, 0),
-                    )
+                    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                        pos = cam_info.cam_offset_pos
+                        ori = cam_info.cam_orientation
+                        Mt = mn.Matrix4.translation(pos)
+                        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                        cam_transform = Mt @ Mz @ My @ Mx
+                    else:
+                        cam_transform = mn.Matrix4.look_at(
+                            cam_info.cam_offset_pos,
+                            cam_info.cam_look_at_pos,
+                            mn.Vector3(0, 1, 0),
+                        )
                     cam_transform = (
                         link_trans
                         @ cam_transform

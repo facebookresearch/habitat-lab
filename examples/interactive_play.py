@@ -68,7 +68,7 @@ try:
 except ImportError:
     pygame = None
 
-# DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_fetch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_spot.yaml"
@@ -77,13 +77,13 @@ except ImportError:
 # DEFAULT_CFG = "configs/tasks/rearrange/open_cab.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/open_fridge_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_spot_blind.yaml"
-DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml" <- common one for the stretch
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
-#DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"

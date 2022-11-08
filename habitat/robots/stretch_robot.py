@@ -154,46 +154,46 @@ class StretchRobot(MobileManipulator):
         )
         return self.sim_obj.transformation @ add_rot
 
-    def update(self):
-        # super().update()
+    # def update(self):
+    #     # super().update()
 
-        agent_node = self._sim._default_agent.scene_node
-        inv_T = agent_node.transformation.inverted()
+    #     agent_node = self._sim._default_agent.scene_node
+    #     inv_T = agent_node.transformation.inverted()
 
-        for cam_prefix, sensor_names in self._cameras.items():
-            for sensor_name in sensor_names:
-                sens_obj = self._sim._sensors[sensor_name]._sensor_object
-                cam_info = self.params.cameras[cam_prefix]
+    #     for cam_prefix, sensor_names in self._cameras.items():
+    #         for sensor_name in sensor_names:
+    #             sens_obj = self._sim._sensors[sensor_name]._sensor_object
+    #             cam_info = self.params.cameras[cam_prefix]
 
-                if cam_info.attached_link_id == -1:
-                    link_trans = self.sim_obj.transformation
-                else:
-                    link_trans = self.sim_obj.get_link_scene_node(
-                        cam_info.attached_link_id  # self.params.ee_link
-                    ).transformation
+    #             if cam_info.attached_link_id == -1:
+    #                 link_trans = self.sim_obj.transformation
+    #             else:
+    #                 link_trans = self.sim_obj.get_link_scene_node(
+    #                     cam_info.attached_link_id  # self.params.ee_link
+    #                 ).transformation
 
-                if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
-                    pos = cam_info.cam_offset_pos
-                    ori = cam_info.cam_orientation
-                    Mt = mn.Matrix4.translation(pos)
-                    Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
-                    My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
-                    Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
-                    cam_transform = Mt @ Mz @ My @ Mx
-                else:
-                    cam_transform = mn.Matrix4.look_at(
-                        cam_info.cam_offset_pos,
-                        cam_info.cam_look_at_pos,
-                        mn.Vector3(0, 1, 0),
-                    )
-                cam_transform = (
-                    link_trans @ cam_transform @ cam_info.relative_transform
-                )
-                cam_transform = inv_T @ cam_transform
+    #             if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+    #                 pos = cam_info.cam_offset_pos
+    #                 ori = cam_info.cam_orientation
+    #                 Mt = mn.Matrix4.translation(pos)
+    #                 Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+    #                 My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+    #                 Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+    #                 cam_transform = Mt @ Mz @ My @ Mx
+    #             else:
+    #                 cam_transform = mn.Matrix4.look_at(
+    #                     cam_info.cam_offset_pos,
+    #                     cam_info.cam_look_at_pos,
+    #                     mn.Vector3(0, 1, 0),
+    #                 )
+    #             cam_transform = (
+    #                 link_trans @ cam_transform @ cam_info.relative_transform
+    #             )
+    #             cam_transform = inv_T @ cam_transform
 
-                sens_obj.node.transformation = orthonormalize_rotation_shear(
-                    cam_transform
-                )
+    #             sens_obj.node.transformation = orthonormalize_rotation_shear(
+    #                 cam_transform
+    #             )
 
 
 class StretchRobotNoWheels(StretchRobot):
