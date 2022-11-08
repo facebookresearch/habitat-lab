@@ -270,10 +270,6 @@ def simulate(sim, dt, get_observations=False):
     not osp.exists("data/robots/hab_fetch"),
     reason="Test requires Fetch robot URDF and assets.",
 )
-@pytest.mark.skipif(
-    not habitat_sim.built_with_bullet,
-    reason="Robot wrapper API requires Bullet physics.",
-)
 @pytest.mark.parametrize("fixed_base", [True, False])
 def test_fetch_robot_wrapper(fixed_base):
     """Test the fetch robot."""
