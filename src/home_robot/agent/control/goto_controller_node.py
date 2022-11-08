@@ -54,7 +54,7 @@ class GotoVelocityController:
 
     def _yaw_tracking_service(self, request):
         self.track_yaw = not self.track_yaw
-        status_str = ["OFF", "ON"][int(self.track_yaw)]
+        status_str = "ON" if self.track_yaw else "OFF"
         return TriggerResponse(
             success=True,
             message=f"Yaw tracking is now {status_str}",
@@ -62,7 +62,7 @@ class GotoVelocityController:
 
     def _toggle_on_service(self, request):
         self.active = not self.active
-        status_str = ["STOPPED", "RUNNING"][int(self.active)]
+        status_str = "RUNNING" if self.active else "STOPPED"
         return TriggerResponse(
             success=True,
             message=f"Goto controller is now {status_str}",
@@ -125,5 +125,4 @@ class GotoVelocityController:
 
 
 if __name__ == "__main__":
-    node = GotoVelocityController(CONTROL_HZ)
-    node.main()
+    GotoVelocityController(CONTROL_HZ).main()
