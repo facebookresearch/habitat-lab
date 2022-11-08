@@ -1,1 +1,1 @@
-from .local_cli import LocalHelloRobot
+from .local_hello_robot import LocalHelloRobot

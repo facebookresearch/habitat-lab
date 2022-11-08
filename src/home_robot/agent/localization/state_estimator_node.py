@@ -48,21 +48,19 @@ def cutoff_angle(duration, cutoff_freq):
 
 class NavStateEstimator:
     def __init__(self):
-        self._slam_pose = None
-        self._odom = None
-
-        self._filtered_pose = sp.SE3()
-        self._slam_pose_sp = sp.SE3()
-        self._t_odom_prev = time.time()
-        self._pose_odom_prev = sp.SE3()
-
-        self._lock = threading.Lock()
-
         # Publishers
         rospy.init_node("state_estimator")
         self._estimator_pub = rospy.Publisher(
             "/state_estimator/pose_filtered", PoseStamped, queue_size=1
         )
+
+        # Initialize
+        self._slam_inject_lock = threading.Lock()
+
+        self._filtered_pose = sp.SE3()
+        self._slam_pose_sp = sp.SE3()
+        self._t_odom_prev = rospy.Time.now()
+        self._pose_odom_prev = sp.SE3()
 
     def _publish_filtered_state(self, timestamp):
         pose_out = PoseStamped()
@@ -70,37 +68,34 @@ class NavStateEstimator:
         pose_out.pose = pose_sophus2ros(self._filtered_pose)
         self._estimator_pub.publish(pose_out)
 
-    def _odom_callback(self, pose):
-        t_curr = time.time()
-        ros_time = rospy.Time.now()
-        with self._lock:
-            self._odom = pose
+    def _odom_callback(self, pose: Odometry):
+        t_curr = rospy.Time.now()
 
         # Compute injected signals into filtered pose
         pose_odom = pose_ros2sophus(pose.pose.pose)
         pose_diff_odom = self._pose_odom_prev.inverse() * pose_odom
-        pose_diff_slam = self._filtered_pose.inverse() * self._slam_pose_sp
+        with self._slam_inject_lock:
+            pose_diff_slam = self._filtered_pose.inverse() * self._slam_pose_sp
 
         # Update filtered pose
-        w = cutoff_angle(t_curr - self._t_odom_prev, SLAM_CUTOFF_HZ)
+        t_interval_secs = (t_curr - self._t_odom_prev).to_sec()
+        w = cutoff_angle(t_interval_secs, SLAM_CUTOFF_HZ)
         coeff = 1 / (w + 1)
 
         pose_diff_log = (
             coeff * pose_diff_odom.log() + (1 - coeff) * pose_diff_slam.log()
         )
         self._filtered_pose = self._filtered_pose * sp.SE3.exp(pose_diff_log)
-        self._publish_filtered_state(ros_time)
+        self._publish_filtered_state(pose.header.stamp)
 
         # Update variables
         self._pose_odom_prev = pose_odom
         self._t_odom_prev = t_curr
 
-    def _slam_pose_callback(self, pose):
-        with self._lock:
-            self._slam_pose = pose
-
+    def _slam_pose_callback(self, pose: PoseWithCovarianceStamped):
         # Update slam pose for filtering
-        self._slam_pose_sp = pose_ros2sophus(pose.pose.pose)
+        with self._slam_inject_lock:
+            self._slam_pose_sp = pose_ros2sophus(pose.pose.pose)
 
     def run(self):
         # This comes from hector_slam. It's a transform from src_frame = 'base_link', target_frame = 'map'

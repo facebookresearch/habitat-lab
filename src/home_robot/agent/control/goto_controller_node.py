@@ -39,7 +39,7 @@ class GotoVelocityController:
 
         # Initialize
         self.xyt_loc = np.zeros(3)
-        self.xyt_goal = None
+        self.xyt_goal: Optional[np.ndarray] = None
 
         self.active = False
         self.track_yaw = True
