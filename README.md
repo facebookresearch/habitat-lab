@@ -1,14 +1,70 @@
 # Home Robot
 
-[![CircleCI](https://dl.circleci.com/status-badge/img/gh/fairinternal/home-robot/tree/main.svg?style=shield&circle-token=625410c58d3e31cedd2f6af22b4f27343d866a77)](https://dl.circleci.com/status-badge/redirect/gh/fairinternal/home-robot/tree/main)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/facebookresearch/home-robot/tree/main.svg?style=shield&circle-token=282f21120e0b390d466913ef0c0a92f0048d52a3)](https://dl.circleci.com/status-badge/redirect/gh/facebookresearch/home-robot/tree/main)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 Mostly Hello Stretch infrastructure
 
 ## Installation
 
-TODO
+1. Prepare a conda environment (ex: `conda create -n home_robot python=3.8`)
+1. Install Mamba (needed for MRP): `conda install -c conda-forge mamba`
+1. Install repo `pip install -e .`
 
+### Additional instructions for setting up on hardware
+
+1. Setup the Stretch robot following official instructions [here](https://github.com/hello-robot/stretch_install)
+1. Install stretch_ros following official instructions [here](https://github.com/hello-robot/stretch_ros/blob/dev/noetic/install_noetic.md)
+1. Install Hector SLAM: `sudo apt install ros-noetic-hector-*`
+
+## Usage
+
+### Launching the hardware stack:
+```sh
+cd src/home_robot
+mrp up hw_stack
+```
+
+This launches:
+- Stretch ROS driver
+- Hector SLAM
+- State estimation node
+- Continuous controller node
+
+### Launching a minimal kinematic simulation (no camera yet)
+```sh
+cd src/home_robot
+mrp up sim_stack
+```
+
+This launches:
+- Fake stretch node (A kinematic simulation that publishes 100% accurate odometry and slam information and accepts velocity control inputs)
+- State estimation node
+- Continuous controller node
+
+### Launching a simple local command line interface (CLI) on the robot:
+
+The CLI currently exposes a simple base control interface via the terminal.
+The interface `home_robot.client.LocalHelloRobot` can also be imported and used within user scripts.
+
+```sh
+cd src/home_robot/client
+mrp up local_cli --attach
+```
+
+Available commands:
+```py
+robot.get_base_state()  # returns base location in the form of [x, y, rz]
+robot.toggle_controller()  # turns goto controller on/off (robot always tries to move to /goto_controller/goal if on)
+robot.toggle_yaw_tracking()  # turns yaw tracking on/off (robot only tries to reach the xy position of goal if off)
+robot.set_goal(xyt: list)  # sets the goal for the goto controller
+robot.set_velocity(v: float, w: float)  # directly sets the linear and angular velocity of robot base (command gets overwritten immediately if goto controller is on)
+```
+
+### Stopping all processes
+```sh
+mrp down
+```
 
 ## Code Contribution
 

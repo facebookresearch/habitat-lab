@@ -1,0 +1,14 @@
+name: home_robot_testenv
+channels:
+  - conda-forge
+  - robostack
+dependencies:
+  - python=3.8
+  - mamba
+  - cmake
+  - pybind11
+  - ros-noetic-desktop
+  - pip:
+    - numpy
+    - scipy
+    - sophuspy

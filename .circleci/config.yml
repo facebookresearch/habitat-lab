@@ -14,7 +14,37 @@ jobs:
             pip install black==22.3.0
             black --check .
 
+  integration-sim:
+    working_directory: ~/home-robot
+    resource_class: large
+    docker:
+      - image: continuumio/miniconda3
+    steps:
+      - checkout
+      - restore_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "tests/test_env.yml" }}
+      - run:
+          name: Setup env
+          command: |
+            apt-get update
+            apt-get install -y build-essential
+            [ -d ~/testenv ] || conda env create -f tests/test_env.yml -p ~/testenv
+      - save_cache:
+          key: deps9-{{ .Branch }}-{{ checksum "tests/test_env.yml" }}
+          paths:
+            - "~/testenv"
+            - "/usr/lib"
+      - run:
+          name: Run tests
+          command: |
+            conda init bash
+            source ~/.bashrc
+            conda activate ~/testenv
+            pip install -e .
+            pytest
+
 workflows:
   main:
     jobs:
       - formatting
+      - integration-sim
