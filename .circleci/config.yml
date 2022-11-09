@@ -149,7 +149,7 @@ jobs:
                 . activate habitat
                 pip install -U pip
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
-                pip install pytest-sugar mock cython pygame
+                pip install pytest-sugar>=0.9.6 mock cython pygame
               fi
       - run:
           name: Install pytorch
@@ -223,6 +223,10 @@ jobs:
               if [ ! -f ./habitat-sim/data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf ]
               then
                 python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/
+              fi
+              if [ ! -f ./habitat-sim/data/robots/hab_stretch/urdf/hab_stretch.urdf ]
+              then
+                python -m habitat_sim.utils.datasets_download --uids hab_stretch --data-path habitat-sim/data/
               fi
       - run:
           name: Download coda scene
