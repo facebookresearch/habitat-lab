@@ -25,7 +25,7 @@ def robot():
 
 
 def test_goto(home_robot_stack, robot):
-    xyt_goal = [0.3, 0.1, 0.1]
+    xyt_goal = [0.2, 0.1, 0.1]
 
     # Activate goto controller & set goal
     robot.toggle_controller()
