@@ -68,7 +68,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_fetch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_spot.yaml"
@@ -79,7 +79,9 @@ DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_spot_blind.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml" <- common one for the stretch
-# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
+DEFAULT_CFG = (
+    "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
+)
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
@@ -255,37 +257,39 @@ def get_input_vel_ctlr(
             # 8 7: joint_head_pan
             # 9 8: joint_head_tilt
 
-            if keys[pygame.K_q]: # joint_arm_l0, joint_arm_l1, joint_arm_l2, joint_arm_l3
+            if keys[
+                pygame.K_q
+            ]:  # joint_arm_l0, joint_arm_l1, joint_arm_l2, joint_arm_l3
                 arm_action[0] = 1.0
             elif keys[pygame.K_1]:
                 arm_action[0] = -1.0
 
-            elif keys[pygame.K_w]: # joint_lift
+            elif keys[pygame.K_w]:  # joint_lift
                 arm_action[4] = 1.0
             elif keys[pygame.K_2]:
                 arm_action[4] = -1.0
 
-            elif keys[pygame.K_e]: # joint_wrist_yaw
+            elif keys[pygame.K_e]:  # joint_wrist_yaw
                 arm_action[5] = 1.0
             elif keys[pygame.K_3]:
                 arm_action[5] = -1.0
 
-            elif keys[pygame.K_r]: # joint_wrist_pitch
+            elif keys[pygame.K_r]:  # joint_wrist_pitch
                 arm_action[6] = 1.0
             elif keys[pygame.K_4]:
                 arm_action[6] = -1.0
 
-            elif keys[pygame.K_t]: # joint_wrist_roll
+            elif keys[pygame.K_t]:  # joint_wrist_roll
                 arm_action[7] = 1.0
             elif keys[pygame.K_5]:
                 arm_action[7] = -1.0
 
-            elif keys[pygame.K_y]: # joint_head_pan
+            elif keys[pygame.K_y]:  # joint_head_pan
                 arm_action[8] = 1.0
             elif keys[pygame.K_6]:
                 arm_action[8] = -1.0
 
-            elif keys[pygame.K_u]: # joint_head_tilt
+            elif keys[pygame.K_u]:  # joint_head_tilt
                 arm_action[9] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[9] = -1.0
