@@ -148,9 +148,10 @@ class InstanceImageGoalSensor(RGBSensor):
         spec.resolution = img_params.image_dimensions
         spec.hfov = img_params.hfov
         spec.sensor_subtype = habitat_sim.SensorSubType.PINHOLE
-        self._sim.add_sensor(spec)
+        agent_id = 0
+        self._sim.add_sensor(spec, agent_id)
 
-        agent = self._sim.get_agent(0)
+        agent = self._sim.get_agent(agent_id)
         agent_state = agent.get_state()
         agent.set_state(
             AgentState(
