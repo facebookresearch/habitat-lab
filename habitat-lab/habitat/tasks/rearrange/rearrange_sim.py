@@ -50,8 +50,7 @@ class RearrangeSim(HabitatSim):
             with read_write(config):
                 for agent in config.agents:
                     agent_cfg = config[agent]
-                    sensor_keys = list(agent_cfg.sim_sensors.keys())
-                    for sensor_key in sensor_keys:
+                    for sensor_key in agent_cfg.sim_sensors.keys():
                         sensor_config = agent_cfg.sim_sensors.pop(sensor_key)
                         sensor_config.uuid = f"{agent}_{sensor_config.uuid}"
                         agent_cfg.sim_sensors[

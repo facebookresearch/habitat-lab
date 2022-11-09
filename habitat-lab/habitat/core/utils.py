@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import cmath
+import dataclasses
 import json
 import math
 from typing import Any, Dict, List, Optional
@@ -12,7 +13,7 @@ from typing import Any, Dict, List, Optional
 import attr
 import numpy as np
 import quaternion  # noqa: F401
-from omegaconf import DictConfig, ListConfig
+from omegaconf import OmegaConf
 
 from habitat.utils.geometry_utils import quaternion_to_list
 
@@ -121,10 +122,10 @@ class DatasetJSONEncoder(json.JSONEncoder):
             return obj.tolist()
         if isinstance(obj, quaternion.quaternion):
             return quaternion_to_list(obj)
-        if isinstance(obj, DictConfig):
-            return dict(obj)
-        if isinstance(obj, ListConfig):
-            return list(obj)
+        if OmegaConf.is_config(obj):
+            return OmegaConf.to_container(obj)
+        if dataclasses.is_dataclass(obj):
+            return dataclasses.asdict(obj)
 
         return (
             obj.__getstate__()
