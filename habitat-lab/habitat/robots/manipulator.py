@@ -400,23 +400,6 @@ class Manipulator(RobotInterface):
         """Set the desired torques of the arm joint motors"""
         self.sim_obj.joint_forces = ctrl
 
-    def _validate_joint_idx(self, joint):
-        if joint not in self.joint_motors:
-            raise ValueError(
-                f"Requested joint {joint} not in joint motors with indices (keys {self.joint_motors.keys()}) and {self.joint_motors}"
-            )
-
-    def _set_motor_pos(self, joint, ctrl):
-        self._validate_joint_idx(joint)
-        self.joint_motors[joint][1].position_target = ctrl
-        self.sim_obj.update_joint_motor(
-            self.joint_motors[joint][0], self.joint_motors[joint][1]
-        )
-
-    def _get_motor_pos(self, joint):
-        self._validate_joint_idx(joint)
-        return self.joint_motors[joint][1].position_target
-
     def _set_joint_pos(self, joint_idx, angle):
         # NOTE: This is pretty inefficient and should not be used iteratively
         set_pos = self.sim_obj.joint_positions
@@ -444,15 +427,3 @@ class Manipulator(RobotInterface):
             if get_observations:
                 observations.append(self._sim.get_sensor_observations())
         return observations
-
-    def _update_motor_settings_cache(self):
-        """Updates the JointMotorSettings cache for cheaper future updates"""
-        self.joint_motors = {}
-        for (
-            motor_id,
-            joint_id,
-        ) in self.sim_obj.existing_joint_motor_ids.items():
-            self.joint_motors[joint_id] = (
-                motor_id,
-                self.sim_obj.get_joint_motor_settings(motor_id),
-            )

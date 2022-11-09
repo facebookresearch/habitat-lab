@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -30,7 +30,8 @@ class RobotBase(RobotInterface):
         r"""Constructor"""
         assert base_type in [
             "mobile",
-        ], f"'{base_type}' is invalid - valid options are [mobile]. Or you write your own class."
+            "leg",
+        ], f"'{base_type}' is invalid - valid options are [mobile, leg]. Or you write your own class."
         RobotInterface.__init__(self)
         # Assign the variables
         self.params = params
@@ -87,17 +88,41 @@ class RobotBase(RobotInterface):
                 self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
         self._update_motor_settings_cache()
 
+        # set correct gains for legs
+        if (
+            hasattr(self.params, "leg_joints")
+            and self.params.leg_joints is not None
+        ):
+            jms = JointMotorSettings(
+                0,  # position_target
+                self.params.leg_mtr_pos_gain,  # position_gain
+                0,  # velocity_target
+                self.params.leg_mtr_vel_gain,  # velocity_gain
+                self.params.leg_mtr_max_impulse,  # max_impulse
+            )
+            # pylint: disable=not-an-iterable
+            for i in self.params.leg_joints:
+                self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
+            self.leg_joint_pos = self.params.leg_init_params
+        self._update_motor_settings_cache()
+
     def update(self) -> None:
         pass
 
     def reset(self) -> None:
-        pass
+        if (
+            hasattr(self.params, "leg_joints")
+            and self.params.leg_init_params is not None
+        ):
+            self.leg_joint_pos = self.params.leg_init_params
+        self._update_motor_settings_cache()
+        self.update()
 
     @property
     def base_pos(self):
         """Get the robot base ground position"""
         # via configured local offset from origin
-        if self._base_type == "mobile":
+        if self._base_type in ["mobile", "leg"]:
             return (
                 self.sim_obj.translation
                 + self.sim_obj.transformation.transform_vector(
@@ -111,7 +136,7 @@ class RobotBase(RobotInterface):
     def base_pos(self, position: mn.Vector3):
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
         # via configured local offset from origin.
-        if self._base_type == "mobile":
+        if self._base_type in ["mobile", "leg"]:
             if len(position) != 3:
                 raise ValueError("Base position needs to be three dimensions")
             self.sim_obj.translation = (
@@ -129,12 +154,67 @@ class RobotBase(RobotInterface):
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
-        if self._base_type == "mobile":
+        if self._base_type == "mobile" or self._base_type == "leg":
             self.sim_obj.rotation = mn.Quaternion.rotation(
                 mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
+
+    @property
+    def leg_motor_pos(self):
+        """Get the current target of the leg joint motors."""
+        if self._base_type == "leg":
+            motor_targets = np.zeros(len(self.params.leg_init_params))
+            for i, jidx in enumerate(self.params.leg_joints):
+                motor_targets[i] = self._get_motor_pos(jidx)
+            return motor_targets
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
+
+    @leg_motor_pos.setter
+    def leg_motor_pos(self, ctrl: List[float]) -> None:
+        """Set the desired target of the leg joint motors."""
+        if self._base_type == "leg":
+            self._validate_ctrl_input(ctrl, self.params.leg_joints)
+            for i, jidx in enumerate(self.params.leg_joints):
+                self._set_motor_pos(jidx, ctrl[i])
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
+
+    @property
+    def leg_joint_pos(self):
+        """Get the current arm joint positions."""
+        if self._base_type == "leg":
+            joint_pos_indices = self.joint_pos_indices
+            leg_joints = self.params.leg_joints
+            leg_pos_indices = [joint_pos_indices[x] for x in leg_joints]
+            return [self.sim_obj.joint_positions[i] for i in leg_pos_indices]
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
+
+    @leg_joint_pos.setter
+    def leg_joint_pos(self, ctrl: List[float]):
+        """Kinematically sets the arm joints and sets the motors to target."""
+        if self._base_type == "leg":
+            self._validate_ctrl_input(ctrl, self.params.leg_joints)
+
+            joint_positions = self.sim_obj.joint_positions
+
+            for i, jidx in enumerate(self.params.leg_joints):
+                self._set_motor_pos(jidx, ctrl[i])
+                joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
+            self.sim_obj.joint_positions = joint_positions
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
 
     @property
     def base_transformation(self):
@@ -145,14 +225,113 @@ class RobotBase(RobotInterface):
             self.sim_obj.get_link_name(link_id) in self.params.base_link_names
         )
 
-    def _update_motor_settings_cache(self):
-        """Updates the JointMotorSettings cache for cheaper future updates"""
-        self.joint_motors = {}
-        for (
-            motor_id,
-            joint_id,
-        ) in self.sim_obj.existing_joint_motor_ids.items():
-            self.joint_motors[joint_id] = (
-                motor_id,
-                self.sim_obj.get_joint_motor_settings(motor_id),
+    def _validate_ctrl_input(self, ctrl: List[float], joints: List[int]):
+        """
+        Raises an exception if the control input is NaN or does not match the
+        joint dimensions.
+        """
+        if len(ctrl) != len(joints):
+            raise ValueError(
+                f"Control dimension does not match joint dimension: {len(ctrl)} vs {len(joints)}"
             )
+        if np.any(np.isnan(ctrl)):
+            raise ValueError("Control is NaN")
+
+    def update_base(self, rigid_state, target_rigid_state):
+
+        cur_state = self._sim.robot.sim_obj.transformation
+
+        # Conduct the collision detection
+        has_attr_contact_test = hasattr(
+            self._sim.habitat_config, "contact_test"
+        )
+        has_attr_navmesh = hasattr(self._sim.habitat_config, "nav_mesh")
+        if (
+            has_attr_contact_test and self._sim.habitat_config.contact_test
+        ) and (
+            (has_attr_navmesh and not self._sim.habitat_config.nav_mesh)
+            or (not has_attr_navmesh)
+        ):
+            did_collide = self._sim.contact_test(self.sim_obj.object_id)
+            robot_id = self.sim_obj.object_id
+            end_pos = target_rigid_state.translation
+            # If there is a collision, we do projection
+            if did_collide:
+                cur_pos = rigid_state.translation
+                target_pos = target_rigid_state.translation
+                move_dir = target_pos - cur_pos
+                # Find the contact point
+                contact_points = self._sim.get_physics_contact_points()
+                num_contact_points = len(
+                    self._sim.get_physics_contact_points()
+                )
+                robot_contact_list = []
+                # Find the contact point associated robot ID
+                for i in range(num_contact_points):
+                    if robot_id == contact_points[i].object_id_a:
+                        robot_contact_list.append(contact_points[i])
+                # Perform projection and sliding
+                contact_points = robot_contact_list
+                if len(contact_points) != 0:
+                    # Get the average normal vector
+                    n_vec = contact_points[0].contact_normal_on_b_in_ws
+                    for i in range(1, len(contact_points)):
+                        n_vec += contact_points[i].contact_normal_on_b_in_ws
+                    n_vec = n_vec / len(contact_points)
+                    # Get the average contact point
+                    c_dot = contact_points[0].position_on_a_in_ws
+                    for i in range(1, len(contact_points)):
+                        c_dot += contact_points[i].position_on_a_in_ws
+                    c_dot = c_dot / len(contact_points)
+                    # Do the projection
+                    proj_dot = self._dot_to_plane_proj(
+                        target_rigid_state.translation, n_vec, c_dot
+                    )
+                    # Get a vector that points from target next point to the projected point
+                    move_vec = target_pos - proj_dot
+                    # Project the vector from the current to target points
+                    proj_move_vec_plane = self._vector_to_plane_proj(
+                        move_dir, n_vec
+                    )
+                    # Combine final move direction.
+                    move_vec = 0.1 * move_vec + 0.1 * proj_move_vec_plane
+                    # Not consider z direction
+                    move_vec[1] = 0
+                    # Add together
+                    end_pos = rigid_state.translation + move_vec
+            target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self.sim_obj.transformation = target_trans
+        elif (
+            has_attr_contact_test
+            and has_attr_navmesh
+            and self._sim.habitat_config.contact_test
+            and self._sim.habitat_config.nav_mesh
+        ):
+            end_pos = self._sim.step_filter(
+                rigid_state.translation, target_rigid_state.translation
+            )
+            # Offset the end position
+            end_pos -= self.params.base_offset
+            target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self.sim_obj.transformation = target_trans
+            # if collide, revet the step back
+            if self._sim.contact_test(self.sim_obj.object_id):
+                self._sim.robot.sim_obj.transformation = cur_state
+        else:
+            end_pos = self._sim.step_filter(
+                rigid_state.translation, target_rigid_state.translation
+            )
+            # Offset the end position
+            end_pos -= self.params.base_offset
+            target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), end_pos
+            )
+            self.sim_obj.transformation = target_trans
+
+        if self._base_type == "leg":
+            # Fix the leg joints
+            self.leg_joint_pos = [0.0, 0.7, -1.5] * 4

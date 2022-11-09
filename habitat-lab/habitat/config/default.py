@@ -707,6 +707,8 @@ _C.habitat.simulator.additional_object_paths = (
     []
 )  # a list of directory or config paths to search in addition to the dataset for object configs. Should match the generated episodes for the task.
 _C.habitat.simulator.seed = _C.habitat.seed
+_C.habitat.simulator.contact_test = False
+_C.habitat.simulator.nav_mesh = True
 _C.habitat.simulator.turn_angle = (
     10  # angle to rotate left or right in degrees
 )
@@ -830,7 +832,56 @@ _C.habitat.simulator.third_depth_sensor = (
     _C.habitat.simulator.depth_sensor.clone()
 )
 _C.habitat.simulator.third_depth_sensor.uuid = "robot_third_rgb"
-
+# -----------------------------------------------------------------------------
+# HEAD STEREO LEFT RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.habitat.simulator.head_stereo_left_rgb_sensor = (
+    _C.habitat.simulator.rgb_sensor.clone()
+)
+_C.habitat.simulator.head_stereo_left_rgb_sensor.uuid = (
+    "robot_head_stereo_left_rgb"
+)
+_C.habitat.simulator.head_stereo_left_rgb_sensor.type = (
+    "HabitatSimHeadStereoLeftRGBSensor"
+)
+# -----------------------------------------------------------------------------
+# HEAD STEREO LEFT DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.habitat.simulator.head_stereo_left_depth_sensor = (
+    _C.habitat.simulator.depth_sensor.clone()
+)
+_C.habitat.simulator.head_stereo_left_depth_sensor.uuid = (
+    "robot_head_stereo_left_depth"
+)
+_C.habitat.simulator.head_stereo_left_depth_sensor.type = (
+    "HabitatSimHeadStereoLeftDepthSensor"
+)
+_C.habitat.simulator.head_stereo_left_depth_sensor.max_zero = False
+# -----------------------------------------------------------------------------
+# HEAD STEREO RIGHT RGB SENSOR
+# -----------------------------------------------------------------------------
+_C.habitat.simulator.head_stereo_right_rgb_sensor = (
+    _C.habitat.simulator.rgb_sensor.clone()
+)
+_C.habitat.simulator.head_stereo_right_rgb_sensor.uuid = (
+    "robot_head_stereo_right_rgb"
+)
+_C.habitat.simulator.head_stereo_right_rgb_sensor.type = (
+    "HabitatSimHeadStereoRightRGBSensor"
+)
+# -----------------------------------------------------------------------------
+# HEAD STEREO RIGHT DEPTH SENSOR
+# -----------------------------------------------------------------------------
+_C.habitat.simulator.head_stereo_right_depth_sensor = (
+    _C.habitat.simulator.depth_sensor.clone()
+)
+_C.habitat.simulator.head_stereo_right_depth_sensor.uuid = (
+    "robot_head_stereo_right_depth"
+)
+_C.habitat.simulator.head_stereo_right_depth_sensor.type = (
+    "HabitatSimHeadStereoRightDepthSensor"
+)
+_C.habitat.simulator.head_stereo_right_depth_sensor.max_zero = False
 # The default value (alpha, xi) is set to match the lens "GoPro" found in Table 3 of this paper:
 # Vladyslav Usenko, Nikolaus Demmel and Daniel Cremers: The Double Sphere
 # Camera Model, The International Conference on 3D Vision (3DV), 2018
