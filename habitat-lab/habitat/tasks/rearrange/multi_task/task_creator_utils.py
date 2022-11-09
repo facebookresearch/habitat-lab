@@ -47,7 +47,9 @@ def create_task_object(
     config = copy.deepcopy(cur_config)
 
     if task_config_path is not None:
-        pass_args: List[str] = [f"{k}={v}" for k, v in task_config_args.items()]
+        pass_args: List[str] = [
+            f"{k}={v}" for k, v in task_config_args.items()
+        ]
         task_config = habitat.get_config(
             osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"),
             pass_args,
