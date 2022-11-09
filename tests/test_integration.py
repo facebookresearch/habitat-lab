@@ -32,11 +32,13 @@ def test_goto(home_robot_stack, robot):
     robot.set_goal(xyt_goal)
 
     # Wait for robot to reach goal
-    time.sleep(5)
+    time.sleep(4)
 
     # Check that robot is at goal
     xyt_new = robot.get_base_state()
-    assert np.allclose(xyt_new, xyt_goal, atol=1e-2)  # 1cm
+
+    assert np.allclose(xyt_new[:2], xyt_goal[:2], atol=0.02)  # 2cm
+    assert np.allclose(xyt_new[2], xyt_goal[2], atol=0.087)  # 5 degrees
 
     # Down processes
     mrp.cmd.down()

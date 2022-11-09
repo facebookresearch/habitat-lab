@@ -21,18 +21,18 @@ class LocalHelloRobot:
         self._base_state = None
 
         # Publishers
-        self._goal_pub = rospy.Publisher("/goto_controller/goal", Pose, queue_size=1)
-        self._velocity_pub = rospy.Publisher("/stretch/cmd_vel", Twist, queue_size=1)
+        self._goal_pub = rospy.Publisher("goto_controller/goal", Pose, queue_size=1)
+        self._velocity_pub = rospy.Publisher("stretch/cmd_vel", Twist, queue_size=1)
 
         # Services
-        self._goto_service = rospy.ServiceProxy("/goto_controller/toggle_on", Trigger)
+        self._goto_service = rospy.ServiceProxy("goto_controller/toggle_on", Trigger)
         self._yaw_service = rospy.ServiceProxy(
-            "/goto_controller/toggle_yaw_tracking", Trigger
+            "goto_controller/toggle_yaw_tracking", Trigger
         )
 
         # Subscribers
         self._state_sub = rospy.Subscriber(
-            "/state_estimator/pose_filtered",
+            "state_estimator/pose_filtered",
             PoseStamped,
             self._state_callback,
             queue_size=1,

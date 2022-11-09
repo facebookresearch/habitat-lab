@@ -6,6 +6,14 @@ import time
 
 
 class RoscoreWrapper:
+    """
+    Thin ROS wrapper for launching and terminating via MRP
+
+    MRP terminates processes by sending a SIGTERM.
+    roscore is designed to exit gracefully under SIGINT (Ctrl-C).
+    This wrapper catches the SIGTERM from `mrp down` and sends a SIGINT to the underlying roscore process.
+    """
+
     def __init__(self):
         signal.signal(signal.SIGINT, self._term_handler)
         signal.signal(signal.SIGTERM, self._term_handler)

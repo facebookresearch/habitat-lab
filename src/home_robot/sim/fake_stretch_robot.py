@@ -75,11 +75,11 @@ class FakeStretch:
         # Ros stuff
         rospy.init_node("fake_stretch_hw")
         self._hector_slam_pub = rospy.Publisher(
-            "/poseupdate",
+            "poseupdate",
             PoseWithCovarianceStamped,
             queue_size=1,
         )
-        self._odom_pub = rospy.Publisher("/odom", Odometry, queue_size=1)
+        self._odom_pub = rospy.Publisher("odom", Odometry, queue_size=1)
 
     def _publish_slam(self, xyt, timestamp):
         msg = PoseWithCovarianceStamped()
@@ -101,7 +101,7 @@ class FakeStretch:
         """Launches the simulation loop"""
         # Subscribers
         rospy.Subscriber(
-            "/stretch/cmd_vel", Twist, self._vel_control_callback, queue_size=1
+            "stretch/cmd_vel", Twist, self._vel_control_callback, queue_size=1
         )
 
         # Sim loop
