@@ -5,6 +5,7 @@ import threading
 import numpy as np
 import rospy
 from std_srvs.srv import Trigger, TriggerResponse
+from std_srvs.srv import SetBool, SetBoolResponse
 from geometry_msgs.msg import Twist, Pose, PoseStamped
 from nav_msgs.msg import Odometry
 
@@ -35,10 +36,6 @@ class GotoVelocityController:
         # Control module
         self.control = DDVelocityControlNoplan(hz)
 
-        # Publishers
-        rospy.init_node("goto_controller")
-        self.vel_command_pub = rospy.Publisher("stretch/cmd_vel", Twist, queue_size=1)
-
         # Initialize
         self.xyt_loc = np.zeros(3)
         self.xyt_loc_odom = np.zeros(3)
@@ -68,20 +65,26 @@ class GotoVelocityController:
 
         self.xyt_goal = sophus2xyt(pose_goal)
 
-    def _yaw_tracking_service(self, request):
-        self.track_yaw = not self.track_yaw
-        status_str = "ON" if self.track_yaw else "OFF"
+    def _enable_service(self, request):
+        self.active = True
         return TriggerResponse(
             success=True,
-            message=f"Yaw tracking is now {status_str}",
+            message=f"Goto controller is now RUNNING",
         )
 
-    def _toggle_on_service(self, request):
-        self.active = not self.active
-        status_str = "RUNNING" if self.active else "STOPPED"
+    def _disable_service(self, request):
+        self.active = False
         return TriggerResponse(
             success=True,
-            message=f"Goto controller is now {status_str}",
+            message=f"Goto controller is now STOPPED",
+        )
+
+    def _set_yaw_tracking_service(self, request: SetBool):
+        self.track_yaw = request.data
+        status_str = "ON" if self.track_yaw else "OFF"
+        return SetBoolResponse(
+            success=True,
+            message=f"Yaw tracking is now {status_str}",
         )
 
     def _compute_error_pose(self):
@@ -119,7 +122,11 @@ class GotoVelocityController:
             rate.sleep()
 
     def main(self):
-        # Subscribers
+        # ROS comms
+        rospy.init_node("goto_controller")
+
+        self.vel_command_pub = rospy.Publisher("stretch/cmd_vel", Twist, queue_size=1)
+
         rospy.Subscriber(
             "state_estimator/pose_filtered",
             PoseStamped,
@@ -136,10 +143,10 @@ class GotoVelocityController:
             "goto_controller/goal", Pose, self._goal_update_callback, queue_size=1
         )
 
-        # Services
-        rospy.Service("goto_controller/toggle_on", Trigger, self._toggle_on_service)
+        rospy.Service("goto_controller/enable", Trigger, self._enable_service)
+        rospy.Service("goto_controller/disable", Trigger, self._disable_service)
         rospy.Service(
-            "goto_controller/toggle_yaw_tracking", Trigger, self._yaw_tracking_service
+            "goto_controller/set_yaw_tracking", SetBool, self._set_yaw_tracking_service
         )
 
         # Run controller

@@ -3,6 +3,7 @@ import pdb
 
 import rospy
 from std_srvs.srv import Trigger, TriggerRequest
+from std_srvs.srv import SetBool, SetBoolRequest
 from geometry_msgs.msg import PoseStamped, Pose, Twist
 
 from home_robot.utils.geometry import xyt2sophus, sophus2xyt
@@ -20,17 +21,10 @@ class LocalHelloRobot:
 
         self._base_state = None
 
-        # Publishers
+        # Ros pubsub
         self._goal_pub = rospy.Publisher("goto_controller/goal", Pose, queue_size=1)
         self._velocity_pub = rospy.Publisher("stretch/cmd_vel", Twist, queue_size=1)
 
-        # Services
-        self._goto_service = rospy.ServiceProxy("goto_controller/toggle_on", Trigger)
-        self._yaw_service = rospy.ServiceProxy(
-            "goto_controller/toggle_yaw_tracking", Trigger
-        )
-
-        # Subscribers
         self._state_sub = rospy.Subscriber(
             "state_estimator/pose_filtered",
             PoseStamped,
@@ -38,21 +32,41 @@ class LocalHelloRobot:
             queue_size=1,
         )
 
-    def toggle_controller(self):
-        """
-        Turns goto controller on/off.
-        Robot always tries to move to goal if on.
-        """
-        result = self._goto_service(TriggerRequest())
-        print(result.message)
-        return result.success
+        self._nav_mode_service = rospy.ServiceProxy(
+            "/switch_to_navigation_mode", Trigger
+        )
+        self._pos_mode_service = rospy.ServiceProxy("/switch_to_position_mode", Trigger)
+        self._goto_on_service = rospy.ServiceProxy("goto_controller/enable", Trigger)
+        self._goto_off_service = rospy.ServiceProxy("goto_controller/disable", Trigger)
+        self._set_yaw_service = rospy.ServiceProxy(
+            "goto_controller/toggle_yaw_tracking", Trigger
+        )
 
-    def toggle_yaw_tracking(self):
+    def set_nav_mode(self):
+        """
+        Switches to navigation mode.
+        Robot always tries to move to goal in nav mode.
+        """
+        result = self._nav_mode_service(TriggerRequest())
+        print(result.message)
+        result = self._goto_on_service(TriggerRequest())
+        print(result.message)
+
+    def set_pos_mode(self):
+        """
+        Switches to position mode.
+        """
+        result = self._pos_mode_service(TriggerRequest())
+        print(result.message)
+        result = self._goto_off_service(TriggerRequest())
+        print(result.message)
+
+    def set_yaw_tracking(self, value: bool = True):
         """
         Turns yaw tracking on/off.
         Robot only tries to reach the xy position of goal if off.
         """
-        result = self._yaw_service(TriggerRequest())
+        result = self._set_yaw_service(SetBoolRequest(data=value))
         print(result.message)
         return result.success
 

@@ -25,20 +25,19 @@ def robot():
 
 
 def test_goto(home_robot_stack, robot):
-    xyt_goal = [0.2, 0.1, 0.1]
+    xyt_goal = [0.1, 0.3, 0.1]
 
     # Activate goto controller & set goal
-    robot.toggle_controller()
+    robot.set_nav_mode()
     robot.set_goal(xyt_goal)
 
     # Wait for robot to reach goal
-    time.sleep(4)
+    time.sleep(5)
 
     # Check that robot is at goal
     xyt_new = robot.get_base_state()
 
-    assert np.allclose(xyt_new[:2], xyt_goal[:2], atol=0.02)  # 2cm
-    assert np.allclose(xyt_new[2], xyt_goal[2], atol=0.087)  # 5 degrees
+    assert np.allclose(xyt_new[:2], xyt_goal[:2], atol=0.05)  # 5cm
 
     # Down processes
     mrp.cmd.down()
