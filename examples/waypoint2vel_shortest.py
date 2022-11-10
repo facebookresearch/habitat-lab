@@ -339,7 +339,7 @@ def waypoint_generator(env, args, config):
 
     print("origin length:", len(action_list))
     print("filter-out length:", len(visited_points))
-    import pdb; pdb.set_trace()
+
 
     return visited_points, used_actions
 
@@ -415,6 +415,7 @@ def get_input_vel_ctlr(
         end_ep = True
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
+
 
     if not_block_input:
         # Base control
@@ -757,6 +758,9 @@ def play_env(env, args, config):
                 xyt_goal = [ waypoint_list[0][0][0],  waypoint_list[0][0][2],  float(waypoint_list[0][1])]
                 agent.set_goal(xyt_goal)
                 first_flag = False
+
+
+
             xyt = [env.sim.robot.base_pos[0], env.sim.robot.base_pos[2], float(env.sim.robot.base_rot)]
             base_action = agent.forward(xyt, env)
 
@@ -764,7 +768,15 @@ def play_env(env, args, config):
                 print("Done")
                 base_action = [0.0, 0.0]
                 index = 0
-
+            else:
+                cam = env._sim.agents[0].scene_node.node_sensor_suite.get("robot_third_rgb")
+                camera_position = cam.render_camera.node.absolute_translation
+                env._sim.get_debug_line_render().draw_circle(
+                    translation= waypoint_list[0][0],
+                    radius=1.0,
+                    color=mn.Color4.red(),
+                    normal=camera_position-waypoint_list[0][0]
+                )
             print("base_action:", base_action)
             print("current and goal:", [env.sim.robot.base_pos[0], env.sim.robot.base_pos[2], env.sim.robot.base_rot], xyt_goal)
             print("index:", index)
