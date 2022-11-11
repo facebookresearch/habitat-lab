@@ -509,19 +509,50 @@ class BatchedEnv:
 
             self._bsim.enable_debug_sensor(False)
 
-            self._main_camera = Camera(
-                "head_pan_link",
-                mn.Vector3(0.2, 0.2, 0.0),
-                mn.Quaternion.rotation(
-                    mn.Deg(-90.0), mn.Vector3(0.0, 1.0, 0.0)
+            camera_setting = self._config.get("CAMERA_CONFIG", "DEFAULT")
+            if camera_setting == "DEFAULT":
+                self._main_camera = Camera(
+                    "head_pan_link",
+                    mn.Vector3(0.2, 0.2, 0.0),
+                    mn.Quaternion.rotation(
+                        mn.Deg(-90.0), mn.Vector3(0.0, 1.0, 0.0)
+                    )
+                    * mn.Quaternion.rotation(
+                        mn.Deg(-20.0), mn.Vector3(1.0, 0.0, 0.0)
+                    ),
+                    60,
                 )
-                * mn.Quaternion.rotation(
-                    mn.Deg(-20.0), mn.Vector3(1.0, 0.0, 0.0)
-                ),
-                60,
-            )
-            self.set_camera("sensor0", self._main_camera)
-
+                self.set_camera("sensor0", self._main_camera)
+            elif camera_setting == "TRANSFER_1":
+                self._main_camera = Camera(
+                    "head_pan_link",
+                    mn.Vector3(0.2, 0.2, 0.0),
+                    mn.Quaternion.rotation(
+                        mn.Deg(-90.0), mn.Vector3(0.0, 1.0, 0.0)
+                    )
+                    * mn.Quaternion.rotation(
+                        mn.Deg(-20.0), mn.Vector3(1.0, 0.0, 0.0)
+                    ),
+                    90,
+                )
+                self.set_camera("sensor0", self._main_camera)
+            elif camera_setting == "TRANSFER_2":
+                self._main_camera = Camera(
+                    "head_pan_link",
+                    mn.Vector3(0.2, 0.0, 0.0),
+                    mn.Quaternion.rotation(
+                        mn.Deg(-90.0), mn.Vector3(0.0, 1.0, 0.0)
+                    )
+                    * mn.Quaternion.rotation(
+                        mn.Deg(-20.0), mn.Vector3(1.0, 0.0, 0.0)
+                    ),
+                    90,
+                )
+                self.set_camera("sensor0", self._main_camera)
+            else:
+                raise NotImplementedError(
+                    f"Unknown camera setting {camera_setting}"
+                )
             if include_debug_sensor:
                 self._debug_camera = Camera(
                     "base_link",
