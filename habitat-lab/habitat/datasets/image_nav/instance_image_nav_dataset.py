@@ -8,7 +8,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
@@ -31,7 +31,7 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
     goals: Dict[str, InstanceImageGoal]
     episodes: List[InstanceImageGoalNavEpisode] = []  # type: ignore[assignment]
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional[DictConfig] = None) -> None:
         self.goals = {}
         super().__init__(config)
 

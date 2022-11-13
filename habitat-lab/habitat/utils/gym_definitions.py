@@ -13,14 +13,15 @@ from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
-from habitat.config.default import _HABITAT_CFG_DIR, Config
+from habitat.config import DictConfig
+from habitat.config.default import _HABITAT_CFG_DIR
 from habitat.config.default_structured_configs import ThirdRGBSensorConfig
 from habitat.core.environments import get_env_class
 
 gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "benchmark/")
 
 
-def _get_gym_name(cfg: Config) -> Optional[str]:
+def _get_gym_name(cfg: DictConfig) -> Optional[str]:
     if "habitat" in cfg:
         cfg = cfg.habitat
     if "gym" in cfg and "auto_name" in cfg["gym"]:
@@ -28,13 +29,13 @@ def _get_gym_name(cfg: Config) -> Optional[str]:
     return None
 
 
-def _get_env_name(cfg: Config) -> Optional[str]:
+def _get_env_name(cfg: DictConfig) -> Optional[str]:
     if "habitat" in cfg:
         cfg = cfg.habitat
     return cfg["env_task"]
 
 
-def make_gym_from_config(config: Config) -> gym.Env:
+def make_gym_from_config(config: DictConfig) -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """

@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 import habitat
 from habitat import logger
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.simulator import ShortestPathPoint
 from habitat.core.utils import try_cv2_import
 from habitat.datasets.utils import VocabDict
@@ -30,14 +30,14 @@ class NavDataset(wds.Dataset):
 
     def __init__(
         self,
-        config: Config,
+        config: DictConfig,
         env: habitat.Env,
         device: torch.device,
         max_controller_actions: int = 5,
     ):
         """
         Args:
-            config: Config
+            config: DictConfig
             env: habitat Env
             device: torch.device
             max_controller_actions (int)

@@ -10,7 +10,7 @@ from typing import Any, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.config.default import Config
+from habitat.config import DictConfig
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -26,7 +26,7 @@ class RearrangeGraspManager:
     Manages the agent grasping onto rigid objects and the links of articulated objects.
     """
 
-    def __init__(self, sim, config: Config, robot) -> None:
+    def __init__(self, sim, config: DictConfig, robot) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
         :param config: The task's "simulator" subconfig node. Defines grasping parameters.

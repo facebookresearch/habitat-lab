@@ -16,7 +16,8 @@ import attr
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import logger
+from habitat.config import DictConfig
 from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat_baselines.common.tensor_dict import (
     NDArrayDict,
@@ -44,7 +45,7 @@ class ReportWorkerProcess(ProcessBase):
     learning progress, and agent training progress.
     """
     port: int
-    config: Config
+    config: DictConfig
     report_queue: BatchedQueue
     my_t_zero: float
     num_steps_done: torch.Tensor
@@ -387,7 +388,7 @@ class ReportWorker(WorkerBase):
         self,
         mp_ctx: BaseContext,
         port: int,
-        config: Config,
+        config: DictConfig,
         report_queue: BatchedQueue,
         my_t_zero: float,
         init_num_steps=0,

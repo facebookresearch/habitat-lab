@@ -13,7 +13,7 @@ from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -49,8 +49,8 @@ class PointNavResNetPolicy(NetPolicy):
         resnet_baseplanes: int = 32,
         backbone: str = "resnet18",
         force_blind_policy: bool = False,
-        policy_config: Config = None,
-        aux_loss_config: Optional[Config] = None,
+        policy_config: DictConfig = None,
+        aux_loss_config: Optional[DictConfig] = None,
         fuse_keys: Optional[List[str]] = None,
         **kwargs,
     ):
@@ -86,7 +86,7 @@ class PointNavResNetPolicy(NetPolicy):
     @classmethod
     def from_config(
         cls,
-        config: Config,
+        config: DictConfig,
         observation_space: spaces.Dict,
         action_space,
         **kwargs,

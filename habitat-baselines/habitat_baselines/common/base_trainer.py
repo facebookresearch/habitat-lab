@@ -12,7 +12,8 @@ import torch
 from numpy import ndarray
 from torch import Tensor
 
-from habitat import Config, logger
+from habitat import logger
+from habitat.config import DictConfig
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
@@ -36,7 +37,7 @@ class BaseTrainer:
     specific trainer classes like RL trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
-    config: Config
+    config: DictConfig
     flush_secs: float
     supported_tasks: ClassVar[List[str]]
 
@@ -44,7 +45,7 @@ class BaseTrainer:
         raise NotImplementedError
 
     def _get_resume_state_config_or_new_config(
-        self, resume_state_config: Config
+        self, resume_state_config: DictConfig
     ):
         if self.config.habitat_baselines.load_resume_state_config:
             if self.config != resume_state_config:
@@ -186,14 +187,14 @@ class BaseRLTrainer(BaseTrainer):
     methods should be hosted here.
     """
     device: torch.device  # type: ignore
-    config: Config
+    config: DictConfig
     video_option: List[str]
     num_updates_done: int
     num_steps_done: int
     _flush_secs: int
     _last_checkpoint_percent: float
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         super().__init__()
         assert config is not None, "needs config file to initialize trainer"
         self.config = config

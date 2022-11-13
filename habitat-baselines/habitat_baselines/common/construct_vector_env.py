@@ -2,13 +2,13 @@ import os
 import random
 from typing import Any, List, Type
 
-from habitat import Config, ThreadedVectorEnv, VectorEnv, logger, make_dataset
-from habitat.config import read_write
+from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
+from habitat.config import DictConfig, read_write
 from habitat.utils.gym_definitions import make_gym_from_config
 
 
 def construct_envs(
-    config: Config,
+    config: DictConfig,
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
 ) -> VectorEnv:

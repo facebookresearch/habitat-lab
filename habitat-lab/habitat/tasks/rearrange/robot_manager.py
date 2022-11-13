@@ -3,7 +3,8 @@ from typing import Iterator, Optional
 
 import magnum as mn
 import numpy as np
-from yacs.config import CfgNode
+
+from habitat.config import DictConfig
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -23,7 +24,7 @@ class RobotData:
 
     robot: MobileManipulator
     grasp_mgr: RearrangeGraspManager
-    cfg: CfgNode
+    cfg: DictConfig
     start_js: np.ndarray
     is_pb_installed: bool
     _ik_helper: Optional[IkHelper] = None

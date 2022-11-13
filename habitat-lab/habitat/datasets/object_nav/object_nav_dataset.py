@@ -8,7 +8,7 @@ import json
 import os
 from typing import Any, Dict, List, Optional, Sequence
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.utils import DatasetFloatJSONEncoder
@@ -69,7 +69,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         return result
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional[DictConfig] = None) -> None:
         self.goals_by_category = {}
         super().__init__(config)
         self.episodes = list(self.episodes)

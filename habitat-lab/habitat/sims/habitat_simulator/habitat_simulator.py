@@ -24,14 +24,13 @@ from gym.spaces.box import Box
 if TYPE_CHECKING:
     from torch import Tensor
 
-from omegaconf import DictConfig
 
 import habitat_sim
+from habitat.config import DictConfig
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
-    Config,
     DepthSensor,
     Observations,
     RGBSensor,
@@ -99,7 +98,7 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
 
     RGBSENSOR_DIMENSION = 3
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
@@ -138,7 +137,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     min_depth_value: float
     max_depth_value: float
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         if config.normalize_depth:
             self.min_depth_value = 0
             self.max_depth_value = 1
@@ -186,7 +185,7 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
     sim_sensor_type = habitat_sim.SensorType.SEMANTIC
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
@@ -260,7 +259,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         config: configuration for initializing the simulator.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         self.habitat_config = config
 
         sim_sensors = []
@@ -424,7 +423,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return output
 
     def reconfigure(
-        self, habitat_config: Config, should_close_on_new_scene: bool = True
+        self,
+        habitat_config: DictConfig,
+        should_close_on_new_scene: bool = True,
     ) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
         is_same_scene = habitat_config.scene == self._current_scene

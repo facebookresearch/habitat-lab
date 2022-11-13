@@ -9,7 +9,8 @@ import json
 import os
 from typing import List, Optional
 
-from habitat.config import Config
+from yacs.config import CfgNode as Config
+
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState

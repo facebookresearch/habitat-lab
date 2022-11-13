@@ -1,8 +1,9 @@
 from hydra import compose, initialize
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 # NOTE: import required to register structured configs
 import habitat_baselines.config.default_structured_configs  # noqa: F401
+from habitat.config import DictConfig
 from habitat.config.default_structured_configs import (
     HabitatConfigPlugin,
     register_hydra_plugin,

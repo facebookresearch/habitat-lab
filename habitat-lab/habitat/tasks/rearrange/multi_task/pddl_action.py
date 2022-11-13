@@ -7,7 +7,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-from habitat import Config
+from habitat.config import DictConfig
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -25,7 +25,7 @@ from habitat.tasks.rearrange.utils import rearrange_logger
 
 @dataclass
 class ActionTaskInfo:
-    task_config: Optional[Config]
+    task_config: Optional[DictConfig]
     task: str
     task_def: str
     config_args: Dict[str, Any] = field(default_factory=dict)

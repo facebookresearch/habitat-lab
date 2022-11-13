@@ -30,7 +30,7 @@ import numpy as np
 from gym import spaces
 
 import habitat
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.env import Env, RLEnv
 from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
@@ -71,7 +71,9 @@ OBSERVATION_SPACE_NAME = "observation_space"
 
 
 def _make_env_fn(
-    config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
+    config: DictConfig,
+    dataset: Optional[habitat.Dataset] = None,
+    rank: int = 0,
 ) -> Env:
     """Constructor for default habitat :ref:`env.Env`.
 

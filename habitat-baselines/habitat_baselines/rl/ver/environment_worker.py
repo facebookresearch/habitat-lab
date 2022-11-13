@@ -13,8 +13,8 @@ from typing import Any, Callable, Iterable, List, Optional, Sequence, TypeVar
 import attr
 import numpy as np
 
-from habitat import Config, RLEnv, logger, make_dataset
-from habitat.config import read_write
+from habitat import RLEnv, logger, make_dataset
+from habitat.config import DictConfig, read_write
 from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.utils.gym_definitions import make_gym_from_config
@@ -314,7 +314,7 @@ def _make_proc_config(config, rank, scenes=None, scene_splits=None):
     return proc_config
 
 
-def _create_worker_configs(config: Config):
+def _create_worker_configs(config: DictConfig):
     num_environments = config.habitat_baselines.num_environments
 
     dataset = make_dataset(config.habitat.dataset.type)
@@ -345,7 +345,7 @@ def _create_worker_configs(config: Config):
 
 
 def construct_environment_workers(
-    config: Config,
+    config: DictConfig,
     mp_ctx: BaseContext,
     worker_queues: WorkerQueues,
 ) -> List[EnvironmentWorker]:
