@@ -60,6 +60,7 @@ class ReportWorkerProcess(ProcessBase):
     )
     steps_delta: int = 0
     writer: Optional[Any] = None
+    run_id: Optional[str] = None
     preemption_decider_report: Dict[str, float] = attr.ib(
         factory=dict, init=False
     )
@@ -80,6 +81,7 @@ class ReportWorkerProcess(ProcessBase):
                 running_frames_window=self.running_frames_window,
                 running_time_window=self.running_time_window,
                 n_update_reports=self.n_update_reports,
+                run_id=self.run_id,
             )
         )
 
@@ -368,6 +370,7 @@ class ReportWorkerProcess(ProcessBase):
         with (
             get_writer(
                 self.config,
+                resume_run_id=self.run_id,
                 flush_secs=self.flush_secs,
                 purge_step=int(self.num_steps_done),
             )
@@ -389,6 +392,7 @@ class ReportWorker(WorkerBase):
         report_queue: BatchedQueue,
         my_t_zero: float,
         init_num_steps=0,
+        run_id=None,
     ):
         self.num_steps_done = torch.full(
             (), int(init_num_steps), dtype=torch.int64
@@ -397,6 +401,7 @@ class ReportWorker(WorkerBase):
         self.num_steps_done.share_memory_()
         self.time_taken.share_memory_()
         self.report_queue = report_queue
+        self.run_id = run_id
         super().__init__(
             mp_ctx,
             ReportWorkerProcess,

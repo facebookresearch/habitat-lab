@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, List
+from typing import Any, List, Optional
 
 import numpy as np
 import torch
@@ -27,7 +27,13 @@ def get_writer(config, **kwargs):
 
 
 class TensorboardWriter:
-    def __init__(self, log_dir: str, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        log_dir: str,
+        *args: Any,
+        resume_run_id: Optional[str] = None,
+        **kwargs: Any,
+    ):
         r"""A Wrapper for tensorboard SummaryWriter. It creates a dummy writer
         when log_dir is empty string or None. It also has functionality that
         generates tb video directly from numpy images.
@@ -41,6 +47,9 @@ class TensorboardWriter:
         self.writer = None
         if log_dir is not None and len(log_dir) > 0:
             self.writer = SummaryWriter(log_dir, *args, **kwargs)
+
+    def get_run_id(self) -> Optional[str]:
+        return None
 
     def __getattr__(self, item):
         if self.writer:
@@ -88,7 +97,13 @@ class TensorboardWriter:
 
 
 class WeightsAndBiasesWriter:
-    def __init__(self, config, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        config,
+        *args: Any,
+        resume_run_id: Optional[str] = None,
+        **kwargs: Any,
+    ):
         r"""
         Integrates with https://wandb.ai logging service.
         """
@@ -110,6 +125,9 @@ class WeightsAndBiasesWriter:
             raise ValueError(
                 "Requested to log with wandb, but wandb is not installed."
             )
+        if resume_run_id is not None:
+            wb_kwargs["id"] = resume_run_id
+            wb_kwargs["resume"] = "must"
 
         self.run = wandb.init(
             config={"slurm": slurm_info_dict, **config}, **wb_kwargs
@@ -133,6 +151,9 @@ class WeightsAndBiasesWriter:
 
     def __enter__(self):
         return self
+
+    def get_run_id(self) -> Optional[str]:
+        return self.run.id
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.run:

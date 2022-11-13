@@ -737,12 +737,14 @@ class PPOTrainer(BaseRLTrainer):
             self.window_episode_stats.update(
                 requeue_stats["window_episode_stats"]
             )
+            resume_run_id = requeue_stats.get("run_id", None)
 
         ppo_cfg = self.config.RL.PPO
 
         with (
             get_writer(
                 self.config,
+                resume_run_id=resume_run_id,
                 flush_secs=self.flush_secs,
                 purge_step=int(self.num_steps_done),
             )
@@ -769,6 +771,7 @@ class PPOTrainer(BaseRLTrainer):
                         prev_time=(time.time() - self.t_start) + prev_time,
                         running_episode_stats=self.running_episode_stats,
                         window_episode_stats=dict(self.window_episode_stats),
+                        resume_run_id=writer.get_run_id(),
                     )
 
                     save_resume_state(

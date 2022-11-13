@@ -149,6 +149,17 @@ class VERTrainer(PPOTrainer):
             self._my_t_zero,
         )
 
+        has_report_resume_state = (
+            resume_state is not None
+            and "report_worker_state" in resume_state["requeue_stats"]
+        )
+
+        run_id = None
+        if has_report_resume_state:
+            run_id = resume_state["requeue_stats"]["report_worker_state"][
+                "run_id"
+            ]
+
         self.report_worker = ReportWorker(
             self.mp_ctx,
             get_free_port_distributed("report", tcp_store),
@@ -156,11 +167,10 @@ class VERTrainer(PPOTrainer):
             self.queues.report,
             self._my_t_zero,
             self.num_steps_done,
+            run_id,
         )
-        if (
-            resume_state is not None
-            and "report_worker_state" in resume_state["requeue_stats"]
-        ):
+
+        if has_report_resume_state:
             self.report_worker.load_state_dict(
                 resume_state["requeue_stats"]["report_worker_state"]
             )
