@@ -192,6 +192,8 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
+              git fetch --all
+              git checkout sensor_refactor_python
               pip install -r requirements.txt --progress-bar off
               pip install pillow
               python -u setup.py install --headless --with-cuda --bullet
