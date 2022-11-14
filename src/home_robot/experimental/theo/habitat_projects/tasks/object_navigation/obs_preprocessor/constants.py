@@ -1,4 +1,4 @@
-from home_robot.agent.perception.segmentation.coco_maskrcnn.coco_categories import (
+from home_robot.agent.perception.detection.coco_maskrcnn.coco_categories import (
     coco_categories_color_palette,
 )
 
