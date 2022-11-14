@@ -47,5 +47,5 @@ TASK:
 DATASET:
   TYPE: ObjectNav-v1
   SPLIT: val
-  DATA_PATH: "sim/habitat_interface/datasets/episode_datasets/objectgoal_hm3d/{split}/{split}.json.gz"
-  SCENES_DIR: "sim/habitat_interface/datasets/scene_datasets/"
+  DATA_PATH: "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/objectgoal_hm3d/{split}/{split}.json.gz"
+  SCENES_DIR: "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/"
