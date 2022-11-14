@@ -9,15 +9,15 @@ from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 from .objectnav_agent_module import ObjectNavAgentModule
-from habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
-    ObsPreprocessor,
-)
 from home_robot.agent.mapping.dense.semantic.categorical_2d_semantic_map_state import (
     Categorical2DSemanticMapState
 )
 from home_robot.agent.navigation_planner.discrete_planner import DiscretePlanner
 from home_robot.agent.visualization.object_navigation.objectnav_visualizer import (
     ObjectNavVisualizer,
+)
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
+    ObsPreprocessor,
 )
 
 
