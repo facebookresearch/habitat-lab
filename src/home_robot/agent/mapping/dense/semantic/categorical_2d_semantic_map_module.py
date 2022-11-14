@@ -6,10 +6,10 @@ from torch.nn import functional as F
 import numpy as np
 import skimage.morphology
 
-import agent.mapping.dense.depth_utils as du
-import agent.mapping.dense.rotation_utils as ru
-import agent.mapping.dense.map_utils as mu
-import agent.utils.pose_utils as pu
+import home_robot.agent.mapping.dense.depth_utils as du
+import home_robot.agent.mapping.dense.rotation_utils as ru
+import home_robot.agent.mapping.dense.map_utils as mu
+import home_robot.agent.utils.pose_utils as pu
 
 
 class Categorical2DSemanticMapModule(nn.Module):

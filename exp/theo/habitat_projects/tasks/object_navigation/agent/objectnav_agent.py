@@ -12,9 +12,9 @@ from .objectnav_agent_module import ObjectNavAgentModule
 from habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
     ObsPreprocessor,
 )
-from agent.mapping.dense.semantic.semantic_map_state import SemanticMapState
-from agent.navigation_planner.discrete_planner import DiscretePlanner
-from agent.visualization.object_navigation.objectnav_visualizer import (
+from home_robot.agent.mapping.dense.semantic.semantic_map_state import SemanticMapState
+from home_robot.agent.navigation_planner.discrete_planner import DiscretePlanner
+from home_robot.agent.visualization.object_navigation.objectnav_visualizer import (
     ObjectNavVisualizer,
 )
 

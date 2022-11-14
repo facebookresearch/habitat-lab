@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import skimage.morphology
 
-from agent.utils.morphology_utils import binary_dilation
+from home_robot.agent.utils.morphology_utils import binary_dilation
 
 
 class ObjectNavFrontierExplorationPolicy(nn.Module):
