@@ -1,10 +1,6 @@
-"""
-This script is intended to run from the "src" root:
-python sim/habitat_interface/tasks/object_navigation/eval_scripts/eval_specific_episode.py
-"""
 from pathlib import Path
 import sys
-
+print(str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent))
 sys.path.insert(
     0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent)
 )
