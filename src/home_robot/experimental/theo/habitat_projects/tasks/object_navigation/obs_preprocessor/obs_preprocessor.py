@@ -35,7 +35,7 @@ class ObsPreprocessor:
         self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
 
         if not self.ground_truth_semantics:
-            from agent.perception.segmentation.coco_maskrcnn.coco_maskrcnn import (
+            from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
                 COCOMaskRCNN,
             )
 

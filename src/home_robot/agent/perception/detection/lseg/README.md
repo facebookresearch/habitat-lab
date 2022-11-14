@@ -10,7 +10,7 @@ gdown 1ayk6NXURI_vIPlym16f_RG3ffxBWHxvb
 
 ### Inference Usage
 ```
-from agent.perception.segmentation.lseg import load_lseg_for_inference
+from home_robot.agent.perception.detection.lseg import load_lseg_for_inference
 
 # Load pre-trained model
 checkpoint_path = "checkpoints/demo_e200.ckpt"

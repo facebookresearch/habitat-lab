@@ -10,7 +10,7 @@ import home_robot.agent.mapping.dense.depth_utils as du
 import home_robot.agent.mapping.dense.rotation_utils as ru
 import home_robot.agent.mapping.dense.map_utils as mu
 import home_robot.agent.utils.pose_utils as pu
-from home_robot.agent.perception.segmentation.lseg import load_lseg_for_inference
+from home_robot.agent.perception.detection.lseg import load_lseg_for_inference
 
 
 class VisionLanguage2DSemanticMapModule(nn.Module):

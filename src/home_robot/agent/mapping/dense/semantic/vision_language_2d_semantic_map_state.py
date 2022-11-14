@@ -3,7 +3,7 @@ import numpy as np
 from typing import List
 
 from home_robot.agent.mapping.dense.map_utils import MapSizeParameters, init_map_and_pose_for_env
-from home_robot.agent.perception.segmentation.lseg.modules.models.lseg_net import LSegEncDecNet
+from home_robot.agent.perception.detection.lseg.modules.models.lseg_net import LSegEncDecNet
 
 
 class VisionLanguage2DSemanticMapState:

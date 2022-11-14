@@ -8,7 +8,7 @@ from typing import Optional
 
 import home_robot.agent.utils.visualization_utils as vu
 import home_robot.agent.utils.pose_utils as pu
-from home_robot.agent.perception.segmentation.coco_maskrcnn.coco_categories import (
+from home_robot.agent.perception.detection.coco_maskrcnn.coco_categories import (
     coco_categories_color_palette,
 )
 

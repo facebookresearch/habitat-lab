@@ -12,8 +12,8 @@ from habitat.core.dataset import EpisodeIterator
 from sim.habitat_interface.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
     ObsPreprocessor,
 )
-from agent.navigation_planner.discrete_planner import DiscretePlanner
-from agent.visualization.object_navigation.objectnav_visualizer import (
+from home_robot.agent.navigation_planner.discrete_planner import DiscretePlanner
+from home_robot.agent.visualization.object_navigation.objectnav_visualizer import (
     ObjectNavVisualizer,
 )
 
