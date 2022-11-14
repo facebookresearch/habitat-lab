@@ -1,7 +1,9 @@
 import torch.nn as nn
 import time
 
-from home_robot.agent.mapping.dense.semantic.semantic_map_module import SemanticMapModule
+from home_robot.agent.mapping.dense.semantic.categorical_2d_semantic_map_module import (
+    Categorical2DSemanticMapModule
+)
 from home_robot.agent.navigation_policy.object_navigation.objectnav_frontier_exploration_policy import (
     ObjectNavFrontierExplorationPolicy,
 )
@@ -11,7 +13,7 @@ class ObjectNavAgentModule(nn.Module):
     def __init__(self, config):
         super().__init__()
 
-        self.semantic_map_module = SemanticMapModule(
+        self.semantic_map_module = Categorical2DSemanticMapModule(
             frame_height=config.ENVIRONMENT.frame_height,
             frame_width=config.ENVIRONMENT.frame_width,
             camera_height=config.ENVIRONMENT.camera_height,
