@@ -8,7 +8,7 @@ from PIL import Image
 from habitat import Config
 from habitat.core.simulator import Observations
 
-import agent.utils.pose_utils as pu
+import home_robot.agent.utils.pose_utils as pu
 from .constants import (
     goal_id_to_goal_name,
     goal_id_to_coco_id,

@@ -20,15 +20,15 @@ from pathlib import Path
 import sys
 
 sys.path.insert(
-    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent)
+    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent.parent)
 )
 
 from habitat import Config
 from habitat.core.vector_env import VectorEnv
 
-from habitat_projects.utils.config_utils import get_config
-from habitat_projects.tasks.object_navigation.agent.objectnav_agent import ObjectNavAgent
-from habitat_projects.tasks.object_navigation.env_wrapper import (
+from home_robot.experimental.theo.habitat_projects.utils.config_utils import get_config
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.agent.objectnav_agent import ObjectNavAgent
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.env_wrapper import (
     make_vector_envs,
     make_vector_envs_on_specific_episodes,
 )
