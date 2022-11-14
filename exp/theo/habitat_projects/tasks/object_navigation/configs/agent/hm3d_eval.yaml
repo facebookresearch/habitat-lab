@@ -1,0 +1,47 @@
+BASE_TASK_CONFIG_PATH: sim/habitat_interface/tasks/object_navigation/configs/task/hm3d_challenge2022_val.yaml
+
+NO_GPU: 0                 # 1: ignore IDs above and run on CPU, 0: run on GPUs with IDs above
+NUM_ENVIRONMENTS: 20      # number of environments (per agent process)
+DUMP_LOCATION: sim/habitat_interface/tasks/object_navigation/datadump # path to dump models and log
+EXP_NAME: eval_hm3d       # experiment name
+VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
+PRINT_IMAGES: 0           # 1: save visualization as images, 0: no image saving
+GROUND_TRUTH_SEMANTICS: 0 # 1: use ground-truth semantics (for debugging / ablations)
+
+ENVIRONMENT:
+  num_sem_categories: 16  # number of semantic segmentation categories
+  turn_angle: 30.0        # agent turn angle (in degrees)
+  frame_height: 480       # first-person frame height (in pixels)
+  frame_width: 640        # first-person frame width (in pixels)
+  camera_height: 0.88     # camera sensor height (in metres)
+  hfov: 79.0              # horizontal field of view (in degrees)
+  min_depth: 0.5          # minimum depth for depth sensor (in metres)
+  max_depth: 5.0          # maximum depth for depth sensor (in metres)
+
+AGENT:
+  max_steps: 500          # maximum number of steps before stopping an episode
+  panorama_start: 1       # 1: turn around 360 degrees when starting an episode, 0: don't
+
+  SEMANTIC_MAP:
+    map_size_cm: 4800        # global map size (in centimeters)
+    map_resolution: 5        # size of map bins (in centimeters)
+    vision_range: 100        # diameter of local map region visible by the agent (in cells)
+    global_downscaling: 2    # ratio of global over local map
+    du_scale: 4              # frame downscaling before projecting to point cloud
+    cat_pred_threshold: 5.0  # number of depth points to be in bin to classify it as a certain semantic category
+    exp_pred_threshold: 1.0  # number of depth points to be in bin to consider it as explored
+    map_pred_threshold: 1.0  # number of depth points to be in bin to consider it as obstacle
+
+  PLANNER:
+    collision_threshold: 0.20       # forward move distance under which we consider there's a collision (in meters)
+    obs_dilation_selem_radius: 3    # radius (in cells) of obstacle dilation structuring element
+    goal_dilation_selem_radius: 10  # radius (in cells) of goal dilation structuring element
+
+EVAL_VECTORIZED:
+  simulator_gpu_ids: [1, 2, 3, 4, 5] # IDs of GPUs to use for vectorized environments
+  specific_episodes: 0      # 1: eval on specific episodes (for debugging), 0: eval on split normally
+  goal_on_same_floor: 0     # 1: restrict to episodes with a goal on the same floor as the starting position
+  split: val                # eval split
+  num_episodes_per_env: 100 # number of eval episodes per environment
+  record_videos: 0          # 1: record videos from printed images, 0: don't
+  record_planner_videos: 0  # 1: record planner videos (if record videos), 0: don't
