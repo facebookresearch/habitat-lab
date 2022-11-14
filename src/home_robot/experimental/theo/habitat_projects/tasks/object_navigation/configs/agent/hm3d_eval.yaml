@@ -1,8 +1,8 @@
-BASE_TASK_CONFIG_PATH: sim/habitat_interface/tasks/object_navigation/configs/task/hm3d_challenge2022_val.yaml
+BASE_TASK_CONFIG_PATH: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/task/hm3d_challenge2022_val.yaml
 
 NO_GPU: 0                 # 1: ignore IDs above and run on CPU, 0: run on GPUs with IDs above
 NUM_ENVIRONMENTS: 20      # number of environments (per agent process)
-DUMP_LOCATION: sim/habitat_interface/tasks/object_navigation/datadump # path to dump models and log
+DUMP_LOCATION: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/datadump # path to dump models and log
 EXP_NAME: eval_hm3d       # experiment name
 VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
 PRINT_IMAGES: 0           # 1: save visualization as images, 0: no image saving
