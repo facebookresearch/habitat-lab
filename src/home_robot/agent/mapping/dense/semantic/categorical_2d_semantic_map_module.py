@@ -6,9 +6,9 @@ from torch.nn import functional as F
 import numpy as np
 import skimage.morphology
 
-import agent.mapping.metric.depth_utils as du
-import agent.mapping.metric.rotation_utils as ru
-import agent.mapping.metric.map_utils as mu
+import agent.mapping.dense.depth_utils as du
+import agent.mapping.dense.rotation_utils as ru
+import agent.mapping.dense.map_utils as mu
 import agent.utils.pose_utils as pu
 
 

@@ -4,7 +4,7 @@ python habitat_projects/tasks/object_navigation/eval_scripts/eval_specific_episo
 """
 from pathlib import Path
 import sys
-print(str(Path(__file__).resolve().parent.parent.parent.parent.parent))
+
 sys.path.insert(
     0, str(Path(__file__).resolve().parent.parent.parent.parent.parent)
 )

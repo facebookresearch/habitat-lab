@@ -1,6 +1,6 @@
 """
-This script is intended to run from the "src" root:
-python sim/habitat_interface/tasks/object_navigation/eval_scripts/eval_vectorized.py \
+This script is intended to run from the "exp/theo" root:
+python habitat_projects/tasks/object_navigation/eval_scripts/eval_vectorized.py \
     --config_path sim/habitat_interface/tasks/object_navigation/configs/agent/hm3d_eval.yaml \
     EVAL_VECTORIZED.simulator_gpu_ids "[0, 1]" \
     NUM_ENVIRONMENTS 10
@@ -20,17 +20,15 @@ from pathlib import Path
 import sys
 
 sys.path.insert(
-    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent)
+    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent)
 )
 
 from habitat import Config
 from habitat.core.vector_env import VectorEnv
 
-from sim.habitat_interface.utils.config_utils import get_config
-from sim.habitat_interface.tasks.object_navigation.agent.objectnav_agent import (
-    ObjectNavAgent,
-)
-from sim.habitat_interface.tasks.object_navigation.env_wrapper import (
+from habitat_projects.utils.config_utils import get_config
+from habitat_projects.tasks.object_navigation.agent.objectnav_agent import ObjectNavAgent
+from habitat_projects.tasks.object_navigation.env_wrapper import (
     make_vector_envs,
     make_vector_envs_on_specific_episodes,
 )

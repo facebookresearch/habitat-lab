@@ -2,7 +2,7 @@ import torch
 import numpy as np
 from typing import List
 
-from agent.mapping.metric.map_utils import MapSizeParameters, init_map_and_pose_for_env
+from agent.mapping.dense.map_utils import MapSizeParameters, init_map_and_pose_for_env
 from agent.perception.segmentation.lseg.modules.models.lseg_net import LSegEncDecNet
 
 
