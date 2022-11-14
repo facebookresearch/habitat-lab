@@ -1,17 +1,19 @@
+"""
+This script is intended to run from the "exp/theo" root:
+python habitat_projects/tasks/object_navigation/eval_scripts/eval_specific_episode.py
+"""
 from pathlib import Path
 import sys
-print(str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent / "src/home_robot"))
+print(str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent))
 sys.path.insert(
-    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent / "src/home_robot")
+    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent)
 )
 
 from habitat.core.env import Env
 from habitat.core.simulator import Observations
 
-from sim.habitat_interface.utils.config_utils import get_config
-from sim.habitat_interface.tasks.object_navigation.agent.objectnav_agent import (
-    ObjectNavAgent,
-)
+from habitat_projects.utils.config_utils import get_config
+from habitat_projects.tasks.object_navigation.agent.objectnav_agent import ObjectNavAgent
 
 
 def reset_to_episode(env: Env, scene_id: str, episode_id: str) -> Observations:
