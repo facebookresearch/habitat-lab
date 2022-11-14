@@ -66,7 +66,7 @@ class ObjectNavVisualizer:
 
         self.color_palette = [int(x * 255.0) for x in map_color_palette]
         self.legend = cv2.imread(
-            "agent/perception/segmentation/coco_maskrcnn/coco_categories_legend.png"
+            "home_robot/agent/perception/detection/coco_maskrcnn/coco_categories_legend.png"
         )
 
         self.num_sem_categories = num_sem_categories
