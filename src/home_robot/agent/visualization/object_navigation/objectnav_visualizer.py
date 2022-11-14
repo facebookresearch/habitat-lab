@@ -6,9 +6,9 @@ from PIL import Image
 import skimage.morphology
 from typing import Optional
 
-import agent.utils.visualization_utils as vu
-import agent.utils.pose_utils as pu
-from agent.perception.segmentation.coco_maskrcnn.coco_categories import (
+import home_robot.agent.utils.visualization_utils as vu
+import home_robot.agent.utils.pose_utils as pu
+from home_robot.agent.perception.segmentation.coco_maskrcnn.coco_categories import (
     coco_categories_color_palette,
 )
 
