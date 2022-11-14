@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrangement: prepare_groceries
+  - /benchmark/rearrange: prepare_groceries
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 

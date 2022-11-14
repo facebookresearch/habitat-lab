@@ -73,7 +73,7 @@ def test_rearrange_example_modules(args):
 
 @pytest.mark.skipif(
     not osp.exists(
-        "habitat-lab/habitat/config/benchmark/navigation/pointnav/pointnav_franka.yaml"
+        "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_franka.yaml"
     ),
     reason="Requires the franka point config",
 )
@@ -92,7 +92,7 @@ def test_static_franka_example(args):
 
 @pytest.mark.skipif(
     not osp.exists(
-        "habitat-lab/habitat/config/benchmark/navigation/pointnav/pointnav_franka.yaml"
+        "habitat-lab/habitat/config/benchmark/nav/pointnav/pointnav_franka.yaml"
     )
     or not osp.exists("data/test_assets/objects/nested_box.glb")
     or not osp.exists(

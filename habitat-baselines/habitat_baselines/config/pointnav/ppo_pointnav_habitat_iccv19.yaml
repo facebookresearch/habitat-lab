@@ -5,7 +5,7 @@
 # and should be used as the starting point instead.
 
 defaults:
-  - /benchmark/navigation/pointnav: pointnav_gibson
+  - /benchmark/nav/pointnav: pointnav_gibson
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 

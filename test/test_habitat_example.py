@@ -19,7 +19,7 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 def skip_if_dataset_does_not_exist():
     cfg = habitat.get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     )
     if not PointNavDatasetV1.check_config_paths_exist(
         config=cfg.habitat.dataset

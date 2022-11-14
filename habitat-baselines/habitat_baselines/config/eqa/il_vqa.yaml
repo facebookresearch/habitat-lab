@@ -2,7 +2,7 @@
 
 defaults:
  - /habitat_baselines: habitat_baselines_il_config_base
- - /benchmark/navigation: eqa_rgbonly_mp3d
+ - /benchmark/nav: eqa_rgbonly_mp3d
  - override /habitat/simulator/sim_sensors:
    - rgb_sensor
  - _self_

@@ -19,7 +19,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 if TYPE_CHECKING:
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
-TASK_CONFIGS_DIR = "benchmark/rearrangement/"
+TASK_CONFIGS_DIR = "benchmark/rearrange/"
 TASK_IGNORE_KEYS = ["task_spec", "task_spec_base_path", "pddl_domain_def"]
 
 

@@ -31,7 +31,7 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
 
-CFG_TEST = "benchmark/rearrangement/pick.yaml"
+CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
     "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
 )
@@ -109,7 +109,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/benchmark/rearrangement/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
@@ -136,7 +136,7 @@ def test_rearrange_tasks(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/benchmark/rearrangement/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_composite_tasks(test_cfg_path):

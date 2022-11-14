@@ -27,7 +27,7 @@ from habitat.utils.geometry_utils import (
 )
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
-CFG_MULTI_TEST = "benchmark/navigation/pointnav/pointnav_gibson.yaml"
+CFG_MULTI_TEST = "benchmark/nav/pointnav/pointnav_gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
 NUM_EPISODES = 10
 
@@ -50,7 +50,7 @@ def check_json_serialization(dataset: habitat.Dataset):
 
 def test_single_pointnav_dataset():
     dataset_config = get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     ).habitat.dataset
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")

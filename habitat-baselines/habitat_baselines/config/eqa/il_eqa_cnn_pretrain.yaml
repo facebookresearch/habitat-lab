@@ -2,7 +2,7 @@
 
 defaults:
  - /habitat_baselines: habitat_baselines_il_config_base
- - /benchmark/navigation: eqa_mp3d
+ - /benchmark/nav: eqa_mp3d
  - _self_
 
 

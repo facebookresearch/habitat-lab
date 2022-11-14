@@ -28,19 +28,19 @@ importlib.reload(habitat.utils.gym_adapter)
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "benchmark/rearrangement/reach_state.yaml",
+            "benchmark/rearrange/reach_state.yaml",
             [],
             7,
             np.ndarray,
         ),
         (
-            "benchmark/rearrangement/pick.yaml",
+            "benchmark/rearrange/pick.yaml",
             [],
             8,
             dict,
         ),
         (
-            "benchmark/rearrangement/pick.yaml",
+            "benchmark/rearrange/pick.yaml",
             [
                 "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
@@ -48,7 +48,7 @@ importlib.reload(habitat.utils.gym_adapter)
             dict,
         ),
         (
-            "benchmark/rearrangement/tidy_house.yaml",
+            "benchmark/rearrange/tidy_house.yaml",
             [],
             11,  # 7 joints, 1 grip action, 2 base velocity, 1 stop action
             dict,
@@ -91,13 +91,13 @@ def test_gym_wrapper_contract_continuous(
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "benchmark/navigation/imagenav/imagenav_test.yaml",
+            "benchmark/nav/imagenav/imagenav_test.yaml",
             [],
             4,
             dict,
         ),
         (
-            "benchmark/navigation/pointnav/pointnav_habitat_test.yaml",
+            "benchmark/nav/pointnav/pointnav_habitat_test.yaml",
             [],
             4,
             dict,
@@ -139,12 +139,12 @@ def test_gym_wrapper_contract_discrete(
     "config_file,override_options",
     [
         [
-            "benchmark/rearrangement/pick.yaml",
+            "benchmark/rearrange/pick.yaml",
             [
                 "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
         ],
-        ["benchmark/rearrangement/pick.yaml", []],
+        ["benchmark/rearrange/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):

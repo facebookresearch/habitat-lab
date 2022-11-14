@@ -8,7 +8,7 @@ defaults:
     - head_depth_sensor
     - arm_rgb_sensor
     - arm_depth_sensor
-  - /habitat/task/rearrange/benchmark: idle
+  - /habitat/task/rearrange/demo: interact
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
@@ -42,7 +42,7 @@ habitat:
           height: 128
           width: 128
       is_set_start_state: True
-      start_position: [3.66997,0.0,3.5041]
+      start_position: [-1.2, 0.158, 0.29]
       start_rotation: [0.0, 0.999657, 0.0, -0.0261769]
       robot_type: FetchRobotNoWheels
       robot_urdf: ./data/robots/hab_fetch/robots/fetch_no_base.urdf

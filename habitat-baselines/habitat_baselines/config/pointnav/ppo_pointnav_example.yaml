@@ -4,7 +4,7 @@
 # for better hyperparameters for actual training
 
 defaults:
-  - /benchmark/navigation/pointnav: pointnav_habitat_test
+  - /benchmark/nav/pointnav: pointnav_habitat_test
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 

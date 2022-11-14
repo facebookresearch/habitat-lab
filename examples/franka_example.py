@@ -19,7 +19,7 @@ def example(render):
 
     with habitat.Env(
         config=habitat.get_config(
-            "benchmark/navigation/pointnav/pointnav_franka.yaml"
+            "benchmark/nav/pointnav/pointnav_franka.yaml"
         )
     ) as env:
         logger.info("Environment creation successful")

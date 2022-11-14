@@ -38,7 +38,7 @@ def safe_mkdir(path):
 
 def _generate_fn(scene):
     cfg = habitat.get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     )
     with habitat.config.read_write(cfg):
         cfg.habitat.simulator.scene = scene

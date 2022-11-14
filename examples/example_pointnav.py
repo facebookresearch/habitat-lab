@@ -12,7 +12,7 @@ def example():
 
     with habitat.Env(
         config=habitat.get_config(
-            "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
+            "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
         )
     ) as env:
         print("Environment creation successful")

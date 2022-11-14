@@ -49,9 +49,7 @@ from habitat.utils.visualizations.utils import (
 
 
 def get_test_config():
-    config = get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
-    )
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     with habitat.config.read_write(config):
         config.habitat.task.measurements = {}
         config.habitat.task.lab_sensors = {}

@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /benchmark/navigation/objectnav: objectnav_mp3d
+  - /benchmark/nav/objectnav: objectnav_mp3d
   - _self_
 
 habitat:

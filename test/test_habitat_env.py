@@ -418,9 +418,7 @@ def test_close_with_paused():
 # TODO Bring back this test for the greedy follower
 @pytest.mark.skip
 def test_action_space_shortest_path():
-    config = get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
-    )
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -465,9 +463,7 @@ def test_action_space_shortest_path():
 
 @pytest.mark.parametrize("set_method", ["current", "list", "iter"])
 def test_set_episodes(set_method):
-    config = get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
-    )
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 

@@ -71,7 +71,7 @@ def test_task_actions_sampling_for_teleport():
     "config_file",
     [
         CFG_TEST,
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml",
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml",
         "test/habitat_mp3d_eqa_test.yaml",
     ],
 )

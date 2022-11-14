@@ -3,7 +3,7 @@
 # Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
 
 defaults:
-  - /benchmark/navigation/pointnav: pointnav_gibson
+  - /benchmark/nav/pointnav: pointnav_gibson
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 

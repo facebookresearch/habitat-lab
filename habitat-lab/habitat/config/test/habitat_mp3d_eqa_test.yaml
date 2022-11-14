@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - /benchmark/navigation/eqa_mp3d.yaml
+  - /benchmark/nav/eqa_mp3d.yaml
   - _self_
 
 habitat:

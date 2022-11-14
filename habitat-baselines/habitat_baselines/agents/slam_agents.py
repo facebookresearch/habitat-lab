@@ -606,13 +606,11 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="benchmark/navigation/pointnav/pointnav_habitat_test.yaml",
+        default="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
     )
     args = parser.parse_args()
 
-    config = get_config(
-        "benchmark/navigation/pointnav/pointnav_habitat_test.yaml"
-    )
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     agent_config = cfg_baseline()
     with habitat.config.read_write(config):
         config.BASELINE = agent_config.BASELINE

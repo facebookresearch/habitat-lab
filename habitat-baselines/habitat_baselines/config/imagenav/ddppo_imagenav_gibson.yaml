@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /benchmark/navigation/imagenav: imagenav_gibson
+  - /benchmark/nav/imagenav: imagenav_gibson
   - _self_
 
 habitat:

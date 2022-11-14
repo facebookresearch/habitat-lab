@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/navigation/vln_r2r.yaml
+  - /benchmark/nav/vln_r2r.yaml
   - _self_
 
 habitat:

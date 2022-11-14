@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrangement: open_cab
+  - /benchmark/rearrange: open_cab
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 
