@@ -1,7 +1,7 @@
 import torch.nn as nn
 import time
 
-from agent.mapping.metric.semantic.semantic_map_module import SemanticMapModule
+from agent.mapping.dense.semantic.semantic_map_module import SemanticMapModule
 from agent.navigation_policy.object_navigation.objectnav_frontier_exploration_policy import (
     ObjectNavFrontierExplorationPolicy,
 )
