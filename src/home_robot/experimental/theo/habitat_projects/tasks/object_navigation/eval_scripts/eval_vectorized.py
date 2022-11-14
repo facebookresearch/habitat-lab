@@ -1,7 +1,7 @@
 """
 This script is intended to run from the "src" root:
 python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eval_scripts/eval_vectorized.py \
-    --config_path sim/habitat_interface/tasks/object_navigation/configs/agent/hm3d_eval.yaml \
+    --config_path home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/agent/hm3d_eval.yaml \
     EVAL_VECTORIZED.simulator_gpu_ids "[0, 1]" \
     NUM_ENVIRONMENTS 10
 """
