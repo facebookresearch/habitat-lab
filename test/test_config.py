@@ -8,10 +8,12 @@
 from glob import glob
 
 import pytest
+from yacs.config import CfgNode
 
 import habitat
-from habitat.config.default import _C, _HABITAT_CFG_DIR, get_config
+from habitat.config.default import _HABITAT_CFG_DIR, get_config
 
+_C = CfgNode()
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
 CFG_EQA = "test/habitat_mp3d_eqa_test.yaml"
 MAX_TEST_STEPS_LIMIT = 3
