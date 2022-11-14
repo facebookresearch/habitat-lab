@@ -27,7 +27,9 @@ def _make_encoder(
             use_readout=use_readout,
             enable_attention_hooks=enable_attention_hooks,
         )
-        scratch = _make_scratch([256, 512, 1024, 1024], features, groups=groups, expand=expand)
+        scratch = _make_scratch(
+            [256, 512, 1024, 1024], features, groups=groups, expand=expand
+        )
     elif backbone == "clipRN50x16_vitl16_384":
         clip_pretrained, pretrained = _make_pretrained_clipRN50x16_vitl16_384(
             use_pretrained,
@@ -35,14 +37,18 @@ def _make_encoder(
             use_readout=use_readout,
             enable_attention_hooks=enable_attention_hooks,
         )
-        scratch = _make_scratch([256, 512, 1024, 1024], features, groups=groups, expand=expand)
+        scratch = _make_scratch(
+            [256, 512, 1024, 1024], features, groups=groups, expand=expand
+        )
     elif backbone == "clip_vitb32_384":
         clip_pretrained, pretrained = _make_pretrained_clip_vitb32_384(
             use_pretrained,
             hooks=hooks,
             use_readout=use_readout,
         )
-        scratch = _make_scratch([96, 192, 384, 768], features, groups=groups, expand=expand)
+        scratch = _make_scratch(
+            [96, 192, 384, 768], features, groups=groups, expand=expand
+        )
     else:
         print(f"Backbone '{backbone}' not implemented")
         assert False
@@ -151,9 +157,13 @@ class ResidualConvUnit(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = nn.Conv2d(features, features, kernel_size=3, stride=1, padding=1, bias=True)
+        self.conv1 = nn.Conv2d(
+            features, features, kernel_size=3, stride=1, padding=1, bias=True
+        )
 
-        self.conv2 = nn.Conv2d(features, features, kernel_size=3, stride=1, padding=1, bias=True)
+        self.conv2 = nn.Conv2d(
+            features, features, kernel_size=3, stride=1, padding=1, bias=True
+        )
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -201,7 +211,9 @@ class FeatureFusionBlock(nn.Module):
 
         output = self.resConfUnit2(output)
 
-        output = nn.functional.interpolate(output, scale_factor=2, mode="bilinear", align_corners=True)
+        output = nn.functional.interpolate(
+            output, scale_factor=2, mode="bilinear", align_corners=True
+        )
 
         return output
 
@@ -335,7 +347,9 @@ class FeatureFusionBlock_custom(nn.Module):
 
         output = self.resConfUnit2(output)
 
-        output = nn.functional.interpolate(output, scale_factor=2, mode="bilinear", align_corners=self.align_corners)
+        output = nn.functional.interpolate(
+            output, scale_factor=2, mode="bilinear", align_corners=self.align_corners
+        )
 
         output = self.out_conv(output)
 

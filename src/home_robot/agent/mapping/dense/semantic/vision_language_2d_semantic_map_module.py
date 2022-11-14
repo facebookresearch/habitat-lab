@@ -326,9 +326,9 @@ class VisionLanguage2DSemanticMapModule(nn.Module):
         y2 = y1 + self.vision_range
         agent_view[:, 0:1, y1:y2, x1:x2] = fp_map_pred
         agent_view[:, 1:2, y1:y2, x1:x2] = fp_exp_pred
-        agent_view[:, 5 : 5 + self.lseg_features_dim, y1:y2, x1:x2] = (
-            all_height_proj[:, 1 : 1 + self.lseg_features_dim]
-        )
+        agent_view[:, 5 : 5 + self.lseg_features_dim, y1:y2, x1:x2] = all_height_proj[
+            :, 1 : 1 + self.lseg_features_dim
+        ]
 
         current_pose = pu.get_new_pose_batch(prev_pose.clone(), pose_delta)
         st_pose = current_pose.clone().detach()
@@ -355,23 +355,18 @@ class VisionLanguage2DSemanticMapModule(nn.Module):
         current_map = prev_map.clone()
         current_map[:, :4], _ = torch.max(
             torch.cat(
-                (
-                    prev_map[:, :4].unsqueeze(1),
-                    translated[:, :4].unsqueeze(1)
-                ),
-                1
+                (prev_map[:, :4].unsqueeze(1), translated[:, :4].unsqueeze(1)), 1
             ),
-            1
+            1,
         )
         for e in range(batch_size):
             update_mask = translated[e, 5:].sum(0) > 0
 
             # Average features of all previous views and most recent view
             current_map[e, 5:, update_mask] = (
-                (prev_map[e, 5:, update_mask] * prev_map[e, 4, update_mask] +
-                 translated[e, 5:, update_mask]) /
-                (prev_map[e, 4, update_mask] + 1)
-            )
+                prev_map[e, 5:, update_mask] * prev_map[e, 4, update_mask]
+                + translated[e, 5:, update_mask]
+            ) / (prev_map[e, 4, update_mask] + 1)
 
             # Keep most recent view only
             # current_map[e, 5:, update_mask] = translated[e, 5:, update_mask]

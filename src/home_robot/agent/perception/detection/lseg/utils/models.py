@@ -21,13 +21,23 @@ __all__ = ["LSeg_MultiEvalModule"]
 class LSeg_MultiEvalModule(DataParallel):
     """Multi-size Segmentation Eavluator"""
 
-    def __init__(self, module, device_ids=None, flip=True, scales=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75]):
+    def __init__(
+        self,
+        module,
+        device_ids=None,
+        flip=True,
+        scales=[0.5, 0.75, 1.0, 1.25, 1.5, 1.75],
+    ):
         super(LSeg_MultiEvalModule, self).__init__(module, device_ids)
         self.base_size = module.base_size
         self.crop_size = module.crop_size
         self.scales = scales
         self.flip = flip
-        print("MultiEvalModule: base_size {}, crop_size {}".format(self.base_size, self.crop_size))
+        print(
+            "MultiEvalModule: base_size {}, crop_size {}".format(
+                self.base_size, self.crop_size
+            )
+        )
 
     def parallel_forward(self, inputs, label_set="", **kwargs):
         """Multi-GPU Mult-size Evaluation
@@ -38,7 +48,10 @@ class LSeg_MultiEvalModule(DataParallel):
         if len(label_set) < 10:
             print("** MultiEvalModule parallel_forward phase: {} **".format(label_set))
         self.nclass = len(label_set)
-        inputs = [(input.unsqueeze(0).cuda(device),) for input, device in zip(inputs, self.device_ids)]
+        inputs = [
+            (input.unsqueeze(0).cuda(device),)
+            for input, device in zip(inputs, self.device_ids)
+        ]
         replicas = self.replicate(self, self.device_ids[: len(inputs)])
         kwargs = scatter(kwargs, target_gpus, dim) if kwargs else []
         if len(inputs) < len(kwargs):
@@ -86,13 +99,17 @@ class LSeg_MultiEvalModule(DataParallel):
             # resize image to current size
             cur_img = resize_image(image, height, width, **self.module._up_kwargs)
             if long_size <= crop_size:
-                pad_img = pad_image(cur_img, self.module.mean, self.module.std, crop_size)
+                pad_img = pad_image(
+                    cur_img, self.module.mean, self.module.std, crop_size
+                )
                 outputs = module_inference(self.module, pad_img, label_set, self.flip)
                 outputs = crop_image(outputs, 0, height, 0, width)
             else:
                 if short_size < crop_size:
                     # pad if needed
-                    pad_img = pad_image(cur_img, self.module.mean, self.module.std, crop_size)
+                    pad_img = pad_image(
+                        cur_img, self.module.mean, self.module.std, crop_size
+                    )
                 else:
                     pad_img = cur_img
                 _, _, ph, pw = pad_img.shape  # .size()
@@ -101,7 +118,9 @@ class LSeg_MultiEvalModule(DataParallel):
                 h_grids = int(math.ceil(1.0 * (ph - crop_size) / stride)) + 1
                 w_grids = int(math.ceil(1.0 * (pw - crop_size) / stride)) + 1
                 with torch.cuda.device_of(image):
-                    outputs = image.new().resize_(batch, self.nclass, ph, pw).zero_().cuda()
+                    outputs = (
+                        image.new().resize_(batch, self.nclass, ph, pw).zero_().cuda()
+                    )
                     count_norm = image.new().resize_(batch, 1, ph, pw).zero_().cuda()
                 # grid evaluation
                 for idh in range(h_grids):
@@ -112,9 +131,15 @@ class LSeg_MultiEvalModule(DataParallel):
                         w1 = min(w0 + crop_size, pw)
                         crop_img = crop_image(pad_img, h0, h1, w0, w1)
                         # pad if needed
-                        pad_crop_img = pad_image(crop_img, self.module.mean, self.module.std, crop_size)
-                        output = module_inference(self.module, pad_crop_img, label_set, self.flip)
-                        outputs[:, :, h0:h1, w0:w1] += crop_image(output, 0, h1 - h0, 0, w1 - w0)
+                        pad_crop_img = pad_image(
+                            crop_img, self.module.mean, self.module.std, crop_size
+                        )
+                        output = module_inference(
+                            self.module, pad_crop_img, label_set, self.flip
+                        )
+                        outputs[:, :, h0:h1, w0:w1] += crop_image(
+                            output, 0, h1 - h0, 0, w1 - w0
+                        )
                         count_norm[:, :, h0:h1, w0:w1] += 1
                 assert (count_norm == 0).sum() == 0
                 outputs = outputs / count_norm
@@ -146,7 +171,9 @@ def pad_image(img, mean, std, crop_size):
     img_pad = img.new().resize_(b, c, h + padh, w + padw)
     for i in range(c):
         # note that pytorch pad params is in reversed orders
-        img_pad[:, i, :, :] = F.pad(img[:, i, :, :], (0, padw, 0, padh), value=pad_values[i])
+        img_pad[:, i, :, :] = F.pad(
+            img[:, i, :, :], (0, padw, 0, padh), value=pad_values[i]
+        )
     assert img_pad.size(2) >= crop_size and img_pad.size(3) >= crop_size
     return img_pad
 
@@ -204,7 +231,10 @@ def parallel_apply(modules, inputs, label_set, kwargs_tup=None, devices=None):
     devices = [_get_device_index(x, True) for x in devices]
     lock = threading.Lock()
     results = {}
-    grad_enabled, autocast_enabled = torch.is_grad_enabled(), torch.is_autocast_enabled()
+    grad_enabled, autocast_enabled = (
+        torch.is_grad_enabled(),
+        torch.is_autocast_enabled(),
+    )
 
     def _worker(i, module, input, label_set, kwargs, device=None):
         torch.set_grad_enabled(grad_enabled)
@@ -220,12 +250,18 @@ def parallel_apply(modules, inputs, label_set, kwargs_tup=None, devices=None):
                 results[i] = output
         except Exception:
             with lock:
-                results[i] = ExceptionWrapper(where="in replica {} on device {}".format(i, device))
+                results[i] = ExceptionWrapper(
+                    where="in replica {} on device {}".format(i, device)
+                )
 
     if len(modules) > 1:
         threads = [
-            threading.Thread(target=_worker, args=(i, module, input, label_set, kwargs, device))
-            for i, (module, input, kwargs, device) in enumerate(zip(modules, inputs, kwargs_tup, devices))
+            threading.Thread(
+                target=_worker, args=(i, module, input, label_set, kwargs, device)
+            )
+            for i, (module, input, kwargs, device) in enumerate(
+                zip(modules, inputs, kwargs_tup, devices)
+            )
         ]
 
         for thread in threads:

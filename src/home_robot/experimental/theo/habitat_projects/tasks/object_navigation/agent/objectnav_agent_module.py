@@ -2,7 +2,7 @@ import torch.nn as nn
 import time
 
 from home_robot.agent.mapping.dense.semantic.categorical_2d_semantic_map_module import (
-    Categorical2DSemanticMapModule
+    Categorical2DSemanticMapModule,
 )
 from home_robot.agent.navigation_policy.object_navigation.objectnav_frontier_exploration_policy import (
     ObjectNavFrontierExplorationPolicy,

@@ -10,7 +10,9 @@ from .models.lseg_net import LSegNet
 
 class LSegModule(LSegmentationModule):
     def __init__(self, data_path, dataset, batch_size, base_lr, max_epochs, **kwargs):
-        super(LSegModule, self).__init__(data_path, dataset, batch_size, base_lr, max_epochs, **kwargs)
+        super(LSegModule, self).__init__(
+            data_path, dataset, batch_size, base_lr, max_epochs, **kwargs
+        )
 
         if dataset == "citys":
             self.base_size = 2048
@@ -94,7 +96,9 @@ class LSegModule(LSegmentationModule):
 
         parser.add_argument("--dropout", type=float, default=0.1, help="dropout rate")
 
-        parser.add_argument("--finetune_weights", type=str, help="load weights to finetune from")
+        parser.add_argument(
+            "--finetune_weights", type=str, help="load weights to finetune from"
+        )
 
         parser.add_argument(
             "--no-scaleinv",
@@ -110,7 +114,9 @@ class LSegModule(LSegmentationModule):
             help="turn off batchnorm",
         )
 
-        parser.add_argument("--widehead", default=False, action="store_true", help="wider output head")
+        parser.add_argument(
+            "--widehead", default=False, action="store_true", help="wider output head"
+        )
 
         parser.add_argument(
             "--widehead_hr",

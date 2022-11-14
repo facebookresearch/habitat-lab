@@ -7,7 +7,12 @@ import torchvision.transforms as transforms
 from PIL import Image
 import matplotlib.patches as mpatches
 
-from .lseg_blocks import _make_encoder, FeatureFusionBlock_custom, forward_vit, Interpolate
+from .lseg_blocks import (
+    _make_encoder,
+    FeatureFusionBlock_custom,
+    forward_vit,
+    Interpolate,
+)
 
 
 class depthwise_clipseg_conv(nn.Module):
@@ -16,7 +21,9 @@ class depthwise_clipseg_conv(nn.Module):
         self.depthwise = nn.Conv2d(1, 1, kernel_size=3, padding=1)
 
     def depthwise_clipseg(self, x, channels):
-        x = torch.cat([self.depthwise(x[:, i].unsqueeze(1)) for i in range(channels)], dim=1)
+        x = torch.cat(
+            [self.depthwise(x[:, i].unsqueeze(1)) for i in range(channels)], dim=1
+        )
         return x
 
     def forward(self, x):
@@ -28,7 +35,9 @@ class depthwise_clipseg_conv(nn.Module):
 class depthwise_conv(nn.Module):
     def __init__(self, kernel_size=3, stride=1, padding=1):
         super(depthwise_conv, self).__init__()
-        self.depthwise = nn.Conv2d(1, 1, kernel_size=kernel_size, stride=stride, padding=padding)
+        self.depthwise = nn.Conv2d(
+            1, 1, kernel_size=kernel_size, stride=stride, padding=padding
+        )
 
     def forward(self, x):
         # support for 4D tensor with NCHW
@@ -196,7 +205,11 @@ class LSeg(BaseModel):
 
         logits_per_image = pixel_encoding @ text_features.t()
 
-        out = logits_per_image.float().view(imshape[0], imshape[2], imshape[3], -1).permute(0, 3, 1, 2)
+        out = (
+            logits_per_image.float()
+            .view(imshape[0], imshape[2], imshape[3], -1)
+            .permute(0, 3, 1, 2)
+        )
 
         if self.arch_option in [1, 2]:
             for _ in range(self.block_depth - 1):
@@ -312,7 +325,11 @@ class LSegEnc(BaseModel):
         image_features = image_features / image_features.norm(dim=-1, keepdim=True)
 
         pixel_encoding = self.logit_scale * image_features.half()
-        pixel_encoding = pixel_encoding.float().view(imshape[0], imshape[2], imshape[3], -1).permute(0, 3, 1, 2)
+        pixel_encoding = (
+            pixel_encoding.float()
+            .view(imshape[0], imshape[2], imshape[3], -1)
+            .permute(0, 3, 1, 2)
+        )
         pixel_encoding = self.scratch.output_conv(pixel_encoding)
 
         return pixel_encoding
@@ -336,8 +353,9 @@ def get_new_palette(num_cls):
     return palette
 
 
-def get_new_mask_palette(npimg, new_palette, out_label_flag=False,
-                         labels=None, ignore_ids_list=[]):
+def get_new_mask_palette(
+    npimg, new_palette, out_label_flag=False, labels=None, ignore_ids_list=[]
+):
     """Get image color palette for visualizing masks."""
     out_img = Image.fromarray(npimg.squeeze().astype("uint8"))
     out_img.putpalette(new_palette)
@@ -363,13 +381,15 @@ def get_new_mask_palette(npimg, new_palette, out_label_flag=False,
 class LSegEncDecNet(LSegEnc):
     """LSeg encoder & decoder wrapper."""
 
-    def __init__(self,
-                 path=None,
-                 scale_factor=0.5,
-                 norm_mean=[0.5, 0.5, 0.5],
-                 norm_std=[0.5, 0.5, 0.5],
-                 visualize=True,
-                 **kwargs):
+    def __init__(
+        self,
+        path=None,
+        scale_factor=0.5,
+        norm_mean=[0.5, 0.5, 0.5],
+        norm_std=[0.5, 0.5, 0.5],
+        visualize=True,
+        **kwargs,
+    ):
         kwargs["use_bn"] = True
 
         self.scale_factor = scale_factor
@@ -405,10 +425,9 @@ class LSegEncDecNet(LSegEnc):
         images = self.transform(images / 255.0)
         return self.forward(images)
 
-    def decode(self,
-               pixel_features: torch.Tensor,
-               labels: Optional[List[str]] = None
-               ) -> Tuple[torch.Tensor, Optional[np.ndarray]]:
+    def decode(
+        self, pixel_features: torch.Tensor, labels: Optional[List[str]] = None
+    ) -> Tuple[torch.Tensor, Optional[np.ndarray]]:
         """Decode CLIP pixel features to text labels.
 
         Arguments:
@@ -437,7 +456,8 @@ class LSegEncDecNet(LSegEnc):
             for prediction in predictions.cpu().numpy():
                 new_palette = get_new_palette(len(labels))
                 mask, patches = get_new_mask_palette(
-                    prediction, new_palette, out_label_flag=True, labels=labels)
+                    prediction, new_palette, out_label_flag=True, labels=labels
+                )
                 mask = mask.convert("RGB")
                 visualizations.append(np.array(mask))
             visualizations = np.stack(visualizations)

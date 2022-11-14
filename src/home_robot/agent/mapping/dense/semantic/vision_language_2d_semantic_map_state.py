@@ -2,8 +2,13 @@ import torch
 import numpy as np
 from typing import List
 
-from home_robot.agent.mapping.dense.map_utils import MapSizeParameters, init_map_and_pose_for_env
-from home_robot.agent.perception.detection.lseg.modules.models.lseg_net import LSegEncDecNet
+from home_robot.agent.mapping.dense.map_utils import (
+    MapSizeParameters,
+    init_map_and_pose_for_env,
+)
+from home_robot.agent.perception.detection.lseg.modules.models.lseg_net import (
+    LSegEncDecNet,
+)
 
 
 class VisionLanguage2DSemanticMapState:
@@ -142,9 +147,7 @@ class VisionLanguage2DSemanticMapState:
         """Get local map of semantic categories for an environment - decode CLIP
         features to label set."""
         assert labels[-1] == "other"
-        one_hot_categories, _ = lseg.decode(
-            self.local_map[[e], 5:, :, :], labels
-        )
+        one_hot_categories, _ = lseg.decode(self.local_map[[e], 5:, :, :], labels)
         one_hot_categories = one_hot_categories.squeeze(0)
         empty_mask = self.local_map[e, 5:].sum(0) == 0
         one_hot_categories[empty_mask, :] = 0
