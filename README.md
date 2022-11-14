@@ -17,6 +17,15 @@ Mostly Hello Stretch infrastructure
 1. Install stretch_ros following official instructions [here](https://github.com/hello-robot/stretch_ros/blob/dev/noetic/install_noetic.md)
 1. Install Hector SLAM: `sudo apt install ros-noetic-hector-*`
 
+#### Conflicting Processes Already Running
+
+- Restart stretch
+- See running processes using:
+
+```sh
+mrp info
+```
+
 ## Usage
 
 ### Launching the hardware stack:
@@ -55,10 +64,19 @@ mrp up local_cli --attach
 Available commands:
 ```py
 robot.get_base_state()  # returns base location in the form of [x, y, rz]
-robot.toggle_controller()  # turns goto controller on/off (robot always tries to move to /goto_controller/goal if on)
-robot.toggle_yaw_tracking()  # turns yaw tracking on/off (robot only tries to reach the xy position of goal if off)
+robot.set_nav_mode()  # enables continuous navigation
+robot.set_pos_mode()  # enables position control
+robot.set_yaw_tracking(value: bool)  # turns yaw tracking on/off (robot only tries to reach the xy position of goal if off)
 robot.set_goal(xyt: list)  # sets the goal for the goto controller
 robot.set_velocity(v: float, w: float)  # directly sets the linear and angular velocity of robot base (command gets overwritten immediately if goto controller is on)
+```
+
+#### Getting Started
+
+```py
+robot.set_nav_mode()  # Enables continuous control
+robot.set_goal(]1.0, 0.0, 0.0])  # Sets XYZ target
+robot.get_base_state()  # Shows the robot's XYZ coordinates
 ```
 
 ### Stopping all processes
