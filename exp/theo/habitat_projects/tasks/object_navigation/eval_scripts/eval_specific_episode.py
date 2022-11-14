@@ -1,8 +1,8 @@
 from pathlib import Path
 import sys
-print(str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent))
+print(str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent / "src/home_robot"))
 sys.path.insert(
-    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent)
+    0, str(Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent / "src/home_robot")
 )
 
 from habitat.core.env import Env
