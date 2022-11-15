@@ -19,7 +19,7 @@ from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
-from habitat.tasks import make_task
+from habitat.tasks.registration import make_task
 from habitat.utils import profiling_wrapper
 
 
