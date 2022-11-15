@@ -15,11 +15,13 @@ import numpy as np
 import torch
 import tqdm
 from gym import spaces
+from omegaconf import OmegaConf
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
 from habitat.config import read_write
+from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
@@ -100,7 +102,6 @@ class PPOTrainer(BaseRLTrainer):
     def obs_space(self):
         if self._obs_space is None and self.envs is not None:
             self._obs_space = self.envs.observation_spaces[0]
-
         return self._obs_space
 
     @obs_space.setter
@@ -203,7 +204,9 @@ class PPOTrainer(BaseRLTrainer):
             resume_state = load_resume_state(self.config)
 
         if resume_state is not None:
-            self.config: Config = resume_state["config"]
+            self.config = self._get_resume_state_config_or_new_config(
+                resume_state["config"]
+            )
 
         if self.config.habitat_baselines.rl.ddppo.force_distributed:
             self._is_distributed = True
@@ -223,7 +226,9 @@ class PPOTrainer(BaseRLTrainer):
 
             with read_write(self.config):
                 self.config.habitat_baselines.torch_gpu_id = local_rank
-                self.config.habitat_baselines.simulator_gpu_id = local_rank
+                self.config.habitat.simulator.habitat_sim_v0.gpu_device_id = (
+                    local_rank
+                )
                 # Multiply by the number of simulators to make sure they also get unique seeds
                 self.config.habitat.seed += (
                     torch.distributed.get_rank()
@@ -239,12 +244,28 @@ class PPOTrainer(BaseRLTrainer):
             self.num_rollouts_done_store.set("num_done", "0")
 
         if rank0_only() and self.config.habitat_baselines.verbose:
-            logger.info(f"config: {self.config}")
+            logger.info(f"config: {OmegaConf.to_yaml(self.config)}")
 
         profiling_wrapper.configure(
             capture_start_step=self.config.habitat_baselines.profiling.capture_start_step,
             num_steps_to_capture=self.config.habitat_baselines.profiling.num_steps_to_capture,
         )
+
+        # remove the non scalar measures from the measures since they can only be used in
+        # evaluation
+        for non_scalar_metric in NON_SCALAR_METRICS:
+            non_scalar_metric_root = non_scalar_metric.split(".")[0]
+            if non_scalar_metric_root in self.config.habitat.task.measurements:
+                with read_write(self.config):
+                    OmegaConf.set_struct(self.config, False)
+                    self.config.habitat.task.measurements.pop(
+                        non_scalar_metric_root
+                    )
+                    OmegaConf.set_struct(self.config, True)
+                if self.config.habitat_baselines.verbose:
+                    logger.info(
+                        f"Removed metric {non_scalar_metric_root} from metrics since it cannot be used during training."
+                    )
 
         self._init_envs()
 
@@ -388,15 +409,13 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
-
     @classmethod
     def _extract_scalars_from_info(
         cls, info: Dict[str, Any]
     ) -> Dict[str, float]:
         result = {}
         for k, v in info.items():
-            if not isinstance(k, str) or k in cls.METRICS_BLACKLIST:
+            if not isinstance(k, str) or k in NON_SCALAR_METRICS:
                 continue
 
             if isinstance(v, dict):
@@ -407,7 +426,7 @@ class PPOTrainer(BaseRLTrainer):
                             v
                         ).items()
                         if isinstance(subk, str)
-                        and k + "." + subk not in cls.METRICS_BLACKLIST
+                        and k + "." + subk not in NON_SCALAR_METRICS
                     }
                 )
             # Things that are scalar-like will have an np.size of 1.
@@ -902,12 +921,11 @@ class PPOTrainer(BaseRLTrainer):
             step_id = ckpt_dict["extra_state"]["step"]
             print(step_id)
         else:
-            ckpt_dict = {}
+            ckpt_dict = {"config": None}
 
-        if self.config.habitat_baselines.eval.use_ckpt_config:
-            config = self._setup_eval_config(ckpt_dict["config"])
-        else:
-            config = self.config.clone()
+        config = self._get_resume_state_config_or_new_config(
+            ckpt_dict["config"]
+        )
 
         ppo_cfg = config.habitat_baselines.rl.ppo
 
@@ -915,16 +933,8 @@ class PPOTrainer(BaseRLTrainer):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
         if (
-            len(self.config.habitat_baselines.video_option) > 0
-            and self.config.habitat_baselines.video_render_top_down
-        ):
-            with read_write(config):
-                config.habitat.task.measurements.append("top_down_map")
-                config.habitat.task.measurements.append("collisions")
-
-        if (
             len(config.habitat_baselines.video_render_views) > 0
-            and len(self.config.habitat_baselines.video_option) > 0
+            and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
             with read_write(config):
                 for render_view in config.habitat_baselines.video_render_views:
@@ -933,7 +943,7 @@ class PPOTrainer(BaseRLTrainer):
                     config.habitat_baselines.sensors.append(render_view)
 
         if config.habitat_baselines.verbose:
-            logger.info(f"env config: {config}")
+            logger.info(f"env config: {OmegaConf.to_yaml(config)}")
 
         self._init_envs(config, is_eval=True)
 
@@ -989,7 +999,7 @@ class PPOTrainer(BaseRLTrainer):
         rgb_frames = [
             [] for _ in range(self.config.habitat_baselines.num_environments)
         ]  # type: List[List[np.ndarray]]
-        if len(self.config.habitat_baselines.video_option) > 0:
+        if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
         number_of_eval_episodes = (
@@ -1089,7 +1099,7 @@ class PPOTrainer(BaseRLTrainer):
                 ):
                     envs_to_pause.append(i)
 
-                if len(self.config.habitat_baselines.video_option) > 0:
+                if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
@@ -1100,8 +1110,7 @@ class PPOTrainer(BaseRLTrainer):
                         frame = observations_to_image(
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
-                    if self.config.habitat_baselines.video_render_all_info:
-                        frame = overlay_frame(frame, infos[i])
+                    frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
                 # episode ended
@@ -1122,9 +1131,12 @@ class PPOTrainer(BaseRLTrainer):
                     # use scene_id + episode_id as unique id for storing stats
                     stats_episodes[(k, ep_eval_count[k])] = episode_stats
 
-                    if len(self.config.habitat_baselines.video_option) > 0:
+                    if (
+                        len(self.config.habitat_baselines.eval.video_option)
+                        > 0
+                    ):
                         generate_video(
-                            video_option=self.config.habitat_baselines.video_option,
+                            video_option=self.config.habitat_baselines.eval.video_option,
                             video_dir=self.config.habitat_baselines.video_dir,
                             images=rgb_frames[i],
                             episode_id=current_episodes_info[i].episode_id,

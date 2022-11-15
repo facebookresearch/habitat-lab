@@ -48,7 +48,7 @@ class PointNavDatasetV1(Dataset):
                 f"Could not find dataset file `{dataset_dir}`"
             )
 
-        cfg = config.clone()
+        cfg = config.copy()
         with read_write(cfg):
             cfg.content_scenes = []
             dataset = cls(cfg)

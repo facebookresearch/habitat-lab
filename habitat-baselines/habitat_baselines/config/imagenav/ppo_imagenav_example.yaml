@@ -1,15 +1,19 @@
+# @package _global_
+
+defaults:
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /benchmark/nav/imagenav: imagenav_test
+  - _self_
+
+
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/tasks/imagenav.yaml"
   trainer_name: "ppo"
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-  video_option: ["disk", "tensorboard"]
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   test_episode_count: 2
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 1
-  sensors: ["rgb_sensor", "depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1e6
@@ -18,6 +22,9 @@ habitat_baselines:
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
+
+  eval:
+    video_option: ["disk", "tensorboard"]
 
   rl:
     ppo:

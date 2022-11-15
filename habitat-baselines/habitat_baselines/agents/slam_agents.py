@@ -604,11 +604,13 @@ def main():
         choices=["blind", "orbslam2-rgbd", "orbslam2-rgb-monod"],
     )
     parser.add_argument(
-        "--task-config", type=str, default="tasks/pointnav_rgbd.yaml"
+        "--task-config",
+        type=str,
+        default="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
     )
     args = parser.parse_args()
 
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     agent_config = cfg_baseline()
     with habitat.config.read_write(config):
         config.BASELINE = agent_config.BASELINE

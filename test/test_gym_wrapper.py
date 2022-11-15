@@ -28,28 +28,27 @@ importlib.reload(habitat.utils.gym_adapter)
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "tasks/rearrange/reach_state.yaml",
+            "benchmark/rearrange/reach_state.yaml",
             [],
             7,
             np.ndarray,
         ),
         (
-            "tasks/rearrange/pick.yaml",
+            "benchmark/rearrange/pick.yaml",
             [],
             8,
             dict,
         ),
         (
-            "tasks/rearrange/pick.yaml",
+            "benchmark/rearrange/pick.yaml",
             [
-                "habitat.task.actions.arm_action.grip_controller",
-                "SuctionGraspAction",
+                "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
             8,
             dict,
         ),
         (
-            "tasks/rearrange/tidy_house.yaml",
+            "benchmark/rearrange/tidy_house.yaml",
             [],
             11,  # 7 joints, 1 grip action, 2 base velocity, 1 stop action
             dict,
@@ -92,13 +91,13 @@ def test_gym_wrapper_contract_continuous(
     "config_file,overrides,expected_action_dim,expected_obs_type",
     [
         (
-            "tasks/imagenav.yaml",
+            "benchmark/nav/imagenav/imagenav_test.yaml",
             [],
             4,
             dict,
         ),
         (
-            "tasks/pointnav.yaml",
+            "benchmark/nav/pointnav/pointnav_habitat_test.yaml",
             [],
             4,
             dict,
@@ -140,13 +139,12 @@ def test_gym_wrapper_contract_discrete(
     "config_file,override_options",
     [
         [
-            "tasks/rearrange/pick.yaml",
+            "benchmark/rearrange/pick.yaml",
             [
-                "habitat.task.actions.arm_action.grip_controller",
-                "SuctionGraspAction",
+                "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
             ],
         ],
-        ["tasks/rearrange/pick.yaml", []],
+        ["benchmark/rearrange/pick.yaml", []],
     ],
 )
 def test_full_gym_wrapper(config_file, override_options):
@@ -176,7 +174,7 @@ def test_full_gym_wrapper(config_file, override_options):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habtiat-lab/habitat/config/tasks/**/*.yaml", recursive=True),
+        glob("habitat-lab/habitat/config/benchmark/**/*.yaml", recursive=True),
     ),
 )
 def test_auto_gym_wrapper(test_cfg_path):
@@ -184,7 +182,7 @@ def test_auto_gym_wrapper(test_cfg_path):
     Test all defined automatic Gym wrappers work
     """
     config = habitat.get_config(test_cfg_path)
-    if "gym" not in config or config.habitat.gym.auto_name == "":
+    if "gym" not in config.habitat or config.habitat.gym.auto_name == "":
         pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
     pytest.importorskip("pygame")
     for prefix in ["", "Render"]:
@@ -193,7 +191,7 @@ def test_auto_gym_wrapper(test_cfg_path):
         hab_gym = gym.make(
             full_gym_name,
             # Test sometimes fails with concurrent rendering.
-            override_options=["habitat.simulator.concur_render", False],
+            override_options=["habitat.simulator.concur_render=False"],
         )
         hab_gym.reset()
         done = False

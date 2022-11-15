@@ -1,0 +1,17 @@
+defaults:
+  - task_config_base
+  - actions:
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
+  - measurements:
+    - distance_to_goal
+    - success
+    - spl
+  - lab_sensors:
+    - instruction_sensor
+  - _self_
+
+
+type: VLN-v0
