@@ -22,7 +22,7 @@ import numpy as np
 import quaternion
 from gym import Space, spaces
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.dataset import Episode
 
 if TYPE_CHECKING:
@@ -36,7 +36,7 @@ VisualObservation = Union[np.ndarray, "Tensor"]
 
 @attr.s(auto_attribs=True)
 class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
-    config: Config
+    config: DictConfig
 
     @abc.abstractmethod
     def get(self) -> Any:
@@ -76,7 +76,7 @@ class Sensor(metaclass=abc.ABCMeta):
     """
 
     uuid: str
-    config: Config
+    config: DictConfig
     sensor_type: SensorTypes
     observation_space: Space
 
@@ -246,7 +246,7 @@ class Simulator:
     r"""Basic simulator class for habitat. New simulators to be added to habtiat
     must derive from this class and implement the abstarct methods.
     """
-    habitat_config: Config
+    habitat_config: DictConfig
 
     def __init__(self, *args, **kwargs) -> None:
         pass
@@ -277,7 +277,7 @@ class Simulator:
     def seed(self, seed: int) -> None:
         raise NotImplementedError
 
-    def reconfigure(self, config: Config) -> None:
+    def reconfigure(self, config: DictConfig) -> None:
         raise NotImplementedError
 
     def geodesic_distance(

@@ -15,7 +15,8 @@ import attr
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import logger
+from habitat.config import DictConfig
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -52,7 +53,7 @@ class InferenceWorkerProcess(ProcessBase):
     setup_queue: SimpleQueue
     inference_worker_idx: int
     num_inference_workers: int
-    config: Config
+    config: DictConfig
     queues: WorkerQueues
     iw_sync: InferenceWorkerSync
     _torch_transfer_buffers: TensorDict

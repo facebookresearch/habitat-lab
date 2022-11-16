@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat.config import Config, get_config
+from habitat.config import get_config
 from habitat.core.agent import Agent
 from habitat.core.benchmark import Benchmark
 from habitat.core.challenge import Challenge
@@ -22,7 +22,6 @@ __all__ = [
     "Agent",
     "Benchmark",
     "Challenge",
-    "Config",
     "Dataset",
     "EmbodiedTask",
     "Env",

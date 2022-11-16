@@ -10,7 +10,7 @@ import numpy as np
 from gym import Space, spaces
 
 import habitat_sim
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -107,7 +107,7 @@ class InstanceImageGoalSensor(RGBSensor):
     def __init__(
         self,
         sim,
-        config: Config,
+        config: DictConfig,
         dataset: "InstanceImageNavDatasetV1",
         *args: Any,
         **kwargs: Any,

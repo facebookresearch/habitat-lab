@@ -14,9 +14,9 @@ import torch
 from gym.spaces import Box
 from gym.spaces import Dict as SpaceDict
 from gym.spaces import Discrete
+from yacs.config import CfgNode as Config
 
 import habitat
-from habitat.config import Config
 from habitat.core.agent import Agent
 from habitat.core.simulator import Observations
 from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy

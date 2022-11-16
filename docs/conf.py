@@ -32,8 +32,8 @@ habitat.core.__all__ = [
     "registry",
     "vector_env",
 ]
-# yacs.config isn't ours, so don't document it
-habitat.config.__all__.remove("Config")
+# Hydra's DictConfig isn't ours, so don't document it
+habitat.config.__all__.remove("DictConfig")
 
 PROJECT_TITLE = "Habitat"
 PROJECT_SUBTITLE = "Lab Docs"

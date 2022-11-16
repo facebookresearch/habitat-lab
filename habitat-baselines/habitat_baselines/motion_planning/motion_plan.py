@@ -31,8 +31,7 @@ except ImportError:
 
 from copy import copy
 
-from yacs.config import CfgNode
-
+from habitat.config import DictConfig
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollisionDetails, make_border_red
 from habitat_baselines.motion_planning.grasp_generator import GraspGenerator
@@ -46,7 +45,7 @@ def is_ompl_installed() -> bool:
 
 
 class MotionPlanner:
-    def __init__(self, sim: RearrangeSim, config: CfgNode):
+    def __init__(self, sim: RearrangeSim, config: DictConfig):
         if not is_ompl_installed:
             raise ImportError("Need to install OMPL to use motion planning")
         self._config = config
@@ -157,7 +156,7 @@ class MotionPlanner:
         count_obj_collisions: bool,
         grasp_thresh: float,
         n_gen_grasps: int,
-        run_cfg: CfgNode,
+        run_cfg: DictConfig,
         ignore_first: bool = False,
         use_prev: bool = False,
     ):

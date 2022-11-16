@@ -11,7 +11,7 @@ import attr
 import numpy as np
 
 import habitat_sim.utils.datasets_download as data_downloader
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.dataset import Episode
 from habitat.core.logging import logger
 from habitat.core.registry import registry
@@ -50,7 +50,7 @@ class RearrangeDatasetV0(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
         return result
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional[DictConfig] = None) -> None:
         self.config = config
 
         if config and not self.check_config_paths_exist(config):

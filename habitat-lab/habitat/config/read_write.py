@@ -4,12 +4,12 @@ from typing import Generator, Union
 from omegaconf import OmegaConf
 from omegaconf.base import Node
 
-from habitat.config.default import Config
+from habitat.config import DictConfig
 
 
 # TODO : Delete this when migration to hydra is complete
 @contextmanager
-def read_write(config: Union[Node, Config]) -> Generator[Node, None, None]:
+def read_write(config: Union[Node, DictConfig]) -> Generator[Node, None, None]:
     if isinstance(config, Node):
         prev_state_readonly = config._get_node_flag("readonly")
         prev_state_struct = config._get_node_flag("struct")

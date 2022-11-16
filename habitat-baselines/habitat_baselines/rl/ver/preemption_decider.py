@@ -14,7 +14,8 @@ import attr
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import logger
+from habitat.config import DictConfig
 from habitat_baselines.common.windowed_running_mean import WindowedRunningMean
 from habitat_baselines.rl.ddppo.ddp_utils import init_distrib_slurm, rank0_only
 from habitat_baselines.rl.ver.task_enums import (
@@ -51,7 +52,7 @@ class PreemptionDeciderProcess(ProcessBase):
     port: int
     world_rank: int
     world_size: int
-    config: Config
+    config: DictConfig
     queues: WorkerQueues
     my_t_zero: float
     rollout_ends: RolloutEarlyEnds
@@ -387,7 +388,7 @@ class PreemptionDeciderWorker(WorkerBase):
         port: int,
         world_rank: int,
         world_size: int,
-        config: Config,
+        config: DictConfig,
         queues: WorkerQueues,
         my_t_zero: float,
     ):

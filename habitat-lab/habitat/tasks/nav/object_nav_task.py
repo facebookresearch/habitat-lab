@@ -9,7 +9,7 @@ import attr
 import numpy as np
 from gym import spaces
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Sensor, SensorTypes
@@ -116,7 +116,7 @@ class ObjectGoalSensor(Sensor):
     def __init__(
         self,
         sim,
-        config: Config,
+        config: DictConfig,
         dataset: "ObjectNavDatasetV1",
         *args: Any,
         **kwargs: Any,

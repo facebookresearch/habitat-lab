@@ -10,10 +10,10 @@ import numpy as np
 import pyrobot
 from gym import Space, spaces
 
+from habitat.config import DictConfig
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     BumpSensor,
-    Config,
     DepthSensor,
     RGBSensor,
     SensorSuite,
@@ -167,7 +167,7 @@ class PyRobot(Simulator):
         config: configuration for initializing the PyRobot object.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         self._config = config
 
         robot_sensors = []

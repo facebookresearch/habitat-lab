@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING, Any, Dict, List
 from omegaconf import OmegaConf
 
 import habitat
-from habitat import Config
+from habitat.config import DictConfig
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
@@ -26,7 +26,7 @@ TASK_IGNORE_KEYS = ["task_spec", "task_spec_base_path", "pddl_domain_def"]
 def create_task_object(
     task_cls_name: str,
     task_config_path: str,
-    cur_config: Config,
+    cur_config: DictConfig,
     cur_env: RearrangeTask,
     cur_dataset: "RearrangeDatasetV0",
     should_super_reset: bool,

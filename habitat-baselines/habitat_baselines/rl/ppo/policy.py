@@ -10,7 +10,7 @@ import torch
 from gym import spaces
 from torch import nn as nn
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.tasks.nav.nav import (
     ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
@@ -251,7 +251,7 @@ class PointNavBaselinePolicy(NetPolicy):
     @classmethod
     def from_config(
         cls,
-        config: Config,
+        config: DictConfig,
         observation_space: spaces.Dict,
         action_space,
         **kwargs,

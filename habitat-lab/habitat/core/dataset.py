@@ -29,7 +29,7 @@ import attr
 import numpy as np
 from numpy import ndarray
 
-from habitat.config import Config
+from habitat.config import DictConfig
 from habitat.core.utils import DatasetJSONEncoder, not_none_validator
 
 ALL_SCENES_MASK = "*"
@@ -120,7 +120,7 @@ class Dataset(Generic[T]):
         return os.path.splitext(os.path.basename(scene_path))[0]
 
     @classmethod
-    def get_scenes_to_load(cls, config: Config) -> List[str]:
+    def get_scenes_to_load(cls, config: DictConfig) -> List[str]:
         r"""Returns a list of scene names that would be loaded with this dataset.
 
         Useful for determining what scenes to split up among different workers.

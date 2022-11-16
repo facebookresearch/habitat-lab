@@ -6,11 +6,12 @@
 
 from typing import Type, Union
 
-from habitat import Config, Env, RLEnv, make_dataset
+from habitat import Env, RLEnv, make_dataset
+from habitat.config import DictConfig
 
 
 def make_env_fn(
-    config: Config, env_class: Union[Type[Env], Type[RLEnv]]
+    config: DictConfig, env_class: Union[Type[Env], Type[RLEnv]]
 ) -> Union[Env, RLEnv]:
     r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.
