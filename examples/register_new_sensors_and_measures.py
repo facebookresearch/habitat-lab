@@ -81,7 +81,7 @@ class AgentPositionSensor(habitat.Sensor):
             dtype=np.float32,
         )
 
-    # This is called whenver reset is called or an action is taken
+    # This is called whenever reset is called or an action is taken
     def get_observation(
         self, observations, *args: Any, episode, **kwargs: Any
     ):
