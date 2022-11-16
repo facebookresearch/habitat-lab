@@ -23,32 +23,27 @@ validate that transformation comparing projected and original views.
         import os
         import numpy as np
         import quaternion
-
         import matplotlib.pyplot as plt
-        %matplotlib inline
 
         import habitat
+        from habitat.config import read_write
 
         import torch.nn.functional as F
         import torch
         from torchvision.transforms import ToTensor
 
         # Set up the environment for testing
-        config = habitat.get_config(config_paths="../habitat-lab/habitat/config/tasks/pointnav_rgbd.yaml")
+        config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml")
         with read_write(config):
-            config.habitat.dataset.data_path = '../data/datasets/pointnav/habitat-test-scenes/v1/val/val.json.gz'
-            config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
-
-        # Can also do directly in the config file
-        with read_write(config):
-            config.habitat.simulator.depth_sensor.normalize_depth = False
+            config.habitat.dataset.split = "val"
+            config.habitat.simulator.agent_0.sim_sensors.depth_sensor.normalize_depth = False
 
         # Intrinsic parameters, assuming width matches height. Requires a simple refactor otherwise
-        W = config.habitat.simulator.depth_sensor.width
-        H = config.habitat.simulator.depth_sensor.height
+        W = config.habitat.simulator.agent_0.sim_sensors.depth_sensor.width
+        H = config.habitat.simulator.agent_0.sim_sensors.depth_sensor.height
 
         assert(W == H)
-        hfov = float(config.habitat.simulator.depth_sensor.hfov) * np.pi / 180.
+        hfov = float(config.habitat.simulator.agent_0.sim_sensors.depth_sensor.hfov) * np.pi / 180.
 
 
         env = habitat.Env(config=config)
@@ -195,6 +190,7 @@ validate that transformation comparing projected and original views.
         ax1.imshow(np.abs(img2_warped.squeeze().permute(1,2,0) - img1_tensor.squeeze().permute(1,2,0)))
         ax1.set_title("Difference between warped \n and ground truth images", fontsize='large')
         ax1.axis('off')
+        plt.show()
 
     .. code:: shell-session
         :class: m-nopad
