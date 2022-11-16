@@ -717,6 +717,7 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             torch.distributed.barrier()
 
+        resume_run_id = None
         if resume_state is not None:
             self.agent.load_state_dict(resume_state["state_dict"])
             self.agent.optimizer.load_state_dict(resume_state["optim_state"])

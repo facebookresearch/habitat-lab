@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from collections import OrderedDict
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
@@ -91,8 +92,22 @@ class PointNavResNetPolicy(NetPolicy):
         action_space,
         **kwargs,
     ):
+        # Exclude cameras for rendering from the observation space.
+        ignore_names = [
+            config.TASK_CONFIG.SIMULATOR[k].UUID
+            for k in config.VIDEO_RENDER_VIEWS
+        ]
+        filtered_obs = spaces.Dict(
+            OrderedDict(
+                [
+                    (k, v)
+                    for k, v in observation_space.items()
+                    if k not in ignore_names
+                ]
+            )
+        )
         return cls(
-            observation_space=observation_space,
+            observation_space=filtered_obs,
             action_space=action_space,
             hidden_size=config.RL.PPO.hidden_size,
             rnn_type=config.RL.DDPPO.rnn_type,
@@ -120,9 +135,7 @@ class ResNetEncoder(nn.Module):
         self.visual_keys = [
             k
             for k, v in observation_space.spaces.items()
-            if len(v.shape) > 1
-            and k != ImageGoalSensor.cls_uuid
-            and k not in ["robot_third_rgb"]
+            if len(v.shape) > 1 and k != ImageGoalSensor.cls_uuid
         ]
         self.key_needs_rescaling = {k: None for k in self.visual_keys}
         for k, v in observation_space.spaces.items():

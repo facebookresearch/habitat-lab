@@ -50,18 +50,23 @@ TASK:
     PLACE_REWARD:
         TYPE: PlaceReward
         DIST_REWARD: 2.0
-        PLACE_REWARD: 2.0
-        DROP_PEN: 5.0
+        PLACE_REWARD: 5.0
+        DROP_PEN: 0.0
         USE_DIFF: true
-        WRONG_DROP_SHOULD_END: false
-        CONSTRAINT_VIOLATE_PEN: 5.0
+        MIN_DIST_TO_GOAL: 0.15
+        USE_EE_DIST: False
+        WRONG_DROP_SHOULD_END: True
+        CONSTRAINT_VIOLATE_PEN: 0.0
         FORCE_PEN: 0.0001
         MAX_FORCE_PEN: 0.01
         FORCE_END_PEN: 1.0
+    END_EFFECTOR_TO_GOAL_DISTANCE:
+        TYPE: EndEffectorToGoalDistance
     MEASUREMENTS:
     - ROBOT_FORCE
     - FORCE_TERMINATE
     - ROBOT_COLLS
+    - END_EFFECTOR_TO_GOAL_DISTANCE
     - END_EFFECTOR_TO_REST_DISTANCE
     - OBJECT_TO_GOAL_DISTANCE
     - OBJ_AT_GOAL

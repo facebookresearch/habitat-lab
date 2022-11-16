@@ -512,6 +512,33 @@ class ObjAtGoal(Measure):
 
 
 @registry.register_measure
+class EndEffectorToGoalDistance(UsesRobotInterface, Measure):
+    cls_uuid: str = "ee_to_goal_distance"
+
+    def __init__(self, sim, *args, **kwargs):
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return EndEffectorToGoalDistance.cls_uuid
+
+    def reset_metric(self, *args, episode, **kwargs):
+        self.update_metric(*args, episode=episode, **kwargs)
+
+    def update_metric(self, *args, observations, **kwargs):
+        ee_pos = self._sim.get_robot_data(
+            self.robot_id
+        ).robot.ee_transform.translation
+
+        idxs, goals = self._sim.get_targets()
+
+        distances = np.linalg.norm(goals - ee_pos, ord=2, axis=-1)
+
+        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+
+
+@registry.register_measure
 class EndEffectorToObjectDistance(UsesRobotInterface, Measure):
     """
     Gets the distance between the end-effector and all current target object COMs.
