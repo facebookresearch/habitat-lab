@@ -203,7 +203,7 @@ if __name__ == "__main__":
 try:
     from IPython import display
 
-    with open("../../../res/img/tensorboard_video_demo.gif", "rb") as f:
+    with open("./res/img/tensorboard_video_demo.gif", "rb") as f:
         display.display(display.Image(data=f.read(), format="png"))
 except ImportError:
     pass
