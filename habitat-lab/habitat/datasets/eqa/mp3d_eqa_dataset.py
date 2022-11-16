@@ -9,6 +9,8 @@ import json
 import os
 from typing import TYPE_CHECKING, List, Optional
 
+from omegaconf import OmegaConf
+
 from habitat.config.default_structured_configs import DatasetConfig
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
@@ -26,11 +28,13 @@ EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
-def get_default_mp3d_v1_config(split: str = "val") -> DatasetConfig:
-    return DatasetConfig(
-        type="MP3DEQA-v1",
-        split=split,
-        data_path="data/datasets/eqa/mp3d/v1/{split}.json.gz",
+def get_default_mp3d_v1_config(split: str = "val") -> "DictConfig":
+    return OmegaConf.create(
+        DatasetConfig(
+            type="MP3DEQA-v1",
+            split=split,
+            data_path="data/datasets/eqa/mp3d/v1/{split}.json.gz",
+        )
     )
 
 
@@ -49,10 +53,10 @@ class Matterport3dDatasetV1(Dataset):
     question_vocab: VocabDict
 
     @staticmethod
-    def check_config_paths_exist(config: DictConfig) -> bool:
+    def check_config_paths_exist(config: "DictConfig") -> bool:
         return os.path.exists(config.data_path.format(split=config.split))
 
-    def __init__(self, config: DatasetConfig = None) -> None:
+    def __init__(self, config: "DictConfig" = None) -> None:
         self.episodes = []
 
         if config is None:

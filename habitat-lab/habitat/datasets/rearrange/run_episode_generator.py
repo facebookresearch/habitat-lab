@@ -195,7 +195,7 @@ class RearrangeEpisodeGeneratorConfig:
     markers: List[Any] = field(default_factory=list)
 
 
-def get_config_defaults() -> DictConfig:
+def get_config_defaults() -> "DictConfig":
     """
     Populates and resturns a default config for a RearrangeEpisode.
     """
