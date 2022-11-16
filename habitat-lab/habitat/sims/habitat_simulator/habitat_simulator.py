@@ -20,6 +20,7 @@ from typing import (
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
+from omegaconf import DictConfig
 
 import habitat_sim
 from habitat.core.dataset import Episode
@@ -39,7 +40,6 @@ from habitat.core.simulator import (
 from habitat.core.spaces import Space
 
 if TYPE_CHECKING:
-    from omegaconf import DictConfig
     from torch import Tensor
 
 
@@ -61,7 +61,7 @@ def overwrite_config(
     """
 
     def if_config_to_lower(config):
-        if isinstance(config, "DictConfig"):
+        if isinstance(config, DictConfig):
             return {key.lower(): val for key, val in config.items()}
         else:
             return config

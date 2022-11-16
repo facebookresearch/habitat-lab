@@ -1,6 +1,5 @@
 gym>=0.22.0,<0.23.1
 numpy>=1.20.0
-yacs>=0.1.8
 numpy-quaternion>=2019.3.18.14.33.20
 attrs>=19.1.0
 opencv-python>=3.3.0
