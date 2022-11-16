@@ -1,17 +1,21 @@
+from typing import TYPE_CHECKING
+
 from hydra import compose, initialize
 from omegaconf import OmegaConf
 
 # NOTE: import required to register structured configs
 import habitat_baselines.config.default_structured_configs  # noqa: F401
-from habitat.config import DictConfig
 from habitat.config.default_structured_configs import (
     HabitatConfigPlugin,
     register_hydra_plugin,
 )
 from habitat_baselines.run import execute_exp
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
-def my_app_compose_api() -> DictConfig:
+
+def my_app_compose_api() -> "DictConfig":
     # initialize the Hydra subsystem.
     # This is needed for apps that cannot have
     # a standard @hydra.main() entry point

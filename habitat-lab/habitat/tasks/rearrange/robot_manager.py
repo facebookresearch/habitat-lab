@@ -1,10 +1,8 @@
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, Optional
 
 import magnum as mn
 import numpy as np
-
-from habitat.config import DictConfig
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -15,6 +13,9 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 )
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @dataclass
 class RobotData:
@@ -24,7 +25,7 @@ class RobotData:
 
     robot: MobileManipulator
     grasp_mgr: RearrangeGraspManager
-    cfg: DictConfig
+    cfg: "DictConfig"
     start_js: np.ndarray
     is_pb_installed: bool
     _ik_helper: Optional[IkHelper] = None

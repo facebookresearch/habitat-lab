@@ -6,14 +6,14 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
 import numpy.typing as npt
 
 import habitat_sim
-from habitat.config import DictConfig, read_write
+from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 
@@ -35,6 +35,9 @@ from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
@@ -44,7 +47,7 @@ class RearrangeSim(HabitatSim):
 
     ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
 
-    def __init__(self, config: DictConfig):
+    def __init__(self, config: "DictConfig"):
         if len(config.agents) > 1:
             with read_write(config):
                 for agent in config.agents:
@@ -62,7 +65,7 @@ class RearrangeSim(HabitatSim):
         super().__init__(config)
 
         self.first_setup = True
-        self.ep_info: Optional[DictConfig] = None
+        self.ep_info: Optional["DictConfig"] = None
         self.prev_loaded_navmesh = None
         self.prev_scene_id = None
 
@@ -139,7 +142,7 @@ class RearrangeSim(HabitatSim):
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
 
-    def add_markers(self, ep_info: DictConfig):
+    def add_markers(self, ep_info: "DictConfig"):
         self._markers = {}
         aom = self.get_articulated_object_manager()
         for marker in ep_info["markers"]:
@@ -176,7 +179,7 @@ class RearrangeSim(HabitatSim):
             self.reset_agent(i)
         return None
 
-    def reconfigure(self, config: DictConfig):
+    def reconfigure(self, config: "DictConfig"):
         self.step_idx = 0
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
@@ -341,7 +344,7 @@ class RearrangeSim(HabitatSim):
         # managed by the underlying sim.
         self.art_objs = []
 
-    def _set_ao_states_from_ep(self, ep_info: DictConfig) -> None:
+    def _set_ao_states_from_ep(self, ep_info: "DictConfig") -> None:
         """
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
         """
@@ -392,7 +395,9 @@ class RearrangeSim(HabitatSim):
 
         return new_pos
 
-    def _add_objs(self, ep_info: DictConfig, should_add_objects: bool) -> None:
+    def _add_objs(
+        self, ep_info: "DictConfig", should_add_objects: bool
+    ) -> None:
         # Load clutter objects:
         # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
@@ -451,7 +456,7 @@ class RearrangeSim(HabitatSim):
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
 
-    def _create_obj_viz(self, ep_info: DictConfig):
+    def _create_obj_viz(self, ep_info: "DictConfig"):
         """
         Adds a visualization of the goal for each of the target objects in the
         scene. This is the same as the target object, but is a render only

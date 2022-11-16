@@ -10,14 +10,22 @@ import os
 import time
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    cast,
+)
 
 import attr
 import numpy as np
 import torch
 
 from habitat import logger
-from habitat.config import DictConfig
 from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat_baselines.common.tensor_dict import (
     NDArrayDict,
@@ -38,6 +46,9 @@ from habitat_baselines.rl.ver.queue import BatchedQueue
 from habitat_baselines.rl.ver.task_enums import ReportWorkerTasks
 from habitat_baselines.rl.ver.worker_common import ProcessBase, WorkerBase
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @attr.s(auto_attribs=True)
 class ReportWorkerProcess(ProcessBase):
@@ -45,7 +56,7 @@ class ReportWorkerProcess(ProcessBase):
     learning progress, and agent training progress.
     """
     port: int
-    config: DictConfig
+    config: "DictConfig"
     report_queue: BatchedQueue
     my_t_zero: float
     num_steps_done: torch.Tensor
@@ -388,7 +399,7 @@ class ReportWorker(WorkerBase):
         self,
         mp_ctx: BaseContext,
         port: int,
-        config: DictConfig,
+        config: "DictConfig",
         report_queue: BatchedQueue,
         my_t_zero: float,
         init_num_steps=0,

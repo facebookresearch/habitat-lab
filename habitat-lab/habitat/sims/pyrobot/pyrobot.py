@@ -4,13 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pyrobot
 from gym import Space, spaces
 
-from habitat.config import DictConfig
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     BumpSensor,
@@ -20,6 +19,10 @@ from habitat.core.simulator import (
     Simulator,
 )
 from habitat.core.utils import center_crop, try_cv2_import
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 cv2 = try_cv2_import()
 
@@ -167,7 +170,7 @@ class PyRobot(Simulator):
         config: configuration for initializing the PyRobot object.
     """
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         self._config = config
 
         robot_sensors = []

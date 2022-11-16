@@ -21,12 +21,7 @@ import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
 
-if TYPE_CHECKING:
-    from torch import Tensor
-
-
 import habitat_sim
-from habitat.config import DictConfig
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -43,9 +38,13 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import Space
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+    from torch import Tensor
+
 
 def overwrite_config(
-    config_from: DictConfig,
+    config_from: "DictConfig",
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
     trans_dict: Optional[Dict[str, Callable]] = None,
@@ -62,7 +61,7 @@ def overwrite_config(
     """
 
     def if_config_to_lower(config):
-        if isinstance(config, DictConfig):
+        if isinstance(config, "DictConfig"):
             return {key.lower(): val for key, val in config.items()}
         else:
             return config
@@ -98,7 +97,7 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
 
     RGBSENSOR_DIMENSION = 3
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
@@ -137,7 +136,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     min_depth_value: float
     max_depth_value: float
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         if config.normalize_depth:
             self.min_depth_value = 0
             self.max_depth_value = 1
@@ -185,7 +184,7 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
     sim_sensor_type = habitat_sim.SensorType.SEMANTIC
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
@@ -259,7 +258,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         config: configuration for initializing the simulator.
     """
 
-    def __init__(self, config: DictConfig) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         self.habitat_config = config
 
         sim_sensors = []
@@ -424,7 +423,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def reconfigure(
         self,
-        habitat_config: DictConfig,
+        habitat_config: "DictConfig",
         should_close_on_new_scene: bool = True,
     ) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching

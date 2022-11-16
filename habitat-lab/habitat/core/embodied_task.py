@@ -8,15 +8,17 @@ r"""Implements task and measurements needed for training and benchmarking of
 """
 
 from collections import OrderedDict
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
 from omegaconf import OmegaConf
 
-from habitat.config import DictConfig
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.simulator import Observations, SensorSuite, Simulator
 from habitat.core.spaces import ActionSpace, EmptySpace, Space
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 class Action:
@@ -60,7 +62,7 @@ class SimulatorTaskAction(Action):
     """
 
     def __init__(
-        self, *args: Any, config: DictConfig, sim: Simulator, **kwargs: Any
+        self, *args: Any, config: "DictConfig", sim: Simulator, **kwargs: Any
     ) -> None:
         self._config = config
         self._sim = sim
@@ -226,7 +228,7 @@ class EmbodiedTask:
 
     def __init__(
         self,
-        config: DictConfig,
+        config: "DictConfig",
         sim: Simulator,
         dataset: Optional[Dataset] = None,
     ) -> None:
@@ -361,8 +363,8 @@ class EmbodiedTask:
         )
 
     def overwrite_sim_config(
-        self, sim_config: DictConfig, episode: Episode
-    ) -> DictConfig:
+        self, sim_config: "DictConfig", episode: Episode
+    ) -> "DictConfig":
         r"""Update config merging information from :p:`sim_config` and
         :p:`episode`.
 

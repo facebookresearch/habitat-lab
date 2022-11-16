@@ -6,11 +6,10 @@
 
 import itertools
 import os.path as osp
-from typing import Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
 
 import yaml  # type: ignore[import]
 
-from habitat.config import DictConfig
 from habitat.config.default import get_full_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
@@ -38,6 +37,9 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 class PddlDomain:
     """
@@ -47,7 +49,7 @@ class PddlDomain:
     def __init__(
         self,
         domain_file_path: str,
-        cur_task_config: Optional[DictConfig] = None,
+        cur_task_config: Optional["DictConfig"] = None,
     ):
         """
         :param domain_file_path: Either an absolute path or a path relative to `habitat/task/rearrange/multi_task/domain_configs/`.
@@ -458,7 +460,7 @@ class PddlProblem(PddlDomain):
         self,
         domain_file_path: str,
         problem_file_path: str,
-        cur_task_config: Optional[DictConfig] = None,
+        cur_task_config: Optional["DictConfig"] = None,
     ):
         super().__init__(domain_file_path, cur_task_config)
         with open(get_full_config_path(problem_file_path), "r") as f:

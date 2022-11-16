@@ -6,14 +6,14 @@
 
 # TODO, lots of typing errors in here
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
 
 import attr
 import numpy as np
 import quaternion
 from gym import spaces
 
-from habitat.config import DictConfig, read_write
+from habitat.config import read_write
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
     EmbodiedTask,
@@ -52,6 +52,10 @@ try:
 except ImportError:
     pass
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
+
 cv2 = try_cv2_import()
 
 
@@ -62,7 +66,9 @@ MAP_THICKNESS_SCALAR: int = 128
 NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
 
 
-def merge_sim_episode_config(sim_config: DictConfig, episode: Episode) -> Any:
+def merge_sim_episode_config(
+    sim_config: "DictConfig", episode: Episode
+) -> Any:
     with read_write(sim_config):
         sim_config.scene = episode.scene_id
     if (
@@ -148,7 +154,7 @@ class PointGoalSensor(Sensor):
     cls_uuid: str = "pointgoal"
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -241,7 +247,7 @@ class ImageGoalSensor(Sensor):
     cls_uuid: str = "imagegoal"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: DictConfig, **kwargs: Any
+        self, *args: Any, sim: Simulator, config: "DictConfig", **kwargs: Any
     ):
         self._sim = sim
         sensors = self._sim.sensor_suite.sensors
@@ -355,7 +361,7 @@ class HeadingSensor(Sensor):
     cls_uuid: str = "heading"
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
         super().__init__(config=config)
@@ -428,7 +434,7 @@ class EpisodicGPSSensor(Sensor):
     cls_uuid: str = "gps"
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -528,7 +534,7 @@ class Success(Measure):
     cls_uuid: str = "success"
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -573,7 +579,7 @@ class SPL(Measure):
     """
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._previous_position: Optional[np.ndarray] = None
         self._start_end_episode_distance: Optional[float] = None
@@ -701,7 +707,11 @@ class TopDownMap(Measure):
     r"""Top Down Map measure"""
 
     def __init__(
-        self, sim: "HabitatSim", config: DictConfig, *args: Any, **kwargs: Any
+        self,
+        sim: "HabitatSim",
+        config: "DictConfig",
+        *args: Any,
+        **kwargs: Any,
     ):
         self._sim = sim
         self._config = config
@@ -963,7 +973,7 @@ class DistanceToGoal(Measure):
     cls_uuid: str = "distance_to_goal"
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._previous_position: Optional[Tuple[float, float, float]] = None
         self._sim = sim
@@ -1030,7 +1040,7 @@ class DistanceToGoalReward(Measure):
     cls_uuid: str = "distance_to_goal_reward"
 
     def __init__(
-        self, sim: Simulator, config: DictConfig, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -1323,7 +1333,7 @@ class VelocityAction(SimulatorTaskAction):
 class NavigationTask(EmbodiedTask):
     def __init__(
         self,
-        config: DictConfig,
+        config: "DictConfig",
         sim: Simulator,
         dataset: Optional[Dataset] = None,
     ) -> None:

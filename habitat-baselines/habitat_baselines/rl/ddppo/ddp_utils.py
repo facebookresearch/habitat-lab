@@ -9,6 +9,7 @@ import subprocess
 import threading
 from os import path as osp
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     List,
@@ -25,7 +26,10 @@ import torch
 from torch import distributed as distrib
 
 from habitat import logger
-from habitat.config import DictConfig
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 T = TypeVar("T")
 
@@ -67,7 +71,7 @@ def is_slurm_batch_job() -> bool:
     )
 
 
-def resume_state_filename(config: DictConfig, filename_key: str = "") -> str:
+def resume_state_filename(config: "DictConfig", filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
     if (
@@ -178,7 +182,7 @@ def add_signal_handlers() -> None:
 @rank0_only
 def save_resume_state(
     state: Any,
-    filename_or_config: Union[DictConfig, str],
+    filename_or_config: Union["DictConfig", str],
     filename_key: str = "",
 ):
     r"""Saves the resume job state to the specified filename.
@@ -188,7 +192,7 @@ def save_resume_state(
     :param filename_or_config: The filename of the saved state or the config to construct it.
     :param filename_key: If generating the filename from the config, append this to the name.
     """
-    if isinstance(filename_or_config, DictConfig):
+    if isinstance(filename_or_config, "DictConfig"):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
@@ -197,7 +201,7 @@ def save_resume_state(
 
 
 def load_resume_state(
-    filename_or_config: Union[DictConfig, str], filename_key: str = ""
+    filename_or_config: Union["DictConfig", str], filename_key: str = ""
 ) -> Optional[Any]:
     r"""Loads the saved resume state
 
@@ -206,7 +210,7 @@ def load_resume_state(
 
     :return: The saved state if the file exists, else none
     """
-    if isinstance(filename_or_config, DictConfig):
+    if isinstance(filename_or_config, "DictConfig"):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
