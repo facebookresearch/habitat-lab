@@ -1,11 +1,6 @@
 View, Transform and Warp
 ########################
 
-.. button-primary:: https://dl.fbaipublicfiles.com/habitat/notebooks/relative_camera_views_transform_and_warping_demo.ipynb
-
-    Download notebook
-
-    relative_cam…demo.ipynb
 
 .. contents::
     :class: m-block m-default
