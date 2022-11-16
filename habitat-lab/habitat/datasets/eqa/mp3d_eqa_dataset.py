@@ -7,7 +7,7 @@
 import gzip
 import json
 import os
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from habitat.config.default_structured_configs import DatasetConfig
 from habitat.core.dataset import Dataset
@@ -17,6 +17,10 @@ from habitat.datasets.utils import VocabDict
 from habitat.tasks.eqa.eqa import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav import ShortestPathPoint
 from habitat.tasks.nav.object_nav_task import ObjectGoal
+
+if TYPE_CHECKING:
+    from habitat.config import DictConfig
+
 
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
@@ -45,7 +49,7 @@ class Matterport3dDatasetV1(Dataset):
     question_vocab: VocabDict
 
     @staticmethod
-    def check_config_paths_exist(config: DatasetConfig) -> bool:
+    def check_config_paths_exist(config: DictConfig) -> bool:
         return os.path.exists(config.data_path.format(split=config.split))
 
     def __init__(self, config: DatasetConfig = None) -> None:

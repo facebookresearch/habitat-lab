@@ -8,12 +8,11 @@ import os
 import os.path as osp
 import random
 from dataclasses import dataclass, field
-from typing import Any, List
+from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
 from omegaconf import OmegaConf
 
-from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.datasets.rearrange.rearrange_generator import (
@@ -22,6 +21,9 @@ from habitat.datasets.rearrange.rearrange_generator import (
 from habitat.datasets.rearrange.samplers.receptacle import (
     get_all_scenedataset_receptacles,
 )
+
+if TYPE_CHECKING:
+    from habitat.config import DictConfig
 
 
 @dataclass
