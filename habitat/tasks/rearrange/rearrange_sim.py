@@ -34,6 +34,7 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
 
 @registry.register_simulator(name="RearrangeSim-v0")
@@ -95,6 +96,30 @@ class RearrangeSim(HabitatSim):
         self.ctrl_arm = True
 
         self.robots_mgr = RobotManager(self.habitat_config, self)
+
+        receptacles = find_receptacles(self)
+        # find sampling volumes per receptacle object
+        self.recep_sampling_volumes = defaultdict(list)
+        self.recep_to_parent_obj = defaultdict()
+        self.receptacles = {}
+        for r in receptacles:
+            self.recep_sampling_volumes[r.parent_object_handle].append(
+                r.bounds
+            )
+            self.recep_to_parent_obj[r.name] = r.parent_object_handle
+            self.receptacles[r.name] = r
+        self.rec_handle_to_rec_obj = self.get_rec_handle_to_rec_obj()
+
+    def get_rec_handle_to_rec_obj(self):
+        handle_to_obj = {}
+        rom = self.get_rigid_object_manager()
+        for handle, ro in rom.get_objects_by_handle_substring().items():
+            if "frl" in handle:
+                handle_to_obj[handle] = ro
+        aom = self.get_articulated_object_manager()
+        for handle, ao in aom.get_objects_by_handle_substring().items():
+            handle_to_obj[handle] = ao
+        return handle_to_obj
 
     @property
     def robot(self):

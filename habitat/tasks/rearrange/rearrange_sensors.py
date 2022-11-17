@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import pickle
 from typing import Any, Optional
 
 import numpy as np
@@ -46,6 +47,7 @@ class ObjectCategorySensor(Sensor):
         self._dataset = dataset
         self._category_attribute = category_attribute
         self._name_to_id_mapping = name_to_id_mapping
+
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -81,6 +83,42 @@ class ObjectCategorySensor(Sensor):
 
 
 @registry.register_sensor
+class ObjectEmbeddingSensor(Sensor):
+    cls_uuid: str = "object_embedding"
+
+    def __init__(
+        self,
+        sim,
+        config: Config,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._config = config
+        with open(config.EMBEDDINGS_FILE, "rb") as f:
+            self._embeddings = pickle.load(f)
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(self._config.DIM,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, *args, episode, **kwargs):
+        category_name = episode.object_category
+        return self._embeddings[category_name]
+
+
+@registry.register_sensor
 class GoalReceptacleSensor(ObjectCategorySensor):
     cls_uuid: str = "goal_receptacle"
 
@@ -97,6 +135,27 @@ class GoalReceptacleSensor(ObjectCategorySensor):
             config=config,
             dataset=dataset,
             category_attribute="goal_recep_category",
+            name_to_id_mapping="recep_category_to_recep_category_id",
+        )
+
+
+@registry.register_sensor
+class StartReceptacleSensor(ObjectCategorySensor):
+    cls_uuid: str = "start_receptacle"
+
+    def __init__(
+        self,
+        sim,
+        config: Config,
+        dataset: "ObjectRearrangeDatasetV0",
+        *args: Any,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            sim=sim,
+            config=config,
+            dataset=dataset,
+            category_attribute="start_recep_category",
             name_to_id_mapping="recep_category_to_recep_category_id",
         )
 

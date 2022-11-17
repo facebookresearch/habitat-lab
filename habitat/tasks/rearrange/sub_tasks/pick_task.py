@@ -20,6 +20,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import get_angle
+import re
 
 
 @registry.register_task(name="RearrangePickTask-v0")
@@ -44,6 +45,7 @@ class RearrangePickTaskV1(RearrangeTask):
         self.prev_colls = None
         self.force_set_idx = None
         self._add_cache_key: str = ""
+        self.pick_object_exists = False
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -71,24 +73,82 @@ class RearrangePickTaskV1(RearrangeTask):
             or self._config.BASE_ANGLE_NOISE != 0
         )
 
+    # Sample a point on a receptacle that does not contain an object that can be picked but contains other objects
+    def get_incorrect_pick_position(self, sim, episode):
+        rom = sim.get_rigid_object_manager()
+        candidate_receptacles = set(
+            [
+                sim.recep_to_parent_obj[recep]
+                for recep in episode.name_to_receptacle.values()
+            ]
+        )
+
+        receptacles_to_remove = set(
+            [
+                sim.recep_to_parent_obj[
+                    episode.name_to_receptacle[
+                        rom.get_object_handle_by_id(
+                            sim.scene_obj_ids[goal.object_id]
+                        )
+                    ]
+                ]
+                for goal in episode.candidate_objects
+            ]
+        )
+        candidate_receptacles = list(
+            candidate_receptacles.difference(receptacles_to_remove)
+        )
+        # sample a candidate receptacle
+        if len(candidate_receptacles) > 0:
+            receptacle = np.random.choice(candidate_receptacles)
+            return np.array(sim.rec_handle_to_rec_obj[receptacle].translation)
+        else:
+            return None
+
     def _gen_start_pos(
-        self, sim, is_easy_init, episode, sel_idx, force_snap_pos=None
+        self,
+        sim,
+        is_easy_init,
+        episode,
+        sel_idx,
+        force_snap_pos=None,
     ):
         target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
+        snap_pos = None
+        receptacle = sim.receptacles[
+            episode.name_to_receptacle[
+                list(sim.instance_handle_to_ref_handle.keys())[0]
+            ]
+        ]
 
-        if force_snap_pos is not None:
-            snap_pos = force_snap_pos
-        else:
-            snap_pos = targ_pos
+        recep_center = np.array(
+            receptacle.get_global_transform(sim).transform_point(
+                receptacle.bounds.center()
+            )
+        )
 
+        if self.pick_object_exists:
+            snap_pos = self.get_incorrect_pick_position(sim, episode)
+        elif self._config.REMOVE_BIAS:
+            snap_pos = recep_center
+
+        if snap_pos is None:
+            self.pick_object_exists = False
+            if force_snap_pos is not None:
+                snap_pos = force_snap_pos
+            else:
+                snap_pos = targ_pos
         orig_start_pos = sim.safe_snap_point(snap_pos)
+
+        if not isinstance(orig_start_pos, np.ndarray):
+            orig_start_pos = np.array(orig_start_pos)
 
         state = sim.capture_state()
         start_pos = orig_start_pos
 
         forward = np.array([1.0, 0, 0])
-        dist_thresh = 0.1
+        dist_thresh = self._config.DIST_THRESH
         did_collide = False
 
         if self._config.SHOULD_ENFORCE_TARGET_WITHIN_REACH:
@@ -107,7 +167,10 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
-            rel_targ = targ_pos - start_pos
+            if self._config.REMOVE_BIAS:
+                rel_targ = recep_center - start_pos
+            else:
+                rel_targ = targ_pos - start_pos
             angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
             if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
                 angle_to_obj *= -1.0
@@ -124,7 +187,11 @@ class RearrangePickTaskV1(RearrangeTask):
                 start_pos
             )
 
-            if targ_dist > dist_thresh or not is_navigable:
+            if (
+                targ_dist > dist_thresh
+                or not is_navigable
+                or targ_dist < self._config.MIN_DIST_THRESH
+            ):
                 continue
 
             sim.set_state(state)
@@ -223,9 +290,14 @@ class RearrangePickTaskV1(RearrangeTask):
             f"Using cache key {cache_lookup_k}, force_regenerate={self._config.FORCE_REGENERATE}"
         )
 
+        self.pick_object_exists = (
+            np.random.random() < self._config.IMPOSSIBLE_PICK_PROB
+        )
+
         if (
             cache_lookup_k in self.start_states
             and not self._config.FORCE_REGENERATE
+            and not self.pick_object_exists
         ):
             start_pos, start_rot, sel_idx = self.start_states[cache_lookup_k]
         else:
@@ -270,12 +342,21 @@ class RearrangePickTaskV1(RearrangeTask):
                 start_pos = None
 
             start_pos, start_rot = self._gen_start_pos(
-                sim, self._config.EASY_INIT, episode, sel_idx, start_pos
+                sim,
+                self._config.EASY_INIT,
+                episode,
+                sel_idx,
+                start_pos,
             )
             rearrange_logger.debug(f"Finished creating init for {self}")
-            self.start_states[cache_lookup_k] = (start_pos, start_rot, sel_idx)
-            if self._config.SHOULD_SAVE_TO_CACHE:
-                self.cache.save(self.start_states)
+            if not self.pick_object_exists:
+                self.start_states[cache_lookup_k] = (
+                    start_pos,
+                    start_rot,
+                    sel_idx,
+                )
+                if self._config.SHOULD_SAVE_TO_CACHE:
+                    self.cache.save(self.start_states)
 
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot
