@@ -1,0 +1,43 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - arm_action
+  - /habitat/task/measurements:
+    - robot_force
+    - force_terminate
+    - end_effector_to_rest_distance
+    - end_effector_to_object_distance
+    - did_pick_object
+    - pick_success
+    - pick_reward
+    - did_violate_hold_constraint
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - target_start_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+  - _self_
+
+type: RearrangePickTask-v0
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+reward_measure: "rearrangepick_reward"
+success_measure: "rearrangepick_success"
+success_reward: 100.0
+end_on_success: True
+actions:
+  arm_action:
+    grip_controller: SuctionGraspAction
+measurements:
+  pick_success:
+    ee_resting_success_threshold: 0.2
+  force_terminate:
+    max_accum_force: 5000.0
+  pick_reward:
+    use_diff: True
+    drop_obj_should_end: True
+    wrong_pick_should_end: True

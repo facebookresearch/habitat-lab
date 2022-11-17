@@ -37,7 +37,7 @@ def get_sample_region_ratios(load_dict) -> Dict[str, float]:
 
 
 class RearrangeEpisodeGenerator:
-    """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement tasks.
+    """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement task.
 
     Initialized from a provided configuration file defining dataset paths, object,scene,and receptacle sets, and state sampler parameters.
 
@@ -66,7 +66,7 @@ class RearrangeEpisodeGenerator:
         """
         # load and cache the config
         self.cfg = cfg
-        self.start_cfg = self.cfg.clone()
+        self.start_cfg = self.cfg.copy()
         self._limit_scene_set = limit_scene_set
 
         # debug visualization settings

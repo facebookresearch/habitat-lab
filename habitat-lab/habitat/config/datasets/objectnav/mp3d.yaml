@@ -1,5 +1,0 @@
-habitat:
-  dataset:
-    type: ObjectNav-v1
-    split: train
-    data_path: data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz

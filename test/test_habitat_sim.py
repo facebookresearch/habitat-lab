@@ -17,7 +17,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def init_sim():
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     return make_sim(
@@ -75,9 +75,9 @@ def test_sim_trajectory():
 
 
 def test_sim_no_sensors():
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     with read_write(config):
-        config.habitat.simulator.agent_0.sensors = []
+        config.habitat.simulator.agent_0.sim_sensors = {}
         if not os.path.exists(config.habitat.simulator.scene):
             pytest.skip("Please download Habitat test data to data folder.")
         with make_sim(
@@ -87,7 +87,7 @@ def test_sim_no_sensors():
 
 
 def test_sim_geodesic_distance():
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
     with make_sim(

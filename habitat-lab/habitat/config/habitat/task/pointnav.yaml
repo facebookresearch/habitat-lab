@@ -1,0 +1,21 @@
+defaults:
+  - task_config_base
+  - actions:
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
+  - measurements:
+    - distance_to_goal
+    - success
+    - spl
+    - distance_to_goal_reward
+  - lab_sensors:
+    - pointgoal_with_gps_compass_sensor
+  - _self_
+
+type: Nav-v0
+end_on_success: True
+reward_measure: "distance_to_goal_reward"
+success_measure: "spl"
+goal_sensor_uuid: pointgoal_with_gps_compass

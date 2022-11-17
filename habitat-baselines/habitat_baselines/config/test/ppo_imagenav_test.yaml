@@ -1,9 +1,13 @@
+# @package _global_
+
+defaults:
+  - /benchmark/nav/imagenav: imagenav_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
 habitat_baselines:
-  base_task_config_path: "tasks/imagenav.yaml"
   trainer_name: "ppo"
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-  video_option: []
   tensorboard_dir: ""
   eval_ckpt_path_dir: "data/test_checkpoints/ppo/imagenav/ckpt.0.pth"
   num_environments: 1

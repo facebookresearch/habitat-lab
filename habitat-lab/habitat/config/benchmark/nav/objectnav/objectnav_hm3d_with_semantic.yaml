@@ -1,0 +1,19 @@
+# @package _global_
+
+
+
+  defaults:
+    - /benchmark/nav/objectnav: objectnav_hm3d
+    - /habitat/simulator/sim_sensors:
+      - semantic_sensor
+    - _self_
+
+  habitat:
+    simulator:
+      agent_0:
+        sim_sensors:
+          semantic_sensor:
+            width: 640
+            height: 480
+            hfov: 79
+            position: [0, 0.88, 0]

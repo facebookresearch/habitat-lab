@@ -34,7 +34,15 @@ except ImportError:
 
 from habitat import make_dataset
 from habitat.config import read_write
+from habitat.config.default_structured_configs import (
+    HeadDepthSensorConfig,
+    HeadRGBSensorConfig,
+)
 from habitat.utils.gym_definitions import make_gym_from_config
+from habitat_baselines.config.default_structured_configs import (
+    Cube2EqConfig,
+    Cube2FishConfig,
+)
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -47,7 +55,7 @@ def download_data():
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "test_cfg_path,gpu2gpu,observation_transforms,mode",
+    "test_cfg_path,gpu2gpu,observation_transforms_overrides,mode",
     list(
         itertools.product(
             glob("habitat-baselines/habitat_baselines/config/test/*"),
@@ -55,8 +63,7 @@ def download_data():
             [
                 [],
                 [
-                    "CenterCropper",
-                    "ResizeShortestEdge",
+                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
                 ],
             ],
             ["train", "eval"],
@@ -71,19 +78,24 @@ def download_data():
             [
                 [],
                 [
-                    "CenterCropper",
-                    "ResizeShortestEdge",
+                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
                 ],
             ],
             ["train", "eval"],
         )
     ),
 )
-def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
+def test_trainers(
+    test_cfg_path, gpu2gpu, observation_transforms_overrides, mode
+):
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
 
-    config = get_config(test_cfg_path).habitat.dataset
+    test_cfg_cleaned_path = test_cfg_path.replace(
+        "habitat-baselines/habitat_baselines/config/", ""
+    )
+
+    config = get_config(test_cfg_cleaned_path).habitat.dataset
     dataset = make_dataset(id_dataset=config.type)
     if not dataset.check_config_paths_exist(config):
         pytest.skip("Test skipped as dataset files are missing.")
@@ -99,14 +111,12 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
 
     try:
         run_exp(
-            test_cfg_path,
+            test_cfg_cleaned_path,
             mode,
             [
-                "habitat.simulator.habitat_sim_v0.gpu_gpu",
-                str(gpu2gpu),
-                "habitat_baselines.rl.policy.obs_transforms.enabled_transforms",
-                str(tuple(observation_transforms)),
-            ],
+                f"habitat.simulator.habitat_sim_v0.gpu_gpu={str(gpu2gpu)}",
+            ]
+            + observation_transforms_overrides,
         )
     finally:
         # Needed to destroy the trainer
@@ -123,8 +133,8 @@ def test_trainers(test_cfg_path, gpu2gpu, observation_transforms, mode):
 @pytest.mark.parametrize(
     "test_cfg_path",
     (
-        "habitat-baselines/habitat_baselines/config/test/ddppo_pointnav_test.yaml",
-        "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml",
+        "test/ddppo_pointnav_test.yaml",
+        "rearrange/ddppo_pick.yaml",
     ),
 )
 @pytest.mark.parametrize("variable_experience", [True, False])
@@ -141,24 +151,15 @@ def test_ver_trainer(
             test_cfg_path,
             "train",
             [
-                "habitat_baselines.num_environments",
-                4,
-                "habitat_baselines.trainer_name",
-                "ver",
-                "habitat_baselines.rl.ver.variable_experience",
-                str(variable_experience),
-                "habitat_baselines.rl.ver.overlap_rollouts_and_learn",
-                str(overlap_rollouts_and_learn),
-                "habitat_baselines.rl.policy.obs_transforms.enabled_transforms",
-                "['CenterCropper', 'ResizeShortestEdge']",
-                "habitat_baselines.num_updates",
-                2,
-                "habitat_baselines.total_num_steps",
-                -1.0,
-                "habitat_baselines.rl.preemption.save_state_batch_only",
-                True,
-                "habitat_baselines.rl.ppo.num_steps",
-                16,
+                "habitat_baselines.num_environments=4",
+                "habitat_baselines.trainer_name=ver",
+                f"habitat_baselines.rl.ver.variable_experience={str(variable_experience)}",
+                f"habitat_baselines.rl.ver.overlap_rollouts_and_learn={str(overlap_rollouts_and_learn)}",
+                "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                "habitat_baselines.num_updates=2",
+                "habitat_baselines.total_num_steps=-1",
+                "habitat_baselines.rl.preemption.save_state_batch_only=True",
+                "habitat_baselines.rl.ppo.num_steps=16",
             ],
         )
     finally:
@@ -171,10 +172,16 @@ def test_ver_trainer(
 
 
 def test_cpca():
+    cfg = get_config(
+        "test/ppo_pointnav_test.yaml",
+        ["+habitat_baselines/rl/auxiliary_losses=cpca"],
+    )
+    assert "cpca" in cfg.habitat_baselines.rl.auxiliary_losses
+
     run_exp(
-        "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
+        "test/ppo_pointnav_test.yaml",
         "train",
-        ["habitat_baselines.rl.auxiliary_losses.enabled", "['cpca']"],
+        ["+habitat_baselines/rl/auxiliary_losses=cpca"],
     )
 
 
@@ -185,7 +192,7 @@ def test_cpca():
     "test_cfg_path,mode",
     [
         [
-            "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml",
+            "test/ppo_pointnav_test.yaml",
             "train",
         ],
     ],
@@ -209,30 +216,48 @@ def test_cubemap_stiching(
         ]
         sensor_uuids = []
 
-        if f"{sensor_type}_sensor" not in config.simulator.agent_0.sensors:
-            config.simulator.agent_0.sensors.append(f"{sensor_type}_sensor")
-        sensor = getattr(config.simulator, f"{sensor_type}_sensor")
+        if sensor_type == "rgb":
+            config.simulator.agent_0.sim_sensors = {
+                "rgb_sensor": HeadRGBSensorConfig(width=256, height=256),
+            }
+        elif sensor_type == "depth":
+            config.simulator.agent_0.sim_sensors = {
+                "depth_sensor": HeadDepthSensorConfig(width=256, height=256),
+            }
+        else:
+            raise ValueError(
+                "Typo in the sensor type in test_cubemap_stiching"
+            )
+        sensor = getattr(
+            config.simulator.agent_0.sim_sensors, f"{sensor_type}_sensor"
+        )
         for camera_id in range(CAMERA_NUM):
             camera_template = f"{sensor_type}_{camera_id}"
             camera_config = deepcopy(sensor)
             camera_config.orientation = orient[camera_id]
             camera_config.uuid = camera_template.lower()
             sensor_uuids.append(camera_config.uuid)
-            setattr(config.simulator, camera_template, camera_config)
-            config.simulator.agent_0.sensors.append(camera_template)
+            setattr(
+                config.simulator.agent_0.sim_sensors,
+                camera_template,
+                camera_config,
+            )
 
         meta_config.habitat = config
-        meta_config.habitat_baselines.sensors = (
-            config.simulator.agent_0.sensors
-        )
+
         if camera == "equirect":
-            meta_config.habitat_baselines.rl.policy.obs_transforms.cube2eq.sensor_uuids = tuple(
-                sensor_uuids
-            )
+            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+                "cube2eq": Cube2EqConfig(
+                    sensor_uuids=sensor_uuids, width=256, height=256
+                )
+            }
         elif camera == "fisheye":
-            meta_config.habitat_baselines.rl.policy.obs_transforms.cube2fish.sensor_uuids = tuple(
-                sensor_uuids
-            )
+            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+                "cube2fish": Cube2FishConfig(
+                    sensor_uuids=sensor_uuids, width=256, height=256
+                )
+            }
+
     if camera in ["equirect", "fisheye"]:
         execute_exp(meta_config, mode)
         # Deinit processes group
@@ -245,7 +270,7 @@ def test_cubemap_stiching(
         # 3) Compare the input and output cubemap
         env_fn_args = []
         for split in ["train", "val"]:
-            tmp_config = config.clone()
+            tmp_config = config.copy()
             with read_write(tmp_config):
                 tmp_config.dataset["split"] = split
             env_fn_args.append((tmp_config,))
@@ -300,34 +325,35 @@ def test_cubemap_stiching(
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_eval_config():
-    ckpt_opts = ["habitat_baselines.video_option", "[]"]
-    eval_opts = ["habitat_baselines.video_option", "['disk']"]
-
-    ckpt_cfg = get_config(None, ckpt_opts)
-    assert ckpt_cfg.habitat_baselines.video_option == []
-    assert ckpt_cfg.habitat_baselines.cmd_trailing_opts == [
-        "habitat_baselines.video_option",
-        "[]",
+    ckpt_opts = [
+        "habitat_baselines.eval.video_option=[]",
+        "habitat_baselines.load_resume_state_config=True",
+    ]
+    eval_opts = [
+        "habitat_baselines.eval.video_option=['disk']",
+        "habitat_baselines.load_resume_state_config=False",
     ]
 
-    eval_cfg = get_config(None, eval_opts)
-    assert eval_cfg.habitat_baselines.video_option == ["disk"]
-    assert eval_cfg.habitat_baselines.cmd_trailing_opts == [
-        "habitat_baselines.video_option",
-        "['disk']",
-    ]
+    ckpt_cfg = get_config("test/ppo_pointnav_test.yaml", ckpt_opts)
+    assert ckpt_cfg.habitat_baselines.eval.video_option == []
 
-    trainer = BaseRLTrainer(get_config())
-    assert trainer.config.habitat_baselines.video_option == [
-        "disk",
-        "tensorboard",
-    ]
-    returned_config = trainer._setup_eval_config(checkpoint_config=ckpt_cfg)
-    assert returned_config.habitat_baselines.video_option == []
+    eval_cfg = get_config("test/ppo_pointnav_test.yaml", eval_opts)
+    assert eval_cfg.habitat_baselines.eval.video_option == ["disk"]
+
+    trainer = BaseRLTrainer(get_config("test/ppo_pointnav_test.yaml"))
+
+    returned_config = trainer._get_resume_state_config_or_new_config(
+        resume_state_config=ckpt_cfg
+    )
+    assert returned_config.habitat_baselines.eval.video_option == []
 
     trainer = BaseRLTrainer(eval_cfg)
-    returned_config = trainer._setup_eval_config(ckpt_cfg)
-    assert returned_config.habitat_baselines.video_option == ["disk"]
+    # Load state config is false. This means that _get_resume_state_config_or_new_config
+    # should use the new (eval_cfg) config instead of the resume_state_config
+    returned_config = trainer._get_resume_state_config_or_new_config(
+        resume_state_config=ckpt_cfg
+    )
+    assert returned_config.habitat_baselines.eval.video_option == ["disk"]
 
 
 def __do_pause_test(num_envs, envs_to_pause):
