@@ -97,7 +97,7 @@ TASK:
         USE_DIFF: True
         DROP_OBJ_SHOULD_END: True
         WRONG_PICK_SHOULD_END: True
-        ANY_INSTANCE: True
+        OBJECT_GOAL: True
         # General Rearrange Reward config
         CONSTRAINT_VIOLATE_PEN: 10.0
         FORCE_PEN: 0.001
@@ -109,14 +109,13 @@ TASK:
     PICK_SUCCESS:
         TYPE: "RearrangePickSuccess"
         EE_RESTING_SUCCESS_THRESHOLD: 0.2
-        ANY_INSTANCE: True
+        OBJECT_GOAL: True
 
     MEASUREMENTS:
         - 'DISTANCE_TO_GOAL'
         - "ROBOT_FORCE"
         - "FORCE_TERMINATE"
         - "END_EFFECTOR_TO_REST_DISTANCE"
-        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
         - "DID_PICK_OBJECT"
         - "PICK_SUCCESS"
         - "PICK_REWARD"

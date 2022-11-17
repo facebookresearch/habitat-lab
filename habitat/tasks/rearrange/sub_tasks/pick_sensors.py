@@ -14,13 +14,8 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.rearrange.multi_task.composite_sensors import (
-    DoesWantTerminate,
-)
 from habitat.tasks.nav.nav import DistanceToGoal
 from habitat.tasks.rearrange.utils import rearrange_logger
-from habitat.datasets.rearrange.rearrange_dataset import ObjectRearrangeEpisode
-import numpy as np
 
 
 @registry.register_measure
@@ -42,25 +37,6 @@ class DidPickObjectMeasure(Measure):
     def update_metric(self, *args, episode, **kwargs):
         self._did_pick = self._did_pick or self._sim.grasp_mgr.is_grasped
         self._metric = int(self._did_pick)
-
-
-@registry.register_measure
-class PickObjectExistsMeasure(Measure):
-    cls_uuid: str = "pick_object_exists"
-
-    def __init__(self, sim, config, task, *args, **kwargs):
-        self._task = task
-        super().__init__(**kwargs)
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return PickObjectExistsMeasure.cls_uuid
-
-    def reset_metric(self, *args, **kwargs):
-        self.update_metric(*args, **kwargs)
-
-    def update_metric(self, *args, **kwargs):
-        self._metric = int(self._task.pick_object_exists)
 
 
 @registry.register_measure
@@ -103,7 +79,6 @@ class RearrangePickReward(RearrangeReward):
         self.cur_dist = -1.0
         self._prev_picked = False
         self._metric = None
-        self._config = config
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -114,15 +89,17 @@ class RearrangePickReward(RearrangeReward):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
-                EndEffectorToObjectDistance.cls_uuid,
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
-                RearrangePickSuccess.cls_uuid,
             ],
         )
-        if self._config.ANY_INSTANCE:
+        if self._config.OBJECT_GOAL:
             task.measurements.check_measure_dependencies(
                 self.uuid, [DistanceToGoal.cls_uuid]
+            )
+        else:
+            task.measurements.check_measure_dependencies(
+                self.uuid, [EndEffectorToObjectDistance.cls_uuid]
             )
 
         self.cur_dist = -1.0
@@ -144,7 +121,7 @@ class RearrangePickReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-        if self._config.ANY_INSTANCE:
+        if self._config.OBJECT_GOAL:
             ee_to_object_distance = task.measurements.measures[
                 DistanceToGoal.cls_uuid
             ].get_metric()
@@ -166,7 +143,7 @@ class RearrangePickReward(RearrangeReward):
 
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
-            if self._config.ANY_INSTANCE:
+            if self._config.OBJECT_GOAL:
                 permissible_obj_ids = [
                     self._sim.scene_obj_ids[g.object_id]
                     for g in episode.candidate_objects
@@ -191,7 +168,7 @@ class RearrangePickReward(RearrangeReward):
                 self.cur_dist = -1
                 return
 
-        # Only reward the object to end effector distance changes to SPARSE, dense reward for bringing arm back to resting position
+        # If SPARSE_REWARD=True, use dense reward only after the object gets picked for bringing arm to resting position
         if not self._config.SPARSE_REWARD or did_pick:
             if self._config.USE_DIFF:
                 if self.cur_dist < 0:
@@ -218,32 +195,6 @@ class RearrangePickReward(RearrangeReward):
 
 
 @registry.register_measure
-class PickBadCalledTerminate(Measure):
-    cls_uuid: str = "pick_bad_called_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return PickBadCalledTerminate.cls_uuid
-
-    def reset_metric(self, *args, task, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [DoesWantTerminate.cls_uuid, RearrangePickSuccess.cls_uuid],
-        )
-        self.update_metric(*args, task=task, **kwargs)
-
-    def update_metric(self, *args, task, **kwargs):
-        does_action_want_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
-        is_succ = task.measurements.measures[
-            RearrangePickSuccess.cls_uuid
-        ].get_metric()
-
-        self._metric = (not is_succ) and does_action_want_stop
-
-
-@registry.register_measure
 class RearrangePickSuccess(Measure):
     cls_uuid: str = "rearrangepick_success"
 
@@ -258,13 +209,6 @@ class RearrangePickSuccess(Measure):
         return RearrangePickSuccess.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid, [EndEffectorToObjectDistance.cls_uuid]
-        )
-        if self._config.MUST_CALL_STOP:
-            task.measurements.check_measure_dependencies(
-                self.uuid, [DoesWantTerminate.cls_uuid]
-            )
         self._prev_ee_pos = observations["ee_pos"]
 
         self.update_metric(
@@ -282,7 +226,7 @@ class RearrangePickSuccess(Measure):
 
         # Is the agent holding the object and it's at the start?
 
-        if self._config.ANY_INSTANCE:
+        if self._config.OBJECT_GOAL:
             permissible_obj_ids = [
                 self._sim.scene_obj_ids[g.object_id]
                 for g in episode.candidate_objects
@@ -293,21 +237,10 @@ class RearrangePickSuccess(Measure):
 
         # Check that we are holding the right object and the object is actually
         # being held.
-        if task.pick_object_exists:
-            self._metric = self._sim.grasp_mgr.snap_idx is None
-        else:
-            self._metric = (
-                self._sim.grasp_mgr.snap_idx in permissible_obj_ids
-                and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            )
         self._metric = (
-            self._metric
+            self._sim.grasp_mgr.snap_idx in permissible_obj_ids
+            and not self._sim.grasp_mgr.is_violating_hold_constraint()
             and ee_to_rest_distance < self._config.EE_RESTING_SUCCESS_THRESHOLD
         )
-        if self._config.MUST_CALL_STOP:
-            does_action_want_stop = task.measurements.measures[
-                DoesWantTerminate.cls_uuid
-            ].get_metric()
-            self._metric = self._metric and does_action_want_stop
 
         self._prev_ee_pos = observations["ee_pos"]

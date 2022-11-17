@@ -45,7 +45,6 @@ class RearrangePickTaskV1(RearrangeTask):
         self.prev_colls = None
         self.force_set_idx = None
         self._add_cache_key: str = ""
-        self.pick_object_exists = False
 
     def set_args(self, obj, **kwargs):
         self.force_set_idx = obj
@@ -115,7 +114,6 @@ class RearrangePickTaskV1(RearrangeTask):
     ):
         target_positions = self._get_targ_pos(sim)
         targ_pos = target_positions[sel_idx]
-        snap_pos = None
         receptacle = sim.receptacles[
             episode.name_to_receptacle[
                 list(sim.instance_handle_to_ref_handle.keys())[0]
@@ -128,17 +126,8 @@ class RearrangePickTaskV1(RearrangeTask):
             )
         )
 
-        if self.pick_object_exists:
-            snap_pos = self.get_incorrect_pick_position(sim, episode)
-        elif self._config.REMOVE_BIAS:
-            snap_pos = recep_center
+        snap_pos = recep_center
 
-        if snap_pos is None:
-            self.pick_object_exists = False
-            if force_snap_pos is not None:
-                snap_pos = force_snap_pos
-            else:
-                snap_pos = targ_pos
         orig_start_pos = sim.safe_snap_point(snap_pos)
 
         if not isinstance(orig_start_pos, np.ndarray):
@@ -167,10 +156,7 @@ class RearrangePickTaskV1(RearrangeTask):
             start_pos = orig_start_pos + np.random.normal(
                 0, self._config.BASE_NOISE, size=(3,)
             )
-            if self._config.REMOVE_BIAS:
-                rel_targ = recep_center - start_pos
-            else:
-                rel_targ = targ_pos - start_pos
+            rel_targ = recep_center - start_pos
             angle_to_obj = get_angle(forward[[0, 2]], rel_targ[[0, 2]])
             if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
                 angle_to_obj *= -1.0
@@ -290,14 +276,9 @@ class RearrangePickTaskV1(RearrangeTask):
             f"Using cache key {cache_lookup_k}, force_regenerate={self._config.FORCE_REGENERATE}"
         )
 
-        self.pick_object_exists = (
-            np.random.random() < self._config.IMPOSSIBLE_PICK_PROB
-        )
-
         if (
             cache_lookup_k in self.start_states
             and not self._config.FORCE_REGENERATE
-            and not self.pick_object_exists
         ):
             start_pos, start_rot, sel_idx = self.start_states[cache_lookup_k]
         else:
@@ -349,14 +330,13 @@ class RearrangePickTaskV1(RearrangeTask):
                 start_pos,
             )
             rearrange_logger.debug(f"Finished creating init for {self}")
-            if not self.pick_object_exists:
-                self.start_states[cache_lookup_k] = (
-                    start_pos,
-                    start_rot,
-                    sel_idx,
-                )
-                if self._config.SHOULD_SAVE_TO_CACHE:
-                    self.cache.save(self.start_states)
+            self.start_states[cache_lookup_k] = (
+                start_pos,
+                start_rot,
+                sel_idx,
+            )
+            if self._config.SHOULD_SAVE_TO_CACHE:
+                self.cache.save(self.start_states)
 
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot

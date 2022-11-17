@@ -67,7 +67,6 @@ _C.TASK.CONSTRAINT_VIOLATION_DROPS_OBJECT = False
 _C.TASK.FORCE_REGENERATE = (
     False  # Forced to regenerate the starts even if they are already cached.
 )
-_C.TASK.IMPOSSIBLE_PICK_PROB = 0.0
 _C.TASK.SHOULD_SAVE_TO_CACHE = True  # Saves the generated starts to a cache if they are not already generated.
 _C.TASK.MUST_LOOK_AT_TARG = True
 _C.TASK.OBJECT_IN_HAND_SAMPLE_PROB = 0.167
@@ -81,7 +80,6 @@ _C.TASK.BASE_ANGLE_NOISE = 0.15
 _C.TASK.BASE_NOISE = 0.05
 _C.TASK.DIST_THRESH = 0.1
 _C.TASK.MIN_DIST_THRESH = 0.0
-_C.TASK.REMOVE_BIAS = True
 _C.TASK.SPAWN_REGION_SCALE = 0.2
 _C.TASK.JOINT_MAX_IMPULSE = -1.0
 _C.TASK.DESIRED_RESTING_POSITION = [0.5, 0.0, 1.0]
@@ -100,7 +98,6 @@ _C.TASK.SHOULD_ENFORCE_TARGET_WITHIN_REACH = False
 # -----------------------------------------------------------------------------
 _C.TASK.TASK_SPEC_BASE_PATH = "configs/tasks/rearrange/pddl/"
 _C.TASK.TASK_SPEC = ""
-_C.TASK.DEBUG = False
 # PDDL domain params
 _C.TASK.PDDL_DOMAIN_DEF = "replica_cad"
 _C.TASK.OBJ_SUCC_THRESH = 0.3
@@ -546,8 +543,6 @@ _C.TASK.OBJECT_EMBEDDING_SENSOR = CN()
 _C.TASK.OBJECT_EMBEDDING_SENSOR.TYPE = "ObjectEmbeddingSensor"
 _C.TASK.OBJECT_EMBEDDING_SENSOR.EMBEDDINGS_FILE = "clip_embeddings.pickle"
 _C.TASK.OBJECT_EMBEDDING_SENSOR.DIM = 512
-_C.TASK.PICK_OBJECT_EXISTS = CN()
-_C.TASK.PICK_OBJECT_EXISTS.TYPE = "PickObjectExistsMeasure"
 # -----------------------------------------------------------------------------
 # DID VIOLATE HOLD CONSTRAINT MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -589,15 +584,11 @@ _C.TASK.PICK_REWARD.DROP_OBJ_SHOULD_END = False
 _C.TASK.PICK_REWARD.WRONG_PICK_SHOULD_END = False
 _C.TASK.PICK_REWARD.COLLISION_PENALTY = 0.0
 _C.TASK.PICK_REWARD.ROBOT_OBJ_COLLISION_PENALTY = 0.0
-_C.TASK.PICK_REWARD.ANY_INSTANCE = False
-_C.TASK.PICK_REWARD.SCALE = 1.0
+_C.TASK.PICK_REWARD.OBJECT_GOAL = False
 _C.TASK.PICK_SUCCESS = CN()
-_C.TASK.PICK_SUCCESS.ANY_INSTANCE = False
+_C.TASK.PICK_SUCCESS.OBJECT_GOAL = False
 _C.TASK.PICK_SUCCESS.TYPE = "RearrangePickSuccess"
 _C.TASK.PICK_SUCCESS.EE_RESTING_SUCCESS_THRESHOLD = 0.15
-_C.TASK.PICK_SUCCESS.MUST_CALL_STOP = False
-_C.TASK.PICK_BAD_CALLED_TERMINATE = CN()
-_C.TASK.PICK_BAD_CALLED_TERMINATE.TYPE = "PickBadCalledTerminate"
 # -----------------------------------------------------------------------------
 # PLACE MEASUREMENT
 # -----------------------------------------------------------------------------
@@ -677,9 +668,7 @@ _C.TASK.INSTRUCTION_SENSOR_UUID = "instruction"
 _C.TASK.DISTANCE_TO_GOAL = CN()
 _C.TASK.DISTANCE_TO_GOAL.TYPE = "DistanceToGoal"
 _C.TASK.DISTANCE_TO_GOAL.DISTANCE_TO = "POINT"
-_C.TASK.DISTANCE_TO_GOAL.DISTANCE_FROM = ""
-_C.TASK.DISTANCE_TO_GOAL.SPARSE_REWARD = False
-
+_C.TASK.DISTANCE_TO_GOAL.DISTANCE_FROM = "BASE"
 
 # -----------------------------------------------------------------------------
 # # DISTANCE_TO_GOAL_REWARD MEASUREMENT
