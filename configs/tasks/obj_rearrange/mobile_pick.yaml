@@ -1,0 +1,206 @@
+GYM:
+    AUTO_NAME: "Pick"
+    OBS_KEYS: ['robot_head_depth', 'robot_head_rgb', 'object_category', 'joint', 'is_holding', 'relative_resting_position']
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 200
+DATASET:
+    TYPE: ObjectRearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
+    SCENES_DIR: "data/replica_cad/"
+TASK:
+    TYPE: RearrangePickTask-v0
+    COUNT_OBJ_COLLISIONS: True
+    COUNT_ROBOT_OBJ_COLLS: False
+
+    SHOULD_ENFORCE_TARGET_WITHIN_REACH: False
+
+    # In radians
+    BASE_ANGLE_NOISE: 0.15
+    BASE_NOISE: 1.0
+    DIST_THRESH: 2.0
+    MIN_DIST_THRESH: 1.0
+    FORCE_REGENERATE: False
+
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: True
+
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    END_ON_SUCCESS: True
+    DISTANCE_TO_GOAL:
+        DISTANCE_TO: "EUCLIDEAN_POINT"
+        DISTANCE_FROM: "END_EFFECTOR"
+        GOALS_ATTR: candidate_objects
+
+    # If true, does not care about navigability or collisions with objects when spawning
+    # robot
+    EASY_INIT: False
+
+    TARGET_START_SENSOR:
+        TYPE: "TargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    GOAL_SENSOR:
+        TYPE: "GoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_TARGET_START_SENSOR:
+        TYPE: "AbsTargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_GOAL_SENSOR:
+        TYPE: "AbsGoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    JOINT_SENSOR:
+        TYPE: "JointSensor"
+        DIMENSIONALITY: 7
+    END_EFFECTOR_SENSOR:
+        TYPE: "EEPositionSensor"
+    IS_HOLDING_SENSOR:
+        TYPE: "IsHoldingSensor"
+    RELATIVE_RESTING_POS_SENSOR:
+        TYPE: "RelativeRestingPositionSensor"
+    OBJECT_CATEGORY_SENSOR:
+        GOAL_SPEC_MAX_VAL: 20
+        TYPE: "ObjectCategorySensor"
+    OBJECT_EMBEDDING_SENSOR:
+        TYPE: "ObjectEmbeddingSensor"
+        EMBEDDINGS_FILE: 'clip_embeddings.pickle'
+    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR", "OBJECT_CATEGORY_SENSOR","OBJECT_EMBEDDING_SENSOR"]
+    ROBOT_FORCE:
+        TYPE: "RobotForce"
+        MIN_FORCE: 20.0
+    FORCE_TERMINATE:
+        TYPE: "ForceTerminate"
+        MAX_ACCUM_FORCE: 5000.0
+    END_EFFECTOR_TO_OBJECT_DISTANCE:
+        TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
+    DID_PICK_OBJECT:
+        TYPE: "DidPickObjectMeasure"
+    NUM_STEPS:
+        TYPE: "NumStepsMeasure"
+    DID_VIOLATE_HOLD_CONSTRAINT:
+        TYPE: "DidViolateHoldConstraintMeasure"
+    PICK_REWARD:
+        TYPE: "RearrangePickReward"
+        DIST_REWARD: 20.0
+        SUCC_REWARD: 10.0
+        PICK_REWARD: 20.0
+        DROP_PEN: 5.0
+        WRONG_PICK_PEN: 5.0
+        USE_DIFF: True
+        DROP_OBJ_SHOULD_END: True
+        WRONG_PICK_SHOULD_END: True
+        ANY_INSTANCE: True
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+        SPARSE_REWARD: False
+        SCALE: 1.0
+
+    PICK_SUCCESS:
+        TYPE: "RearrangePickSuccess"
+        EE_RESTING_SUCCESS_THRESHOLD: 0.2
+        ANY_INSTANCE: True
+
+    MEASUREMENTS:
+        - 'DISTANCE_TO_GOAL'
+        - "ROBOT_FORCE"
+        - "FORCE_TERMINATE"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "DID_PICK_OBJECT"
+        - "PICK_SUCCESS"
+        - "PICK_REWARD"
+        - "DID_VIOLATE_HOLD_CONSTRAINT"
+        - "NUM_STEPS"
+        - 'DISTANCE_TO_GOAL_REWARD'
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosAction"
+            GRIP_CONTROLLER: SuctionGraspAction
+            ARM_JOINT_DIMENSIONALITY: 7
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+        BASE_VELOCITY:
+            TYPE: BaseVelAction
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
+            ALLOW_DYN_SLIDE: true
+            END_ON_STOP: false
+            ALLOW_BACK: true
+            MIN_ABS_LIN_SPEED: 1.0
+            MIN_ABS_ANG_SPEED: 1.0
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
+        - BASE_VELOCITY
+
+SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
+    ACTION_SPACE_CONFIG: v0
+    AGENTS: ['AGENT_0']
+    DEBUG_RENDER: True
+    DEBUG_RENDER_GOAL: False
+    NEEDS_MARKERS: False
+    AGENT_0:
+        HEIGHT: 1.5
+        RADIUS: 0.3
+        SENSORS: ['HEAD_DEPTH_SENSOR', 'HEAD_RGB_SENSOR']
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_TYPE: FetchSuctionRobot
+        IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
+    HEAD_RGB_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
+    ARM_DEPTH_SENSOR:
+        HEIGHT: 128
+        MAX_DEPTH: 10.0
+        MIN_DEPTH: 0.0
+        NORMALIZE_DEPTH: true
+        WIDTH: 128
+    ARM_RGB_SENSOR:
+        HEIGHT: 128
+        WIDTH: 128
+    SEMANTIC_SENSOR:
+        HEIGHT: 256
+        HFOV: 90
+        ORIENTATION: [0.0, 0.0, 0.0]
+        POSITION: [0, 1.25, 0]
+        TYPE: HabitatSimSemanticSensor
+        WIDTH: 256
+    # Agent setup
+    CTRL_FREQ: 120.0
+    AC_FREQ_RATIO: 4
+    FORWARD_STEP_SIZE: 0.25
+
+    # Grasping
+    HOLD_THRESH: 0.2
+    GRASP_IMPULSE: 10000.0
+
+    DEFAULT_AGENT_ID: 0
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: False
+        ENABLE_PHYSICS: True
+        GPU_DEVICE_ID: 0
+        GPU_GPU: False
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    SEED: 100
+    TYPE: RearrangeSim-v0

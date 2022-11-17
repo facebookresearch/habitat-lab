@@ -32,6 +32,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
+from habitat_baselines.rl.ddppo.policy import resnet_gn
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
 )
@@ -83,6 +84,7 @@ class PointNavResNetPolicy(NetPolicy):
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
                 no_downscaling=policy_config.no_downscaling,
+                ovrl=hasattr(policy_config, "ovrl") and policy_config.ovrl,
             ),
             action_space=action_space,
             policy_config=policy_config,
@@ -253,6 +255,7 @@ class PointNavResNetNet(Net):
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
         no_downscaling: bool = False,
+        ovrl: bool = False,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -421,7 +424,7 @@ class PointNavResNetNet(Net):
                 goal_observation_space,
                 baseplanes=resnet_baseplanes,
                 ngroups=resnet_baseplanes // 2,
-                make_backbone=getattr(resnet, backbone),
+                make_backbone=getattr(resnet_gn if ovrl else resnet, backbone),
                 no_downscaling=no_downscaling,
             )
 
@@ -452,7 +455,7 @@ class PointNavResNetNet(Net):
             use_obs_space,
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
-            make_backbone=getattr(resnet, backbone),
+            make_backbone=getattr(resnet_gn if ovrl else resnet, backbone),
             no_downscaling=no_downscaling,
         )
 

@@ -1,6 +1,6 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/obj_rearrange/pick.yaml
-TRAINER_NAME: "ddppo"
+BASE_TASK_CONFIG_PATH: configs/tasks/obj_rearrange/mobile_pick.yaml
+TRAINER_NAME: "ver"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]

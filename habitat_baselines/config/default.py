@@ -108,6 +108,8 @@ _C.RL.POLICY = CN()
 _C.RL.POLICY.name = "PointNavResNetPolicy"
 _C.RL.POLICY.action_distribution_type = "categorical"  # or 'gaussian'
 _C.RL.POLICY.no_downscaling = False
+_C.RL.POLICY.ovrl = False
+
 # If the list is empty, all keys will be included.
 # For gaussian action distribution:
 _C.RL.POLICY.ACTION_DIST = CN()

@@ -107,7 +107,7 @@ class ObjectEmbeddingSensor(Sensor):
 
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
-            shape=(768,),
+            shape=(self._config.DIM,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
