@@ -628,7 +628,7 @@ if __name__ == "__main__":
                 raise ValueError(
                     "Action space does not have any arm control so incompatible with `--add-ik` option"
                 )
-            sim_config.ik_arm_urdf = (
+            sim_config.agent_0.ik_arm_urdf = (
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
