@@ -355,3 +355,20 @@ class IkHelper:
             self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id
         )
         return js[: self._arm_len]
+
+
+def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
+    """
+    Writes the all replay frames to a file for later replay. Filename is of the
+    form 'episodeX.replay.json' where `X` is the episode ID.
+    """
+
+    os.makedirs(task_config.GFX_REPLAY_DIR, exist_ok=True)
+    # A gfx-replay list of keyframes for the episode. This is a JSON string that
+    # should be saved to a file; the file can be read by visualization tools
+    # (e.g. import into Blender for screenshots and videos).
+    filepath = osp.join(
+        task_config.GFX_REPLAY_DIR, f"episode{ep_id}.replay.json"
+    )
+    with open(filepath, "w") as text_file:
+        text_file.write(gfx_keyframe_str)

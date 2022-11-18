@@ -16,6 +16,7 @@ from habitat_sim.physics import (
     CollisionGroupHelper,
     CollisionGroups,
     ManagedRigidObject,
+    RigidConstraintType,
     RigidConstraintSettings,
 )
 
@@ -188,10 +189,12 @@ class RearrangeGraspManager:
 
     def create_hold_constraint(
         self,
+        constraint_type,
         pivot_in_link: mn.Vector3,
         pivot_in_obj: mn.Vector3,
         obj_id_b: int,
         link_id_b: Optional[int] = None,
+        rotation_lock_b: Optional[mn.Matrix3] = None,
     ) -> int:
         """Create a new rigid point-to-point (ball joint) constraint between the robot and an object.
 
@@ -202,16 +205,65 @@ class RearrangeGraspManager:
 
         :return: The id of the newly created constraint or -1 if failed.
         """
+        robot = self._sim.robot
         c = RigidConstraintSettings()
-        c.object_id_a = self._sim.robot.get_robot_sim_id()
-        c.link_id_a = self._sim.robot.ee_link_id
+        c.object_id_a = robot.get_robot_sim_id()
+        c.link_id_a = robot.ee_link_id
         c.object_id_b = obj_id_b
         if link_id_b is not None:
             c.link_id_b = link_id_b
         c.pivot_a = pivot_in_link
         c.pivot_b = pivot_in_obj
+        c.frame_a = mn.Matrix3.identity_init()
+        if rotation_lock_b is not None:
+            c.frame_b = rotation_lock_b
         c.max_impulse = self._config.GRASP_IMPULSE
+        c.constraint_type = constraint_type
+
+        if constraint_type == RigidConstraintType.Fixed:
+            # we set the link frame to object rotation in link space (objR -> world -> link)
+            link_node = robot.sim_obj.get_link_scene_node(robot.ee_link_id)
+            link_frame_world_space = (
+                link_node.absolute_transformation().rotation()
+            )
+
+            object_frame_world_space = (
+                self._sim.get_rigid_object_manager()
+                .get_object_by_id(obj_id_b)
+                .transformation.rotation()
+            )
+            c.frame_a = link_frame_world_space.inverted().__matmul__(
+                object_frame_world_space
+            )
+
         return self._sim.create_rigid_constraint(c)
+
+    # def create_hold_constraint(
+    #     self,
+    #     pivot_in_link: mn.Vector3,
+    #     pivot_in_obj: mn.Vector3,
+    #     obj_id_b: int,
+    #     link_id_b: Optional[int] = None,
+    # ) -> int:
+    #     """Create a new rigid point-to-point (ball joint) constraint between the robot and an object.
+
+    #     :param pivot_in_link: The origin of the constraint in end effector local space.
+    #     :param pivot_in_obj: The origin of the constraint in object local space.
+    #     :param obj_id_b: The id of the object to be constrained to the end effector.
+    #     :param link_id_b: If the object is articulated, provide the link index for the constraint.
+
+    #     :return: The id of the newly created constraint or -1 if failed.
+    #     """
+    #     c = RigidConstraintSettings()
+    #     c.object_id_a = self._sim.robot.get_robot_sim_id()
+    #     c.link_id_a = self._sim.robot.ee_link_id
+    #     c.object_id_b = obj_id_b
+    #     if link_id_b is not None:
+    #         c.link_id_b = link_id_b
+    #     c.pivot_a = pivot_in_link
+    #     c.pivot_b = pivot_in_obj
+    #     c.max_impulse = self._config.GRASP_IMPULSE
+    #     return self._sim.create_rigid_constraint(c)
 
     def update_object_to_grasp(self) -> None:
         """
@@ -219,8 +271,67 @@ class RearrangeGraspManager:
         """
         self.snap_rigid_obj.transformation = self._sim.robot.ee_transform
 
-    def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
-        """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
+    # def snap_to_obj(self, snap_obj_id: int, force: bool = True) -> None:
+    #     """Attempt to grasp an object, snapping/constraining it to the robot's end effector with 3 ball-joint constraints forming a fixed frame.
+
+    #     :param snap_obj_id: The id of the object to be constrained to the end effector.
+    #     :param force: Will kinematically snap the object to the robot's end-effector, even if
+    #         the object is already in the grasped state.
+    #     """
+    #     if snap_obj_id == self._snapped_obj_id:
+    #         # Already grasping this object.
+    #         return
+
+    #     if len(self._snap_constraints) != 0:
+    #         # We were already grabbing something else.
+    #         raise ValueError(
+    #             f"Tried snapping to {snap_obj_id} when already snapped to {self._snapped_obj_id}"
+    #         )
+
+    #     self._snapped_obj_id = snap_obj_id
+    #     if force:
+    #         # Set the transformation to be in the robot's hand already.
+    #         self.update_object_to_grasp()
+
+    #     # Set collision group to GraspedObject so that it doesn't collide
+    #     # with the links of the robot.
+    #     self.snap_rigid_obj.override_collision_group(
+    #         CollisionGroups.UserGroup7
+    #     )
+
+    #     self._snap_constraints = [
+    #         self.create_hold_constraint(
+    #             mn.Vector3(0.1, 0, 0),
+    #             mn.Vector3(0, 0, 0),
+    #             self._snapped_obj_id,
+    #         ),
+    #         self.create_hold_constraint(
+    #             mn.Vector3(0.0, 0, 0),
+    #             mn.Vector3(-0.1, 0, 0),
+    #             self._snapped_obj_id,
+    #         ),
+    #         self.create_hold_constraint(
+    #             mn.Vector3(0.1, 0.0, 0.1),
+    #             mn.Vector3(0.0, 0.0, 0.1),
+    #             self._snapped_obj_id,
+    #         ),
+    #     ]
+
+    #     self._sim.robot.open_gripper()
+
+    #     if any((x == -1 for x in self._snap_constraints)):
+    #         raise ValueError("Created bad constraint")
+
+    def snap_to_obj(
+        self,
+        snap_obj_id: int,
+        force: bool = True,
+        should_open_gripper=True,
+        rel_pos: Optional[mn.Vector3] = None,
+        keep_T: Optional[mn.Matrix4] = None,
+    ) -> None:
+        """Attempt to grasp an object, snapping/constraining it to the robot's
+        end effector with 3 ball-joint constraints forming a fixed frame.
 
         :param snap_obj_id: The id of the object to be constrained to the end effector.
         :param force: Will kinematically snap the object to the robot's end-effector, even if
@@ -240,6 +351,9 @@ class RearrangeGraspManager:
         if force:
             # Set the transformation to be in the robot's hand already.
             self.update_object_to_grasp()
+        robot = self._sim.robot
+
+        robot.open_gripper()
 
         # Set collision group to GraspedObject so that it doesn't collide
         # with the links of the robot.
@@ -247,25 +361,25 @@ class RearrangeGraspManager:
             CollisionGroups.UserGroup7
         )
 
+        self._keep_T = keep_T
+
+        # Get object transform in EE frame
+        if rel_pos is None:
+            rel_pos = mn.Vector3.zero_init()
+
         self._snap_constraints = [
             self.create_hold_constraint(
-                mn.Vector3(0.1, 0, 0),
-                mn.Vector3(0, 0, 0),
-                self._snapped_obj_id,
-            ),
-            self.create_hold_constraint(
-                mn.Vector3(0.0, 0, 0),
-                mn.Vector3(-0.1, 0, 0),
-                self._snapped_obj_id,
-            ),
-            self.create_hold_constraint(
-                mn.Vector3(0.1, 0.0, 0.1),
-                mn.Vector3(0.0, 0.0, 0.1),
-                self._snapped_obj_id,
+                RigidConstraintType.Fixed,
+                # link pivot is the object in link space
+                pivot_in_link=rel_pos,
+                # object pivot is local origin
+                pivot_in_obj=mn.Vector3.zero_init(),
+                obj_id_b=self._snapped_obj_id,
             ),
         ]
 
-        self._sim.robot.open_gripper()
+        if should_open_gripper:
+            robot.open_gripper()
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")

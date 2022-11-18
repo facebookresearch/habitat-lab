@@ -1,0 +1,18 @@
+stage_goals:
+  stage_0_5:
+    - "holding(goal0|0)"
+  stage_1:
+    - "at(goal0|0,TARGET_goal0|0)"
+start:
+    precondition: []
+    state: {}
+
+goal:
+  - "at(goal0|0,TARGET_goal0|0)"
+  # - "not_holding()"
+
+solution:
+    - "nav(goal0|0)"
+    - "pick(goal0|0)"
+    - "nav(TARGET_goal0|0)"
+    - "place(goal0|0,TARGET_goal0|0)"

@@ -19,6 +19,8 @@ from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import Config, VectorEnv, logger
+from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
+from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.core.environments import get_env_class
 from habitat.utils import profiling_wrapper
 from habitat.utils.env_utils import construct_envs
@@ -734,6 +736,14 @@ class PPOTrainer(BaseRLTrainer):
         Returns:
             None
         """
+        if self.config.RESUME_CKPT != "":
+            ckpt_dict = self.load_checkpoint(
+                self.config.RESUME_CKPT, map_location="cpu"
+            )
+            raw_config = ckpt_dict["config"]
+            self._convert_gala_cfg(self.config, raw_config)
+        else:
+            ckpt_dict = None
 
         self._init_train()
 
@@ -766,6 +776,10 @@ class PPOTrainer(BaseRLTrainer):
             self.window_episode_stats.update(
                 requeue_stats["window_episode_stats"]
             )
+
+        if ckpt_dict is not None:
+            if self.agent.actor_critic.should_load_agent_state:
+                self.agent.load_state_dict(ckpt_dict["state_dict"])
 
         ppo_cfg = self.config.RL.PPO
 
@@ -890,6 +904,42 @@ class PPOTrainer(BaseRLTrainer):
 
             self.envs.close()
 
+    def _convert_gala_cfg(self, config, raw_cfg):
+        config.defrost()
+        config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+
+        self.config.defrost()
+        fuse_keys = []
+        map_sensors = {
+            "ROBOT_TARGET_RELATIVE": "obj_start_gps_compass",
+            "ROBOT_GOAL_RELATIVE": "obj_goal_gps_compass",
+            "EE_TARGET_RELATIVE": "obj_start_sensor",
+            "EE_GOAL_RELATIVE": "obj_goal_sensor",
+            "ROBOT_EE_RELATIVE": "ee_pos",
+            "IS_HOLDING_SENSOR": "is_holding",
+            "JOINT_SENSOR": "joint",
+            "STEP_COUNT_SENSOR": "step_count_remaining",
+        }
+        for sensor in raw_cfg.SENSORS:
+            if sensor in ["DEPTH_SENSOR", "RGB_SENSOR"]:
+                continue
+            fuse_keys.append(map_sensors[sensor])
+
+        self.config.RL.POLICY.fuse_keys = fuse_keys
+        if self.config.RL.POLICY.name == "WrapperPolicy":
+            self.config.RL.POLICY.wrapped_name = raw_cfg.RL.POLICY.name
+        else:
+            self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+        self.config.RL.POLICY.SENSOR_ORDERING = fuse_keys
+        self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
+        config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_PICK_THRESH = (
+            raw_cfg.GRASP_THRESHOLD
+        )
+        config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_DROP_THRESH = (
+            raw_cfg.DROP_THRESHOLD
+        )
+        self.config.freeze()
+
     def _eval_checkpoint(
         self,
         checkpoint_path: str,
@@ -926,45 +976,9 @@ class PPOTrainer(BaseRLTrainer):
 
         ppo_cfg = config.RL.PPO
 
-        config.defrost()
         #################################
         # Gala specific options. Map gala config options to H2.0 config.
-        if config.EVAL.SPLIT == "val":
-            config.EVAL.SPLIT = "eval"
-        config.RL.POLICY.name = raw_cfg.RL.POLICY.name
-
-        self.config.defrost()
-        fuse_keys = []
-        map_sensors = {
-            "ROBOT_TARGET_RELATIVE": "obj_start_gps_compass",
-            "ROBOT_GOAL_RELATIVE": "obj_goal_gps_compass",
-            "EE_TARGET_RELATIVE": "obj_start_sensor",
-            "EE_GOAL_RELATIVE": "obj_goal_sensor",
-            "ROBOT_EE_RELATIVE": "ee_pos",
-            "IS_HOLDING_SENSOR": "is_holding",
-            "JOINT_SENSOR": "joint",
-            "STEP_COUNT_SENSOR": "step_count_remaining",
-        }
-        for sensor in raw_cfg.SENSORS:
-            if sensor in ["DEPTH_SENSOR", "RGB_SENSOR"]:
-                continue
-            fuse_keys.append(map_sensors[sensor])
-
-        self.config.RL.POLICY.fuse_keys = fuse_keys
-        if self.config.RL.POLICY.name == "WrapperPolicy":
-            self.config.RL.POLICY.wrapped_name = raw_cfg.RL.POLICY.name
-        else:
-            self.config.RL.POLICY.name = raw_cfg.RL.POLICY.name
-        self.config.RL.POLICY.SENSOR_ORDERING = fuse_keys
-        self.config.RL.DDPPO.rnn_type = raw_cfg.RL.DDPPO.rnn_type
-        config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_PICK_THRESH = (
-            raw_cfg.GRASP_THRESHOLD
-        )
-        config.TASK_CONFIG.TASK.ACTIONS.ARM_ACTION.GRASP_DROP_THRESH = (
-            raw_cfg.DROP_THRESHOLD
-        )
-        self.config.freeze()
-
+        self._convert_gala_cfg(config, raw_cfg)
         #################################
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
@@ -1023,8 +1037,6 @@ class PPOTrainer(BaseRLTrainer):
             observations, device=self.device, cache=self._obs_batching_cache
         )
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-        for orig, map_to in map_sensors.items():
-            print(map_to, list(batch[map_to].view(-1).cpu().numpy()))
         current_episode_reward = torch.zeros(
             self.envs.num_envs, 1, device="cpu"
         )
@@ -1102,7 +1114,7 @@ class PPOTrainer(BaseRLTrainer):
                             test_recurrent_hidden_states,
                             did_act,
                         ) = res
-
+                    # prev_actions.copy_(actions)
                     for i, should_add in enumerate(did_act):
                         if should_add:
                             prev_actions[i].copy_(actions[i])  # type: ignore
@@ -1196,6 +1208,14 @@ class PPOTrainer(BaseRLTrainer):
 
                         rgb_frames[i] = []
 
+                    gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
+                    if gfx_str != "":
+                        write_gfx_replay(
+                            gfx_str,
+                            self.config.TASK_CONFIG.TASK,
+                            current_episodes[i].episode_id,
+                        )
+
                 # episode continues
                 elif len(self.config.VIDEO_OPTION) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
@@ -1208,6 +1228,8 @@ class PPOTrainer(BaseRLTrainer):
                     rgb_frames[i].append(frame)
 
             not_done_masks = not_done_masks.to(device=self.device)
+            if isinstance(self.actor_critic, WrapperPolicy):
+                self.actor_critic.add_paused_envs(envs_to_pause)
             (
                 self.envs,
                 test_recurrent_hidden_states,
@@ -1234,6 +1256,16 @@ class PPOTrainer(BaseRLTrainer):
                 sum(v[stat_key] for v in stats_episodes.values())
                 / num_episodes
             )
+        succ_k = "composite_success"
+        aggregated_stats[succ_k + "_err"] = (
+            np.sqrt(
+                sum(
+                    (v[succ_k] - aggregated_stats[succ_k]) ** 2
+                    for v in stats_episodes.values()
+                )
+            )
+            / num_episodes
+        )
 
         for k, v in aggregated_stats.items():
             logger.info(f"Average episode {k}: {v:.4f}")

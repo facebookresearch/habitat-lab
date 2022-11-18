@@ -10,7 +10,13 @@ class WrapperPolicy(Policy):
         super().__init__()
         self._wrapped_policy = wrapped_policy
         self._timesteps = torch.zeros(n_envs)
+        self._n_envs = n_envs
         self._policy_cfg = policy_cfg
+        self._active_envs = list(range(self._n_envs))
+
+    def add_paused_envs(self, paused):
+        for i in reversed(paused):
+            self._active_envs.pop(i)
 
     def act(
         self,
@@ -20,8 +26,12 @@ class WrapperPolicy(Policy):
         masks,
         deterministic=False,
     ):
-        self._timesteps *= masks.view(-1).cpu()
-        should_act = (self._timesteps % self._policy_cfg.act_freq) == 0
+        if masks.shape[0] == self._timesteps.shape[0]:
+            self._timesteps[self._active_envs] *= masks.view(-1).cpu()
+
+        should_act = (
+            self._timesteps[self._active_envs] % self._policy_cfg.act_freq
+        ) == 0
 
         _, actions, _, new_rnn_hxs = self._wrapped_policy.act(
             observations, rnn_hidden_states, prev_actions, masks, deterministic
@@ -33,6 +43,17 @@ class WrapperPolicy(Policy):
                 actions[i, 1:] *= 0.0
 
         self._timesteps += 1
+        # When we are at the goal, drop the object.
+        is_holding = observations["is_holding"].bool().view(-1)
+        should_release = (
+            torch.linalg.norm(observations["obj_goal_sensor"], dim=-1)
+            < self._policy_cfg.release_thresh
+        )
+        n_envs = should_release.size(0)
+        for env_i in range(n_envs):
+            if is_holding[env_i] and not should_release[env_i]:
+                # Keep holding
+                actions[:, :1] = 1.0
 
         return (None, actions, None, new_rnn_hxs, should_act)
 

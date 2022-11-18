@@ -56,17 +56,23 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             logger.info(
                 "Rearrange task assets are not downloaded locally, downloading and extracting now..."
             )
-            data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+            data_downloader.main(
+                ["--uids", "rearrange_task_assets", "--no-replace"]
+            )
             logger.info("Downloaded and extracted the data.")
 
         check_and_gen_physics_config()
 
         super().__init__(config)
 
-    def from_json(self, json_str: str, scenes_dir: Optional[str] = None) -> None:
+    def from_json(
+        self, json_str: str, scenes_dir: Optional[str] = None
+    ) -> None:
         deserialized = json.loads(json_str)
 
         for i, episode in enumerate(deserialized["episodes"]):
+            if "name_to_receptacle" in episode:
+                del episode["name_to_receptacle"]
             rearrangement_episode = RearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
 

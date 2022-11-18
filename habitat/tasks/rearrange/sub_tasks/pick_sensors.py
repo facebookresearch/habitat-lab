@@ -33,8 +33,10 @@ class DidPickObjectMeasure(Measure):
         self._did_pick = False
         self.update_metric(*args, episode=episode, **kwargs)
 
-    def update_metric(self, *args, episode, **kwargs):
-        self._did_pick = self._did_pick or self._sim.grasp_mgr.is_grasped
+    def update_metric(self, *args, task, **kwargs):
+        abs_targ_obj_idx = self._sim.scene_obj_ids[0]
+        snapped_id = self._sim.grasp_mgr.snap_idx
+        self._did_pick = self._did_pick or (snapped_id == abs_targ_obj_idx)
         self._metric = int(self._did_pick)
 
 
@@ -51,10 +53,13 @@ class DoesWantPickMeasure(Measure):
         return DoesWantPickMeasure.cls_uuid
 
     def reset_metric(self, *args, episode, **kwargs):
+        self._metric = False
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = float(task.actions['ARM_ACTION'].grip_ctrlr.wants_grasp)
+        self._metric = float(
+            task.actions["ARM_ACTION"].grip_ctrlr.wants_grasp or self._metric
+        )
 
 
 @registry.register_measure

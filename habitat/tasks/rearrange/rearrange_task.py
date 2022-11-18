@@ -15,11 +15,13 @@ from habitat.core.registry import registry
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
+    CacheHelper,
     CollisionDetails,
     rearrange_collision,
     rearrange_logger,
 )
 import json
+import os.path as osp
 
 
 def merge_sim_episode_with_object_config(sim_config, episode):
@@ -69,6 +71,22 @@ class RearrangeTask(NavigationTask):
         else:
             self._ep_starts = None
 
+        data_path = dataset.config.DATA_PATH.format(split=dataset.config.SPLIT)
+        fname = data_path.split("/")[-1].split(".")[0]
+        cache_path = osp.join(
+            osp.dirname(data_path),
+            f"{fname}_robot_start.pickle",
+        )
+        if self._config.SHOULD_SAVE_TO_CACHE or osp.exists(cache_path):
+            self._robot_init_cache = CacheHelper(
+                cache_path,
+                def_val={},
+                verbose=False,
+            )
+            self._robot_pos_start = self._robot_init_cache.load()
+        else:
+            self._robot_pos_start = None
+
     @property
     def targ_idx(self):
         return self._targ_idx
@@ -89,6 +107,27 @@ class RearrangeTask(NavigationTask):
     def set_sim_reset(self, sim_reset):
         self._sim_reset = sim_reset
 
+    def _get_cached_robot_start(self, agent_idx: int = 0):
+        start_ident = f"{self._episode_id}_0"
+        if (
+            self._robot_pos_start is None
+            or start_ident not in self._robot_pos_start
+            or self._config.FORCE_REGENERATE
+        ):
+            return None
+        else:
+            return self._robot_pos_start[start_ident]
+
+    def _set_robot_start(self) -> None:
+        robot_start = self._get_cached_robot_start()
+        if robot_start is None:
+            robot_pos, robot_rot = self._sim.set_robot_base_to_random_point()
+        else:
+            robot_pos, robot_rot = robot_start
+        robot = self._sim.robot
+        robot.base_pos = robot_pos
+        robot.base_rot = robot_rot
+
     def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
@@ -98,18 +137,7 @@ class RearrangeTask(NavigationTask):
             for action_instance in self.actions.values():
                 action_instance.reset(episode=episode, task=self)
             self._is_episode_active = True
-            if self._ep_starts is not None:
-                start_pos, start_rot = self._ep_starts[
-                    self._cur_ep_cache_starts
-                ]
-                check_pos = self._ep_targ_pos[self._cur_ep_cache_starts]
-                valid_y = self._sim.pathfinder.get_random_navigable_point()[1]
-                self._sim.robot.base_pos = mn.Vector3(
-                    [start_pos[0], valid_y, start_pos[1]]
-                )
-                self._sim.robot.base_rot = start_rot
-            else:
-                self._sim.set_robot_base_to_random_point()
+            self._set_robot_start()
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0

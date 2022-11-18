@@ -177,10 +177,14 @@ class GalaArmDynAction(SimulatorTaskAction):
         # go.
 
         delta_pos = interp_step(self._config.SCALING, set_pos)
+        desired_pos = delta_pos + self._sim.robot.arm_joint_pos
 
-        self._sim.robot.arm_motor_pos = (
-            delta_pos + self._sim.robot.arm_motor_pos
-        )
+        # self._sim.robot._interpolate_arm_control(
+        #     desired_pos, self._sim.robot.params.arm_joints, 0.1, 120.0
+        # )
+
+        self._sim.robot.arm_motor_pos = desired_pos
+        # self._sim.robot.arm_velocity = delta_pos
 
 
 @registry.register_task_action

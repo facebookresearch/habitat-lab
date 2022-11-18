@@ -10,11 +10,12 @@ GYM:
     - obj_goal_sensor
     - obj_goal_gps_compass
 ENVIRONMENT:
-    MAX_EPISODE_STEPS: 500
+    MAX_EPISODE_STEPS: 1500
+    #MAX_EPISODE_STEPS: 500
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -201,6 +202,9 @@ SIMULATOR:
         - 0
         - 0
         - 1
+    THIRD_RGB_SENSOR:
+        WIDTH: 512
+        HEIGHT: 512
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128

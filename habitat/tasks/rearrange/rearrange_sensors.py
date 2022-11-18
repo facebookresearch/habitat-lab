@@ -921,3 +921,38 @@ class RearrangeReward(Measure):
             ),
         )
         return reward
+
+@registry.register_measure
+class GfxReplayMeasure(Measure):
+    cls_uuid: str = "gfx_replay_keyframes_string"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._config = config
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return GfxReplayMeasure.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._gfx_replay_keyframes_string = None
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        if (
+            not task._is_episode_active
+            and self._sim.sim_config.sim_cfg.enable_gfx_replay_save
+        ):
+            self._metric = (
+                self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
+            )
+        else:
+            self._metric = ""
+
+    def get_metric(self, force_get=False):
+        if force_get and self._sim.sim_config.sim_cfg.enable_gfx_replay_save:
+            return (
+                self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
+            )
+        return super().get_metric()

@@ -19,6 +19,7 @@ from habitat.core.simulator import Observations
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
+from habitat.robots.fetch_suction import FetchSuctionRobot
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
@@ -172,7 +173,19 @@ class RearrangeSim(HabitatSim):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
+        if self.habitat_config.get("BAKED_SCENE", False):
+            ep_info["scene_id"] = ep_info["scene_id"].replace(
+                "/replica_cad/", "/replica_cad_baked_lighting/"
+            )
+            ep_info["scene_id"] = ep_info["scene_id"].replace(
+                "v3_sc", "Baked_sc"
+            )
+            ep_info[
+                "scene_dataset_config"
+            ] = "data/replica_cad_baked_lighting/replicaCAD_baked.scene_dataset_config.json"
+
         config["SCENE"] = ep_info["scene_id"]
+        config["SCENE_DATASET"] = ep_info["scene_dataset_config"]
 
         super().reconfigure(config, should_close_on_new_scene=False)
 
@@ -310,11 +323,11 @@ class RearrangeSim(HabitatSim):
                     break
             if not did_collide:
                 break
-        if attempt_i == max_attempts - 1:
-            raise ValueError()
-            rearrange_logger.warning(
-                f"Could not find a collision free start for {self.ep_info['episode_id']}"
-            )
+        # if attempt_i == max_attempts - 1:
+        #     raise ValueError()
+        #     rearrange_logger.warning(
+        #         f"Could not find a collision free start for {self.ep_info['episode_id']}"
+        #     )
         return start_pos, start_rot
 
     def _setup_targets(self):
@@ -437,15 +450,21 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         obj_counts: Dict[str, int] = defaultdict(int)
 
+        obj_attr_mgr = self.get_object_template_manager()
+        if self.habitat_config.get("BAKED_SCENE", False):
+            for path in self.habitat_config.ADDITIONAL_OBJECT_PATHS:
+                obj_attr_mgr.load_configs(path)
+
         for i, (obj_handle, transform) in enumerate(ep_info["rigid_objs"]):
             if should_add_objects:
                 obj_attr_mgr = self.get_object_template_manager()
                 matching_templates = (
                     obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
                 )
-                assert (
-                    len(matching_templates.values()) == 1
-                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
+                if len(matching_templates.values()) != 1:
+                    raise ValueError(
+                        f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
+                    )
                 ro = rom.add_object_by_template_handle(
                     list(matching_templates.keys())[0]
                 )
@@ -669,9 +688,7 @@ class RearrangeSim(HabitatSim):
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
 
-        if self.habitat_config.HABITAT_SIM_V0.get(
-            "ENABLE_GFX_REPLAY_SAVE", False
-        ):
+        if self.habitat_config.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE:
             self.gfx_replay_manager.save_keyframe()
 
         return obs

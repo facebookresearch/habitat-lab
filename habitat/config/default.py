@@ -48,6 +48,7 @@ _C.TASK.SUCCESS_MEASURE = "spl"
 _C.TASK.SUCCESS_REWARD = 2.5
 _C.TASK.SLACK_REWARD = -0.01
 _C.TASK.END_ON_SUCCESS = False
+_C.TASK.GFX_REPLAY_DIR = "data/replays"
 # -----------------------------------------------------------------------------
 # # NAVIGATION TASK
 # -----------------------------------------------------------------------------
@@ -406,6 +407,9 @@ _C.TASK.ART_OBJ_AT_DESIRED_STATE = CN()
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.TYPE = "ArtObjAtDesiredState"
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.USE_ABSOLUTE_DISTANCE = True
 _C.TASK.ART_OBJ_AT_DESIRED_STATE.SUCCESS_DIST_THRESHOLD = 0.05
+
+_C.TASK.GFX_REPLAY_MEASURE = CN()
+_C.TASK.GFX_REPLAY_MEASURE.TYPE = "GfxReplayMeasure"
 
 _C.TASK.EE_DIST_TO_MARKER = CN()
 _C.TASK.EE_DIST_TO_MARKER.TYPE = "EndEffectorDistToMarker"
@@ -809,6 +813,7 @@ _C.SIMULATOR.HABITAT_SIM_V0.PHYSICS_CONFIG_FILE = (
 )
 # Possibly unstable optimization for extra performance with concurrent rendering
 _C.SIMULATOR.HABITAT_SIM_V0.LEAVE_CONTEXT_WITH_BACKGROUND_RENDERER = False
+_C.SIMULATOR.HABITAT_SIM_V0.ENABLE_GFX_REPLAY_SAVE = False
 # -----------------------------------------------------------------------------
 # PYROBOT
 # -----------------------------------------------------------------------------

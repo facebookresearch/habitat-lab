@@ -1,5 +1,5 @@
 VERBOSE: False
-BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/gala_nav_pick_nav_place.yaml
+BASE_TASK_CONFIG_PATH: configs/tasks/rearrange/rearrange_easy.yaml
 TRAINER_NAME: "ddppo"
 ENV_NAME: "RearrangeRLEnv"
 SIMULATOR_GPU_ID: 0
@@ -7,7 +7,7 @@ TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
 TENSORBOARD_DIR: "tb"
 VIDEO_DIR: "video_dir"
-VIDEO_FPS: 30
+VIDEO_FPS: 45
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 TEST_EPISODE_COUNT: -1
@@ -32,7 +32,10 @@ EVAL:
 
 RL:
   POLICY:
-      name: "PointNavBaselinePolicy"
+      name: "WrapperPolicy"
+      act_freq: 1
+      wrapped_name: "PointNavBaselinePolicy"
+      release_thresh: 0.3
       action_distribution_type: "gaussian"
       include_visual_keys: ["robot_head_depth", "robot_head_rgb"]
       action_distribution_type: "gaussian_and_categorical"

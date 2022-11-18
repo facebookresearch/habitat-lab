@@ -14,9 +14,7 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
-    #DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/test.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -25,7 +23,7 @@ TASK:
     # START_CACHE: ../gala_kinematic/data/tidy_house_100ep.episode_set.json
     START_CACHE: null
     SUCCESS_REWARD: 100.0
-    SLACK_REWARD: -0.01
+    SLACK_REWARD: -0.0
     END_ON_SUCCESS: true
     MAX_COLLISIONS: -1.0
     COUNT_OBJ_COLLISIONS: true
@@ -39,7 +37,7 @@ TASK:
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
-    TASK_SPEC: gala
+    TASK_SPEC: gala_rearrange
     PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
@@ -109,11 +107,12 @@ TASK:
     - DID_PICK_OBJECT
     - MOVE_OBJECTS_REWARD
     - DOES_WANT_PICK
+    - GFX_REPLAY_MEASURE
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
-            ARM_CONTROLLER: GalaArmKinematicAction
-            GRIP_CONTROLLER: GalaMagicGraspAction
+            ARM_CONTROLLER: GalaArmDynAction
+            GRIP_CONTROLLER: SuctionGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
@@ -142,14 +141,14 @@ TASK:
     USING_SUBTASKS: false
     MOVE_OBJECTS_REWARD:
         TYPE: MoveObjectsReward
-        PICK_REWARD: 1.0
+        PICK_REWARD: 10.0
         SUCCESS_DIST: 0.15
         SINGLE_REARRANGE_REWARD: 1.0
         DIST_REWARD: 1.0
-        CONSTRAINT_VIOLATE_PEN: 10.0
+        CONSTRAINT_VIOLATE_PEN: 0.0
         FORCE_PEN: 0.0
-        MAX_FORCE_PEN: 1.0
-        FORCE_END_PEN: 10.0
+        MAX_FORCE_PEN: 0.0
+        FORCE_END_PEN: 0.0
     TARGET_START_GPS_COMPASS_SENSOR:
         TYPE: TargetStartGpsCompassSensor
         INCLUDE_Z: True
@@ -158,21 +157,6 @@ TASK:
         TYPE: TargetGoalGpsCompassSensor
         INCLUDE_Z: True
         CARTESIAN: True
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
     GEN_NAVMESH: False
     ADDITIONAL_OBJECT_PATHS:
@@ -203,10 +187,12 @@ SIMULATOR:
         - 0
         - 0
         - 1
+    THIRD_RGB_SENSOR:
+        WIDTH: 256
+        HEIGHT: 256
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
-        HFOV: 90
     HEAD_DEPTH_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -235,9 +221,11 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
-    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-    ROBOT_TYPE: FetchRobot
+
+    ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+    ROBOT_TYPE: FetchSuctionRobot
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480

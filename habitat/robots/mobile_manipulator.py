@@ -586,7 +586,7 @@ class MobileManipulator(RobotInterface):
                 joint_positions[self.joint_pos_indices[jidx]] = (
                     delta[j] * (i + 1) + curs[j]
                 )
-            self.sim_obj.joint_positions = joint_positions
+            #self.sim_obj.joint_positions = joint_positions
             self._sim.step_world(1 / ctrl_freq)
             if get_observations:
                 observations.append(self._sim.get_sensor_observations())

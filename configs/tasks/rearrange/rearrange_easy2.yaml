@@ -11,12 +11,11 @@ GYM:
     - obj_goal_gps_compass
 ENVIRONMENT:
     MAX_EPISODE_STEPS: 1500
+    #MAX_EPISODE_STEPS: 500
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
-    #DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/test.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
     SCENES_DIR: data/replica_cad/
 TASK:
     TYPE: RearrangeCompositeTask-v0
@@ -39,7 +38,7 @@ TASK:
     BASE_NOISE: 0.05
     EASY_INIT: false
     TASK_SPEC_BASE_PATH: configs/tasks/rearrange/pddl/
-    TASK_SPEC: gala
+    TASK_SPEC: gala_rearrange
     PDDL_DOMAIN_DEF: configs/tasks/rearrange/pddl/replica_cad_domain.yaml
     OBJ_SUCC_THRESH: 0.3
     ART_SUCC_THRESH: 0.15
@@ -112,8 +111,8 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: ArmAction
-            ARM_CONTROLLER: GalaArmKinematicAction
-            GRIP_CONTROLLER: GalaMagicGraspAction
+            ARM_CONTROLLER: GalaArmDynAction
+            GRIP_CONTROLLER: MagicGraspAction
             ARM_JOINT_DIMENSIONALITY: 7
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: false
@@ -158,21 +157,6 @@ TASK:
         TYPE: TargetGoalGpsCompassSensor
         INCLUDE_Z: True
         CARTESIAN: True
-    REARRANGE_NAV_TO_OBJ_SUCCESS:
-        TYPE: NavToObjSuccess
-        SUCCESS_ANGLE_DIST: 0.7
-        MUST_LOOK_AT_TARG: true
-        HEURISTIC_STOP: false
-        MUST_CALL_STOP: false
-    NAV_TO_POS_SUCC:
-        TYPE: NavToPosSucc
-        SUCCESS_DISTANCE: 0.2
-    PLACE_SUCCESS:
-        TYPE: PlaceSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
-    PICK_SUCCESS:
-        TYPE: RearrangePickSuccess
-        EE_RESTING_SUCCESS_THRESHOLD: 0.3
 SIMULATOR:
     GEN_NAVMESH: False
     ADDITIONAL_OBJECT_PATHS:
@@ -203,10 +187,12 @@ SIMULATOR:
         - 0
         - 0
         - 1
+    THIRD_RGB_SENSOR:
+        WIDTH: 512
+        HEIGHT: 512
     HEAD_RGB_SENSOR:
         WIDTH: 128
         HEIGHT: 128
-        HFOV: 90
     HEAD_DEPTH_SENSOR:
         WIDTH: 128
         HEIGHT: 128
@@ -235,9 +221,11 @@ SIMULATOR:
         GPU_DEVICE_ID: 0
         GPU_GPU: false
         PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+
     ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_fetch.urdf
     ROBOT_TYPE: FetchRobot
     IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
+
     SEED: 100
     SEMANTIC_SENSOR:
         HEIGHT: 480
