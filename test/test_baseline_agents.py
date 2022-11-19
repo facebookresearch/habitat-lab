@@ -45,23 +45,25 @@ def test_ppo_agents(input_type, resolution):
         benchmark = habitat.Benchmark(config_paths=CFG_TEST)
         with habitat.config.read_write(config_env):
             agent_config.RESOLUTION = resolution
-            config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width = (
+            config_env.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor.width = (
                 resolution
             )
-            config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height = (
+            config_env.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor.height = (
                 resolution
             )
-            config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor.width = (
+            config_env.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.width = (
                 resolution
             )
-            config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor.height = (
+            config_env.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.height = (
                 resolution
             )
             if input_type in ["depth", "blind"]:
-                del config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor
+                del (
+                    config_env.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor
+                )
             if input_type in ["rgb", "blind"]:
                 del (
-                    config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor
+                    config_env.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor
                 )
 
         del benchmark._env

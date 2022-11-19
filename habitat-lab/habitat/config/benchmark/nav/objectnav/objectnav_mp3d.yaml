@@ -17,22 +17,23 @@
       turn_angle: 30
       tilt_angle: 30
       action_space_config: "v1"
-      agent_0:
-        sim_sensors:
-          rgb_sensor:
-            width: 640
-            height: 480
-            hfov: 79
-            position: [0, 0.88, 0]
-          depth_sensor:
-            width: 640
-            height: 480
-            hfov: 79
-            min_depth: 0.5
-            max_depth: 5.0
-            position: [0, 0.88, 0]
-        height: 0.88
-        radius: 0.18
+      agents:
+        agent_0:
+          sim_sensors:
+            rgb_sensor:
+              width: 640
+              height: 480
+              hfov: 79
+              position: [0, 0.88, 0]
+            depth_sensor:
+              width: 640
+              height: 480
+              hfov: 79
+              min_depth: 0.5
+              max_depth: 5.0
+              position: [0, 0.88, 0]
+          height: 0.88
+          radius: 0.18
       habitat_sim_v0:
         gpu_device_id: 0
         allow_sliding: False

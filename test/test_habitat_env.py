@@ -249,8 +249,8 @@ def test_rl_vectorized_envs(gpu2gpu):
         with habitat.config.read_write(config):
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
             # Only keep the rgb_sensor
-            config.habitat.simulator.agent_0.sim_sensors = {
-                "rgb_sensor": config.habitat.simulator.agent_0.sim_sensors[
+            config.habitat.simulator.agents.agent_0.sim_sensors = {
+                "rgb_sensor": config.habitat.simulator.agents.agent_0.sim_sensors[
                     "rgb_sensor"
                 ]
             }

@@ -71,7 +71,10 @@ def ResizePIL2(np_img, size=256):
 
 
 def make_good_config_for_orbslam2(config):
-    config.habitat.simulator.agent_0.sensors = ["rgb_sensor", "depth_sensor"]
+    config.habitat.simulator.agents.agent_0.sensors = [
+        "rgb_sensor",
+        "depth_sensor",
+    ]
     config.habitat.simulator.rgb_sensor.width = 256
     config.habitat.simulator.rgb_sensor.height = 256
     config.habitat.simulator.depth_sensor.width = 256

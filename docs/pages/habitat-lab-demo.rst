@@ -128,7 +128,7 @@ the config object.
     config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_mp3d.yaml")
     with read_write(config):
         config.habitat.dataset.split = "val"
-        config.habitat.simulator.agent_0.sim_sensors.update(
+        config.habitat.simulator.agents.agent_0.sim_sensors.update(
             {"semantic_sensor": HabitatSimSemanticSensorConfig(height=256, width=256)}
         )
         config.habitat.simulator.turn_angle = 30

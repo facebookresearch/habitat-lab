@@ -31,14 +31,14 @@ validate that transformation comparing projected and original views.
         config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml")
         with read_write(config):
             config.habitat.dataset.split = "val"
-            config.habitat.simulator.agent_0.sim_sensors.depth_sensor.normalize_depth = False
+            config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.normalize_depth = False
 
         # Intrinsic parameters, assuming width matches height. Requires a simple refactor otherwise
-        W = config.habitat.simulator.agent_0.sim_sensors.depth_sensor.width
-        H = config.habitat.simulator.agent_0.sim_sensors.depth_sensor.height
+        W = config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.width
+        H = config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.height
 
         assert(W == H)
-        hfov = float(config.habitat.simulator.agent_0.sim_sensors.depth_sensor.hfov) * np.pi / 180.
+        hfov = float(config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.hfov) * np.pi / 180.
 
 
         env = habitat.Env(config=config)

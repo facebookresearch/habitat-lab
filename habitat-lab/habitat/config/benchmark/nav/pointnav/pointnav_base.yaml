@@ -12,11 +12,12 @@ habitat:
   environment:
     max_episode_steps: 500
   simulator:
-    agent_0:
-      sim_sensors:
-        rgb_sensor:
-          width: 256
-          height: 256
-        depth_sensor:
-          width: 256
-          height: 256
+    agents:
+      agent_0:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+          depth_sensor:
+            width: 256
+            height: 256

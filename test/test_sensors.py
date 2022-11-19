@@ -291,7 +291,7 @@ def test_imagegoal_sensor():
         config.habitat.task.lab_sensors = {
             "imagegoal_sensor": ImageGoalSensorConfig()
         }
-        config.habitat.simulator.agent_0.sim_sensors = {
+        config.habitat.simulator.agents.agent_0.sim_sensors = {
             "rgb_sensor": HabitatSimRGBSensorConfig()
         }
     with habitat.Env(config=config, dataset=None) as env:
@@ -352,7 +352,7 @@ def test_get_observations_at():
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
         config.habitat.task.lab_sensors = {}
-        config.habitat.simulator.agent_0.sim_sensors = {
+        config.habitat.simulator.agents.agent_0.sim_sensors = {
             "rgb_sensor": HabitatSimRGBSensorConfig(),
             "depth_sensor": HabitatSimDepthSensorConfig(),
         }
@@ -472,7 +472,7 @@ def test_smoke_not_pinhole_sensors(sensors, cuda):
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
         )
-        config.habitat.simulator.agent_0.sim_sensors = sensors
+        config.habitat.simulator.agents.agent_0.sim_sensors = sensors
     smoke_test_sensor(config)
 
 
@@ -518,7 +518,7 @@ def test_smoke_pinhole_sensors(sensor, cuda):
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
         )
-        config.habitat.simulator.agent_0.sim_sensors = sensor
+        config.habitat.simulator.agents.agent_0.sim_sensors = sensor
     smoke_test_sensor(config)
 
 
@@ -531,7 +531,7 @@ def test_noise_models_rgbd():
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
         )
-        config.habitat.simulator.agent_0.sim_sensors = {
+        config.habitat.simulator.agents.agent_0.sim_sensors = {
             "rgb_sensor": HabitatSimRGBSensorConfig(),
             "depth_sensor": HabitatSimDepthSensorConfig(),
         }
@@ -570,13 +570,13 @@ def test_noise_models_rgbd():
 
     with habitat.config.read_write(config):
 
-        config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.noise_model = (
+        config.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor.noise_model = (
             "GaussianNoiseModel"
         )
-        config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
+        config.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
             0.5
         )
-        config.habitat.simulator.agent_0.sim_sensors.depth_sensor.noise_model = (
+        config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.noise_model = (
             "RedwoodDepthNoiseModel"
         )
 

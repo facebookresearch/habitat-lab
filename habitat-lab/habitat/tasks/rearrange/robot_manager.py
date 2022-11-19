@@ -50,8 +50,7 @@ class RobotManager:
         self._is_pb_installed = is_pb_installed()
         self.agent_names = cfg.agents
 
-        for agent_name in cfg.agents:
-            agent_cfg = cfg[agent_name]
+        for agent_name, agent_cfg in cfg.agents.items():
             robot_cls = eval(agent_cfg.robot_type)
             robot = robot_cls(agent_cfg.robot_urdf, sim)
             grasp_mgr = RearrangeGraspManager(sim, cfg, robot)

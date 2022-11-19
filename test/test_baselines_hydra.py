@@ -31,7 +31,7 @@ def my_app_compose_api() -> "DictConfig":
                 # "+task/rearrange@habitat=pick",
                 "+benchmark/rearrange=pick",
                 # "+habitat=benchmark/rearrange/pick",
-                # "+sim_sensors@habitat.simulator.agent_0.sim_sensors.arm_rgb_sensor=arm_rgb_sensor",
+                # "+sim_sensors@habitat.simulator.agents.agent_0.sim_sensors.arm_rgb_sensor=arm_rgb_sensor",
             ]
         )
 

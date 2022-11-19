@@ -50,16 +50,17 @@ class RearrangeSim(HabitatSim):
     def __init__(self, config: "DictConfig"):
         if len(config.agents) > 1:
             with read_write(config):
-                for agent in config.agents:
-                    agent_cfg = config[agent]
+                for agent_name, agent_cfg in config.agents.items():
                     # using list to create a copy of the sim_sensors keys since we will be
                     # editing the sim_sensors config
                     sensor_keys = list(agent_cfg.sim_sensors.keys())
                     for sensor_key in sensor_keys:
                         sensor_config = agent_cfg.sim_sensors.pop(sensor_key)
-                        sensor_config.uuid = f"{agent}_{sensor_config.uuid}"
+                        sensor_config.uuid = (
+                            f"{agent_name}_{sensor_config.uuid}"
+                        )
                         agent_cfg.sim_sensors[
-                            f"{agent}_{sensor_key}"
+                            f"{agent_name}_{sensor_key}"
                         ] = sensor_config
 
         super().__init__(config)

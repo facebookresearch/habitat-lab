@@ -99,7 +99,7 @@ def test_trainers(config_path, num_updates, trainer_name):
     )
     with read_write(config):
         # Changing the visual observation size for speed
-        for v in config.habitat.simulator.agent_0.sim_sensors.values():
+        for v in config.habitat.simulator.agents.agent_0.sim_sensors.values():
             v.width = 64
             v.height = 64
     random.seed(config.habitat.seed)

@@ -12,10 +12,11 @@ habitat:
   environment:
     max_episode_steps: 500
   simulator:
-    agent_0:
-      robot_urdf: ./data/robots/franka_panda/panda_arm.urdf
-      robot_type: "FrankaRobot"
-      sim_sensors:
-        rgb_sensor:
-          width: 256
-          height: 256
+    agents:
+      agent_0:
+        robot_urdf: ./data/robots/franka_panda/panda_arm.urdf
+        robot_type: "FrankaRobot"
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256

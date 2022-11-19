@@ -593,7 +593,7 @@ if __name__ == "__main__":
 
         if not args.same_task:
             sim_config.debug_render = True
-            sim_config.agent_0.sim_sensors.update(
+            sim_config.agents.agent_0.sim_sensors.update(
                 {
                     "third_rgb_sensor": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res

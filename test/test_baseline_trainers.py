@@ -217,11 +217,11 @@ def test_cubemap_stiching(
         sensor_uuids = []
 
         if sensor_type == "rgb":
-            config.simulator.agent_0.sim_sensors = {
+            config.simulator.agents.agent_0.sim_sensors = {
                 "rgb_sensor": HeadRGBSensorConfig(width=256, height=256),
             }
         elif sensor_type == "depth":
-            config.simulator.agent_0.sim_sensors = {
+            config.simulator.agents.agent_0.sim_sensors = {
                 "depth_sensor": HeadDepthSensorConfig(width=256, height=256),
             }
         else:
@@ -229,7 +229,8 @@ def test_cubemap_stiching(
                 "Typo in the sensor type in test_cubemap_stiching"
             )
         sensor = getattr(
-            config.simulator.agent_0.sim_sensors, f"{sensor_type}_sensor"
+            config.simulator.agents.agent_0.sim_sensors,
+            f"{sensor_type}_sensor",
         )
         for camera_id in range(CAMERA_NUM):
             camera_template = f"{sensor_type}_{camera_id}"
@@ -238,7 +239,7 @@ def test_cubemap_stiching(
             camera_config.uuid = camera_template.lower()
             sensor_uuids.append(camera_config.uuid)
             setattr(
-                config.simulator.agent_0.sim_sensors,
+                config.simulator.agents.agent_0.sim_sensors,
                 camera_template,
                 camera_config,
             )
