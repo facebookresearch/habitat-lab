@@ -15,6 +15,7 @@ from glob import glob
 import pytest
 import torch
 import yaml
+from omegaconf import OmegaConf
 
 import habitat
 import habitat.datasets.rearrange.run_episode_generator as rr_gen
@@ -190,7 +191,8 @@ def test_rearrange_episode_generator(
     debug_visualization, num_episodes, config
 ):
     cfg = rr_gen.get_config_defaults()
-    cfg.merge_from_file(config)
+    override_config = OmegaConf.load(config)
+    cfg = OmegaConf.merge(cfg, override_config)
     dataset = RearrangeDatasetV0()
     with rr_gen.RearrangeEpisodeGenerator(
         cfg=cfg, debug_visualization=debug_visualization
