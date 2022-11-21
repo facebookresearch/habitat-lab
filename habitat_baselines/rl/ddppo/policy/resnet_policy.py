@@ -574,5 +574,4 @@ class PointNavResNetNet(Net):
             out, rnn_hidden_states, masks, rnn_build_seq_info
         )
         aux_loss_state["rnn_output"] = out
-        
         return out, rnn_hidden_states, aux_loss_state

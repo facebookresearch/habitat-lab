@@ -503,6 +503,8 @@ class BaseVelAction(RobotAction):
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
+        height = self.cur_robot.base_pos[1]
+
         if lin_vel != 0.0 or ang_vel != 0.0:
             trans = self.cur_robot.sim_obj.transformation
             rigid_state = habitat_sim.RigidState(
@@ -524,6 +526,10 @@ class BaseVelAction(RobotAction):
             # self.data_time_1.append(elapsed_time_1)
             # self.data_time_2.append(elapsed_time_2)
             self.check_step()
+
+        cur_pos = self.cur_robot.base_pos
+        cur_pos[1] = height
+        self.cur_robot.base_pos = cur_pos
 
         self.counter += 1
 

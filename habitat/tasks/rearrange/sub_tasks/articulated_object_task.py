@@ -108,6 +108,9 @@ class SetArticulatedObjectTask(RearrangeTask):
         if np.cross(forward[[0, 2]], rel_targ[[0, 2]]) > 0:
             angle_to_obj *= -1.0
 
+        if "stretch" in self._sim.robot.urdf_path:
+            angle_to_obj += 1.57
+
         return angle_to_obj, start_pos
 
     def step(self, action: Dict[str, Any], episode: Episode):

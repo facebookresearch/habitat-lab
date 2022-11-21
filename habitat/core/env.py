@@ -253,7 +253,7 @@ class Env:
         self.episode_gen()
         self.reconfigure(self._config)
         observations = self.task.reset(episode=self.current_episode)
-        print("ee")
+
         # Prevent the episode from fails
         # while True:
         #     if self.task.fail_pos_episode:

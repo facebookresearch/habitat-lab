@@ -64,6 +64,8 @@ class RearrangeGraspManager:
         the agent violated the hold constraint.
         """
         ee_pos = self._managed_robot.ee_transform.translation
+        if self._snapped_obj_id is not None:
+            print("obj dis:",  np.linalg.norm(ee_pos - self.snap_rigid_obj.translation))
         if self._snapped_obj_id is not None and (
             np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
             >= self._config.HOLD_THRESH
@@ -71,10 +73,12 @@ class RearrangeGraspManager:
             return True
         if self._snapped_marker_id is not None:
             marker = self._sim.get_marker(self._snapped_marker_id)
+            print("marker dis:", np.linalg.norm(ee_pos - marker.get_current_position()))
             if (
                 np.linalg.norm(ee_pos - marker.get_current_position())
                 >= self._config.HOLD_THRESH
             ):
+                import pdb; pdb.set_trace()
                 return True
 
         return False

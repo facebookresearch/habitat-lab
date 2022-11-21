@@ -1,0 +1,172 @@
+GYM:
+    AUTO_NAME: "Pick"
+    OBS_KEYS: ['robot_head_depth', "robot_head_semantic", 'joint', 'is_holding', "relative_resting_position", "obj_start_sensor"]
+    CLASS_NAME: ["RearrangeRLEnv"]
+ENVIRONMENT:
+    MAX_EPISODE_STEPS: 500
+DATASET:
+    TYPE: RearrangeDataset-v0
+    SPLIT: train
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
+    SCENES_DIR: "data/replica_cad/"
+EVAL:
+    SPLIT: train
+TASK:
+    TYPE: RearrangePickTask-v0
+    COUNT_OBJ_COLLISIONS: True
+    COUNT_ROBOT_OBJ_COLLS: False
+    DESIRED_RESTING_POSITION: [0.11, -0.38, 0.22]
+    SHOULD_ENFORCE_TARGET_WITHIN_REACH: True
+    # In radians
+    BASE_ANGLE_NOISE: 0.15
+    BASE_NOISE: 0.05
+    FORCE_REGENERATE: True
+    CONSTRAINT_VIOLATION_ENDS_EPISODE: false
+    CONSTRAINT_VIOLATION_DROPS_OBJECT: false
+
+    REWARD_MEASURE: "rearrangepick_reward"
+    SUCCESS_MEASURE: "rearrangepick_success"
+    SUCCESS_REWARD: 100.0
+    SLACK_REWARD: -0.01
+    END_ON_SUCCESS: True
+
+    EASY_INIT: False
+
+    TARGET_START_SENSOR:
+        TYPE: "TargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    GOAL_SENSOR:
+        TYPE: "GoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_TARGET_START_SENSOR:
+        TYPE: "AbsTargetStartSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    ABS_GOAL_SENSOR:
+        TYPE: "AbsGoalSensor"
+        GOAL_FORMAT: "CARTESIAN"
+        DIMENSIONALITY: 3
+    JOINT_SENSOR:
+        TYPE: "JointSensor"
+        DIMENSIONALITY: 10
+    END_EFFECTOR_SENSOR:
+        TYPE: "EEPositionSensor"
+    IS_HOLDING_SENSOR:
+        TYPE: "IsHoldingSensor"
+    RELATIVE_RESTING_POS_SENSOR:
+        TYPE: "RelativeRestingPositionSensor"
+    SENSORS: ["TARGET_START_SENSOR", "JOINT_SENSOR", "IS_HOLDING_SENSOR", "END_EFFECTOR_SENSOR", "RELATIVE_RESTING_POS_SENSOR"]
+    ROBOT_FORCE:
+        TYPE: "RobotForce"
+        MIN_FORCE: 20.0
+    FORCE_TERMINATE:
+        TYPE: "ForceTerminate"
+        MAX_ACCUM_FORCE: 5000.0
+    END_EFFECTOR_TO_OBJECT_DISTANCE:
+        TYPE: "EndEffectorToObjectDistance"
+    END_EFFECTOR_TO_REST_DISTANCE:
+        TYPE: "EndEffectorToRestDistance"
+    DID_PICK_OBJECT:
+        TYPE: "DidPickObjectMeasure"
+    NUM_STEPS:
+        TYPE: "NumStepsMeasure"
+    DID_VIOLATE_HOLD_CONSTRAINT:
+        TYPE: "DidViolateHoldConstraintMeasure"
+    PICK_REWARD:
+        TYPE: "RearrangePickReward"
+        DIST_REWARD: 20.0
+        SUCC_REWARD: 10.0
+        PICK_REWARD: 20.0
+        DROP_PEN: 5.0
+        WRONG_PICK_PEN: 5.0
+        USE_DIFF: True
+        DROP_OBJ_SHOULD_END: True
+        WRONG_PICK_SHOULD_END: True
+
+        # General Rearrange Reward config
+        CONSTRAINT_VIOLATE_PEN: 10.0
+        FORCE_PEN: 0.001
+        MAX_FORCE_PEN: 1.0
+        FORCE_END_PEN: 10.0
+
+    PICK_SUCCESS:
+        TYPE: "RearrangePickSuccess"
+        EE_RESTING_SUCCESS_THRESHOLD: 0.2
+
+    MEASUREMENTS:
+        - "ROBOT_FORCE"
+        - "FORCE_TERMINATE"
+        - "END_EFFECTOR_TO_REST_DISTANCE"
+        - "END_EFFECTOR_TO_OBJECT_DISTANCE"
+        - "DID_PICK_OBJECT"
+        - "PICK_SUCCESS"
+        - "PICK_REWARD"
+        - "DID_VIOLATE_HOLD_CONSTRAINT"
+        - "NUM_STEPS"
+    ACTIONS:
+        ARM_ACTION:
+            TYPE: "ArmAction"
+            ARM_CONTROLLER: "ArmRelPosKinematicReducedActionStretch" #  or ArmRelPosAction
+            GRIP_CONTROLLER: "MagicGraspAction"
+            ARM_JOINT_MASK: [1,0,0,0,1,1,1,1,1,1] # mask out the arm
+            ARM_JOINT_DIMENSIONALITY: 10
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+    POSSIBLE_ACTIONS:
+        - ARM_ACTION
+
+SIMULATOR:
+    ADDITIONAL_OBJECT_PATHS:
+        - "data/objects/ycb/configs/"
+    ACTION_SPACE_CONFIG: v0
+    AGENTS: ['AGENT_0']
+    DEBUG_RENDER: False
+    DEBUG_RENDER_GOAL: False
+    NEEDS_MARKERS: False
+    AGENT_0:
+        HEIGHT: 1.5
+        RADIUS: 0.3
+        SENSORS: [HEAD_RGB_SENSOR, HEAD_DEPTH_SENSOR, HEAD_SEMANTIC_SENSOR]
+        ROBOT_URDF:  /Users/jimmytyyang/Documents/hab_stretch/urdf/hab_stretch.urdf
+        ROBOT_TYPE: "StretchRobot"
+        IK_ARM_URDF:
+    HEAD_RGB_SENSOR:
+        WIDTH: 120
+        HEIGHT: 212
+        HFOV: 69
+    HEAD_DEPTH_SENSOR:
+        WIDTH: 120
+        HEIGHT: 212
+        MIN_DEPTH: 0.0
+        MAX_DEPTH: 10.0
+        NORMALIZE_DEPTH: True
+    HEAD_SEMANTIC_SENSOR:
+        HEIGHT: 212
+        WIDTH: 120
+
+    # Agent setup
+    CTRL_FREQ: 120.0
+    AC_FREQ_RATIO: 4
+    FORWARD_STEP_SIZE: 0.25
+
+    # Grasping
+    HOLD_THRESH: 0.2
+    GRASP_IMPULSE: 10000.0
+
+    DEFAULT_AGENT_ID: 0
+    HABITAT_SIM_V0:
+        ALLOW_SLIDING: False
+        ENABLE_PHYSICS: True
+        GPU_DEVICE_ID: 0
+        GPU_GPU: False
+        PHYSICS_CONFIG_FILE: ./data/default.physics_config.json
+    SEED: 100
+    TYPE: RearrangeSim-v0
+    # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
+    # for the collision detection.
+    COLLISION_DETECTION_METHOD: "NevMesh"
+    KINEMATIC_MODE: True

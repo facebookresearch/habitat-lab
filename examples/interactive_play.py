@@ -74,14 +74,17 @@ except ImportError:
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/open_cab_spot.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/open_cab.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/open_fridge.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/open_fridge_spot.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_spot_blind.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch_final_DRS.yaml"
+DEFAULT_CFG = "configs/tasks/rearrange/open_fridge_stretch.yaml"
+# DEFAULT_CFG = "configs/tasks/rearrange/open_cab_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml" <- common one for the stretch
-DEFAULT_CFG = (
-    "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
-)
+# DEFAULT_CFG = (
+#     "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
+# )
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
@@ -474,7 +477,9 @@ def play_env(env, args, config):
         trans = env.sim.robot.base_transformation
         ee_pos = env.sim.robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
-        print("@interactive_play.py, local_ee_pos:", local_ee_pos, ee_pos)
+        print("@interactive_play.py: env.sim.robot.arm_joint_pos:", env.sim.robot.arm_joint_pos)
+        print("@interactive_play.py: env.sim.robot.arm_motor_pos:", env.sim.robot.arm_motor_pos)
+        #print("@interactive_play.py: arm_joint_angle",env.sim.robot)
         # print("@interactive_play.py, location of robot:", env.sim.robot.base_transformation.translation)
         # print("@interactive_play.py, rotation of robot:", env.sim.robot.sim_obj.rotation)
         # print("rel target pos:", rel_targ_pos)

@@ -36,8 +36,9 @@ class StretchRobot(MobileManipulator):
             # 44: joint_right_wheel
             #wheel_joints=[4, 44],
             wheel_joints=[4, 42],
+            # We for the camera to point toward the target object want to to pick-up
             arm_init_params=np.array(
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.70, -0.43],
                 dtype=np.float32,
             ),
             gripper_init_params=np.array([0.0, 0.0], dtype=np.float32),

@@ -283,6 +283,8 @@ class RobotBase(RobotInterface):
 
     def update_base(self, rigid_state, target_rigid_state):
 
+        height = self.base_pos[1]
+
         cur_state = self._sim.robot.sim_obj.transformation
 
         # Conduct the collision detection
@@ -419,7 +421,7 @@ class RobotBase(RobotInterface):
                 target_rigid_state.rotation.to_matrix(), end_pos
             )
             self.sim_obj.transformation = target_trans
-
+        #import pdb; pdb.set_trace()
         if self._base_type == "leg":
             # Fix the leg joints
             self.leg_joint_pos = [0.0, 0.7, -1.5] * 4
