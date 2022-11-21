@@ -1,9 +1,17 @@
+# @package _global_
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_habitat_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
+habitat:
+  task:
+    success_reward: 2.5
+
 habitat_baselines:
-  base_task_config_path: "tasks/pointnav.yaml"
   trainer_name: "ddppo"
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-  video_option: []
   tensorboard_dir: ""
   eval_ckpt_path_dir: "data/test_checkpoints/ddppo/pointnav/ckpt.0.pth"
   num_environments: 1
@@ -17,8 +25,6 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   rl:
-    success_reward: 2.5
-
     policy:
       name: "PointNavResNetPolicy"
 
@@ -65,5 +71,3 @@ habitat_baselines:
       num_recurrent_layers: 2
 
       force_distributed: True
-
-    gym_action_keys: [ "stop", "move_forward", "turn_left", "turn_right" ]

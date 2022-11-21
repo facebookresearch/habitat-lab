@@ -14,9 +14,10 @@ from gym.envs.registration import register, registry
 import habitat
 import habitat.utils.env_utils
 from habitat.config.default import _HABITAT_CFG_DIR, Config
+from habitat.config.default_structured_configs import ThirdRGBSensorConfig
 from habitat.core.environments import get_env_class
 
-gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/")
+gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "benchmark/")
 
 
 def _get_gym_name(cfg: Config) -> Optional[str]:
@@ -58,19 +59,20 @@ def _make_habitat_gym_env(
         override_options = []
 
     config = habitat.get_config(cfg_file_path)
-
-    sensors = config.habitat.simulator.agent_0.sensors
-
     if use_render_mode:
-        override_options.extend(
-            [
-                "habitat.simulator.agent_0.sensors",
-                [*sensors, "third_rgb_sensor"],
-            ]
-        )
-
-    # Re-loading the config since we modified the override_options
-    config = habitat.get_config(cfg_file_path, override_options)
+        with habitat.config.read_write(config):
+            if len(config.habitat.simulator.agents) == 1:
+                config.habitat.simulator.agent_0.sim_sensors.update(
+                    {"third_rgb_sensor": ThirdRGBSensorConfig()}
+                )
+            else:
+                config.habitat.simulator.agent_0.sim_sensors.update(
+                    {
+                        "agent_0_third_rgb_sensor": ThirdRGBSensorConfig(
+                            uuid="agent_0_robot_third_rgb"
+                        )
+                    }
+                )
     env = make_gym_from_config(config)
     return env
 

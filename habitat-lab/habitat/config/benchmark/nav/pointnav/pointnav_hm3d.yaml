@@ -1,0 +1,5 @@
+# @package _global_
+
+defaults:
+  - pointnav_base
+  - /habitat/dataset/pointnav: hm3d

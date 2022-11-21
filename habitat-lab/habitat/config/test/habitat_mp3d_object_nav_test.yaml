@@ -1,49 +1,10 @@
+# @package _global_
+
+defaults:
+  - /benchmark/nav/objectnav/objectnav_mp3d.yaml
+  - _self_
+
 habitat:
-  environment:
-    max_episode_steps: 500
-  simulator:
-    turn_angle: 30
-    tilt_angle: 30
-    action_space_config: "v1"
-    agent_0:
-      sensors: ['rgb_sensor', 'depth_sensor']
-      height: 0.88
-      radius: 0.2
-    habitat_sim_v0:
-      gpu_device_id: 0
-    semantic_sensor:
-      width: 640
-      height: 480
-      hfov: 79
-      position: [0, 0.88, 0]
-    rgb_sensor:
-      width: 640
-      height: 480
-      hfov: 79
-      position: [0, 0.88, 0]
-    depth_sensor:
-      width: 640
-      height: 480
-      hfov: 79
-      min_depth: 0.5
-      max_depth: 5.0
-      position: [0, 0.88, 0]
-  task:
-    end_on_success: True
-    reward_measure: "distance_to_goal_reward"
-    success_measure: "spl"
-
-    type: ObjectNav-v1
-    possible_actions: ["stop", "move_forward", "turn_left", "turn_right", "look_up", "look_down"]
-
-    sensors: ['OBJECTgoal_sensor', 'compass_sensor', 'gps_sensor', 'distance_to_goal_reward']
-    goal_sensor_uuid: objectgoal
-
-    measurements: ['distance_to_goal', 'success', 'spl']
-    success:
-      success_distance: 0.1
-    distance_to_goal:
-      distance_to: VIEW_POINTS
 
   dataset:
     type: ObjectNav-v1

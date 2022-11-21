@@ -30,7 +30,7 @@ Controls:
     - B to reset the camera position
 - X to change the robot that is being controlled (if there are multiple robots).
 
-Change the task with `--cfg tasks/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/tasks/rearrange/` folder).
+Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `task.actions.arm_action.grip_controller "SuctionGraspAction"`
@@ -55,6 +55,10 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.config.default_structured_configs import (
+    GfxReplayMeasureMeasurementConfig,
+    ThirdRGBSensorConfig,
+)
 from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -68,7 +72,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "tasks/rearrange/play.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -583,37 +587,51 @@ if __name__ == "__main__":
 
     config = habitat.get_config(args.cfg, args.opts)
     with habitat.config.read_write(config):
+        env_config = config.habitat.environment
+        sim_config = config.habitat.simulator
+        task_config = config.habitat.task
+
         if not args.same_task:
-            config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
-            config.habitat.simulator.third_rgb_sensor.height = (
-                args.play_cam_res
+            sim_config.debug_render = True
+            sim_config.agent_0.sim_sensors.update(
+                {
+                    "third_rgb_sensor": ThirdRGBSensorConfig(
+                        height=args.play_cam_res, width=args.play_cam_res
+                    )
+                }
             )
-            config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
-            config.habitat.simulator.debug_render = True
-            config.habitat.task.composite_success.must_call_stop = False
-            config.habitat.task.rearrange_nav_to_obj_success.must_call_stop = (
-                False
-            )
-            config.habitat.task.force_terminate.max_accum_force = -1.0
-            config.habitat.task.force_terminate.max_instant_force = -1.0
+            if "composite_success" in task_config.measurements:
+                task_config.measurements.composite_success.must_call_stop = (
+                    False
+                )
+            if "rearrange_nav_to_obj_success" in task_config.measurements:
+                task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
+                    False
+                )
+            if "force_terminate" in task_config.measurements:
+                task_config.measurements.force_terminate.max_accum_force = -1.0
+                task_config.measurements.force_terminate.max_instant_force = (
+                    -1.0
+                )
+
         if args.gfx:
-            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
-                True
+            sim_config.habitat_sim_v0.enable_gfx_replay_save = True
+            task_config.measurements.update(
+                {"gfx_replay_measure": GfxReplayMeasureMeasurementConfig()}
             )
-            config.habitat.task.measurements.append("gfx_replay_measure")
+
         if args.never_end:
-            config.habitat.environment.max_episode_steps = 0
+            env_config.max_episode_steps = 0
+
         if args.add_ik:
-            if "arm_action" not in config.habitat.task.actions:
+            if "arm_action" not in task_config.actions:
                 raise ValueError(
                     "Action space does not have any arm control so incompatible with `--add-ik` option"
                 )
-            config.habitat.task.actions.arm_action.arm_controller = (
-                "ArmEEAction"
-            )
-            config.habitat.simulator.ik_arm_urdf = (
+            sim_config.ik_arm_urdf = (
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
+            task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

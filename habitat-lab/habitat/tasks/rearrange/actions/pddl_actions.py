@@ -73,7 +73,7 @@ class PddlApplyAction(RobotAction):
                     self._entities_list[i] for i in real_action_idxs
                 ]
 
-                apply_action = action.clone()
+                apply_action = action.copy()
                 apply_action.set_param_values(param_values)
                 if self._task.pddl_problem.is_expr_true(apply_action.precond):
                     rearrange_logger.debug(

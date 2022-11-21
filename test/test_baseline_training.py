@@ -11,6 +11,8 @@ import random
 import numpy as np
 import pytest
 
+from habitat.config import read_write
+
 try:
     import torch
     import torch.distributed
@@ -89,25 +91,17 @@ def test_trainers(config_path, num_updates, trainer_name):
     config = get_config(
         config_path,
         [
-            "habitat_baselines.num_updates",
-            num_updates,
-            "habitat_baselines.total_num_steps",
-            -1.0,
-            "habitat_baselines.checkpoint_folder",
-            "data/test_checkpoints/test_training",
-            "habitat_baselines.trainer_name",
-            trainer_name,
-            # Changing the visual observation size for speed
-            "habitat.simulator.head_rgb_sensor.width",
-            64,
-            "habitat.simulator.head_rgb_sensor.height",
-            64,
-            "habitat.simulator.head_depth_sensor.width",
-            64,
-            "habitat.simulator.head_depth_sensor.height",
-            64,
+            f"habitat_baselines.num_updates={num_updates}",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.trainer_name={trainer_name}",
         ],
     )
+    with read_write(config):
+        # Changing the visual observation size for speed
+        for v in config.habitat.simulator.agent_0.sim_sensors.values():
+            v.width = 64
+            v.height = 64
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
     torch.manual_seed(config.habitat.seed)
@@ -169,21 +163,14 @@ def test_trainers_gym_registry(
     config = get_config(
         config_path,
         [
-            "habitat_baselines.num_updates",
-            num_updates,
-            "habitat_baselines.total_num_steps",
-            -1.0,
-            "habitat_baselines.checkpoint_folder",
-            "data/test_checkpoints/test_training",
-            "habitat_baselines.trainer_name",
-            trainer_name,
+            f"habitat_baselines.num_updates={num_updates}",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.trainer_name={trainer_name}",
             # Overwrite the gym_environment
-            "habitat.env_task",
-            "GymRegistryEnv",
-            "habitat.env_task_gym_dependencies",
-            dependencies,
-            "habitat.env_task_gym_id",
-            env_key,
+            "habitat.env_task=GymRegistryEnv",
+            f"habitat.env_task_gym_dependencies={dependencies}",
+            f"habitat.env_task_gym_id={env_key}",
         ],
     )
     random.seed(config.habitat.seed)
@@ -246,14 +233,10 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
     config = get_config(
         config_path,
         [
-            "habitat_baselines.num_updates",
-            num_updates,
-            "habitat_baselines.total_num_steps",
-            -1.0,
-            "habitat_baselines.checkpoint_folder",
-            "data/test_checkpoints/test_training",
-            "habitat_baselines.trainer_name",
-            trainer_name,
+            f"habitat_baselines.num_updates={num_updates}",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.trainer_name={trainer_name}",
         ],
     )
     random.seed(config.habitat.seed)

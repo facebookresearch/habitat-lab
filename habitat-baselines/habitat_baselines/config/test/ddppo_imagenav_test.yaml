@@ -1,12 +1,15 @@
+# @package _global_
+
+defaults:
+  - /benchmark/nav/imagenav: imagenav_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
 habitat_baselines:
-  base_task_config_path: "tasks/imagenav.yaml"
   trainer_name: "ddppo"
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-  video_option: []
   tensorboard_dir: ""
   video_dir: ""
-  sensors: ["rgb_sensor", "depth_sensor"]
   eval_ckpt_path_dir: "data/test_checkpoints/ddppo/imagenav/ckpt.0.pth"
   num_environments: 1
   checkpoint_folder: "data/test_checkpoints/ddppo/imagenav/"
@@ -20,8 +23,6 @@ habitat_baselines:
 
 
   rl:
-    success_reward: 2.5
-
     policy:
       name: "PointNavResNetPolicy"
 

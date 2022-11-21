@@ -80,11 +80,8 @@ def _load_test_data():
         with habitat.config.read_write(config):
             config.habitat.simulator.scene = datasets[-1].episodes[0].scene_id
             # remove the teleport action that makes the action space continuous
-            config.habitat.task.possible_actions = [
-                a
-                for a in config.habitat.task.possible_actions
-                if a != "teleport"
-            ]
+            if "teleport" in config.habitat.task.actions:
+                del config.habitat.task.actions["teleport"]
             if not os.path.exists(config.habitat.simulator.scene):
                 pytest.skip(
                     "Please download Habitat test data to data folder."
@@ -199,9 +196,9 @@ def test_env(gpu2gpu):
 
     with habitat.config.read_write(config):
         config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-        config.habitat.task.possible_actions = [
-            a for a in config.habitat.task.possible_actions if a != "teleport"
-        ]
+        # remove the teleport action that makes the action space continuous
+        if "teleport" in config.habitat.task.actions:
+            del config.habitat.task.actions["teleport"]
     with habitat.Env(config=config, dataset=None) as env:
         env.episodes = [
             NavigationEpisode(
@@ -251,7 +248,12 @@ def test_rl_vectorized_envs(gpu2gpu):
     for config in configs:
         with habitat.config.read_write(config):
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-            config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
+            # Only keep the rgb_sensor
+            config.habitat.simulator.agent_0.sim_sensors = {
+                "rgb_sensor": config.habitat.simulator.agent_0.sim_sensors[
+                    "rgb_sensor"
+                ]
+            }
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
@@ -301,9 +303,9 @@ def test_rl_env(gpu2gpu):
 
     with habitat.config.read_write(config):
         config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-        config.habitat.task.possible_actions = [
-            a for a in config.habitat.task.possible_actions if a != "teleport"
-        ]
+        # remove the teleport action that makes the action space continuous
+        if "teleport" in config.habitat.task.actions:
+            del config.habitat.task.actions["teleport"]
 
     with _make_dummy_env_func(config=config, dataset=None) as env:
         env.episodes = [
@@ -416,7 +418,7 @@ def test_close_with_paused():
 # TODO Bring back this test for the greedy follower
 @pytest.mark.skip
 def test_action_space_shortest_path():
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -461,7 +463,7 @@ def test_action_space_shortest_path():
 
 @pytest.mark.parametrize("set_method", ["current", "list", "iter"])
 def test_set_episodes(set_method):
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
