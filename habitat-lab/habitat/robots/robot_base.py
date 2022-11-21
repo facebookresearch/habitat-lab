@@ -227,41 +227,15 @@ class RobotBase(RobotInterface):
 
     def update_base(self, rigid_state, target_rigid_state):
 
-        cur_state = self._sim.robot.sim_obj.transformation
-
-        # Conduct the collision detection
-        has_attr_contact_test = hasattr(
-            self._sim.habitat_config, "contact_test"
+        end_pos = self._sim.step_filter(
+            rigid_state.translation, target_rigid_state.translation
         )
-        has_attr_navmesh = hasattr(self._sim.habitat_config, "nav_mesh")
-        if (
-            has_attr_contact_test
-            and has_attr_navmesh
-            and self._sim.habitat_config.contact_test
-            and self._sim.habitat_config.nav_mesh
-        ):
-            end_pos = self._sim.step_filter(
-                rigid_state.translation, target_rigid_state.translation
-            )
-            # Offset the end position
-            end_pos -= self.params.base_offset
-            target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), end_pos
-            )
-            self.sim_obj.transformation = target_trans
-            # if collide, revet the step back
-            if self._sim.contact_test(self.sim_obj.object_id):
-                self._sim.robot.sim_obj.transformation = cur_state
-        else:
-            end_pos = self._sim.step_filter(
-                rigid_state.translation, target_rigid_state.translation
-            )
-            # Offset the end position
-            end_pos -= self.params.base_offset
-            target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), end_pos
-            )
-            self.sim_obj.transformation = target_trans
+        # Offset the end position
+        end_pos -= self.params.base_offset
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(), end_pos
+        )
+        self.sim_obj.transformation = target_trans
 
         if self._base_type == "leg":
             # Fix the leg joints
