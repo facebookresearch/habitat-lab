@@ -6,7 +6,12 @@ import numpy as np
 from yacs.config import CfgNode
 
 # flake8: noqa
-from habitat.robots import FetchRobot, FetchRobotNoWheels
+from habitat.robots import (
+    FetchRobot,
+    FetchRobotNoWheels,
+    SpotRobot,
+    StretchRobot,
+)
 from habitat.robots.fetch_suction import FetchSuctionRobot
 from habitat.robots.mobile_manipulator import MobileManipulator
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
