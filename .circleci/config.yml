@@ -227,7 +227,7 @@ jobs:
               fi
               if [ ! -f ./habitat-sim/data/robots/hab_stretch/urdf/hab_stretch.urdf ]
               then
-                python -m habitat_sim.utils.datasets_download --uids hab_stretch --replace --data-path habitat-sim/data/
+                python -m habitat_sim.utils.datasets_download --uids hab_stretch --data-path habitat-sim/data/ --replace
               fi
       - run:
           name: Download coda scene
