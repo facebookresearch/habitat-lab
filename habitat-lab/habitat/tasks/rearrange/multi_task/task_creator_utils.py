@@ -8,6 +8,8 @@ import copy
 import os.path as osp
 from typing import TYPE_CHECKING, Any, Dict, List
 
+from omegaconf import OmegaConf
+
 import habitat
 from habitat import Config
 from habitat.core.dataset import Episode
@@ -17,7 +19,7 @@ from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 if TYPE_CHECKING:
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 
-TASK_CONFIGS_DIR = "tasks/rearrange/"
+TASK_CONFIGS_DIR = "benchmark/rearrange/"
 TASK_IGNORE_KEYS = ["task_spec", "task_spec_base_path", "pddl_domain_def"]
 
 
@@ -43,21 +45,25 @@ def create_task_object(
     task_cls = registry.get_task(task_cls_name)
 
     config = copy.deepcopy(cur_config)
-    with habitat.config.read_write(config):
-        if task_config_path is not None:
-            pass_args: List[Any] = []
-            for k, v in task_config_args.items():
-                pass_args.extend((k, v))
-            task_config = habitat.get_config(
-                osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"),
-                pass_args,
-            )
+
+    if task_config_path is not None:
+        pass_args: List[str] = [
+            f"{k}={v}" for k, v in task_config_args.items()
+        ]
+        task_config = habitat.get_config(
+            osp.join(TASK_CONFIGS_DIR, task_config_path + ".yaml"),
+            pass_args,
+        )
+
+        with habitat.config.read_write(config):
+            config = OmegaConf.merge(config, task_config.habitat.task)
+            # config.merge_from_other_cfg(task_config.habitat.task)
+            # Putting back the values from TASK_IGNORE_KEYS :
             for k in TASK_IGNORE_KEYS:
-                del task_config.habitat["task"][k]
-            config.merge_from_other_cfg(task_config.habitat.task)
-        # New task should not recreate any sensors
-        config.measurements = []
-        config.sensors = []
+                config[k] = cur_config[k]
+            # New task should not recreate any sensors
+            config.measurements = {}
+            config.lab_sensors = {}
     task = task_cls(config=config, dataset=cur_dataset, sim=cur_env._sim)
 
     assert isinstance(

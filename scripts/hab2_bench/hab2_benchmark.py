@@ -22,7 +22,7 @@ def create_env(args, proc_i):
 
     set_opts = args.opts
     set_opts.extend(
-        ["habitat.simulator.habitat_sim_v0.gpu_device_id", spec_gpu]
+        [f"habitat.simulator.habitat_sim_v0.gpu_device_id={spec_gpu}"]
     )
 
     config = habitat.get_config(args.cfg, set_opts)
@@ -167,7 +167,9 @@ if __name__ == "__main__":
     load_fname = "orp/start_data/bench_ac.txt"
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-name", type=str, default="")
-    parser.add_argument("--cfg", type=str, default="")
+    parser.add_argument(
+        "--cfg", type=str, default="benchmark/rearrange/idle.yaml"
+    )
 
     parser.add_argument(
         "--n-procs",

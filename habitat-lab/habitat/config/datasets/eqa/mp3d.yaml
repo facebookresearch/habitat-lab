@@ -1,8 +1,0 @@
-# @package _global_
-
-habitat:
-  dataset:
-    type: MP3DEQA-v1
-    split: train
-    data_path: "data/datasets/eqa/mp3d/v1/{split}/{split}.json.gz"
-    scenes_dir: "data/scene_datasets/"

@@ -49,7 +49,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
     def _make_results_dir(self):
         r"""Makes directory for saving eqa-cnn-pretrain eval results."""
         for s_type in ["rgb", "seg", "depth"]:
-            dir_name = self.config.habitat_baselines.results_dir.format(
+            dir_name = self.config.habitat_baselines.il.results_dir.format(
                 split="val", type=s_type
             )
             if not os.path.isdir(dir_name):
@@ -263,8 +263,9 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                     )
 
                 if (
-                    config.habitat_baselines.eval_save_results
-                    and t % config.habitat_baselines.eval_save_results_interval
+                    config.habitat_baselines.il.eval_save_results
+                    and t
+                    % config.habitat_baselines.il.eval_save_results_interval
                     == 0
                 ):
 
@@ -272,7 +273,7 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                         checkpoint_index, idx[0].item()
                     )
                     result_path = os.path.join(
-                        self.config.habitat_baselines.results_dir, result_id
+                        self.config.habitat_baselines.il.results_dir, result_id
                     )
 
                     self._save_results(

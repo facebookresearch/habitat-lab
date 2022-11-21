@@ -1,0 +1,53 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - arm_action
+    - empty
+  - /habitat/task/measurements:
+    - robot_force
+    - robot_colls
+    - force_terminate
+    - end_effector_to_rest_distance
+    - end_effector_to_object_distance
+    - pick_success
+    - pick_reward
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - target_start_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - relative_resting_pos_sensor
+    - goal_sensor
+    - object_sensor
+  - _self_
+
+# The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
+type: RearrangePickTask-v0
+count_obj_collisions: True
+desired_resting_position: [0.5, 0.0, 1.0]
+constraint_violation_ends_episode: True
+should_enforce_target_within_reach: False
+
+# In radians
+base_angle_noise: 0.15
+base_noise: 0.05
+force_regenerate: False
+
+# If true, does not care about navigability or collisions with objects when spawning
+# robot
+easy_init: False
+
+actions:
+  arm_action:
+    arm_controller: "ArmAbsPosKinematicAction"
+    grip_controller: "MagicGraspAction"
+measurements:
+  pick_reward:
+    dist_reward: 10.0
+    pick_reward: 5.0
+    force_pen: 0.0
+    max_force_pen: 0.0
+    force_end_pen: 0.0

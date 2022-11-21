@@ -142,14 +142,11 @@ class ResizeShortestEdge(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        rs_config = (
-            config.habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge
-        )
         return cls(
-            rs_config.size,
-            rs_config.channels_last,
-            rs_config.trans_keys,
-            rs_config.semantic_key,
+            config.size,
+            config.channels_last,
+            config.trans_keys,
+            config.semantic_key,
         )
 
 
@@ -225,13 +222,10 @@ class CenterCropper(ObservationTransformer):
 
     @classmethod
     def from_config(cls, config: Config):
-        cc_config = (
-            config.habitat_baselines.rl.policy.obs_transforms.center_cropper
-        )
         return cls(
-            (cc_config.height, cc_config.width),
-            cc_config.channels_last,
-            cc_config.trans_keys,
+            (config.height, config.width),
+            config.channels_last,
+            config.trans_keys,
         )
 
 
@@ -1007,19 +1001,16 @@ class CubeMap2Equirect(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-        cube2eq_config = (
-            config.habitat_baselines.rl.policy.obs_transforms.cube2eq
-        )
-        if hasattr(cube2eq_config, "target_uuids"):
+        if hasattr(config, "target_uuids"):
             # Optional Config Value to specify target uuid
-            target_uuids = cube2eq_config.target_uuids
+            target_uuids = config.target_uuids
         else:
             target_uuids = None
         return cls(
-            cube2eq_config.sensor_uuids,
+            config.sensor_uuids,
             eq_shape=(
-                cube2eq_config.height,
-                cube2eq_config.width,
+                config.height,
+                config.width,
             ),
             target_uuids=target_uuids,
         )
@@ -1120,22 +1111,19 @@ class CubeMap2Fisheye(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-        cube2fish_config = (
-            config.habitat_baselines.rl.policy.obs_transforms.cube2fish
-        )
-        if hasattr(cube2fish_config, "target_uuids"):
+        if hasattr(config, "target_uuids"):
             # Optional Config Value to specify target uuid
-            target_uuids = cube2fish_config.target_uuids
+            target_uuids = config.target_uuids
         else:
             target_uuids = None
         return cls(
-            cube2fish_config.sensor_uuids,
+            config.sensor_uuids,
             fish_shape=(
-                cube2fish_config.height,
-                cube2fish_config.width,
+                config.height,
+                config.width,
             ),
-            fish_fov=cube2fish_config.fov,
-            fish_params=cube2fish_config.params,
+            fish_fov=config.fov,
+            fish_params=config.params,
             target_uuids=target_uuids,
         )
 
@@ -1195,20 +1183,17 @@ class Equirect2CubeMap(ProjectionTransformer):
 
     @classmethod
     def from_config(cls, config):
-        eq2cube_config = (
-            config.habitat_baselines.rl.policy.obs_transforms.eq2cube
-        )
 
-        if hasattr(eq2cube_config, "target_uuids"):
+        if hasattr(config, "target_uuids"):
             # Optional Config Value to specify target uuid
-            target_uuids = eq2cube_config.target_uuids
+            target_uuids = config.target_uuids
         else:
             target_uuids = None
         return cls(
-            eq2cube_config.sensor_uuids,
+            config.sensor_uuids,
             img_shape=(
-                eq2cube_config.height,
-                eq2cube_config.width,
+                config.height,
+                config.width,
             ),
             target_uuids=target_uuids,
         )
@@ -1216,15 +1201,17 @@ class Equirect2CubeMap(ProjectionTransformer):
 
 def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
     active_obs_transforms = []
+    obs_trans_conf = config.habitat_baselines.rl.policy.obs_transforms
     if hasattr(config.habitat_baselines.rl.policy, "obs_transforms"):
-        obs_transform_names = (
-            config.habitat_baselines.rl.policy.obs_transforms.enabled_transforms
-        )
-        for obs_transform_name in obs_transform_names:
+        for obs_transform_config in obs_trans_conf.values():
             obs_trans_cls = baseline_registry.get_obs_transformer(
-                obs_transform_name
+                obs_transform_config.type
             )
-            obs_transform = obs_trans_cls.from_config(config)
+            if obs_trans_cls is None:
+                raise ValueError(
+                    f"Unkown ObservationTransform with name {obs_transform_config.type}."
+                )
+            obs_transform = obs_trans_cls.from_config(obs_transform_config)
             active_obs_transforms.append(obs_transform)
     return active_obs_transforms
 
@@ -1263,7 +1250,7 @@ class AddVirtualKeys(ObservationTransformer):
     def transform_observation_space(
         self, observation_space: spaces.Dict, **kwargs
     ):
-        for k, obs_dim in self._virtual_keys.items():
+        for k, obs_dim in self._virtual_keys.virtual_keys.items():
             observation_space[k] = spaces.Box(
                 shape=(obs_dim,),
                 low=np.finfo(np.float32).min,
@@ -1279,12 +1266,10 @@ class AddVirtualKeys(ObservationTransformer):
         first_obs = next(iter(observations.values()))
         device = first_obs.device
         batch_dim = first_obs.shape[0]
-        for k, obs_dim in self._virtual_keys.items():
+        for k, obs_dim in self._virtual_keys.virtual_keys.items():
             observations[k] = torch.zeros((batch_dim, obs_dim), device=device)
         return observations
 
     @classmethod
     def from_config(cls, config):
-        return cls(
-            config.habitat_baselines.rl.policy.obs_transforms.add_virtual_keys
-        )
+        return cls(config)

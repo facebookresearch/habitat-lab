@@ -3,7 +3,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-r"""Implements tasks and measurements needed for training and benchmarking of
+r"""Implements task and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
@@ -11,6 +11,7 @@ from collections import OrderedDict
 from typing import Any, Dict, Iterable, List, Optional, Union
 
 import numpy as np
+from omegaconf import OmegaConf
 
 from habitat.config import Config
 from habitat.core.dataset import Dataset, Episode
@@ -198,7 +199,7 @@ class Measurements:
 
 
 class EmbodiedTask:
-    r"""Base class for embodied tasks. ``EmbodiedTask`` holds definition of
+    r"""Base class for embodied task. ``EmbodiedTask`` holds definition of
     a task that agent needs to solve: action space, observation space,
     measures, simulator usage. ``EmbodiedTask`` has :ref:`reset` and
     :ref:`step` methods that are called by ``Env``. ``EmbodiedTask`` is the
@@ -234,38 +235,31 @@ class EmbodiedTask:
 
         self.measurements = Measurements(
             self._init_entities(
-                entity_names=config.measurements,
+                entities_configs=config.measurements,
                 register_func=registry.get_measure,
-                entities_config=config,
             ).values()
         )
 
         self.sensor_suite = SensorSuite(
             self._init_entities(
-                entity_names=config.sensors,
+                entities_configs=config.lab_sensors,
                 register_func=registry.get_sensor,
-                entities_config=config,
             ).values()
         )
 
         self.actions = self._init_entities(
-            entity_names=config.possible_actions,
+            entities_configs=config.actions,
             register_func=registry.get_task_action,
-            entities_config=self._config.actions,
         )
         self._action_keys = list(self.actions.keys())
 
         self._is_episode_active = False
 
-    def _init_entities(
-        self, entity_names, register_func, entities_config=None
-    ) -> OrderedDict:
-        if entities_config is None:
-            entities_config = self._config
+    def _init_entities(self, entities_configs, register_func) -> OrderedDict:
 
         entities = OrderedDict()
-        for entity_name in entity_names:
-            entity_cfg = getattr(entities_config, entity_name)
+        for entity_name, entity_cfg in entities_configs.items():
+            entity_cfg = OmegaConf.create(entity_cfg)
             if "type" not in entity_cfg:
                 raise ValueError(f"Could not find type in {entity_cfg}")
             entity_type = register_func(entity_cfg.type)

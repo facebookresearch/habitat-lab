@@ -1,0 +1,29 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - arm_action
+  - /habitat/task/measurements:
+    - end_effector_to_rest_distance
+    - rearrange_reach_success
+    - rearrange_reach_reward
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - joint_velocity_sensor
+    - relative_resting_pos_sensor
+  - _self_
+
+type: RearrangeReachTask-v0
+reward_measure: "rearrange_reach_reward"
+success_measure: "rearrange_reach_success"
+success_reward: 10.0
+end_on_success: True
+base_angle_noise: 0.0
+base_noise: 0.0
+actions:
+  arm_action:
+    grip_controller: null
+    should_clip: True
+    render_ee_target: True

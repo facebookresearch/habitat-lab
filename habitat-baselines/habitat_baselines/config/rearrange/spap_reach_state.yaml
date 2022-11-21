@@ -1,8 +1,12 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: reach_state
+  - /habitat_baselines: habitat_baselines_spa_config_base
+  - _self_
+
 habitat_baselines:
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/reach_state.yaml
   video_dir: "data/vids/"
-  video_optionS: [ "disk" ]
-  count_obj_collisions: True
 
   sense_plan_act:
     verbose: True
@@ -22,13 +26,17 @@ habitat_baselines:
     ik_dist_thresh: 0.1
     ik_speed_factor: 1.0
 
+  eval:
+    video_option: ["disk"]
+
 habitat:
-  reward_measure: "rearrange_reach_reward"
-  success_measure: "rearrange_reach_success"
-  success_reward: 10.0
-  slack_reward: -0.01
-  end_on_success: False
   gym:
     obs_keys: [ 'joint', 'ee_pos' ]
     desired_goal_keys: [ 'resting_position' ]
     action_keys: [ 'arm_action' ]
+  task:
+    reward_measure: "rearrange_reach_reward"
+    success_measure: "rearrange_reach_success"
+    success_reward: 10.0
+    slack_reward: -0.01
+    end_on_success: False

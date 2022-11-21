@@ -1,0 +1,56 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /agent@habitat.simulator.agent_0: agent_base
+  - /habitat/simulator/sim_sensors:
+    - head_depth_sensor
+  - /habitat/task/rearrange: pick
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    auto_name: Pick
+    obs_keys:
+      - robot_head_depth
+      - obj_start_sensor
+      - joint
+      - is_holding
+      - relative_resting_position
+  environment:
+    max_episode_steps: 200
+  simulator:
+    type: RearrangeSim-v0
+    additional_object_paths:
+      - data/objects/ycb/configs/
+    debug_render_goal: False
+    needs_markers: False
+    agent_0:
+      radius: 0.3
+      robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+      robot_type: FetchSuctionRobot
+      sim_sensors:
+        head_depth_sensor:
+            width: 256
+            height: 256
+#        head_rgb_sensor:
+#            width: 256
+#            height: 256
+#        arm_depth_sensor:
+#          height: 128
+#          width: 128
+#        arm_rgb_sensor:
+#          height: 128
+#          width: 128
+
+    # Grasping
+    hold_thresh: 0.2
+    grasp_impulse: 10000.0
+
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz

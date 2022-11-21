@@ -1,0 +1,36 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - arm_action
+    - base_velocity
+    - empty
+  - /habitat/task/measurements:
+    - robot_force
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+  - _self_
+
+# Config for empty task to explore the scene.
+type: RearrangeEmptyTask-v0
+count_obj_collisions: True
+desired_resting_position: [0.5, 0.0, 1.0]
+
+# Reach task config
+render_target: True
+ee_sample_factor: 0.8
+
+# In radians
+base_angle_noise: 0.0
+base_noise: 0.0
+constraint_violation_ends_episode: False
+
+# If true, does not care about navigability or collisions
+# with objects when spawning robot
+easy_init: False
+force_regenerate: True
+
+actions:
+  arm_action:
+    grip_controller: "MagicGraspAction"

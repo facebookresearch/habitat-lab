@@ -1,21 +1,22 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: open_fridge
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-  video_option: ["disk"]
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-  video_render_top_down: False
-  video_render_all_info: True
   video_render_views:
     - "third_rgb_sensor"
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   num_environments: 32
-  # Visual sensors to include
-  sensors: ["head_depth_sensor"]
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1.0e8
@@ -26,7 +27,9 @@ habitat_baselines:
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'success']
 
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/open_fridge.yaml
+  eval:
+    video_option: ["disk"]
+
   rl:
     policy:
         name: "PointNavResNetPolicy"

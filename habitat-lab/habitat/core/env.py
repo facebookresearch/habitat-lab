@@ -19,7 +19,7 @@ from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
 from habitat.datasets import make_dataset
 from habitat.sims import make_sim
-from habitat.tasks import make_task
+from habitat.tasks.registration import make_task
 from habitat.utils import profiling_wrapper
 
 
@@ -30,7 +30,7 @@ class Env:
         sim and task.
     :data action_space: ``gym.space`` object corresponding to valid actions.
 
-    All the information  needed for working on embodied tasks with simulator
+    All the information  needed for working on embodied task with simulator
     is abstracted inside :ref:`Env`. Acts as a base for other derived
     environment classes. :ref:`Env` consists of three major components:
     ``dataset`` (`episodes`), ``simulator`` (:ref:`sim`) and :ref:`task` and

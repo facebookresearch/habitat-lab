@@ -1,6 +1,0 @@
-habitat:
-  dataset:
-    type: R2RVLN-v1
-    split: train
-    data_path: "data/datasets/vln/mp3d/r2r/v1/{split}/{split}.json.gz"
-    scenes_dir: "data/scene_datasets/"

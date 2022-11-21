@@ -1,0 +1,50 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions@actions.agent_0_arm_action: arm_action
+  - /habitat/task/actions@actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@actions.agent_1_arm_action: arm_action
+  - /habitat/task/actions@actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/measurements:
+    - object_to_goal_distance
+    - robot_force
+    - force_terminate
+    - robot_colls
+    - composite_success
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+  - _self_
+
+type: RearrangeCompositeTask-v0
+reward_measure: composite_success
+success_measure: composite_success
+success_reward: 100.0
+slack_reward: -0.01
+end_on_success: True
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+task_spec: rearrange_easy
+actions:
+  # Actions are defined per agent. Unlike the sensors, actions are not
+  # automatically duplicated per agent.
+  agent_0_arm_action:
+    grip_controller: MagicGraspAction
+  agent_1_arm_action:
+    grip_controller: MagicGraspAction
+measurements:
+  force_terminate:
+    max_accum_force: 100000.0
+    max_instant_force: 10000.0
+  composite_success:
+    must_call_stop: False
