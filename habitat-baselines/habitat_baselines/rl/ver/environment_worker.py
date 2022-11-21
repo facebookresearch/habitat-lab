@@ -304,20 +304,12 @@ def _construct_environment_workers_impl(
 
 
 def _make_proc_config(config, rank, scenes=None, scene_splits=None):
-    proc_config = config.clone()
+    proc_config = config.copy()
     with read_write(proc_config):
         task_config = proc_config.habitat
         task_config.seed = task_config.seed + rank
         if scenes is not None and len(scenes) > 0:
             task_config.dataset.content_scenes = scene_splits[rank]
-
-        task_config.simulator.habitat_sim_v0.gpu_device_id = (
-            config.habitat_baselines.simulator_gpu_id
-        )
-
-        task_config.simulator.agent_0.sensors = (
-            config.habitat_baselines.sensors
-        )
 
     return proc_config
 

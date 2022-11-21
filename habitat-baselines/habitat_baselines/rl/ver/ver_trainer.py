@@ -76,7 +76,9 @@ class VERTrainer(PPOTrainer):
 
             with read_write(self.config):
                 self.config.habitat_baselines.torch_gpu_id = local_rank
-                self.config.habitat_baselines.simulator_gpu_id = local_rank
+                self.config.habitat.simulator.habitat_sim_v0.gpu_device_id = (
+                    local_rank
+                )
                 # Multiply by the number of simulators to make sure they also get unique seeds
                 self.config.habitat.seed += (
                     world_rank * self.config.habitat_baselines.num_environments

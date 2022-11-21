@@ -6,11 +6,13 @@
 
 import inspect
 import os.path as osp
-from typing import List, Optional, Union
 
 import yacs.config
 
-from habitat.core.logging import logger
+# from typing import Optional
+
+
+# from habitat.core.logging import logger
 
 
 # Default Habitat config node
@@ -103,7 +105,7 @@ _C.habitat.task.should_enforce_target_within_reach = False
 # -----------------------------------------------------------------------------
 # # COMPOSITE task CONFIG
 # -----------------------------------------------------------------------------
-_C.habitat.task.task_spec_base_path = "tasks/rearrange/pddl/"
+_C.habitat.task.task_spec_base_path = "task/rearrange/pddl/"
 _C.habitat.task.task_spec = ""
 # PDDL domain params
 _C.habitat.task.pddl_domain_def = "replica_cad"
@@ -218,10 +220,10 @@ _C.habitat.task.pointgoal_with_gps_compass_sensor.type = (
 # -----------------------------------------------------------------------------
 # OBJECTGOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.habitat.task.OBJECTgoal_sensor = CN()
-_C.habitat.task.OBJECTgoal_sensor.type = "ObjectGoalSensor"
-_C.habitat.task.OBJECTgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
-_C.habitat.task.OBJECTgoal_sensor.goal_spec_max_val = 50
+_C.habitat.task.objectgoal_sensor = CN()
+_C.habitat.task.objectgoal_sensor.type = "ObjectGoalSensor"
+_C.habitat.task.objectgoal_sensor.goal_spec = "TASK_CATEGORY_ID"
+_C.habitat.task.objectgoal_sensor.goal_spec_max_val = 50
 # -----------------------------------------------------------------------------
 # IMAGEGOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -384,10 +386,10 @@ _C.habitat.task.abs_target_start_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # ABSOLUTE GOAL SENSOR
 # -----------------------------------------------------------------------------
-_C.habitat.task.ABS_goal_sensor = CN()
-_C.habitat.task.ABS_goal_sensor.type = "AbsGoalSensor"
-_C.habitat.task.ABS_goal_sensor.goal_format = "CARTESIAN"
-_C.habitat.task.ABS_goal_sensor.dimensionality = 3
+_C.habitat.task.abs_goal_sensor = CN()
+_C.habitat.task.abs_goal_sensor.type = "AbsGoalSensor"
+_C.habitat.task.abs_goal_sensor.goal_format = "CARTESIAN"
+_C.habitat.task.abs_goal_sensor.dimensionality = 3
 # -----------------------------------------------------------------------------
 # DISTANCE TO NAVIGATION GOAL SENSOR
 # -----------------------------------------------------------------------------
@@ -990,51 +992,90 @@ _C.habitat.env_task_gym_dependencies = []
 _C.habitat.env_task_gym_id = ""
 
 
-def _get_full_config_path(config_path: str) -> str:
+def get_full_config_path(
+    config_path: str, default_configs_dir: str = _HABITAT_CFG_DIR
+) -> str:
     if osp.exists(config_path):
-        return config_path
+        return osp.abspath(config_path)
 
-    proposed_full_path = osp.join(_HABITAT_CFG_DIR, config_path)
+    proposed_full_path = osp.join(default_configs_dir, config_path)
     if osp.exists(proposed_full_path):
-        return proposed_full_path
+        return osp.abspath(proposed_full_path)
 
     raise RuntimeError(f"No file found for config '{config_path}'")
 
 
+# def get_config(
+#     config_paths: Optional[Union[List[str], str]] = None,
+#     opts: Optional[list] = None,
+# ) -> CN:
+#     r"""Create a unified config with default values overwritten by values from
+#     :p:`config_paths` and overwritten by options from :p:`opts`.
+
+#     :param config_paths: List of config paths or string that contains comma
+#         separated list of config paths.
+#     :param opts: Config options (keys, values) in a list (e.g., passed from
+#         command line into the config. For example,
+#         :py:`opts = ['FOO.BAR', 0.5]`. Argument can be used for parameter
+#         sweeping or quick tests.
+#     """
+#     config = _C.clone()
+#     if config_paths:
+#         if isinstance(config_paths, str):
+#             if CONFIG_FILE_SEPARATOR in config_paths:
+#                 config_paths = config_paths.split(CONFIG_FILE_SEPARATOR)
+#             else:
+#                 config_paths = [config_paths]
+
+#         for config_path in config_paths:
+#             config_path = _get_full_config_path(config_path)
+#             if not osp.exists(config_path):
+#                 logger.warn(
+#                     f"Config file {config_path} could not be found. "
+#                     "Note that configuration files were moved to "
+#                     "the `habitat-lab/habitat/config` folder."
+#                 )
+#             config.merge_from_file(config_path)
+
+#     if opts:
+#         config.merge_from_list(opts)
+
+#     config.freeze()
+#     return config
+
+
+import threading
+from typing import Optional
+
+from hydra import compose, initialize_config_dir
+from omegaconf import DictConfig, OmegaConf
+
+from habitat.config.default_structured_configs import (
+    HabitatConfigPlugin,
+    register_hydra_plugin,
+)
+
+lock = threading.Lock()
+
+
 def get_config(
-    config_paths: Optional[Union[List[str], str]] = None,
-    opts: Optional[list] = None,
-) -> CN:
-    r"""Create a unified config with default values overwritten by values from
-    :p:`config_paths` and overwritten by options from :p:`opts`.
+    config_paths: str,
+    overrides: Optional[list] = None,
+) -> DictConfig:
+    register_hydra_plugin(HabitatConfigPlugin)
 
-    :param config_paths: List of config paths or string that contains comma
-        separated list of config paths.
-    :param opts: Config options (keys, values) in a list (e.g., passed from
-        command line into the config. For example,
-        :py:`opts = ['FOO.BAR', 0.5]`. Argument can be used for parameter
-        sweeping or quick tests.
-    """
-    config = _C.clone()
-    if config_paths:
-        if isinstance(config_paths, str):
-            if CONFIG_FILE_SEPARATOR in config_paths:
-                config_paths = config_paths.split(CONFIG_FILE_SEPARATOR)
-            else:
-                config_paths = [config_paths]
+    config_path = get_full_config_path(config_paths)
+    # If get_config is called from different threads, Hydra might
+    # get initialized twice leading to issues. This lock fixes it.
+    with lock, initialize_config_dir(
+        version_base=None,
+        config_dir=osp.dirname(config_path),
+    ):
+        cfg = compose(
+            config_name=osp.basename(config_path),
+            overrides=overrides if overrides is not None else [],
+        )
 
-        for config_path in config_paths:
-            config_path = _get_full_config_path(config_path)
-            if not osp.exists(config_path):
-                logger.warn(
-                    f"Config file {config_path} could not be found. "
-                    "Note that configuration files were moved to "
-                    "the `habitat-lab/habitat/config` folder."
-                )
-            config.merge_from_file(config_path)
+    OmegaConf.set_readonly(cfg, True)
 
-    if opts:
-        config.merge_from_list(opts)
-
-    config.freeze()
-    return config
+    return cfg

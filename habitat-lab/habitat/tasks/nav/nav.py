@@ -57,6 +57,10 @@ cv2 = try_cv2_import()
 
 MAP_THICKNESS_SCALAR: int = 128
 
+# These metrics are not scalars and cannot be easily reported
+# (unless using videos)
+NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
+
 
 def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
     with read_write(sim_config):
@@ -69,7 +73,9 @@ def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
         agent_cfg = getattr(sim_config, agent_name)
         with read_write(agent_cfg):
             agent_cfg.start_position = episode.start_position
-            agent_cfg.start_rotation = episode.start_rotation
+            agent_cfg.start_rotation = [
+                float(k) for k in episode.start_rotation
+            ]
             agent_cfg.is_set_start_state = True
     return sim_config
 

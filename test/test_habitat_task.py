@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import habitat
+from habitat.config.default_structured_configs import TeleportActionConfig
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
@@ -22,9 +23,7 @@ teleport_ROTATION = np.array([0.92035, 0, -0.39109465, 0], dtype=np.float32)
 def test_task_actions():
     config = habitat.get_config(config_paths=CFG_TEST)
     with habitat.config.read_write(config):
-        config.habitat.task.possible_actions = (
-            config.habitat.task.possible_actions + ["teleport"]
-        )
+        config.habitat.task.actions["teleport"] = TeleportActionConfig()
 
     with habitat.Env(config=config) as env:
         env.reset()
@@ -51,9 +50,7 @@ def test_task_actions():
 def test_task_actions_sampling_for_teleport():
     config = habitat.get_config(config_paths=CFG_TEST)
     with habitat.config.read_write(config):
-        config.habitat.task.possible_actions = (
-            config.habitat.task.possible_actions + ["teleport"]
-        )
+        config.habitat.task.actions["teleport"] = TeleportActionConfig()
 
     with habitat.Env(config=config) as env:
         env.reset()
@@ -74,7 +71,7 @@ def test_task_actions_sampling_for_teleport():
     "config_file",
     [
         CFG_TEST,
-        "tasks/pointnav.yaml",
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml",
         "test/habitat_mp3d_eqa_test.yaml",
     ],
 )

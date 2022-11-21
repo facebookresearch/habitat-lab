@@ -12,7 +12,7 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 
 def test_demo_notebook():
-    config = habitat.get_config("tasks/pointnav_mp3d.yaml")
+    config = habitat.get_config("benchmark/nav/pointnav/pointnav_mp3d.yaml")
     with habitat.config.read_write(config):
         config.habitat.dataset.split = "val"
 

@@ -1,18 +1,22 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: nav_pick_nav_place
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - add_virtual_keys_base
+  - _self_
+
+
 habitat_baselines:
   verbose: False
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/nav_pick_nav_place.yaml
   trainer_name: "ddppo"
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-  video_option: ["disk"]
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-  video_render_top_down: False
-  video_render_all_info: True
   video_render_views:
     - "third_rgb_sensor"
-  sensors: ["head_depth_sensor"]
   test_episode_count: -1
   eval_ckpt_path_dir: ""
   num_environments: 1
@@ -27,117 +31,119 @@ habitat_baselines:
   eval:
     use_ckpt_config: False
     should_load_ckpt: False
+    video_option: ["disk"]
 
   rl:
     policy:
         name: "HierarchicalPolicy"
-        high_level_policy:
-          name: "GtHighLevelPolicy"
         obs_transforms:
-          enabled_transforms: ['AddVirtualKeys']
           add_virtual_keys:
-            "nav_to_skill": 8
-            "object_to_agent_gps_compass": 2
-        defined_skills:
-          NN_OPEN_CAB:
-            skill_name: "ArtObjSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            at_resting_threshold: 0.15
-            obs_skill_inputs: []
-            load_ckpt_file: "data/models/open_cab.pth"
-            max_skill_steps: 200
-            start_zone_radius: 0.3
-            force_end_on_timeout: True
+            virtual_keys:
+              "nav_to_skill": 8
+              "object_to_agent_gps_compass": 2
+        hierarchical_policy:
+          high_level_policy:
+            name: "GtHighLevelPolicy"
+          defined_skills:
+            NN_OPEN_CAB:
+              skill_name: "ArtObjSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              at_resting_threshold: 0.15
+              obs_skill_inputs: []
+              load_ckpt_file: "data/models/open_cab.pth"
+              max_skill_steps: 200
+              start_zone_radius: 0.3
+              force_end_on_timeout: True
 
-          NN_OPEN_FRIDGE:
-            skill_name: "ArtObjSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            at_resting_threshold: 0.15
-            obs_skill_inputs: []
-            load_ckpt_file: "data/models/open_fridge.pth"
-            max_skill_steps: 200
-            start_zone_radius: 0.3
-            force_end_on_timeout: True
+            NN_OPEN_FRIDGE:
+              skill_name: "ArtObjSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              at_resting_threshold: 0.15
+              obs_skill_inputs: []
+              load_ckpt_file: "data/models/open_fridge.pth"
+              max_skill_steps: 200
+              start_zone_radius: 0.3
+              force_end_on_timeout: True
 
-          NN_CLOSE_CAB:
-            skill_name: "ArtObjSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            at_resting_threshold: 0.2
-            obs_skill_inputs: ["obj_start_sensor"]
-            load_ckpt_file: "data/models/close_cab.pth"
-            max_skill_steps: 200
-            start_zone_radius: 0.3
-            force_end_on_timeout: True
+            NN_CLOSE_CAB:
+              skill_name: "ArtObjSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              at_resting_threshold: 0.2
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/close_cab.pth"
+              max_skill_steps: 200
+              start_zone_radius: 0.3
+              force_end_on_timeout: True
 
-          NN_CLOSE_FRIDGE:
-            skill_name: "ArtObjSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            at_resting_threshold: 0.2
-            obs_skill_inputs: ["obj_start_sensor"]
-            load_ckpt_file: "data/models/close_fridge.pth"
-            max_skill_steps: 200
-            start_zone_radius: 0.3
-            force_end_on_timeout: True
+            NN_CLOSE_FRIDGE:
+              skill_name: "ArtObjSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              at_resting_threshold: 0.2
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/close_fridge.pth"
+              max_skill_steps: 200
+              start_zone_radius: 0.3
+              force_end_on_timeout: True
 
-          nn_pick:
-            skill_name: "PickSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            at_resting_threshold: 0.15
-            obs_skill_inputs: ["obj_start_sensor"]
-            load_ckpt_file: "data/models/pick.pth"
-            max_skill_steps: 200
-            force_end_on_timeout: True
+            nn_pick:
+              skill_name: "PickSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              at_resting_threshold: 0.15
+              obs_skill_inputs: ["obj_start_sensor"]
+              load_ckpt_file: "data/models/pick.pth"
+              max_skill_steps: 200
+              force_end_on_timeout: True
 
-          nn_place:
-            skill_name: "PlaceSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            at_resting_threshold: 0.15
-            obs_skill_inputs: ["obj_goal_sensor"]
-            load_ckpt_file: "data/models/place.pth"
-            max_skill_steps: 200
-            force_end_on_timeout: True
+            nn_place:
+              skill_name: "PlaceSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              at_resting_threshold: 0.15
+              obs_skill_inputs: ["obj_goal_sensor"]
+              load_ckpt_file: "data/models/place.pth"
+              max_skill_steps: 200
+              force_end_on_timeout: True
 
-          nn_nav:
-            skill_name: "NavSkillPolicy"
-            name: "PointNavResNetPolicy"
-            action_distribution_type: "gaussian"
-            obs_skill_inputs: ["object_to_agent_gps_compass"]
-            obs_skill_input_dim: 2
-            lin_speed_stop: 0.067
-            ang_speed_stop: 0.067
-            load_ckpt_file: "data/models/nav.pth"
-            max_skill_steps: 300
-            force_end_on_timeout: False
+            nn_nav:
+              skill_name: "NavSkillPolicy"
+              name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
+              obs_skill_inputs: ["object_to_agent_gps_compass"]
+              obs_skill_input_dim: 2
+              lin_speed_stop: 0.067
+              ang_speed_stop: 0.067
+              load_ckpt_file: "data/models/nav.pth"
+              max_skill_steps: 300
+              force_end_on_timeout: False
 
-          wait_skill:
-            skill_name: "WaitSkillPolicy"
-            max_skill_steps: -1.0
-            force_end_on_timeout: False
+            wait_skill:
+              skill_name: "WaitSkillPolicy"
+              max_skill_steps: -1.0
+              force_end_on_timeout: False
 
-          reset_arm_skill:
-            skill_name: "ResetArmSkill"
-            max_skill_steps: 50
-            reset_joint_state: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
-            force_end_on_timeout: False
+            reset_arm_skill:
+              skill_name: "ResetArmSkill"
+              max_skill_steps: 50
+              reset_joint_state: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+              force_end_on_timeout: False
 
-        use_skills:
-          # Uncomment if you are also using these skills
-          # open_cab: "NN_OPEN_CAB"
-          # open_fridge: "NN_OPEN_FRIDGE"
-          # close_cab: "NN_OPEN_CAB"
-          # close_fridge: "NN_OPEN_FRIDGE"
-          pick: "nn_pick"
-          place: "nn_place"
-          nav: "nn_nav"
-          nav_to_receptacle: "nn_nav"
-          wait: "wait_skill"
-          reset_arm: "reset_arm_skill"
+          use_skills:
+            # Uncomment if you are also using these skills
+            # open_cab: "NN_OPEN_CAB"
+            # open_fridge: "NN_OPEN_FRIDGE"
+            # close_cab: "NN_OPEN_CAB"
+            # close_fridge: "NN_OPEN_FRIDGE"
+            pick: "nn_pick"
+            place: "nn_place"
+            nav: "nn_nav"
+            nav_to_receptacle: "nn_nav"
+            wait: "wait_skill"
+            reset_arm: "reset_arm_skill"
 
     ppo:
       # ppo params

@@ -17,6 +17,7 @@ import numpy as np
 import torch
 
 from habitat import Config, logger
+from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat_baselines.common.tensor_dict import (
     NDArrayDict,
     transpose_list_of_dicts,
@@ -111,14 +112,12 @@ class ReportWorkerProcess(ProcessBase):
         torch.distributed.all_reduce(t, op=reduce_op)
         return type(val)(t)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
-
     @classmethod
     def _extract_scalars_from_info(
         cls, info: Dict[str, Any]
     ) -> Iterator[Tuple[str, float]]:
         for k, v in info.items():
-            if k in cls.METRICS_BLACKLIST:
+            if k in NON_SCALAR_METRICS:
                 continue
 
             if isinstance(v, dict):

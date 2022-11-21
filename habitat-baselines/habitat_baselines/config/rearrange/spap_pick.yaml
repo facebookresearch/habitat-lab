@@ -1,8 +1,12 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: pick
+  - /habitat_baselines: habitat_baselines_spa_config_base
+  - _self_
+
 habitat_baselines:
-  base_task_config_path: habitat-lab/habitat/config/tasks/rearrange/pick.yaml
   video_dir: "data/vids/"
-  video_optionS: [ "disk" ]
-  count_obj_collisions: True
 
   sense_plan_act:
     verbose: True
@@ -21,16 +25,15 @@ habitat_baselines:
     grasp_gen_is_verbose: True
     ik_dist_thresh: 0.1
 
-  rl:
-    # If true, does not care about navigability or collisions with objects when spawning
-    # robot
-    easy_init: False
+  eval:
+    video_option: ["disk"]
 
 habitat:
-  success_reward: 2000.0
-  end_on_success: False
   gym:
     obs_keys: ['joint', 'ee_pos']
     desired_goal_keys: ['obj_goal_pos_sensor']
     achieved_goal_keys: []
     action_keys: ['arm_action']
+  task:
+    success_reward: 2000.0
+    end_on_success: False

@@ -44,19 +44,25 @@ def test_ppo_agents(input_type, resolution):
 
         benchmark = habitat.Benchmark(config_paths=CFG_TEST)
         with habitat.config.read_write(config_env):
-            config_env.habitat.simulator.agent_0.sensors = []
-            if input_type in ["rgb", "rgbd"]:
-                config_env.habitat.simulator.agent_0.sensors += ["rgb_sensor"]
-                agent_config.RESOLUTION = resolution
-                config_env.habitat.simulator.rgb_sensor.width = resolution
-                config_env.habitat.simulator.rgb_sensor.height = resolution
-            if input_type in ["depth", "rgbd"]:
-                config_env.habitat.simulator.agent_0.sensors += [
-                    "depth_sensor"
-                ]
-                agent_config.RESOLUTION = resolution
-                config_env.habitat.simulator.depth_sensor.width = resolution
-                config_env.habitat.simulator.depth_sensor.height = resolution
+            agent_config.RESOLUTION = resolution
+            config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width = (
+                resolution
+            )
+            config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height = (
+                resolution
+            )
+            config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor.width = (
+                resolution
+            )
+            config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor.height = (
+                resolution
+            )
+            if input_type in ["depth", "blind"]:
+                del config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor
+            if input_type in ["rgb", "blind"]:
+                del (
+                    config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor
+                )
 
         del benchmark._env
         benchmark._env = habitat.Env(config=config_env)
@@ -85,7 +91,7 @@ def test_simple_agents():
         simple_agents.RandomForwardAgent,
     ]:
         agent = agent_class(
-            config_env.habitat.task.success.success_distance,
+            config_env.habitat.task.measurements.success.success_distance,
             config_env.habitat.task.goal_sensor_uuid,
         )
         habitat.logger.info(agent_class.__name__)

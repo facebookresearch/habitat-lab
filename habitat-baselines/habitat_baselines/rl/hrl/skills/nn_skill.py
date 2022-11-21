@@ -152,10 +152,8 @@ class NnSkillPolicy(SkillPolicy):
 
         filtered_action_space = ActionSpace(
             OrderedDict(
-                [
-                    (k, action_space[k])
-                    for k in policy_cfg.habitat.task.possible_actions
-                ]
+                (k, action_space[k])
+                for k in policy_cfg.habitat.task.actions.keys()
             )
         )
 

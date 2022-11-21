@@ -24,6 +24,8 @@ from gym.spaces.box import Box
 if TYPE_CHECKING:
     from torch import Tensor
 
+from omegaconf import DictConfig
+
 import habitat_sim
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -44,7 +46,7 @@ from habitat.core.spaces import Space
 
 
 def overwrite_config(
-    config_from: Config,
+    config_from: DictConfig,
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
     trans_dict: Optional[Dict[str, Callable]] = None,
@@ -61,7 +63,7 @@ def overwrite_config(
     """
 
     def if_config_to_lower(config):
-        if isinstance(config, Config):
+        if isinstance(config, DictConfig):
             return {key.lower(): val for key, val in config.items()}
         else:
             return config
@@ -260,17 +262,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def __init__(self, config: Config) -> None:
         self.habitat_config = config
-        agent_config = self._get_agent_config()
 
         sim_sensors = []
-        for sensor_name in agent_config.sensors:
-            sensor_cfg = getattr(self.habitat_config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.type)
+        for agent in self.habitat_config.agents:
+            for sensor_cfg in self.habitat_config[agent].sim_sensors.values():
+                sensor_type = registry.get_sensor(sensor_cfg.type)
 
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.type
-            )
-            sim_sensors.append(sensor_type(sensor_cfg))
+                assert (
+                    sensor_type is not None
+                ), "invalid sensor type {}".format(sensor_cfg.type)
+                sim_sensors.append(sensor_type(sensor_cfg))
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
@@ -314,6 +315,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "is_set_start_state",
                 # This is the Sensor Config. Unpacked below
                 "sensors",
+                "sim_sensors",
                 "start_position",
                 "start_rotation",
                 "robot_urdf",

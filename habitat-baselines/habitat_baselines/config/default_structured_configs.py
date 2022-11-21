@@ -1,9 +1,11 @@
 import math
 from dataclasses import dataclass, field
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
+
+cs = ConfigStore.instance()
 
 
 @dataclass
@@ -30,14 +32,15 @@ class WBConfig(HabitatBaselinesBaseConfig):
 class EvalConfig(HabitatBaselinesBaseConfig):
     # The split to evaluate on
     split: str = "val"
-    # Whether to use the config in the checkpoint. Setting this to False
-    # is useful if some code changes necessitate a new config but the weights
-    # are still valid.
     use_ckpt_config: bool = True
     should_load_ckpt: bool = True
     # The number of time to run each episode through evaluation.
     # Only works when evaluating on all episodes.
     evals_per_ep: int = 1
+    video_option: List[str] = field(
+        # available options are "disk" and "tensorboard"
+        default_factory=list
+    )
 
 
 @dataclass
@@ -57,6 +60,7 @@ class PreemptionConfig(HabitatBaselinesBaseConfig):
 class ActionDistributionConfig(HabitatBaselinesBaseConfig):
     use_log_std: bool = True
     use_softplus: bool = False
+    std_init: float = MISSING
     log_std_init: float = 0.0
     # If True, the std will be a parameter not conditioned on state
     use_std_param: bool = False
@@ -78,6 +82,7 @@ class ObsTransformConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class CenterCropperConfig(ObsTransformConfig):
+    type: str = "CenterCropper"
     height: int = 256
     width: int = 256
     channels_last: bool = True
@@ -88,8 +93,17 @@ class CenterCropperConfig(ObsTransformConfig):
     )
 
 
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.center_cropper",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="center_cropper_base",
+    node=CenterCropperConfig,
+)
+
+
 @dataclass
 class ResizeShortestEdgeConfig(ObsTransformConfig):
+    type: str = "ResizeShortestEdge"
     size: int = 256
     channels_last: bool = True
     trans_keys: Tuple[str] = (
@@ -100,8 +114,17 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
     semantic_key: str = "semantic"
 
 
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="resize_shortest_edge_base",
+    node=ResizeShortestEdgeConfig,
+)
+
+
 @dataclass
 class Cube2EqConfig(ObsTransformConfig):
+    type: str = "CubeMap2Equirect"
     height: int = 256
     width: int = 512
     sensor_uuids: List[str] = field(
@@ -116,8 +139,17 @@ class Cube2EqConfig(ObsTransformConfig):
     )
 
 
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.cube_2_eq",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="cube_2_eq_base",
+    node=Cube2EqConfig,
+)
+
+
 @dataclass
 class Cube2FishConfig(ObsTransformConfig):
+    type: str = "CubeMap2Fisheye"
     height: int = 256
     width: int = 256
     fov: int = 180
@@ -134,8 +166,31 @@ class Cube2FishConfig(ObsTransformConfig):
     )
 
 
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.cube_2_fish",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="cube_2_fish_base",
+    node=Cube2FishConfig,
+)
+
+
+@dataclass
+class AddVirtualKeysConfig(ObsTransformConfig):
+    type: str = "AddVirtualKeys"
+    virtual_keys: Dict[str, int] = field(default_factory=dict)
+
+
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.add_virtual_keys",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="add_virtual_keys_base",
+    node=AddVirtualKeysConfig,
+)
+
+
 @dataclass
 class Eq2CubeConfig(ObsTransformConfig):
+    type: str = "Equirect2CubeMap"
     height: int = 256
     width: int = 256
     sensor_uuids: List[str] = field(
@@ -150,6 +205,21 @@ class Eq2CubeConfig(ObsTransformConfig):
     )
 
 
+cs.store(
+    package="habitat_baselines.rl.policy.obs_transforms.eq_2_cube",
+    group="habitat_baselines/rl/policy/obs_transforms",
+    name="eq_2_cube_base",
+    node=Eq2CubeConfig,
+)
+
+
+@dataclass
+class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+    high_level_policy: Dict[str, Any] = MISSING
+    defined_skills: Dict[str, Any] = field(default_factory=dict)
+    use_skills: Dict[str, str] = field(default_factory=dict)
+
+
 @dataclass
 class PolicyConfig(HabitatBaselinesBaseConfig):
     name: str = "PointNavResNetPolicy"
@@ -157,7 +227,8 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
-    obs_transforms: Any = MISSING
+    obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
+    hierarchical_policy: HierarchicalPolicy = MISSING
 
 
 @dataclass
@@ -224,8 +295,9 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     rnn_type: str = "GRU"
     num_recurrent_layers: int = 1
     backbone: str = "resnet18"
+    # Visual encoder backbone
     pretrained_weights: str = "data/ddppo-models/gibson-2plus-resnet50.pth"
-    # Loads pretrained weights
+    # Initialize with pretrained weights
     pretrained: bool = False
     # Loads just the visual encoder backbone weights
     pretrained_encoder: bool = False
@@ -244,11 +316,9 @@ class RLConfig(HabitatBaselinesBaseConfig):
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()
-    ver: VERConfig = VERConfig()
-
-    # Auxiliary Losses
-    auxiliary_losses: Any = MISSING
     ddppo: DDPPOConfig = DDPPOConfig()
+    ver: VERConfig = VERConfig()
+    auxiliary_losses: Dict[str, AuxLossConfig] = field(default_factory=dict)
 
 
 @dataclass
@@ -302,31 +372,22 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
-    base_task_config_path: str = (
-        "habitat-lab/habitat/config/tasks/pointnav.yaml"
-    )
-    cmd_trailing_opts: List[str] = field(default_factory=list)
+    # base_task_config_path: str = (
+    #     "habitat-lab/habitat/config/task/pointnav.yaml"
+    # )
+    # cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
-    simulator_gpu_id: int = 0
     torch_gpu_id: int = 0
-    video_option: List[str] = field(
-        default_factory=lambda: ["disk", "tensorboard"]
-    )
     video_render_views: List[str] = field(default_factory=list)
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
     video_dir: str = "video_dir"
     video_fps: int = 10
-    video_render_top_down: bool = True
-    video_render_all_info: bool = False
     test_episode_count: int = -1
     # path to ckpt or path to ckpts dir
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
-    sensors: List[str] = field(
-        default_factory=lambda: ["rgb_sensor", "depth_sensor"]
-    )
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10
@@ -349,30 +410,73 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     force_torch_single_threaded: bool = False
     # Weights and Biases config
     wb: WBConfig = WBConfig()
+    # When resuming training or evaluating, will use the original
+    # training config if load_resume_state_config is True
+    load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
-    rl: RLConfig = RLConfig()
-
-    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
     profiling: ProfilingConfig = ProfilingConfig()
 
 
-cs = ConfigStore.instance()
+@dataclass
+class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
+    rl: RLConfig = RLConfig()
+
+
+@dataclass
+class HabitatBaselinesILConfig(HabitatBaselinesConfig):
+    il: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
+    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
+
+
+@dataclass
+class HabitatBaselinesSPAConfig(HabitatBaselinesConfig):
+    sense_plan_act: Any = MISSING
+
+
+# Register configs to config store
 cs.store(
     group="habitat_baselines",
-    name="habitat_baselines_config_base",
-    node=HabitatBaselinesConfig,
+    name="habitat_baselines_rl_config_base",
+    node=HabitatBaselinesRLConfig(),
+)
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_orbslam2_config_base",
+    node=HabitatBaselinesORBSLAMConfig,
+)
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_il_config_base",
+    node=HabitatBaselinesILConfig,
+)
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_spa_config_base",
+    node=HabitatBaselinesSPAConfig,
 )
 cs.store(
     group="habitat_baselines/rl/policy", name="policy_base", node=PolicyConfig
 )
 
 cs.store(
-    group="habitat_baselines/rl/policy/obs_transforms/center_cropper",
-    name="center_cropper_base",
-    node=CenterCropperConfig,
-)
-cs.store(
-    group="habitat_baselines/rl/auxiliary_losses/cpca",
-    name="cpca_loss_base",
+    package="habitat_baselines.rl.auxiliary_losses.cpca",
+    group="habitat_baselines/rl/auxiliary_losses",
+    name="cpca",
     node=CPCALossConfig,
 )
+
+
+from hydra.core.config_search_path import ConfigSearchPath
+from hydra.plugins.search_path_plugin import SearchPathPlugin
+
+
+class HabitatBaselinesConfigPlugin(SearchPathPlugin):
+    def manipulate_search_path(self, search_path: ConfigSearchPath) -> None:
+        search_path.append(
+            provider="habitat",
+            path="pkg://habitat_baselines/config/",
+        )

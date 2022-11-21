@@ -19,9 +19,7 @@ from habitat.datasets.image_nav.instance_image_nav_dataset import (
 )
 from habitat.tasks.nav.nav import MoveForwardAction
 
-CFG_TEST = (
-    "habitat-lab/habitat/config/test/habitat_hm3d_instance_image_nav_test.yaml"
-)
+CFG_TEST = "test/habitat_hm3d_instance_image_nav_test.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 

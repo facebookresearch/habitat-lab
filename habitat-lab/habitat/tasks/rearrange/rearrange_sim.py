@@ -48,18 +48,18 @@ class RearrangeSim(HabitatSim):
     def __init__(self, config: Config):
         if len(config.agents) > 1:
             with read_write(config):
-                all_new_sensor_names = []
                 for agent in config.agents:
                     agent_cfg = config[agent]
-                    for orig_sensor_name in config.agent_0.sensors:
-                        full_name = f"{agent}_{orig_sensor_name}"
-                        orig_sensor_id = config[orig_sensor_name].uuid
-                        new_sensor_cfg = config[orig_sensor_name].clone()
-                        new_sensor_cfg.uuid = f"{agent}_{orig_sensor_id}"
-                        config[full_name] = new_sensor_cfg
-                        all_new_sensor_names.append(full_name)
+                    # using list to create a copy of the sim_sensors keys since we will be
+                    # editing the sim_sensors config
+                    sensor_keys = list(agent_cfg.sim_sensors.keys())
+                    for sensor_key in sensor_keys:
+                        sensor_config = agent_cfg.sim_sensors.pop(sensor_key)
+                        sensor_config.uuid = f"{agent}_{sensor_config.uuid}"
+                        agent_cfg.sim_sensors[
+                            f"{agent}_{sensor_key}"
+                        ] = sensor_config
 
-                config.agent_0.sensors = all_new_sensor_names
         super().__init__(config)
 
         self.first_setup = True
@@ -182,7 +182,8 @@ class RearrangeSim(HabitatSim):
         ep_info = config["ep_info"][0]
         self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
 
-        config["scene"] = ep_info["scene_id"]
+        with read_write(config):
+            config["scene"] = ep_info["scene_id"]
 
         super().reconfigure(config, should_close_on_new_scene=False)
 

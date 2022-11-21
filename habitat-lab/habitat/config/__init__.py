@@ -22,7 +22,7 @@ An example of how to merge default config with 2 others configs and overwrite
 one parameter that could come from the command line:
 ```
     merged_config = get_config(
-        config_paths=["habitat-lab/habitat/config/tasks/pointnav.yaml",
+        config_paths=["habitat-lab/habitat/config/task/pointnav.yaml",
             "habitat-lab/habitat/config/dataset/val.yaml"],
         opts=["habitat.environment.max_episode_steps", steps_limit]
     )
@@ -105,8 +105,8 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="habitat-lab/habitat/config/tasks/pointnav.yaml,"
-                "habitat-lab/habitat/config/datasets/pointnav/habitat_test.yaml",
+        default="habitat-lab/habitat/config/task/pointnav.yaml,"
+                "habitat-lab/habitat/config/dataset/pointnav/habitat_test.yaml",
     )
     parser.add_argument(
         "opts",

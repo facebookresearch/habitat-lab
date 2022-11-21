@@ -57,7 +57,7 @@ class VLNEpisode(NavigationEpisode):
 class InstructionSensor(Sensor):
     def __init__(self, **kwargs):
         self.uuid = "instruction"
-        self.observation_space = spaces.Discrete(0)
+        self.observation_space = spaces.Dict()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.uuid

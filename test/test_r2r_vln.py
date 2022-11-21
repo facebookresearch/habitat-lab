@@ -149,8 +149,8 @@ def test_r2r_vln_sim():
                     ), "Instruction from sensor does not match the intruction from the episode"
 
                     assert obs["rgb"].shape[:2] == (
-                        vln_config.habitat.simulator.rgb_sensor.height,
-                        vln_config.habitat.simulator.rgb_sensor.width,
+                        vln_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height,
+                        vln_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width,
                     ), (
                         "Observation resolution {} doesn't correspond to config "
                         "({}, {}).".format(

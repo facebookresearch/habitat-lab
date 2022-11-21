@@ -9,7 +9,6 @@ r"""Implements dataset functionality to be used ``habitat.EmbodiedTask``.
 of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
-import json
 import os
 import random
 from itertools import groupby
@@ -31,7 +30,7 @@ import numpy as np
 from numpy import ndarray
 
 from habitat.config import Config
-from habitat.core.utils import not_none_validator
+from habitat.core.utils import DatasetJSONEncoder, not_none_validator
 
 ALL_SCENES_MASK = "*"
 
@@ -192,16 +191,6 @@ class Dataset(Generic[T]):
         return EpisodeIterator(self.episodes, *args, **kwargs)
 
     def to_json(self) -> str:
-        class DatasetJSONEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, np.ndarray):
-                    return obj.tolist()
-
-                return (
-                    obj.__getstate__()
-                    if hasattr(obj, "__getstate__")
-                    else obj.__dict__
-                )
 
         result = DatasetJSONEncoder().encode(self)
         return result

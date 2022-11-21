@@ -131,7 +131,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="habitat-lab/habitat/config/tasks/pointnav.yaml",
+        default="habitat-lab/habitat/config/task/pointnav.yaml",
     )
     parser.add_argument("--agent-class", type=str, default="GoalFollower")
     args = parser.parse_args()

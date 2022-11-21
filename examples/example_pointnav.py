@@ -10,7 +10,11 @@ import habitat
 def example():
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
-    with habitat.Env(config=habitat.get_config("tasks/pointnav.yaml")) as env:
+    with habitat.Env(
+        config=habitat.get_config(
+            "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        )
+    ) as env:
         print("Environment creation successful")
         observations = env.reset()  # noqa: F841
 
