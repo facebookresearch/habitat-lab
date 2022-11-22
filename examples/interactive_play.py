@@ -394,10 +394,6 @@ def play_env(env, args, config):
     is_multi_agent = len(env._sim.robots_mgr) > 1
 
     while True:
-        trans = env.sim.robot.base_transformation
-        ee_pos = env.sim.robot.ee_transform.translation
-        local_ee_pos = trans.inverted().transform_point(ee_pos)
-        print("@interactive_play.py, local_ee_pos:", local_ee_pos, ee_pos)
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
