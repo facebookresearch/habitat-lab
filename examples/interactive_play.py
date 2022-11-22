@@ -104,6 +104,10 @@ def get_input_vel_ctlr(
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
+    elif "stretch" in DEFAULT_CFG:
+        arm_action_space = np.zeros(10)
+        arm_ctrlr = None
+        base_action = [0, 0]
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
@@ -178,6 +182,43 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+        elif arm_action_space.shape[0] == 10:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[5] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[6] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[7] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[7] = -1.0
+
+            elif keys[pygame.K_y]:
+                arm_action[8] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[8] = -1.0
+
+            elif keys[pygame.K_u]:
+                arm_action[9] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[9] = -1.0
+
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
             # End effector control
@@ -353,6 +394,10 @@ def play_env(env, args, config):
     is_multi_agent = len(env._sim.robots_mgr) > 1
 
     while True:
+        trans = env.sim.robot.base_transformation
+        ee_pos = env.sim.robot.ee_transform.translation
+        local_ee_pos = trans.inverted().transform_point(ee_pos)
+        print("@interactive_play.py, local_ee_pos:", local_ee_pos, ee_pos)
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
