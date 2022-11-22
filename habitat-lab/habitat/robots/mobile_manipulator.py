@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -26,8 +26,9 @@ class RobotCameraParams:
     """
 
     attached_link_id: int
-    cam_offset_pos: mn.Vector3
-    cam_look_at_pos: mn.Vector3
+    cam_offset_pos: mn.Vector3 = mn.Vector3.zero_init()
+    cam_look_at_pos: mn.Vector3 = mn.Vector3.zero_init()
+    cam_orientation: mn.Vector3 = mn.Vector3.zero_init()
     relative_transform: mn.Matrix4 = mn.Matrix4.identity_init()
 
 
@@ -106,6 +107,7 @@ class MobileManipulator(Manipulator, RobotBase):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
+        base_type="mobile",
     ):
         r"""Constructor
         :param params: The parameter of the manipulator robot.
@@ -114,6 +116,7 @@ class MobileManipulator(Manipulator, RobotBase):
         :param limit_robo_joints: If true, joint limits of robot are always
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
+        :param base_type: The base type
         """
         # instantiate a manipulator
         Manipulator.__init__(
@@ -132,7 +135,7 @@ class MobileManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
             fixed_based=fixed_base,
             sim_obj=self.sim_obj,
-            base_type="mobile",
+            base_type=base_type,
         )
 
     def reconfigure(self) -> None:
