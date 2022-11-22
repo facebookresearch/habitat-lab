@@ -1,0 +1,6 @@
+[submodule "hab_stretch"]
+	path = assets/hab_stretch
+	url = git@github.com:cpaxton/hab_stretch.git
+[submodule "third_party/contact_graspnet"]
+	path = third_party/contact_graspnet
+	url = git@github.com:cpaxton/contact_graspnet.git

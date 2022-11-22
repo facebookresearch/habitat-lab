@@ -41,7 +41,7 @@ jobs:
             source ~/.bashrc
             conda activate ~/testenv
             pip install -e .
-            pytest
+            pytest tests/
 
 workflows:
   main:

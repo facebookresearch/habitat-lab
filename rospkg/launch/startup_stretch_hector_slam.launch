@@ -1,0 +1,59 @@
+<?xml version="1.0"?>
+<launch>
+	<arg name="geotiff_map_file_path" default="$(find hector_geotiff)/maps"/>
+	<arg name="start_robot" default="true"/>
+	<arg name="teleop_keyboard" default="false"/>
+	<arg name="start_rs_ros" default="true"/>
+
+	<!-- bring up rviz? -->
+	<param name="/use_sim_time" value="false"/>
+	<arg name="rviz" default="false" doc="whether to show Rviz" />
+
+	<!-- STRETCH DRIVER -->
+	<param name="/stretch_driver/broadcast_odom_tf" type="bool" value="false"/>
+	<param name="/stretch_driver/fail_out_of_range_goal" type="bool" value="false"/>
+  	<param name="/stretch_driver/mode" type="string" value="navigation" />
+	<include file="$(find stretch_core)/launch/stretch_driver.launch"
+		pass_all_args="true"
+		if="$(arg start_robot)"/>
+	<!-- -->
+
+	<!-- Realsense driver -->
+	<include file="$(find stretch_core)/launch/d435i_high_resolution.launch"></include>
+	<node name="d435i_configure" pkg="stretch_core" type="d435i_configure" output="screen">
+	   <param name="initial_mode" type="string" value="High Accuracy"/>
+	</node>
+	<!--include file="$(find realsense2_camera)/launch/rs_aligned_depth.launch" if="$(arg start_rs_ros)">
+		<arg name="camera" value="camera"/>
+		<arg name="align_depth" value="true"/>
+		<arg name="filters" value="temporal,decimation,spatial,disparity"/>
+	</include-->
+	<!--param name="serial_no" value="032622071943"/-->
+
+	<!-- LASER RANGE FINDER -->
+	<include file="$(find stretch_core)/launch/rplidar.launch" />
+	<!-- -->
+
+	<!-- LASER SCAN MATCHER FOR ODOMETRY -->
+	<include file="$(find stretch_core)/launch/stretch_scan_matcher.launch" />
+		<!-- -->
+
+	<!-- Rviz visualization -->
+	<include file="$(find home_robot)/launch/visualization.launch" if="$(arg rviz)" />
+
+	<!-- launch the main mapping node -->
+	<include file="$(find home_robot)/launch/stretch_hector_mapping.launch">
+		<arg name="pub_map_odom_transform" value="true"/>
+	</include>
+
+	<include file="$(find hector_geotiff_launch)/launch/geotiff_mapper.launch">
+		<arg name="trajectory_source_frame_name" value="scanmatcher_frame"/>
+		<arg name="map_file_path" value="$(arg geotiff_map_file_path)"/>
+	</include>
+
+	<!-- Keyboard teleop, if we need it -->
+	<include file="$(find stretch_core)/launch/teleop_twist.launch" if="$(arg teleop_keyboard)">
+		<arg name="teleop_type" value="keyboard"/>
+	</include>
+
+</launch>

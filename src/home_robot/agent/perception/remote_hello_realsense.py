@@ -23,7 +23,7 @@ from droidlet.dashboard.o3dviz import serialize as o3d_pickle
 from data_compression import *
 from segmentation.constants import coco_categories
 from segmentation.detectron2_segmentation import Detectron2Segmentation
-from home_robot.ros.camera import RosCamera
+from home_robot.hw.ros.camera import RosCamera
 
 
 # Configure depth and color streams
@@ -403,9 +403,7 @@ class RemoteHelloRealsense(object):
         time.sleep(2)
         pcd = self.get_open3d_pcd()
         plane, points = pcd.segment_plane(
-            distance_threshold=0.03,
-            ransac_n=3,
-            num_iterations=1000,
+            distance_threshold=0.03, ransac_n=3, num_iterations=1000
         )
         angle = math.atan(plane[0] / plane[2])
         self.bot.set_tilt_correction(angle)

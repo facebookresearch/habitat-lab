@@ -19,13 +19,7 @@ RVEL_MAX_DEFAULT = 0.45
 
 
 class RobotController:
-    def __init__(
-        self,
-        mover,
-        vel_max=None,
-        rvel_max=None,
-        hz=HZ_DEFAULT,
-    ):
+    def __init__(self, mover, vel_max=None, rvel_max=None, hz=HZ_DEFAULT):
         # Params
         self.dt = 1.0 / hz
         self.vel_max = vel_max or VEL_MAX_DEFAULT

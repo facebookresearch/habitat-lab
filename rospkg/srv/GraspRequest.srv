@@ -1,0 +1,4 @@
+sensor_msgs/PointCloud cloud
+---
+geometry_msgs/PoseArray[] grasps
+std_msgs/Float32MultiArray[] scores

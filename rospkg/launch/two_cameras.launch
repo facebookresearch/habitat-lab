@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+	<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+		<arg name="camera" value="camera1"/>
+		<param name="serial_no" value="032622071943"/>
+	</include>
+	<include file="$(find realsense2_camera)/launch/rs_camera.launch">
+		<arg name="camera" value="camera2"/>
+		<param name="serial_no" value="815412070200"/>
+	</include>
+</launch>

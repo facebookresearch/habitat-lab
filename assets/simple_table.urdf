@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<robot name="simple_table">
+
+	<material name="dark">
+		<color rgba="0.2 0.2 0.2 1"/>
+	</material>
+
+	<link name="base_link">
+		<visual>
+			<geometry>
+				<box size="0.6 1.2 0.8"/>
+			</geometry>
+			<material name="dark"/>
+		</visual>
+		<collision>
+			<geometry>
+				<box size="0.6 1.2 0.8"/>
+			</geometry>
+		</collision>
+	</link>
+</robot>

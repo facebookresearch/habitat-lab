@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<launch>
+	<!-- start odom base -->
+	<arg name="rviz" default="true" doc="whether to show Rviz" />
+  	<arg name="geotiff_map_file_path" default="$(find hector_geotiff)/maps"/>
+
+	<param name="/stretch_driver/broadcast_odom_tf" type="bool" value="false"/>
+	<param name="/stretch_driver/fail_out_of_range_goal" type="bool" value="false"/>
+  	<param name="/use_sim_time" value="false"/>
+
+	<!-- STRETCH DRIVER -->
+	<include file="$(find stretch_core)/launch/stretch_driver.launch" pass_all_args="true"/>
+
+	<!-- LASER RANGE FINDER -->
+	<include file="$(find stretch_core)/launch/rplidar.launch" />
+
+	<!-- LASER SCAN MATCHER FOR ODOMETRY -->
+	<include file="$(find stretch_core)/launch/stretch_scan_matcher.launch" />
+
+	<include file="$(find hector_geotiff_launch)/launch/geotiff_mapper.launch">
+		<arg name="trajectory_source_frame_name" value="scanmatcher_frame"/>
+		<arg name="map_file_path" value="$(arg geotiff_map_file_path)"/>
+	</include>
+</launch>

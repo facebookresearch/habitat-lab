@@ -10,10 +10,7 @@ from enum import Enum
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 import rospy
-from geometry_msgs.msg import (
-    PoseWithCovarianceStamped,
-    Twist,
-)
+from geometry_msgs.msg import PoseWithCovarianceStamped, Twist
 from nav_msgs.msg import Odometry
 from std_srvs.srv import Trigger, TriggerResponse
 
