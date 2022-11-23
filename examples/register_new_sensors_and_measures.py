@@ -13,8 +13,8 @@ from omegaconf import MISSING
 
 import habitat
 from habitat.config.default_structured_configs import (
+    LabSensorConfig,
     MeasurementConfig,
-    SensorConfig,
 )
 
 
@@ -90,7 +90,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 # define a configuration for this new sensor
 @dataclass
-class AgentPositionSensorConfig(SensorConfig):
+class AgentPositionSensorConfig(LabSensorConfig):
     # Note that typing is required on all fields
     type: str = "my_supercool_sensor"
     # MISSING makes this field have no defaults

@@ -160,12 +160,12 @@ class AnswerActionConfig(ActionConfig):
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
 @dataclass
-class SensorConfig(HabitatBaseConfig):
+class LabSensorConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
 @dataclass
-class PointGoalSensorConfig(SensorConfig):
+class PointGoalSensorConfig(LabSensorConfig):
     type: str = "PointGoalSensor"
     goal_format: str = "POLAR"
     dimensionality: int = 2
@@ -177,184 +177,184 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
 
 
 @dataclass
-class ObjectGoalSensorConfig(SensorConfig):
+class ObjectGoalSensorConfig(LabSensorConfig):
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
 
 
 @dataclass
-class ImageGoalSensorConfig(SensorConfig):
+class ImageGoalSensorConfig(LabSensorConfig):
     type: str = "ImageGoalSensor"
 
 
 @dataclass
-class InstanceImageGoalSensorConfig(SensorConfig):
+class InstanceImageGoalSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalSensor"
 
 
 @dataclass
-class InstanceImageGoalHFOVSensorConfig(SensorConfig):
+class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalHFOVSensor"
 
 
 @dataclass
-class HeadingSensorConfig(SensorConfig):
+class HeadingSensorConfig(LabSensorConfig):
     type: str = "HeadingSensor"
 
 
 @dataclass
-class CompassSensorConfig(SensorConfig):
+class CompassSensorConfig(LabSensorConfig):
     type: str = "CompassSensor"
 
 
 @dataclass
-class GPSSensorConfig(SensorConfig):
+class GPSSensorConfig(LabSensorConfig):
     type: str = "GPSSensor"
     dimensionality: int = 2
 
 
 @dataclass
-class ProximitySensorConfig(SensorConfig):
+class ProximitySensorConfig(LabSensorConfig):
     type: str = "ProximitySensor"
     max_detection_radius: float = 2.0
 
 
 @dataclass
-class JointSensorConfig(SensorConfig):
+class JointSensorConfig(LabSensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
 
 
 @dataclass
-class EEPositionSensorConfig(SensorConfig):
+class EEPositionSensorConfig(LabSensorConfig):
     type: str = "EEPositionSensor"
 
 
 @dataclass
-class IsHoldingSensorConfig(SensorConfig):
+class IsHoldingSensorConfig(LabSensorConfig):
     type: str = "IsHoldingSensor"
 
 
 @dataclass
-class RelativeRestingPositionSensorConfig(SensorConfig):
+class RelativeRestingPositionSensorConfig(LabSensorConfig):
     type: str = "RelativeRestingPositionSensor"
 
 
 @dataclass
-class JointVelocitySensorConfig(SensorConfig):
+class JointVelocitySensorConfig(LabSensorConfig):
     type: str = "JointVelocitySensor"
     dimensionality: int = 7
 
 
 @dataclass
-class OracleNavigationActionSensorConfig(SensorConfig):
+class OracleNavigationActionSensorConfig(LabSensorConfig):
     type: str = "OracleNavigationActionSensor"
 
 
 @dataclass
-class RestingPositionSensorConfig(SensorConfig):
+class RestingPositionSensorConfig(LabSensorConfig):
     type: str = "RestingPositionSensor"
 
 
 @dataclass
-class ArtJointSensorConfig(SensorConfig):
+class ArtJointSensorConfig(LabSensorConfig):
     type: str = "ArtJointSensor"
 
 
 @dataclass
-class NavGoalSensorConfig(SensorConfig):
+class NavGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalSensor"
 
 
 @dataclass
-class ArtJointSensorNoVelSensorConfig(SensorConfig):
+class ArtJointSensorNoVelSensorConfig(LabSensorConfig):
     type: str = "ArtJointSensorNoVel"  # TODO: add "Sensor" suffix
 
 
 @dataclass
-class MarkerRelPosSensorConfig(SensorConfig):
+class MarkerRelPosSensorConfig(LabSensorConfig):
     type: str = "MarkerRelPosSensor"
 
 
 @dataclass
-class TargetStartSensorConfig(SensorConfig):
+class TargetStartSensorConfig(LabSensorConfig):
     type: str = "TargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class TargetCurrentSensorConfig(SensorConfig):
+class TargetCurrentSensorConfig(LabSensorConfig):
     type: str = "TargetCurrentSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class GoalSensorConfig(SensorConfig):
+class GoalSensorConfig(LabSensorConfig):
     type: str = "GoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class TargetOrGoalStartPointGoalSensorConfig(SensorConfig):
+class TargetOrGoalStartPointGoalSensorConfig(LabSensorConfig):
     type: str = "TargetOrGoalStartPointGoalSensor"
 
 
 @dataclass
-class GlobalPredicatesSensorConfig(SensorConfig):
+class GlobalPredicatesSensorConfig(LabSensorConfig):
     type: str = "GlobalPredicatesSensor"
 
 
 @dataclass
-class TargetStartGpsCompassSensorConfig(SensorConfig):
+class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     type: str = "TargetStartGpsCompassSensor"
 
 
 @dataclass
-class TargetGoalGpsCompassSensorConfig(SensorConfig):
+class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
     type: str = "TargetGoalGpsCompassSensor"
 
 
 @dataclass
-class NavToSkillSensorConfig(SensorConfig):
+class NavToSkillSensorConfig(LabSensorConfig):
     type: str = "NavToSkillSensor"
     num_skills: int = 8
 
 
 @dataclass
-class AbsTargetStartSensorConfig(SensorConfig):
+class AbsTargetStartSensorConfig(LabSensorConfig):
     type: str = "AbsTargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class AbsGoalSensorConfig(SensorConfig):
+class AbsGoalSensorConfig(LabSensorConfig):
     type: str = "AbsGoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class DistToNavGoalSensorConfig(SensorConfig):
+class DistToNavGoalSensorConfig(LabSensorConfig):
     type: str = "DistToNavGoalSensor"
 
 
 @dataclass
-class LocalizationSensorConfig(SensorConfig):
+class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
 
 @dataclass
-class QuestionSensorConfig(SensorConfig):
+class QuestionSensorConfig(LabSensorConfig):
     type: str = "QuestionSensor"
 
 
 @dataclass
-class InstructionSensorConfig(SensorConfig):
+class InstructionSensorConfig(LabSensorConfig):
     type: str = "InstructionSensor"
     instruction_sensor_uuid: str = "instruction"
 
@@ -703,7 +703,7 @@ class TaskConfig(HabitatBaseConfig):
     # NAVIGATION task
     type: str = "Nav-v0"
     # Temporary structure for sensors
-    lab_sensors: Dict[str, SensorConfig] = field(default_factory=dict)
+    lab_sensors: Dict[str, LabSensorConfig] = field(default_factory=dict)
     measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
