@@ -554,10 +554,9 @@ if __name__ == "__main__":
         help="If true, make the task never end due to reaching max number of steps",
     )
     parser.add_argument(
-        "--add-ik",
+        "--no-add-ik",
         action="store_true",
-        default=True,
-        help="If true, changes arm control to IK",
+        help="If true, does not use IK for the arm control",
     )
     parser.add_argument(
         "--gfx",
@@ -596,7 +595,7 @@ if __name__ == "__main__":
         config.TASK.MEASUREMENTS.append("GFX_REPLAY_MEASURE")
     if args.never_end:
         config.ENVIRONMENT.MAX_EPISODE_STEPS = 0
-    if args.add_ik:
+    if not args.no_add_ik:
         if "ARM_ACTION" not in config.TASK.ACTIONS:
             raise ValueError(
                 "Action space does not have any arm control so incompatible with `--add-ik` option"

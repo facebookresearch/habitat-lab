@@ -117,7 +117,6 @@ class DynNavRLEnv(RearrangeTask):
             episode, force_idx=self.force_obj_to_idx
         )
 
-        self._nav_to_info.start_hold_obj_idx = self._generate_snap_to_obj()
         sim.robot.base_pos = self._nav_to_info.robot_start_pos
         sim.robot.base_rot = self._nav_to_info.robot_start_angle
 

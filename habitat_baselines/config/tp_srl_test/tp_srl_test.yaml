@@ -22,7 +22,7 @@ RL:
   POLICY:
       name: "HierarchicalPolicy"
       high_level_policy:
-        name: "GtHighLevelPolicy"
+        name: "FixedHighLevelPolicy"
       OBS_TRANSFORMS:
         ENABLED_TRANSFORMS: ['AddVirtualKeys']
         ADD_VIRTUAL_KEYS:

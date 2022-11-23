@@ -86,7 +86,6 @@ SIMULATOR:
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3
-        JOINT_START_NOISE: 0.2
         SENSORS: ['HEAD_DEPTH_SENSOR']
         ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
         ROBOT_TYPE: FetchSuctionRobot

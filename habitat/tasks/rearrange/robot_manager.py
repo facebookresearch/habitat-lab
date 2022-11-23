@@ -70,7 +70,7 @@ class RobotManager:
                     robot=robot,
                     grasp_mgr=grasp_mgr,
                     cfg=agent_cfg,
-                    start_js=np.array(robot.params.arm_init_params),
+                    start_js=np.array(cfg.ARM_JOINT_START),
                     is_pb_installed=self._is_pb_installed,
                 )
             )

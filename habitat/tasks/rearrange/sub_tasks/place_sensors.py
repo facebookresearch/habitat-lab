@@ -81,13 +81,13 @@ class PlaceReward(RearrangeReward):
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
 
-        if cur_picked:
+        if (not obj_at_goal) or cur_picked:
             if self._config.USE_EE_DIST:
                 dist_to_goal = ee_to_goal_dist[str(task.abs_targ_idx)]
             else:
                 dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
             min_dist = self._config.MIN_DIST_TO_GOAL
-        elif obj_at_goal:
+        else:
             dist_to_goal = ee_to_rest_distance
             min_dist = 0.0
 

@@ -176,7 +176,10 @@ class DistToGoal(Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        return np.linalg.norm(self._sim.robot.base_pos - task.nav_goal_pos)
+        return np.linalg.norm(
+            np.array(self._sim.robot.base_pos)[[0, 2]]
+            - task.nav_goal_pos[[0, 2]]
+        )
 
     @staticmethod
     def _get_uuid(*args, **kwargs):

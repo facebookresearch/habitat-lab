@@ -772,7 +772,7 @@ class PPOTrainer(BaseRLTrainer):
                         prev_time=(time.time() - self.t_start) + prev_time,
                         running_episode_stats=self.running_episode_stats,
                         window_episode_stats=dict(self.window_episode_stats),
-                        resume_run_id=writer.get_run_id(),
+                        run_id=writer.get_run_id(),
                     )
 
                     save_resume_state(
@@ -1046,6 +1046,9 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            policy_info = self.actor_critic.get_policy_info(infos, dones)
+            for i in range(len(policy_info)):
+                infos[i].update(policy_info[i])
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,

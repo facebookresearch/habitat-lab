@@ -85,8 +85,8 @@ SIMULATOR:
         - "data/objects/ycb/configs/"
     DEBUG_RENDER: false
     DEBUG_RENDER_GOAL: true
-    CONCUR_RENDER: false
-    AUTO_SLEEP: false
+    CONCUR_RENDER: True
+    AUTO_SLEEP: True
     AGENT_0:
         HEIGHT: 1.5
         RADIUS: 0.3

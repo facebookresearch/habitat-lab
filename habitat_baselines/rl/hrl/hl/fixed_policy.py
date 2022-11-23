@@ -1,4 +1,4 @@
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 import torch
 import yaml
@@ -7,18 +7,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
 
 
-class HighLevelPolicy:
-    def get_next_skill(
-        self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
-    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor]:
-        """
-        :returns: A tuple containing the next skill index, a list of arguments
-            for the skill, and if the high-level policy requests immediate
-            termination.
-        """
-
-
-class GtHighLevelPolicy:
+class FixedHighLevelPolicy:
     """
     :property _solution_actions: List of tuples were first tuple element is the
         action name and the second is the action arguments.
@@ -38,8 +27,9 @@ class GtHighLevelPolicy:
         for i, sol_step in enumerate(task_spec["solution"]):
             sol_action = parse_func(sol_step)
             self._solution_actions.append(sol_action)
-            if i < (len(task_spec["solution"]) - 1):
+            if config.add_arm_rest and i < (len(task_spec["solution"]) - 1):
                 self._solution_actions.append(parse_func("reset_arm(0)"))
+
         # Add a wait action at the end.
         self._solution_actions.append(parse_func("wait(30)"))
 

@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Dict, Iterable, Optional, Union
+from typing import Dict, Iterable, List, Optional, Union
 
 import torch
 from gym import spaces
@@ -44,6 +44,9 @@ class Policy(abc.ABC):
 
     def forward(self, *x):
         raise NotImplementedError
+
+    def get_policy_info(self, infos, dones) -> List[Dict[str, float]]:
+        return []
 
     def act(
         self,
