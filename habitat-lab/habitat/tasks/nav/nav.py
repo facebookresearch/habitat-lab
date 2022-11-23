@@ -75,7 +75,10 @@ def merge_sim_episode_config(
         episode.start_position is not None
         and episode.start_rotation is not None
     ):
-        agent_cfg = next(iter(sim_config.agents.values()))
+        default_agent_name = sim_config.agents_order[
+            sim_config.default_agent_id
+        ]
+        agent_cfg = sim_config.agents[default_agent_name]
         with read_write(agent_cfg):
             agent_cfg.start_position = episode.start_position
             agent_cfg.start_rotation = [

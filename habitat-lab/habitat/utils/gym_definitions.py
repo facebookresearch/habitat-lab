@@ -65,10 +65,12 @@ def _make_habitat_gym_env(
     config = habitat.get_config(cfg_file_path)
     if use_render_mode:
         with habitat.config.read_write(config):
-            default_agent = next(
-                iter(config.habitat.simulator.agents.values())
-            )
-            if len(config.habitat.simulator.agents) == 1:
+            sim_config = config.habitat.simulator
+            default_agent_name = sim_config.agents_order[
+                sim_config.default_agent_id
+            ]
+            default_agent = sim_config.agents[default_agent_name]
+            if len(sim_config.agents) == 1:
                 default_agent.sim_sensors.update(
                     {"third_rgb_sensor": ThirdRGBSensorConfig()}
                 )

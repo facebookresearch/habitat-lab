@@ -31,6 +31,9 @@ habitat:
       - "data/objects/ycb/configs/"
     grasp_impulse: 10000.0
     hold_thresh: 0.2
+    agents_order:
+      - agent_0
+      - agent_1
     agents:
       agent_0:
         radius: 0.3

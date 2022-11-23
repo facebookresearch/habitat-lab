@@ -262,9 +262,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self.habitat_config = config
 
         sim_sensors = []
-        for _agent_id, (_agent_name, agent_config) in enumerate(
-            self.habitat_config.agents.items()
-        ):
+        for agent_config in self.habitat_config.agents.values():
             for sensor_cfg in agent_config.sim_sensors.values():
                 sensor_type = registry.get_sensor(sensor_cfg.type)
 
@@ -283,7 +281,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         for path in self.habitat_config.additional_object_paths:
             obj_attr_mgr.load_configs(path)
         self._action_space = spaces.Discrete(
-            len(self.sim_config.agents[0].action_space)
+            len(
+                self.sim_config.agents[
+                    self.habitat_config.default_agent_id
+                ].action_space
+            )
         )
         self._prev_sim_obs: Optional[Observations] = None
 
@@ -308,7 +310,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sim_config.scene_id = self.habitat_config.scene
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=self._get_default_agent_config(),
+            config_from=self._get_agent_config(),
             config_to=agent_config,
             # These keys are only used by Hab-Lab
             ignore_keys={
@@ -376,9 +378,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def _update_agents_state(self) -> bool:
         is_updated = False
-        for agent_id, (_agent_name, agent_cfg) in enumerate(
-            self.habitat_config.agents.items()
+        for agent_id, agent_name in enumerate(
+            self.habitat_config.agents_order
         ):
+            agent_cfg = self.habitat_config.agents[agent_name]
             if agent_cfg.is_set_start_state:
                 self.set_agent_state(
                     agent_cfg.start_position,
@@ -543,8 +546,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         """
         return self.semantic_scene
 
-    def _get_default_agent_config(self) -> Any:
-        return next(iter(self.habitat_config.agents.values()))
+    def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
+        if agent_id is None:
+            agent_id = self.habitat_config.default_agent_id
+
+        agent_name = self.habitat_config.agents_order[agent_id]
+        agent_config = self.habitat_config.agents[agent_name]
+
+        return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         return self.get_agent(agent_id).get_state()
