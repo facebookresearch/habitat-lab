@@ -81,7 +81,9 @@ class ReportWorkerProcess(ProcessBase):
                 running_frames_window=self.running_frames_window,
                 running_time_window=self.running_time_window,
                 n_update_reports=self.n_update_reports,
-                run_id=self.run_id,
+                run_id=self.writer.get_run_id()
+                if self.writer is not None
+                else None,
             )
         )
 
