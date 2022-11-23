@@ -13,7 +13,7 @@ The system has 5 components. 3 of these are the key components for learning:
 
 How these pieces are connected together is best seen via this diagram:
 
-![ver System Diagram](images/ver-system.svg)
+![ver System Diagram](/habitat-baselines/habitat_baselines/rl/ver/images/ver-system.svg)
 
 The Shared CPU Memory block is implemented via the `transfer_buffers` and the Shared GPU Memory block is implemented via the `rollouts`.
 
