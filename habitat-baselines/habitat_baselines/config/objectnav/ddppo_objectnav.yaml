@@ -1,0 +1,80 @@
+# @package _global_
+
+defaults:
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /benchmark/nav/objectnav: objectnav_mp3d
+  - _self_
+
+habitat:
+  environment:
+    iterator_options:
+      max_scene_repeat_steps: 50000
+  task:
+    success_reward: 2.5
+    slack_reward: -1e-3
+
+habitat_baselines:
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  test_episode_count: -1
+  eval_ckpt_path_dir: "data/new_checkpoints"
+  num_environments: 4
+  checkpoint_folder: "data/new_checkpoints"
+  trainer_name: "ddppo"
+  num_updates: 270000
+  log_interval: 10
+  num_checkpoints: 100
+  # Force PyTorch to be single threaded as
+  # this improves performance considerably
+  force_torch_single_threaded: True
+
+  eval:
+    split: "val"
+
+  rl:
+
+    policy:
+      name: "PointNavResNetPolicy"
+
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 4
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.2
+      num_steps: 64
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: False
+      reward_window_size: 50
+
+      use_normalized_advantage: False
+
+      hidden_size: 512
+
+    ddppo:
+      sync_frac: 0.6
+      # The PyTorch distributed backend to use
+      distrib_backend: NCCL
+      # Visual encoder backbone
+      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+      # Initialize with pretrained weights
+      pretrained: False
+      # Initialize just the visual encoder backbone with pretrained weights
+      pretrained_encoder: False
+      # Whether or not the visual encoder backbone will be trained.
+      train_encoder: True
+      # Whether or not to reset the critic linear layer
+      reset_critic: True
+
+      # Model parameters
+      backbone: resnet50
+      rnn_type: LSTM
+      num_recurrent_layers: 2

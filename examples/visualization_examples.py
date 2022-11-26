@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -80,9 +80,11 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
 
 
 def example_get_topdown_map():
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
+    config = habitat.get_config(
+        config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    )
     dataset = habitat.make_dataset(
-        id_dataset=config.DATASET.TYPE, config=config.DATASET
+        id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
     )
     with habitat.Env(config=config, dataset=dataset) as env:
         env.reset()

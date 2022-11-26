@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - /benchmark/nav/vln_r2r.yaml
+  - _self_
+
+habitat:
+  task:
+    measurements:
+      success:
+        success_distance: 0.1
+  dataset:
+    type: R2RVLN-v1
+    split: val_seen
+    data_path: "data/datasets/vln/mp3d/r2r/v1/{split}/{split}.json.gz"
+    scenes_dir: "data/scene_datasets/"

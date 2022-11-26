@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,16 +10,19 @@ import os
 import numpy as np
 import pytest
 
+from habitat.config import read_write
 from habitat.config.default import get_config
 from habitat.sims import make_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def init_sim():
-    config = get_config()
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    return make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR)
+    return make_sim(
+        config.habitat.simulator.type, config=config.habitat.simulator
+    )
 
 
 def test_sim_trajectory():
@@ -72,20 +75,24 @@ def test_sim_trajectory():
 
 
 def test_sim_no_sensors():
-    config = get_config()
-    config.defrost()
-    config.SIMULATOR.AGENT_0.SENSORS = []
-    if not os.path.exists(config.SIMULATOR.SCENE):
-        pytest.skip("Please download Habitat test data to data folder.")
-    with make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR) as sim:
-        sim.reset()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
+    with read_write(config):
+        config.habitat.simulator.agent_0.sim_sensors = {}
+        if not os.path.exists(config.habitat.simulator.scene):
+            pytest.skip("Please download Habitat test data to data folder.")
+        with make_sim(
+            config.habitat.simulator.type, config=config.habitat.simulator
+        ) as sim:
+            sim.reset()
 
 
 def test_sim_geodesic_distance():
-    config = get_config()
-    if not os.path.exists(config.SIMULATOR.SCENE):
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
+    if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
-    with make_sim(config.SIMULATOR.TYPE, config=config.SIMULATOR) as sim:
+    with make_sim(
+        config.habitat.simulator.type, config=config.habitat.simulator
+    ) as sim:
         sim.reset()
 
         with open(

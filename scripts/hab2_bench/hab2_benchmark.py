@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -21,7 +21,9 @@ def create_env(args, proc_i):
     print(f"assigning {proc_i} gpu {spec_gpu}")
 
     set_opts = args.opts
-    set_opts.extend(["SIMULATOR.HABITAT_SIM_V0.GPU_DEVICE_ID", spec_gpu])
+    set_opts.extend(
+        [f"habitat.simulator.habitat_sim_v0.gpu_device_id={spec_gpu}"]
+    )
 
     config = habitat.get_config(args.cfg, set_opts)
     return habitat.Env(config=config)
@@ -130,7 +132,7 @@ class HabDemoRunner:
             self.get_actions = lambda i: np.array(
                 [
                     {
-                        "action": "ARM_ACTION",
+                        "action": "arm_action",
                         "action_args": {"arm_action": use_actions[i][:-1]},
                     }
                     for _ in range(self.args.n_procs)
@@ -165,7 +167,9 @@ if __name__ == "__main__":
     load_fname = "orp/start_data/bench_ac.txt"
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-name", type=str, default="")
-    parser.add_argument("--cfg", type=str, default="")
+    parser.add_argument(
+        "--cfg", type=str, default="benchmark/rearrange/idle.yaml"
+    )
 
     parser.add_argument(
         "--n-procs",

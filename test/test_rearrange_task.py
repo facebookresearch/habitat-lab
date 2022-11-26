@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -21,7 +21,7 @@ import habitat.datasets.rearrange.run_episode_generator as rr_gen
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
-from habitat.config.default import get_config
+from habitat.config.default import _HABITAT_CFG_DIR, get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
@@ -31,8 +31,10 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
 
-CFG_TEST = "configs/tasks/rearrange/pick.yaml"
-GEN_TEST_CFG = "habitat/datasets/rearrange/configs/test_config.yaml"
+CFG_TEST = "benchmark/rearrange/pick.yaml"
+GEN_TEST_CFG = (
+    "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
+)
 EPISODES_LIMIT = 6
 
 
@@ -57,14 +59,14 @@ def check_json_serialization(dataset: habitat.Dataset):
 
 
 def test_rearrange_dataset():
-    dataset_config = get_config(CFG_TEST).DATASET
+    dataset_config = get_config(CFG_TEST).habitat.dataset
     if not RearrangeDatasetV0.check_config_paths_exist(dataset_config):
         pytest.skip(
             "Please download ReplicaCAD RearrangeDataset Dataset to data folder."
         )
 
     dataset = habitat.make_dataset(
-        id_dataset=dataset_config.TYPE, config=dataset_config
+        id_dataset=dataset_config.type, config=dataset_config
     )
     assert dataset
     dataset.episodes = dataset.episodes[0:EPISODES_LIMIT]
@@ -74,7 +76,10 @@ def test_rearrange_dataset():
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat_baselines/config/rearrange/**/*.yaml", recursive=True),
+        glob(
+            "habitat-baselines/habitat_baselines/config/rearrange/**/*.yaml",
+            recursive=True,
+        ),
     ),
 )
 def test_rearrange_baseline_envs(test_cfg_path):
@@ -82,12 +87,11 @@ def test_rearrange_baseline_envs(test_cfg_path):
     Test the Habitat Baseline environments
     """
     config = baselines_get_config(test_cfg_path)
-    config.defrost()
-    config.TASK_CONFIG.GYM.OBS_KEYS = None
-    config.TASK_CONFIG.GYM.DESIRED_GOAL_KEYS = []
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.gym.obs_keys = None
+        config.habitat.gym.desired_goal_keys = []
 
-    env_class = get_env_class(config.TASK_CONFIG.ENV_TASK)
+    env_class = get_env_class(config.habitat.env_task)
 
     env = habitat.utils.env_utils.make_env_fn(
         env_class=env_class, config=config
@@ -105,7 +109,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("configs/tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
@@ -116,6 +120,13 @@ def test_rearrange_tasks(test_cfg_path):
         return
 
     config = get_config(test_cfg_path)
+    if (
+        config.habitat.dataset.data_path
+        == "data/ep_datasets/bench_scene.json.gz"
+    ):
+        pytest.skip(
+            "This config is only useful for examples and does not have the generated dataset"
+        )
 
     with habitat.Env(config=config) as env:
         for _ in range(5):
@@ -125,7 +136,7 @@ def test_rearrange_tasks(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("configs/tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_composite_tasks(test_cfg_path):
@@ -135,16 +146,28 @@ def test_composite_tasks(test_cfg_path):
     if not osp.isfile(test_cfg_path):
         return
 
-    config = get_config(test_cfg_path, ["SIMULATOR.CONCUR_RENDER", False])
-    if "TASK_SPEC" not in config.TASK:
+    config = get_config(
+        test_cfg_path, ["habitat.simulator.concur_render=False"]
+    )
+    if "task_spec" not in config.habitat.task:
         return
+
+    if (
+        config.habitat.dataset.data_path
+        == "data/ep_datasets/bench_scene.json.gz"
+    ):
+        pytest.skip(
+            "This config is only useful for examples and does not have the generated dataset"
+        )
 
     with habitat.Env(config=config) as env:
         if not isinstance(env.task, CompositeTask):
             return
 
         pddl_path = osp.join(
-            config.TASK.TASK_SPEC_BASE_PATH, config.TASK.TASK_SPEC + ".yaml"
+            _HABITAT_CFG_DIR,
+            config.habitat.task.task_spec_base_path,
+            config.habitat.task.task_spec + ".yaml",
         )
         with open(pddl_path, "r") as f:
             domain = yaml.safe_load(f)
@@ -187,7 +210,7 @@ def test_rearrange_episode_generator(
     "test_cfg_path,mode",
     list(
         itertools.product(
-            glob("habitat_baselines/config/tp_srl_test/*"),
+            glob("habitat-baselines/habitat_baselines/config/tp_srl_test/*"),
             ["eval"],
         )
     ),
@@ -197,9 +220,11 @@ def test_tp_srl(test_cfg_path, mode):
     os.environ["MAIN_PORT"] = str(find_free_port())
 
     run_exp(
-        test_cfg_path,
+        test_cfg_path.replace(
+            "habitat-baselines/habitat_baselines/config/", ""
+        ),
         mode,
-        ["EVAL.SPLIT", "train"],
+        ["habitat_baselines.eval.split=train"],
     )
 
     # Needed to destroy the trainer

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 r"""Reference python script for profiling DDPPO PointNav on the FAIR internal
@@ -23,7 +23,7 @@ if __name__ == "__main__":
 
     # The Habitat-lab program to be profiled (the command you usually use to
     # invoke it).
-    program_str = "python -u -m habitat_baselines.run --exp-config habitat_baselines/config/pointnav/ddppo_pointnav.yaml --run-type train"
+    program_str = "python -u -m habitat_baselines.run --exp-config habitat-baselines/habitat_baselines/config/pointnav/ddppo_pointnav.yaml --run-type train"
 
     # Path to Nsight Systems nsys command-line tool. This hard-coded path is
     # for the FAIR cluster.
@@ -132,9 +132,9 @@ if __name__ == "__main__":
     if do_capture_step_range:
         program_with_extra_args_str = (
             program_str
-            + " PROFILING.CAPTURE_START_STEP "
+            + " profiling.capture_start_step "
             + str(capture_start_step)
-            + " PROFILING.NUM_STEPS_TO_CAPTURE "
+            + " profiling.num_steps_to_capture "
             + str(num_steps_to_capture)
         )
     else:

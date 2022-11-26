@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -16,7 +16,9 @@ from habitat_baselines.agents.mp_agents import (
 )
 from habitat_baselines.motion_planning.motion_plan import is_ompl_installed
 
-TEST_CFG = "habitat_baselines/config/rearrange/spap_pick.yaml"
+TEST_CFG = (
+    "habitat-baselines/habitat_baselines/config/rearrange/spap_pick.yaml"
+)
 
 
 @pytest.mark.skipif(
@@ -26,14 +28,16 @@ TEST_CFG = "habitat_baselines/config/rearrange/spap_pick.yaml"
 def test_pick_motion_planning():
     config = get_config(TEST_CFG)
 
-    benchmark = Benchmark(config.BASE_TASK_CONFIG_PATH)
+    benchmark = Benchmark(config.habitat_baselines.base_task_config_path)
 
     def get_args(skill):
         target_idx = skill._sim.get_targets()[0][0]
         return {"obj": target_idx}
 
-    ac_cfg = get_config(config.BASE_TASK_CONFIG_PATH).TASK.ACTIONS
-    spa_cfg = config.SENSE_PLAN_ACT
+    ac_cfg = get_config(
+        config.habitat_baselines.base_task_config_path
+    ).task.actions
+    spa_cfg = config.habitat_baselines.sense_plan_act
     env = benchmark._env
     pick_skill = AgentComposition(
         [

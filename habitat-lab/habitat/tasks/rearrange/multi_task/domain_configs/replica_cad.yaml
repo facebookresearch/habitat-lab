@@ -1,0 +1,312 @@
+types:
+  object:
+    - robot_type
+    - static_obj_type
+  static_obj_type:
+    - art_obj_type
+    - obj_type
+  art_obj_type:
+    - cab_type
+    - fridge_type
+  obj_type:
+    - goal_type
+    - rigid_obj_type
+
+
+constants:
+  - name: cab_push_point_7
+    expr_type: cab_type
+  - name: cab_push_point_6
+    expr_type: cab_type
+  - name: cab_push_point_5
+    expr_type: cab_type
+  - name: cab_push_point_4
+    expr_type: cab_type
+  - name: fridge_push_point
+    expr_type: fridge_type
+
+predicates:
+  - name: in
+    args:
+      - name: obj
+        expr_type: obj_type
+      - name: receptacle
+        expr_type: art_obj_type
+    set_state:
+      obj_states:
+        obj: receptacle
+
+  - name: holding
+    args:
+      - name: obj
+        expr_type: rigid_obj_type
+      - name: robot_id
+        expr_type: robot_type
+    set_state:
+      robot_states:
+        robot_id:
+          holding: obj
+
+  - name: not_holding
+    args:
+      - name: robot_id
+        expr_type: robot_type
+    set_state:
+      robot_states:
+        robot_id:
+          should_drop: True
+
+  - name: opened_cab
+    args:
+      - name: cab_id
+        expr_type: cab_type
+    set_state:
+      art_states:
+        cab_id:
+          value: 0.45
+          cmp: 'greater'
+          override_thresh: 0.1
+
+  - name: closed_cab
+    args:
+      - name: cab_id
+        expr_type: cab_type
+    set_state:
+      arg_spec:
+        name_match: "cab"
+      art_states:
+        cab_id:
+          value: 0.0
+          cmp: 'close'
+
+
+  - name: opened_fridge
+    args:
+      - name: fridge_id
+        expr_type: fridge_type
+    set_state:
+      art_states:
+        fridge_id:
+          value: 1.22
+          cmp: 'greater'
+
+  - name: closed_fridge
+    args:
+      - name: fridge_id
+        expr_type: fridge_type
+    set_state:
+      art_states:
+        fridge_id:
+          value: 0.0
+          cmp: 'close'
+
+  - name: robot_at
+    args:
+      - name: Y
+        expr_type: static_obj_type
+      - name: robot_id
+        expr_type: robot_type
+    set_state:
+      robot_states:
+        robot_id:
+          pos: Y
+
+  - name: at
+    args:
+      - name: obj
+        expr_type: obj_type
+      - name: at_entity
+        expr_type: static_obj_type
+    set_state:
+        obj_states:
+            obj: at_entity
+
+actions:
+  - name: nav
+    parameters:
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition: null
+    postcondition:
+      - robot_at(obj, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: nav_to_receptacle
+    parameters:
+      - name: marker
+        expr_type: art_obj_type
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - in(obj, marker)
+    postcondition:
+      - robot_at(marker, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: pick
+    parameters:
+      - name: obj
+        expr_type: rigid_obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(obj, robot)
+        - quantifier: FORALL
+          inputs:
+            - name: recep
+              expr_type: cab_type
+          expr_type: NAND
+          sub_exprs:
+            - in(obj, recep)
+            - closed_cab(recep)
+    postcondition:
+      - holding(obj, robot)
+    task_info:
+      task: RearrangePickTask-v0
+      task_def: "pick"
+      config_args:
+        habitat.task.should_enforce_target_within_reach: True
+        habitat.task.force_regenerate: True
+        habitat.task.base_angle_noise: 0.0
+        habitat.task.base_noise: 0.0
+        habitat.task.should_save_to_cache: False
+
+  - name: place
+    parameters:
+      - name: place_obj
+        expr_type: rigid_obj_type
+      - name: obj
+        expr_type: goal_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - holding(place_obj, robot)
+        - robot_at(obj, robot)
+    postcondition:
+      - not_holding(robot)
+      - at(place_obj, obj)
+    task_info:
+      task: RearrangePlaceTask-v0
+      task_def: "place"
+      config_args:
+        task.should_enforce_target_within_reach: True
+        task.force_regenerate: True
+        task.base_angle_noise: 0.0
+        task.base_noise: 0.0
+        task.should_save_to_cache: False
+
+  - name: open_fridge
+    parameters:
+      - name: fridge_id
+        expr_type: fridge_type
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(fridge_id, robot)
+        - closed_fridge(fridge_id)
+        - in(obj,fridge_id)
+    postcondition:
+      - opened_fridge(fridge_id)
+    task_info:
+      task_def: "open_fridge"
+      task: RearrangeOpenFridgeTask-v0
+      add_task_args:
+        marker: fridge_id
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
+
+  - name: close_fridge
+    parameters:
+      - name: fridge_id
+        expr_type: fridge_type
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(fridge_id, robot)
+        - opened_fridge(fridge_id)
+        - in(obj,fridge_id)
+    postcondition:
+      - closed_fridge(fridge_id)
+    task_info:
+      task_def: "close_fridge"
+      task: RearrangeCloseFridgeTask-v0
+      add_task_args:
+        marker: fridge_id
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
+
+  - name: open_cab
+    parameters:
+      - name: marker
+        expr_type: cab_type
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(marker, robot)
+        - closed_cab(marker)
+        - in(obj,marker)
+    postcondition:
+      - opened_cab(marker)
+    task_info:
+      task_def: "open_cab"
+      task: RearrangeOpenDrawerTask-v0
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
+
+  - name: close_cab
+    parameters:
+      - name: marker
+        expr_type: cab_type
+      - name: obj
+        expr_type: obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(marker, robot)
+        - opened_cab(marker)
+        - in(obj,marker)
+    postcondition:
+      - closed_cab(marker)
+    task_info:
+      task_def: "close_cab"
+      task: RearrangeCloseDrawerTask-v0
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0

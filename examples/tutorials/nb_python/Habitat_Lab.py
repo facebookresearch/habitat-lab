@@ -112,12 +112,12 @@ def display_sample(
 # ## Setup PointNav Task
 
 # %%
-# cat "./configs/test/habitat_all_sensors_test.yaml"
+# cat "./test/habitat_all_sensors_test.yaml"
 
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_paths="./configs/test/habitat_all_sensors_test.yaml"
+        config_paths="./test/habitat_all_sensors_test.yaml"
     )
 
     try:
@@ -129,9 +129,9 @@ if __name__ == "__main__":
     # %%
     action = None
     obs = env.reset()
-    valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
+    valid_actions = ["turn_left", "turn_right", "move_forward", "stop"]
     interactive_control = False  # @param {type:"boolean"}
-    while action != "STOP":
+    while action != "stop":
         display_sample(obs["rgb"])
         print(
             "distance to goal: {:.2f}".format(
@@ -170,9 +170,7 @@ if __name__ == "__main__":
 
 # %%
 if __name__ == "__main__":
-    config = get_baselines_config(
-        "./habitat_baselines/config/pointnav/ppo_pointnav_example.yaml"
-    )
+    config = get_baselines_config("pointnav/ppo_pointnav_example.yaml")
 
 # %%
 # set random seeds
@@ -180,18 +178,19 @@ if __name__ == "__main__":
     seed = "42"  # @param {type:"string"}
     steps_in_thousands = "10"  # @param {type:"string"}
 
-    config.defrost()
-    config.TASK_CONFIG.SEED = int(seed)
-    config.TOTAL_NUM_STEPS = int(steps_in_thousands)
-    config.LOG_INTERVAL = 1
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.seed = int(seed)
+        config.habitat_baselines.total_num_steps = int(steps_in_thousands)
+        config.habitat_baselines.log_interval = 1
 
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
 
 # %%
 if __name__ == "__main__":
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
     trainer = trainer_init(config)
     trainer.train()
 
@@ -246,7 +245,7 @@ except ImportError:
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_paths="./configs/test/habitat_all_sensors_test.yaml"
+        config_paths="./test/habitat_all_sensors_test.yaml"
     )
 
 
@@ -266,9 +265,8 @@ class NewNavigationTask(NavigationTask):
 
 
 if __name__ == "__main__":
-    config.defrost()
-    config.TASK.TYPE = "TestNav-v0"
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.task.type = "TestNav-v0"
 
     try:
         env.close()
@@ -279,7 +277,7 @@ if __name__ == "__main__":
     # %%
     action = None
     env.reset()
-    valid_actions = ["TURN_LEFT", "TURN_RIGHT", "MOVE_FORWARD", "STOP"]
+    valid_actions = ["turn_left", "turn_right", "move_forward", "stop"]
     interactive_control = False  # @param {type:"boolean"}
     while env.episode_over is not True:
         display_sample(obs["rgb"])
@@ -340,17 +338,19 @@ class AgentPositionSensor(habitat.Sensor):
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_paths="./configs/test/habitat_all_sensors_test.yaml"
+        config_paths="./test/habitat_all_sensors_test.yaml"
     )
 
-    config.defrost()
-    # Now define the config for the sensor
-    config.TASK.AGENT_POSITION_SENSOR = habitat.Config()
-    # Use the custom name
-    config.TASK.AGENT_POSITION_SENSOR.TYPE = "agent_position_sensor"
-    # Add the sensor to the list of sensors in use
-    config.TASK.SENSORS.append("AGENT_POSITION_SENSOR")
-    config.freeze()
+    from habitat.config.default_structured_configs import SensorConfig
+
+    # We use the base sensor config, but you could also define your own
+    # AgentPositionSensorConfig that inherits from SensorConfig
+
+    with habitat.config.read_write(config):
+        # Now define the config for the sensor
+        config.habitat.task.lab_sensors[
+            "agent_position_sensor"
+        ] = SensorConfig(type="agent_position_sensor")
 
     try:
         env.close()
@@ -394,9 +394,9 @@ class ForwardOnlyAgent(habitat.Agent):
 
     def act(self, observations):
         if self.is_goal_reached(observations):
-            action = HabitatSimActions.STOP
+            action = HabitatSimActions.stop
         else:
-            action = HabitatSimActions.MOVE_FORWARD
+            action = HabitatSimActions.move_forward
         return {"action": action}
 
 
@@ -423,9 +423,9 @@ except ImportError:
 # ```python
 # # Are we in sim or reality?
 # if args.use_robot: # Use LoCoBot via PyRobot
-#     config.SIMULATOR.TYPE = "PyRobot-Locobot-v0"
+#     config.habitat.simulator.type = "PyRobot-Locobot-v0"
 # else: # Use simulation
-#     config.SIMULATOR.TYPE = "Habitat-Sim-v0"
+#     config.habitat.simulator.type = "Habitat-Sim-v0"
 # ```
 #
 # Paper: [https://arxiv.org/abs/1912.06321](https://arxiv.org/abs/1912.06321)

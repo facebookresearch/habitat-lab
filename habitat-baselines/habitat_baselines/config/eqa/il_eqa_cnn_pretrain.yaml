@@ -1,0 +1,37 @@
+# @package _global_
+
+defaults:
+ - /habitat_baselines: habitat_baselines_il_config_base
+ - /benchmark/nav: eqa_mp3d
+ - _self_
+
+
+habitat_baselines:
+  trainer_name: "eqa-cnn-pretrain"
+
+  torch_gpu_id: 0
+  eval_ckpt_path_dir: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
+
+  checkpoint_folder: "data/eqa/eqa_cnn_pretrain/checkpoints"
+  tensorboard_dir: "data/eqa/eqa_cnn_pretrain/tb"
+
+
+
+  log_interval: 50
+
+  # Force PyTorch to be single threaded as
+  # this improves performance considerably
+  force_torch_single_threaded: True
+
+  il:
+    dataset_path: "data/datasets/eqa/eqa_cnn_pretrain/{split}/{split}.db"
+    results_dir: "data/eqa/eqa_cnn_pretrain/results/{split}/{type}"
+    log_metrics: True
+    output_log_dir: data/eqa/eqa_cnn_pretrain/logs
+    eval_save_results: True
+    eval_save_results_interval: 50
+    eqa_cnn_pretrain:
+      # params
+      max_epochs: 5
+      batch_size: 20
+      lr: 1e-3

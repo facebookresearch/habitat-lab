@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -17,6 +17,7 @@ import numpy as np
 
 import habitat
 import habitat_sim
+from habitat.config.default_structured_configs import ActionConfig
 from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
@@ -148,28 +149,27 @@ def main():
     HabitatSimActions.extend_action_space("STRAFE_LEFT")
     HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
-    config = habitat.get_config(config_paths="configs/tasks/pointnav.yaml")
-    config.defrost()
+    config = habitat.get_config(
+        config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    )
+    with habitat.config.read_write(config):
+        # Add a simple action config to the config.habitat.task.actions dictionary
+        config.habitat.task.actions["STRAFE_LEFT"] = ActionConfig(
+            type="StrafeLeft"
+        )
+        config.habitat.task.actions["STRAFE_RIGHT"] = ActionConfig(
+            type="StrafeRight"
+        )
 
-    config.TASK.POSSIBLE_ACTIONS = config.TASK.POSSIBLE_ACTIONS + [
-        "STRAFE_LEFT",
-        "STRAFE_RIGHT",
-    ]
-    config.TASK.ACTIONS.STRAFE_LEFT = habitat.config.Config()
-    config.TASK.ACTIONS.STRAFE_LEFT.TYPE = "StrafeLeft"
-    config.TASK.ACTIONS.STRAFE_RIGHT = habitat.config.Config()
-    config.TASK.ACTIONS.STRAFE_RIGHT.TYPE = "StrafeRight"
-    config.SIMULATOR.ACTION_SPACE_CONFIG = "NoNoiseStrafe"
-    config.freeze()
+        config.habitat.simulator.action_space_config = "NoNoiseStrafe"
 
     with habitat.Env(config=config) as env:
         env.reset()
         env.step("STRAFE_LEFT")
         env.step("STRAFE_RIGHT")
 
-    config.defrost()
-    config.SIMULATOR.ACTION_SPACE_CONFIG = "NoiseStrafe"
-    config.freeze()
+    with habitat.config.read_write(config):
+        config.habitat.simulator.action_space_config = "NoiseStrafe"
 
     with habitat.Env(config=config) as env:
         env.reset()

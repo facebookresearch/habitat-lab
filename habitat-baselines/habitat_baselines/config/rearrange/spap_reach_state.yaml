@@ -1,0 +1,42 @@
+# @package _global_
+
+defaults:
+  - /benchmark/rearrange: reach_state
+  - /habitat_baselines: habitat_baselines_spa_config_base
+  - _self_
+
+habitat_baselines:
+  video_dir: "data/vids/"
+
+  sense_plan_act:
+    verbose: True
+    run_freq: 4
+    n_grasps: 100
+    mp_obj: True
+    mp_margin: null
+    mp_render: True
+    timeout: 3
+    exec_ee_thresh: 0.1
+    # "Priv" or "Reg"
+    mp_sim_type: "Priv"
+    video_dir: 'data/vids'
+    debug_dir: "data/mp_test"
+    count_obj_collisions: True
+    grasp_gen_is_verbose: True
+    ik_dist_thresh: 0.1
+    ik_speed_factor: 1.0
+
+  eval:
+    video_option: ["disk"]
+
+habitat:
+  gym:
+    obs_keys: [ 'joint', 'ee_pos' ]
+    desired_goal_keys: [ 'resting_position' ]
+    action_keys: [ 'arm_action' ]
+  task:
+    reward_measure: "rearrange_reach_reward"
+    success_measure: "rearrange_reach_success"
+    success_reward: 10.0
+    slack_reward: -0.01
+    end_on_success: False

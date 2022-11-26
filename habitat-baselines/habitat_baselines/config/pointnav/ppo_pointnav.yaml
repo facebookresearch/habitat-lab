@@ -1,0 +1,56 @@
+# @package _global_
+
+# Hyperparameters and ResNet18 from on https://arxiv.org/abs/2012.0611
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_gibson
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
+habitat_baselines:
+  verbose: False
+  trainer_name: "ppo"
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  # Evaluate on all episodes
+  test_episode_count: -1
+  eval_ckpt_path_dir: "data/new_checkpoints"
+  num_environments: 6
+  checkpoint_folder: "data/new_checkpoints"
+  total_num_steps: 75e6
+  log_interval: 25
+  num_checkpoints: 100
+  # Force PyTorch to be single threaded as
+  # this improves performance considerably
+  force_torch_single_threaded: True
+
+  eval:
+    video_option: [ ]
+    # Can be uncommented to generate videos.
+    # video_option: ["disk", "tensorboard"]
+
+  rl:
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 4
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.5
+      num_steps: 128
+      hidden_size: 512
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: True
+      use_linear_lr_decay: True
+      reward_window_size: 50
+
+      # Use double buffered sampling, typically helps
+      # when environment time is similar or larger than
+      # policy inference time during rollout generation
+      use_double_buffered_sampler: False

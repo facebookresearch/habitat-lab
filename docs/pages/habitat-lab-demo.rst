@@ -10,26 +10,26 @@ Habitat Lab Demo
 
     import numpy as np
     import random
+    from omegaconf import read_write
 
     %matplotlib inline
     import matplotlib.pyplot as plt
 
 All the boilerplate code in the habitat-sim to set sensor config and agent
 config is abstracted out in the Habitat Lab config system. Default config is at
-:gh:`habitat/config/default.py <facebookresearch/habitat-lab/blob/main/habitat/config/default.py>`.
+:gh:`habitat-lab/habitat/config/default.py <facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/config/default.py>`.
 You can override defaults by specifying them in a separate file and pass it to
-the :ref:`habitat.config.get_config()` function or defrost the config object,
-override parameters and freeze the config.
+the :ref:`habitat.config.get_config()` function or use `read_write` to edit
+the config object.
 
 .. code-figure::
 
     .. code:: py
 
-        config = habitat.get_config(config_paths='../configs/tasks/pointnav_mp3d.yaml')
-        config.defrost()
-        config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
-        config.DATASET.SCENES_DIR = '../data/scene_datasets/'
-        config.freeze()
+        config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
+        with read_write(config):
+            config.habitat.dataset.data_path = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
+            config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
 
         env = habitat.Env(config=config)
 
@@ -128,15 +128,14 @@ override parameters and freeze the config.
             plt.imshow(data)
         plt.show()
 
-    config = habitat.get_config(config_paths='../configs/tasks/pointnav_mp3d.yaml')
-    config.defrost()
-    config.DATASET.DATA_PATH = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
-    config.DATASET.SCENES_DIR = '../data/scene_datasets/'
-    config.SIMULATOR.AGENT_0.SENSORS = ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
-    config.SIMULATOR.SEMANTIC_SENSOR.WIDTH = 256
-    config.SIMULATOR.SEMANTIC_SENSOR.HEIGHT = 256
-    config.SIMULATOR.TURN_ANGLE = 30
-    config.freeze()
+    config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
+    with read_write(config):
+        config.habitat.dataset.data_path = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
+        config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
+        config.habitat.simulator.agent_0.sensors = ['rgb_sensor', 'depth_sensor', 'semantic_sensor']
+        config.habitat.simulator.semantic_sensor.width = 256
+        config.habitat.simulator.semantic_sensor.height = 256
+        config.habitat.simulator.turn_angle = 30
 
     env = habitat.Env(config=config)
     env.episodes = random.sample(env.episodes, 2)

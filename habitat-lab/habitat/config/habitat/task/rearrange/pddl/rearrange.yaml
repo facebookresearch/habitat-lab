@@ -1,0 +1,23 @@
+objects:
+  - name: goal0|0
+    expr_type: rigid_obj_type
+  - name: TARGET_goal0|0
+    expr_type: goal_type
+  - name: robot_0
+    expr_type: robot_type
+
+goal:
+  expr_type: AND
+  sub_exprs:
+    - at(goal0|0,TARGET_goal0|0)
+    - not_holding(robot_0)
+
+stage_goals:
+  stage_0_5:
+    expr_type: AND
+    sub_exprs:
+      - holding(goal0|0, robot_0)
+  stage_1:
+    expr_type: AND
+    sub_exprs:
+      - at(goal0|0,TARGET_goal0|0)

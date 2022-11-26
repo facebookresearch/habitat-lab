@@ -1,0 +1,14 @@
+# @package _global_
+
+defaults:
+  - /benchmark/nav/objectnav/objectnav_mp3d.yaml
+  - _self_
+
+habitat:
+
+  dataset:
+    type: ObjectNav-v1
+    split: val
+    content_scenes: ["*"]
+    data_path: "data/datasets/objectnav/mp3d/v1/{split}/{split}.json.gz"
+    scenes_dir: "data/scene_datasets/"

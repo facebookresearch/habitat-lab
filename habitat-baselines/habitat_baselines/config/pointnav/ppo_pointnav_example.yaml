@@ -1,0 +1,50 @@
+# @package _global_
+
+# Note:  This is an example config, see habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav.yaml
+# for better hyperparameters for actual training
+
+defaults:
+  - /benchmark/nav/pointnav: pointnav_habitat_test
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
+habitat_baselines:
+  trainer_name: "ppo"
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  # To evaluate on all episodes, set this to -1
+  test_episode_count: 2
+  eval_ckpt_path_dir: "data/new_checkpoints"
+  num_environments: 1
+  checkpoint_folder: "data/new_checkpoints"
+  num_updates: -1
+  total_num_steps: 1e6
+  log_interval: 10
+  num_checkpoints: 50
+  # Force PyTorch to be single threaded as
+  # this improves performance considerably
+  force_torch_single_threaded: True
+
+  eval:
+    video_option: [ "disk", "tensorboard" ]
+
+  rl:
+    ppo:
+      # ppo params
+      clip_param: 0.1
+      ppo_epoch: 1
+      num_mini_batch: 1
+      value_loss_coef: 0.5
+      entropy_coef: 0.01
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.5
+      num_steps: 32
+      hidden_size: 512
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: True
+      use_linear_lr_decay: True
+      reward_window_size: 50

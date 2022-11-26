@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,6 +10,8 @@ import random
 
 import numpy as np
 import pytest
+
+from habitat.config import read_write
 
 try:
     import torch
@@ -46,14 +48,38 @@ def setup_function(test_trainers):
 @pytest.mark.parametrize(
     "config_path,num_updates",
     [
-        ("habitat_baselines/config/rearrange/ddppo_close_cab.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_open_fridge.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_place.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_close_fridge.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_open_cab.yaml", 3),
-        ("habitat_baselines/config/rearrange/ddppo_pick.yaml", 3),
-        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_close_cab.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_open_fridge.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_close_fridge.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_open_cab.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            3,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            3,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
@@ -65,40 +91,39 @@ def test_trainers(config_path, num_updates, trainer_name):
     config = get_config(
         config_path,
         [
-            "NUM_UPDATES",
-            num_updates,
-            "TOTAL_NUM_STEPS",
-            -1.0,
-            "CHECKPOINT_FOLDER",
-            "data/test_checkpoints/test_training",
-            "TRAINER_NAME",
-            trainer_name,
-            # Changing the visual observation size for speed
-            "TASK_CONFIG.SIMULATOR.HEAD_RGB_SENSOR.WIDTH",
-            64,
-            "TASK_CONFIG.SIMULATOR.HEAD_RGB_SENSOR.HEIGHT",
-            64,
-            "TASK_CONFIG.SIMULATOR.HEAD_DEPTH_SENSOR.WIDTH",
-            64,
-            "TASK_CONFIG.SIMULATOR.HEAD_DEPTH_SENSOR.HEIGHT",
-            64,
+            f"habitat_baselines.num_updates={num_updates}",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.trainer_name={trainer_name}",
         ],
     )
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
-    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    with read_write(config):
+        # Changing the visual observation size for speed
+        for v in config.habitat.simulator.agent_0.sim_sensors.values():
+            v.width = 64
+            v.height = 64
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
-    assert config.TRAINER_NAME in (
+    assert config.habitat_baselines.trainer_name in (
         "ddppo",
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
@@ -119,13 +144,17 @@ def test_trainers(config_path, num_updates, trainer_name):
 @pytest.mark.parametrize(
     "config_path,num_updates",
     [
-        ("habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml", 3),
+        (
+            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            3,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
 @pytest.mark.parametrize("env_key", ["CartPole-v0"])
+@pytest.mark.parametrize("dependencies", [[], ["pygame"]])
 def test_trainers_gym_registry(
-    config_path, num_updates, trainer_name, env_key
+    config_path, num_updates, trainer_name, env_key, dependencies
 ):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
@@ -134,38 +163,38 @@ def test_trainers_gym_registry(
     config = get_config(
         config_path,
         [
-            "NUM_UPDATES",
-            num_updates,
-            "TOTAL_NUM_STEPS",
-            -1.0,
-            "CHECKPOINT_FOLDER",
-            "data/test_checkpoints/test_training",
-            "TRAINER_NAME",
-            trainer_name,
+            f"habitat_baselines.num_updates={num_updates}",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.trainer_name={trainer_name}",
             # Overwrite the gym_environment
-            "TASK_CONFIG.ENV_TASK",
-            "GymRegistryEnv",
-            "TASK_CONFIG.ENV_TASK_GYM_DEPENDENCIES",
-            ["pygame"],
-            "TASK_CONFIG.ENV_TASK_GYM_ID",
-            env_key,
+            "habitat.env_task=GymRegistryEnv",
+            f"habitat.env_task_gym_dependencies={dependencies}",
+            f"habitat.env_task_gym_id={env_key}",
         ],
     )
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
-    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
-    assert config.TRAINER_NAME in (
+    assert config.habitat_baselines.trainer_name in (
         "ddppo",
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
@@ -183,8 +212,16 @@ def test_trainers_gym_registry(
 @pytest.mark.parametrize(
     "config_path,num_updates,target_reward",
     [
-        ("habitat_baselines/config/rearrange/ddppo_reach_state.yaml", 40, 5.0),
-        ("habitat_baselines/config/pointnav/ddppo_pointnav.yaml", 1000, 2.0),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            40,
+            5.0,
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/pointnav/ddppo_pointnav.yaml",
+            1000,
+            2.0,
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
@@ -196,38 +233,41 @@ def test_trainers_large(config_path, num_updates, target_reward, trainer_name):
     config = get_config(
         config_path,
         [
-            "NUM_UPDATES",
-            num_updates,
-            "TOTAL_NUM_STEPS",
-            -1.0,
-            "CHECKPOINT_FOLDER",
-            "data/test_checkpoints/test_training",
-            "TRAINER_NAME",
-            trainer_name,
+            f"habitat_baselines.num_updates={num_updates}",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.trainer_name={trainer_name}",
         ],
     )
-    random.seed(config.TASK_CONFIG.SEED)
-    np.random.seed(config.TASK_CONFIG.SEED)
-    torch.manual_seed(config.TASK_CONFIG.SEED)
-    torch.cuda.manual_seed(config.TASK_CONFIG.SEED)
+    random.seed(config.habitat.seed)
+    np.random.seed(config.habitat.seed)
+    torch.manual_seed(config.habitat.seed)
+    torch.cuda.manual_seed(config.habitat.seed)
     torch.backends.cudnn.deterministic = True
-    if config.FORCE_TORCH_SINGLE_THREADED and torch.cuda.is_available():
+    if (
+        config.habitat_baselines.force_torch_single_threaded
+        and torch.cuda.is_available()
+    ):
         torch.set_num_threads(1)
 
-    assert config.TRAINER_NAME in (
+    assert config.habitat_baselines.trainer_name in (
         "ddppo",
         "ver",
     ), "This test can only be used with ddppo/ver trainer"
 
-    trainer_init = baseline_registry.get_trainer(config.TRAINER_NAME)
-    assert trainer_init is not None, f"{config.TRAINER_NAME} is not supported"
+    trainer_init = baseline_registry.get_trainer(
+        config.habitat_baselines.trainer_name
+    )
+    assert (
+        trainer_init is not None
+    ), f"{config.habitat_baselines.trainer_name} is not supported"
     trainer = trainer_init(config)
 
     # Train
     trainer.train()
 
     # Gather the data
-    if config.TRAINER_NAME == "ddppo":
+    if config.habitat_baselines.trainer_name == "ddppo":
         deltas = {
             k: (
                 (v[-1] - v[0]).sum().item()

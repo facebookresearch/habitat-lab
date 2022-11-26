@@ -1,0 +1,36 @@
+
+defaults:
+  - task_config_base
+  - actions:
+    - stop
+    - move_forward
+    - turn_left
+    - turn_right
+    - look_up
+    - look_down
+  - measurements:
+    - distance_to_goal
+    - success
+    - spl
+    - soft_spl
+    - distance_to_goal_reward
+  - lab_sensors:
+    - objectgoal_sensor
+    - compass_sensor
+    - gps_sensor
+  - _self_
+
+
+type: ObjectNav-v1
+end_on_success: True
+reward_measure: "distance_to_goal_reward"
+success_measure: "spl"
+
+
+goal_sensor_uuid: objectgoal
+
+measurements:
+  distance_to_goal:
+    distance_to: VIEW_POINTS
+  success:
+    success_distance: 0.1
