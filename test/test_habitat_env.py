@@ -13,7 +13,7 @@ import pytest
 from gym import Wrapper
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_config, get_default_agent_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
@@ -248,11 +248,12 @@ def test_rl_vectorized_envs(gpu2gpu):
     for config in configs:
         with habitat.config.read_write(config):
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+            default_agent_config = get_default_agent_config(
+                config.habitat.simulator
+            )
             # Only keep the rgb_sensor
-            config.habitat.simulator.agents.agent_0.sim_sensors = {
-                "rgb_sensor": config.habitat.simulator.agents.agent_0.sim_sensors[
-                    "rgb_sensor"
-                ]
+            default_agent_config.sim_sensors = {
+                "rgb_sensor": default_agent_config.sim_sensors["rgb_sensor"]
             }
 
     num_envs = len(configs)

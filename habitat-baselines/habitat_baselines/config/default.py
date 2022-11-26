@@ -6,17 +6,12 @@
 
 import inspect
 import os.path as osp
-import threading
 from typing import Optional
 
-from hydra import compose, initialize_config_dir
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import DictConfig
 
-from habitat.config.default import get_full_config_path
-from habitat.config.default_structured_configs import (
-    HabitatConfigPlugin,
-    register_hydra_plugin,
-)
+from habitat.config.default import get_config as get_habitat_config
+from habitat.config.default_structured_configs import register_hydra_plugin
 from habitat_baselines.config.default_structured_configs import (
     HabitatBaselinesConfigPlugin,
 )
@@ -26,30 +21,12 @@ DEFAULT_CONFIG_DIR = "habitat-lab/habitat/config/"
 CONFIG_FILE_SEPARATOR = ","
 
 
-lock = threading.Lock()
-
-
 def get_config(
     config_paths: str,
     overrides: Optional[list] = None,
+    configs_dir: str = _BASELINES_CFG_DIR,
 ) -> DictConfig:
-    register_hydra_plugin(HabitatConfigPlugin)
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
-
-    config_path = get_full_config_path(
-        config_paths, default_configs_dir=_BASELINES_CFG_DIR
-    )
-    # If get_config is called from different threads, Hydra might
-    # get initialized twice leading to issues. This lock fixes it.
-    with lock, initialize_config_dir(
-        version_base=None,
-        config_dir=osp.dirname(config_path),
-    ):
-        cfg = compose(
-            config_name=osp.basename(config_path),
-            overrides=overrides if overrides is not None else [],
-        )
-
-    OmegaConf.set_readonly(cfg, True)
+    cfg = get_habitat_config(config_paths, overrides, configs_dir)
 
     return cfg

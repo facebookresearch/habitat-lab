@@ -21,7 +21,7 @@ import torch
 from torch.nn import functional as F
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_config, get_default_agent_config
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat_baselines.config.default import get_config as cfg_baseline
 from habitat_baselines.slambased.mappers import DirectDepthMapper
@@ -71,14 +71,11 @@ def ResizePIL2(np_img, size=256):
 
 
 def make_good_config_for_orbslam2(config):
-    config.habitat.simulator.agents.agent_0.sensors = [
-        "rgb_sensor",
-        "depth_sensor",
-    ]
-    config.habitat.simulator.rgb_sensor.width = 256
-    config.habitat.simulator.rgb_sensor.height = 256
-    config.habitat.simulator.depth_sensor.width = 256
-    config.habitat.simulator.depth_sensor.height = 256
+    default_agent_config = get_default_agent_config(config.habitat.simulator)
+    default_agent_config.sim_sensors.rgb_sensor.width = 256
+    default_agent_config.sim_sensors.rgb_sensor.height = 256
+    default_agent_config.sim_sensors.depth_sensor.width = 256
+    default_agent_config.sim_sensors.depth_sensor.height = 256
     config.TRAINER.orbslam2.camera_height = (
         config.habitat.simulator.depth_sensor.position[1]
     )
@@ -617,7 +614,7 @@ def main():
     agent_config = cfg_baseline()
     with habitat.config.read_write(config):
         config.BASELINE = agent_config.BASELINE
-    make_good_config_for_orbslam2(config)
+        make_good_config_for_orbslam2(config)
 
     if args.agent_type == "blind":
         agent = BlindAgent(config.TRAINER.orbslam2)

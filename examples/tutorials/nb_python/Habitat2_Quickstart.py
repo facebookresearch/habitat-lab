@@ -29,6 +29,7 @@
 # Play a teaser video
 from dataclasses import dataclass
 
+from habitat.config.default import get_default_agent_config
 from habitat.config.default_structured_configs import (
     MeasurementConfig,
     ThirdRGBSensorConfig,
@@ -92,7 +93,10 @@ def insert_render_options(config):
     # Added settings to make rendering higher resolution for better visualization
     with habitat.config.read_write(config):
         config.habitat.simulator.concur_render = False
-        config.habitat.simulator.agents.agent_0.sim_sensors.update(
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors.update(
             {"third_rgb_sensor": ThirdRGBSensorConfig(height=512, width=512)}
         )
     return config
@@ -362,9 +366,8 @@ cfg_txt = """
 
 defaults:
   - /habitat: habitat_config_base
-  - /agent@habitat.simulator.agents.agent_0: agent_base
-  - /habitat/simulator/sim_sensors:
-    - head_rgb_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: agent_base
+  - /habitat/simulator/sim_sensors@habitat.simulator.agents.agent_0.sim_sensors.head_rgb_sensor: head_rgb_sensor
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action

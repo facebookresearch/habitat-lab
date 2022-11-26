@@ -12,7 +12,7 @@ import pytest
 import quaternion
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_config, get_default_agent_config
 from habitat.config.default_structured_configs import (
     CollisionsMeasurementConfig,
     CompassSensorConfig,
@@ -291,7 +291,10 @@ def test_imagegoal_sensor():
         config.habitat.task.lab_sensors = {
             "imagegoal_sensor": ImageGoalSensorConfig()
         }
-        config.habitat.simulator.agents.agent_0.sim_sensors = {
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors = {
             "rgb_sensor": HabitatSimRGBSensorConfig()
         }
     with habitat.Env(config=config, dataset=None) as env:
@@ -352,7 +355,10 @@ def test_get_observations_at():
         pytest.skip("Please download Habitat test data to data folder.")
     with habitat.config.read_write(config):
         config.habitat.task.lab_sensors = {}
-        config.habitat.simulator.agents.agent_0.sim_sensors = {
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors = {
             "rgb_sensor": HabitatSimRGBSensorConfig(),
             "depth_sensor": HabitatSimDepthSensorConfig(),
         }
@@ -472,7 +478,10 @@ def test_smoke_not_pinhole_sensors(sensors, cuda):
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
         )
-        config.habitat.simulator.agents.agent_0.sim_sensors = sensors
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors = sensors
     smoke_test_sensor(config)
 
 
@@ -518,7 +527,10 @@ def test_smoke_pinhole_sensors(sensor, cuda):
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
         )
-        config.habitat.simulator.agents.agent_0.sim_sensors = sensor
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors = sensor
     smoke_test_sensor(config)
 
 
@@ -531,7 +543,10 @@ def test_noise_models_rgbd():
         config.habitat.simulator.scene = (
             "data/scene_datasets/habitat-test-scenes/skokloster-castle.glb"
         )
-        config.habitat.simulator.agents.agent_0.sim_sensors = {
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors = {
             "rgb_sensor": HabitatSimRGBSensorConfig(),
             "depth_sensor": HabitatSimDepthSensorConfig(),
         }
@@ -569,14 +584,16 @@ def test_noise_models_rgbd():
             no_noise_states.append(env.sim.get_agent_state())
 
     with habitat.config.read_write(config):
-
-        config.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor.noise_model = (
+        default_agent_config = get_default_agent_config(
+            config.habitat.simulator
+        )
+        default_agent_config.sim_sensors.rgb_sensor.noise_model = (
             "GaussianNoiseModel"
         )
-        config.habitat.simulator.agents.agent_0.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
+        default_agent_config.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
             0.5
         )
-        config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.noise_model = (
+        default_agent_config.sim_sensors.depth_sensor.noise_model = (
             "RedwoodDepthNoiseModel"
         )
 
