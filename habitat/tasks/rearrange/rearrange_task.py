@@ -270,10 +270,8 @@ class RearrangeTask(NavigationTask):
             match_contacts = [
                 x
                 for x in contact_points
-                if check_id in [x.object_id_a, x.object_id_b]
-            ]
-            match_contacts = [
-                x for x in match_contacts if x.object_id_a != x.object_id_b
+                if (check_id in [x.object_id_a, x.object_id_b])
+                and (x.object_id_a != x.object_id_b)
             ]
 
             max_force = 0

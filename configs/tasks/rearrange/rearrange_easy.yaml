@@ -56,6 +56,7 @@ TASK:
     - ROBOT_COLLS
     - END_EFFECTOR_TO_OBJECT_DISTANCE
     - DOES_WANT_TERMINATE
+    - COMPOSITE_STAGE_GOALS
     - COMPOSITE_SUCCESS
     - BAD_CALLED_TERMINATE
     - NUM_STEPS
@@ -92,7 +93,7 @@ SIMULATOR:
         RADIUS: 0.3
         SENSORS:
         - HEAD_DEPTH_SENSOR
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
         ROBOT_TYPE: FetchSuctionRobot
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_RGB_SENSOR:

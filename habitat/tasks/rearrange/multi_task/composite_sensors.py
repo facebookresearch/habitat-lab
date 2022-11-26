@@ -225,7 +225,7 @@ class CompositeSuccess(Measure):
 class CompositeStageGoals(Measure):
     """
     Adds to the metrics `[TASK_NAME]_success`: Did the agent complete a
-        particular stage defined in `stage_goals`.
+        particular stage defined in `stage_goals` at ANY point in the episode.
     """
 
     _stage_succ: List[str]

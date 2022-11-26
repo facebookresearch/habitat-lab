@@ -58,7 +58,7 @@ TASK:
         WRONG_DROP_SHOULD_END: True
         CONSTRAINT_VIOLATE_PEN: 0.0
         FORCE_PEN: 0.0001
-        MAX_FORCE_PEN: 0.01
+        MAX_FORCE_PEN: 0.0
         FORCE_END_PEN: 1.0
     END_EFFECTOR_TO_GOAL_DISTANCE:
         TYPE: EndEffectorToGoalDistance
@@ -96,7 +96,7 @@ SIMULATOR:
         RADIUS: 0.3
         SENSORS:
         - HEAD_DEPTH_SENSOR
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
         ROBOT_TYPE: FetchSuctionRobot
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     HEAD_DEPTH_SENSOR:

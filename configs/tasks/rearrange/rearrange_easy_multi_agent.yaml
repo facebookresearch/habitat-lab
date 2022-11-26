@@ -136,7 +136,7 @@ SIMULATOR:
         IS_SET_START_STATE: false
         SENSORS:
         - HEAD_DEPTH_SENSOR
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
         ROBOT_TYPE: FetchSuctionRobot
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
         JOINT_START_NOISE: 0.0
@@ -149,7 +149,7 @@ SIMULATOR:
         # each agent.
         SENSORS:
         - HEAD_DEPTH_SENSOR
-        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        ROBOT_URDF: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
         ROBOT_TYPE: FetchSuctionRobot
         IK_ARM_URDF: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
         JOINT_START_NOISE: 0.0
