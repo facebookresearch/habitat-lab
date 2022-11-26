@@ -41,11 +41,14 @@ get_full_habitat_config_path = partial(
 )
 
 
-def get_default_agent_config(sim_config):
-    default_agent_name = sim_config.agents_order[sim_config.default_agent_id]
-    default_agent_config = sim_config.agents[default_agent_name]
+def get_agent_config(sim_config, agent_id: Optional[int] = None):
+    if agent_id is None:
+        agent_id = sim_config.default_agent_id
 
-    return default_agent_config
+    agent_name = sim_config.agents_order[agent_id]
+    agent_config = sim_config.agents[agent_name]
+
+    return agent_config
 
 
 lock = threading.Lock()

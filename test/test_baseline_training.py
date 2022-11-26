@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 
 from habitat.config import read_write
-from habitat.config.default import get_default_agent_config
+from habitat.config.default import get_agent_config
 
 try:
     import torch
@@ -99,11 +99,9 @@ def test_trainers(config_path, num_updates, trainer_name):
         ],
     )
     with read_write(config):
-        default_agent_config = get_default_agent_config(
-            config.habitat.simulator
-        )
+        agent_config = get_agent_config(config.habitat.simulator)
         # Changing the visual observation size for speed
-        for sim_sensor_config in default_agent_config.sim_sensors.values():
+        for sim_sensor_config in agent_config.sim_sensors.values():
             sim_sensor_config.update({"height": 64, "width": 64})
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)

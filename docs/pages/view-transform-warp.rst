@@ -22,6 +22,7 @@ validate that transformation comparing projected and original views.
 
         import habitat
         from habitat.config import read_write
+        from habitat.config.default import get_agent_config
 
         import torch.nn.functional as F
         import torch
@@ -31,14 +32,15 @@ validate that transformation comparing projected and original views.
         config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml")
         with read_write(config):
             config.habitat.dataset.split = "val"
-            config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.normalize_depth = False
+            agent_config = get_agent_config(config.habitat.simulator)
+            agent_config.sim_sensors.depth_sensor.normalize_depth = False
 
         # Intrinsic parameters, assuming width matches height. Requires a simple refactor otherwise
-        W = config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.width
-        H = config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.height
+        W = agent_config.sim_sensors.depth_sensor.width
+        H = agent_config.sim_sensors.depth_sensor.height
 
         assert(W == H)
-        hfov = float(config.habitat.simulator.agents.agent_0.sim_sensors.depth_sensor.hfov) * np.pi / 180.
+        hfov = float(agent_config.sim_sensors.depth_sensor.hfov) * np.pi / 180.
 
 
         env = habitat.Env(config=config)

@@ -23,6 +23,7 @@ from gym.spaces.box import Box
 from omegaconf import DictConfig
 
 import habitat_sim
+from habitat.config.default import get_agent_config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -310,7 +311,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sim_config.scene_id = self.habitat_config.scene
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=self._get_agent_config(),
+            config_from=get_agent_config(self.habitat_config),
             config_to=agent_config,
             # These keys are only used by Hab-Lab
             ignore_keys={
@@ -545,15 +546,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                     for obj in region.objects:
         """
         return self.semantic_scene
-
-    def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
-        if agent_id is None:
-            agent_id = self.habitat_config.default_agent_id
-
-        agent_name = self.habitat_config.agents_order[agent_id]
-        agent_config = self.habitat_config.agents[agent_name]
-
-        return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         return self.get_agent(agent_id).get_state()

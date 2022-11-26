@@ -10,7 +10,7 @@ import os
 import pytest
 
 import habitat
-from habitat.config.default import get_default_agent_config
+from habitat.config.default import get_agent_config
 
 try:
     from habitat_baselines.agents import ppo_agents, simple_agents
@@ -47,25 +47,23 @@ def test_ppo_agents(input_type, resolution):
 
         benchmark = habitat.Benchmark(config_paths=CFG_TEST)
         with habitat.config.read_write(config_env):
-            default_agent_config = get_default_agent_config(
-                config_env.habitat.simulator
-            )
-            default_agent_config.sim_sensors.rgb_sensor.update(
+            agent_config = get_agent_config(config_env.habitat.simulator)
+            agent_config.sim_sensors.rgb_sensor.update(
                 {
                     "height": resolution,
                     "width": resolution,
                 }
             )
-            default_agent_config.sim_sensors.depth_sensor.update(
+            agent_config.sim_sensors.depth_sensor.update(
                 {
                     "height": resolution,
                     "width": resolution,
                 }
             )
             if input_type in ["depth", "blind"]:
-                del default_agent_config.sim_sensors.rgb_sensor
+                del agent_config.sim_sensors.rgb_sensor
             if input_type in ["rgb", "blind"]:
-                del default_agent_config.sim_sensors.depth_sensor
+                del agent_config.sim_sensors.depth_sensor
 
         del benchmark._env
         benchmark._env = habitat.Env(config=config_env)

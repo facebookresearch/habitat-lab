@@ -14,7 +14,7 @@ from glob import glob
 
 import pytest
 
-from habitat.config.default import get_default_agent_config
+from habitat.config.default import get_agent_config
 from habitat.core.vector_env import VectorEnv
 
 try:
@@ -217,13 +217,13 @@ def test_cubemap_stiching(
         ]
         sensor_uuids = []
 
-        default_agent_config = get_default_agent_config(config.simulator)
+        agent_config = get_agent_config(config.simulator)
         if sensor_type == "rgb":
-            default_agent_config.sim_sensors = {
+            agent_config.sim_sensors = {
                 "rgb_sensor": HeadRGBSensorConfig(width=256, height=256),
             }
         elif sensor_type == "depth":
-            default_agent_config.sim_sensors = {
+            agent_config.sim_sensors = {
                 "depth_sensor": HeadDepthSensorConfig(width=256, height=256),
             }
         else:
@@ -231,14 +231,14 @@ def test_cubemap_stiching(
                 "Typo in the sensor type in test_cubemap_stiching"
             )
 
-        sensor = default_agent_config.sim_sensors[f"{sensor_type}_sensor"]
+        sensor = agent_config.sim_sensors[f"{sensor_type}_sensor"]
         for camera_id in range(CAMERA_NUM):
             camera_template = f"{sensor_type}_{camera_id}"
             camera_config = deepcopy(sensor)
             camera_config.orientation = orient[camera_id]
             camera_config.uuid = camera_template.lower()
             sensor_uuids.append(camera_config.uuid)
-            default_agent_config.sim_sensors[camera_template] = camera_config
+            agent_config.sim_sensors[camera_template] = camera_config
 
         meta_config.habitat = config
 

@@ -55,7 +55,7 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
-from habitat.config.default import get_default_agent_config
+from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
     ThirdRGBSensorConfig,
@@ -594,8 +594,8 @@ if __name__ == "__main__":
 
         if not args.same_task:
             sim_config.debug_render = True
-            default_agent_config = get_default_agent_config(sim_config)
-            default_agent_config.sim_sensors.update(
+            agent_config = get_agent_config(sim_config)
+            agent_config.sim_sensors.update(
                 {
                     "third_rgb_sensor": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res

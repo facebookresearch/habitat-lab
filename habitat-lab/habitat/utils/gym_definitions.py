@@ -77,8 +77,8 @@ def _make_habitat_gym_env(
             else:
                 default_agent.sim_sensors.update(
                     {
-                        "agent_0_third_rgb_sensor": ThirdRGBSensorConfig(
-                            uuid="agent_0_robot_third_rgb"
+                        "default_agent_third_rgb_sensor": ThirdRGBSensorConfig(
+                            uuid="default_robot_third_rgb"
                         )
                     }
                 )
