@@ -10,7 +10,7 @@ from typing import Optional
 
 from omegaconf import DictConfig
 
-from habitat.config.default import get_config as get_habitat_config
+from habitat.config.default import get_config as _habitat_get_config
 from habitat.config.default_structured_configs import register_hydra_plugin
 from habitat_baselines.config.default_structured_configs import (
     HabitatBaselinesConfigPlugin,
@@ -27,6 +27,6 @@ def get_config(
     configs_dir: str = _BASELINES_CFG_DIR,
 ) -> DictConfig:
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
-    cfg = get_habitat_config(config_paths, overrides, configs_dir)
+    cfg = _habitat_get_config(config_paths, overrides, configs_dir)
 
     return cfg
