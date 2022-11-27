@@ -690,7 +690,6 @@ _C.habitat.simulator.action_space_config = "v0"
 _C.habitat.simulator.forward_step_size = 0.25  # in metres
 _C.habitat.simulator.create_renderer = False
 _C.habitat.simulator.requires_textures = True
-_C.habitat.simulator.lag_observations = 0
 _C.habitat.simulator.auto_sleep = False
 _C.habitat.simulator.step_physics = True
 _C.habitat.simulator.update_robot = True

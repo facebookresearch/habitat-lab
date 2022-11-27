@@ -89,10 +89,10 @@ class RearrangeTask(NavigationTask):
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
             osp.dirname(data_path),
-            f"{fname}_{self._config.TYPE}_robot_start.pickle",
+            f"{fname}_{self._config.type}_robot_start.pickle",
         )
 
-        if self._config.SHOULD_SAVE_TO_CACHE or osp.exists(cache_path):
+        if self._config.should_save_to_cache or osp.exists(cache_path):
             self._robot_init_cache = CacheHelper(
                 cache_path,
                 def_val={},
@@ -210,12 +210,12 @@ class RearrangeTask(NavigationTask):
             self._sim.grasp_mgr.is_grasped
             and action_args.get("grip_action", None) is not None
             and action_args["grip_action"] < 0
-            and min_dist < self._config.OBJ_SUCC_THRESH
+            and min_dist < self._config.obj_succ_thresh
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
         action_args = action["action_args"]
-        if self._config.ENABLE_SAFE_DROP and self._is_violating_safe_drop(
+        if self._config.enable_safe_drop and self._is_violating_safe_drop(
             action_args
         ):
             action_args["grip_action"] = None

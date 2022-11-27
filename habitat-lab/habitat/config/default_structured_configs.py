@@ -120,10 +120,7 @@ class BaseVelocityActionConfig(ActionConfig):
     lin_speed: float = 10.0
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
-    end_on_stop: bool = False
     allow_back: bool = True
-    min_abs_lin_speed: float = 1.0
-    min_abs_ang_speed: float = 1.0
 
 
 @dataclass
@@ -592,19 +589,17 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
 @dataclass
 class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickReward"
-    dist_reward: float = 20.0
-    succ_reward: float = 10.0
-    pick_reward: float = 20.0
-    constraint_violate_pen: float = 10.0
-    drop_pen: float = 5.0
-    wrong_pick_pen: float = 5.0
-    max_accum_force: float = 5000.0
-    force_pen: float = 0.001
-    max_force_pen: float = 1.0
-    force_end_pen: float = 10.0
+    dist_reward: float = 2.0
+    pick_reward: float = 2.0
+    constraint_violate_pen: float = 1.0
+    drop_pen: float = 0.5
+    wrong_pick_pen: float = 0.5
+    force_pen: float = 0.0001
+    max_force_pen: float = 0.01
+    force_end_pen: float = 1.0
     use_diff: bool = True
-    drop_obj_should_end: bool = False
-    wrong_pick_should_end: bool = False
+    drop_obj_should_end: bool = True
+    wrong_pick_should_end: bool = True
 
 
 @dataclass
@@ -623,7 +618,6 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
 class PlaceRewardMeasurementConfig(MeasurementConfig):
     type: str = "PlaceReward"
     dist_reward: float = 20.0
-    succ_reward: float = 10.0
     place_reward: float = 20.0
     drop_pen: float = 5.0
     use_diff: bool = True
@@ -720,11 +714,17 @@ class TaskConfig(HabitatBaseConfig):
     # Forced to regenerate the starts even if they are already cached
     force_regenerate: bool = False
     # Saves the generated starts to a cache if they are not already generated
-    should_save_to_cache: bool = True
+    should_save_to_cache: bool = False
     must_look_at_targ: bool = True
     object_in_hand_sample_prob: float = 0.167
     gfx_replay_dir = "data/replays"
     render_target: bool = True
+    # Spawn parameters
+    physics_stability_steps: int = 1
+    num_spawn_attempts: int = 200
+    spawn_max_dists_to_obj: float = 2.0
+    base_angle_noise: float = 0.523599
+    # EE sample parameters
     ee_sample_factor: float = 0.2
     ee_exclude_region: float = 0.0
     # In radians
@@ -749,6 +749,8 @@ class TaskConfig(HabitatBaseConfig):
     # PDDL domain params
     pddl_domain_def: str = "replica_cad"
     obj_succ_thresh: float = 0.3
+    # Disable drop except for when the object is at its goal.
+    enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = field(default_factory=list)
@@ -853,21 +855,29 @@ class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
 @dataclass
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_head_rgb"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_head_depth"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_arm_rgb"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_arm_depth"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
@@ -889,7 +899,7 @@ class AgentConfig(HabitatBaseConfig):
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
-    joint_start_noise: float = 0.0
+    joint_start_noise: float = 0.1
     robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     robot_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
@@ -924,7 +934,6 @@ class SimulatorConfig(HabitatBaseConfig):
     forward_step_size: float = 0.25  # in metres
     create_renderer: bool = False
     requires_textures: bool = True
-    lag_observations: int = 0
     auto_sleep: bool = False
     step_physics: bool = True
     concur_render: bool = False
@@ -958,8 +967,8 @@ class SimulatorConfig(HabitatBaseConfig):
     ac_freq_ratio: int = 4
     load_objs: bool = False
     # Rearrange agent grasping
-    hold_thresh: float = 0.09
-    grasp_impulse: float = 1000.0
+    hold_thresh: float = 0.15
+    grasp_impulse: float = 10000.0
     agents: List[str] = field(default_factory=lambda: ["agent_0"])
     agent_0: AgentConfig = AgentConfig()
     agent_1: AgentConfig = (

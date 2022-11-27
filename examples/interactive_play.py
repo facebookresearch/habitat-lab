@@ -622,7 +622,7 @@ if __name__ == "__main__":
         if args.never_end:
             env_config.max_episode_steps = 0
 
-        if args.add_ik:
+        if not args.no_add_ik:
             if "arm_action" not in task_config.actions:
                 raise ValueError(
                     "Action space does not have any arm control so incompatible with `--add-ik` option"
