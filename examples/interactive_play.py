@@ -72,7 +72,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "benchmark/rearrange/play_stretch.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
