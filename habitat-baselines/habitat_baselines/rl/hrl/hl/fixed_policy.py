@@ -14,6 +14,8 @@ from habitat_baselines.common.logging import baselines_logger
 
 class FixedHighLevelPolicy:
     """
+    Executes a fixed sequence of high-level actions as specified by the
+    `solution` field of the PDDL problem file.
     :property _solution_actions: List of tuples were first tuple element is the
         action name and the second is the action arguments.
     """
