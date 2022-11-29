@@ -13,19 +13,12 @@ if TYPE_CHECKING:
 def read_write(
     config: Union[Node, "DictConfig"]
 ) -> Generator[Node, None, None]:
-    if isinstance(config, Node):
-        prev_state_readonly = config._get_node_flag("readonly")
-        prev_state_struct = config._get_node_flag("struct")
-        try:
-            OmegaConf.set_struct(config, False)
-            OmegaConf.set_readonly(config, False)
-            yield config
-        finally:
-            OmegaConf.set_readonly(config, prev_state_readonly)
-            OmegaConf.set_struct(config, prev_state_struct)
-    else:
-        try:
-            config.defrost()
-            yield config
-        finally:
-            config.freeze()
+    prev_state_readonly = config._get_node_flag("readonly")
+    prev_state_struct = config._get_node_flag("struct")
+    try:
+        OmegaConf.set_struct(config, False)
+        OmegaConf.set_readonly(config, False)
+        yield config
+    finally:
+        OmegaConf.set_readonly(config, prev_state_readonly)
+        OmegaConf.set_struct(config, prev_state_struct)

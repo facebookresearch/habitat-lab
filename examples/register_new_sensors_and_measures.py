@@ -32,14 +32,14 @@ class EpisodeInfoExample(habitat.Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "episode_info"
 
-    # This is called whenver the environment is reset
+    # This is called whenever the environment is reset
     def reset_metric(self, *args: Any, episode, **kwargs: Any):
         # Our measure always contains all the attributes of the episode
         self._metric = vars(episode).copy()
         # But only on reset, it has an additional field of my_value
         self._metric["my_value"] = self._config.VALUE
 
-    # This is called whenver an action is taken in the environment
+    # This is called whenever an action is taken in the environment
     def update_metric(self, *args: Any, episode, action, **kwargs: Any):
         # Now the measure will just have all the attributes of the episode
         self._metric = vars(episode).copy()
