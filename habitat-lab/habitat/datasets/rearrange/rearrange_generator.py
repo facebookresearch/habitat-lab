@@ -5,7 +5,13 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
-from collections import Sequence, defaultdict
+from collections import defaultdict
+
+try:
+    from collections import Sequence
+except ImportError:
+    from collections.abc import Sequence
+
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn

@@ -12,7 +12,6 @@ from typing import Any, Dict, List, Tuple, Union
 import numpy as np
 from gym import spaces
 
-from habitat.config import read_write
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
@@ -25,13 +24,6 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
-
-
-def merge_sim_episode_with_object_config(sim_config, episode):
-    with read_write(sim_config):
-        sim_config.ep_info = [episode.__dict__]
-    return sim_config
-
 
 ADD_CACHE_KEY = "add_cache_key"
 
@@ -47,7 +39,8 @@ class RearrangeTask(NavigationTask):
     _robot_pos_start: Dict[str, Tuple[np.ndarray, float]]
 
     def overwrite_sim_config(self, sim_config, episode):
-        return merge_sim_episode_with_object_config(sim_config, episode)
+        sim_config.ep_info = [episode.__dict__]
+        return sim_config
 
     def _duplicate_sensor_suite(self, sensor_suite: SensorSuite) -> None:
         """

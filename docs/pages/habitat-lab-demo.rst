@@ -102,6 +102,7 @@ the config object.
     import numpy as np
     from PIL import Image
     from habitat_sim.utils.common import d3_40_colors_rgb
+    from habitat.config.default import get_agent_config
     from habitat.config.default_structured_configs import HabitatSimSemanticSensorConfig
 
     def display_sample(rgb_obs, semantic_obs, depth_obs):
@@ -128,7 +129,8 @@ the config object.
     config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_mp3d.yaml")
     with read_write(config):
         config.habitat.dataset.split = "val"
-        config.habitat.simulator.agent_0.sim_sensors.update(
+        agent_config = get_agent_config(sim_config=config.habitat.simulator)
+        agent_config.sim_sensors.update(
             {"semantic_sensor": HabitatSimSemanticSensorConfig(height=256, width=256)}
         )
         config.habitat.simulator.turn_angle = 30

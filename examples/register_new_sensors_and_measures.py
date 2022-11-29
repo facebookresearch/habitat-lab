@@ -100,7 +100,7 @@ class AgentPositionSensorConfig(LabSensorConfig):
 def main():
     # Get the default config node
     config = habitat.get_config(
-        config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     )
     with habitat.config.read_write(config):
         my_value = 5

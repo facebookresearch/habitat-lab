@@ -3,8 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: pointnav_franka
-  - /habitat/simulator/sim_sensors:
-    - rgb_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_agent
   - /habitat/dataset/pointnav: habitat_test
   - _self_
 
@@ -12,10 +11,11 @@ habitat:
   environment:
     max_episode_steps: 500
   simulator:
-    agent_0:
-      robot_urdf: ./data/robots/franka_panda/panda_arm.urdf
-      robot_type: "FrankaRobot"
-      sim_sensors:
-        rgb_sensor:
-          width: 256
-          height: 256
+    agents:
+      main_agent:
+        robot_urdf: ./data/robots/franka_panda/panda_arm.urdf
+        robot_type: "FrankaRobot"
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256

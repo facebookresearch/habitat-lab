@@ -13,7 +13,7 @@ import numpy as np
 import quaternion
 from gym import spaces
 
-from habitat.config import read_write
+from habitat.config.default import get_agent_config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
     EmbodiedTask,
@@ -64,26 +64,6 @@ MAP_THICKNESS_SCALAR: int = 128
 # These metrics are not scalars and cannot be easily reported
 # (unless using videos)
 NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
-
-
-def merge_sim_episode_config(
-    sim_config: "DictConfig", episode: Episode
-) -> Any:
-    with read_write(sim_config):
-        sim_config.scene = episode.scene_id
-    if (
-        episode.start_position is not None
-        and episode.start_rotation is not None
-    ):
-        agent_name = sim_config.agents[sim_config.default_agent_id]
-        agent_cfg = getattr(sim_config, agent_name)
-        with read_write(agent_cfg):
-            agent_cfg.start_position = episode.start_position
-            agent_cfg.start_rotation = [
-                float(k) for k in episode.start_rotation
-            ]
-            agent_cfg.is_set_start_state = True
-    return sim_config
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -1340,7 +1320,18 @@ class NavigationTask(EmbodiedTask):
         super().__init__(config=config, sim=sim, dataset=dataset)
 
     def overwrite_sim_config(self, sim_config: Any, episode: Episode) -> Any:
-        return merge_sim_episode_config(sim_config, episode)
+        sim_config.scene = episode.scene_id
+        if (
+            episode.start_position is not None
+            and episode.start_rotation is not None
+        ):
+            agent_config = get_agent_config(sim_config)
+            agent_config.start_position = episode.start_position
+            agent_config.start_rotation = [
+                float(k) for k in episode.start_rotation
+            ]
+            agent_config.is_set_start_state = True
+        return sim_config
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)

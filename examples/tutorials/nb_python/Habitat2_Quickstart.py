@@ -29,6 +29,7 @@
 # Play a teaser video
 from dataclasses import dataclass
 
+from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     MeasurementConfig,
     ThirdRGBSensorConfig,
@@ -92,7 +93,8 @@ def insert_render_options(config):
     # Added settings to make rendering higher resolution for better visualization
     with habitat.config.read_write(config):
         config.habitat.simulator.concur_render = False
-        config.habitat.simulator.agent_0.sim_sensors.update(
+        agent_config = get_agent_config(sim_config=config.habitat.simulator)
+        agent_config.sim_sensors.update(
             {"third_rgb_sensor": ThirdRGBSensorConfig(height=512, width=512)}
         )
     return config
@@ -362,9 +364,8 @@ cfg_txt = """
 
 defaults:
   - /habitat: habitat_config_base
-  - /agent@habitat.simulator.agent_0: agent_base
-  - /habitat/simulator/sim_sensors:
-    - head_rgb_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: agent_base
+  - /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.head_rgb_sensor: head_rgb_sensor
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
@@ -435,18 +436,19 @@ habitat:
     action_space_config: v0
     concur_render: False
     auto_sleep: False
-    agent_0:
-      height: 1.5
-      is_set_start_state: False
-      radius: 0.1
-      sim_sensors:
-        head_rgb_sensor:
-          height: 128
-          width: 128
-      start_position: [0, 0, 0]
-      start_rotation: [0, 0, 0, 1]
-      robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-      robot_type: "FetchRobot"
+    agents:
+      main_agent:
+        height: 1.5
+        is_set_start_state: False
+        radius: 0.1
+        sim_sensors:
+          head_rgb_sensor:
+            height: 128
+            width: 128
+        start_position: [0, 0, 0]
+        start_rotation: [0, 0, 0, 1]
+        robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        robot_type: "FetchRobot"
 
     # Agent setup
     # ARM_REST: [0.6, 0.0, 0.9]

@@ -21,7 +21,7 @@ teleport_ROTATION = np.array([0.92035, 0, -0.39109465, 0], dtype=np.float32)
 
 
 def test_task_actions():
-    config = habitat.get_config(config_paths=CFG_TEST)
+    config = habitat.get_config(config_path=CFG_TEST)
     with habitat.config.read_write(config):
         config.habitat.task.actions["teleport"] = TeleportActionConfig()
 
@@ -48,7 +48,7 @@ def test_task_actions():
 
 
 def test_task_actions_sampling_for_teleport():
-    config = habitat.get_config(config_paths=CFG_TEST)
+    config = habitat.get_config(config_path=CFG_TEST)
     with habitat.config.read_write(config):
         config.habitat.task.actions["teleport"] = TeleportActionConfig()
 
@@ -76,7 +76,7 @@ def test_task_actions_sampling_for_teleport():
     ],
 )
 def test_task_actions_sampling(config_file):
-    config = habitat.get_config(config_paths=config_file)
+    config = habitat.get_config(config_path=config_file)
     if not os.path.exists(
         config.habitat.dataset.data_path.format(
             split=config.habitat.dataset.split

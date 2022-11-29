@@ -10,6 +10,7 @@ import os
 import pytest
 
 import habitat
+from habitat.config.default import get_agent_config
 
 try:
     from habitat_baselines.agents import ppo_agents, simple_agents
@@ -34,41 +35,39 @@ CFG_TEST = "test/habitat_all_sensors_test.yaml"
     ],
 )
 def test_ppo_agents(input_type, resolution):
+    ppo_agent_config = ppo_agents.get_default_config()
+    ppo_agent_config.MODEL_PATH = ""
+    ppo_agent_config.RESOLUTION = resolution
+    ppo_agent_config.INPUT_TYPE = input_type
 
-    agent_config = ppo_agents.get_default_config()
-    agent_config.MODEL_PATH = ""
-    with habitat.config.read_write(agent_config):
-        config_env = habitat.get_config(config_paths=CFG_TEST)
+    with habitat.config.read_write(ppo_agent_config):
+        config_env = habitat.get_config(config_path=CFG_TEST)
         if not os.path.exists(config_env.habitat.simulator.scene):
             pytest.skip("Please download Habitat test data to data folder.")
 
         benchmark = habitat.Benchmark(config_paths=CFG_TEST)
         with habitat.config.read_write(config_env):
-            agent_config.RESOLUTION = resolution
-            config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width = (
-                resolution
+            agent_config = get_agent_config(config_env.habitat.simulator)
+            agent_config.sim_sensors.rgb_sensor.update(
+                {
+                    "height": resolution,
+                    "width": resolution,
+                }
             )
-            config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height = (
-                resolution
-            )
-            config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor.width = (
-                resolution
-            )
-            config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor.height = (
-                resolution
+            agent_config.sim_sensors.depth_sensor.update(
+                {
+                    "height": resolution,
+                    "width": resolution,
+                }
             )
             if input_type in ["depth", "blind"]:
-                del config_env.habitat.simulator.agent_0.sim_sensors.rgb_sensor
+                del agent_config.sim_sensors.rgb_sensor
             if input_type in ["rgb", "blind"]:
-                del (
-                    config_env.habitat.simulator.agent_0.sim_sensors.depth_sensor
-                )
+                del agent_config.sim_sensors.depth_sensor
 
         del benchmark._env
         benchmark._env = habitat.Env(config=config_env)
-        agent_config.INPUT_TYPE = input_type
-
-        agent = ppo_agents.PPOAgent(agent_config)
+        agent = ppo_agents.PPOAgent(ppo_agent_config)
         habitat.logger.info(benchmark.evaluate(agent, num_episodes=10))
         benchmark._env.close()
 
@@ -77,7 +76,7 @@ def test_ppo_agents(input_type, resolution):
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_simple_agents():
-    config_env = habitat.get_config(config_paths=CFG_TEST)
+    config_env = habitat.get_config(config_path=CFG_TEST)
 
     if not os.path.exists(config_env.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")

@@ -81,7 +81,7 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
 
 def example_get_topdown_map():
     config = habitat.get_config(
-        config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     )
     dataset = habitat.make_dataset(
         id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
