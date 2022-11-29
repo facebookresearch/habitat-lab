@@ -60,5 +60,3 @@ In this section, we describe the basic function of Stretch in Habitat as one exa
     - Key T and Key 5: `joint_wrist_roll`
     - Key Y and Key 6: `joint_head_pan`
     - Key U and Key 7: `joint_head_tilt`
-
-    ![Stretch Demo](res/img/stretch_demo_video.gif)
