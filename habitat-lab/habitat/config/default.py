@@ -116,7 +116,7 @@ def get_config(
         "habitat.simulator.agents_order should be set explicitly "
         "and match the agents' keys in habitat.simulator.agents.\n"
         f"habitat.simulator.agents_order: {sim_config.agents_order}\n"
-        f"habitat.simulator.agents: {sim_config.agents}"
+        f"habitat.simulator.agents: {list(sim_config.agents.keys())}"
     )
 
     OmegaConf.set_readonly(cfg, True)
