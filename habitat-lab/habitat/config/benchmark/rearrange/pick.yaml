@@ -34,15 +34,6 @@ habitat:
           head_depth_sensor:
               width: 256
               height: 256
-#          head_rgb_sensor:
-#              width: 256
-#              height: 256
-#          arm_depth_sensor:
-#            height: 128
-#            width: 128
-#          arm_rgb_sensor:
-#            height: 128
-#            width: 128
 
     # Grasping
     hold_thresh: 0.2

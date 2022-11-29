@@ -203,7 +203,7 @@ def test_cpca():
 def test_cubemap_stiching(
     test_cfg_path: str, mode: str, camera: str, sensor_type: str
 ):
-    meta_config = get_config(config_paths=test_cfg_path)
+    meta_config = get_config(config_path=test_cfg_path)
     with read_write(meta_config):
         config = meta_config.habitat
         CAMERA_NUM = 6

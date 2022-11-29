@@ -17,16 +17,27 @@ from habitat_baselines.config.default_structured_configs import (
 )
 
 _BASELINES_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
+# Habitat baselines config directory inside the installed package.
+# Used to access default predefined configs.
+# This is equivalent to doing osp.dirname(osp.abspath(__file__))
 DEFAULT_CONFIG_DIR = "habitat-lab/habitat/config/"
 CONFIG_FILE_SEPARATOR = ","
 
 
 def get_config(
-    config_paths: str,
+    config_path: str,
     overrides: Optional[list] = None,
     configs_dir: str = _BASELINES_CFG_DIR,
 ) -> DictConfig:
+    """
+    Returns habitat_baselines config object composed of configs from yaml file (config_path) and overrides.
+
+    :param config_path: path to the yaml config file.
+    :param overrides: list of config overrides. For example, :py:`overrides=["habitat_baselines.trainer_name=ddppo"]`.
+    :param configs_dir: path to the config files root directory (defaults to :ref:`_BASELINES_CFG_DIR`).
+    :return: composed config object.
+    """
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
-    cfg = _habitat_get_config(config_paths, overrides, configs_dir)
+    cfg = _habitat_get_config(config_path, overrides, configs_dir)
 
     return cfg

@@ -93,7 +93,7 @@ def insert_render_options(config):
     # Added settings to make rendering higher resolution for better visualization
     with habitat.config.read_write(config):
         config.habitat.simulator.concur_render = False
-        agent_config = get_agent_config(config.habitat.simulator)
+        agent_config = get_agent_config(sim_config=config.habitat.simulator)
         agent_config.sim_sensors.update(
             {"third_rgb_sensor": ThirdRGBSensorConfig(height=512, width=512)}
         )

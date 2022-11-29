@@ -8,7 +8,7 @@ to [Hydra](https://hydra.cc).
 ## Hydra Concepts used in Habitat-Lab
 
 With Hydra, the [Output Config](https://hydra.cc/docs/advanced/terminology/#output-config)
-is composed dynamically at the run time from
+is composed dynamically at run time from
 the [Input Configs](https://hydra.cc/docs/advanced/terminology/#input-configs) specified in
 the [Defaults List](https://hydra.cc/docs/advanced/terminology/#defaults-list) and
 [Overrides](https://hydra.cc/docs/advanced/terminology/#overrides) from the primary yaml config file or command line.
@@ -18,16 +18,16 @@ Default config values and their types are defined via
 config validation schemas to ensure that all the required fields are set and match the required type, and also as a
 configs, in place of configuration yaml files. All Structured Configs are registered in
 the [ConfigStore](https://hydra.cc/docs/tutorials/structured_config/config_store/) - in-memory
-Structured Configs registry. Habitat-Lab's Structured Configs are defined and registered to the ConfigStore in the
+Structured Configs registry. Habitat-Lab's Structured Configs are defined and registered to the ConfigStore in
 [habitat-lab/habitat/config/default_structured_configs.py](default_structured_configs.py).
 
-Similar configs are grouped in the [Config Groups](https://hydra.cc/docs/advanced/terminology/#config-group)
+Similar configs are grouped in [Config Groups](https://hydra.cc/docs/advanced/terminology/#config-group)
 (placed in the same directories in the [Config Search Path](https://hydra.cc/docs/advanced/terminology/#config-search-path)).
 These configs are also called [Config Group Options](https://hydra.cc/docs/advanced/terminology/#config-group-option).
 For example, Embodied AI task specifications supported by Habitat-Lab are placed in the `habitat/task` Config Group
 and to use the PointNav task just add `habitat/task: pointnav` line to your config's Defaults List.
 
-Where the content of each Input Config (Config Group Option) is placed in the Output Config is determined via
+Each Input Config's position in the Output Config is determined via
 [Package](https://hydra.cc/docs/advanced/terminology/#package). In other words, a Package is the path to node in a config.
 By default, the Package of a Config Group Option is derived from the Config Group. e.g: task configs in `habitat/task`
 will have the package `habitat.task` by default (i.e. will be placed under `habitat.task` in the final Output Config).
@@ -64,7 +64,7 @@ habitat-lab/habitat/config/
 
 ## What's changed?
 <details>
-<summary>Expand to see the Habitat-Lab input PointNav benchmark config example.</summary>
+<summary>PointNav benchmark: Input Config.</summary>
 
 ```yaml
 # @package _global_
@@ -96,7 +96,7 @@ habitat:
 </details>
 
 <details>
-<summary>Expand to see the corresponding composed output config.</summary>
+<summary>PointNav benchmark: Output Config.</summary>
 
 ```yaml
 habitat:
@@ -299,13 +299,13 @@ habitat:
 - `agent.sensors` is renamed to `agent.sim_sensors`,  `task.sensors` is renamed to `task.lab_sensors`.
 - Actions, agents, measurements and sensors configs are not directly attached to the simulator, task or agent
   config nodes but are added to `task.actions`, `simulator.agents`, `task.measurements`, `task.lab_sensors`,
-  `simulator.agent_name.sim_sensors` sub-nodes of type `Dict[str, CorrespondingConfigNodeType]`
+  `simulator.<agent_name>.sim_sensors` sub-nodes of type `Dict[str, CorrespondingConfigNodeType]`
   that can be updated dynamically. Consequently, Output Config contains only those config nodes that are listed in
   `task.actions`, `simulator.agents`, `task.measurements`, `task.lab_sensors`, `simulator.agents.agent_name.sim_sensors`
   (not all possible actions, agents, measurements and sensors config nodes).
 - `task.possible_actions` is removed.
 
-### New features
+### New functionality enabled
 After the configuration system migration to Hydra, Habitat-Lab automatically supports all Hydra's
 and [OmegaConf's](https://omegaconf.readthedocs.io/) features (note that Hydra is build on top of OmegaConf).
 Some of new features are listed below:
@@ -315,18 +315,6 @@ Some of new features are listed below:
 defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
-```
-- Making the config key required by setting its value to `MISSING`. For example, we require the user to explicitly
-  set the `task` and the `dataset` in every Habitat-Lab benchmark config (see `HabitatConfig` Structured Config
- in the [habitat-lab/habitat/config/default.py](default.py)):
-```python
-from omegaconf import MISSING
-
-@dataclass
-class HabitatConfig(HabitatBaseConfig):
-    # Other HabitatConfig keys are omitted in this code snippet
-    task: TaskConfig = MISSING
-    dataset: DatasetConfig = MISSING
 ```
 - [Variable interpolation](https://omegaconf.readthedocs.io/en/2.2_branch/usage.html#variable-interpolation).
   For example, use the same seed value for `SimulatorConfig.seed` as in `HabitatConfig.seed` (see `SimulatorConfig`
@@ -339,10 +327,30 @@ class SimulatorConfig(HabitatBaseConfig):
     # Other SimulatorConfig keys are omitted in this code snippet
     seed: int = II("habitat.seed")
 ```
-- [Multirun](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/). For example, launching 3 experiments with three different learning rates:
+- [Parameter sweeping and multirun](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/). For example, launching 3 experiments with three different learning rates:
 ```bash
-python -u habitat_baselines/run.py --exp-config config.yaml --run-type train –-multirun \
-habitat_baselines.rl.ppo.lr 2.5e-4,2.5e-5,2.5e-6
+python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
+–-multirun habitat_baselines.rl.ppo.lr 2.5e-4,2.5e-5,2.5e-6
+```
+- Seamless [SLURM](https://slurm.schedmd.com/documentation.html) integration through
+  [Submitit Launcher](https://hydra.cc/docs/plugins/submitit_launcher/).
+  To enable the feature Submitit plugin should be installed: `pip install hydra-submitit-launcher --upgrade`
+  and `submitit_slurm` launcher specified in the command line `hydra/launcher=submitit_slurm`:
+```bash
+python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
+hydra/launcher=submitit_slurm
+```
+- Making the config key required by setting its value to `MISSING`. For example, we require the user to explicitly
+  set the `task` and the `dataset` in every Habitat-Lab benchmark config (see `HabitatConfig` Structured Config
+ in the [habitat-lab/habitat/config/default.py](default.py)):
+```python
+from omegaconf import MISSING
+
+@dataclass
+class HabitatConfig(HabitatBaseConfig):
+    # Other HabitatConfig keys are omitted in this code snippet
+    task: TaskConfig = MISSING
+    dataset: DatasetConfig = MISSING
 ```
 
 
@@ -469,7 +477,7 @@ from hydra.core.config_store import ConfigStore
 
 @dataclass
 class CustomStructuredConfig:
-    custom_config_key: KeyType = DefayltValue
+    custom_config_key: KeyType = DefaultValue
 
 cs = ConfigStore.instance()
 cs.store(

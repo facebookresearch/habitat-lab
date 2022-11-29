@@ -8,7 +8,7 @@ import inspect
 import os.path as osp
 import threading
 from functools import partial
-from typing import Optional
+from typing import List, Optional
 
 from hydra import compose, initialize_config_dir
 from omegaconf import DictConfig, OmegaConf
@@ -20,12 +20,20 @@ from habitat.config.default_structured_configs import (
 from habitat.config.read_write import read_write
 
 _HABITAT_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
+# Habitat config directory inside the installed package.
+# Used to access default predefined configs.
 # This is equivalent to doing osp.dirname(osp.abspath(__file__))
 # in editable install, this is pwd/habitat-lab/habitat/config
 CONFIG_FILE_SEPARATOR = ","
 
 
 def get_full_config_path(config_path: str, configs_dir: str) -> str:
+    r"""Returns absolute path to the yaml config file if exists, else raises RuntimeError.
+
+    :param config_path: path to the yaml config file.
+    :param configs_dir: path to the config files root directory.
+    :return: absolute path to the yaml config file.
+    """
     if osp.exists(config_path):
         return osp.abspath(config_path)
 
@@ -39,9 +47,23 @@ def get_full_config_path(config_path: str, configs_dir: str) -> str:
 get_full_habitat_config_path = partial(
     get_full_config_path, configs_dir=_HABITAT_CFG_DIR
 )
+get_full_habitat_config_path.__doc__ = r"""
+Returns absolute path to the habitat yaml config file if exists, else raises RuntimeError.
+
+:param config_path: relative path to the habitat yaml config file.
+:return: absolute config to the habitat yaml config file.
+"""
 
 
-def get_agent_config(sim_config, agent_id: Optional[int] = None):
+def get_agent_config(
+    sim_config: DictConfig, agent_id: Optional[int] = None
+) -> DictConfig:
+    r"""Returns agent's config node of default agent or based on index of the agent.
+
+    :param sim_config: config of :ref:`habitat.core.simulator.Simulator`.
+    :param agent_id: index of the agent config (relevant for multi-agent setup).
+    :return: relevant agent's config.
+    """
     if agent_id is None:
         agent_id = sim_config.default_agent_id
 
@@ -55,13 +77,20 @@ lock = threading.Lock()
 
 
 def get_config(
-    config_paths: str,
-    overrides: Optional[list] = None,
+    config_path: str,
+    overrides: Optional[List[str]] = None,
     configs_dir: str = _HABITAT_CFG_DIR,
 ) -> DictConfig:
+    r"""Returns habitat config object composed of configs from yaml file (config_path) and overrides.
+
+    :param config_path: path to the yaml config file.
+    :param overrides: list of config overrides. For example, :py:`overrides=["habitat.seed=1"]`.
+    :param configs_dir: path to the config files root directory (defaults to :ref:`_HABITAT_CFG_DIR`).
+    :return: composed config object.
+    """
     register_hydra_plugin(HabitatConfigPlugin)
 
-    config_path = get_full_config_path(config_paths, configs_dir)
+    config_path = get_full_config_path(config_path, configs_dir)
     # If get_config is called from different threads, Hydra might
     # get initialized twice leading to issues. This lock fixes it.
     with lock, initialize_config_dir(
@@ -81,9 +110,13 @@ def get_config(
 
     # Check if the `habitat.simulator.agents_order`
     # is set and matches the agents' keys in `habitat.simulator.agents`.
-    assert set(sim_config.agents_order) == set(sim_config.agents.keys()), (
+    assert len(sim_config.agents_order) == len(sim_config.agents) and set(
+        sim_config.agents_order
+    ) == set(sim_config.agents.keys()), (
         "habitat.simulator.agents_order should be set explicitly "
-        "and match the agents' keys in habitat.simulator.agents"
+        "and match the agents' keys in habitat.simulator.agents.\n"
+        f"habitat.simulator.agents_order: {sim_config.agents_order}\n"
+        f"habitat.simulator.agents: {sim_config.agents}"
     )
 
     OmegaConf.set_readonly(cfg, True)

@@ -41,7 +41,7 @@ def test_ppo_agents(input_type, resolution):
     ppo_agent_config.INPUT_TYPE = input_type
 
     with habitat.config.read_write(ppo_agent_config):
-        config_env = habitat.get_config(config_paths=CFG_TEST)
+        config_env = habitat.get_config(config_path=CFG_TEST)
         if not os.path.exists(config_env.habitat.simulator.scene):
             pytest.skip("Please download Habitat test data to data folder.")
 
@@ -76,7 +76,7 @@ def test_ppo_agents(input_type, resolution):
     not baseline_installed, reason="baseline sub-module not installed"
 )
 def test_simple_agents():
-    config_env = habitat.get_config(config_paths=CFG_TEST)
+    config_env = habitat.get_config(config_path=CFG_TEST)
 
     if not os.path.exists(config_env.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")

@@ -594,7 +594,7 @@ if __name__ == "__main__":
 
         if not args.same_task:
             sim_config.debug_render = True
-            agent_config = get_agent_config(sim_config)
+            agent_config = get_agent_config(sim_config=sim_config)
             agent_config.sim_sensors.update(
                 {
                     "third_rgb_sensor": ThirdRGBSensorConfig(

@@ -28,11 +28,8 @@ def my_app_compose_api() -> "DictConfig":
                 "habitat_baselines.num_environments=4",
                 "habitat_baselines.total_num_steps=-1.0",
                 "habitat_baselines.rl.policy.action_distribution_type=gaussian",
-                # "+task/rearrange@habitat=pick",
                 "+benchmark/rearrange=pick",
-                "habitat.simulator.agents_order=[depth_head_agent]"
-                # "+habitat=benchmark/rearrange/pick",
-                # "+sim_sensors@habitat.simulator.agents.agent_0.sim_sensors.arm_rgb_sensor=arm_rgb_sensor",
+                "habitat.simulator.agents_order=[depth_head_agent]",
             ]
         )
 
