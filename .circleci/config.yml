@@ -1,3 +1,5 @@
+
+
 version: 2.1
 gpu: &gpu
   machine:
@@ -68,7 +70,6 @@ jobs:
             pip install -U pip setuptools pre-commit
             # Install the hooks now so that they'll be cached
             pre-commit install-hooks
-
       - save_cache:
           paths:
             - ~/.cache/pre-commit
@@ -313,14 +314,12 @@ jobs:
               . activate habitat; cd habitat-lab
               pip install -e habitat-lab
               pip install -e habitat-baselines
-
               # Download sim inventory for crosslinking (no need to build
               # the whole sim docs for that)
               # TODO: take it from github.com/facebookmicrosites/habitat-website
               #   instead
               mkdir -p ../habitat-sim/build/docs-public/habitat-sim
               curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
-
               cd docs
               conda install -y -c conda-forge doxygen
               conda install -y  jinja2 pygments docutils
@@ -335,8 +334,6 @@ jobs:
               python -c "import habitat"
               python -m pip install habitat-baselines/
               python -c "import habitat_baselines"
-
-
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
 

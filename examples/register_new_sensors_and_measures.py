@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -13,8 +13,8 @@ from omegaconf import MISSING
 
 import habitat
 from habitat.config.default_structured_configs import (
+    LabSensorConfig,
     MeasurementConfig,
-    SensorConfig,
 )
 
 
@@ -90,7 +90,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 # define a configuration for this new sensor
 @dataclass
-class AgentPositionSensorConfig(SensorConfig):
+class AgentPositionSensorConfig(LabSensorConfig):
     # Note that typing is required on all fields
     type: str = "my_supercool_sensor"
     # MISSING makes this field have no defaults
