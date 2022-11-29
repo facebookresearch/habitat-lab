@@ -81,4 +81,4 @@ In this section, we describe the basic function of Stretch in Habitat as one exa
     - Key U and Key 7: `joint_head_tilt`
 
 1. **Unit Test Example**
-    - `habitat-lab/test/test_robot_wrapper.py` provides an example of initializing the robot and controling its joints.
+    - `habitat-lab/test/test_robot_wrapper.py` provides an example of initializing the robot and controlling its joints.
