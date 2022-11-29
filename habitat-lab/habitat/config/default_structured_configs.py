@@ -105,6 +105,7 @@ class ArmActionConfig(ActionConfig):
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
     grip_controller: Optional[str] = None
+    arm_joint_mask: Optional[List[int]] = None
     arm_joint_dimensionality: int = 7
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
