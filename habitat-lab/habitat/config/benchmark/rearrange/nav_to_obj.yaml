@@ -25,7 +25,7 @@ habitat:
     debug_render_goal: False
     agent_0:
       radius: 0.3
-      robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+      robot_urdf: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
       robot_type: FetchSuctionRobot
     habitat_sim_v0:
       allow_sliding: False
