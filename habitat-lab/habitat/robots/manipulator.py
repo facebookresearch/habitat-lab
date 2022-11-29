@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -147,14 +147,23 @@ class Manipulator(RobotInterface):
                         link_trans = self.sim_obj.transformation
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
-                            self.params.ee_link
+                            cam_info.attached_link_id
                         ).transformation
 
-                    cam_transform = mn.Matrix4.look_at(
-                        cam_info.cam_offset_pos,
-                        cam_info.cam_look_at_pos,
-                        mn.Vector3(0, 1, 0),
-                    )
+                    if cam_info.cam_look_at_pos == mn.Vector3(0, 0, 0):
+                        pos = cam_info.cam_offset_pos
+                        ori = cam_info.cam_orientation
+                        Mt = mn.Matrix4.translation(pos)
+                        Mz = mn.Matrix4.rotation_z(mn.Rad(ori[2]))
+                        My = mn.Matrix4.rotation_y(mn.Rad(ori[1]))
+                        Mx = mn.Matrix4.rotation_x(mn.Rad(ori[0]))
+                        cam_transform = Mt @ Mz @ My @ Mx
+                    else:
+                        cam_transform = mn.Matrix4.look_at(
+                            cam_info.cam_offset_pos,
+                            cam_info.cam_look_at_pos,
+                            mn.Vector3(0, 1, 0),
+                        )
                     cam_transform = (
                         link_trans
                         @ cam_transform
@@ -237,6 +246,14 @@ class Manipulator(RobotInterface):
             self.ee_local_offset
         )
         return ef_link_transform
+
+    def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
+        """Clips a 3D end-effector position within region the robot can reach."""
+        return np.clip(
+            pos,
+            self.params.ee_constraint[:, 0],
+            self.params.ee_constraint[:, 1],
+        )
 
     @property
     def gripper_joint_pos(self):
@@ -332,16 +349,6 @@ class Manipulator(RobotInterface):
             joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
         self.sim_obj.joint_positions = joint_positions
 
-    def _validate_arm_ctrl_input(self, ctrl: List[float]):
-        """
-        Raises an exception if the control input is NaN or does not match the
-        joint dimensions.
-        """
-        if len(ctrl) != len(self.params.arm_joints):
-            raise ValueError("Dimensions do not match")
-        if np.any(np.isnan(ctrl)):
-            raise ValueError("Control is NaN")
-
     def set_fixed_arm_joint_pos(self, fix_arm_joint_pos):
         """
         Will fix the arm to a desired position at every internal timestep. Can
@@ -382,14 +389,6 @@ class Manipulator(RobotInterface):
         for i, jidx in enumerate(self.params.arm_joints):
             self._set_motor_pos(jidx, ctrl[i])
 
-    def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
-        """Clips a 3D end-effector position within region the robot can reach."""
-        return np.clip(
-            pos,
-            self.params.ee_constraint[:, 0],
-            self.params.ee_constraint[:, 1],
-        )
-
     @property
     def arm_motor_forces(self) -> np.ndarray:
         """Get the current torques on the arm joint motors"""
@@ -400,28 +399,21 @@ class Manipulator(RobotInterface):
         """Set the desired torques of the arm joint motors"""
         self.sim_obj.joint_forces = ctrl
 
-    def _validate_joint_idx(self, joint):
-        if joint not in self.joint_motors:
-            raise ValueError(
-                f"Requested joint {joint} not in joint motors with indices (keys {self.joint_motors.keys()}) and {self.joint_motors}"
-            )
-
-    def _set_motor_pos(self, joint, ctrl):
-        self._validate_joint_idx(joint)
-        self.joint_motors[joint][1].position_target = ctrl
-        self.sim_obj.update_joint_motor(
-            self.joint_motors[joint][0], self.joint_motors[joint][1]
-        )
-
-    def _get_motor_pos(self, joint):
-        self._validate_joint_idx(joint)
-        return self.joint_motors[joint][1].position_target
-
     def _set_joint_pos(self, joint_idx, angle):
         # NOTE: This is pretty inefficient and should not be used iteratively
         set_pos = self.sim_obj.joint_positions
         set_pos[self.joint_pos_indices[joint_idx]] = angle
         self.sim_obj.joint_positions = set_pos
+
+    def _validate_arm_ctrl_input(self, ctrl: List[float]):
+        """
+        Raises an exception if the control input is NaN or does not match the
+        joint dimensions.
+        """
+        if len(ctrl) != len(self.params.arm_joints):
+            raise ValueError("Dimensions do not match")
+        if np.any(np.isnan(ctrl)):
+            raise ValueError("Control is NaN")
 
     def _interpolate_arm_control(
         self, targs, idxs, seconds, ctrl_freq, get_observations=False
@@ -444,15 +436,3 @@ class Manipulator(RobotInterface):
             if get_observations:
                 observations.append(self._sim.get_sensor_observations())
         return observations
-
-    def _update_motor_settings_cache(self):
-        """Updates the JointMotorSettings cache for cheaper future updates"""
-        self.joint_motors = {}
-        for (
-            motor_id,
-            joint_id,
-        ) in self.sim_obj.existing_joint_motor_ids.items():
-            self.joint_motors[joint_id] = (
-                motor_id,
-                self.sim_obj.get_joint_motor_settings(motor_id),
-            )
