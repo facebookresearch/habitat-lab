@@ -46,6 +46,13 @@ class Policy(abc.ABC):
         raise NotImplementedError
 
     def get_policy_info(self, infos, dones) -> List[Dict[str, float]]:
+        """
+        Gets the log information from the policy at the current time step.
+        Currently only called during evaluation. The return list should be
+        empty for no logging or a list of size equal to the number of
+        environments.
+        """
+
         return []
 
     def act(

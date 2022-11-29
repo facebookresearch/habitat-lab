@@ -10,9 +10,10 @@ import yaml
 from habitat.config.default import get_full_config_path
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
+from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 
 
-class FixedHighLevelPolicy:
+class FixedHighLevelPolicy(HighLevelPolicy):
     """
     Executes a fixed sequence of high-level actions as specified by the
     `solution` field of the PDDL problem file.
