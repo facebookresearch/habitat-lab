@@ -962,8 +962,12 @@ class SimulatorConfig(HabitatBaseConfig):
     grasp_impulse: float = 1000.0
     # we assume agent(s) to be set explicitly
     agents: Dict[str, AgentConfig] = MISSING
-    # if the number of agents is greater than one,
-    # then agents_order has to be set explicitly too
+    # agents_order specifies the order in which the agents
+    # are stored on the habitat-sim side.
+    # In other words, the order to return the observations and accept
+    # the actions when using the environment API
+    # If the number of agents is greater than one,
+    # then agents_order has to be set explicitly.
     agents_order: List[str] = MISSING
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
     # ep_info is added to the config in some rearrange tasks inside
