@@ -1,20 +1,15 @@
 # @package _global_
 
 defaults:
-  - /habitat: habitat_config_base
-  - /habitat/task: eqa
-  - /habitat/simulator/agents:
-    - rgbd_agent
-  - /habitat/dataset/eqa: mp3d
   - /habitat_baselines: habitat_baselines_il_config_base
+  - /benchmark/nav: eqa_rgbonly_mp3d
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
   - _self_
 
 habitat:
-  environment:
-    max_episode_steps: 500
   simulator:
     agents:
-      rgbd_agent:
+      main_agent:
         sim_sensors:
           rgb_sensor:
             width: 256
@@ -22,8 +17,6 @@ habitat:
           depth_sensor:
             width: 256
             height: 256
-    habitat_sim_v0:
-      gpu_device_id: 0
 
 habitat_baselines:
   trainer_name: "pacman"

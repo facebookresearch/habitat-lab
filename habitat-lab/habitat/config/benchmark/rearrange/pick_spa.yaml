@@ -2,10 +2,9 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents:
-    - rgbd_head_rgbd_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   # add third_rgb_sensor to rgbd_head_rgbd_arm_agent:
-  - /habitat/simulator/sim_sensors@habitat.simulator.agents.rgbd_head_rgbd_arm_agent.sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.third_rgb_sensor: third_rgb_sensor
   - /habitat/task/rearrange: pick_spa
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -22,7 +21,7 @@ habitat:
     concur_render: True
     auto_sleep: True
     agents:
-      rgbd_head_rgbd_arm_agent:
+      main_agent:
         radius: 0.3
         sim_sensors:
           head_rgb_sensor:

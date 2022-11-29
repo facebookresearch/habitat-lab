@@ -2,8 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents:
-    - rgbd_head_rgbd_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - /habitat/task/rearrange/demo: idle
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -24,7 +23,7 @@ habitat:
     additional_object_paths:
       - "data/objects/ycb/configs/"
     agents:
-      rgbd_head_rgbd_arm_agent:
+      main_agent:
         sim_sensors:
           head_rgb_sensor:
             height: 128

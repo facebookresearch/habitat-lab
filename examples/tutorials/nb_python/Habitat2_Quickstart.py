@@ -364,8 +364,8 @@ cfg_txt = """
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: agent_base
-  - /habitat/simulator/sim_sensors@habitat.simulator.agents.agent_0.sim_sensors.head_rgb_sensor: head_rgb_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: agent_base
+  - /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.head_rgb_sensor: head_rgb_sensor
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
@@ -437,7 +437,7 @@ habitat:
     concur_render: False
     auto_sleep: False
     agents:
-      agent_0:
+      main_agent:
         height: 1.5
         is_set_start_state: False
         radius: 0.1

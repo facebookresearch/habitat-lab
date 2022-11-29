@@ -2,8 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents:
-    - depth_head_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_agent
   - /habitat/task/rearrange: rearrange_easy
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -30,7 +29,7 @@ habitat:
     grasp_impulse: 10000.0
     hold_thresh: 0.2
     agents:
-      depth_head_agent:
+      main_agent:
         height: 1.5
         radius: 0.3
         sim_sensors:

@@ -3,8 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task: vln_r2r
-  - /habitat/simulator/agents:
-    - rgbd_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
   - /habitat/dataset/vln: mp3d_r2r
   - _self_
 
@@ -14,7 +13,7 @@ habitat:
     max_episode_steps: 500
   simulator:
     agents:
-      rgbd_agent:
+      main_agent:
         sim_sensors:
           rgb_sensor:
             width: 256

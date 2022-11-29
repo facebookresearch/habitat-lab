@@ -29,7 +29,7 @@ def my_app_compose_api() -> "DictConfig":
                 "habitat_baselines.total_num_steps=-1.0",
                 "habitat_baselines.rl.policy.action_distribution_type=gaussian",
                 "+benchmark/rearrange=pick",
-                "habitat.simulator.agents_order=[depth_head_agent]",
+                "habitat.simulator.agents_order=[main_agent]",
             ]
         )
 
