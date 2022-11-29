@@ -222,7 +222,7 @@ class ArtObjSuccess(Measure):
             and ee_to_rest_distance < self._config.rest_dist_threshold
             and not self._sim.grasp_mgr.is_grasped
         )
-        if self._config.MUST_CALL_STOP:
+        if self._config.must_call_stop:
             if called_stop:
                 task.should_end = True
             else:

@@ -480,6 +480,7 @@ class ArtObjStateMeasurementConfig(MeasurementConfig):
 class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
+    must_call_stop: bool = True
 
 
 @dataclass

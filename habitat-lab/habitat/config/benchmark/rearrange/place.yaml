@@ -25,6 +25,8 @@ habitat:
     additional_object_paths:
     - data/objects/ycb/configs/
     needs_markers: False
+    concur_render: True
+    auto_sleep: True
     agent_0:
       radius: 0.3
       robot_urdf: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
