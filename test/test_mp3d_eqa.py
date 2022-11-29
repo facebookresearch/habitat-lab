@@ -270,7 +270,7 @@ def test_mp3d_eqa_sim_correspondence():
                     RGB_EPISODE_MEANS[int(episode.episode_id)],
                     rgb_mean,
                     atol=0.5,
-                ), "RGB output doesn't match the ground truth."
+                ), f"RGB output doesn't match the ground truth. Expected {RGB_EPISODE_MEANS[int(episode.episode_id)]} but got {rgb_mean}"
 
             ep_i = (ep_i + 1) % EPISODES_LIMIT
             if ep_i == 0:
