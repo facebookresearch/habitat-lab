@@ -66,7 +66,7 @@ In this section, we describe the basic function of Stretch in Habitat as one exa
     ```
 
     Note that we modified `interactive_play.py` so that it can control Stretch via a keyboard.
-    - Key Q and Key 1: `jointly control `joint_arm_l0`, `joint_arm_l1`, `joint_arm_l2`, `joint_arm_l3`
+    - Key Q and Key 1: jointly control `joint_arm_l0`, `joint_arm_l1`, `joint_arm_l2`, `joint_arm_l3`
     - Key W and Key 2: `joint_lift`
     - Key E and Key 3: `joint_wrist_yaw`
     - Key R and Key 4: `joint_wrist_pitch`
