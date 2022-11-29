@@ -6,8 +6,8 @@ Habitat supports three types of robots: Fetch from Fetch Robotics, Stretch from 
 ---
 
 ## Table of contents
-   1. [Robot's Component Design](#robot-component)
-   1. [Stretch Specification](#specification)
+   1. [Robot Component Design](#robot-component-design)
+   1. [Stretch Specification](#stretch-specification)
 
 ## Robot's Component Design
 
