@@ -302,8 +302,8 @@ class GoalSensorConfig(SensorConfig):
 
 
 @dataclass
-class TargetOrGoalStartPointGoalSensorConfig(SensorConfig):
-    type: str = "TargetOrGoalStartPointGoalSensor"
+class NavGoalPointGoalSensorConfig(SensorConfig):
+    type: str = "NavGoalPointGoalSensor"
 
 
 @dataclass
@@ -450,6 +450,11 @@ class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "EndEffectorToGoalDistance"
+
+
+@dataclass
 class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
@@ -515,7 +520,7 @@ class BadCalledTerminateMeasurementConfig(MeasurementConfig):
 @dataclass
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
     type: str = "NavToPosSucc"
-    success_distance: float = 0.2
+    success_distance: float = 1.5
 
 
 @dataclass
@@ -524,14 +529,14 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     # reward the agent for facing the object?
     should_reward_turn: bool = True
     # what distance do we start giving the reward for facing the object?
-    turn_reward_dist: float = 0.1
+    turn_reward_dist: float = 3.0
     # multiplier on the angle distance to the goal.
     angle_dist_reward: float = 1.0
-    dist_reward: float = 10.0
-    constraint_violate_pen: float = 10.0
-    force_pen: float = 0.0
-    max_force_pen: float = 1.0
-    force_end_pen: float = 10.0
+    dist_reward: float = 1.0
+    constraint_violate_pen: float = 1.0
+    force_pen: float = 0.0001
+    max_force_pen: float = 0.01
+    force_end_pen: float = 1.0
 
 
 @dataclass
@@ -540,8 +545,7 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_look_at_targ: bool = True
     must_call_stop: bool = True
     # distance in radians.
-    success_angle_dist: float = 0.15
-    heuristic_stop: bool = False
+    success_angle_dist: float = 0.261799
 
 
 @dataclass
@@ -617,15 +621,17 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
 @dataclass
 class PlaceRewardMeasurementConfig(MeasurementConfig):
     type: str = "PlaceReward"
-    dist_reward: float = 20.0
-    place_reward: float = 20.0
-    drop_pen: float = 5.0
+    dist_reward: float = 2.0
+    place_reward: float = 5.0
+    drop_pen: float = 0.0
     use_diff: bool = True
-    wrong_drop_should_end: bool = False
-    constraint_violate_pen: float = 10.0
-    force_pen: float = 0.001
-    max_force_pen: float = 1.0
-    force_end_pen: float = 10.0
+    use_ee_dist: bool = False
+    wrong_drop_should_end: bool = True
+    constraint_violate_pen: float = 0.0
+    force_pen: float = 0.0001
+    max_force_pen: float = 0.0
+    force_end_pen: float = 1.0
+    min_dist_to_goal: float = 0.15
 
 
 @dataclass
@@ -717,6 +723,7 @@ class TaskConfig(HabitatBaseConfig):
     should_save_to_cache: bool = False
     must_look_at_targ: bool = True
     object_in_hand_sample_prob: float = 0.167
+    min_start_distance: float = 3.0
     gfx_replay_dir = "data/replays"
     render_target: bool = True
     # Spawn parameters
@@ -1411,10 +1418,10 @@ cs.store(
     node=NavToSkillSensorConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.target_start_point_goal_sensor",
+    package="habitat.task.lab_sensors.nav_goal_sensor",
     group="habitat/task/lab_sensors",
-    name="target_start_point_goal_sensor",
-    node=TargetOrGoalStartPointGoalSensorConfig,
+    name="nav_goal_sensor",
+    node=NavGoalPointGoalSensorConfig,
 )
 
 
@@ -1484,6 +1491,12 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_rest_distance",
     node=EndEffectorToRestDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.end_effector_to_goal_distance",
+    group="habitat/task/measurements",
+    name="end_effector_to_goal_distance",
+    node=EndEffectorToGoalDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.did_pick_object",

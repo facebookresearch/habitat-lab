@@ -932,7 +932,7 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["REARRANGE_STOP"].does_want_terminate
+        self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 
 @registry.register_measure
@@ -951,7 +951,7 @@ class BadCalledTerminate(Measure):
 
     def __init__(self, config, task, *args, **kwargs):
         super().__init__(**kwargs)
-        self._success_measure_name = task._config.SUCCESS_MEASURE
+        self._success_measure_name = task._config.success_measure
         self._config = config
 
     def reset_metric(self, *args, task, **kwargs):

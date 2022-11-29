@@ -535,7 +535,6 @@ _C.habitat.task.rearrange_nav_to_obj_success.must_look_at_targ = True
 _C.habitat.task.rearrange_nav_to_obj_success.must_call_stop = True
 # Distance in radians.
 _C.habitat.task.rearrange_nav_to_obj_success.success_angle_dist = 0.15
-_C.habitat.task.rearrange_nav_to_obj_success.heuristic_stop = False
 # -----------------------------------------------------------------------------
 # REARRANGE REACH MEASUREMENT
 # -----------------------------------------------------------------------------

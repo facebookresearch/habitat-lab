@@ -560,9 +560,9 @@ if __name__ == "__main__":
         help="If true, make the task never end due to reaching max number of steps",
     )
     parser.add_argument(
-        "--no-add-ik",
+        "--disable-inverse-kinematics",
         action="store_true",
-        help="If true, does not use IK for the arm control",
+        help="If specified, does not add the inverse kinematics end-effector control.",
     )
     parser.add_argument(
         "--gfx",
@@ -622,10 +622,10 @@ if __name__ == "__main__":
         if args.never_end:
             env_config.max_episode_steps = 0
 
-        if not args.no_add_ik:
+        if not args.disable_inverse_kinematics:
             if "arm_action" not in task_config.actions:
                 raise ValueError(
-                    "Action space does not have any arm control so incompatible with `--add-ik` option"
+                    "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
                 )
             sim_config.agent_0.ik_arm_urdf = (
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"

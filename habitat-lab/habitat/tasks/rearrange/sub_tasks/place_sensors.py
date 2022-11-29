@@ -82,11 +82,11 @@ class PlaceReward(RearrangeReward):
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
-            if self._config.USE_EE_DIST:
+            if self._config.use_ee_dist:
                 dist_to_goal = ee_to_goal_dist[str(task.abs_targ_idx)]
             else:
                 dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
-            min_dist = self._config.MIN_DIST_TO_GOAL
+            min_dist = self._config.min_dist_to_goal
         else:
             dist_to_goal = ee_to_rest_distance
             min_dist = 0.0
@@ -110,7 +110,7 @@ class PlaceReward(RearrangeReward):
                     return
 
         if dist_to_goal >= min_dist:
-            if self._config.USE_DIFF:
+            if self._config.use_diff:
                 if self._prev_dist < 0:
                     dist_diff = 0.0
                 else:
@@ -118,9 +118,9 @@ class PlaceReward(RearrangeReward):
 
                 # Filter out the small fluctuations
                 dist_diff = round(dist_diff, 3)
-                reward += self._config.DIST_REWARD * dist_diff
+                reward += self._config.dist_reward * dist_diff
             else:
-                reward -= self._config.DIST_REWARD * dist_to_goal
+                reward -= self._config.dist_reward * dist_to_goal
         self._prev_dist = dist_to_goal
 
         self._metric = reward

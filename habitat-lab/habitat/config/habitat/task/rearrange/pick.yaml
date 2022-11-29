@@ -25,12 +25,10 @@ defaults:
 
 type: RearrangePickTask-v0
 base_angle_noise: 0.523599
-spawn_max_dists_to_obj: 2.0
-physics_stability_steps: 1
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
-reward_measure: "rearrangepick_reward"
-success_measure: "rearrangepick_success"
+reward_measure: "pick_reward"
+success_measure: "pick_success"
 success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True

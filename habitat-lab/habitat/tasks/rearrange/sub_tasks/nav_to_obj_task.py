@@ -75,7 +75,7 @@ class DynNavRLEnv(RearrangeTask):
         # Only change the scene if this skill is not running as a sub-task
         if (
             force_idx is None
-            and random.random() < self._config.OBJECT_IN_HAND_SAMPLE_PROB
+            and random.random() < self._config.object_in_hand_sample_prob
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
@@ -95,7 +95,7 @@ class DynNavRLEnv(RearrangeTask):
         def filter_func(start_pos, _):
             return (
                 np.linalg.norm(start_pos - nav_to_pos)
-                > self._config.MIN_START_DISTANCE
+                > self._config.min_start_distance
             )
 
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(

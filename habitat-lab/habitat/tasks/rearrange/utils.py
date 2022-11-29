@@ -408,7 +408,6 @@ def get_robot_spawns(
         start_pos = sim.pathfinder.get_random_navigable_point_near(
             targ_pos, dist_thresh
         )
-        # start_pos[[0, 2]] += np.random.normal(0, base_pertub_noise, size=(2,))
 
         rel_targ = targ_pos - start_pos
 
@@ -453,6 +452,11 @@ def get_robot_spawns(
 
 
 def get_angle_to_pos(rel_pos: np.ndarray) -> float:
+    """
+    :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+    :returns: Angle in radians.
+    """
+
     forward = np.array([1.0, 0, 0])
     rel_pos = np.array(rel_pos)
     forward = forward[[0, 2]]
