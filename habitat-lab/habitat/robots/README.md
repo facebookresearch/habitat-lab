@@ -1,28 +1,15 @@
 Robot Design
 ==============================
 
-Habitat supports three types of robots: Fetch from Fetch Robotics, Stretch from Hello Robot, and Spot from Boston Dynamics. This readme file details the design of robot modules (i.e., arm, gripper, camera, leg, wheel, and base). In addition, we provide Stretch's design specification as one running example.
+Habitat supports three types of robots: Fetch from Fetch Robotics, Stretch from Hello Robot, and Spot from Boston Dynamics. This readme file details the design of robot modules. In addition, we provide Stretch's design specification as one running example.
 
 ---
 
 ## Robot's Component Design
 
-1. **Arm**
+1. `manipulator.py` controls the arm and gripper joint angles.
 
-
-1. **Gripper**
-
-
-1. **Camera**.
-
-
-1. **Leg**.
-
-
-1. **Wheel**.
-
-
-1. **Base**.
+1. `robot_base.py` controls the leg joint angles or base position depending on the morphology of the robot.
 
 ## Stretch Specification
 
@@ -73,3 +60,7 @@ In this section, we describe the basic function of Stretch in Habitat as one exa
     - Key T and Key 5: `joint_wrist_roll`
     - Key Y and Key 6: `joint_head_pan`
     - Key U and Key 7: `joint_head_tilt`
+
+    <p align="center">
+    <img src="res/img/stretch_demo_video.gif"  height="400">
+    </p>
