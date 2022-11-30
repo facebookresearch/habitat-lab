@@ -26,18 +26,14 @@ Habitat-Lab uses [`Habitat-Sim`](https://github.com/facebookresearch/habitat-sim
 ---
 
 ## Table of contents
-- [Habitat-Lab](#habitat-lab)
-  - [Table of contents](#table-of-contents)
-  - [Citing Habitat](#citing-habitat)
-  - [Installation](#installation)
-  - [Testing](#testing)
-  - [Documentation](#documentation)
-  - [Docker Setup](#docker-setup)
-    - [Questions?](#questions)
-  - [Datasets](#datasets)
-  - [Baselines](#baselines)
-  - [ROS-X-Habitat](#ros-x-habitat)
-  - [License](#license)
+   1. [Citing Habitat](#citing-habitat)
+   1. [Installation](#installation)
+   1. [Testing](#testing)
+   1. [Documentation](#documentation)
+   1. [Docker Setup](#docker-setup)
+   1. [Datasets](#datasets)
+   1. [Baselines](#baselines)
+   1. [License](#license)
 
 
 ## Citing Habitat
