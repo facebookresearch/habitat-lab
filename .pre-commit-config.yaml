@@ -72,17 +72,14 @@ repos:
     rev: v0.950
     hooks:
     -   id: mypy
-        name: mypy-habitat-lab
-        files: habitat-lab
+        args:
+          - "--namespace-packages"
+        exclude: "setup.py$"
         additional_dependencies:
          - attrs>=19.1.0
-         - numpy
-    -   id: mypy
-        name: mypy-habitat-baselines
-        files: habitat-baselines
-        additional_dependencies:
-         - attrs>=19.1.0
-         - numpy
+         - hydra-core>=1.2.0
+         - numpy>=1.20.0
+         - omegaconf>=2.2.
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.5.0
