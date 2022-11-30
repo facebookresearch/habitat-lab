@@ -42,14 +42,14 @@ In this section, we describe the basic function of Stretch in Habitat as one exa
         - **Camera** (size 2): It consists of 2 motors that control the yaw and pitch of the camera: `joint_head_pan` (7), `joint_head_tilt` (8)
         - As a result, the original action space is the order of `[joint_arm_l0, joint_arm_l1, joint_arm_l2, joint_arm_l3, joint_lift, joint_wrist_yaw, joint_wrist_pitch, joint_wrist_roll, joint_head_pan, joint_head_tilt]` defined in `habitat/robots/stretch_robot.py`
 
-    - **Exposed Arm Action Space**: In the real hardware, the arm extension is further reduced to a single control motor via an action wrapper ArmRelPosKinematicReducedActionStretch specified in `habitat-lab/habitat/config/tasks/rearrange/play_stretch.yaml`, and defined in `habitat-lab/habitat/tasks/rearrange/actions/actions.py`
+    - **Exposed Arm Action Space**: In the real hardware, the arm extension is further reduced to a single control motor via an action wrapper ArmRelPosKinematicReducedActionStretch specified in `habitat-lab/habitat/config/benchmark/rearrange/play_stretch.yaml`, and defined in `habitat-lab/habitat/tasks/rearrange/actions/actions.py`
         - **arm_joint_mask**: This specifies the exposed control interface, we set it to be `[1,0,0,0,1,1,1,1,1,1]`, so the motor angles added or reduced in the first motor will roll over to the rest of the three motors (i.e., `joint_arm_l1`, `joint_arm_l2`, `joint_arm_l3`)
         - As a result, the exposed action space is the size of 7.
         - Right now the arm control is kinematically simulated.
 
-    - **Gripper Open-close**: The gripper open-close control is the same as the one in Fetch and Spot. Right now we use MagicGraspAction specified in `habitat-lab/habitat/config/tasks/rearrange/play_stretch.yaml`
+    - **Gripper Open-close**: The gripper open-close control is the same as the one in Fetch and Spot. Right now we use MagicGraspAction specified in `habitat-lab/habitat/config/benchmark/rearrange/play_stretch.yaml`
 
-    - **Base Velocity Control**: The base velocity control is the same as the one in Fetch and Spot. Right now we use BaseVelAction specified in `habitat-lab/habitat/config/tasks/rearrange/play_stretch.yaml`
+    - **Base Velocity Control**: The base velocity control is the same as the one in Fetch and Spot. Right now we use BaseVelAction specified in `habitat-lab/habitat/config/benchmark/rearrange/play_stretch.yaml`
 
 1. **Camera**:
     - **head_rgb_sensor**
