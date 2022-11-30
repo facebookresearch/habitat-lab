@@ -82,6 +82,7 @@ repos:
          - types-mock
          - types-Pillow
          - types-tqdm
+         - types-PyYAML
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.5.0

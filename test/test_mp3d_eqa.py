@@ -222,7 +222,7 @@ def test_mp3d_eqa_sim_correspondence():
                 start_state.position, episode.start_position
             ), "Agent's start position diverges from the shortest path's one."
 
-            rgb_mean = 0
+            rgb_mean = 0.0
             logger.info(
                 "{id} {question}\n{answer}".format(
                     id=episode.episode_id,

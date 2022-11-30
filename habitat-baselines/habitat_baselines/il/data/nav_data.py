@@ -3,7 +3,16 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import TYPE_CHECKING, Callable, Dict, Generator, List, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Tuple,
+    Union,
+)
 
 import numpy as np
 import torch
@@ -28,6 +37,8 @@ from habitat_baselines.utils.common import (
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+    from habitat.task.nav import NavigationEpisode
+
 cv2 = try_cv2_import()
 
 
@@ -50,7 +61,7 @@ class NavDataset(wds.Dataset):
         """
         self.config = config.habitat
         self.env = env
-        self.episodes = self.env._dataset.episodes  # type:ignore
+        self.episodes: List[NavigationEpisode] = self.env._dataset.episodes
         self.max_controller_actions = max_controller_actions
         self.device = device
         self.sim = self.env.sim
@@ -315,7 +326,7 @@ class NavDataset(wds.Dataset):
     def group_by_keys_(
         self,
         data: Generator,
-        keys: Callable[[str], Tuple[str]] = base_plus_ext,
+        keys: Callable[[str], Tuple[str, ...]] = base_plus_ext,
         lcase: bool = True,
         suffixes=None,
     ):
@@ -324,7 +335,7 @@ class NavDataset(wds.Dataset):
         keys: function that splits the key into key and extension (base_plus_ext)
         lcase: convert suffixes to lower case (Default value = True)
         """
-        current_sample = {}
+        current_sample: Dict[str, Any] = {}
         for fname, value in data:
             prefix, suffix = keys(fname)
             if prefix is None:
@@ -403,10 +414,10 @@ class NavDataset(wds.Dataset):
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            idx = "{0:0=3d}".format(idx)
+            str_idx = "{0:0=3d}".format(idx)
             episode_id = "{0:0=4d}".format(int(episode_id))
             new_path = os.path.join(
-                self.frame_dataset_path, "{}.{}".format(episode_id, idx)
+                self.frame_dataset_path, "{}.{}".format(episode_id, str_idx)
             )
             cv2.imwrite(new_path + ".jpg", img[..., ::-1])
 

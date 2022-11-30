@@ -116,7 +116,7 @@ class SkillPolicy(Policy):
 
     def on_enter(
         self,
-        skill_arg: List[str],
+        skill_arg: str,
         batch_idx: int,
         observations,
         rnn_hidden_states,
