@@ -26,12 +26,11 @@ def visualize_fp_scenes(scenes):
             sim.pathfinder, navmesh_settings, include_static_objects=True
         )
 
-        pos = sim.pathfinder.get_random_navigable_point()
-        # pos = [-6.7892866 ,  0.19999951, -4.6983275 ]
-        rot = sim.get_agent_state().rotation
-        sim.set_agent_state(pos, rot)
-
-        cv2.imwrite(f"ego_obs_{scene}.png", sim.render()[:, :, ::-1])
+        for i in range(50):
+            pos = sim.pathfinder.get_random_navigable_point()
+            rot = sim.get_agent_state().rotation
+            sim.set_agent_state(pos, rot)
+            cv2.imwrite(f"obs/ego_obs_{scene}_{i}.png", sim.render()[:, :, ::-1])
 
         sim.close(destroy=True)
 
