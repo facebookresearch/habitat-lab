@@ -2,9 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /agent@habitat.simulator.agent_0: agent_base
-  - /habitat/simulator/sim_sensors:
-    - head_depth_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_agent
   - /habitat/task/rearrange: close_fridge
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -26,14 +24,15 @@ habitat:
     additional_object_paths:
     - data/objects/ycb/configs/
     debug_render_goal: False
-    agent_0:
-      radius: 0.3
-      sim_sensors:
-        head_depth_sensor:
-          height: 256
-          width: 256
-      robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-      robot_type: FetchSuctionRobot
+    agents:
+      main_agent:
+        radius: 0.3
+        sim_sensors:
+          head_depth_sensor:
+            height: 256
+            width: 256
+        robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        robot_type: FetchSuctionRobot
     hold_thresh: 0.2
     grasp_impulse: 10000.0
     habitat_sim_v0:

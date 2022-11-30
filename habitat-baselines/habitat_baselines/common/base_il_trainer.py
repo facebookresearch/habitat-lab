@@ -6,13 +6,15 @@
 
 import os
 from collections import OrderedDict
-from typing import Dict, List
+from typing import TYPE_CHECKING, Dict, List
 
 import torch
 
-from habitat import Config
 from habitat_baselines.common.base_trainer import BaseTrainer
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 class BaseILTrainer(BaseTrainer):
@@ -20,11 +22,11 @@ class BaseILTrainer(BaseTrainer):
     methods should be hosted here.
     """
     device: torch.device
-    config: Config
+    config: "DictConfig"
     video_option: List[str]
     _flush_secs: int
 
-    def __init__(self, config: Config):
+    def __init__(self, config: "DictConfig"):
         super().__init__()
         assert config is not None, "needs config file to initialize trainer"
         self.config = config

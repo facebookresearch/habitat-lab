@@ -25,27 +25,33 @@ For training on sample data please follow steps in the repository README. You sh
 
 **train**:
 ```bash
-python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type train
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
+  --run-type train
 ```
 
-You can reduce training time by changing the trainer from the default implement to [VER](/habitat-baselines/habitat_baselines/rl/ver/README.md) by
+You can reduce training time by changing the trainer from the default implement to [VER](rl/ver/README.md) by
 setting `trainer_name` to `"ver"` in either the config or via the command line.
 
 ```bash
-python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type train \
-  trainer_name ver
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
+  --run-type train \
+  habitat_baselines.trainer_name=ver
 ```
 
 **test**:
 ```bash
-python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml --run-type eval
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
+  --run-type eval
 ```
 
 We also provide trained RGB, RGBD, and Depth PPO  models for MatterPort3D and Gibson.
-To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v2.zip) and unzip and specify model path [here](agents/ppo_agents.py#L149).
+To use them download pre-trained pytorch models from [link](https://dl.fbaipublicfiles.com/habitat/data/baselines/v1/habitat_baselines_v2.zip) and unzip and specify model path [here](agents/ppo_agents.py#L151).
 
-The `habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav.yaml` config has better hyperparamters for large scale training and loads the [Gibson PointGoal Navigation Dataset](/README.md#task-datasets) instead of the test scenes.
-Change the field `task_config` in `habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml` for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#task-datasets).
+The `habitat_baselines/config/pointnav/ppo_pointnav.yaml` config has better hyperparameters for large scale training and loads the [Gibson PointGoal Navigation Dataset](/README.md#datasets) instead of the test scenes.
+Change the `/benchmark/nav/pointnav: pointnav_gibson` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `/benchmark/nav/pointnav: pointnav_mp3d` in the defaults list for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#datasets).
 
 ### Classic
 
@@ -60,11 +66,11 @@ Coming very soon
 
 **Tensorboard and video generation support**
 
-Enable tensorboard by changing `tensorboard_dir` field in `habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav.yaml`.
+Enable tensorboard by changing `tensorboard_dir` field in `habitat_baselines/config/pointnav/ppo_pointnav.yaml`.
 
-Enable video generation for `eval` mode by changing `video_option`: `tensorboard,disk` (for displaying on tensorboard and for saving videos on disk, respectively)
+Enable video generation for `eval` mode by changing `video_option: tensorboard,disk` (for displaying on tensorboard and for saving videos on disk, respectively)
 
 Generated navigation episode recordings should look like this on tensorboard:
 <p align="center">
-  <img src="../res/img/tensorboard_video_demo.gif"  height="500">
+  <img src="../../res/img/tensorboard_video_demo.gif"  height="500">
 </p>

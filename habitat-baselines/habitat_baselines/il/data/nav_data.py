@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Callable, Dict, Generator, List, Tuple, Union
+from typing import TYPE_CHECKING, Callable, Dict, Generator, List, Tuple, Union
 
 import numpy as np
 import torch
@@ -13,7 +13,6 @@ from tqdm import tqdm
 
 import habitat
 from habitat import logger
-from habitat.config import Config
 from habitat.core.simulator import ShortestPathPoint
 from habitat.core.utils import try_cv2_import
 from habitat.datasets.utils import VocabDict
@@ -26,6 +25,9 @@ from habitat_baselines.utils.common import (
     valid_sample,
 )
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 cv2 = try_cv2_import()
 
 
@@ -34,14 +36,14 @@ class NavDataset(wds.Dataset):
 
     def __init__(
         self,
-        config: Config,
+        config: "DictConfig",
         env: habitat.Env,
         device: torch.device,
         max_controller_actions: int = 5,
     ):
         """
         Args:
-            config: Config
+            config: DictConfig
             env: habitat Env
             device: torch.device
             max_controller_actions (int)

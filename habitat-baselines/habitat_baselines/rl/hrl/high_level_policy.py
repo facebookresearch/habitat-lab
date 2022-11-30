@@ -7,7 +7,7 @@ from typing import Any, List, Tuple
 import torch
 import yaml
 
-from habitat.config.default import get_full_config_path
+from habitat.config.default import get_full_habitat_config_path
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
 
@@ -32,7 +32,7 @@ class GtHighLevelPolicy:
     _solution_actions: List[Tuple[str, List[str]]]
 
     def __init__(self, config, task_spec_file, num_envs, skill_name_to_idx):
-        with open(get_full_config_path(task_spec_file), "r") as f:
+        with open(get_full_habitat_config_path(task_spec_file), "r") as f:
             task_spec = yaml.safe_load(f)
 
         self._solution_actions = []

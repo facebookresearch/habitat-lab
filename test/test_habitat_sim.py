@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from habitat.config import read_write
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.sims import make_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
@@ -77,7 +77,8 @@ def test_sim_trajectory():
 def test_sim_no_sensors():
     config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     with read_write(config):
-        config.habitat.simulator.agent_0.sim_sensors = {}
+        agent_config = get_agent_config(config.habitat.simulator)
+        agent_config.sim_sensors = {}
         if not os.path.exists(config.habitat.simulator.scene):
             pytest.skip("Please download Habitat test data to data folder.")
         with make_sim(

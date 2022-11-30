@@ -20,6 +20,7 @@ from os import path as osp
 import tqdm
 
 import habitat
+from habitat.config.default import get_agent_config
 from habitat.datasets.pointnav.pointnav_generator import (
     generate_pointnav_episode,
 )
@@ -42,7 +43,8 @@ def _generate_fn(scene):
     )
     with habitat.config.read_write(cfg):
         cfg.habitat.simulator.scene = scene
-        cfg.habitat.simulator.agent_0.sensors = []
+        agent_config = get_agent_config(cfg.habitat.simulator)
+        agent_config.sensors.clear()
 
     sim = habitat.sims.make_sim("Sim-v0", config=cfg.habitat.simulator)
 

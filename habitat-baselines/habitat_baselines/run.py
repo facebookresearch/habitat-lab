@@ -5,14 +5,16 @@
 # LICENSE file in the root directory of this source tree.
 import argparse
 import random
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 import numpy as np
 import torch
 
-from habitat.config import Config
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.config.default import get_config
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 def build_parser(
@@ -52,7 +54,7 @@ def main():
     run_exp(**vars(args))
 
 
-def execute_exp(config: Config, run_type: str) -> None:
+def execute_exp(config: "DictConfig", run_type: str) -> None:
     r"""This function runs the specified config with the specified runtype
     Args:
     config: Habitat.config

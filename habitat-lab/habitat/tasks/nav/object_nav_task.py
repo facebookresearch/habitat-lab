@@ -3,13 +3,12 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import attr
 import numpy as np
 from gym import spaces
 
-from habitat.config import Config
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Sensor, SensorTypes
@@ -26,6 +25,9 @@ try:
     )
 except ImportError:
     pass
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -116,7 +118,7 @@ class ObjectGoalSensor(Sensor):
     def __init__(
         self,
         sim,
-        config: Config,
+        config: "DictConfig",
         dataset: "ObjectNavDatasetV1",
         *args: Any,
         **kwargs: Any,

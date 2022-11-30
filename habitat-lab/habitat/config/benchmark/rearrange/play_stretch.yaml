@@ -2,12 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /agent@habitat.simulator.agent_0: agent_base
-  - /habitat/simulator/sim_sensors:
-    - head_rgb_sensor
-    - head_depth_sensor
-    - arm_rgb_sensor
-    - arm_depth_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - /habitat/task/rearrange: play
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -33,23 +28,24 @@ habitat:
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"
-    agent_0:
-      radius: 0.3
-      robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
-      robot_type: "StretchRobot"
-      sim_sensors:
-        head_rgb_sensor:
-          height: 212
-          width: 120
-        head_depth_sensor:
-          height: 212
-          width: 120
-        arm_depth_sensor:
-          height: 212
-          width: 120
-        arm_rgb_sensor:
-          height: 212
-          width: 120
+    agents:
+      main_agent:
+        radius: 0.3
+        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        robot_type: "StretchRobot"
+        sim_sensors:
+          head_rgb_sensor:
+            height: 212
+            width: 120
+          head_depth_sensor:
+            height: 212
+            width: 120
+          arm_depth_sensor:
+            height: 212
+            width: 120
+          arm_rgb_sensor:
+            height: 212
+            width: 120
     habitat_sim_v0:
       enable_physics: True
   dataset:

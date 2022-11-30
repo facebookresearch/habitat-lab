@@ -167,12 +167,12 @@ class AnswerActionConfig(ActionConfig):
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
 @dataclass
-class SensorConfig(HabitatBaseConfig):
+class LabSensorConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
 @dataclass
-class PointGoalSensorConfig(SensorConfig):
+class PointGoalSensorConfig(LabSensorConfig):
     type: str = "PointGoalSensor"
     goal_format: str = "POLAR"
     dimensionality: int = 2
@@ -184,184 +184,184 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
 
 
 @dataclass
-class ObjectGoalSensorConfig(SensorConfig):
+class ObjectGoalSensorConfig(LabSensorConfig):
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
 
 
 @dataclass
-class ImageGoalSensorConfig(SensorConfig):
+class ImageGoalSensorConfig(LabSensorConfig):
     type: str = "ImageGoalSensor"
 
 
 @dataclass
-class InstanceImageGoalSensorConfig(SensorConfig):
+class InstanceImageGoalSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalSensor"
 
 
 @dataclass
-class InstanceImageGoalHFOVSensorConfig(SensorConfig):
+class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalHFOVSensor"
 
 
 @dataclass
-class HeadingSensorConfig(SensorConfig):
+class HeadingSensorConfig(LabSensorConfig):
     type: str = "HeadingSensor"
 
 
 @dataclass
-class CompassSensorConfig(SensorConfig):
+class CompassSensorConfig(LabSensorConfig):
     type: str = "CompassSensor"
 
 
 @dataclass
-class GPSSensorConfig(SensorConfig):
+class GPSSensorConfig(LabSensorConfig):
     type: str = "GPSSensor"
     dimensionality: int = 2
 
 
 @dataclass
-class ProximitySensorConfig(SensorConfig):
+class ProximitySensorConfig(LabSensorConfig):
     type: str = "ProximitySensor"
     max_detection_radius: float = 2.0
 
 
 @dataclass
-class JointSensorConfig(SensorConfig):
+class JointSensorConfig(LabSensorConfig):
     type: str = "JointSensor"
     dimensionality: int = 7
 
 
 @dataclass
-class EEPositionSensorConfig(SensorConfig):
+class EEPositionSensorConfig(LabSensorConfig):
     type: str = "EEPositionSensor"
 
 
 @dataclass
-class IsHoldingSensorConfig(SensorConfig):
+class IsHoldingSensorConfig(LabSensorConfig):
     type: str = "IsHoldingSensor"
 
 
 @dataclass
-class RelativeRestingPositionSensorConfig(SensorConfig):
+class RelativeRestingPositionSensorConfig(LabSensorConfig):
     type: str = "RelativeRestingPositionSensor"
 
 
 @dataclass
-class JointVelocitySensorConfig(SensorConfig):
+class JointVelocitySensorConfig(LabSensorConfig):
     type: str = "JointVelocitySensor"
     dimensionality: int = 7
 
 
 @dataclass
-class OracleNavigationActionSensorConfig(SensorConfig):
+class OracleNavigationActionSensorConfig(LabSensorConfig):
     type: str = "OracleNavigationActionSensor"
 
 
 @dataclass
-class RestingPositionSensorConfig(SensorConfig):
+class RestingPositionSensorConfig(LabSensorConfig):
     type: str = "RestingPositionSensor"
 
 
 @dataclass
-class ArtJointSensorConfig(SensorConfig):
+class ArtJointSensorConfig(LabSensorConfig):
     type: str = "ArtJointSensor"
 
 
 @dataclass
-class NavGoalSensorConfig(SensorConfig):
+class NavGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalSensor"
 
 
 @dataclass
-class ArtJointSensorNoVelSensorConfig(SensorConfig):
+class ArtJointSensorNoVelSensorConfig(LabSensorConfig):
     type: str = "ArtJointSensorNoVel"  # TODO: add "Sensor" suffix
 
 
 @dataclass
-class MarkerRelPosSensorConfig(SensorConfig):
+class MarkerRelPosSensorConfig(LabSensorConfig):
     type: str = "MarkerRelPosSensor"
 
 
 @dataclass
-class TargetStartSensorConfig(SensorConfig):
+class TargetStartSensorConfig(LabSensorConfig):
     type: str = "TargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class TargetCurrentSensorConfig(SensorConfig):
+class TargetCurrentSensorConfig(LabSensorConfig):
     type: str = "TargetCurrentSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class GoalSensorConfig(SensorConfig):
+class GoalSensorConfig(LabSensorConfig):
     type: str = "GoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class TargetOrGoalStartPointGoalSensorConfig(SensorConfig):
+class TargetOrGoalStartPointGoalSensorConfig(LabSensorConfig):
     type: str = "TargetOrGoalStartPointGoalSensor"
 
 
 @dataclass
-class GlobalPredicatesSensorConfig(SensorConfig):
+class GlobalPredicatesSensorConfig(LabSensorConfig):
     type: str = "GlobalPredicatesSensor"
 
 
 @dataclass
-class TargetStartGpsCompassSensorConfig(SensorConfig):
+class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     type: str = "TargetStartGpsCompassSensor"
 
 
 @dataclass
-class TargetGoalGpsCompassSensorConfig(SensorConfig):
+class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
     type: str = "TargetGoalGpsCompassSensor"
 
 
 @dataclass
-class NavToSkillSensorConfig(SensorConfig):
+class NavToSkillSensorConfig(LabSensorConfig):
     type: str = "NavToSkillSensor"
     num_skills: int = 8
 
 
 @dataclass
-class AbsTargetStartSensorConfig(SensorConfig):
+class AbsTargetStartSensorConfig(LabSensorConfig):
     type: str = "AbsTargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class AbsGoalSensorConfig(SensorConfig):
+class AbsGoalSensorConfig(LabSensorConfig):
     type: str = "AbsGoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
 @dataclass
-class DistToNavGoalSensorConfig(SensorConfig):
+class DistToNavGoalSensorConfig(LabSensorConfig):
     type: str = "DistToNavGoalSensor"
 
 
 @dataclass
-class LocalizationSensorConfig(SensorConfig):
+class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
 
 @dataclass
-class QuestionSensorConfig(SensorConfig):
+class QuestionSensorConfig(LabSensorConfig):
     type: str = "QuestionSensor"
 
 
 @dataclass
-class InstructionSensorConfig(SensorConfig):
+class InstructionSensorConfig(LabSensorConfig):
     type: str = "InstructionSensor"
     instruction_sensor_uuid: str = "instruction"
 
@@ -710,7 +710,7 @@ class TaskConfig(HabitatBaseConfig):
     # NAVIGATION task
     type: str = "Nav-v0"
     # Temporary structure for sensors
-    lab_sensors: Dict[str, SensorConfig] = field(default_factory=dict)
+    lab_sensors: Dict[str, LabSensorConfig] = field(default_factory=dict)
     measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
@@ -961,11 +961,15 @@ class SimulatorConfig(HabitatBaseConfig):
     # Rearrange agent grasping
     hold_thresh: float = 0.09
     grasp_impulse: float = 1000.0
-    agents: List[str] = field(default_factory=lambda: ["agent_0"])
-    agent_0: AgentConfig = AgentConfig()
-    agent_1: AgentConfig = (
-        MISSING  # temporary multi-agent rearrangement config fix
-    )
+    # we assume agent(s) to be set explicitly
+    agents: Dict[str, AgentConfig] = MISSING
+    # agents_order specifies the order in which the agents
+    # are stored on the habitat-sim side.
+    # In other words, the order to return the observations and accept
+    # the actions when using the environment API.
+    # If the number of agents is greater than one,
+    # then agents_order has to be set explicitly.
+    agents_order: List[str] = MISSING
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
@@ -1096,7 +1100,7 @@ cs.store(
 
 # Agent Config
 cs.store(
-    group="agent",
+    group="habitat/simulator/agents",
     name="agent_base",
     node=AgentConfig,
 )
@@ -1184,42 +1188,36 @@ cs.store(
 
 # Simulator Sensors
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.rgb_sensor",
     group="habitat/simulator/sim_sensors",
     name="rgb_sensor",
     node=HabitatSimRGBSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.depth_sensor",
     group="habitat/simulator/sim_sensors",
     name="depth_sensor",
     node=HabitatSimDepthSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.semantic_sensor",
     group="habitat/simulator/sim_sensors",
     name="semantic_sensor",
     node=HabitatSimSemanticSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.equirect_rgb_sensor",
     group="habitat/simulator/sim_sensors",
     name="equirect_rgb_sensor",
     node=HabitatSimEquirectangularRGBSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.equirect_depth_sensor",
     group="habitat/simulator/sim_sensors",
     name="equirect_depth_sensor",
     node=HabitatSimEquirectangularDepthSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.equirect_semantic_sensor",
     group="habitat/simulator/sim_sensors",
     name="equirect_semantic_sensor",
     node=HabitatSimEquirectangularSemanticSensorConfig,
@@ -1227,42 +1225,36 @@ cs.store(
 
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.arm_depth_sensor",
     group="habitat/simulator/sim_sensors",
     name="arm_depth_sensor",
     node=ArmDepthSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.arm_rgb_sensor",
     group="habitat/simulator/sim_sensors",
     name="arm_rgb_sensor",
     node=ArmRGBSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.head_depth_sensor",
     group="habitat/simulator/sim_sensors",
     name="head_depth_sensor",
     node=HeadDepthSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.head_rgb_sensor",
     group="habitat/simulator/sim_sensors",
     name="head_rgb_sensor",
     node=HeadRGBSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.third_depth_sensor",
     group="habitat/simulator/sim_sensors",
     name="third_depth_sensor",
     node=ThirdDepthSensorConfig,
 )
 
 cs.store(
-    package="habitat.simulator.agent_0.sim_sensors.third_rgb_sensor",
     group="habitat/simulator/sim_sensors",
     name="third_rgb_sensor",
     node=ThirdRGBSensorConfig,
