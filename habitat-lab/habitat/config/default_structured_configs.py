@@ -671,11 +671,6 @@ class DoesWantTerminateMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
-class CompositeBadCalledTerminateMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeBadCalledTerminate"
-
-
-@dataclass
 class CorrectAnswerMeasurementConfig(MeasurementConfig):
     type: str = "CorrectAnswer"
 
@@ -1575,12 +1570,6 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_success",
     node=CompositeSuccessMeasurementConfig,
-)
-cs.store(
-    package="habitat.task.measurements.composite_bad_called_terminate",
-    group="habitat/task/measurements",
-    name="composite_bad_called_terminate",
-    node=CompositeBadCalledTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.gfx_replay_measure",

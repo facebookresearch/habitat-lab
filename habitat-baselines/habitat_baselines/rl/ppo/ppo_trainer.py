@@ -943,11 +943,24 @@ class PPOTrainer(BaseRLTrainer):
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
-            with read_write(config):
-                for render_view in config.habitat_baselines.video_render_views:
-                    uuid = config.habitat.simulator[render_view].uuid
-                    config.habitat.gym.obs_keys.append(uuid)
-                    config.habitat_baselines.sensors.append(render_view)
+
+            for render_view in config.habitat_baselines.video_render_views:
+                uuid: Optional[str] = None
+                for agent_id in config.habitat.simulator.agents:
+                    if (
+                        render_view
+                        in config.habitat.simulator.agents[
+                            agent_id
+                        ].sim_sensors
+                    ):
+                        uuid = (
+                            config.habitat.simulator.agents[agent_id]
+                            .sim_sensors[render_view]
+                            .uuid
+                        )
+                if uuid is not None:
+                    with read_write(config):
+                        config.habitat.gym.obs_keys.append(uuid)
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
