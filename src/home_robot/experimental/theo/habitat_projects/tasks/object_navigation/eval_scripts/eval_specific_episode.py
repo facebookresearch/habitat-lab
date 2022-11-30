@@ -63,12 +63,13 @@ if __name__ == "__main__":
     agent = ObjectNavAgent(config=config)
     env = Env(config=config.TASK_CONFIG)
 
-    scene_id = "ziup5kvtCCR"
-    episode_id = "2"
+    # scene_id = "ziup5kvtCCR"
+    # episode_id = "2"
+    # obs = reset_to_episode(env, scene_id, episode_id)
+    obs = env.reset()
 
-    obs = reset_to_episode(env, scene_id, episode_id)
     agent.reset()
-    agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
+    # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
 
     t = 0
     while not env.episode_over:
