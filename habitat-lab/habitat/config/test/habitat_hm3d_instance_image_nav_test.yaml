@@ -1,6 +1,6 @@
 # @package _global_
 defaults:
-  - /benchmark/nav/instance_imagenav/instance_imagenav_hm3d.yaml
+  - /benchmark/nav/instance_imagenav/instance_imagenav_hm3d_v1.yaml
   - _self_
 
 habitat:

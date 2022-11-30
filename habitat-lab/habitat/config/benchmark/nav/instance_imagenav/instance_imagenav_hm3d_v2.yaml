@@ -6,7 +6,7 @@ defaults:
   - /habitat/simulator/sim_sensors:
     - depth_sensor
     - rgb_sensor
-  - /habitat/dataset/instance_imagenav: hm3d
+  - /habitat/dataset/instance_imagenav: hm3d_v2
   - _self_
 
 habitat:
@@ -19,19 +19,19 @@ habitat:
     agent_0:
       sim_sensors:
         rgb_sensor:
-          width: 640
-          height: 480
-          hfov: 79
-          position: [0, 0.88, 0]
+          width: 360
+          height: 640
+          hfov: 42
+          position: [0, 1.31, 0]
         depth_sensor:
-          width: 640
-          height: 480
-          hfov: 79
+          width: 360
+          height: 640
+          hfov: 58
           min_depth: 0.5
           max_depth: 5.0
-          position: [0, 0.88, 0]
-      height: 0.88
-      radius: 0.18
+          position: [0, 1.31, 0]
+      height: 1.41
+      radius: 0.17
     habitat_sim_v0:
       gpu_device_id: 0
       allow_sliding: False
