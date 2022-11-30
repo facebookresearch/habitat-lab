@@ -2,6 +2,7 @@ ENVIRONMENT:
   MAX_EPISODE_STEPS: 500
 
 SIMULATOR:
+  SCENE_DATASET: "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/floorplanner/v1/hab-fp.scene_dataset_config.json"
   TURN_ANGLE: 30
   TILT_ANGLE: 30
   ACTION_SPACE_CONFIG: "v1"
