@@ -39,7 +39,7 @@ jobs:
           name: run mypy
           command: |
               mypy --version
-              mypy .
+              mypy
       - run:
           name: run assert no files in habitat and habitat_baselines
           command: |
