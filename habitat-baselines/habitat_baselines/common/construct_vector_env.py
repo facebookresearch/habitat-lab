@@ -4,15 +4,18 @@
 
 import os
 import random
-from typing import Any, List, Type
+from typing import TYPE_CHECKING, Any, List, Type
 
-from habitat import Config, ThreadedVectorEnv, VectorEnv, logger, make_dataset
+from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.config import read_write
 from habitat.utils.gym_definitions import make_gym_from_config
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 def construct_envs(
-    config: Config,
+    config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
 ) -> VectorEnv:

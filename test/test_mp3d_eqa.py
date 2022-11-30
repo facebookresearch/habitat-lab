@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
@@ -173,9 +173,10 @@ def test_mp3d_eqa_sim():
             obs = env.step(env.task.action_space.sample())
             if not env.episode_over:
                 assert "rgb" in obs, "RGB image is missing in observation."
+                agent_config = get_agent_config(eqa_config.habitat.simulator)
                 assert obs["rgb"].shape[:2] == (
-                    eqa_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height,
-                    eqa_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width,
+                    agent_config.sim_sensors.rgb_sensor.height,
+                    agent_config.sim_sensors.rgb_sensor.width,
                 ), (
                     "Observation resolution {} doesn't correspond to config "
                     "({}, {}).".format(

@@ -224,6 +224,70 @@ class ArmAbsPosKinematicAction(RobotAction):
 
 
 @registry.register_task_action
+class ArmRelPosKinematicReducedActionStretch(RobotAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action and the mask. This function is used for Stretch.
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self.last_arm_action = None
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.last_arm_action = None
+
+    @property
+    def action_space(self):
+        self.step_c = 0
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, *args, **kwargs):
+        if self._config.get("SHOULD_CLIP", True):
+            # clip from -1 to 1
+            delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.delta_pos_limit
+        self._sim: RearrangeSim
+
+        # Expand delta_pos based on mask
+        expanded_delta_pos = np.zeros(len(self._config.arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._config.arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            expanded_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        min_limit, max_limit = self.cur_robot.arm_joint_limits
+        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        # Perform roll over to the joints so that the user cannot control
+        # the motor 2, 3, 4 for the arm.
+        if expanded_delta_pos[0] >= 0:
+            for i in range(3):
+                if set_arm_pos[i] > max_limit[i]:
+                    set_arm_pos[i + 1] += set_arm_pos[i] - max_limit[i]
+                    set_arm_pos[i] = max_limit[i]
+        else:
+            for i in range(3):
+                if set_arm_pos[i] < min_limit[i]:
+                    set_arm_pos[i + 1] -= min_limit[i] - set_arm_pos[i]
+                    set_arm_pos[i] = min_limit[i]
+        set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+
+        self.cur_robot.arm_motor_pos = set_arm_pos
+
+
+@registry.register_task_action
 class BaseVelAction(RobotAction):
     """
     The robot base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.

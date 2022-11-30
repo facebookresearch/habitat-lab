@@ -55,6 +55,7 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
     ThirdRGBSensorConfig,
@@ -108,6 +109,10 @@ def get_input_vel_ctlr(
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
+    elif "stretch" in DEFAULT_CFG:
+        arm_action_space = np.zeros(10)
+        arm_ctrlr = None
+        base_action = [0, 0]
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
@@ -182,6 +187,44 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+
+        elif arm_action_space.shape[0] == 10:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[5] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[6] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[7] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[7] = -1.0
+
+            elif keys[pygame.K_y]:
+                arm_action[8] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[8] = -1.0
+
+            elif keys[pygame.K_u]:
+                arm_action[9] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[9] = -1.0
+
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
             # End effector control
@@ -592,7 +635,8 @@ if __name__ == "__main__":
 
         if not args.same_task:
             sim_config.debug_render = True
-            sim_config.agent_0.sim_sensors.update(
+            agent_config = get_agent_config(sim_config=sim_config)
+            agent_config.sim_sensors.update(
                 {
                     "third_rgb_sensor": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res

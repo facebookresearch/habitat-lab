@@ -6,21 +6,25 @@
 
 import os.path as osp
 from glob import glob
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import gym
 from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
-from habitat.config.default import _HABITAT_CFG_DIR, Config
+from habitat.config.default import _HABITAT_CFG_DIR
 from habitat.config.default_structured_configs import ThirdRGBSensorConfig
 from habitat.core.environments import get_env_class
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "benchmark/")
 
 
-def _get_gym_name(cfg: Config) -> Optional[str]:
+def _get_gym_name(cfg: "DictConfig") -> Optional[str]:
     if "habitat" in cfg:
         cfg = cfg.habitat
     if "gym" in cfg and "auto_name" in cfg["gym"]:
@@ -28,13 +32,13 @@ def _get_gym_name(cfg: Config) -> Optional[str]:
     return None
 
 
-def _get_env_name(cfg: Config) -> Optional[str]:
+def _get_env_name(cfg: "DictConfig") -> Optional[str]:
     if "habitat" in cfg:
         cfg = cfg.habitat
     return cfg["env_task"]
 
 
-def make_gym_from_config(config: Config) -> gym.Env:
+def make_gym_from_config(config: "DictConfig") -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """
@@ -61,15 +65,20 @@ def _make_habitat_gym_env(
     config = habitat.get_config(cfg_file_path)
     if use_render_mode:
         with habitat.config.read_write(config):
-            if len(config.habitat.simulator.agents) == 1:
-                config.habitat.simulator.agent_0.sim_sensors.update(
+            sim_config = config.habitat.simulator
+            default_agent_name = sim_config.agents_order[
+                sim_config.default_agent_id
+            ]
+            default_agent = sim_config.agents[default_agent_name]
+            if len(sim_config.agents) == 1:
+                default_agent.sim_sensors.update(
                     {"third_rgb_sensor": ThirdRGBSensorConfig()}
                 )
             else:
-                config.habitat.simulator.agent_0.sim_sensors.update(
+                default_agent.sim_sensors.update(
                     {
-                        "agent_0_third_rgb_sensor": ThirdRGBSensorConfig(
-                            uuid="agent_0_robot_third_rgb"
+                        "default_agent_third_rgb_sensor": ThirdRGBSensorConfig(
+                            uuid="default_robot_third_rgb"
                         )
                     }
                 )

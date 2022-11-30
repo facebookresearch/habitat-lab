@@ -1,33 +1,35 @@
 # @package _global_
 
 defaults:
- - /habitat_baselines: habitat_baselines_il_config_base
- - /benchmark/nav: eqa_rgbonly_mp3d
- - /habitat/simulator/sim_sensors:
-   - rgb_sensor
-   - depth_sensor
- - _self_
+  - /habitat_baselines: habitat_baselines_il_config_base
+  - /benchmark/nav: eqa_rgbonly_mp3d
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - _self_
+
+habitat:
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+          depth_sensor:
+            width: 256
+            height: 256
 
 habitat_baselines:
   trainer_name: "pacman"
-
   torch_gpu_id: 0
-
   eval_ckpt_path_dir: "data/eqa/nav/checkpoints/"
   num_processes: 1
   checkpoint_folder: "data/eqa/nav/checkpoints"
   tensorboard_dir: "data/eqa/nav/tb"
-
-
-
-
   log_interval: 10
   checkpoint_interval: 1
-
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
-
   il:
     only_vqa_task: False # if True, only last `num_frames` will be saved to disk.
     #if False, all frames for each episode are saved to disk (for NAV task later)

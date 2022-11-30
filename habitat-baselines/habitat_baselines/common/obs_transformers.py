@@ -24,14 +24,13 @@ import abc
 import copy
 import numbers
 from enum import Enum
-from typing import Dict, Iterable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import torch
 from gym import spaces
 from torch import nn
 
-from habitat.config import Config
 from habitat.core.logging import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.utils.common import (
@@ -40,6 +39,9 @@ from habitat_baselines.utils.common import (
     image_resize_shortest_edge,
     overwrite_gym_box_shape,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
@@ -55,7 +57,7 @@ class ObservationTransformer(nn.Module, metaclass=abc.ABCMeta):
 
     @classmethod
     @abc.abstractmethod
-    def from_config(cls, config: Config):
+    def from_config(cls, config: "DictConfig"):
         pass
 
     def forward(
@@ -141,7 +143,7 @@ class ResizeShortestEdge(ObservationTransformer):
         return observations
 
     @classmethod
-    def from_config(cls, config: Config):
+    def from_config(cls, config: "DictConfig"):
         return cls(
             config.size,
             config.channels_last,
@@ -221,7 +223,7 @@ class CenterCropper(ObservationTransformer):
         return observations
 
     @classmethod
-    def from_config(cls, config: Config):
+    def from_config(cls, config: "DictConfig"):
         return cls(
             (config.height, config.width),
             config.channels_last,
@@ -1199,7 +1201,9 @@ class Equirect2CubeMap(ProjectionTransformer):
         )
 
 
-def get_active_obs_transforms(config: Config) -> List[ObservationTransformer]:
+def get_active_obs_transforms(
+    config: "DictConfig",
+) -> List[ObservationTransformer]:
     active_obs_transforms = []
     obs_trans_conf = config.habitat_baselines.rl.policy.obs_transforms
     if hasattr(config.habitat_baselines.rl.policy, "obs_transforms"):

@@ -1,0 +1,6 @@
+# @package habitat.simulator.agents.rgbd_agent
+
+defaults:
+  - agent_base
+  - /habitat/simulator/sim_sensors@sim_sensors.rgb_sensor: rgb_sensor
+  - /habitat/simulator/sim_sensors@sim_sensors.depth_sensor: depth_sensor
