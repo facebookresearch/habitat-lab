@@ -1,0 +1,36 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: instance_imagenav
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - /habitat/dataset/instance_imagenav: hm3d_v2
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 1000
+  simulator:
+    turn_angle: 30
+    tilt_angle: 30
+    action_space_config: v1
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 360
+            height: 640
+            hfov: 42
+            position: [0, 1.31, 0]
+          depth_sensor:
+            width: 360
+            height: 640
+            hfov: 58
+            min_depth: 0.5
+            max_depth: 5.0
+            position: [0, 1.31, 0]
+        height: 1.41
+        radius: 0.17
+    habitat_sim_v0:
+      gpu_device_id: 0
+      allow_sliding: False
