@@ -78,7 +78,10 @@ repos:
          - attrs>=19.1.0
          - hydra-core>=1.2.0
          - numpy>=1.20.0
-         - omegaconf>=2.2.
+         - omegaconf>=2.2.3
+         - types-mock
+         - types-Pillow
+         - types-tqdm
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.5.0
