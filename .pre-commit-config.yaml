@@ -72,8 +72,6 @@ repos:
     rev: v0.950
     hooks:
     -   id: mypy
-        args:
-          - "--namespace-packages"
         exclude: "setup.py$"
         additional_dependencies:
          - attrs>=19.1.0
