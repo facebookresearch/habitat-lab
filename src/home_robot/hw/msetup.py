@@ -2,9 +2,7 @@ import mrp
 
 mrp.process(
     name="roscore_hw",
-    runtime=mrp.Host(
-        run_command=["python3", "-m", "home_robot.utils.mrp.roscore"],
-    ),
+    runtime=mrp.Host(run_command=["python3", "-m", "home_robot.utils.mrp.roscore"]),
 )
 
 # Launches these nodes:

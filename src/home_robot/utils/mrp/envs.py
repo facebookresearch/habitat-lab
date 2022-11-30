@@ -11,7 +11,6 @@ pip_deps = ["numpy", "scipy", "sophuspy", f"-e {os.path.abspath(PROJECT_ROOT_DIR
 control_env = mrp.Conda.SharedEnv(
     name="stretch_control_env",
     channels=["conda-forge", "robostack"],
-    use_mamba=True,
     dependencies=[
         "python=3.8",
         "cmake",

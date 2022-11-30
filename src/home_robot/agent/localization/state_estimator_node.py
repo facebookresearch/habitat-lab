@@ -6,11 +6,7 @@ import numpy as np
 import sophus as sp
 from scipy.spatial.transform import Rotation as R
 import rospy
-from geometry_msgs.msg import (
-    Pose,
-    PoseStamped,
-    PoseWithCovarianceStamped,
-)
+from geometry_msgs.msg import Pose, PoseStamped, PoseWithCovarianceStamped
 from nav_msgs.msg import Odometry
 
 

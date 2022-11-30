@@ -20,10 +20,7 @@ mrp.process(
 
 # Metaprocs
 
-mrp.process(
-    name="simple_sim",
-    deps=["roscore", "fake_stretch"],
-)
+mrp.process(name="simple_sim", deps=["roscore", "fake_stretch"])
 
 if __name__ == "__main__":
     mrp.main()
