@@ -22,7 +22,7 @@ def _construct_dataset(num_episodes, num_groups=10):
             start_rotation=[0, 0, 0, 1],
         )
         episodes.append(episode)
-    dataset = Dataset()
+    dataset: Dataset = Dataset()
     dataset.episodes = episodes
     return dataset
 

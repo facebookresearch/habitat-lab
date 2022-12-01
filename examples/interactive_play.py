@@ -49,6 +49,7 @@ import os
 import os.path as osp
 import time
 from collections import defaultdict
+from typing import Any, Dict, List
 
 import magnum as mn
 import numpy as np
@@ -265,7 +266,7 @@ def get_input_vel_ctlr(
         joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
         logger.info(f"Robot arm joint state: {joint_state}")
 
-    args = {}
+    args: Dict[str, Any] = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
         name = base_action_name
         args = {base_key: base_action}
@@ -390,7 +391,7 @@ def play_env(env, args, config):
     prev_time = time.time()
     all_obs = []
     total_reward = 0
-    all_arm_actions = []
+    all_arm_actions: List[float] = []
     agent_to_control = 0
 
     free_cam = FreeCamHelper()
@@ -509,7 +510,7 @@ def play_env(env, args, config):
             screen.blit(draw_obuse_ob, (0, 0))
             pygame.display.update()
         if args.save_obs:
-            all_obs.append(draw_ob)
+            all_obs.append(draw_ob)  # type: ignore[assignment]
 
         if not args.no_render:
             pygame.event.pump()
@@ -538,8 +539,8 @@ def play_env(env, args, config):
         return
 
     if args.save_obs:
-        all_obs = np.array(all_obs)
-        all_obs = np.transpose(all_obs, (0, 2, 1, 3))
+        all_obs = np.array(all_obs)  # type: ignore[assignment]
+        all_obs = np.transpose(all_obs, (0, 2, 1, 3))  # type: ignore[assignment]
         os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
         vut.make_video(
             np.expand_dims(all_obs, 1),

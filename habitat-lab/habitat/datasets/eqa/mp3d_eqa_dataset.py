@@ -29,7 +29,7 @@ DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
 def get_default_mp3d_v1_config(split: str = "val") -> "DictConfig":
-    return OmegaConf.create(
+    return OmegaConf.create(  # type: ignore[call-overload]
         DatasetConfig(
             type="MP3DEQA-v1",
             split=split,

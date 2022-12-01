@@ -58,7 +58,9 @@ def create_task_object(
         )
 
         with habitat.config.read_write(config):
-            config = OmegaConf.merge(config, task_config.habitat.task)
+            config = OmegaConf.merge(  # type:ignore
+                config, task_config.habitat.task
+            )
             # config.merge_from_other_cfg(task_config.habitat.task)
             # Putting back the values from TASK_IGNORE_KEYS :
             for k in TASK_IGNORE_KEYS:

@@ -365,7 +365,7 @@ def __do_pause_test(num_envs, envs_to_pause):
         def pause_at(self, idx):
             self._running.pop(idx)
 
-    envs = PausableShim(num_envs)
+    envs: PausableShim = PausableShim(num_envs)
     test_recurrent_hidden_states = (
         torch.arange(num_envs).view(num_envs, 1, 1).expand(num_envs, 4, 512)
     )
@@ -401,7 +401,7 @@ def __do_pause_test(num_envs, envs_to_pause):
 
     expected = sorted(set(range(num_envs)) - set(envs_to_pause))
 
-    assert envs._running == expected
+    assert envs._running == expected  # type: ignore[attr-defined]
 
     assert list(test_recurrent_hidden_states.size()) == [len(expected), 4, 512]
     assert test_recurrent_hidden_states[:, 0, 0].numpy().tolist() == expected

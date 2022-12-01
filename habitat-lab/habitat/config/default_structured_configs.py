@@ -731,8 +731,6 @@ class TaskConfig(HabitatBaseConfig):
     # EE sample parameters
     ee_sample_factor: float = 0.2
     ee_exclude_region: float = 0.0
-    # In radians
-    base_angle_noise: float = 0.15
     base_noise: float = 0.05
     spawn_region_scale: float = 0.2
     joint_max_impulse: float = -1.0

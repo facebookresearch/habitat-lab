@@ -131,7 +131,7 @@ class WeightsAndBiasesWriter:
             wb_kwargs["id"] = resume_run_id
             wb_kwargs["resume"] = "must"
 
-        self.run = wandb.init(
+        self.run = wandb.init(  # type: ignore[attr-defined]
             config={"slurm": slurm_info_dict, **config}, **wb_kwargs
         )
 
@@ -146,10 +146,10 @@ class WeightsAndBiasesWriter:
             f"{log_group}/{k.replace(' ', '')}": v
             for k, v in data_dict.items()
         }
-        wandb.log(log_data_dict, step=int(step_id))
+        wandb.log(log_data_dict, step=int(step_id))  # type: ignore[attr-defined]
 
     def add_scalar(self, key, value, step_id):
-        wandb.log({key: value}, step=int(step_id))
+        wandb.log({key: value}, step=int(step_id))  # type: ignore[attr-defined]
 
     def __enter__(self):
         return self

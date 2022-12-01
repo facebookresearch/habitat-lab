@@ -199,7 +199,7 @@ def get_config_defaults() -> "DictConfig":
     """
     Populates and resturns a default config for a RearrangeEpisode.
     """
-    return OmegaConf.create(RearrangeEpisodeGeneratorConfig())
+    return OmegaConf.create(RearrangeEpisodeGeneratorConfig())  # type: ignore[call-overload]
 
 
 if __name__ == "__main__":
@@ -278,7 +278,7 @@ if __name__ == "__main__":
             args.config
         ), f"Provided config, '{args.config}', does not exist."
         override_config = OmegaConf.load(args.config)
-        cfg = OmegaConf.merge(cfg, override_config)
+        cfg = OmegaConf.merge(cfg, override_config)  # type: ignore[assignment]
 
     logger.info(f"\n\nModified Config:\n{cfg}\n\n")
 

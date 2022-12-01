@@ -3,20 +3,18 @@
 # LICENSE file in the root directory of this source tree.
 
 from contextlib import contextmanager
-from typing import TYPE_CHECKING, Generator, Union
+from typing import TYPE_CHECKING, Generator
 
 from omegaconf import OmegaConf
 from omegaconf.base import Node
 
 if TYPE_CHECKING:
-    from omegaconf import DictConfig
+    from omegaconf import Container
 
 
 # TODO : Delete this when migration to hydra is complete
 @contextmanager
-def read_write(
-    config: Union[Node, "DictConfig"]
-) -> Generator[Node, None, None]:
+def read_write(config: "Container") -> Generator[Node, None, None]:
     prev_state_readonly = config._get_node_flag("readonly")
     prev_state_struct = config._get_node_flag("struct")
     try:

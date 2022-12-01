@@ -121,7 +121,7 @@ if __name__ == "__main__":
     )
 
     try:
-        env.close()
+        env.close()  # type: ignore[has-type]
     except NameError:
         pass
     env = habitat.Env(config=config)

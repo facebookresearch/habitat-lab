@@ -36,7 +36,7 @@ class PPOAgentConfig:
 
 
 def get_default_config() -> DictConfig:
-    return OmegaConf.create(PPOAgentConfig())
+    return OmegaConf.create(PPOAgentConfig())  # type: ignore[call-overload]
 
 
 class PPOAgent(Agent):

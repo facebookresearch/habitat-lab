@@ -372,7 +372,7 @@ def test_fetch_robot_wrapper(fixed_base):
         fetch.close_gripper()
         observations += simulate(sim, 1.0, produce_debug_video)
         assert fetch.is_gripper_closed
-        assert not fetch.is_gripper_open
+        assert not fetch.is_gripper_open  # type: ignore[unreachable]
 
         # halfway open
         fetch.set_gripper_target_state(0.5)
@@ -632,7 +632,7 @@ def test_spot_robot_wrapper(fixed_base):
         spot.close_gripper()
         observations += simulate(sim, 1.0, produce_debug_video)
         assert spot.is_gripper_closed
-        assert not spot.is_gripper_open
+        assert not spot.is_gripper_open  # type: ignore[unreachable]
 
         # halfway open
         spot.set_gripper_target_state(0.5)
@@ -777,7 +777,7 @@ def test_stretch_robot_wrapper(fixed_base):
         stretch.close_gripper()
         observations += simulate(sim, 1.0, produce_debug_video)
         assert stretch.is_gripper_closed
-        assert not stretch.is_gripper_open
+        assert not stretch.is_gripper_open  # type: ignore[unreachable]
 
         # halfway open
         stretch.set_gripper_target_state(0.5)

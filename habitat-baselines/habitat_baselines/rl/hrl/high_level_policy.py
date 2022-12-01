@@ -74,7 +74,7 @@ class FixedHighLevelPolicy:
                     )
                 next_skill[batch_idx] = self._skill_name_to_idx[skill_name]
 
-                skill_args_data[batch_idx] = skill_args
+                skill_args_data[batch_idx] = skill_args  # type: ignore[call-overload]
 
                 self._next_sol_idxs[batch_idx] += 1
 

@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Tuple
+from typing import Any, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
@@ -34,7 +34,9 @@ class SkillPolicy(Policy):
         self._cur_skill_args: List[Any] = [
             None for _ in range(self._batch_size)
         ]
-        self._raw_skill_args = [None for _ in range(self._batch_size)]
+        self._raw_skill_args: List[Optional[str]] = [
+            None for _ in range(self._batch_size)
+        ]
 
         self._grip_ac_idx = 0
         found_grip = False
@@ -123,7 +125,7 @@ class SkillPolicy(Policy):
     def on_enter(
         self,
         skill_arg: List[str],
-        batch_idxs: int,
+        batch_idxs: List[int],
         observations,
         rnn_hidden_states,
         prev_actions,
@@ -139,6 +141,11 @@ class SkillPolicy(Policy):
             self._cur_skill_args[batch_idx] = self._parse_skill_arg(
                 skill_arg[i]
             )
+
+        return (
+            rnn_hidden_states[batch_idxs] * 0.0,
+            prev_actions[batch_idxs] * 0.0,
+        )
 
     @classmethod
     def from_config(

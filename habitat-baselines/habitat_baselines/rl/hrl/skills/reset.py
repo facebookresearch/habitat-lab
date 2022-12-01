@@ -32,13 +32,17 @@ class ResetArmSkill(SkillPolicy):
     def on_enter(
         self,
         skill_arg: List[str],
-        batch_idx: int,
+        batch_idxs: List[int],
         observations,
         rnn_hidden_states,
         prev_actions,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         ret = super().on_enter(
-            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+            skill_arg,
+            batch_idxs,
+            observations,
+            rnn_hidden_states,
+            prev_actions,
         )
 
         self._initial_delta = (

@@ -97,7 +97,7 @@ class PointNavResNetPolicy(NetPolicy):
         # Exclude cameras for rendering from the observation space.
         ignore_names: List[str] = []
         for agent_id in config.habitat.simulator.agents.keys():
-            ignore_names.append(
+            ignore_names.extend(
                 [
                     config.habitat.simulator.agents[agent_id]
                     .sim_sensors[k]
