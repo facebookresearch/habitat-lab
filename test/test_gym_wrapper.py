@@ -36,15 +36,7 @@ importlib.reload(habitat.utils.gym_adapter)
         (
             "benchmark/rearrange/pick.yaml",
             [],
-            8,
-            dict,
-        ),
-        (
-            "benchmark/rearrange/pick.yaml",
-            [
-                "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
-            ],
-            8,
+            10,  # arm = 7 + base = 2 + grip = 1
             dict,
         ),
         (
