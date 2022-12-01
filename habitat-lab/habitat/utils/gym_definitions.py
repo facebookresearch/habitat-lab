@@ -62,7 +62,7 @@ def _make_habitat_gym_env(
     if override_options is None:
         override_options = []
 
-    config = habitat.get_config(cfg_file_path)
+    config = habitat.get_config(cfg_file_path, overrides=override_options)
     if use_render_mode:
         with habitat.config.read_write(config):
             sim_config = config.habitat.simulator
