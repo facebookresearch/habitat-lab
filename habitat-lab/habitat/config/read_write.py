@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 # TODO : Delete this when migration to hydra is complete
 @contextmanager
-def read_write(config: Container) -> Generator[Node, None, None]:
+def read_write(config: "Container") -> Generator[Node, None, None]:
     prev_state_readonly = config._get_node_flag("readonly")
     prev_state_struct = config._get_node_flag("struct")
     try:
