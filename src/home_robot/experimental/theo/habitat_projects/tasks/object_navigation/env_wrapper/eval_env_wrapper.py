@@ -16,6 +16,9 @@ from home_robot.agent.visualization.object_navigation.objectnav_visualizer impor
 from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
     ObsPreprocessor,
 )
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.constants import (
+    mp3d_to_coco, hm3d_to_mp3d
+)
 
 
 class EvalEnvWrapper(Env):
@@ -37,12 +40,17 @@ class EvalEnvWrapper(Env):
         os.environ["MAGNUM_LOG"] = "quiet"
         os.environ["HABITAT_SIM_LOG"] = "quiet"
 
+        self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
+        if self.ground_truth_semantics:
+            self.scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
+            assert ("floorplanner" in self.scenes_dir or "hm3d" in self.scenes_dir)
         self.device = (
             torch.device("cpu")
             if config.NO_GPU
             else torch.device(f"cuda:{self.sim.gpu_device}")
         )
         self.max_steps = config.AGENT.max_steps
+        self.num_sem_categories = config.ENVIRONMENT.num_sem_categories
         if config.AGENT.panorama_start:
             self.panorama_start_steps = int(360 / config.ENVIRONMENT.turn_angle)
         else:
@@ -151,6 +159,30 @@ class EvalEnvWrapper(Env):
             and self.episode_id not in self.forced_episode_ids
         ):
             self._disable_print_images()
+
+        if self.ground_truth_semantics:
+            if "hm3d" in self.scenes_dir:
+                instance_id_to_category_id = torch.tensor([
+                    mp3d_to_coco.get(
+                        hm3d_to_mp3d.get(obj.category.name().lower().strip()),
+                        self.num_sem_categories - 1
+                    )
+                    for obj in self.sim.semantic_annotations().objects
+                ])
+            elif "floorplanner" in self.scenes_dir:
+                # Temporary
+                instance_id_to_category_id = torch.tensor([
+                    self.num_sem_categories - 1,  # misc
+                    3,  # bed
+                    0,  # chair
+                    2,  # plant
+                    1,  # couch
+                    4,  # toilet
+                    5,  # tv
+                ])
+            self.obs_preprocessor.set_instance_id_to_category_id(
+                instance_id_to_category_id
+            )
 
         obs_preprocessed, info = self._preprocess_obs(obs)
 
