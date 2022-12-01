@@ -39,7 +39,7 @@ jobs:
           name: run mypy
           command: |
               mypy --version
-              mypy --exclude=^docs/|setup.py$
+              mypy --exclude="^docs/|setup.py$"
       - run:
           name: run assert no files in habitat and habitat_baselines
           command: |
