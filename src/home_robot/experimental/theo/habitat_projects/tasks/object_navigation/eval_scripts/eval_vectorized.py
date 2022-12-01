@@ -3,7 +3,8 @@ This script is intended to run from the "src" root:
 python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eval_scripts/eval_vectorized.py \
     --config_path home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/agent/floorplanner_eval.yaml \
     EVAL_VECTORIZED.simulator_gpu_ids "[0, 1]" \
-    NUM_ENVIRONMENTS 10
+    NUM_ENVIRONMENTS 10 \
+    EVAL_VECTORIZED.num_episodes_per_env 1
 """
 
 import time
