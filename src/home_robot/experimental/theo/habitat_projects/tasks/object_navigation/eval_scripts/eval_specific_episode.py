@@ -72,6 +72,7 @@ if __name__ == "__main__":
     # obs = reset_to_episode(env, scene_id, episode_id)
     obs = env.reset()
     obs = env.reset()
+    obs = env.reset()
 
     agent.reset()
     # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
