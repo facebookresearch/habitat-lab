@@ -224,7 +224,7 @@ def test_pointnav_episode_generator():
         for episode in episodes:
             check_shortest_path(env, episode)
 
-        dataset = habitat.Dataset()
+        dataset: habitat.Dataset = habitat.Dataset()
         dataset.episodes = episodes
         assert (
             dataset.to_json()

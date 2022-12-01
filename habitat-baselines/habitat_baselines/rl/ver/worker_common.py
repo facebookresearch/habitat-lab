@@ -158,7 +158,7 @@ class WorkerBase:
         self._proc_done_event = mp_ctx.Event()
         self._proc_done_event.clear()
         self.response_queue = mp_ctx.SimpleQueue()
-        p = mp_ctx.Process(
+        p = mp_ctx.Process(  # type: ignore[attr-defined]
             target=self._worker_fn,
             args=(
                 process_class,

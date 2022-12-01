@@ -6,7 +6,7 @@
 
 # TODO, lots of typing errors in here
 
-from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
 import attr
 import numpy as np
@@ -561,7 +561,7 @@ class SPL(Measure):
     def __init__(
         self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
-        self._previous_position: Optional[np.ndarray] = None
+        self._previous_position: Union[None, np.ndarray, List[float]] = None
         self._start_end_episode_distance: Optional[float] = None
         self._agent_episode_distance: Optional[float] = None
         self._episode_view_points: Optional[

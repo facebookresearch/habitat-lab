@@ -44,7 +44,7 @@ if "COLAB_GPU" in os.environ:
 
     import PIL
 
-    importlib.reload(PIL.TiffTags)
+    importlib.reload(PIL.TiffTags)  # type: ignore[attr-defined]
 
 # Video rendering utility.
 from habitat_sim.utils import viz_utils as vut

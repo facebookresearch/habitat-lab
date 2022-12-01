@@ -63,11 +63,16 @@ def overwrite_config(
 
     def if_config_to_lower(config):
         if isinstance(config, DictConfig):
-            return {key.lower(): val for key, val in config.items()}
+            return {
+                key.lower(): val
+                for key, val in config.items()
+                if isinstance(key, str)
+            }
         else:
             return config
 
     for attr, value in config_from.items():
+        assert isinstance(attr, str)
         low_attr = attr.lower()
         if ignore_keys is None or low_attr not in ignore_keys:
             if hasattr(config_to, low_attr):
@@ -331,7 +336,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             assert isinstance(sensor, HabitatSimSensor)
-            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[misc]
+            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[operator]
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,

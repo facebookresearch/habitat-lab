@@ -103,7 +103,7 @@ class HierarchicalPolicy(Policy):
         return False
 
     def parameters(self):
-        return self._skills[0].parameters()
+        return self._skills[0].parameters()  # type: ignore[attr-defined]
 
     def to(self, device):
         for skill in self._skills.values():
@@ -120,7 +120,7 @@ class HierarchicalPolicy(Policy):
         deterministic=False,
     ):
 
-        self._high_level_policy.apply_mask(masks)
+        self._high_level_policy.apply_mask(masks)  # type: ignore[attr-defined]
         use_device = prev_actions.device
 
         batched_observations = [

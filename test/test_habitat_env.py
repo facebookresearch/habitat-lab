@@ -7,6 +7,7 @@
 import itertools
 import multiprocessing as mp
 import os
+from typing import List
 
 import numpy as np
 import pytest
@@ -430,8 +431,8 @@ def test_action_space_shortest_path():
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
     source = AgentState(source_position, source_rotation)
 
-    reachable_targets = []
-    unreachable_targets = []
+    reachable_targets: List[AgentState] = []
+    unreachable_targets: List[AgentState] = []
     while len(reachable_targets) < 5:
         position = env.sim.sample_navigable_point()
         angles = list(range(-180, 180, config.habitat.simulator.turn_angle))
@@ -451,11 +452,15 @@ def test_action_space_shortest_path():
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.action_space_shortest_path(source, targets)
+    shortest_path1 = env.action_space_shortest_path(  # type: ignore[attr-defined]
+        source, targets
+    )
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.action_space_shortest_path(source, targets)
+    shortest_path2 = env.action_space_shortest_path(  # type: ignore[attr-defined]
+        source, targets
+    )
     assert shortest_path2 == []
     env.close()
 

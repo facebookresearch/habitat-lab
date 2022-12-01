@@ -316,7 +316,7 @@ class VectorEnv:
         for worker_conn, parent_conn, env_args in zip(
             worker_connections, parent_connections, env_fn_args
         ):
-            ps = self._mp_ctx.Process(
+            ps = self._mp_ctx.Process(  # type: ignore[attr-defined]
                 target=self._worker_env,
                 args=(
                     worker_conn.recv,

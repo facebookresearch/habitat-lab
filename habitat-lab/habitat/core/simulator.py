@@ -231,7 +231,7 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    position: Optional[np.ndarray]
+    position: Union[None, List[float], np.ndarray]
     rotation: Union[None, np.ndarray, quaternion.quaternion] = None
 
 

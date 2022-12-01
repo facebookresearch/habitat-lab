@@ -200,10 +200,11 @@ def test_pointgoal_sensor():
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
         goal_position = np.add(valid_start_position, expected_pointgoal)
+        goal_position = goal_position.tolist()
 
         # starting quaternion is rotated 180 degree along z-axis, which
         # corresponds to simulator using z-negative as forward action
-        start_rotation = [0, 0, 0, 1]
+        start_rotation = [0.0, 0.0, 0.0, 1.0]
 
         env.episode_iterator = iter(
             [
@@ -246,10 +247,11 @@ def test_pointgoal_with_gps_compass_sensor():
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
         goal_position = np.add(valid_start_position, expected_pointgoal)
+        goal_position = goal_position.tolist()
 
         # starting quaternion is rotated 180 degree along z-axis, which
         # corresponds to simulator using z-negative as forward action
-        start_rotation = [0, 0, 0, 1]
+        start_rotation = [0.0, 0.0, 0.0, 1.0]
 
         env.episode_iterator = iter(
             [
@@ -299,13 +301,15 @@ def test_imagegoal_sensor():
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         pointgoal = [0.1, 0.2, 0.3]
         goal_position = np.add(valid_start_position, pointgoal)
+        goal_position = goal_position.tolist()
 
         pointgoal_2 = [0.3, 0.2, 0.1]
         goal_position_2 = np.add(valid_start_position, pointgoal_2)
+        goal_position_2 = goal_position_2.tolist()
 
         # starting quaternion is rotated 180 degree along z-axis, which
         # corresponds to simulator using z-negative as forward action
-        start_rotation = [0, 0, 0, 1]
+        start_rotation = [0.0, 0.0, 0.0, 1.0]
 
         env.episode_iterator = iter(
             [
@@ -362,10 +366,11 @@ def test_get_observations_at():
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
         goal_position = np.add(valid_start_position, expected_pointgoal)
+        goal_position = goal_position.tolist()
 
         # starting quaternion is rotated 180 degree along z-axis, which
         # corresponds to simulator using z-negative as forward action
-        start_rotation = [0, 0, 0, 1]
+        start_rotation = [0.0, 0.0, 0.0, 1.0]
 
         env.episode_iterator = iter(
             [
@@ -420,10 +425,11 @@ def smoke_test_sensor(config, N_STEPS=100):
 
     expected_pointgoal = [0.1, 0.2, 0.3]
     goal_position = np.add(valid_start_position, expected_pointgoal)
+    goal_position = goal_position.tolist()
 
     # starting quaternion is rotated 180 degree along z-axis, which
     # corresponds to simulator using z-negative as forward action
-    start_rotation = [0, 0, 0, 1]
+    start_rotation = [0.0, 0.0, 0.0, 1.0]
     test_episode = NavigationEpisode(
         episode_id="0",
         scene_id=config.habitat.simulator.scene,
@@ -545,10 +551,11 @@ def test_noise_models_rgbd():
 
     expected_pointgoal = [0.1, 0.2, 0.3]
     goal_position = np.add(valid_start_position, expected_pointgoal)
+    goal_position = goal_position.tolist()
 
     # starting quaternion is rotated 180 degree along z-axis, which
     # corresponds to simulator using z-negative as forward action
-    start_rotation = [0, 0, 0, 1]
+    start_rotation = [0.0, 0.0, 0.0, 1.0]
     test_episode = NavigationEpisode(
         episode_id="0",
         scene_id=config.habitat.simulator.scene,
@@ -595,17 +602,17 @@ def test_noise_models_rgbd():
 
         obs = env.reset()
         assert np.linalg.norm(
-            obs["rgb"].astype(np.float)
-            - no_noise_obs[0]["rgb"].astype(np.float)
+            obs["rgb"].astype(np.float32)
+            - no_noise_obs[0]["rgb"].astype(np.float32)
         ) > 1.5e-2 * np.linalg.norm(
-            no_noise_obs[0]["rgb"].astype(np.float)
+            no_noise_obs[0]["rgb"].astype(np.float32)
         ), "No RGB noise detected."
 
         assert np.linalg.norm(
-            obs["depth"].astype(np.float)
-            - no_noise_obs[0]["depth"].astype(np.float)
+            obs["depth"].astype(np.float32)
+            - no_noise_obs[0]["depth"].astype(np.float32)
         ) > 1.5e-2 * np.linalg.norm(
-            no_noise_obs[0]["depth"].astype(np.float)
+            no_noise_obs[0]["depth"].astype(np.float32)
         ), "No Depth noise detected."
 
         images = []

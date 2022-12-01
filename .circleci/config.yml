@@ -22,7 +22,7 @@ jobs:
           command: |
               pip install black --progress-bar off
               pip install "isort[pyproject]" numpy --progress-bar off
-              pip install mypy==0.950 --progress-bar off
+              pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
               pip install -r habitat-lab/requirements.txt --progress-bar off
       - run:
           name: run black
@@ -39,10 +39,7 @@ jobs:
           name: run mypy
           command: |
               mypy --version
-              mypy habitat-lab/
-              mypy habitat-baselines/
-              mypy examples/
-              mypy test/
+              mypy --exclude="^docs/|setup.py$"
       - run:
           name: run assert no files in habitat and habitat_baselines
           command: |

@@ -82,7 +82,7 @@ def test_gym_wrapper_contract_continuous(
     assert isinstance(frame, np.ndarray)
     assert len(frame.shape) == 3 and frame.shape[-1] == 3
 
-    for _, v in info.items():
+    for _, v in info.items():  # type: ignore[union-attr]
         assert not isinstance(v, dict)
     env.close()
 
@@ -130,7 +130,7 @@ def test_gym_wrapper_contract_discrete(
     assert isinstance(frame, np.ndarray)
     assert len(frame.shape) == 3 and frame.shape[-1] == 3
 
-    for _, v in info.items():
+    for _, v in info.items():  # type: ignore[union-attr]
         assert not isinstance(v, dict)
     env.close()
 

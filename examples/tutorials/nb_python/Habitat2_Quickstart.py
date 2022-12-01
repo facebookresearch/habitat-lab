@@ -66,7 +66,7 @@ if "COLAB_GPU" in os.environ:
 
     import PIL
 
-    importlib.reload(PIL.TiffTags)
+    importlib.reload(PIL.TiffTags)  # type:ignore
 
 import os
 
@@ -106,7 +106,9 @@ import importlib
 # 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
 import PIL
 
-importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
+importlib.reload(
+    PIL.TiffTags  # type: ignore[attr-defined]
+)  # To potentially avoid PIL problem
 
 
 # %% [markdown]

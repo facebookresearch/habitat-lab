@@ -138,10 +138,10 @@ def images_to_video(
         **kwargs,
     )
     logger.info(f"Video created: {os.path.join(output_dir, video_name)}")
-    if verbose:
-        images_iter = tqdm.tqdm(images)
+    if not verbose:
+        images_iter: List[np.ndarray] = images
     else:
-        images_iter = images
+        images_iter = tqdm.tqdm(images)  # type: ignore[assignment]
     for im in images_iter:
         writer.append_data(im)
     writer.close()

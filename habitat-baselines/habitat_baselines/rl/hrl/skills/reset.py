@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Tuple
+from typing import Tuple
 
 import gym.spaces as spaces
 import numpy as np
@@ -31,7 +31,7 @@ class ResetArmSkill(SkillPolicy):
 
     def on_enter(
         self,
-        skill_arg: List[str],
+        skill_arg: str,
         batch_idx: int,
         observations,
         rnn_hidden_states,
