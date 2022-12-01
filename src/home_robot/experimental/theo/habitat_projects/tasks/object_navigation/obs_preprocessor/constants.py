@@ -18,7 +18,7 @@ challenge_goal_name_to_goal_name = {
     "tv_monitor": "tv",
 }
 
-goal_id_to_goal_name = {
+hm3d_goal_id_to_goal_name = {
     0: "chair",
     1: "bed",
     2: "potted plant",
@@ -27,13 +27,31 @@ goal_id_to_goal_name = {
     5: "couch",
 }
 
-goal_id_to_coco_id = {
+hm3d_goal_id_to_coco_id = {
     0: 0,  # chair
     1: 3,  # bed
     2: 2,  # potted plant
     3: 4,  # toilet
     4: 5,  # tv
     5: 1,  # couch
+}
+
+floorplanner_goal_id_to_goal_name = {
+    1: "bed",
+    2: "chair",
+    3: "plant",
+    4: "couch",
+    5: "toilet",
+    6: "tv",
+}
+
+floorplanner_goal_id_to_coco_id = {
+    1: 3,  # bed
+    2: 0,  # chair
+    3: 2,  # plant
+    4: 1,  # couch
+    5: 4,  # toilet
+    6: 5,  # tv
 }
 
 frame_color_palette = [
