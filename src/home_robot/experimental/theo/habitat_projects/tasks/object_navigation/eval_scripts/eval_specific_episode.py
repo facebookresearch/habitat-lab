@@ -22,7 +22,7 @@ from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.agent
     ObjectNavAgent,
 )
 from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.constants import (
-    mp3d_to_coco, hm3d_to_mp3d, floorplanner_to_coco
+    mp3d_to_coco, hm3d_to_mp3d
 )
 
 
@@ -106,6 +106,5 @@ if __name__ == "__main__":
         print(t)
         action = agent.act(obs)
         obs = env.step(action)
-        print(obs.keys())
 
     print(env.get_metrics())
