@@ -43,5 +43,5 @@ EVAL_VECTORIZED:
   goal_on_same_floor: 0     # 1: restrict to episodes with a goal on the same floor as the starting position
   split: val                # eval split
   num_episodes_per_env: 100 # number of eval episodes per environment
-  record_videos: 0          # 1: record videos from printed images, 0: don't
+  record_videos: 1          # 1: record videos from printed images, 0: don't
   record_planner_videos: 0  # 1: record planner videos (if record videos), 0: don't

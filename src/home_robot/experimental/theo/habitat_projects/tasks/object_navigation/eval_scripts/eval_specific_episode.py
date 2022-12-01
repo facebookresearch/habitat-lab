@@ -70,6 +70,7 @@ if __name__ == "__main__":
     print(len(env.episodes))
     scene_ids = [ep.scene_id.split("/")[-1].split(".")[0] for ep in env.episodes]
     scene_ids = set(scene_ids)
+    print(scene_ids)
     print(len(scene_ids))
 
     # # scene_id = "ziup5kvtCCR"
