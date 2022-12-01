@@ -141,7 +141,7 @@ def images_to_video(
     if not verbose:
         images_iter: List[np.ndarray] = images
     else:
-        images_iter = tqdm.tqdm(images)  # type:ignore
+        images_iter = tqdm.tqdm(images)  # type: ignore[assignment]
     for im in images_iter:
         writer.append_data(im)
     writer.close()

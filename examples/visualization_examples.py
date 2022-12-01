@@ -30,7 +30,7 @@ def example_pointnav_draw_target_birdseye_view():
         episode_id="dummy_id",
         scene_id="dummy_scene",
         start_position=agent_position,
-        start_rotation=agent_rotation,  # type:ignore
+        start_rotation=agent_rotation,  # type: ignore[arg-type]
     )
     agent_position = np.array(agent_position)
     target_image = maps.pointnav_draw_target_birdseye_view(
@@ -63,7 +63,7 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
                 episode_id="dummy_id",
                 scene_id="dummy_scene",
                 start_position=agent_position,
-                start_rotation=agent_rotation,  # type:ignore
+                start_rotation=agent_rotation,  # type: ignore[arg-type]
             )
             agent_position = np.array(agent_position)
             target_image = maps.pointnav_draw_target_birdseye_view(

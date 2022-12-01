@@ -510,7 +510,7 @@ def play_env(env, args, config):
             screen.blit(draw_obuse_ob, (0, 0))
             pygame.display.update()
         if args.save_obs:
-            all_obs.append(draw_ob)  # type:ignore
+            all_obs.append(draw_ob)  # type: ignore[assignment]
 
         if not args.no_render:
             pygame.event.pump()
@@ -539,8 +539,8 @@ def play_env(env, args, config):
         return
 
     if args.save_obs:
-        all_obs = np.array(all_obs)  # type:ignore
-        all_obs = np.transpose(all_obs, (0, 2, 1, 3))  # type:ignore
+        all_obs = np.array(all_obs)  # type: ignore[assignment]
+        all_obs = np.transpose(all_obs, (0, 2, 1, 3))  # type: ignore[assignment]
         os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
         vut.make_video(
             np.expand_dims(all_obs, 1),

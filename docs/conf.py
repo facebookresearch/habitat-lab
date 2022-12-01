@@ -24,7 +24,7 @@ gym.Env.__annotations__["_np_random"] = typing.Optional[
 # Overrides the __all__ as that one pulls everything into the root module
 # and doesn't expose any submodules
 habitat.__all__ = ["config", "core", "Agent", "Benchmark"]
-habitat.core.__all__ = [  # type:ignore
+habitat.core.__all__ = [  # type: ignore[attr-defined]
     "env",
     "embodied_task",
     "dataset",
@@ -85,7 +85,7 @@ LINKS_NAVBAR1 = [
     ),
     ("Classes", "classes", []),
 ]
-LINKS_NAVBAR2 = [  # type:ignore
+LINKS_NAVBAR2 = [  # type: ignore[var-annotated]
     ("Sim Docs", "../habitat-sim/index.html", []),
 ]
 
@@ -99,7 +99,7 @@ STYLESHEETS = [
     "../../habitat-sim/docs/theme.compiled.css",
 ]
 
-M_SPHINX_INVENTORIES = [  # type:ignore
+M_SPHINX_INVENTORIES = [  # type: ignore[var-annotated]
     (
         "../../habitat-sim/docs/python.inv",
         "https://docs.python.org/3/",

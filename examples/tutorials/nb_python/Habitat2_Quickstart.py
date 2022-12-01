@@ -107,7 +107,7 @@ import importlib
 import PIL
 
 importlib.reload(
-    PIL.TiffTags  # type:ignore
+    PIL.TiffTags  # type: ignore[attr-defined]
 )  # To potentially avoid PIL problem
 
 

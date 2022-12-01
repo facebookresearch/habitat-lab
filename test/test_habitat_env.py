@@ -452,13 +452,13 @@ def test_action_space_shortest_path():
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.action_space_shortest_path(  # type:ignore
+    shortest_path1 = env.action_space_shortest_path(  # type: ignore[attr-defined]
         source, targets
     )
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.action_space_shortest_path(  # type:ignore
+    shortest_path2 = env.action_space_shortest_path(  # type: ignore[attr-defined]
         source, targets
     )
     assert shortest_path2 == []

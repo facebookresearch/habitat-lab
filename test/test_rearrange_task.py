@@ -104,7 +104,9 @@ def test_rearrange_baseline_envs(test_cfg_path):
             done = False
             while not done:
                 action = env.action_space.sample()
-                _, _, done, _ = env.step(action=action)  # type:ignore
+                _, _, done, _ = env.step(  # type:ignore[assignment]
+                    action=action
+                )
 
 
 @pytest.mark.parametrize(

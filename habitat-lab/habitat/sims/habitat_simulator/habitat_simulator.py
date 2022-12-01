@@ -336,7 +336,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             assert isinstance(sensor, HabitatSimSensor)
-            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore
+            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[operator]
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
