@@ -6,6 +6,7 @@
 
 import os
 import shutil
+from typing import List
 
 import numpy as np
 
@@ -77,7 +78,7 @@ def reference_path_example(mode):
                 shutil.rmtree(dirname)
             os.makedirs(dirname)
 
-            images = []
+            images: List[np.ndarray] = []
             steps = 0
             reference_path = env.habitat_env.current_episode.reference_path + [
                 env.habitat_env.current_episode.goals[0].position
