@@ -1,3 +1,6 @@
+import pandas as pd
+from pathlib import Path
+
 from home_robot.agent.perception.detection.coco_maskrcnn.coco_categories import (
     coco_categories_color_palette,
 )
@@ -39,3 +42,18 @@ frame_color_palette = [
     1.0,
     1.0,  # no category
 ]
+
+mp3d_to_coco = {
+    3: 0,   # chair
+    10: 1,  # couch
+    14: 2,  # plant
+    11: 3,  # bed
+    18: 4,  # toilet
+    22: 5,  # tv
+    5: 6,   # table
+    15: 8,  # sink
+}
+
+hm3d_to_mp3d_path = Path(__file__).resolve().parent / "matterport_category_mappings.tsv"
+df = pd.read_csv(hm3d_to_mp3d_path, sep='    ', header=0)
+hm3d_to_mp3d = {row["category"]: row["mpcat40index"] for _, row in df.iterrows()}
