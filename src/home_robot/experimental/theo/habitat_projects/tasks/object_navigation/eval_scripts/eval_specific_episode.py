@@ -74,6 +74,7 @@ if __name__ == "__main__":
 
     agent.reset()
     # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
+
     if config.GROUND_TRUTH_SEMANTICS:
         scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
         assert ("floorplanner" in scenes_dir or "hm3d" in scenes_dir)
@@ -106,5 +107,8 @@ if __name__ == "__main__":
         print(t)
         action = agent.act(obs)
         obs = env.step(action)
+        print(obs["semantic"].shape)
+        import numpy as np
+        print(np.unique(obs["semantic"]))
 
     print(env.get_metrics())
