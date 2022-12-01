@@ -210,8 +210,6 @@ def test_auto_gym_wrapper(test_cfg_path):
         "HabitatTidyHouse-v0",
         "HabitatPrepareGroceries-v0",
         "HabitatSetTable-v0",
-        "HabitatNavPick-v0",
-        "HabitatNavPickNavPlace-v0",
     ],
 )
 def test_gym_premade_envs(name):
