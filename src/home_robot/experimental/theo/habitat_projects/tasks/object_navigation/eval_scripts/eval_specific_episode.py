@@ -71,6 +71,7 @@ if __name__ == "__main__":
     # episode_id = "2"
     # obs = reset_to_episode(env, scene_id, episode_id)
     obs = env.reset()
+    obs = env.reset()
 
     agent.reset()
     # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
@@ -107,8 +108,5 @@ if __name__ == "__main__":
         print(t)
         action = agent.act(obs)
         obs = env.step(action)
-        print(obs["semantic"].shape)
-        import numpy as np
-        print(np.unique(obs["semantic"]))
 
     print(env.get_metrics())
