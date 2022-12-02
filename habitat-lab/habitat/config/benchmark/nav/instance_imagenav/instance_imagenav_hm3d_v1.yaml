@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/task: instance_imagenav
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
-  - /habitat/dataset/instance_imagenav: hm3d
+  - /habitat/dataset/instance_imagenav: hm3d_v1
   - _self_
 
 habitat:

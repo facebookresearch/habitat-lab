@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/nav/instance_imagenav: instance_imagenav_hm3d
+  - /benchmark/nav/instance_imagenav: instance_imagenav_hm3d_v2
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat_baselines/rl/policy/obs_transforms:
     - center_cropper_base
