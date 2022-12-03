@@ -26,6 +26,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.robot_manager import RobotManager
+from habitat.tasks.rearrange.humanoid_manager import HumanoidManager
 from habitat.tasks.rearrange.utils import (
     get_aabb,
     make_render_only,
@@ -94,7 +95,10 @@ class RearrangeSim(HabitatSim):
         # architecture).
         self.ctrl_arm = True
 
-        self.robots_mgr = RobotManager(self.habitat_config, self)
+        # self.robots_mgr = RobotManager(self.habitat_config, self)
+        # breakpoint()
+        self.humans_mgr = HumanoidManager(self.habitat_config, self)
+        self.robots_mgr = self.humans_mgr
 
     @property
     def robot(self):
@@ -198,7 +202,8 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         self.robots_mgr.reconfigure(new_scene)
-
+        self.humans_mgr.reconfigure(new_scene)
+        
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info["rigid_objs"]]
         should_add_objects = self._prev_obj_names != obj_names
@@ -279,7 +284,6 @@ class RearrangeSim(HabitatSim):
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
-
             robot.base_pos = start_pos
             robot.base_rot = start_rot
             self.perform_discrete_collision_detection()
@@ -679,6 +683,37 @@ class RearrangeSim(HabitatSim):
         """
         if self.habitat_config.update_robot:
             self.robots_mgr.update_robots()
+
+    def visualize_path(
+        self,
+        path: List,
+        viz_id: Optional[int] = None,
+        r: float = 0.05,
+    ) -> int:
+        """Adds the sphere object to the specified position for visualization purpose."""
+
+        template_mgr = self.get_object_template_manager()
+        rom = self.get_rigid_object_manager()
+        viz_obj = None
+        if viz_id is None:
+            if r not in self._viz_templates:
+                template = template_mgr.get_template_by_handle(
+                    template_mgr.get_template_handles("sphere")[0]
+                )
+                template.scale = mn.Vector3(r, r, r)
+                self._viz_templates[str(r)] = template_mgr.register_template(
+                    template, "ball_new_viz_" + str(r)
+                )
+            viz_obj = rom.add_object_by_template_id(
+                self._viz_templates[str(r)]
+            )
+            make_render_only(viz_obj, self)
+            self._viz_handle_to_template[viz_obj.object_id] = r
+        else:
+            viz_obj = rom.get_object_by_id(viz_id)
+
+        viz_obj.translation = mn.Vector3(*position)
+        return viz_obj.object_id
 
     def visualize_position(
         self,

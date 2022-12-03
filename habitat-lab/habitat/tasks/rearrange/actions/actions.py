@@ -10,6 +10,9 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+import quaternion
+from scipy.spatial.transform import Rotation
+
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
@@ -24,6 +27,8 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     SuctionGraspAction,
 )
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
+# TODO: HumanAction is very similar to RobotAction, can it be merged?
+from habitat.tasks.rearrange.actions.human_action import HumanAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
@@ -339,6 +344,8 @@ class BaseVelAction(RobotAction):
             return {}
 
 
+
+
 @registry.register_task_action
 class ArmEEAction(RobotAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the robot's arm."""
@@ -393,3 +400,334 @@ class ArmEEAction(RobotAction):
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
+
+
+
+@registry.register_task_action
+class HumanJointAction(HumanAction):
+    
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+        # cur_ee = self._ik_helper.calc_fk(
+        #     np.array(self._sim.robot.arm_joint_pos)
+        # )
+
+        # self.ee_target = cur_ee
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(2,), low=-1, high=1, dtype=np.float32)
+
+    # def apply_ee_constraints(self):
+    #     self.ee_target = np.clip(
+    #         self.ee_target,
+    #         self._sim.robot.params.ee_constraint[:, 0],
+    #         self._sim.robot.params.ee_constraint[:, 1],
+    #     )
+
+    # def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+    #     self.ee_target += np.array(ee_pos)
+
+    #     self.apply_ee_constraints()
+
+    #     joint_pos = np.array(self._sim.robot.arm_joint_pos)
+    #     joint_vel = np.zeros(joint_pos.shape)
+
+    #     self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+    #     des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
+    #     des_joint_pos = list(des_joint_pos)
+    #     self._sim.robot.arm_motor_pos = des_joint_pos
+
+    def step(self, **kwargs):
+        print("Step action")
+        # self._sim.human.
+        # ee_pos = np.clip(ee_pos, -1, 1)
+        # ee_pos *= self._config.ee_ctrl_lim
+        # self.set_desired_ee_pos(ee_pos)
+
+        # if self._config.get("render_ee_target", False):
+        #     global_pos = self._sim.robot.base_transformation.transform_point(
+        #         self.ee_target
+        #     )
+        #     self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
+        #         global_pos, self._sim.viz_ids["ee_target"]
+        #     )
+
+
+
+@registry.register_task_action
+class GrabAction(HumanAction):
+    
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.grasp_manager_id = 0
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+        # breakpoint()
+        # self._sim.robot.
+        link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
+        if link_index == 0:
+            curr_link = self._sim.robot.params.ee_link_left
+        else:
+            curr_link = self._sim.robot.params.ee_link_right
+
+        ef_link_transform = self._sim.robot.sim_obj.get_link_scene_node(
+            curr_link
+        ).transformation
+        # self.ee_target = ef_link_transform.translation
+        # cur_ee = self._ik_helper.calc_fk(
+        #     np.array(self._sim.robot.arm_joint_pos)
+        # )
+
+        # self.ee_target = cur_ee
+        # self.ee_target = mn.Vector3([0, 0.5, 0])
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32)
+
+    # def apply_ee_constraints(self):
+    #     self.ee_target = np.clip(
+    #         self.ee_target,
+    #         self._sim.robot.params.ee_constraint[:, 0],
+    #         self._sim.robot.params.ee_constraint[:, 1],
+    #     )
+
+    def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
+        self.ee_target += np.array(ee_pos)
+        # breakpoint()
+
+        # self.apply_ee_constraints()
+
+        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_vel = np.zeros(joint_pos.shape)
+
+        # print(self.ee_target)
+        
+        self._ik_helper.set_arm_state(joint_pos, joint_vel)
+
+        des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
+        des_joint_pos = list(des_joint_pos)
+        
+        # Convert to joints, can this be set programatically?
+        joints_pos = []
+
+        indices_interest = list(range(11)) + [11, 12, 13] + [14, 15, 16] 
+        # breakpoint()
+        for index in indices_interest:
+            
+            current_angle = des_joint_pos[(index*3):(index*3 + 3)]
+
+            Q = Rotation.from_euler('xyz', current_angle).as_quat()
+            joints_pos += list(Q)
+
+        self._sim.robot.arm_joint_pos = joints_pos
+        print(self._sim.robot.sim_obj.joint_positions)
+        
+        # breakpoint()
+
+    def step(self, **kwargs):
+        ee_pos = np.array(kwargs['base_pos'])
+        # self.ee_target = ee_pos
+        # print(ee_pos)
+        # breakpoint()
+        # self.set_desired_ee_pos(ee_pos)
+
+        grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
+        snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
+        grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
+        
+        
+        # print("Step action")
+        # self._sim.human.
+        # ee_pos = np.clip(ee_pos, -1, 1)
+        # ee_pos *= self._config.ee_ctrl_lim
+        # self.set_desired_ee_pos(ee_pos)
+
+        # if self._config.get("render_ee_target", False):
+        # breakpoint()
+        # global_pos = self._sim.robot.sim_obj.transformation.transform_point(
+        #     self.ee_target
+        # )
+        # # global_pos = self.ee_target
+        # self._sim.viz_ids["true_ee_target"] = self._sim.visualize_position(
+        #     global_pos, self._sim.viz_ids["true_ee_target"])
+            
+        # breakpoint()
+        return self._sim.step(HabitatSimActions.changejoint_action)
+
+
+@registry.register_task_action
+class WalkAction(HumanAction):
+    
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(2,), low=-1, high=1, dtype=np.float32)
+
+
+    def step(self, **kwargs):
+        new_pos = kwargs['base_pos']
+
+        # breakpoint()
+        new_pos = mn.Vector3([new_pos[0], 0, new_pos[1]])
+        self._sim.robot.walk(new_pos)
+        # global_pos = self._sim.robot.base_transformation.transform_point(
+        #         new_pos
+        # )
+        global_pos = self._sim.robot.translation_offset + new_pos
+        # breakpoint()
+        # self._sim.viz_ids["pos_target"] = self._sim.visualize_position(
+        #     global_pos, self._sim.viz_ids["pos_target"]
+        # )
+        return self._sim.step(HabitatSimActions.changejoint_action)
+
+
+@registry.register_task_action
+class StopAction(HumanAction):
+    
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+
+    def step(self, **kwargs):
+        # new_pos = kwargs['base_pos']
+
+        # breakpoint()
+        new_pos = mn.Vector3([0,0,0])
+        self._sim.robot.stop(new_pos)
+        
+        return self._sim.step(HabitatSimActions.changejoint_action)
+
+
+
+@registry.register_task_action
+class GrabLeftAction(GrabAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self.grasp_manager_id = 0
+        self.obj_id = 0 
+
+@registry.register_task_action
+class GrabRightAction(GrabAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self.grasp_manager_id = 1
+        self.obj_id = 1
+
+
+
+
+
+@registry.register_task_action
+class ReleaseAction(HumanAction):
+    
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.grasp_manager_id = 0
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+        # breakpoint()
+        # self._sim.robot.
+        link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
+        if link_index == 0:
+            curr_link = self._sim.robot.params.ee_link_left
+        else:
+            curr_link = self._sim.robot.params.ee_link_right
+
+        ef_link_transform = self._sim.robot.sim_obj.get_link_scene_node(
+            curr_link
+        ).transformation
+        # self.ee_target = ef_link_transform.translation
+        # cur_ee = self._ik_helper.calc_fk(
+        #     np.array(self._sim.robot.arm_joint_pos)
+        # )
+
+        # self.ee_target = cur_ee
+        # self.ee_target = mn.Vector3([0, 0.5, 0])
+
+    @property
+    def action_space(self):
+        return spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32)
+
+    # def apply_ee_constraints(self):
+    #     self.ee_target = np.clip(
+    #         self.ee_target,
+    #         self._sim.robot.params.ee_constraint[:, 0],
+    #         self._sim.robot.params.ee_constraint[:, 1],
+    #     )
+
+
+
+    def step(self, **kwargs):
+        ee_pos = np.array(kwargs['base_pos'])
+        # self.ee_target = ee_pos
+        # print(ee_pos)
+        # breakpoint()
+        # self.set_desired_ee_pos(ee_pos)
+
+        grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
+        # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
+        grasp_mgr.desnap()
+        
+        
+        # print("Step action")
+        # self._sim.human.
+        # ee_pos = np.clip(ee_pos, -1, 1)
+        # ee_pos *= self._config.ee_ctrl_lim
+        # self.set_desired_ee_pos(ee_pos)
+
+        # if self._config.get("render_ee_target", False):
+        # breakpoint()
+        # global_pos = self._sim.robot.sim_obj.transformation.transform_point(
+        #     self.ee_target
+        # )
+        # # global_pos = self.ee_target
+        # self._sim.viz_ids["true_ee_target"] = self._sim.visualize_position(
+        #     global_pos, self._sim.viz_ids["true_ee_target"])
+            
+        # breakpoint()
+        return self._sim.step(HabitatSimActions.changejoint_action)
+
+
+@registry.register_task_action
+class ReleaseLeftAction(ReleaseAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self.grasp_manager_id = 0
+
+@registry.register_task_action
+class ReleaseRightAction(ReleaseAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self.grasp_manager_id = 1

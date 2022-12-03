@@ -882,6 +882,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
     #  check if it won't cause any errors
 
 
+
 @dataclass
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
@@ -894,6 +895,14 @@ class AgentConfig(HabitatBaseConfig):
     robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     robot_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+
+@dataclass
+class HumanAgentConfig(AgentConfig):
+    amass_path: str = ""
+    body_model_path: str = ""
+    human_type: str = "AmassHuman"
+    # ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+
 
 
 @dataclass
@@ -1099,6 +1108,12 @@ cs.store(
     group="agent",
     name="agent_base",
     node=AgentConfig,
+)
+
+cs.store(
+    group="agent",
+    name="humanoid_agent_base",
+    node=HumanAgentConfig,
 )
 
 cs.store(

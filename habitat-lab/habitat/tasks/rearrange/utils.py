@@ -276,7 +276,7 @@ def is_pb_installed():
 class IkHelper:
     def __init__(self, only_arm_urdf, arm_start):
         self._arm_start = arm_start
-        self._arm_len = 7
+        
         self.pc_id = p.connect(p.DIRECT)
 
         self.robo_id = p.loadURDF(
@@ -286,12 +286,14 @@ class IkHelper:
             flags=p.URDF_USE_INERTIA_FROM_FILE,
             physicsClientId=self.pc_id,
         )
-
+        # breakpoint()
         p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
-        JOINT_DAMPING = 0.5
-        self.pb_link_idx = 7
-
-        for link_idx in range(15):
+        JOINT_DAMPING = 0.0001
+        # TODO: this should be a variable somewhere else
+        self.pb_link_idx = 15
+        num_joints = p.getNumJoints(self.robo_id, self.pc_id)
+        self._arm_len = num_joints
+        for link_idx in range(num_joints):
             p.changeDynamics(
                 self.robo_id,
                 link_idx,
@@ -300,17 +302,17 @@ class IkHelper:
                 jointDamping=JOINT_DAMPING,
                 physicsClientId=self.pc_id,
             )
-            p.changeDynamics(
-                self.robo_id,
-                link_idx,
-                maxJointVelocity=200,
-                physicsClientId=self.pc_id,
-            )
+            # p.changeDynamics(
+            #     self.robo_id,
+            #     link_idx,
+            #     maxJointVelocity=200,
+            #     physicsClientId=self.pc_id,
+            # )
 
     def set_arm_state(self, joint_pos, joint_vel=None):
         if joint_vel is None:
             joint_vel = np.zeros((len(joint_pos),))
-        for i in range(7):
+        for i in range(len(joint_pos)):
             p.resetJointState(
                 self.robo_id,
                 i,
@@ -354,7 +356,11 @@ class IkHelper:
             targ_ee,
             physicsClientId=self.pc_id,
         )
-        return js[: self._arm_len]
+
+        #!p.calculateInverseKinematics(self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id)
+        # print(js)
+        # breakpoint()
+        return js#[: self._arm_len]
 
 
 class UsesRobotInterface:

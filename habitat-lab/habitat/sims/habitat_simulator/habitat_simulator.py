@@ -322,6 +322,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "robot_type",
                 "joint_start_noise",
                 "ik_arm_urdf",
+                "amass_path",
+                "body_model_path",
+                "human_type"
             },
         )
 
