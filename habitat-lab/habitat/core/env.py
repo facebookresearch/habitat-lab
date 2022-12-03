@@ -6,14 +6,24 @@
 
 import random
 import time
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    Union,
+    cast,
+)
 
 import gym
 import numba
 import numpy as np
 from gym import spaces
 
-from habitat.config import Config, read_write
+from habitat.config import read_write
 from habitat.core.dataset import BaseEpisode, Dataset, Episode, EpisodeIterator
 from habitat.core.embodied_task import EmbodiedTask, Metrics
 from habitat.core.simulator import Observations, Simulator
@@ -21,6 +31,9 @@ from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks.registration import make_task
 from habitat.utils import profiling_wrapper
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 class Env:
@@ -39,7 +52,7 @@ class Env:
 
     observation_space: spaces.Dict
     action_space: spaces.Dict
-    _config: Config
+    _config: "DictConfig"
     _dataset: Optional[Dataset[Episode]]
     number_of_episodes: Optional[int]
     _current_episode: Optional[Episode]
@@ -55,7 +68,7 @@ class Env:
     _episode_force_changed: bool
 
     def __init__(
-        self, config: Config, dataset: Optional[Dataset[Episode]] = None
+        self, config: "DictConfig", dataset: Optional[Dataset[Episode]] = None
     ) -> None:
         """Constructor
 
@@ -321,7 +334,7 @@ class Env:
         self._sim.seed(seed)
         self._task.seed(seed)
 
-    def reconfigure(self, config: Config) -> None:
+    def reconfigure(self, config: "DictConfig") -> None:
         self._config = config
 
         with read_write(self._config):
@@ -359,7 +372,7 @@ class RLEnv(gym.Env):
     _env: Env
 
     def __init__(
-        self, config: Config, dataset: Optional[Dataset] = None
+        self, config: "DictConfig", dataset: Optional[Dataset] = None
     ) -> None:
         """Constructor
 
@@ -376,7 +389,7 @@ class RLEnv(gym.Env):
         self.reward_range = self.get_reward_range()
 
     @property
-    def config(self) -> Config:
+    def config(self) -> "DictConfig":
         return self._core_env_config
 
     @property

@@ -15,6 +15,7 @@ from glob import glob
 import pytest
 import torch
 import yaml
+from omegaconf import DictConfig, OmegaConf
 
 import habitat
 import habitat.datasets.rearrange.run_episode_generator as rr_gen
@@ -38,7 +39,7 @@ GEN_TEST_CFG = (
 EPISODES_LIMIT = 6
 
 
-def check_json_serialization(dataset: habitat.Dataset):
+def check_json_serialization(dataset: RearrangeDatasetV0):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -103,7 +104,9 @@ def test_rearrange_baseline_envs(test_cfg_path):
             done = False
             while not done:
                 action = env.action_space.sample()
-                _, _, done, info = env.step(action=action)
+                _, _, done, _ = env.step(  # type:ignore[assignment]
+                    action=action
+                )
 
 
 @pytest.mark.parametrize(
@@ -190,7 +193,9 @@ def test_rearrange_episode_generator(
     debug_visualization, num_episodes, config
 ):
     cfg = rr_gen.get_config_defaults()
-    cfg.merge_from_file(config)
+    override_config = OmegaConf.load(config)
+    cfg = OmegaConf.merge(cfg, override_config)
+    assert isinstance(cfg, DictConfig)
     dataset = RearrangeDatasetV0()
     with rr_gen.RearrangeEpisodeGenerator(
         cfg=cfg, debug_visualization=debug_visualization

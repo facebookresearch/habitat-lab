@@ -7,13 +7,14 @@
 import itertools
 import multiprocessing as mp
 import os
+from typing import List
 
 import numpy as np
 import pytest
 from gym import Wrapper
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
@@ -248,11 +249,10 @@ def test_rl_vectorized_envs(gpu2gpu):
     for config in configs:
         with habitat.config.read_write(config):
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+            agent_config = get_agent_config(config.habitat.simulator)
             # Only keep the rgb_sensor
-            config.habitat.simulator.agent_0.sim_sensors = {
-                "rgb_sensor": config.habitat.simulator.agent_0.sim_sensors[
-                    "rgb_sensor"
-                ]
+            agent_config.sim_sensors = {
+                "rgb_sensor": agent_config.sim_sensors["rgb_sensor"]
             }
 
     num_envs = len(configs)
@@ -431,8 +431,8 @@ def test_action_space_shortest_path():
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
     source = AgentState(source_position, source_rotation)
 
-    reachable_targets = []
-    unreachable_targets = []
+    reachable_targets: List[AgentState] = []
+    unreachable_targets: List[AgentState] = []
     while len(reachable_targets) < 5:
         position = env.sim.sample_navigable_point()
         angles = list(range(-180, 180, config.habitat.simulator.turn_angle))
@@ -452,11 +452,15 @@ def test_action_space_shortest_path():
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.action_space_shortest_path(source, targets)
+    shortest_path1 = env.action_space_shortest_path(  # type: ignore[attr-defined]
+        source, targets
+    )
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.action_space_shortest_path(source, targets)
+    shortest_path2 = env.action_space_shortest_path(  # type: ignore[attr-defined]
+        source, targets
+    )
     assert shortest_path2 == []
     env.close()
 

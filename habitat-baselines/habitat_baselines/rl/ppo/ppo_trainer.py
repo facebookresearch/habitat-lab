@@ -9,7 +9,7 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -19,7 +19,7 @@ from omegaconf import OmegaConf
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from habitat import Config, VectorEnv, logger
+from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -67,6 +67,9 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -121,7 +124,7 @@ class PPOTrainer(BaseRLTrainer):
 
         return t.to(device=orig_device)
 
-    def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
+    def _setup_actor_critic_agent(self, ppo_cfg: "DictConfig") -> None:
         r"""Sets up actor critic and agent for PPO.
 
         Args:
@@ -940,11 +943,24 @@ class PPOTrainer(BaseRLTrainer):
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
-            with read_write(config):
-                for render_view in config.habitat_baselines.video_render_views:
-                    uuid = config.habitat.simulator[render_view].uuid
-                    config.habitat.gym.obs_keys.append(uuid)
-                    config.habitat_baselines.sensors.append(render_view)
+
+            for render_view in config.habitat_baselines.video_render_views:
+                uuid: Optional[str] = None
+                for agent_id in config.habitat.simulator.agents:
+                    if (
+                        render_view
+                        in config.habitat.simulator.agents[
+                            agent_id
+                        ].sim_sensors
+                    ):
+                        uuid = (
+                            config.habitat.simulator.agents[agent_id]
+                            .sim_sensors[render_view]
+                            .uuid
+                        )
+                if uuid is not None:
+                    with read_write(config):
+                        config.habitat.gym.obs_keys.append(uuid)
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")

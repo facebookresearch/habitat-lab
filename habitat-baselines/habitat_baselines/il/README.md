@@ -21,7 +21,7 @@ followed by fine-tuning the NAV model.
 ## Pre-requisites:
 
 - Habitat-sim and Habitat-api installation.
-- Download the Matterport 3D **scene dataset** and **task dataset** and place them in the appropriate folders (relevant information in repository's [README](https://github.com/facebookresearch/habitat-api/blob/main/README.md)).
+- Download the Matterport 3D **scene dataset** and **task dataset** and place them in the appropriate folders (relevant information in repository's [README](/README.md)).
 
 ---
 
@@ -34,12 +34,14 @@ This is an encoder-decoder network that takes RGB input and generates an RGB rec
 
 ### Configuration:
 
-Configuration for training the VQA (answering) model can be found in `habitat-baselines/habitat_baselines/config/eqa/il_eqa_cnn_pretrain.yaml`.
+Configuration for training the VQA (answering) model can be found in `habitat_baselines/config/eqa/il_eqa_cnn_pretrain.yaml`.
 
 ### Train:
 
 ```
- python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/eqa/il_eqa_cnn_pretrain.yaml --run-type train
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/eqa/il_eqa_cnn_pretrain.yaml \
+  --run-type train
 ```
 
 Training checkpoints are by default stored in `data/eqa/eqa_cnn_pretrain/checkpoints`.
@@ -47,7 +49,9 @@ Training checkpoints are by default stored in `data/eqa/eqa_cnn_pretrain/checkpo
 ### Eval:
 
 ```
- python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/eqa/il_eqa_cnn_pretrain.yaml --run-type eval
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/eqa/il_eqa_cnn_pretrain.yaml \
+  --run-type eval
 ```
 
 Results from evaluation are stored in `data/eqa/eqa_cnn_pretrain/results/val`.
@@ -74,14 +78,16 @@ The VQA model is responsible for predicting an answer based on the input questio
 
 ### Configuration:
 
-Configuration for training the VQA (answering) model can be found in `habitat-baselines/habitat_baselines/config/eqa/il_vqa.yaml`.
+Configuration for training the VQA (answering) model can be found in `habitat_baselines/config/eqa/il_vqa.yaml`.
 
-The VQA trainer picks the EQA CNN pre-trained encoder checkpoint by default from `data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt`. If you want to use a different checkpoint for the EQA CNN encoder, the corresponding path can be changed in the aforementioned config file's `EQA_CNN_PRETRAIN_CKPT_PATH` parameter.
+The VQA trainer picks the EQA CNN pre-trained encoder checkpoint by default from `data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt`. If you want to use a different checkpoint for the EQA CNN encoder, the corresponding path can be changed in the aforementioned config file's `eqa_cnn_pretrain_ckpt_path` parameter.
 
 ### Train:
 
 ```
- python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/eqa/il_vqa.yaml --run-type train
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/eqa/il_vqa.yaml \
+  --run-type train
 ```
 
 Training checkpoints are by default stored in `data/eqa/vqa/checkpoints`.
@@ -90,12 +96,14 @@ Training checkpoints are by default stored in `data/eqa/vqa/checkpoints`.
 
 Pre-trained VQA model can be downloaded from [here](https://drive.google.com/file/d/1frhIlgF1BpBT_vnRt7J5txlnfvgwXLeq/view?usp=sharing).
 
-After downloading the pre-trained model, add it's path to the config file's `eval_ckpt_path_dir` parameter for evaluation.
+After downloading the pre-trained model, add its path to the config file's `eval_ckpt_path_dir` parameter for evaluation.
 
 ### Eval:
 
 ```
- python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/eqa/il_vqa.yaml --run-type eval
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/eqa/il_vqa.yaml \
+  --run-type eval
 ```
 
 Results from evaluation are stored in `data/eqa/vqa/results/val`.
@@ -116,13 +124,15 @@ The NAV model (known as *PACMAN*) predicts the actions required to navigate the 
 
 ### Configuration:
 
-Configuration for training the NAV-PACMAN model can be found in `habitat-baselines/habitat_baselines/config/eqa/il_pacman_nav.yaml`.
+Configuration for training the NAV-PACMAN model can be found in `habitat_baselines/config/eqa/il_pacman_nav.yaml`.
 The trainer also picks the EQA CNN pre-trained encoder checkpoint by default from `data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt`.
 
 ### Train:
 
 ```
- python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/eqa/il_pacman_nav.yaml --run-type train
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/eqa/il_pacman_nav.yaml \
+  --run-type train
 ```
 
 Training checkpoints are by default stored in `data/eqa/nav/checkpoints`.
@@ -131,7 +141,9 @@ Training checkpoints are by default stored in `data/eqa/nav/checkpoints`.
 ### Eval:
 
 ```
- python -u habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/eqa/il_pacman_nav.yaml --run-type eval
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/eqa/il_pacman_nav.yaml \
+  --run-type eval
 ```
 
 Results from evaluation are stored in `data/eqa/nav/results/val`.

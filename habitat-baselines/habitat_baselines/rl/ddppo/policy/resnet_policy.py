@@ -6,7 +6,7 @@
 
 
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch
@@ -14,7 +14,6 @@ from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
 
-from habitat.config import Config
 from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import (
     EpisodicCompassSensor,
@@ -37,6 +36,9 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 from habitat_baselines.rl.ppo import Net, NetPolicy
 from habitat_baselines.utils.common import get_num_actions
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @baseline_registry.register_policy
 class PointNavResNetPolicy(NetPolicy):
@@ -50,8 +52,8 @@ class PointNavResNetPolicy(NetPolicy):
         resnet_baseplanes: int = 32,
         backbone: str = "resnet18",
         force_blind_policy: bool = False,
-        policy_config: Config = None,
-        aux_loss_config: Optional[Config] = None,
+        policy_config: "DictConfig" = None,
+        aux_loss_config: Optional["DictConfig"] = None,
         fuse_keys: Optional[List[str]] = None,
         **kwargs,
     ):
@@ -87,16 +89,24 @@ class PointNavResNetPolicy(NetPolicy):
     @classmethod
     def from_config(
         cls,
-        config: Config,
+        config: "DictConfig",
         observation_space: spaces.Dict,
         action_space,
         **kwargs,
     ):
         # Exclude cameras for rendering from the observation space.
-        ignore_names = [
-            config.TASK_CONFIG.SIMULATOR[k].UUID
-            for k in config.VIDEO_RENDER_VIEWS
-        ]
+        ignore_names: List[str] = []
+        for agent_id in config.habitat.simulator.agents.keys():
+            ignore_names.extend(
+                [
+                    config.habitat.simulator.agents[agent_id]
+                    .sim_sensors[k]
+                    .uuid
+                    for k in config.habitat_baselines.video_render_views
+                    if k
+                    in config.habitat.simulator.agents[agent_id].sim_sensors
+                ]
+            )
         filtered_obs = spaces.Dict(
             OrderedDict(
                 [

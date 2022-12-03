@@ -11,13 +11,15 @@ from typing import TYPE_CHECKING, Any, Dict, List
 from omegaconf import OmegaConf
 
 import habitat
-from habitat import Config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
     from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
+
 
 TASK_CONFIGS_DIR = "benchmark/rearrange/"
 TASK_IGNORE_KEYS = ["task_spec", "task_spec_base_path", "pddl_domain_def"]
@@ -26,7 +28,7 @@ TASK_IGNORE_KEYS = ["task_spec", "task_spec_base_path", "pddl_domain_def"]
 def create_task_object(
     task_cls_name: str,
     task_config_path: str,
-    cur_config: Config,
+    cur_config: "DictConfig",
     cur_env: RearrangeTask,
     cur_dataset: "RearrangeDatasetV0",
     should_super_reset: bool,
@@ -56,7 +58,9 @@ def create_task_object(
         )
 
         with habitat.config.read_write(config):
-            config = OmegaConf.merge(config, task_config.habitat.task)
+            config = OmegaConf.merge(  # type:ignore
+                config, task_config.habitat.task
+            )
             # config.merge_from_other_cfg(task_config.habitat.task)
             # Putting back the values from TASK_IGNORE_KEYS :
             for k in TASK_IGNORE_KEYS:

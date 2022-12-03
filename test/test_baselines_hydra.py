@@ -2,8 +2,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import TYPE_CHECKING
+
 from hydra import compose, initialize
-from omegaconf import DictConfig, OmegaConf
+from omegaconf import OmegaConf
 
 # NOTE: import required to register structured configs
 import habitat_baselines.config.default_structured_configs  # noqa: F401
@@ -13,8 +15,11 @@ from habitat.config.default_structured_configs import (
 )
 from habitat_baselines.run import execute_exp
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
-def my_app_compose_api() -> DictConfig:
+
+def my_app_compose_api() -> "DictConfig":
     # initialize the Hydra subsystem.
     # This is needed for apps that cannot have
     # a standard @hydra.main() entry point
@@ -27,10 +32,8 @@ def my_app_compose_api() -> DictConfig:
                 "habitat_baselines.num_environments=4",
                 "habitat_baselines.total_num_steps=-1.0",
                 "habitat_baselines.rl.policy.action_distribution_type=gaussian",
-                # "+task/rearrange@habitat=pick",
                 "+benchmark/rearrange=pick",
-                # "+habitat=benchmark/rearrange/pick",
-                # "+sim_sensors@habitat.simulator.agent_0.sim_sensors.arm_rgb_sensor=arm_rgb_sensor",
+                "habitat.simulator.agents_order=[main_agent]",
             ]
         )
 

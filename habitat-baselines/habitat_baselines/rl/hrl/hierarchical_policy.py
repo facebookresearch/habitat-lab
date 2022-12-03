@@ -4,7 +4,7 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import gym.spaces as spaces
 import torch
@@ -106,7 +106,9 @@ class HierarchicalPolicy(Policy):
         policy_infos = []
         for i, info in enumerate(infos):
             cur_skill_idx = self._cur_skills[i].item()
-            policy_info = {"cur_skill": self._idx_to_name[cur_skill_idx]}
+            policy_info: Dict[str, Any] = {
+                "cur_skill": self._idx_to_name[cur_skill_idx]
+            }
 
             did_skill_fail = dones[i] and not info[CompositeSuccess.cls_uuid]
             for skill_name, idx in self._name_to_idx.items():
@@ -126,7 +128,7 @@ class HierarchicalPolicy(Policy):
         return False
 
     def parameters(self):
-        return self._skills[0].parameters()
+        return self._skills[0].parameters()  # type: ignore[attr-defined]
 
     def to(self, device):
         for skill in self._skills.values():
@@ -136,7 +138,7 @@ class HierarchicalPolicy(Policy):
         self, skill_ids, sel_dat, should_adds=None
     ) -> Dict[int, List[int]]:
         # skill id -> [batch ids]
-        grouped_skills = defaultdict(list)
+        grouped_skills: Dict[int, List[int]] = defaultdict(list)
         if should_adds is None:
             should_adds = [True for _ in range(len(skill_ids))]
         for i, (cur_skill, should_add) in enumerate(
@@ -161,7 +163,7 @@ class HierarchicalPolicy(Policy):
         deterministic=False,
     ):
 
-        self._high_level_policy.apply_mask(masks)
+        self._high_level_policy.apply_mask(masks)  # type: ignore[attr-defined]
 
         should_terminate: torch.BoolTensor = torch.zeros(
             (self._num_envs,), dtype=torch.bool

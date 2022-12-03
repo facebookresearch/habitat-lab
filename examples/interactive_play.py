@@ -49,12 +49,14 @@ import os
 import os.path as osp
 import time
 from collections import defaultdict
+from typing import Any, Dict, List
 
 import magnum as mn
 import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
     ThirdRGBSensorConfig,
@@ -108,6 +110,10 @@ def get_input_vel_ctlr(
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
+    elif "stretch" in DEFAULT_CFG:
+        arm_action_space = np.zeros(10)
+        arm_ctrlr = None
+        base_action = [0, 0]
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
@@ -182,6 +188,44 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+
+        elif arm_action_space.shape[0] == 10:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[5] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[6] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[7] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[7] = -1.0
+
+            elif keys[pygame.K_y]:
+                arm_action[8] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[8] = -1.0
+
+            elif keys[pygame.K_u]:
+                arm_action[9] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[9] = -1.0
+
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
             # End effector control
@@ -222,7 +266,7 @@ def get_input_vel_ctlr(
         joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
         logger.info(f"Robot arm joint state: {joint_state}")
 
-    args = {}
+    args: Dict[str, Any] = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
         name = base_action_name
         args = {base_key: base_action}
@@ -347,7 +391,7 @@ def play_env(env, args, config):
     prev_time = time.time()
     all_obs = []
     total_reward = 0
-    all_arm_actions = []
+    all_arm_actions: List[float] = []
     agent_to_control = 0
 
     free_cam = FreeCamHelper()
@@ -466,7 +510,7 @@ def play_env(env, args, config):
             screen.blit(draw_obuse_ob, (0, 0))
             pygame.display.update()
         if args.save_obs:
-            all_obs.append(draw_ob)
+            all_obs.append(draw_ob)  # type: ignore[assignment]
 
         if not args.no_render:
             pygame.event.pump()
@@ -495,8 +539,8 @@ def play_env(env, args, config):
         return
 
     if args.save_obs:
-        all_obs = np.array(all_obs)
-        all_obs = np.transpose(all_obs, (0, 2, 1, 3))
+        all_obs = np.array(all_obs)  # type: ignore[assignment]
+        all_obs = np.transpose(all_obs, (0, 2, 1, 3))  # type: ignore[assignment]
         os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
         vut.make_video(
             np.expand_dims(all_obs, 1),
@@ -592,7 +636,8 @@ if __name__ == "__main__":
 
         if not args.same_task:
             sim_config.debug_render = True
-            sim_config.agent_0.sim_sensors.update(
+            agent_config = get_agent_config(sim_config=sim_config)
+            agent_config.sim_sensors.update(
                 {
                     "third_rgb_sensor": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res

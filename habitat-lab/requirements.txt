@@ -1,15 +1,16 @@
 gym>=0.22.0,<0.23.1
 numpy>=1.20.0
-yacs>=0.1.8
 numpy-quaternion>=2019.3.18.14.33.20
 attrs>=19.1.0
 opencv-python>=3.3.0
 pickle5; python_version < '3.8'
+# config dependencies
+hydra-core>=1.2.0
+omegaconf>=2.2.3
+# acceleration dependencies
+numba>=0.44.0
 # visualization optional dependencies
 imageio>=2.2.0
 imageio-ffmpeg>=0.2.0
 scipy>=1.0.0
 tqdm>=4.0.0
-numba>=0.44.0
-hydra-core==1.2.0
-omegaconf==2.2.3

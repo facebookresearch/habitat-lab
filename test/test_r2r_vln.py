@@ -8,7 +8,7 @@ import time
 import pytest
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
 from habitat.datasets.vln import r2r_vln_dataset as r2r_vln_dataset
@@ -147,10 +147,12 @@ def test_r2r_vln_sim():
                         obs["instruction"]["text"]
                         == env.current_episode.instruction.instruction_text
                     ), "Instruction from sensor does not match the intruction from the episode"
-
+                    agent_config = get_agent_config(
+                        vln_config.habitat.simulator
+                    )
                     assert obs["rgb"].shape[:2] == (
-                        vln_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height,
-                        vln_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width,
+                        agent_config.sim_sensors.rgb_sensor.height,
+                        agent_config.sim_sensors.rgb_sensor.width,
                     ), (
                         "Observation resolution {} doesn't correspond to config "
                         "({}, {}).".format(

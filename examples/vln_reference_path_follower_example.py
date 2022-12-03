@@ -6,6 +6,7 @@
 
 import os
 import shutil
+from typing import List
 
 import numpy as np
 
@@ -48,7 +49,7 @@ def reference_path_example(mode):
     Args:
         mode: 'geodesic_path' or 'greedy'
     """
-    config = habitat.get_config(config_paths="test/habitat_r2r_vln_test.yaml")
+    config = habitat.get_config(config_path="test/habitat_r2r_vln_test.yaml")
     with habitat.config.read_write(config):
         config.habitat.task.measurements.update(
             {"top_down_map": TopDownMapMeasurementConfig()}
@@ -77,7 +78,7 @@ def reference_path_example(mode):
                 shutil.rmtree(dirname)
             os.makedirs(dirname)
 
-            images = []
+            images: List[np.ndarray] = []
             steps = 0
             reference_path = env.habitat_env.current_episode.reference_path + [
                 env.habitat_env.current_episode.goals[0].position
