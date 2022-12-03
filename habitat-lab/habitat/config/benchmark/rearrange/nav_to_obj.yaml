@@ -21,6 +21,8 @@ habitat:
     additional_object_paths:
       - data/objects/ycb/configs/
     debug_render_goal: False
+    concur_render: True
+    auto_sleep: True
     agents:
       main_agent:
         radius: 0.3

@@ -27,10 +27,6 @@ habitat:
     auto_sleep: True
     agents:
       main_agent:
-        sim_sensors:
-          head_depth_sensor:
-            width: 256
-            height: 256
         radius: 0.3
         robot_urdf: ./data/robots/hab_fetch/robots/hab_suction_v2.urdf
         robot_type: FetchSuctionRobot
