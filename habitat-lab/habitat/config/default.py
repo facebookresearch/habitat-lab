@@ -27,10 +27,9 @@ _HABITAT_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 CONFIG_FILE_SEPARATOR = ","
 
 
-def get_full_config_path(
-    config_path: str, configs_dir: str = _HABITAT_CFG_DIR
-) -> str:
+def get_full_config_path(config_path: str, configs_dir: str) -> str:
     r"""Returns absolute path to the yaml config file if exists, else raises RuntimeError.
+
     :param config_path: path to the yaml config file.
     :param configs_dir: path to the config files root directory.
     :return: absolute path to the yaml config file.

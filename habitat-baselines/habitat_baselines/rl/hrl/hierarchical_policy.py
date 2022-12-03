@@ -4,7 +4,7 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import gym.spaces as spaces
 import torch
@@ -136,9 +136,8 @@ class HierarchicalPolicy(Policy):
 
     def _broadcast_skill_ids(
         self, skill_ids, sel_dat, should_adds=None
-    ) -> Dict[int, List[int]]:
-        # skill id -> [batch ids]
-        grouped_skills: Dict[int, List[int]] = defaultdict(list)
+    ) -> Dict[int, Tuple[List[int], Dict[str, Any]]]:
+        skill_to_batch: Dict[int, List[int]] = defaultdict(list)
         if should_adds is None:
             should_adds = [True for _ in range(len(skill_ids))]
         for i, (cur_skill, should_add) in enumerate(
@@ -146,13 +145,14 @@ class HierarchicalPolicy(Policy):
         ):
             if should_add:
                 cur_skill = cur_skill.item()
-                grouped_skills[cur_skill].append(i)
-        for k, v in grouped_skills.items():
+                skill_to_batch[cur_skill].append(i)
+        grouped_skills = {}
+        for k, v in skill_to_batch.items():
             grouped_skills[k] = (
                 v,
                 {dat_k: dat[v] for dat_k, dat in sel_dat.items()},
             )
-        return dict(grouped_skills)
+        return grouped_skills
 
     def act(
         self,
