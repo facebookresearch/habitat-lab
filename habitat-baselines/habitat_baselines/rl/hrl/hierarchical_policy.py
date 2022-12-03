@@ -4,7 +4,7 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
@@ -135,8 +135,18 @@ class HierarchicalPolicy(Policy):
             skill.to(device)
 
     def _broadcast_skill_ids(
-        self, skill_ids, sel_dat, should_adds=None
+        self,
+        skill_ids: torch.Tensor,
+        sel_dat: Dict[str, Any],
+        should_adds: Optional[torch.Tensor] = None,
     ) -> Dict[int, Tuple[List[int], Dict[str, Any]]]:
+        """
+        Groups the information per skill. Specifically, this will return a map
+        from the skill ID to the indices of the batch and the observations at
+        these indices the skill is currently running for. This is used to batch
+        observations per skill.
+        """
+
         skill_to_batch: Dict[int, List[int]] = defaultdict(list)
         if should_adds is None:
             should_adds = [True for _ in range(len(skill_ids))]
