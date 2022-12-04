@@ -22,7 +22,6 @@ habitat:
     type: RearrangeSim-v0
     additional_object_paths:
       - data/objects/ycb/configs/
-    debug_render_goal: False
     needs_markers: False
     concur_render: True
     auto_sleep: True

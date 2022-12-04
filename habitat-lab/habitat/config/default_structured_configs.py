@@ -885,6 +885,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
+    width: int = 512
+    height: int = 512
 
 
 @dataclass

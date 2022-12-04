@@ -9,6 +9,7 @@ from typing import Any, List, Optional
 
 import numpy as np
 import torch
+from omegaconf import OmegaConf
 from torch.utils.tensorboard import SummaryWriter
 
 try:
@@ -132,7 +133,11 @@ class WeightsAndBiasesWriter:
             wb_kwargs["resume"] = "must"
 
         self.run = wandb.init(  # type: ignore[attr-defined]
-            config={"slurm": slurm_info_dict, **config}, **wb_kwargs
+            config={
+                "slurm": slurm_info_dict,
+                **OmegaConf.to_container(config),  # type: ignore[arg-type]
+            },
+            **wb_kwargs,
         )
 
     def __getattr__(self, item):
