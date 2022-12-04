@@ -229,8 +229,8 @@ class Motions:
                     @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
                 "robot_head": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(0, 1.2, 0.25),
-                    cam_look_at_pos=mn.Vector3(0, 1.0, 0.75),
+                    cam_offset_pos=mn.Vector3(0, 0.5, 0.25),
+                    cam_look_at_pos=mn.Vector3(0, 0.5, 0.75),
                     attached_link_id=-1,
                 ),
                 "robot_third": RobotCameraParams(
@@ -264,14 +264,22 @@ class AmassHuman(Humanoid):
  
         self.mocap_frame = 0
         self.curr_trans = mn.Vector3([0,0,0])
-        # TODO: this should come from the config file
-
-        # self.rotation_offset = self.sim_obj.rotation
-        # self.translation_offset = self.sim_obj.
         self.rotation_offset: Optional[mn.Quaternion] = mn.Quaternion()
         self.translation_offset: Optional[mn.Vector3] = mn.Vector3([2.5, 0.8, 0.7])
 
         self.prev_orientation = None
+
+        # smoothing_params
+        self.frames_to_stop = 10
+        self.frames_to_start = 10
+        self.draw_fps = 60
+
+        # state variables
+        self.time_since_stop = 0 # How many frames since we started stopping
+        self.time_since_start = 0 # How many frames since we started walking
+        self.fully_started = False 
+        self.fully_stopped = False
+        self.last_walk_pose = None
         
         
     def close_gripper(self):
@@ -313,44 +321,7 @@ class AmassHuman(Humanoid):
                 self.joint_motors[joint_id][1].spherical_position_target = mn.Quaternion(mn.Vector3(quat[:3]), quat[-1])
                 self.sim_obj.update_joint_motor(self.joint_motors[joint_id][0], self.joint_motors[joint_id][1])
             # breakpoint()
-    # @property 
-    # def arm_motor_pos(self):
-    #     """Get the current target of the arm joints motors."""
-    #     motor_targets = np.zeros(len(self.params.arm_init_params_left))
-    #     for i, jidx in enumerate(self.params.arm_joints_right):
-    #         motor_targets[i] = self._get_motor_pos(jidx)
-    #     return motor_targets
 
-
-    # def _set_motor_pos(self, joint, ctrl):
-        # breakpoint()
-        # self.joint_motors[joint][1].spherical_position_target = ctrl
-        # self.sim_obj.update_joint_motor(
-        #     self.joint_motors[joint][0], self.joint_motors[joint][1]
-        # )
-
-    #     # self.sim_obj.joint_positions[joint] = ctrl
-
-    # @arm_motor_pos.setter
-    # def arm_motor_pos(self, ctrl: List[float]) -> None:
-    #     """Set the desired target of the arm joint motors."""
-    #     # self._validate_arm_ctrl_input(ctrl)
-    #     # breakpoint()
-    #     new_joint_pos = self.sim_obj.joint_positions
-        
-    #     for i, jidx in enumerate(self.params.arm_joints_right):
-            
-    #         new_joint_pos[jidx] = ctrl[i]
-    #     # breakpoint()
-    #     # for i, jidx in enumerate(range(len(self.sim_obj.joint_positions))):
-    #     #     # self._set_motor_pos(jidx, ctrl[i])
-            
-    #     #     new_joint_pos[jidx] = 0.5
-    #     # # self.sim_obj.translation += mn.Vector3((0,0.5,0))
-    #     # print(self.sim_obj.joint_positions)
-    #     self.sim_obj.joint_positions = new_joint_pos
-    #     # print(self.sim_obj.joint_positions)
-    #     # breakpoint()
 
 
     def _update_motor_settings_cache(self):
@@ -392,49 +363,62 @@ class AmassHuman(Humanoid):
 
     # TODO: remove the position
     def stop(self, position: mn.Vector3):
+        
         new_pose =  self.motions.standing_pose
         new_pose, new_root_trans, root_rotation = self.convert_CMUamass_single_pose(new_pose, self.sim_obj)
-        self.sim_obj.joint_positions = new_pose
-        # self.sim_obj.transformation = full_transform
+       # self.sim_obj.transformation = full_transform
+        self.time_since_stop += 1
+        
+        if self.fully_started: 
+            progress = min(self.time_since_stop, self.frames_to_stop)
+        else: 
+            # if it didn't fully stop it should take us to walk as many 
+            # frames as the time we spent stopping
+            progress = max(0, self.frames_to_stop - self.time_since_start)
+
+        progress_norm =  progress * 1.0/self.frames_to_stop
+        if progress_norm == 1:
+            self.fully_stopped = True
+        else:
+            self.fully_stopped = False
+
+        if self.last_walk_pose is not None:
+            interp_pose =  np.array(self.last_walk_pose) * (1-progress_norm) + np.array(new_pose) * progress_norm
+            interp_pose = list(interp_pose)
+        else:
+            interp_pose = new_pose
+        if self.time_since_stop >= self.frames_to_stop:
+            self.fully_stopped = True
+        self.time_since_start = 0
+
+        self.sim_obj.joint_positions = interp_pose
+        
+
+        
+
+        
+
+    def walk_path(self, position: List[mn.Vector3]):
+        pass
 
     def walk(self, position: mn.Vector3):
-        """ Walks to the desired position """
-        # return
+        """ Walks to the desired position. Rotates the character if facing in a different direction """
+        step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
         # breakpoint()
-        # prev_pos = self.motions.walk_to_walk.poses[0]
-        
-        self.mocap_frame = (self.mocap_frame + 1 ) % self.motions.walk_to_walk.motion.num_frames()
+        self.mocap_frame = (self.mocap_frame +  step_size) % self.motions.walk_to_walk.motion.num_frames()
         if self.mocap_frame == 0:
             self.distance_rot = 0
         # curr_pos = self.motions.walk_to_walk[self.mocap_frame]
         new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
         curr_motion_data = self.motions.walk_to_walk
         new_pose, new_root_trans, root_rotation = self.convert_CMUamass_single_pose(new_pose, self.sim_obj)
-        # breakpoint()
-        # full_transform = prev_pos.get_transform(self.ROOT, local=True)
-        # full_transform = mn.Matrix4(full_transform)
-        # full_transform.translation -= curr_motion_data.center_of_root_drift
-        # global_neutral_correction = self.global_correction_quat(
-        #             mn.Vector3.z_axis(), curr_motion_data.direction_forward
-        #         )
                 
         char_pos = self.translation_offset
-        # breakpoint()
-        # full_transform = (
-        #     mn.Matrix4.from_(global_neutral_correction.to_matrix(), mn.Vector3())
-        #     @ full_transform
-        # )
-        """
-        # This is working, if we end function here
-        self.sim_obj.joint_positions = new_pose
-        self.sim_obj.rotation = root_rotation
-        self.sim_obj.translation = new_root_trans
-        """
+
         global_neutral_correction = self.global_correction_quat(
             mn.Vector3.z_axis(), curr_motion_data.direction_forward
         )
-        # This is the next endpoint
-        # t = 1 - ((path_.length - path_displaced) / (margin_r))
+
         forward_V = position
         
         
@@ -454,31 +438,14 @@ class AmassHuman(Humanoid):
                 did_rotate = True
             else:
                 new_angle = curr_angle * np.pi / 180
-            # breakpoint()
 
-            # # new_angle = curr_angle * np.pi / 180
-            # new_angle = curr_angle * np.pi / 180
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
-            # breakpoint()
-                # forward_V = (action_order_facing * t) + (forward_V * (1 - t)) 
-            # # T is a float (0.0, 1.0) representing progress end margin
-            # t = 1 - ((path_.length - path_displaced) / (margin_r))
 
-            # # remove y component and normalize
-            # action_order.facing[1], forward_V[1] = 0.0, 0.0
-            # action_order.facing = action_order.facing.normalized()
-            # forward_V = forward_V.normalized()
-            # forward_V = (action_order.facing * t) + (forward_V * (1 - t))
 
 
         forward_V[1] = 0.
-        # breakpoint()
-        # remove y component and normalize
-        # action_order.facing[1], forward_V[1] = 0.0, 0.0
-        # action_order.facing = action_order.facing.normalized()
         forward_V = forward_V.normalized()
-        # forward_V = (action_order.facing * t) + (forward_V * (1 - t))
 
         look_at_path_T = mn.Matrix4.look_at(
                     char_pos, char_pos + forward_V.normalized(), mn.Vector3.y_axis()
@@ -499,22 +466,11 @@ class AmassHuman(Humanoid):
         # while transform is facing -Z, remove forward displacement
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         full_transform = look_at_path_T @ full_transform
-        # TODO: what does this do
-        # while transform is facing -Z, remove forward displacement
-        # full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
-        # full_transform = look_at_path_T @ full_transform
-
-        # self.sim_obj.joint_positions = new_pose
-        # self.sim_obj.transformation = new_root_trans
-        # breakpoint()
-        self.sim_obj.joint_positions = new_pose
-        self.sim_obj.transformation = full_transform
-        # self.sim_obj.transformation 
-        # breakpoint()
+        
         if self.mocap_frame == 0:
             dist_diff = 0
         else:
-            prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - 1]
+            prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
             dist_diff = max(0, distance_covered - prev_distance)
             if did_rotate:
@@ -523,6 +479,37 @@ class AmassHuman(Humanoid):
 
         self.translation_offset = self.translation_offset + forward_V * dist_diff;
         self.prev_orientation = forward_V
+        
+
+        self.time_since_start += 1
+        if self.fully_stopped: 
+            progress = min(self.time_since_start, self.frames_to_start)
+        else: 
+            # if it didn't fully stop it should take us to walk as many 
+            # frames as the time we spent stopping
+            progress = max(0, self.frames_to_start - self.time_since_stop)
+
+        progress_norm = progress * 1.0/self.frames_to_start
+
+        if progress_norm < 1.0:
+            standing_pose, _, _ = self.convert_CMUamass_single_pose(self.motions.standing_pose, self.sim_obj)
+            # breakpoint()
+            interp_pose = (1-progress_norm) * np.array(standing_pose) + progress_norm * np.array(new_pose)
+            interp_pose = list(interp_pose)
+            self.fully_started = False
+        else:
+            interp_pose = new_pose
+            self.fully_started = True
+            # breakpoint()
+
+        if self.time_since_start >= self.frames_to_start:
+            self.fully_started = True
+        self.time_since_stop = 0
+        self.last_walk_pose = new_pose
+
+        self.sim_obj.joint_positions = interp_pose
+        self.sim_obj.transformation = full_transform
+
         
 
     def global_correction_quat(

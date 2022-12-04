@@ -128,6 +128,8 @@ def get_input_vel_ctlr(
             base_action_name = 'walk_action'
         else:
             base_action_name = 'empty'
+        # if path_ind != 1:
+        #     breakpoint()
         base_action = compute_displ(agent_path.points[path_ind], env._sim.robot)
     # breakpoint()
     if arm_action_name in env.action_space.spaces:
@@ -526,11 +528,11 @@ def play_env(env, args, config):
             )
 
         delta_dist = 0.1
-        dist = (path.points[path_ind] - env._sim.robot.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.y_axis())
-        print(env._sim.robot.translation_offset)
+        dist = (path.points[path_ind] - env._sim.robot.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
+        # print(env._sim.robot.translation_offset)
         if np.linalg.norm(dist) < delta_dist:
-            path_ind += 1
-
+            path_ind = min(path_ind+1, len(path.points) - 1)
+            
         step_result, arm_action, end_ep, repeat_walk = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[update_idx]
