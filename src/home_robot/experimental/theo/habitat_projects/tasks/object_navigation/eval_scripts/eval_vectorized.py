@@ -312,6 +312,6 @@ if __name__ == "__main__":
     if config.EVAL_VECTORIZED.record_videos:
         evaluator.record_videos(
             source_dir=f"{config.DUMP_LOCATION}/images/{config.EXP_NAME}",
-            target_dir="data/videos",
+            target_dir=f"{config.DUMP_LOCATION}/videos/{config.EXP_NAME}",
             record_planner=config.EVAL_VECTORIZED.record_planner_videos,
         )
