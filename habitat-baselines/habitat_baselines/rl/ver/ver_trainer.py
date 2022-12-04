@@ -156,6 +156,15 @@ class VERTrainer(PPOTrainer):
             resume_state is not None
             and "report_worker_state" in resume_state["requeue_stats"]
         )
+        run_id = None
+        if (
+            has_report_resume_state
+            and resume_state["requeue_stats"]["report_worker_state"]
+            is not None
+        ):
+            run_id = resume_state["requeue_stats"]["report_worker_state"][
+                "run_id"
+            ]
 
         self.report_worker = ReportWorker(
             self.mp_ctx,
@@ -164,6 +173,7 @@ class VERTrainer(PPOTrainer):
             self.queues.report,
             self._my_t_zero,
             self.num_steps_done,
+            run_id=run_id,
         )
 
         if has_report_resume_state:
