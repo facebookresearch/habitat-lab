@@ -14,5 +14,3 @@ if __name__ == "__main__":
             x = f.read()
             print(type(x))
             print(type(json.loads(x)))
-            print(type(json.load(x)))
-  
