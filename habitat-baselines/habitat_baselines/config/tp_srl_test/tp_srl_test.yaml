@@ -35,7 +35,8 @@ habitat_baselines:
               "goal_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
-            name: "GtHighLevelPolicy"
+            name: "FixedHighLevelPolicy"
+            add_arm_rest: True
           defined_skills:
             nn_pick:
               skill_name: "PickSkillPolicy"
@@ -63,7 +64,7 @@ habitat_baselines:
               skill_name: "NavSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
-              obs_skill_inputs: ["object_to_agent_gps_compass"]
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
               obs_skill_input_dim: 2
               lin_speed_stop: 0.067
               ang_speed_stop: 0.067

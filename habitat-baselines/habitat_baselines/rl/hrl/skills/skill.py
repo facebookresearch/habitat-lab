@@ -198,7 +198,7 @@ class SkillPolicy(Policy):
             entity_positions = obs[k].view(
                 len(cur_batch_idx),
                 -1,
-                self._config.get("OBS_SKILL_INPUT_DIM", 3),
+                self._config.get("obs_skill_input_dim", 3),
             )
             obs[k] = entity_positions[
                 torch.arange(len(cur_batch_idx)), cur_multi_sensor_index

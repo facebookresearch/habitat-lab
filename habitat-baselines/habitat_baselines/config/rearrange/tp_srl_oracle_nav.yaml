@@ -46,7 +46,8 @@ habitat_baselines:
               "goal_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
-            name: "GtHighLevelPolicy"
+            name: "FixedHighLevelPolicy"
+            add_arm_rest: True
           defined_skills:
             NN_OPEN_CAB:
               skill_name: "ArtObjSkillPolicy"
