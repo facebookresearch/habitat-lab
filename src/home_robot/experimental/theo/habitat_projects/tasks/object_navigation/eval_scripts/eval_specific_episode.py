@@ -6,6 +6,7 @@ python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eva
 from pathlib import Path
 import sys
 import torch
+import cv2
 
 sys.path.insert(
     0,
@@ -55,8 +56,11 @@ def reset_to_episode(env: Env, scene_id: str, episode_id: str) -> Observations:
 
 
 if __name__ == "__main__":
+    # config_path = (
+    #     Path(__file__).resolve().parent.parent / "configs/agent/floorplanner_eval.yaml"
+    # )
     config_path = (
-        Path(__file__).resolve().parent.parent / "configs/agent/floorplanner_eval.yaml"
+        Path(__file__).resolve().parent.parent / "configs/agent/hm3d_imageinstancegoal_eval.yaml"
     )
     config, config_str = get_config(config_path)
     config.defrost()
@@ -72,40 +76,44 @@ if __name__ == "__main__":
     # obs = reset_to_episode(env, scene_id, episode_id)
     obs = env.reset()
 
-    agent.reset()
-    # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
+    scene_id = env.current_episode.scene_id.split("/")[-1].split(".")[0]
+    episode_id = env.current_episode.episode_id
+    cv2.imwrite(obs["instance_imagegoal"], f"image_instances/{scene_id}__{episode_id}.png")
 
-    if config.GROUND_TRUTH_SEMANTICS:
-        scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
-        assert ("floorplanner" in scenes_dir or "hm3d" in scenes_dir)
-        if "hm3d" in scenes_dir:
-            instance_id_to_category_id = torch.tensor([
-                mp3d_to_coco.get(
-                    hm3d_to_mp3d.get(obj.category.name().lower().strip()),
-                    config.ENVIRONMENT.num_sem_categories - 1
-                )
-                for obj in env.sim.semantic_annotations().objects
-            ])
-        elif "floorplanner" in scenes_dir:
-            # Temporary
-            instance_id_to_category_id = torch.tensor([
-                config.ENVIRONMENT.num_sem_categories - 1,  # misc
-                3,  # bed
-                0,  # chair
-                2,  # plant
-                1,  # couch
-                4,  # toilet
-                5,  # tv
-            ])
-        agent.obs_preprocessor.set_instance_id_to_category_id(
-            instance_id_to_category_id
-        )
+    # agent.reset()
+    # # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
 
-    t = 0
-    while not env.episode_over:
-        t += 1
-        print(t)
-        action = agent.act(obs)
-        obs = env.step(action)
+    # if config.GROUND_TRUTH_SEMANTICS:
+    #     scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
+    #     assert ("floorplanner" in scenes_dir or "hm3d" in scenes_dir)
+    #     if "hm3d" in scenes_dir:
+    #         instance_id_to_category_id = torch.tensor([
+    #             mp3d_to_coco.get(
+    #                 hm3d_to_mp3d.get(obj.category.name().lower().strip()),
+    #                 config.ENVIRONMENT.num_sem_categories - 1
+    #             )
+    #             for obj in env.sim.semantic_annotations().objects
+    #         ])
+    #     elif "floorplanner" in scenes_dir:
+    #         # Temporary
+    #         instance_id_to_category_id = torch.tensor([
+    #             config.ENVIRONMENT.num_sem_categories - 1,  # misc
+    #             3,  # bed
+    #             0,  # chair
+    #             2,  # plant
+    #             1,  # couch
+    #             4,  # toilet
+    #             5,  # tv
+    #         ])
+    #     agent.obs_preprocessor.set_instance_id_to_category_id(
+    #         instance_id_to_category_id
+    #     )
 
-    print(env.get_metrics())
+    # t = 0
+    # while not env.episode_over:
+    #     t += 1
+    #     print(t)
+    #     action = agent.act(obs)
+    #     obs = env.step(action)
+
+    # print(env.get_metrics())
