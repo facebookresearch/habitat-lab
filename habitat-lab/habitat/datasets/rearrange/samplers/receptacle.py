@@ -7,13 +7,15 @@
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union, Tuple, Any
 
 import magnum as mn
 import numpy as np
+import random
 
 import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
+from habitat.core.logging import logger
 
 
 class Receptacle(ABC):
@@ -66,11 +68,24 @@ class Receptacle(ABC):
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
 
-    @abstractmethod
     def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
         """
         Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
         """
+        if self.parent_object_handle is None:
+            #global identify by default
+            return mn.Matrix4.identity_init()
+        elif not self.is_parent_object_articulated:
+            obj_mgr = sim.get_rigid_object_manager()
+            obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
+            # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
+            return obj.visual_scene_nodes[1].absolute_transformation()
+        else:
+            ao_mgr = sim.get_articulated_object_manager()
+            obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
+            return obj.get_link_scene_node(
+                self.parent_link
+            ).absolute_transformation()
 
     def sample_uniform_global(
         self, sim: habitat_sim.Simulator, sample_region_scale: float
@@ -90,6 +105,15 @@ class Receptacle(ABC):
         Add one or more visualization objects to the simulation to represent the Receptacle. Return and forget the added objects for external management.
         """
         return []
+
+    @abstractmethod
+    def debug_draw(self, sim, color=None):
+        """
+        Render the Receptacle with DebugLineRender utility at the current frame. 
+        Simulator must be provided. If color is provided, the debug render will use it.
+        Must be called after each frame is rendered, before querying the image data.
+        """
+        pass
 
 
 class OnTopOfReceptacle(Receptacle):
@@ -161,6 +185,7 @@ class AABBReceptacle(Receptacle):
     def get_global_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
         """
         Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
+        This specialization adds override rotation handling for global bounding box Receptacles.
         """
         if self.parent_object_handle is None:
             # this is a global stage receptacle
@@ -192,17 +217,8 @@ class AABBReceptacle(Receptacle):
             l2w4 = l2w4.__matmul__(T.__matmul__(R).__matmul__(T.inverted()))
             return l2w4
 
-        elif not self.is_parent_object_articulated:
-            obj_mgr = sim.get_rigid_object_manager()
-            obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
-            # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
-            return obj.visual_scene_nodes[1].absolute_transformation()
-        else:
-            ao_mgr = sim.get_articulated_object_manager()
-            obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
-            return obj.get_link_scene_node(
-                self.parent_link
-            ).absolute_transformation()
+        #base class implements getting transform from attached objects
+        return super().get_global_transform
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
@@ -240,6 +256,118 @@ class AABBReceptacle(Receptacle):
                 box_obj.transformation
             )
         return [box_obj]
+
+class TriangleMeshReceptacle(Receptacle):
+    """
+    Defines a Receptacle surface as a triangle mesh. 
+    TODO: configurable maximum height.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        mesh_data: Tuple[List[Any], List[Any]], #vertices, indices
+        parent_object_handle: str = None,
+        parent_link: Optional[int] = None,
+        up: Optional[mn.Vector3] = None,
+    ) -> None:
+        """
+        :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
+        :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
+        :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        """
+        super().__init__(name, parent_object_handle, parent_link, up)
+        self.mesh_data = mesh_data
+        self.area_weighted_accumulator = [] #normalized float weights for each triangle for sampling
+        assert len(mesh_data[1])%3 == 0, "must be triangles"
+        self.total_area = 0
+        for f_ix in range(int(len(mesh_data[1])/3)):
+            v = self.get_face_verts(f_ix)
+            w1 = v[1] - v[0]
+            w2 = v[2] - v[1]
+            self.area_weighted_accumulator.append(0.5*np.linalg.norm(np.cross(w1, w2)))
+            self.total_area += self.area_weighted_accumulator[-1]
+        for f_ix in range(len(self.area_weighted_accumulator)):
+            self.area_weighted_accumulator[f_ix] = self.area_weighted_accumulator[f_ix]/self.total_area
+            if f_ix > 0:
+                self.area_weighted_accumulator[f_ix] += self.area_weighted_accumulator[f_ix-1]
+        print(self.area_weighted_accumulator)
+        #TODO: test this
+
+    def get_face_verts(self, f_ix):
+        verts = []
+        for ix in range(3):
+            verts.append(np.array(self.mesh_data[0][self.mesh_data[1][int(f_ix*3+ix)]]))
+        return verts
+        #TODO: test this
+
+    def sample_area_weighted_triangle(self):
+        """
+        Isolates the area weighted triangle sampling code.
+        """
+        def find_ge(a, x):
+            'Find leftmost item greater than or equal to x'
+            from bisect import bisect_left
+            i = bisect_left(a, x)
+            if i != len(a):
+                return i
+            raise ValueError
+        
+        #first area weighted sampling of a triangle
+        sample_val = random.random()
+        tri_index = find_ge(self.area_weighted_accumulator, sample_val)
+        # print(f"tri_index = {tri_index}")
+        #TODO: test this
+        return tri_index
+
+    def sample_uniform_local(
+        self, sample_region_scale: float = 1.0
+    ) -> mn.Vector3:
+        """
+        Sample a uniform random point from the mesh.
+
+        :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
+        """
+
+        if sample_region_scale != 1.0:
+            logger.warning(f"TriangleMeshReceptacle does not support 'sample_region_scale' != 1.0.")
+
+        tri_index = self.sample_area_weighted_triangle()
+
+        #then sample a random point in the triangle
+        #https://math.stackexchange.com/questions/538458/how-to-sample-points-on-a-triangle-surface-in-3d
+        coef1 = random.random()
+        coef2 = random.random()
+        if coef1 + coef2 >= 1:
+            coef1 = 1-coef1
+            coef2 = 1-coef2
+        v = self.get_face_verts(f_ix=tri_index)
+        rand_point = v[0] + coef1*(v[1]-v[0]) + coef2*(v[2]-v[0])
+        #TODO: test this 
+        
+        return rand_point
+
+    def debug_draw(self, sim, color=None):
+        """
+        Render the Receptacle with DebugLineRender utility at the current frame.
+        Draws the Receptacle mesh.
+        Simulator must be provided. If color is provided, the debug render will use it.
+        Must be called after each frame is rendered, before querying the image data.
+        """
+        #draw all mesh triangles
+        if color is None:
+            color = mn.Color4.magenta()
+        dblr = sim.get_debug_line_render()
+        assert (len(self.mesh_data[1])%3 == 0), "must be triangles"
+        for face in range(int(len(self.mesh_data[1])/3)):
+            verts = self.get_face_verts(f_ix=face)
+            for edge in range(3):
+                dblr.draw_transformed_line(
+                    verts[edge],
+                    verts[(edge+1)%3],
+                    color
+                )
 
 
 def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:

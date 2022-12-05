@@ -238,3 +238,121 @@ def test_tp_srl(test_cfg_path, mode):
     # Deinit processes group
     if torch.distributed.is_initialized():
         torch.distributed.destroy_process_group()
+
+
+# NOTE: set 'debug_visualization' = True to produce videos showing receptacles
+
+@pytest.mark.parametrize("debug_visualization", [True])
+@pytest.mark.parametrize("scene_asset", ["GLAQ4DNUx5U", 
+#"NBg5UqG3di3", 
+#"CFVBbU9Rsyb"
+])
+def test_receptacles(
+    debug_visualization, scene_asset
+):
+    import habitat_sim
+    import magnum as mn
+    import numpy as np
+    from habitat_sim.utils.common import d3_40_colors_hex
+    replica_cad_data_path = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    hm3d_data_path = "data/scene_datasets/hm3d/example/hm3d_example_basis.scene_dataset_config.json"
+    
+    mm = habitat_sim.metadata.MetadataMediator()
+    mm.active_dataset = hm3d_data_path
+    print(mm.summary)
+    print(mm.dataset_report())
+    print(mm.get_scene_handles())
+
+    ##########################
+    # Test Mesh Receptacles
+    ##########################
+    # 1. Load the parameterized scene
+    sim_settings = habitat_sim.utils.settings.default_sim_settings.copy()
+    sim_settings["scene"] = scene_asset
+    sim_settings["scene_dataset_config_file"] = hm3d_data_path
+    sim_settings["sensor_height"] = 0
+    cfg = habitat_sim.utils.settings.make_cfg(sim_settings)
+    with habitat_sim.Simulator(cfg) as sim:
+
+        #place the camera in the scene center looking down
+        scene_bb = sim.get_active_scene_graph().get_root_node().cumulative_bb
+        look_down = mn.Quaternion.rotation(
+                        mn.Deg(-90), mn.Vector3.x_axis()
+                    )
+        max_dim = max(scene_bb.size_x(), scene_bb.size_z())
+        cam_pos = scene_bb.center()
+        cam_pos[1] += 0.52*max_dim + scene_bb.size_y()/2.0
+        sim.agents[0].scene_node.translation = cam_pos
+        sim.agents[0].scene_node.rotation = look_down
+        
+    # 2. Compute a navmesh
+        if not sim.pathfinder.is_loaded:
+            # compute a navmesh on the ground plane
+            navmesh_settings = habitat_sim.NavMeshSettings()
+            navmesh_settings.set_defaults()
+            sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
+    
+    # 3. Create receptacles from navmesh data
+    #   a) global receptacles
+        receptacles = []
+        #get navmesh data per-island, convert to lists, create Receptacles
+        for isl_ix in range(sim.pathfinder.num_islands):
+            island_verts = sim.pathfinder.build_navmesh_vertices(isl_ix)
+            island_ixs = sim.pathfinder.build_navmesh_vertex_indices(isl_ix)
+            mesh_receptacle = habitat.datasets.rearrange.samplers.receptacle.TriangleMeshReceptacle(
+                name=str(isl_ix),
+                mesh_data = (island_verts, island_ixs)
+            )
+            receptacles.append(mesh_receptacle)
+    #   TODO: b) load navmesh from .navmesh test files
+    #       -local rigid and articulated pre-computed
+
+    # 4. render receptacle debug (vs. navmesh vis)
+        observations = []
+        if debug_visualization:
+            sim.navmesh_visualization = True
+            observations.append(sim.get_sensor_observations())
+            sim.navmesh_visualization = False
+            for isl_ix,mesh_rec in enumerate(receptacles):
+                isl_color = mn.Color4.from_srgb(int(d3_40_colors_hex[isl_ix], base=16))
+                print(f"isl_color = {isl_color}")
+                mesh_rec.debug_draw(sim, color=isl_color)
+            observations.append(sim.get_sensor_observations())
+
+
+    # 5. sample from receptacles
+        stat_samples_per_unit_area = 500
+        render_samples_per_unit_area = 50
+
+        rec_samples = []
+        for isl_ix,mesh_rec in enumerate(receptacles):
+            rec_samples.append([])
+            num_samples = max(1, int(mesh_rec.total_area*stat_samples_per_unit_area))
+            print(f"isl {isl_ix} num samples = {num_samples}")
+            for samp_ix in range(num_samples):
+                sample = mesh_rec.sample_uniform_global(sim,sample_region_scale=1.0)
+                #print(f"    - {sample}")
+                rec_samples[-1].append(sample)
+
+        if debug_visualization:
+            dblr = sim.get_debug_line_render()
+            #draw the samples
+            for isl_ix,samples in enumerate(rec_samples):
+                isl_color = mn.Color4.from_srgb(int(d3_40_colors_hex[isl_ix], base=16))
+                num_samples = max(1, int(mesh_rec.total_area*render_samples_per_unit_area))
+                for sample_ix in range(num_samples):
+                    dblr.draw_circle(samples[sample_ix], 0.05, isl_color)
+                observations.append(sim.get_sensor_observations())
+
+    # 6. test sampling is correct (percent in each triangle equivalent to area weight)
+        
+
+    #show observations
+    if debug_visualization:
+        from habitat_sim.utils import viz_utils as vut
+        for obs in observations:
+            vut.observation_to_image(obs["color_sensor"], "color").show()
+
+    logger.info(
+        f"done"
+    )
