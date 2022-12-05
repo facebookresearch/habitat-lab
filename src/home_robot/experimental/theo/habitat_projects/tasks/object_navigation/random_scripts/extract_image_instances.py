@@ -13,3 +13,6 @@ if __name__ == "__main__":
         with gzip.open(scene_path) as f:
             x = f.read()
             print(type(x))
+            print(type(json.loads(x)))
+            print(type(json.load(x)))
+  
