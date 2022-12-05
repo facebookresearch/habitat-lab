@@ -292,6 +292,7 @@ jobs:
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               # This is a flag that enables test_test_baseline_training to work
               export TEST_BASELINE_SMALL=1
+              export HABITAT_ENV_DEBUG=1
               python -m pytest  test/test_baseline_training.py -s
       - run:
           name: Run Hab2.0 benchmark
