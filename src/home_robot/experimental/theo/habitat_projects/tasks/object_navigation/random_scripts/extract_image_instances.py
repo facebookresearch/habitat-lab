@@ -4,12 +4,12 @@ python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/ran
 """
 from pathlib import Path
 
-from habitat.config.default import get_config
+import habitat
 from habitat.core.env import Env
 
 
 if __name__ == "__main__":
-    config = get_config(str((
+    config = habitat.get_config(str((
         Path(__file__).resolve().parent.parent / "configs/task/hm3d_imageinstancegoal_val.yaml"
     )))
     env = Env(config=config)
