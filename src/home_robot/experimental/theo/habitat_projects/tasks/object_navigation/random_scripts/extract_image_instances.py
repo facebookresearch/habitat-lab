@@ -21,8 +21,8 @@ if __name__ == "__main__":
     config_path = (
         Path(__file__).resolve().parent.parent / "configs/task/hm3d_imageinstancegoal_val.yaml"
     )
+    print(config_path)
     config, config_str = get_config(config_path)
-    print(config)
     env = Env(config=config.TASK_CONFIG)
     obs = env.reset()
     print(obs["instance_imagegoal"])
