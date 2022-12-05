@@ -1,56 +1,34 @@
-ENVIRONMENT:
-  MAX_EPISODE_STEPS: 500
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: instance_imagenav
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - /habitat/dataset/instance_imagenav: hm3d_v2
+  - _self_
 
-SIMULATOR:
-  TURN_ANGLE: 30
-  TILT_ANGLE: 30
-  ACTION_SPACE_CONFIG: "v1"
-  AGENT_0:
-    SENSORS: ['RGB_SENSOR', 'DEPTH_SENSOR', 'SEMANTIC_SENSOR']
-    HEIGHT: 0.88
-    RADIUS: 0.18
-  HABITAT_SIM_V0:
-    GPU_DEVICE_ID: 0
-    ALLOW_SLIDING: False
-  SEMANTIC_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
-    HFOV: 79
-    POSITION: [0, 0.88, 0]
-  RGB_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
-    HFOV: 79
-    POSITION: [0, 0.88, 0]
-  DEPTH_SENSOR:
-    WIDTH: 640
-    HEIGHT: 480
-    HFOV: 79
-    MIN_DEPTH: 0.5
-    MAX_DEPTH: 5.0
-    POSITION: [0, 0.88, 0]
-
-TASK:
-  TYPE: InstanceImageNav-v1
-  POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
-
-  SENSORS: [
-    INSTANCE_IMAGEGOAL_SENSOR,
-    INSTANCE_IMAGEGOAL_HFOV_SENSOR,
-    COMPASS_SENSOR,
-    GPS_SENSOR
-  ]
-  GOAL_SENSOR_UUID: instance_imagegoal
-
-  MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
-
-  DISTANCE_TO_GOAL:
-    DISTANCE_TO: VIEW_POINTS
-  SUCCESS:
-    SUCCESS_DISTANCE: 0.1
-
-DATASET:
-  TYPE: InstanceImageNav-v1
-  SPLIT: val
-  DATA_PATH: "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/imageinstancegoal_hm3d/{split}/{split}.json.gz"
-  SCENES_DIR: "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/"
+habitat:
+  environment:
+    max_episode_steps: 1000
+  simulator:
+    turn_angle: 30
+    tilt_angle: 30
+    action_space_config: v1
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 360
+            height: 640
+            hfov: 42
+            position: [0, 1.31, 0]
+          depth_sensor:
+            width: 360
+            height: 640
+            hfov: 58
+            min_depth: 0.5
+            max_depth: 5.0
+            position: [0, 1.31, 0]
+        height: 1.41
+        radius: 0.17
+    habitat_sim_v0:
+      gpu_device_id: 0
+      allow_sliding: False
