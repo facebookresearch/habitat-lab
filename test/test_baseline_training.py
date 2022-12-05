@@ -57,13 +57,12 @@ def setup_function(test_trainers):
         (
             "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=open_cab"],
+            ["benchmark/rearrange=open_cab"],
         ),
         (
             "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
             3,
             [
-                "habitat.dataset.split=minival",
                 "benchmark/rearrange=open_fridge",
             ],
         ),
@@ -84,14 +83,13 @@ def setup_function(test_trainers):
             "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
             3,
             [
-                "habitat.dataset.split=minival",
                 "benchmark/rearrange=close_fridge",
             ],
         ),
         (
             "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
             3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=close_cab"],
+            ["benchmark/rearrange=close_cab"],
         ),
         (
             "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
@@ -113,6 +111,7 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
             "habitat_baselines.total_num_steps=-1.0",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
             f"habitat_baselines.trainer_name={trainer_name}",
+            *overrides,
         ],
     )
     with read_write(config):
