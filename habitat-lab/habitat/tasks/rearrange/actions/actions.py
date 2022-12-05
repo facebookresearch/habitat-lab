@@ -305,10 +305,6 @@ class BaseVelAction(RobotAction):
         self.base_vel_ctrl.ang_vel_is_local = True
 
     @property
-    def end_on_stop(self):
-        return self._config.end_on_stop
-
-    @property
     def action_space(self):
         lim = 20
         return spaces.Dict(

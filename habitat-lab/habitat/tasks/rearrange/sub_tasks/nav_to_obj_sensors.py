@@ -248,7 +248,6 @@ class NavToObjSuccess(Measure):
         return NavToObjSuccess.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
-        # Get the end_on_stop property from the action
         task.measurements.check_measure_dependencies(
             self.uuid,
             [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],

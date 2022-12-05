@@ -145,10 +145,7 @@ class OracleNavActionConfig(ActionConfig):
     dist_thresh: float = 0.2
     lin_speed: float = 10.0
     ang_speed: float = 10.0
-    min_abs_lin_speed: float = 1.0
-    min_abs_ang_speed: float = 1.0
     allow_dyn_slide: bool = True
-    end_on_stop: bool = False
     allow_back: bool = True
 
 
