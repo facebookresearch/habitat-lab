@@ -15,3 +15,4 @@ if __name__ == "__main__":
             print(type(scene_data))
             print(scene_data.keys())
             print(type(scene_data["goals"]))
+            print(scene_data["goals"])
