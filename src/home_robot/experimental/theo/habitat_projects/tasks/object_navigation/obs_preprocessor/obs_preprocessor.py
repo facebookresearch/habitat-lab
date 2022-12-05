@@ -35,8 +35,8 @@ class ObsPreprocessor:
         self.min_depth = config.ENVIRONMENT.min_depth
         self.max_depth = config.ENVIRONMENT.max_depth
         self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
-        self.scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
-        assert ("floorplanner" in self.scenes_dir or "hm3d" in self.scenes_dir)
+        self.episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
+        assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
 
         if not self.ground_truth_semantics:
             from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
@@ -133,10 +133,10 @@ class ObsPreprocessor:
 
     def preprocess_goal(self, obs: List[Observations]) -> Tuple[Tensor, List[str]]:
         if "objectgoal" in obs[0]:
-            if "hm3d" in self.scenes_dir:
+            if "hm3d" in self.episodes_data_path:
                 goal = torch.tensor([hm3d_goal_id_to_coco_id[ob["objectgoal"][0]] for ob in obs])
                 goal_name = [hm3d_goal_id_to_goal_name[ob["objectgoal"][0]] for ob in obs]
-            elif "floorplanner" in self.scenes_dir:
+            elif "floorplanner" in self.episodes_data_path:
                 goal = torch.tensor([floorplanner_goal_id_to_coco_id[ob["objectgoal"][0]] for ob in obs])
                 goal_name = [floorplanner_goal_id_to_goal_name[ob["objectgoal"][0]] for ob in obs]
         else:
