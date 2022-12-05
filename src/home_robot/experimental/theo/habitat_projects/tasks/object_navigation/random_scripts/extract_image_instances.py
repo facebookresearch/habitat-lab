@@ -14,4 +14,4 @@ if __name__ == "__main__":
             scene_data = json.loads(f.read())
             print(type(scene_data))
             print(scene_data.keys())
-
+            print(type(scene_data["goals"]))
