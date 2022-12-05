@@ -19,7 +19,7 @@ from home_robot.experimental.theo.habitat_projects.utils.config_utils import get
 
 if __name__ == "__main__":
     config_path = (
-        Path(__file__).resolve().parent.parent / "configs/task/hm3d_imageinstancegoal_val.yaml"
+        Path(__file__).resolve().parent.parent / "configs/agent/hm3d_imageinstancegoal_eval.yaml"
     )
     print(config_path)
     config, config_str = get_config(config_path)
