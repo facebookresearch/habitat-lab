@@ -47,20 +47,61 @@ def setup_function(test_trainers):
     not baseline_installed, reason="baseline sub-module not installed"
 )
 @pytest.mark.parametrize(
-    "config_path,num_updates",
+    "config_path,num_updates,overrides",
     [
         (
             "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
             3,
+            ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            3,
+            ["habitat.dataset.split=minival", "benchmark/rearrange=open_cab"],
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            3,
+            [
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange=open_fridge",
+            ],
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            3,
+            ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            3,
+            [
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange=nav_to_obj",
+            ],
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            3,
+            [
+                "habitat.dataset.split=minival",
+                "benchmark/rearrange=close_fridge",
+            ],
+        ),
+        (
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            3,
+            ["habitat.dataset.split=minival", "benchmark/rearrange=close_cab"],
         ),
         (
             "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
             3,
+            [],
         ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
-def test_trainers(config_path, num_updates, trainer_name):
+def test_trainers(config_path, num_updates, overrides, trainer_name):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
