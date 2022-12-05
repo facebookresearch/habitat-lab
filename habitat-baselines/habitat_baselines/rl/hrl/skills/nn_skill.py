@@ -147,7 +147,10 @@ class NnSkillPolicy(SkillPolicy):
         # Load the wrap policy from file
         if len(config.load_ckpt_file) == 0:
             ckpt_dict = {}
-            policy_cfg = get_config(config.force_config_file)
+            policy_cfg = get_config(
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+                [config.force_config_file],
+            )
         else:
             try:
                 ckpt_dict = torch.load(

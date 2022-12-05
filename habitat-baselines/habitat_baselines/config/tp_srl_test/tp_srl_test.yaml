@@ -7,6 +7,7 @@ defaults:
     - add_virtual_keys_base
 
 habitat_baselines:
+  verbose: False
   trainer_name: "ppo"
   torch_gpu_id: 0
   tensorboard_dir: ""
@@ -31,8 +32,7 @@ habitat_baselines:
         obs_transforms:
           add_virtual_keys:
             virtual_keys:
-              "nav_to_skill": 8
-              "object_to_agent_gps_compass": 2
+              "goal_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
             name: "GtHighLevelPolicy"
@@ -46,7 +46,7 @@ habitat_baselines:
               load_ckpt_file: ""
               max_skill_steps: 200
               force_end_on_timeout: True
-              force_config_file: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml"
+              force_config_file: "benchmark/rearrange=pick"
 
             nn_place:
               skill_name: "PlaceSkillPolicy"
@@ -57,7 +57,7 @@ habitat_baselines:
               load_ckpt_file: ""
               max_skill_steps: 200
               force_end_on_timeout: True
-              force_config_file: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml"
+              force_config_file: "benchmark/rearrange=place"
 
             nn_nav:
               skill_name: "NavSkillPolicy"
@@ -70,7 +70,7 @@ habitat_baselines:
               load_ckpt_file: ""
               max_skill_steps: 300
               force_end_on_timeout: False
-              force_config_file: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml"
+              force_config_file: "benchmark/rearrange=nav_to_obj"
 
             wait_skill:
               skill_name: "WaitSkillPolicy"

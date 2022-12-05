@@ -51,7 +51,7 @@ class SkillPolicy(Policy):
         if not found_grip:
             raise ValueError(f"Could not find grip action in {action_space}")
         self._stop_action_idx, _ = find_action_range(
-            action_space, "REARRANGE_STOP"
+            action_space, "rearrange_stop"
         )
 
     def _internal_log(self, s, observations=None):

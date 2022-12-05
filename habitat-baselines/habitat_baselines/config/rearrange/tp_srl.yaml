@@ -39,8 +39,7 @@ habitat_baselines:
         obs_transforms:
           add_virtual_keys:
             virtual_keys:
-              "nav_to_skill": 8
-              "object_to_agent_gps_compass": 2
+              "goal_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
             name: "GtHighLevelPolicy"
@@ -113,7 +112,7 @@ habitat_baselines:
               skill_name: "NavSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
-              obs_skill_inputs: ["object_to_agent_gps_compass"]
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
               obs_skill_input_dim: 2
               lin_speed_stop: 0.067
               ang_speed_stop: 0.067
