@@ -3,26 +3,22 @@ This script is intended to run from the "src" root:
 python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/random_scripts/extract_image_instances.py
 """
 from pathlib import Path
-import sys
 
-sys.path.insert(
-    0,
-    str(
-        Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent.parent
-    ),
-)
-
+import habitat.config.default
+from habitat.config.default import Config
 from habitat.core.env import Env
-
-from home_robot.experimental.theo.habitat_projects.utils.config_utils import get_config
 
 
 if __name__ == "__main__":
-    config_path = (
-        Path(__file__).resolve().parent.parent / "configs/agent/hm3d_imageinstancegoal_eval.yaml"
-    )
-    print(config_path)
-    config, config_str = get_config(config_path)
-    env = Env(config=config.TASK_CONFIG)
+    config = Config()
+    config.merge_from_other_cfg(habitat.config.default._C)
+    config.merge_from_file(str((
+        Path(__file__).resolve().parent.parent / "configs/task/hm3d_imageinstancegoal_val.yaml"
+    )))
+    env = Env(config=config)
     obs = env.reset()
+    scene_id = env.current_episode.scene_id.split("/")[-1].split(".")[0]
+    episode_id = env.current_episode.episode_id
     print(obs["instance_imagegoal"])
+    print(scene_id)
+    print(episode_id)
