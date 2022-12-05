@@ -31,11 +31,16 @@ SIMULATOR:
     POSITION: [0, 0.88, 0]
 
 TASK:
-  TYPE: ObjectNav-v1
+  TYPE: InstanceImageNav-v1
   POSSIBLE_ACTIONS: ["STOP", "MOVE_FORWARD", "TURN_LEFT", "TURN_RIGHT", "LOOK_UP", "LOOK_DOWN"]
 
-  SENSORS: ['OBJECTGOAL_SENSOR', 'COMPASS_SENSOR', 'GPS_SENSOR']
-  GOAL_SENSOR_UUID: objectgoal
+  SENSORS: [
+    INSTANCE_IMAGEGOAL_SENSOR,
+    INSTANCE_IMAGEGOAL_HFOV_SENSOR,
+    COMPASS_SENSOR,
+    GPS_SENSOR
+  ]
+  GOAL_SENSOR_UUID: instance_imagegoal
 
   MEASUREMENTS: ['DISTANCE_TO_GOAL', 'SUCCESS', 'SPL', 'SOFT_SPL']
 
@@ -45,7 +50,7 @@ TASK:
     SUCCESS_DISTANCE: 0.1
 
 DATASET:
-  TYPE: ObjectNav-v1
+  TYPE: InstanceImageNav-v1
   SPLIT: val
   DATA_PATH: "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/imageinstancegoal_hm3d/{split}/{split}.json.gz"
   SCENES_DIR: "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/"

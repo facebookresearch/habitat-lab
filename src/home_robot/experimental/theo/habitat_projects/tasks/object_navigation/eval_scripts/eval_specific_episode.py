@@ -84,9 +84,9 @@ if __name__ == "__main__":
     # # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)
 
     # if config.GROUND_TRUTH_SEMANTICS:
-    #     scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
-    #     assert ("floorplanner" in scenes_dir or "hm3d" in scenes_dir)
-    #     if "hm3d" in scenes_dir:
+    #     episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
+    #     assert ("floorplanner" in episodes_data_path or "hm3d" in episodes_data_path)
+    #     if "hm3d" in episodes_data_path:
     #         instance_id_to_category_id = torch.tensor([
     #             mp3d_to_coco.get(
     #                 hm3d_to_mp3d.get(obj.category.name().lower().strip()),
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     #             )
     #             for obj in env.sim.semantic_annotations().objects
     #         ])
-    #     elif "floorplanner" in scenes_dir:
+    #     elif "floorplanner" in episodes_data_path:
     #         # Temporary
     #         instance_id_to_category_id = torch.tensor([
     #             config.ENVIRONMENT.num_sem_categories - 1,  # misc

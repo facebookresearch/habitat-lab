@@ -42,8 +42,8 @@ class EvalEnvWrapper(Env):
 
         self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
         if self.ground_truth_semantics:
-            self.scenes_dir = config.TASK_CONFIG.DATASET.SCENES_DIR
-            assert ("floorplanner" in self.scenes_dir or "hm3d" in self.scenes_dir)
+            self.episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
+            assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
         self.device = (
             torch.device("cpu")
             if config.NO_GPU
@@ -161,7 +161,7 @@ class EvalEnvWrapper(Env):
             self._disable_print_images()
 
         if self.ground_truth_semantics:
-            if "hm3d" in self.scenes_dir:
+            if "hm3d" in self.episodes_data_path:
                 instance_id_to_category_id = torch.tensor([
                     mp3d_to_coco.get(
                         hm3d_to_mp3d.get(obj.category.name().lower().strip()),
@@ -169,7 +169,7 @@ class EvalEnvWrapper(Env):
                     )
                     for obj in self.sim.semantic_annotations().objects
                 ])
-            elif "floorplanner" in self.scenes_dir:
+            elif "floorplanner" in self.episodes_data_path:
                 # Temporary
                 instance_id_to_category_id = torch.tensor([
                     self.num_sem_categories - 1,  # misc
