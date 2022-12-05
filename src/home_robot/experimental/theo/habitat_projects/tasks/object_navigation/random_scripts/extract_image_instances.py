@@ -2,14 +2,26 @@
 This script is intended to run from the "src" root:
 python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/random_scripts/extract_image_instances.py
 """
-import json
-import gzip
-import glob
+from pathlib import Path
+import sys
+
+sys.path.insert(
+    0,
+    str(
+        Path(__file__).resolve().parent.parent.parent.parent.parent.parent.parent.parent
+    ),
+)
+
+from habitat.core.env import Env
+
+from home_robot.experimental.theo.habitat_projects.utils.config_utils import get_config
 
 
 if __name__ == "__main__":
-    episode_dir = "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/imageinstancegoal_hm3d/val/content/*"
-    for scene_path in glob.glob(episode_dir):
-        with gzip.open(scene_path) as f:
-            scene_data = json.loads(f.read())
-            print(scene_data["episodes"][0])
+    config_path = (
+        Path(__file__).resolve().parent.parent / "configs/task/hm3d_imageinstancegoal_eval.yaml"
+    )
+    config, config_str = get_config(config_path)
+    env = Env(config=config.TASK_CONFIG)
+    obs = env.reset()
+    print(obs["instance_imagegoal"])
