@@ -66,8 +66,9 @@ class HumanoidManager:
             assert human_type == "AmassHuman", "Only AmassHuman is implemented"
             
             human_cls = AmassHuman
-            human = human_cls(agent_cfg.robot_urdf, agent_cfg.amass_path, agent_cfg.body_model_path, sim)
+            human = human_cls(agent_cfg.robot_urdf, sim)
             
+
             grasp_mgr_left = HumanRearrangeGraspManager(sim, cfg, human, 0)
             grasp_mgr_right = HumanRearrangeGraspManager(sim, cfg, human, 1)
             self._all_human_data.append(
