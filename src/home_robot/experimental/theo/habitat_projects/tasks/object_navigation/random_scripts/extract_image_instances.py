@@ -8,7 +8,7 @@ from habitat.core.env import Env
 
 if __name__ == "__main__":
     # config_path = "home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/task/hm3d_imageinstancegoal_val.yaml"
-    config_path = "habitat/config/benchmark/nav/instance_imagenav/instance_imagenav_hm3d_v2.yaml"
+    config_path = "habitat-lab/habitat-lab/habitat/config/benchmark/nav/instance_imagenav/instance_imagenav_hm3d_v2.yaml"
     config = habitat.get_config(config_path)
     env = Env(config=config)
     obs = env.reset()
