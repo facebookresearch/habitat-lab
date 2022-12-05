@@ -135,7 +135,7 @@ def test_trainers(
     "test_cfg_path",
     (
         "test/ddppo_pointnav_test.yaml",
-        "rearrange/ddppo_pick.yaml",
+        "rearrange/rl_skill.yaml",
     ),
 )
 @pytest.mark.parametrize("variable_experience", [True, False])

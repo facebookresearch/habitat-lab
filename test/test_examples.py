@@ -66,6 +66,7 @@ def test_example_modules(args):
         (
             "examples/interactive_play.py",
             "--no-render",
+            "--disable-inverse-kinematics",
         ),
         ("examples/tutorials/nb_python/Habitat2_Quickstart.py",),
         ("examples/tutorials/nb_python/habitat2_gym_tutorial.py",),

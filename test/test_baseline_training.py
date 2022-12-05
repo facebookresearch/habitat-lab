@@ -50,31 +50,7 @@ def setup_function(test_trainers):
     "config_path,num_updates",
     [
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_close_cab.yaml",
-            3,
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml",
-            3,
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_open_fridge.yaml",
-            3,
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml",
-            3,
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_close_fridge.yaml",
-            3,
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_open_cab.yaml",
-            3,
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml",
+            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
             3,
         ),
         (
