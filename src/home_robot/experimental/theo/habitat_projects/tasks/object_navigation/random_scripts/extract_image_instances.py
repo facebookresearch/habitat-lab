@@ -11,7 +11,6 @@ from habitat.core.env import Env
 
 if __name__ == "__main__":
     config = Config()
-    config.merge_from_other_cfg(habitat.config.default._C)
     config.merge_from_file(str((
         Path(__file__).resolve().parent.parent / "configs/task/hm3d_imageinstancegoal_val.yaml"
     )))
