@@ -109,11 +109,11 @@ class PointNavResNetPolicy(NetPolicy):
             )
         filtered_obs = spaces.Dict(
             OrderedDict(
-                [
+                (
                     (k, v)
                     for k, v in observation_space.items()
                     if k not in ignore_names
-                ]
+                )
             )
         )
         return cls(
