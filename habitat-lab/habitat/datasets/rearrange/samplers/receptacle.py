@@ -299,7 +299,6 @@ class TriangleMeshReceptacle(Receptacle):
         for ix in range(3):
             verts.append(np.array(self.mesh_data[0][self.mesh_data[1][int(f_ix*3+ix)]]))
         return verts
-        #TODO: test this
 
     def sample_area_weighted_triangle(self):
         """
@@ -316,8 +315,6 @@ class TriangleMeshReceptacle(Receptacle):
         #first area weighted sampling of a triangle
         sample_val = random.random()
         tri_index = find_ge(self.area_weighted_accumulator, sample_val)
-        # print(f"tri_index = {tri_index}")
-        #TODO: test this
         return tri_index
 
     def sample_uniform_local(
@@ -343,7 +340,6 @@ class TriangleMeshReceptacle(Receptacle):
             coef2 = 1-coef2
         v = self.get_face_verts(f_ix=tri_index)
         rand_point = v[0] + coef1*(v[1]-v[0]) + coef2*(v[2]-v[0])
-        #TODO: test this 
         
         return rand_point
 

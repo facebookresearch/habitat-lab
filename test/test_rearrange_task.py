@@ -355,7 +355,6 @@ def test_receptacles(
                 #print(f"got {num_tri/num_samples} expected {weight}, diff = {abs(weight - num_tri/num_samples)}")
                 assert abs(weight - num_tri/num_samples) < 0.005, "area weighting may be off"
 
-
     #show observations
     if debug_visualization:
         from habitat_sim.utils import viz_utils as vut
