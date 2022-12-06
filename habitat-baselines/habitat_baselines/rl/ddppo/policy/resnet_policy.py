@@ -98,11 +98,9 @@ class PointNavResNetPolicy(NetPolicy):
         ignore_names: List[str] = []
         for agent_config in config.habitat.simulator.agents.values():
             ignore_names.extend(
-                [
                     agent_config.sim_sensors[k].uuid
                     for k in config.habitat_baselines.video_render_views
-                    if k in agent_config.sim_sensors
-                ]
+                    if k in agent_config.sim_sensors             
             )
         filtered_obs = spaces.Dict(
             OrderedDict(
