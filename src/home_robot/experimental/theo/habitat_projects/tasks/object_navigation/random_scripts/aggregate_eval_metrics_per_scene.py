@@ -14,7 +14,10 @@ if __name__ == "__main__":
     scene_results = defaultdict(list)
     for k, v in episode_results.items():
         scene_id = "_".join(k.split("_")[:-1])
-        scene_results[scene_id].append(v["success"])
+        print(scene_id)
+        print(v["success"])
+        print()
+        #scene_results[scene_id].append(v["success"])
     scene_results = dict(episode_results)
     print(scene_results)
     scene_results = {k: np.mean(v) for k, v in scene_results.items()}
