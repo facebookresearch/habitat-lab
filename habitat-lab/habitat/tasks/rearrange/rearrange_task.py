@@ -137,7 +137,7 @@ class RearrangeTask(NavigationTask):
     def _cache_robot_start(self, cache_data, agent_idx: int = 0):
         if (
             self._robot_pos_start is not None
-            and self._config.SHOULD_SAVE_TO_CACHE
+            and self._config.should_save_to_cache
         ):
             start_ident = self._get_ep_init_ident(agent_idx)
             self._robot_pos_start[start_ident] = cache_data
