@@ -388,16 +388,24 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
 
 
 def get_robot_spawns(
-    targ_pos: np.ndarray,
-    rot_perturb_noise: float,
-    dist_thresh: int,
+    target_position: np.ndarray,
+    rotation_perturbation_noise: float,
+    distance_threshold: int,
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
 ):
     """
-    :param dist_thresh: Distance in meters from target.
+    Attempts to place the robot near the target position, facing towards it
+
+    :param target_position: The position of the target.
+    :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
+    :param distance_threshold: The maximum distance from the target.
+    :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
+    :param physics_stability_steps: The number of steps to perform for physics stability check.
+
+    :return: The robot's start position, rotation, and whether the placement was successful.
     """
 
     state = sim.capture_state()
@@ -405,27 +413,29 @@ def get_robot_spawns(
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         sim.set_state(state)
-        start_pos = sim.pathfinder.get_random_navigable_point_near(
-            targ_pos, dist_thresh
+        start_position = sim.pathfinder.get_random_navigable_point_near(
+            target_position, distance_threshold
         )
 
-        rel_targ = targ_pos - start_pos
+        relative_target = target_position - start_position
 
-        angle_to_obj = get_angle_to_pos(rel_targ)
+        angle_to_object = get_angle_to_pos(relative_target)
 
-        targ_dist = np.linalg.norm((start_pos - targ_pos)[[0, 2]])
+        target_distance = np.linalg.norm(
+            (start_position - target_position)[[0, 2]]
+        )
 
-        is_navigable = sim.pathfinder.is_navigable(start_pos)
+        is_navigable = sim.pathfinder.is_navigable(start_position)
 
         # Face the robot towards the object.
-        rot_noise = np.random.normal(0.0, rot_perturb_noise)
-        start_rot = angle_to_obj + rot_noise
+        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
+        start_rotation = angle_to_object + rotation_noise
 
-        if targ_dist > dist_thresh or not is_navigable:
+        if target_distance > distance_threshold or not is_navigable:
             continue
 
-        sim.robot.base_pos = start_pos
-        sim.robot.base_rot = start_rot
+        sim.robot.base_pos = start_position
+        sim.robot.base_rot = start_rotation
 
         # Make sure the robot is not colliding with anything in this
         # position.
@@ -445,10 +455,10 @@ def get_robot_spawns(
 
         if not did_collide:
             sim.set_state(state)
-            return start_pos, start_rot, False
+            return start_position, start_rotation, False
 
     sim.set_state(state)
-    return start_pos, start_rot, True
+    return start_position, start_rotation, True
 
 
 def get_angle_to_pos(rel_pos: np.ndarray) -> float:
