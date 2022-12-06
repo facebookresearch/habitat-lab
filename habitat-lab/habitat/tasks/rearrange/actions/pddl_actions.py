@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import numpy as np
 from gym import spaces
 
@@ -73,7 +77,7 @@ class PddlApplyAction(RobotAction):
                     self._entities_list[i] for i in real_action_idxs
                 ]
 
-                apply_action = action.clone()
+                apply_action = action.copy()
                 apply_action.set_param_values(param_values)
                 if self._task.pddl_problem.is_expr_true(apply_action.precond):
                     rearrange_logger.debug(

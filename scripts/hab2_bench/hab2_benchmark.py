@@ -1,4 +1,4 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -22,7 +22,7 @@ def create_env(args, proc_i):
 
     set_opts = args.opts
     set_opts.extend(
-        ["habitat.simulator.habitat_sim_v0.gpu_device_id", spec_gpu]
+        [f"habitat.simulator.habitat_sim_v0.gpu_device_id={spec_gpu}"]
     )
 
     config = habitat.get_config(args.cfg, set_opts)
@@ -38,7 +38,7 @@ class HabDemoRunner:
 
     def step_env(self, action):
         start = time.time()
-        obs = self.envs.step(action[0])
+        obs = self.envs.step(action[0])  # type: ignore[has-type]
         step_time = time.time() - start
 
         return obs, step_time
@@ -50,10 +50,10 @@ class HabDemoRunner:
 
     def do_time_steps(self):
         final_vid = []
-        profile_sums = defaultdict(lambda: 0)
+        profile_sums = defaultdict(lambda: 0)  # type: ignore[var-annotated]
 
         for step_idx in range(self.args.n_steps):
-            actions = self.get_actions(step_idx)
+            actions = self.get_actions(step_idx)  # type: ignore[has-type]
 
             obs, step_time = self.step_env(actions)
             if step_idx >= self.args.n_pre_step:
@@ -87,7 +87,7 @@ class HabDemoRunner:
                 _barrier.reset()
         profile_sums = self.do_time_steps()
         # self.envs.close()
-        del self.envs
+        del self.envs  # type: ignore[has-type]
 
         return profile_sums
 
@@ -167,7 +167,9 @@ if __name__ == "__main__":
     load_fname = "orp/start_data/bench_ac.txt"
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-name", type=str, default="")
-    parser.add_argument("--cfg", type=str, default="")
+    parser.add_argument(
+        "--cfg", type=str, default="benchmark/rearrange/idle.yaml"
+    )
 
     parser.add_argument(
         "--n-procs",
@@ -205,7 +207,6 @@ if __name__ == "__main__":
     avg_fps = 0
 
     for _trial in range(args.n_trials):
-        final_vid = []
         bench = HabDemoRunner(args)
         profile_sums = bench.benchmark()
 

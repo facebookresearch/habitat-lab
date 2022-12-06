@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -22,7 +22,7 @@ def _construct_dataset(num_episodes, num_groups=10):
             start_rotation=[0, 0, 0, 1],
         )
         episodes.append(episode)
-    dataset = Dataset()
+    dataset: Dataset = Dataset()
     dataset.episodes = episodes
     return dataset
 

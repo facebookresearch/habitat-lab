@@ -1,0 +1,24 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: eqa
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgb_agent
+  - /habitat/dataset/eqa: mp3d
+  - _self_
+
+
+habitat:
+
+  environment:
+    max_episode_steps: 500
+
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+    habitat_sim_v0:
+      gpu_device_id: 0

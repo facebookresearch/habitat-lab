@@ -123,16 +123,13 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     python examples/example.py
     ```
 
-    which uses [`habitat-lab/habitat/config/tasks/rearrange/pick.yaml`](habitat-lab/habitat/config/tasks/rearrange/pick.yaml) for configuration of task and agent.
+    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent.
 
     ```python
     import habitat
 
     # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
-    env = habitat.Env(
-        config=habitat.get_config("habitat-lab/habitat/config/tasks/rearrange/pick.yaml")
-      )
-
+    env = habitat.Env(config=habitat.get_config("benchmark/rearrange/pick.yaml"))
     observations = env.reset()
 
     # Step through environment with random actions
@@ -183,14 +180,14 @@ We provide docker containers for Habitat, updated approximately once per year fo
     ```
 
 ### Questions?
-[![Slack Join](http://img.shields.io/static/v1?label=Join%20us%20on&message=%23habitat-dev&labelColor=%234A154B&logo=slack)](https://join.slack.com/t/ai-habitat/shared_invite/enQtNjY1MzM1NDE4MTk2LTZhMzdmYWMwODZlNjg5MjZiZjExOTBjOTg5MmRiZTVhOWQyNzk0OTMyN2E1ZTEzZTNjMWM0MjBkN2VhMjQxMDI)
+Can't find the answer to your question? Try asking the developers and community on our [Discussions forum](https://github.com/facebookresearch/habitat-lab/discussions).
 
 ## Datasets
 
 [Common task and episode datasets used with Habitat-Lab](DATASETS.md).
 
 ## Baselines
-Habitat-Lab includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat_baselines/README.md).
+Habitat-Lab includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat-baselines/habitat_baselines/README.md).
 
 ## ROS-X-Habitat
 ROS-X-Habitat (https://github.com/ericchen321/ros_x_habitat) is a framework that bridges the AI Habitat platform (Habitat Lab + Habitat Sim) with other robotics resources via ROS. Compared with Habitat-PyRobot, ROS-X-Habitat places emphasis on 1) leveraging Habitat Sim v2's physics-based simulation capability and 2) allowing roboticists to access simulation assets from ROS. The work has also been made public as a [paper](https://arxiv.org/abs/2109.07703).
@@ -199,7 +196,7 @@ Note that ROS-X-Habitat was developed, and is maintained by the Lab for Computat
 
 
 ## License
-Habitat-Lab is MIT licensed. See the [LICENSE file](habitat_baselines/LICENSE) for details.
+Habitat-Lab is MIT licensed. See the [LICENSE file](/LICENSE) for details.
 
 The trained models and the task datasets are considered data derived from the correspondent scene datasets.
 

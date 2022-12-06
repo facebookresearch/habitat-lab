@@ -56,7 +56,7 @@ repos:
         args: ['--expand-star-imports', '--ignore-init-module-imports', '--in-place']
         exclude: docs/
 
--   repo: https://gitlab.com/pycqa/flake8
+-   repo: https://github.com/PyCQA/flake8
     rev: 4.0.1
     hooks:
     -   id: flake8
@@ -69,20 +69,20 @@ repos:
         - flake8-simplify==0.18.2
 
 -   repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.950
+    rev: v0.991
     hooks:
     -   id: mypy
-        name: mypy-habitat-lab
-        files: habitat-lab
+        # https://github.com/python/mypy/issues/4008
+        exclude: "^docs/|setup.py$"
         additional_dependencies:
          - attrs>=19.1.0
-         - numpy
-    -   id: mypy
-        name: mypy-habitat-baselines
-        files: habitat-baselines
-        additional_dependencies:
-         - attrs>=19.1.0
-         - numpy
+         - hydra-core>=1.2.0
+         - numpy>=1.20.0
+         - omegaconf>=2.2.3
+         - types-mock
+         - types-Pillow
+         - types-tqdm
+         - types-PyYAML
 
 -   repo: https://github.com/kynan/nbstripout
     rev: 0.5.0

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -40,9 +40,7 @@ def _worker_fn(
         "gloo", store=tcp_store, rank=world_rank, world_size=world_size
     )
 
-    config = get_config(
-        "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
-    )
+    config = get_config("test/ppo_pointnav_test.yaml")
     obs_space = gym.spaces.Dict(
         {
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid: gym.spaces.Box(

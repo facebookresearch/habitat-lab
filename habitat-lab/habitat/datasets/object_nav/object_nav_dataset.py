@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import json
 import os
-from typing import Any, Dict, List, Optional, Sequence
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
-from habitat.config import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.utils import DatasetFloatJSONEncoder
@@ -22,6 +21,9 @@ from habitat.tasks.nav.object_nav_task import (
     ObjectGoalNavEpisode,
     ObjectViewLocation,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @registry.register_dataset(name="ObjectNav-v1")
@@ -69,7 +71,7 @@ class ObjectNavDatasetV1(PointNavDatasetV1):
 
         return result
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.goals_by_category = {}
         super().__init__(config)
         self.episodes = list(self.episodes)

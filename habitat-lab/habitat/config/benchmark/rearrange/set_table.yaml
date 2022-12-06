@@ -1,0 +1,42 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_agent
+  - /habitat/task/rearrange: set_table
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  gym:
+    auto_name: SetTable
+    obs_keys:
+      - robot_head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+  environment:
+    max_episode_steps: 4500
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    concur_render: True
+    auto_sleep: True
+    agents:
+      main_agent:
+        radius: 0.3
+        sim_sensors:
+          head_depth_sensor:
+            width: 128
+            height: 128
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/set_table_10k_1k.json.gz

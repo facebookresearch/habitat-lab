@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -27,7 +27,7 @@ from habitat.utils.geometry_utils import (
 )
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
-CFG_MULTI_TEST = "datasets/pointnav/gibson.yaml"
+CFG_MULTI_TEST = "benchmark/nav/pointnav/pointnav_gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
 NUM_EPISODES = 10
 
@@ -49,7 +49,9 @@ def check_json_serialization(dataset: habitat.Dataset):
 
 
 def test_single_pointnav_dataset():
-    dataset_config = get_config().habitat.dataset
+    dataset_config = get_config(
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    ).habitat.dataset
     if not PointNavDatasetV1.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
     scenes = PointNavDatasetV1.get_scenes_to_load(config=dataset_config)
@@ -199,7 +201,7 @@ def test_pointnav_episode_generator():
         random.seed(config.habitat.seed)
         generator = pointnav_generator.generate_pointnav_episode(
             sim=env.sim,
-            shortest_path_success_distance=config.habitat.task.success.success_distance,
+            shortest_path_success_distance=config.habitat.task.measurements.success.success_distance,
             shortest_path_max_steps=config.habitat.environment.max_episode_steps,
         )
         episodes = []
@@ -210,7 +212,7 @@ def test_pointnav_episode_generator():
         for episode in pointnav_generator.generate_pointnav_episode(
             sim=env.sim,
             num_episodes=NUM_EPISODES,
-            shortest_path_success_distance=config.habitat.task.success.success_distance,
+            shortest_path_success_distance=config.habitat.task.measurements.success.success_distance,
             shortest_path_max_steps=config.habitat.environment.max_episode_steps,
             geodesic_to_euclid_min_ratio=0,
         ):
@@ -222,7 +224,7 @@ def test_pointnav_episode_generator():
         for episode in episodes:
             check_shortest_path(env, episode)
 
-        dataset = habitat.Dataset()
+        dataset: habitat.Dataset = habitat.Dataset()
         dataset.episodes = episodes
         assert (
             dataset.to_json()

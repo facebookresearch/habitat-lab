@@ -1,33 +1,45 @@
+# @package _global_
+
+defaults:
+  - /habitat_baselines: habitat_baselines_il_config_base
+  - /benchmark/nav: eqa_rgbonly_mp3d
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - _self_
+
+habitat:
+  simulator:
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+          depth_sensor:
+            width: 256
+            height: 256
+
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
   trainer_name: "pacman"
-
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-
-  only_vqa_task: False # if True, only last `num_frames` will be saved to disk.
-  #if False, all frames for each episode are saved to disk (for NAV task later)
-  frame_dataset_path: "data/datasets/eqa/frame_dataset/{split}"
   eval_ckpt_path_dir: "data/eqa/nav/checkpoints/"
-  eqa_cnn_pretrain_ckpt_path: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
-
   num_processes: 1
-  sensors: ["rgb_sensor", "depth_sensor"]
   checkpoint_folder: "data/eqa/nav/checkpoints"
   tensorboard_dir: "data/eqa/nav/tb"
-  results_dir: "data/eqa/nav/results/{split}"
-
-  log_metrics: True
-  output_log_dir: data/eqa/nav/logs
   log_interval: 10
   checkpoint_interval: 1
-  eval_save_results: True
-  eval_save_results_interval: 10
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
-
   il:
+    only_vqa_task: False # if True, only last `num_frames` will be saved to disk.
+    #if False, all frames for each episode are saved to disk (for NAV task later)
+    frame_dataset_path: "data/datasets/eqa/frame_dataset/{split}"
+    eqa_cnn_pretrain_ckpt_path: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
+    results_dir: "data/eqa/nav/results/{split}"
+    log_metrics: True
+    output_log_dir: data/eqa/nav/logs
+    eval_save_results: True
+    eval_save_results_interval: 10
     nav:
       # nav params
       max_epochs: 20

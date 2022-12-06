@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
@@ -25,7 +25,7 @@ from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
-OLD_stop_ACTION_ID = 3
+OLD_STOP_ACTION_ID = 3
 
 
 # List of episodes each from unique house
@@ -173,9 +173,10 @@ def test_mp3d_eqa_sim():
             obs = env.step(env.task.action_space.sample())
             if not env.episode_over:
                 assert "rgb" in obs, "RGB image is missing in observation."
+                agent_config = get_agent_config(eqa_config.habitat.simulator)
                 assert obs["rgb"].shape[:2] == (
-                    eqa_config.habitat.simulator.rgb_sensor.height,
-                    eqa_config.habitat.simulator.rgb_sensor.width,
+                    agent_config.sim_sensors.rgb_sensor.height,
+                    agent_config.sim_sensors.rgb_sensor.width,
                 ), (
                     "Observation resolution {} doesn't correspond to config "
                     "({}, {}).".format(
@@ -221,7 +222,7 @@ def test_mp3d_eqa_sim_correspondence():
                 start_state.position, episode.start_position
             ), "Agent's start position diverges from the shortest path's one."
 
-            rgb_mean = 0
+            rgb_mean = 0.0
             logger.info(
                 "{id} {question}\n{answer}".format(
                     id=episode.episode_id,
@@ -234,9 +235,9 @@ def test_mp3d_eqa_sim_correspondence():
                 cur_state = env.sim.get_agent_state()
 
                 logger.info(
-                    "diff position: {} diff rotation: {} "
-                    "cur_state.position: {} shortest_path.position: {} "
-                    "cur_state.rotation: {} shortest_path.rotation: {} action: {}"
+                    "diff position: {} diff rotation: {} \n"
+                    "cur_state.position: {} shortest_path.position: {} \n"
+                    "cur_state.rotation: {} shortest_path.rotation: {} action: {}\n"
                     "".format(
                         cur_state.position - point.position,
                         angle_between_quaternions(
@@ -257,7 +258,7 @@ def test_mp3d_eqa_sim_correspondence():
                     atol=CLOSE_STEP_THRESHOLD * (step_id + 1),
                 ), "Agent's path diverges from the shortest path."
 
-                if point.action != OLD_stop_ACTION_ID:
+                if point.action != OLD_STOP_ACTION_ID:
                     obs = env.step(action=point.action)
 
                 if not env.episode_over:

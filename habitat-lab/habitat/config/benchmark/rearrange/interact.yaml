@@ -1,0 +1,48 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - /habitat/task/rearrange/demo: interact
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+habitat:
+  environment:
+    # Endless episode
+    max_episode_steps: 0
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    ############################
+    # Benchmark relevant settings
+    ############################
+    concur_render: True
+    auto_sleep: True
+    ############################
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    agents:
+      main_agent:
+        sim_sensors:
+          head_rgb_sensor:
+            height: 128
+            width: 128
+          head_depth_sensor:
+            height: 128
+            width: 128
+          arm_depth_sensor:
+            height: 128
+            width: 128
+          arm_rgb_sensor:
+            height: 128
+            width: 128
+        is_set_start_state: True
+        start_position: [-1.2, 0.158, 0.29]
+        start_rotation: [0.0, 0.999657, 0.0, -0.0261769]
+        robot_type: FetchRobotNoWheels
+        robot_urdf: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
+    habitat_sim_v0:
+      enable_physics: True
+  dataset:
+    data_path: data/ep_datasets/bench_scene.json.gz

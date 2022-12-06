@@ -1,33 +1,31 @@
+# @package _global_
+
+defaults:
+  - /habitat_baselines: habitat_baselines_il_config_base
+  - /benchmark/nav: eqa_rgbonly_mp3d
+  - _self_
+
 habitat_baselines:
-  base_task_config_path: "habitat-lab/habitat/config/tasks/eqa_mp3d.yaml"
   trainer_name: "vqa"
-
-  simulator_gpu_id: 0
   torch_gpu_id: 0
-
-  only_vqa_task: False # if True, only last `num_frames` will be saved to disk.
-  #if False, all frames for each episode are saved to disk (for NAV task later)
-  dataset_path: "data/datasets/eqa/frame_dataset/{split}/{split}.db"
-  frame_dataset_path: "data/datasets/eqa/frame_dataset/{split}"
   eval_ckpt_path_dir: "data/eqa/vqa/checkpoints/"
-  eqa_cnn_pretrain_ckpt_path: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
-
-  sensors: ["rgb_sensor"]
   checkpoint_folder: "data/eqa/vqa/checkpoints/"
   tensorboard_dir: "data/eqa/vqa/tb"
-  results_dir: "data/eqa/vqa/results/{split}"
-
-  log_metrics: True
-  output_log_dir: "data/eqa/vqa/logs"
   log_interval: 100
-  eval_save_results: True
-  eval_save_results_interval: 10
-
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
-
   il:
+    only_vqa_task: False # if True, only last `num_frames` will be saved to disk.
+    #if False, all frames for each episode are saved to disk (for NAV task later)
+    dataset_path: "data/datasets/eqa/frame_dataset/{split}/{split}.db"
+    frame_dataset_path: "data/datasets/eqa/frame_dataset/{split}"
+    eqa_cnn_pretrain_ckpt_path: "data/eqa/eqa_cnn_pretrain/checkpoints/epoch_5.ckpt"
+    results_dir: "data/eqa/vqa/results/{split}"
+    log_metrics: True
+    output_log_dir: "data/eqa/vqa/logs"
+    eval_save_results: True
+    eval_save_results_interval: 10
     vqa:
       # vqa params
       num_frames: 5

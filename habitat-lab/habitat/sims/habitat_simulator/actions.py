@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -136,33 +136,36 @@ class HabitatSimV1ActionSpaceConfiguration(
 @registry.register_action_space_configuration(name="pyrobotnoisy")
 class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
+        noisemodel_config = (
+            self.config.action_space_config_arguments.NOISE_MODEL
+        )
         return {
             HabitatSimActions.stop: habitat_sim.ActionSpec("stop"),
             HabitatSimActions.move_forward: habitat_sim.ActionSpec(
                 "pyrobot_noisy_move_forward",
                 habitat_sim.PyRobotNoisyActuationSpec(
                     amount=self.config.forward_step_size,
-                    robot=self.config.NOISE_MODEL.robot,
-                    controller=self.config.NOISE_MODEL.CONTROLLER,
-                    noise_multiplier=self.config.NOISE_MODEL.NOISE_MULTIPLIER,
+                    robot=noisemodel_config.robot,
+                    controller=noisemodel_config.CONTROLLER,
+                    noise_multiplier=noisemodel_config.NOISE_MULTIPLIER,
                 ),
             ),
             HabitatSimActions.turn_left: habitat_sim.ActionSpec(
                 "pyrobot_noisy_turn_left",
                 habitat_sim.PyRobotNoisyActuationSpec(
                     amount=self.config.turn_angle,
-                    robot=self.config.NOISE_MODEL.robot,
-                    controller=self.config.NOISE_MODEL.CONTROLLER,
-                    noise_multiplier=self.config.NOISE_MODEL.NOISE_MULTIPLIER,
+                    robot=noisemodel_config.robot,
+                    controller=noisemodel_config.CONTROLLER,
+                    noise_multiplier=noisemodel_config.NOISE_MULTIPLIER,
                 ),
             ),
             HabitatSimActions.turn_right: habitat_sim.ActionSpec(
                 "pyrobot_noisy_turn_right",
                 habitat_sim.PyRobotNoisyActuationSpec(
                     amount=self.config.turn_angle,
-                    robot=self.config.NOISE_MODEL.robot,
-                    controller=self.config.NOISE_MODEL.CONTROLLER,
-                    noise_multiplier=self.config.NOISE_MODEL.NOISE_MULTIPLIER,
+                    robot=noisemodel_config.robot,
+                    controller=noisemodel_config.CONTROLLER,
+                    noise_multiplier=noisemodel_config.NOISE_MULTIPLIER,
                 ),
             ),
             HabitatSimActions.look_up: habitat_sim.ActionSpec(

@@ -1,14 +1,21 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
 import random
-from typing import Any, List, Type
+from typing import TYPE_CHECKING, Any, List, Type
 
-from habitat import Config, ThreadedVectorEnv, VectorEnv, logger, make_dataset
+from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.config import read_write
 from habitat.utils.gym_definitions import make_gym_from_config
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 def construct_envs(
-    config: Config,
+    config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
 ) -> VectorEnv:
@@ -66,21 +73,13 @@ def construct_envs(
         assert sum(map(len, scene_splits)) == len(scenes)
 
     for i in range(num_environments):
-        proc_config = config.clone()
+        proc_config = config.copy()
         with read_write(proc_config):
 
             task_config = proc_config.habitat
             task_config.seed = task_config.seed + i
             if len(scenes) > 0:
                 task_config.dataset.content_scenes = scene_splits[i]
-
-            task_config.simulator.habitat_sim_v0.gpu_device_id = (
-                config.habitat_baselines.simulator_gpu_id
-            )
-
-            task_config.simulator.agent_0.sensors = (
-                config.habitat_baselines.sensors
-            )
 
         configs.append(proc_config)
 

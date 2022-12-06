@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import gc
@@ -12,7 +12,7 @@ from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 
 def test_demo_notebook():
-    config = habitat.get_config("tasks/pointnav_mp3d.yaml")
+    config = habitat.get_config("benchmark/nav/pointnav/pointnav_mp3d.yaml")
     with habitat.config.read_write(config):
         config.habitat.dataset.split = "val"
 

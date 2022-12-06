@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -9,12 +9,13 @@ import queue
 import time
 import warnings
 from multiprocessing.context import BaseContext
+from typing import TYPE_CHECKING
 
 import attr
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import logger
 from habitat_baselines.common.windowed_running_mean import WindowedRunningMean
 from habitat_baselines.rl.ddppo.ddp_utils import init_distrib_slurm, rank0_only
 from habitat_baselines.rl.ver.task_enums import (
@@ -27,6 +28,9 @@ from habitat_baselines.rl.ver.worker_common import (
     WorkerBase,
     WorkerQueues,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @attr.s(auto_attribs=True)
@@ -51,7 +55,7 @@ class PreemptionDeciderProcess(ProcessBase):
     port: int
     world_rank: int
     world_size: int
-    config: Config
+    config: "DictConfig"
     queues: WorkerQueues
     my_t_zero: float
     rollout_ends: RolloutEarlyEnds
@@ -387,7 +391,7 @@ class PreemptionDeciderWorker(WorkerBase):
         port: int,
         world_rank: int,
         world_size: int,
-        config: Config,
+        config: "DictConfig",
         queues: WorkerQueues,
         my_t_zero: float,
     ):

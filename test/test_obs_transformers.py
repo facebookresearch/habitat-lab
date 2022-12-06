@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import pytest
 from gym import spaces
 from gym.vector.utils.spaces import batch_space
@@ -8,24 +12,31 @@ from habitat_baselines.common.obs_transformers import (  # get_active_obs_transf
     apply_obs_transforms_obs_space,
 )
 from habitat_baselines.common.tensor_dict import TensorDict
-
-# from habitat.config.default import _C as default_config
-from habitat_baselines.config.default import _C as default_config
+from habitat_baselines.config.default_structured_configs import (
+    CenterCropperConfig,
+    Cube2EqConfig,
+    Cube2FishConfig,
+    Eq2CubeConfig,
+    ObsTransformConfig,
+    ResizeShortestEdgeConfig,
+)
 
 
 @pytest.mark.parametrize(
-    "obs_transform_key",
+    "obs_transform_config",
     [
-        "ResizeShortestEdge",
-        "CenterCropper",
-        "CubeMap2Equirect",
-        "CubeMap2Fisheye",
-        "Equirect2CubeMap",
+        ResizeShortestEdgeConfig(),
+        CenterCropperConfig(),
+        Cube2EqConfig(),
+        Cube2FishConfig(),
+        Eq2CubeConfig(),
     ],
 )
-def test_transforms(obs_transform_key: str):
-    transformer_cls = baseline_registry.get_obs_transformer(obs_transform_key)
-    transformer = transformer_cls.from_config(default_config)
+def test_transforms(obs_transform_config: ObsTransformConfig):
+    transformer_cls = baseline_registry.get_obs_transformer(
+        obs_transform_config.type
+    )
+    transformer = transformer_cls.from_config(obs_transform_config)
     obs_space = spaces.Dict(
         {
             "BACK": spaces.Box(low=0, high=1, shape=(32, 16, 3)),

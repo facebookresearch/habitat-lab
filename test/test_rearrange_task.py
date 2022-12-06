@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -15,6 +15,7 @@ from glob import glob
 import pytest
 import torch
 import yaml
+from omegaconf import DictConfig, OmegaConf
 
 import habitat
 import habitat.datasets.rearrange.run_episode_generator as rr_gen
@@ -31,14 +32,14 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
 
-CFG_TEST = "tasks/rearrange/pick.yaml"
+CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
     "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
 )
 EPISODES_LIMIT = 6
 
 
-def check_json_serialization(dataset: habitat.Dataset):
+def check_json_serialization(dataset: RearrangeDatasetV0):
     start_time = time.time()
     json_str = dataset.to_json()
     logger.info(
@@ -103,13 +104,15 @@ def test_rearrange_baseline_envs(test_cfg_path):
             done = False
             while not done:
                 action = env.action_space.sample()
-                _, _, done, info = env.step(action=action)
+                _, _, done, _ = env.step(  # type:ignore[assignment]
+                    action=action
+                )
 
 
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_rearrange_tasks(test_cfg_path):
@@ -120,6 +123,13 @@ def test_rearrange_tasks(test_cfg_path):
         return
 
     config = get_config(test_cfg_path)
+    if (
+        config.habitat.dataset.data_path
+        == "data/ep_datasets/bench_scene.json.gz"
+    ):
+        pytest.skip(
+            "This config is only useful for examples and does not have the generated dataset"
+        )
 
     with habitat.Env(config=config) as env:
         for _ in range(5):
@@ -129,7 +139,7 @@ def test_rearrange_tasks(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/tasks/rearrange/*"),
+        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_composite_tasks(test_cfg_path):
@@ -140,10 +150,18 @@ def test_composite_tasks(test_cfg_path):
         return
 
     config = get_config(
-        test_cfg_path, ["habitat.simulator.concur_render", False]
+        test_cfg_path, ["habitat.simulator.concur_render=False"]
     )
     if "task_spec" not in config.habitat.task:
         return
+
+    if (
+        config.habitat.dataset.data_path
+        == "data/ep_datasets/bench_scene.json.gz"
+    ):
+        pytest.skip(
+            "This config is only useful for examples and does not have the generated dataset"
+        )
 
     with habitat.Env(config=config) as env:
         if not isinstance(env.task, CompositeTask):
@@ -175,7 +193,9 @@ def test_rearrange_episode_generator(
     debug_visualization, num_episodes, config
 ):
     cfg = rr_gen.get_config_defaults()
-    cfg.merge_from_file(config)
+    override_config = OmegaConf.load(config)
+    cfg = OmegaConf.merge(cfg, override_config)
+    assert isinstance(cfg, DictConfig)
     dataset = RearrangeDatasetV0()
     with rr_gen.RearrangeEpisodeGenerator(
         cfg=cfg, debug_visualization=debug_visualization
@@ -205,9 +225,11 @@ def test_tp_srl(test_cfg_path, mode):
     os.environ["MAIN_PORT"] = str(find_free_port())
 
     run_exp(
-        test_cfg_path,
+        test_cfg_path.replace(
+            "habitat-baselines/habitat_baselines/config/", ""
+        ),
         mode,
-        ["habitat_baselines.eval.split", "train"],
+        ["habitat_baselines.eval.split=train"],
     )
 
     # Needed to destroy the trainer

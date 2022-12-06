@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -30,7 +30,7 @@ Controls:
     - B to reset the camera position
 - X to change the robot that is being controlled (if there are multiple robots).
 
-Change the task with `--cfg tasks/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/tasks/rearrange/` folder).
+Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `task.actions.arm_action.grip_controller "SuctionGraspAction"`
@@ -49,12 +49,18 @@ import os
 import os.path as osp
 import time
 from collections import defaultdict
+from typing import Any, Dict, List
 
 import magnum as mn
 import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.config.default import get_agent_config
+from habitat.config.default_structured_configs import (
+    GfxReplayMeasureMeasurementConfig,
+    ThirdRGBSensorConfig,
+)
 from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -68,7 +74,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_CFG = "tasks/rearrange/play.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
@@ -104,6 +110,10 @@ def get_input_vel_ctlr(
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
         base_action = None
+    elif "stretch" in DEFAULT_CFG:
+        arm_action_space = np.zeros(10)
+        arm_ctrlr = None
+        base_action = [0, 0]
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
@@ -178,6 +188,44 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
+
+        elif arm_action_space.shape[0] == 10:
+            # Velocity control. A different key for each joint
+            if keys[pygame.K_q]:
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:
+                arm_action[4] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_e]:
+                arm_action[5] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_r]:
+                arm_action[6] = 1.0
+            elif keys[pygame.K_4]:
+                arm_action[6] = -1.0
+
+            elif keys[pygame.K_t]:
+                arm_action[7] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[7] = -1.0
+
+            elif keys[pygame.K_y]:
+                arm_action[8] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[8] = -1.0
+
+            elif keys[pygame.K_u]:
+                arm_action[9] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[9] = -1.0
+
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
             # End effector control
@@ -218,7 +266,7 @@ def get_input_vel_ctlr(
         joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
         logger.info(f"Robot arm joint state: {joint_state}")
 
-    args = {}
+    args: Dict[str, Any] = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
         name = base_action_name
         args = {base_key: base_action}
@@ -343,7 +391,7 @@ def play_env(env, args, config):
     prev_time = time.time()
     all_obs = []
     total_reward = 0
-    all_arm_actions = []
+    all_arm_actions: List[float] = []
     agent_to_control = 0
 
     free_cam = FreeCamHelper()
@@ -462,7 +510,7 @@ def play_env(env, args, config):
             screen.blit(draw_obuse_ob, (0, 0))
             pygame.display.update()
         if args.save_obs:
-            all_obs.append(draw_ob)
+            all_obs.append(draw_ob)  # type: ignore[assignment]
 
         if not args.no_render:
             pygame.event.pump()
@@ -491,8 +539,8 @@ def play_env(env, args, config):
         return
 
     if args.save_obs:
-        all_obs = np.array(all_obs)
-        all_obs = np.transpose(all_obs, (0, 2, 1, 3))
+        all_obs = np.array(all_obs)  # type: ignore[assignment]
+        all_obs = np.transpose(all_obs, (0, 2, 1, 3))  # type: ignore[assignment]
         os.makedirs(SAVE_VIDEO_DIR, exist_ok=True)
         vut.make_video(
             np.expand_dims(all_obs, 1),
@@ -583,37 +631,52 @@ if __name__ == "__main__":
 
     config = habitat.get_config(args.cfg, args.opts)
     with habitat.config.read_write(config):
+        env_config = config.habitat.environment
+        sim_config = config.habitat.simulator
+        task_config = config.habitat.task
+
         if not args.same_task:
-            config.habitat.simulator.third_rgb_sensor.width = args.play_cam_res
-            config.habitat.simulator.third_rgb_sensor.height = (
-                args.play_cam_res
+            sim_config.debug_render = True
+            agent_config = get_agent_config(sim_config=sim_config)
+            agent_config.sim_sensors.update(
+                {
+                    "third_rgb_sensor": ThirdRGBSensorConfig(
+                        height=args.play_cam_res, width=args.play_cam_res
+                    )
+                }
             )
-            config.habitat.simulator.agent_0.sensors.append("third_rgb_sensor")
-            config.habitat.simulator.debug_render = True
-            config.habitat.task.composite_success.must_call_stop = False
-            config.habitat.task.rearrange_nav_to_obj_success.must_call_stop = (
-                False
-            )
-            config.habitat.task.force_terminate.max_accum_force = -1.0
-            config.habitat.task.force_terminate.max_instant_force = -1.0
+            if "composite_success" in task_config.measurements:
+                task_config.measurements.composite_success.must_call_stop = (
+                    False
+                )
+            if "rearrange_nav_to_obj_success" in task_config.measurements:
+                task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
+                    False
+                )
+            if "force_terminate" in task_config.measurements:
+                task_config.measurements.force_terminate.max_accum_force = -1.0
+                task_config.measurements.force_terminate.max_instant_force = (
+                    -1.0
+                )
+
         if args.gfx:
-            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
-                True
+            sim_config.habitat_sim_v0.enable_gfx_replay_save = True
+            task_config.measurements.update(
+                {"gfx_replay_measure": GfxReplayMeasureMeasurementConfig()}
             )
-            config.habitat.task.measurements.append("gfx_replay_measure")
+
         if args.never_end:
-            config.habitat.environment.max_episode_steps = 0
+            env_config.max_episode_steps = 0
+
         if args.add_ik:
-            if "arm_action" not in config.habitat.task.actions:
+            if "arm_action" not in task_config.actions:
                 raise ValueError(
                     "Action space does not have any arm control so incompatible with `--add-ik` option"
                 )
-            config.habitat.task.actions.arm_action.arm_controller = (
-                "ArmEEAction"
-            )
-            config.habitat.simulator.ik_arm_urdf = (
+            sim_config.agent_0.ik_arm_urdf = (
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
+            task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

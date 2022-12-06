@@ -1,0 +1,50 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  # add third_rgb_sensor to rgbd_head_rgbd_arm_agent:
+  - /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat/task/rearrange: pick_spa
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+# The configuration to run the SensePlanAct baseline architecture from https://arxiv.org/abs/2106.14405
+habitat:
+  environment:
+    max_episode_steps: 30
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    concur_render: True
+    auto_sleep: True
+    agents:
+      main_agent:
+        radius: 0.3
+        sim_sensors:
+          head_rgb_sensor:
+            height: 128
+            width: 128
+          head_depth_sensor:
+            width: 128
+            height: 128
+          arm_depth_sensor:
+            height: 128
+            width: 128
+          arm_rgb_sensor:
+            height: 128
+            width: 128
+          third_rgb_sensor:
+            height: 512
+            width: 512
+    # Agent setup
+    ac_freq_ratio: 8
+
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -131,7 +131,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="habitat-lab/habitat/config/tasks/pointnav.yaml",
+        default="habitat-lab/habitat/config/task/pointnav.yaml",
     )
     parser.add_argument("--agent-class", type=str, default="GoalFollower")
     args = parser.parse_args()

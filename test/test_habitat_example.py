@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -17,43 +17,36 @@ from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 
 
-def test_readme_example():
+def skip_if_dataset_does_not_exist():
+    cfg = habitat.get_config(
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    )
     if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().habitat.dataset
+        config=cfg.habitat.dataset
     ):
         pytest.skip("Please download Habitat test data to data folder.")
+
+
+def test_readme_example():
+    skip_if_dataset_does_not_exist()
     example()
 
 
 def test_visualizations_example():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().habitat.dataset
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
+    skip_if_dataset_does_not_exist()
     visualization_examples.main()
 
 
 def test_shortest_path_follower_example():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().habitat.dataset
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
+    skip_if_dataset_does_not_exist()
     shortest_path_follower_example.main()
 
 
 def test_register_new_sensors_and_measures():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().habitat.dataset
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
-
+    skip_if_dataset_does_not_exist()
     register_new_sensors_and_measures.main()
 
 
 def test_new_actions():
-    if not PointNavDatasetV1.check_config_paths_exist(
-        config=habitat.get_config().habitat.dataset
-    ):
-        pytest.skip("Please download Habitat test data to data folder.")
-
+    skip_if_dataset_does_not_exist()
     new_actions.main()

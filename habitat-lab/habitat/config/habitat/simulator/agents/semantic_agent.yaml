@@ -1,0 +1,5 @@
+# @package habitat.simulator.agents.semantic_agent
+
+defaults:
+  - agent_base
+  - /habitat/simulator/sim_sensors@sim_sensors.semantic_sensor: semantic_sensor

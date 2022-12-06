@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -20,16 +20,14 @@ from typing import (
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
-
-if TYPE_CHECKING:
-    from torch import Tensor
+from omegaconf import DictConfig
 
 import habitat_sim
+from habitat.config.default import get_agent_config
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
-    Config,
     DepthSensor,
     Observations,
     RGBSensor,
@@ -42,9 +40,12 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import Space
 
+if TYPE_CHECKING:
+    from torch import Tensor
+
 
 def overwrite_config(
-    config_from: Config,
+    config_from: DictConfig,
     config_to: Any,
     ignore_keys: Optional[Set[str]] = None,
     trans_dict: Optional[Dict[str, Callable]] = None,
@@ -61,12 +62,17 @@ def overwrite_config(
     """
 
     def if_config_to_lower(config):
-        if isinstance(config, Config):
-            return {key.lower(): val for key, val in config.items()}
+        if isinstance(config, DictConfig):
+            return {
+                key.lower(): val
+                for key, val in config.items()
+                if isinstance(key, str)
+            }
         else:
             return config
 
     for attr, value in config_from.items():
+        assert isinstance(attr, str)
         low_attr = attr.lower()
         if ignore_keys is None or low_attr not in ignore_keys:
             if hasattr(config_to, low_attr):
@@ -97,7 +103,7 @@ class HabitatSimRGBSensor(RGBSensor, HabitatSimSensor):
 
     RGBSENSOR_DIMENSION = 3
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any) -> Box:
@@ -136,7 +142,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
     min_depth_value: float
     max_depth_value: float
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         if config.normalize_depth:
             self.min_depth_value = 0
             self.max_depth_value = 1
@@ -184,7 +190,7 @@ class HabitatSimSemanticSensor(SemanticSensor, HabitatSimSensor):
     _get_default_spec = habitat_sim.CameraSensorSpec
     sim_sensor_type = habitat_sim.SensorType.SEMANTIC
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         super().__init__(config=config)
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
@@ -258,19 +264,18 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         config: configuration for initializing the simulator.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         self.habitat_config = config
-        agent_config = self._get_agent_config()
 
         sim_sensors = []
-        for sensor_name in agent_config.sensors:
-            sensor_cfg = getattr(self.habitat_config, sensor_name)
-            sensor_type = registry.get_sensor(sensor_cfg.type)
+        for agent_config in self.habitat_config.agents.values():
+            for sensor_cfg in agent_config.sim_sensors.values():
+                sensor_type = registry.get_sensor(sensor_cfg.type)
 
-            assert sensor_type is not None, "invalid sensor type {}".format(
-                sensor_cfg.type
-            )
-            sim_sensors.append(sensor_type(sensor_cfg))
+                assert (
+                    sensor_type is not None
+                ), "invalid sensor type {}".format(sensor_cfg.type)
+                sim_sensors.append(sensor_type(sensor_cfg))
 
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
@@ -282,7 +287,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         for path in self.habitat_config.additional_object_paths:
             obj_attr_mgr.load_configs(path)
         self._action_space = spaces.Discrete(
-            len(self.sim_config.agents[0].action_space)
+            len(
+                self.sim_config.agents[
+                    self.habitat_config.default_agent_id
+                ].action_space
+            )
         )
         self._prev_sim_obs: Optional[Observations] = None
 
@@ -307,13 +316,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sim_config.scene_id = self.habitat_config.scene
         agent_config = habitat_sim.AgentConfiguration()
         overwrite_config(
-            config_from=self._get_agent_config(),
+            config_from=get_agent_config(self.habitat_config),
             config_to=agent_config,
             # These keys are only used by Hab-Lab
             ignore_keys={
                 "is_set_start_state",
                 # This is the Sensor Config. Unpacked below
                 "sensors",
+                "sim_sensors",
                 "start_position",
                 "start_rotation",
                 "robot_urdf",
@@ -326,7 +336,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             assert isinstance(sensor, HabitatSimSensor)
-            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[misc]
+            sim_sensor_cfg = sensor._get_default_spec()  # type: ignore[operator]
             overwrite_config(
                 config_from=sensor.config,
                 config_to=sim_sensor_cfg,
@@ -374,8 +384,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
     def _update_agents_state(self) -> bool:
         is_updated = False
-        for agent_id, _ in enumerate(self.habitat_config.agents):
-            agent_cfg = self._get_agent_config(agent_id)
+        for agent_id, agent_name in enumerate(
+            self.habitat_config.agents_order
+        ):
+            agent_cfg = self.habitat_config.agents[agent_name]
             if agent_cfg.is_set_start_state:
                 self.set_agent_state(
                     agent_cfg.start_position,
@@ -422,7 +434,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return output
 
     def reconfigure(
-        self, habitat_config: Config, should_close_on_new_scene: bool = True
+        self,
+        habitat_config: DictConfig,
+        should_close_on_new_scene: bool = True,
     ) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
         is_same_scene = habitat_config.scene == self._current_scene
@@ -537,13 +551,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                     for obj in region.objects:
         """
         return self.semantic_scene
-
-    def _get_agent_config(self, agent_id: Optional[int] = None) -> Any:
-        if agent_id is None:
-            agent_id = self.habitat_config.default_agent_id
-        agent_name = self.habitat_config.agents[agent_id]
-        agent_config = getattr(self.habitat_config, agent_name)
-        return agent_config
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         return self.get_agent(agent_id).get_state()

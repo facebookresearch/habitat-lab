@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os.path as osp
 from typing import Dict
 
@@ -46,12 +50,14 @@ class HierarchicalPolicy(Policy):
         self._name_to_idx: Dict[str, int] = {}
 
         for i, (skill_id, use_skill_name) in enumerate(
-            config.use_skills.items()
+            config.hierarchical_policy.use_skills.items()
         ):
             if use_skill_name == "":
                 # Skip loading this skill if no name is provided
                 continue
-            skill_config = config.defined_skills[use_skill_name]
+            skill_config = config.hierarchical_policy.defined_skills[
+                use_skill_name
+            ]
 
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
@@ -69,9 +75,11 @@ class HierarchicalPolicy(Policy):
         )
         self._cur_skills: torch.Tensor = torch.zeros(self._num_envs)
 
-        high_level_cls = eval(config.high_level_policy.name)
+        high_level_cls = eval(
+            config.hierarchical_policy.high_level_policy.name
+        )
         self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.high_level_policy,
+            config.hierarchical_policy.high_level_policy,
             osp.join(
                 full_config.habitat.task.task_spec_base_path,
                 full_config.habitat.task.task_spec + ".yaml",
@@ -95,7 +103,7 @@ class HierarchicalPolicy(Policy):
         return False
 
     def parameters(self):
-        return self._skills[0].parameters()
+        return self._skills[0].parameters()  # type: ignore[attr-defined]
 
     def to(self, device):
         for skill in self._skills.values():
@@ -112,7 +120,7 @@ class HierarchicalPolicy(Policy):
         deterministic=False,
     ):
 
-        self._high_level_policy.apply_mask(masks)
+        self._high_level_policy.apply_mask(masks)  # type: ignore[attr-defined]
         use_device = prev_actions.device
 
         batched_observations = [

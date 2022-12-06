@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -171,7 +171,7 @@ class PACMANTrainer(BaseILTrainer):
                 info={"split": "train"},
                 metric_names=["planner_loss", "controller_loss"],
                 log_json=os.path.join(
-                    config.habitat_baselines.output_log_dir, "train.json"
+                    config.habitat_baselines.il.output_log_dir, "train.json"
                 ),
             )
 
@@ -387,10 +387,10 @@ class PACMANTrainer(BaseILTrainer):
             model.load_state_dict(state_dict)
             model.eval().to(self.device)
 
-            results_dir = config.habitat_baselines.results_dir.format(
+            results_dir = config.habitat_baselines.il.results_dir.format(
                 split="val"
             )
-            video_option = self.config.habitat_baselines.video_option
+            video_option = self.config.habitat_baselines.eval.video_option
 
             metrics = NavMetric(
                 info={"split": "val"},
@@ -404,7 +404,7 @@ class PACMANTrainer(BaseILTrainer):
                     ]
                 ],
                 log_json=os.path.join(
-                    config.habitat_baselines.output_log_dir, "eval.json"
+                    config.habitat_baselines.il.output_log_dir, "eval.json"
                 ),
             )
 
@@ -658,8 +658,9 @@ class PACMANTrainer(BaseILTrainer):
                     )
 
                 if (
-                    config.habitat_baselines.eval_save_results
-                    and t % config.habitat_baselines.eval_save_results_interval
+                    config.habitat_baselines.il.eval_save_results
+                    and t
+                    % config.habitat_baselines.il.eval_save_results_interval
                     == 0
                 ):
                     q_string = q_vocab_dict.token_idx_2_string(question[0])

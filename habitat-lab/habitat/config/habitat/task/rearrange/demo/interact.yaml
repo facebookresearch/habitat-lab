@@ -1,0 +1,15 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - arm_action
+  - _self_
+
+# No task logic, empty task
+type: RearrangeEmptyTask-v0
+constraint_violation_ends_episode: False
+actions:
+  arm_action:
+    grip_controller: "MagicGraspAction"
+    delta_pos_limit: 0.025

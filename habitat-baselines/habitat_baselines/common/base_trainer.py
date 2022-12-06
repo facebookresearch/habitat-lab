@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os
 import time
-from typing import Any, ClassVar, Dict, List, Tuple, Union
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Tuple, Union
 
 import torch
 from numpy import ndarray
 from torch import Tensor
 
-from habitat import Config, logger
-from habitat.config import read_write
+from habitat import logger
 from habitat.core.vector_env import VectorEnv
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
@@ -31,55 +30,37 @@ from habitat_baselines.utils.common import (
     poll_checkpoint_folder,
 )
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 class BaseTrainer:
     r"""Generic trainer class that serves as a base template for more
     specific trainer classes like RL trainer, SLAM or imitation learner.
     Includes only the most basic functionality.
     """
-    config: Config
+    config: "DictConfig"
     flush_secs: float
     supported_tasks: ClassVar[List[str]]
 
     def train(self) -> None:
         raise NotImplementedError
 
-    def _setup_eval_config(self, checkpoint_config: Config) -> Config:
-        r"""Sets up and returns a merged config for evaluation. Config
-            object saved from checkpoint is merged into config file specified
-            at evaluation time with the following overwrite priority:
-                  eval_opts > ckpt_opts > eval_cfg > ckpt_cfg
-            If the saved config is outdated, only the eval config is returned.
-
-        Args:
-            checkpoint_config: saved config from checkpoint.
-
-        Returns:
-            Config: merged config for eval.
-        """
-
-        config = self.config.clone()
-
-        ckpt_cmd_opts = checkpoint_config.habitat_baselines.cmd_trailing_opts
-        eval_cmd_opts = config.habitat_baselines.cmd_trailing_opts
-
-        try:
-            config.merge_from_other_cfg(checkpoint_config)
-            config.merge_from_other_cfg(self.config)
-            config.merge_from_list(ckpt_cmd_opts)
-            config.merge_from_list(eval_cmd_opts)
-        except KeyError:
-            logger.info("Saved config is outdated, using solely eval config")
-            config = self.config.clone()
-            config.merge_from_list(eval_cmd_opts)
-        with read_write(config):
-            if config.habitat.dataset.split == "train":
-                config.habitat.dataset.split = "val"
-            config.habitat.simulator.agent_0.sensors = (
-                self.config.habitat_baselines.sensors
-            )
-
-        return config
+    def _get_resume_state_config_or_new_config(
+        self, resume_state_config: "DictConfig"
+    ):
+        if self.config.habitat_baselines.load_resume_state_config:
+            if self.config != resume_state_config:
+                logger.warning(
+                    "\n##################\n"
+                    "You are attempting to resume training with a different "
+                    "configuration than the one used for the original training run. "
+                    "Since load_resume_state_config=True, the ORIGINAL configuration "
+                    "will be used and the new configuration will be IGNORED."
+                    "##################\n"
+                )
+            return resume_state_config
+        return self.config.copy()
 
     def _add_preemption_signal_handlers(self):
         if is_slurm_batch_job():
@@ -102,7 +83,9 @@ class BaseTrainer:
             # we are resuming an evaluation session that got
             # preempted. We grab the config and the prev_ckpt_ind
             # so that we pick-up from the checkpoint we left off with
-            self.config = resume_state["config"]
+            self.config = self._get_resume_state_config_or_new_config(
+                resume_state["config"]
+            )
             prev_ckpt_ind = resume_state["prev_ckpt_ind"]
         else:
             prev_ckpt_ind = -1
@@ -113,14 +96,14 @@ class BaseTrainer:
             else torch.device("cpu")
         )
 
-        if "tensorboard" in self.config.habitat_baselines.video_option:
+        if "tensorboard" in self.config.habitat_baselines.eval.video_option:
             assert (
                 len(self.config.habitat_baselines.tensorboard_dir) > 0
             ), "Must specify a tensorboard directory for video display"
             os.makedirs(
                 self.config.habitat_baselines.tensorboard_dir, exist_ok=True
             )
-        if "disk" in self.config.habitat_baselines.video_option:
+        if "disk" in self.config.habitat_baselines.eval.video_option:
             assert (
                 len(self.config.habitat_baselines.video_dir) > 0
             ), "Must specify a directory for storing videos on disk"
@@ -206,14 +189,14 @@ class BaseRLTrainer(BaseTrainer):
     methods should be hosted here.
     """
     device: torch.device  # type: ignore
-    config: Config
+    config: "DictConfig"
     video_option: List[str]
     num_updates_done: int
     num_steps_done: int
     _flush_secs: int
     _last_checkpoint_percent: float
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         super().__init__()
         assert config is not None, "needs config file to initialize trainer"
         self.config = config

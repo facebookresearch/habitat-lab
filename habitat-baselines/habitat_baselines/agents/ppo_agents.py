@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 
 import argparse
 import random
+from dataclasses import dataclass
 from typing import Dict, Optional
 
 import numpy as np
@@ -14,31 +15,34 @@ import torch
 from gym.spaces import Box
 from gym.spaces import Dict as SpaceDict
 from gym.spaces import Discrete
+from omegaconf import DictConfig, OmegaConf
 
 import habitat
-from habitat.config import Config
 from habitat.core.agent import Agent
 from habitat.core.simulator import Observations
 from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
 from habitat_baselines.utils.common import batch_obs
 
 
-def get_default_config() -> Config:
-    c = Config()
-    c.INPUT_TYPE = "rgb"
-    c.MODEL_PATH = "data/checkpoints/gibson-rgb-best.pth"
-    c.RESOLUTION = 256
-    c.hidden_size = 512
-    c.RANDOM_SEED = 7
-    c.PTH_GPU_ID = 0
-    c.goal_sensor_uuid = "pointgoal_with_gps_compass"
-    return c
+@dataclass
+class PPOAgentConfig:
+    INPUT_TYPE: str = "rgb"
+    MODEL_PATH: str = "data/checkpoints/gibson-rgb-best.pth"
+    RESOLUTION: int = 256
+    HIDDEN_SIZE: int = 512
+    RANDOM_SEED: int = 7
+    PTH_GPU_ID: int = 0
+    GOAL_SENSOR_UUID: str = "pointgoal_with_gps_compass"
+
+
+def get_default_config() -> DictConfig:
+    return OmegaConf.create(PPOAgentConfig())  # type: ignore[call-overload]
 
 
 class PPOAgent(Agent):
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: DictConfig) -> None:
         spaces = {
-            get_default_config().goal_sensor_uuid: Box(
+            get_default_config().GOAL_SENSOR_UUID: Box(
                 low=np.finfo(np.float32).min,
                 high=np.finfo(np.float32).max,
                 shape=(2,),
@@ -70,7 +74,7 @@ class PPOAgent(Agent):
             if torch.cuda.is_available()
             else torch.device("cpu")
         )
-        self.hidden_size = config.hidden_size
+        self.hidden_size = config.HIDDEN_SIZE
 
         random.seed(config.RANDOM_SEED)
         torch.random.manual_seed(config.RANDOM_SEED)
@@ -152,7 +156,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="habitat-lab/habitat/config/tasks/pointnav.yaml",
+        default="habitat-lab/habitat/config/task/pointnav.yaml",
     )
     args = parser.parse_args()
 

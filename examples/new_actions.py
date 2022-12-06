@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -17,6 +17,7 @@ import numpy as np
 
 import habitat
 import habitat_sim
+from habitat.config.default_structured_configs import ActionConfig
 from habitat.sims.habitat_simulator.actions import (
     HabitatSimActions,
     HabitatSimV1ActionSpaceConfiguration,
@@ -148,19 +149,18 @@ def main():
     HabitatSimActions.extend_action_space("STRAFE_LEFT")
     HabitatSimActions.extend_action_space("STRAFE_RIGHT")
 
-    config = habitat.get_config(config_paths="tasks/pointnav.yaml")
+    config = habitat.get_config(
+        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    )
     with habitat.config.read_write(config):
-        config.habitat.task.possible_actions = (
-            config.habitat.task.possible_actions
-            + [
-                "STRAFE_LEFT",
-                "STRAFE_RIGHT",
-            ]
+        # Add a simple action config to the config.habitat.task.actions dictionary
+        config.habitat.task.actions["STRAFE_LEFT"] = ActionConfig(
+            type="StrafeLeft"
         )
-        config.habitat.task.actions.STRAFE_LEFT = habitat.config.Config()
-        config.habitat.task.actions.STRAFE_LEFT.type = "StrafeLeft"
-        config.habitat.task.actions.STRAFE_RIGHT = habitat.config.Config()
-        config.habitat.task.actions.STRAFE_RIGHT.type = "StrafeRight"
+        config.habitat.task.actions["STRAFE_RIGHT"] = ActionConfig(
+            type="StrafeRight"
+        )
+
         config.habitat.simulator.action_space_config = "NoNoiseStrafe"
 
     with habitat.Env(config=config) as env:

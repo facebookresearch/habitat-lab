@@ -1,0 +1,16 @@
+defaults:
+  - task_config_base
+  - actions:
+    - move_forward
+    - turn_left
+    - turn_right
+    - answer
+  - measurements:
+    - distance_to_goal
+    - episode_info
+    - answer_accuracy
+  - lab_sensors:
+    - question_sensor
+  - _self_
+
+type: EQA-v0

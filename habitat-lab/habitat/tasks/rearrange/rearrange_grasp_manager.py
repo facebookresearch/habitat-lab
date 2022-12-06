@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 
-from typing import Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
-from habitat.config.default import Config
 from habitat.tasks.rearrange.utils import get_aabb
 from habitat_sim.physics import (
     CollisionGroupHelper,
@@ -20,13 +19,16 @@ from habitat_sim.physics import (
     RigidConstraintType,
 )
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 class RearrangeGraspManager:
     """
     Manages the agent grasping onto rigid objects and the links of articulated objects.
     """
 
-    def __init__(self, sim, config: Config, robot) -> None:
+    def __init__(self, sim, config: "DictConfig", robot) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
         :param config: The task's "simulator" subconfig node. Defines grasping parameters.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -13,7 +13,7 @@ import habitat
 from habitat.core.logging import logger
 
 SENSOR_KEY = "rgb"
-CONFIG_FILE = "tasks/franka_point.yaml"
+CONFIG_FILE = "benchmark/nav/pointnav/pointnav_franka.yaml"
 BLOCK_LOC_RANGE = 2.0
 BLOCK_LOC_CENTER = [-5.0, 0.1, 8.5]
 BLOCK_SCALE = 0.2

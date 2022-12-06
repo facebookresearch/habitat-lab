@@ -1,0 +1,30 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: objectnav
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: semantic_agent
+  - /habitat/dataset/objectnav: mp3d
+  - _self_
+
+habitat:
+  environment:
+    max_episode_steps: 500
+
+  simulator:
+    turn_angle: 30
+    tilt_angle: 30
+    action_space_config: "v1"
+    agents:
+      main_agent:
+        sim_sensors:
+          semantic_sensor:
+            width: 640
+            height: 480
+            hfov: 79
+            position: [0, 0.88, 0]
+        height: 0.88
+        radius: 0.18
+    habitat_sim_v0:
+      gpu_device_id: 0
+      allow_sliding: False

@@ -1,3 +1,8 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
@@ -15,7 +20,7 @@ class RobotAction(SimulatorTaskAction):
         Underlying robot mananger for the robot instance the action is attached to.
         """
 
-        if self._config.agent is None:
+        if "agent" not in self._config or self._config.agent is None:
             return self._sim.robots_mgr[0]
         return self._sim.robots_mgr[self._config.agent]
 
@@ -48,6 +53,6 @@ class RobotAction(SimulatorTaskAction):
         there are multiple agents.
         """
 
-        if self._config.agent is not None:
+        if "agent" in self._config and self._config.agent is not None:
             return f"agent_{self._config.agent}_"
         return ""

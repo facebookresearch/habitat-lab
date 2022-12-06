@@ -1,61 +1,13 @@
+# @package _global_
+defaults:
+  - /benchmark/nav/instance_imagenav/instance_imagenav_hm3d_v1.yaml
+  - _self_
+
 habitat:
-  environment:
-    max_episode_steps: 1000
-
-  simulator:
-    turn_angle: 30
-    tilt_angle: 30
-    action_space_config: v1
-    agent_0:
-      sensors: [rgb_sensor, depth_sensor]
-      height: 0.88
-      radius: 0.18
-    habitat_sim_v0:
-      gpu_device_id: 0
-      allow_sliding: False
-    rgb_sensor:
-      width: 640
-      height: 480
-      hfov: 79
-      position: [0, 0.88, 0]
-    depth_sensor:
-      width: 640
-      height: 480
-      hfov: 79
-      min_depth: 0.5
-      max_depth: 5.0
-      position: [0, 0.88, 0]
-  task:
-    type: InstanceImageNav-v1
-    end_on_success: True
-    reward_measure: distance_to_goal_reward
-    success_measure: spl
-
-    possible_actions: [stop, move_forward, turn_left, turn_right, look_up, look_down]
-
-    sensors: [
-      instance_imagegoal_sensor,
-      instance_imagegoal_hfov_sensor,
-      compass_sensor,
-      gps_sensor
-    ]
-    goal_sensor_uuid: instance_imagegoal
-    measurements: [
-      num_steps,
-      distance_to_goal,
-      success,
-      spl,
-      soft_spl,
-      distance_to_goal_reward
-    ]
-
-    distance_to_goal:
-      distance_to: VIEW_POINTS
-    success:
-      success_distance: 0.1
 
   dataset:
     type: InstanceImageNav-v1
-    split: val
+    split: minival
     data_path: data/datasets/instance_imagenav/hm3d/v1/{split}/{split}.json.gz
     scenes_dir: data/scene_datasets/
+    content_scenes: ["*"]

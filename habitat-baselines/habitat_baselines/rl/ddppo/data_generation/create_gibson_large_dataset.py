@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -20,6 +20,7 @@ from os import path as osp
 import tqdm
 
 import habitat
+from habitat.config.default import get_agent_config
 from habitat.datasets.pointnav.pointnav_generator import (
     generate_pointnav_episode,
 )
@@ -37,10 +38,13 @@ def safe_mkdir(path):
 
 
 def _generate_fn(scene):
-    cfg = habitat.get_config()
+    cfg = habitat.get_config(
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    )
     with habitat.config.read_write(cfg):
         cfg.habitat.simulator.scene = scene
-        cfg.habitat.simulator.agent_0.sensors = []
+        agent_config = get_agent_config(cfg.habitat.simulator)
+        agent_config.sensors.clear()
 
     sim = habitat.sims.make_sim("Sim-v0", config=cfg.habitat.simulator)
 

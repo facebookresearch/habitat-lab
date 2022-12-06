@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,7 +10,11 @@ import habitat
 def example():
     # Note: Use with for the example testing, doesn't need to be like this on the README
 
-    with habitat.Env(config=habitat.get_config("tasks/pointnav.yaml")) as env:
+    with habitat.Env(
+        config=habitat.get_config(
+            "benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        )
+    ) as env:
         print("Environment creation successful")
         observations = env.reset()  # noqa: F841
 

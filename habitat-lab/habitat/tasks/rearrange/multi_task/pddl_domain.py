@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import itertools
 import os.path as osp
-from typing import Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
 
 import yaml  # type: ignore[import]
 
-from habitat import Config
-from habitat.config.default import _get_full_config_path
+from habitat.config.default import get_full_habitat_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.pddl_action import (
@@ -38,6 +37,9 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 class PddlDomain:
     """
@@ -47,10 +49,10 @@ class PddlDomain:
     def __init__(
         self,
         domain_file_path: str,
-        cur_task_config: Optional[Config] = None,
+        cur_task_config: Optional["DictConfig"] = None,
     ):
         """
-        :param domain_file_path: Either an absolute path or a path relative to `habitat/tasks/rearrange/multi_task/domain_configs/`.
+        :param domain_file_path: Either an absolute path or a path relative to `habitat/task/rearrange/multi_task/domain_configs/`.
         :param cur_task_config: The task config (`habitat.task`). This is
             used when the action initializes a task via `PddlAction::init_task`. If
             this is not used, `cur_task_config` can be None.
@@ -67,7 +69,7 @@ class PddlDomain:
         if "." not in domain_file_path:
             domain_file_path += ".yaml"
 
-        with open(_get_full_config_path(domain_file_path), "r") as f:
+        with open(get_full_habitat_config_path(domain_file_path), "r") as f:
             domain_def = yaml.safe_load(f)
 
         self._parse_expr_types(domain_def)
@@ -458,10 +460,10 @@ class PddlProblem(PddlDomain):
         self,
         domain_file_path: str,
         problem_file_path: str,
-        cur_task_config: Optional[Config] = None,
+        cur_task_config: Optional["DictConfig"] = None,
     ):
         super().__init__(domain_file_path, cur_task_config)
-        with open(_get_full_config_path(problem_file_path), "r") as f:
+        with open(get_full_habitat_config_path(problem_file_path), "r") as f:
             problem_def = yaml.safe_load(f)
         self._objects = {
             o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])

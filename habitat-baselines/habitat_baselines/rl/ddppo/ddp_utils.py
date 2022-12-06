@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import contextlib
 import functools
 import io
@@ -25,7 +29,7 @@ import torch
 from omegaconf import DictConfig
 from torch import distributed as distrib
 
-from habitat import Config, logger
+from habitat import logger
 
 T = TypeVar("T")
 
@@ -67,7 +71,7 @@ def is_slurm_batch_job() -> bool:
     )
 
 
-def resume_state_filename(config: Config, filename_key: str = "") -> str:
+def resume_state_filename(config: DictConfig, filename_key: str = "") -> str:
     fname = RESUME_STATE_BASE_NAME
 
     if (
@@ -177,7 +181,9 @@ def add_signal_handlers() -> None:
 
 @rank0_only
 def save_resume_state(
-    state: Any, filename_or_config: Union[Config, str], filename_key: str = ""
+    state: Any,
+    filename_or_config: Union[DictConfig, str],
+    filename_key: str = "",
 ):
     r"""Saves the resume job state to the specified filename.
         This is useful when working with preemptable job partitions.
@@ -186,7 +192,7 @@ def save_resume_state(
     :param filename_or_config: The filename of the saved state or the config to construct it.
     :param filename_key: If generating the filename from the config, append this to the name.
     """
-    if isinstance(filename_or_config, (Config, DictConfig)):
+    if isinstance(filename_or_config, DictConfig):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config
@@ -195,7 +201,7 @@ def save_resume_state(
 
 
 def load_resume_state(
-    filename_or_config: Union[Config, str], filename_key: str = ""
+    filename_or_config: Union[DictConfig, str], filename_key: str = ""
 ) -> Optional[Any]:
     r"""Loads the saved resume state
 
@@ -204,7 +210,7 @@ def load_resume_state(
 
     :return: The saved state if the file exists, else none
     """
-    if isinstance(filename_or_config, (Config, DictConfig)):
+    if isinstance(filename_or_config, DictConfig):
         filename = resume_state_filename(filename_or_config, filename_key)
     else:
         filename = filename_or_config

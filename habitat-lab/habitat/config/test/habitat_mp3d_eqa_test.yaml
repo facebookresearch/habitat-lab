@@ -1,11 +1,11 @@
-habitat:
-  task:
-    type: EQA-v0
-    sensors: ['question_sensor']
-    possible_actions: ['move_forward', 'turn_left', 'turn_right', 'answer']
-    measurements: ['episode_info', 'distance_to_goal', 'answer_accuracy']
+# @package _global_
+defaults:
+  - /benchmark/nav/eqa_mp3d.yaml
+  - _self_
 
+habitat:
   environment:
+    max_episode_steps: 1000
     iterator_options:
       shuffle: False
 
@@ -13,14 +13,15 @@ habitat:
     scene: data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb
     forward_step_size: 0.1
     turn_angle: 9
-    agent_0:
-      sensors: ['rgb_sensor', 'depth_sensor', 'semantic_sensor']
-    rgb_sensor:
-      height: 512
-      width: 512
-      hfov: 45
-      position: [0, 1.09, 0]
-      type: HabitatSimRGBSensor
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            height: 512
+            width: 512
+            hfov: 45
+            position: [0, 1.09, 0]
+            type: HabitatSimRGBSensor
 
   dataset:
     type: MP3DEQA-v1

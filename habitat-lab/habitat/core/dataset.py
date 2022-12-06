@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 r"""Implements dataset functionality to be used ``habitat.EmbodiedTask``.
@@ -9,11 +9,11 @@ r"""Implements dataset functionality to be used ``habitat.EmbodiedTask``.
 of a ``habitat.Agent`` inside ``habitat.Env``.
 """
 import copy
-import json
 import os
 import random
 from itertools import groupby
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -30,8 +30,11 @@ import attr
 import numpy as np
 from numpy import ndarray
 
-from habitat.config import Config
-from habitat.core.utils import not_none_validator
+from habitat.core.utils import DatasetJSONEncoder, not_none_validator
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 ALL_SCENES_MASK = "*"
 
@@ -121,7 +124,7 @@ class Dataset(Generic[T]):
         return os.path.splitext(os.path.basename(scene_path))[0]
 
     @classmethod
-    def get_scenes_to_load(cls, config: Config) -> List[str]:
+    def get_scenes_to_load(cls, config: "DictConfig") -> List[str]:
         r"""Returns a list of scene names that would be loaded with this dataset.
 
         Useful for determining what scenes to split up among different workers.
@@ -192,16 +195,6 @@ class Dataset(Generic[T]):
         return EpisodeIterator(self.episodes, *args, **kwargs)
 
     def to_json(self) -> str:
-        class DatasetJSONEncoder(json.JSONEncoder):
-            def default(self, obj):
-                if isinstance(obj, np.ndarray):
-                    return obj.tolist()
-
-                return (
-                    obj.__getstate__()
-                    if hasattr(obj, "__getstate__")
-                    else obj.__dict__
-                )
 
         result = DatasetJSONEncoder().encode(self)
         return result

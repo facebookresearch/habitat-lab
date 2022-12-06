@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -9,6 +9,7 @@ import os
 import time
 
 import torch
+from omegaconf import OmegaConf
 from torch.utils.data import DataLoader
 
 from habitat import logger
@@ -41,11 +42,11 @@ class VQATrainer(BaseILTrainer):
         )
 
         if config is not None:
-            logger.info(f"config: {config}")
+            logger.info(f"config: {OmegaConf.to_yaml(config)}")
 
     def _make_results_dir(self):
         r"""Makes directory for saving VQA eval results."""
-        dir_name = self.config.habitat_baselines.results_dir.format(
+        dir_name = self.config.habitat_baselines.il.results_dir.format(
             split="val"
         )
         os.makedirs(dir_name, exist_ok=True)
@@ -93,7 +94,7 @@ class VQATrainer(BaseILTrainer):
         logger.info("Predicted answer: {}".format(pred_answer))
         logger.info("Ground-truth answer: {}".format(gt_answer))
 
-        result_path = self.config.habitat_baselines.results_dir.format(
+        result_path = self.config.habitat_baselines.il.results_dir.format(
             split=self.config.habitat.dataset.split
         )
 
@@ -142,7 +143,7 @@ class VQATrainer(BaseILTrainer):
         model_kwargs = {
             "q_vocab": q_vocab_dict.word2idx_dict,
             "ans_vocab": ans_vocab_dict.word2idx_dict,
-            "eqa_cnn_pretrain_ckpt_path": config.habitat_baselines.eqa_cnn_pretrain_ckpt_path,
+            "eqa_cnn_pretrain_ckpt_path": config.habitat_baselines.il.eqa_cnn_pretrain_ckpt_path,
             "freeze_encoder": config.habitat_baselines.il.vqa.freeze_encoder,
         }
 
@@ -164,7 +165,7 @@ class VQATrainer(BaseILTrainer):
                 "mean_reciprocal_rank",
             ],
             log_json=os.path.join(
-                config.habitat_baselines.output_log_dir, "train.json"
+                config.habitat_baselines.il.output_log_dir, "train.json"
             ),
         )
 
@@ -321,7 +322,7 @@ class VQATrainer(BaseILTrainer):
         model_kwargs = {
             "q_vocab": q_vocab_dict.word2idx_dict,
             "ans_vocab": ans_vocab_dict.word2idx_dict,
-            "eqa_cnn_pretrain_ckpt_path": config.habitat_baselines.eqa_cnn_pretrain_ckpt_path,
+            "eqa_cnn_pretrain_ckpt_path": config.habitat_baselines.il.eqa_cnn_pretrain_ckpt_path,
         }
         model = VqaLstmCnnAttentionModel(**model_kwargs)
 
@@ -352,7 +353,7 @@ class VQATrainer(BaseILTrainer):
                 "mean_reciprocal_rank",
             ],
             log_json=os.path.join(
-                config.habitat_baselines.output_log_dir, "eval.json"
+                config.habitat_baselines.il.output_log_dir, "eval.json"
             ),
         )
         with torch.no_grad():
@@ -389,8 +390,9 @@ class VQATrainer(BaseILTrainer):
                     metrics.dump_log()
 
                 if (
-                    config.habitat_baselines.eval_save_results
-                    and t % config.habitat_baselines.eval_save_results_interval
+                    config.habitat_baselines.il.eval_save_results
+                    and t
+                    % config.habitat_baselines.il.eval_save_results_interval
                     == 0
                 ):
 

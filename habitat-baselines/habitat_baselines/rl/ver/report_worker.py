@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,13 +10,23 @@ import os
 import time
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import Any, Dict, Iterator, List, Optional, Tuple, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Tuple,
+    cast,
+)
 
 import attr
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import logger
+from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat_baselines.common.tensor_dict import (
     NDArrayDict,
     transpose_list_of_dicts,
@@ -36,6 +46,9 @@ from habitat_baselines.rl.ver.queue import BatchedQueue
 from habitat_baselines.rl.ver.task_enums import ReportWorkerTasks
 from habitat_baselines.rl.ver.worker_common import ProcessBase, WorkerBase
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @attr.s(auto_attribs=True)
 class ReportWorkerProcess(ProcessBase):
@@ -43,7 +56,7 @@ class ReportWorkerProcess(ProcessBase):
     learning progress, and agent training progress.
     """
     port: int
-    config: Config
+    config: "DictConfig"
     report_queue: BatchedQueue
     my_t_zero: float
     num_steps_done: torch.Tensor
@@ -111,14 +124,12 @@ class ReportWorkerProcess(ProcessBase):
         torch.distributed.all_reduce(t, op=reduce_op)
         return type(val)(t)
 
-    METRICS_BLACKLIST = {"top_down_map", "collisions.is_collision"}
-
     @classmethod
     def _extract_scalars_from_info(
         cls, info: Dict[str, Any]
     ) -> Iterator[Tuple[str, float]]:
         for k, v in info.items():
-            if k in cls.METRICS_BLACKLIST:
+            if k in NON_SCALAR_METRICS:
                 continue
 
             if isinstance(v, dict):
@@ -388,7 +399,7 @@ class ReportWorker(WorkerBase):
         self,
         mp_ctx: BaseContext,
         port: int,
-        config: Config,
+        config: "DictConfig",
         report_queue: BatchedQueue,
         my_t_zero: float,
         init_num_steps=0,

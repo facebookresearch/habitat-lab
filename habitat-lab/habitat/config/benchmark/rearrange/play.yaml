@@ -1,0 +1,38 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - /habitat/task/rearrange: play
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+# Config for empty task to explore the scene.
+habitat:
+  environment:
+    max_episode_steps: 0
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    agents:
+      main_agent:
+        radius: 0.3
+        sim_sensors:
+          head_rgb_sensor:
+            height: 128
+            width: 128
+          head_depth_sensor:
+            height: 128
+            width: 128
+          arm_depth_sensor:
+            height: 128
+            width: 128
+          arm_rgb_sensor:
+            height: 128
+            width: 128
+    habitat_sim_v0:
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz

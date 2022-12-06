@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -63,7 +63,7 @@ def main():
     parser.add_argument(
         "--task-config",
         type=str,
-        default="tasks/vln_r2r.yaml",
+        default="benchmark/nav/vln_r2r.yaml",
     )
     args = parser.parse_args()
     config = get_config(args.task_config)

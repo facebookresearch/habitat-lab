@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from collections import OrderedDict
 
 import gym.spaces as spaces
@@ -152,10 +156,8 @@ class NnSkillPolicy(SkillPolicy):
 
         filtered_action_space = ActionSpace(
             OrderedDict(
-                [
-                    (k, action_space[k])
-                    for k in policy_cfg.habitat.task.possible_actions
-                ]
+                (k, action_space[k])
+                for k in policy_cfg.habitat.task.actions.keys()
             )
         )
 

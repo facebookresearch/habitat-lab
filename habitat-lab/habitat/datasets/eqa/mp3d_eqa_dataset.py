@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import gzip
 import json
 import os
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from habitat.config import Config
+from omegaconf import OmegaConf
+
+from habitat.config.default_structured_configs import DatasetConfig
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
@@ -18,16 +20,22 @@ from habitat.tasks.eqa.eqa import EQAEpisode, QuestionData
 from habitat.tasks.nav.nav import ShortestPathPoint
 from habitat.tasks.nav.object_nav_task import ObjectGoal
 
+if TYPE_CHECKING:
+    from habitat.config import DictConfig
+
+
 EQA_MP3D_V1_VAL_EPISODE_COUNT = 1950
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
 
-def get_default_mp3d_v1_config(split: str = "val"):
-    config = Config()
-    config.name = "MP3DEQA-v1"
-    config.data_path = "data/datasets/eqa/mp3d/v1/{split}.json.gz"
-    config.split = split
-    return config
+def get_default_mp3d_v1_config(split: str = "val") -> "DictConfig":
+    return OmegaConf.create(  # type: ignore[call-overload]
+        DatasetConfig(
+            type="MP3DEQA-v1",
+            split=split,
+            data_path="data/datasets/eqa/mp3d/v1/{split}.json.gz",
+        )
+    )
 
 
 @registry.register_dataset(name="MP3DEQA-v1")
@@ -45,10 +53,10 @@ class Matterport3dDatasetV1(Dataset):
     question_vocab: VocabDict
 
     @staticmethod
-    def check_config_paths_exist(config: Config) -> bool:
+    def check_config_paths_exist(config: "DictConfig") -> bool:
         return os.path.exists(config.data_path.format(split=config.split))
 
-    def __init__(self, config: Config = None) -> None:
+    def __init__(self, config: "DictConfig" = None) -> None:
         self.episodes = []
 
         if config is None:

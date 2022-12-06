@@ -1,21 +1,27 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
 from collections import defaultdict
+
+try:
+    from collections import Sequence
+except ImportError:
+    from collections.abc import Sequence
+
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 from tqdm import tqdm
-from yacs.config import CfgNode as CN
 
 import habitat.datasets.rearrange.samplers as samplers
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
@@ -37,7 +43,7 @@ def get_sample_region_ratios(load_dict) -> Dict[str, float]:
 
 
 class RearrangeEpisodeGenerator:
-    """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement tasks.
+    """Generator class encapsulating logic for procedurally sampling individual episodes for general rearrangement task.
 
     Initialized from a provided configuration file defining dataset paths, object,scene,and receptacle sets, and state sampler parameters.
 
@@ -56,7 +62,7 @@ class RearrangeEpisodeGenerator:
 
     def __init__(
         self,
-        cfg: CN,
+        cfg: DictConfig,
         debug_visualization: bool = False,
         limit_scene_set: Optional[str] = None,
     ) -> None:
@@ -66,7 +72,7 @@ class RearrangeEpisodeGenerator:
         """
         # load and cache the config
         self.cfg = cfg
-        self.start_cfg = self.cfg.clone()
+        self.start_cfg = self.cfg.copy()
         self._limit_scene_set = limit_scene_set
 
         # debug visualization settings
@@ -117,8 +123,8 @@ class RearrangeEpisodeGenerator:
                 assert (
                     list_key in scene_set
                 ), f"Expected list key '{list_key}'."
-                assert (
-                    type(scene_set[list_key]) is list
+                assert isinstance(
+                    scene_set[list_key], Sequence
                 ), f"cfg.scene_sets - '{scene_set['name']}' '{list_key}' must be a list of strings."
             self._scene_sets[
                 scene_set["name"]
@@ -138,8 +144,8 @@ class RearrangeEpisodeGenerator:
                 assert (
                     list_key in object_set
                 ), f"Expected list key '{list_key}'."
-                assert (
-                    type(object_set[list_key]) is list
+                assert isinstance(
+                    object_set[list_key], Sequence
                 ), f"cfg.object_sets - '{object_set['name']}' '{list_key}' must be a list of strings."
             self._obj_sets[
                 object_set["name"]
@@ -165,8 +171,8 @@ class RearrangeEpisodeGenerator:
                 assert (
                     list_key in receptacle_set
                 ), f"Expected list key '{list_key}'."
-                assert (
-                    type(receptacle_set[list_key]) is list
+                assert isinstance(
+                    receptacle_set[list_key], Sequence
                 ), f"cfg.receptacle_sets - '{receptacle_set['name']}' '{list_key}' must be a list of strings."
 
             self._receptacle_sets[receptacle_set["name"]] = ReceptacleSet(

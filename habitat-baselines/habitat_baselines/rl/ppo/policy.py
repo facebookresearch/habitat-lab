@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Dict, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Dict, Iterable, Optional, Union
 
 import torch
 from gym import spaces
 from torch import nn as nn
 
-from habitat.config import Config
 from habitat.tasks.nav.nav import (
     ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
@@ -26,6 +25,9 @@ from habitat_baselines.utils.common import (
     GaussianNet,
     get_num_actions,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 class Policy(abc.ABC):
@@ -90,7 +92,7 @@ class NetPolicy(nn.Module, Policy):
                 policy_config.action_dist,
             )
         else:
-            ValueError(
+            raise ValueError(
                 f"Action distribution {self.action_distribution_type}"
                 "not supported."
             )
@@ -98,15 +100,15 @@ class NetPolicy(nn.Module, Policy):
         self.critic = CriticHead(self.net.output_size)
 
         self.aux_loss_modules = nn.ModuleDict()
-        for aux_loss_name in (
-            () if aux_loss_config is None else aux_loss_config.enabled
-        ):
+        if aux_loss_config is None:
+            return
+        for aux_loss_name, cfg in aux_loss_config.items():
             aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
 
             self.aux_loss_modules[aux_loss_name] = aux_loss(
                 action_space,
                 self.net,
-                **getattr(aux_loss_config, aux_loss_name),
+                **cfg,
             )
 
     @property
@@ -251,7 +253,7 @@ class PointNavBaselinePolicy(NetPolicy):
     @classmethod
     def from_config(
         cls,
-        config: Config,
+        config: "DictConfig",
         observation_space: spaces.Dict,
         action_space,
         **kwargs,

@@ -1,32 +1,24 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: pointnav
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_agent
+  - /habitat/dataset/pointnav: habitat_test
+  - _self_
+
 habitat:
   environment:
     max_episode_steps: 10
     iterator_options:
       shuffle: False
   simulator:
-    agent_0:
-      sensors: ['rgb_sensor', 'depth_sensor']
-    rgb_sensor:
-      width: 256
-      height: 256
-    depth_sensor:
-      width: 256
-      height: 256
-  dataset:
-    type: PointNav-v1
-    split: train
-    data_path: data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz
-  task:
-    type: Nav-v0
-    reward_measure: "distance_to_goal_reward"
-    success_measure: "spl"
-    sensors: ['pointgoal_with_gps_compass_sensor']
-    possible_actions: ['stop', 'move_forward', 'turn_left', 'turn_right', 'teleport']
-    pointgoal_with_gps_compass_sensor:
-      goal_format: "POLAR"
-      dimensionality: 2
-    goal_sensor_uuid: pointgoal_with_gps_compass
-
-    measurements: ['distance_to_goal', 'success', 'spl', 'soft_spl', 'distance_to_goal_reward']
-    success:
-      success_distance: 0.2
+    agents:
+      main_agent:
+        sim_sensors:
+          rgb_sensor:
+            width: 256
+            height: 256
+          depth_sensor:
+            width: 256
+            height: 256

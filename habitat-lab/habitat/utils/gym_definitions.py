@@ -1,25 +1,30 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
 from glob import glob
-from typing import Any, List, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import gym
 from gym.envs.registration import register, registry
 
 import habitat
 import habitat.utils.env_utils
-from habitat.config.default import _HABITAT_CFG_DIR, Config
+from habitat.config.default import _HABITAT_CFG_DIR
+from habitat.config.default_structured_configs import ThirdRGBSensorConfig
 from habitat.core.environments import get_env_class
 
-gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "tasks/")
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
-def _get_gym_name(cfg: Config) -> Optional[str]:
+gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "benchmark/")
+
+
+def _get_gym_name(cfg: "DictConfig") -> Optional[str]:
     if "habitat" in cfg:
         cfg = cfg.habitat
     if "gym" in cfg and "auto_name" in cfg["gym"]:
@@ -27,13 +32,13 @@ def _get_gym_name(cfg: Config) -> Optional[str]:
     return None
 
 
-def _get_env_name(cfg: Config) -> Optional[str]:
+def _get_env_name(cfg: "DictConfig") -> Optional[str]:
     if "habitat" in cfg:
         cfg = cfg.habitat
     return cfg["env_task"]
 
 
-def make_gym_from_config(config: Config) -> gym.Env:
+def make_gym_from_config(config: "DictConfig") -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """
@@ -58,19 +63,25 @@ def _make_habitat_gym_env(
         override_options = []
 
     config = habitat.get_config(cfg_file_path)
-
-    sensors = config.habitat.simulator.agent_0.sensors
-
     if use_render_mode:
-        override_options.extend(
-            [
-                "habitat.simulator.agent_0.sensors",
-                [*sensors, "third_rgb_sensor"],
+        with habitat.config.read_write(config):
+            sim_config = config.habitat.simulator
+            default_agent_name = sim_config.agents_order[
+                sim_config.default_agent_id
             ]
-        )
-
-    # Re-loading the config since we modified the override_options
-    config = habitat.get_config(cfg_file_path, override_options)
+            default_agent = sim_config.agents[default_agent_name]
+            if len(sim_config.agents) == 1:
+                default_agent.sim_sensors.update(
+                    {"third_rgb_sensor": ThirdRGBSensorConfig()}
+                )
+            else:
+                default_agent.sim_sensors.update(
+                    {
+                        "default_agent_third_rgb_sensor": ThirdRGBSensorConfig(
+                            uuid="default_robot_third_rgb"
+                        )
+                    }
+                )
     env = make_gym_from_config(config)
     return env
 

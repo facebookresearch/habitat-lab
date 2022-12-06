@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 import habitat
+from habitat.config.default_structured_configs import TeleportActionConfig
 from habitat.utils.test_utils import sample_non_stop_action
 
 CFG_TEST = "test/habitat_all_sensors_test.yaml"
@@ -20,11 +21,9 @@ teleport_ROTATION = np.array([0.92035, 0, -0.39109465, 0], dtype=np.float32)
 
 
 def test_task_actions():
-    config = habitat.get_config(config_paths=CFG_TEST)
+    config = habitat.get_config(config_path=CFG_TEST)
     with habitat.config.read_write(config):
-        config.habitat.task.possible_actions = (
-            config.habitat.task.possible_actions + ["teleport"]
-        )
+        config.habitat.task.actions["teleport"] = TeleportActionConfig()
 
     with habitat.Env(config=config) as env:
         env.reset()
@@ -49,11 +48,9 @@ def test_task_actions():
 
 
 def test_task_actions_sampling_for_teleport():
-    config = habitat.get_config(config_paths=CFG_TEST)
+    config = habitat.get_config(config_path=CFG_TEST)
     with habitat.config.read_write(config):
-        config.habitat.task.possible_actions = (
-            config.habitat.task.possible_actions + ["teleport"]
-        )
+        config.habitat.task.actions["teleport"] = TeleportActionConfig()
 
     with habitat.Env(config=config) as env:
         env.reset()
@@ -74,12 +71,12 @@ def test_task_actions_sampling_for_teleport():
     "config_file",
     [
         CFG_TEST,
-        "tasks/pointnav.yaml",
+        "benchmark/nav/pointnav/pointnav_habitat_test.yaml",
         "test/habitat_mp3d_eqa_test.yaml",
     ],
 )
 def test_task_actions_sampling(config_file):
-    config = habitat.get_config(config_paths=config_file)
+    config = habitat.get_config(config_path=config_file)
     if not os.path.exists(
         config.habitat.dataset.data_path.format(
             split=config.habitat.dataset.split

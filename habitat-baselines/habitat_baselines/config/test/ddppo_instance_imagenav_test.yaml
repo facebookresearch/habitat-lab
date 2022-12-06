@@ -1,12 +1,22 @@
-habitat_baselines:
-  base_task_config_path: tasks/instance_imagenav_hm3d.yaml
-  habitat:
-    dataset:
-      split: minival
+# @package _global_
 
-  simulator_gpu_id: 0
+defaults:
+  - /benchmark/nav/instance_imagenav: instance_imagenav_hm3d_v2
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - center_cropper_base
+    - resize_shortest_edge_base
+  - _self_
+
+habitat:
+  dataset:
+    split: minival
+  task:
+    success_reward: 2.5
+    slack_reward: -1e-3
+
+habitat_baselines:
   torch_gpu_id: 0
-  video_option: []
   tensorboard_dir: ""
   video_dir: ""
   test_episode_count: 2
@@ -14,7 +24,6 @@ habitat_baselines:
   num_environments: 1
   checkpoint_folder: data/test_checkpoints/ddppo/instance_imagenav
   trainer_name: ddppo
-  sensors: [depth_sensor, rgb_sensor]
   num_updates: 2
   log_interval: 10
   num_checkpoints: 2
@@ -23,13 +32,9 @@ habitat_baselines:
   force_torch_single_threaded: True
 
   rl:
-    success_reward: 2.5
-    slack_reward: -1e-3
-
     policy:
       name: PointNavResNetPolicy
       obs_transforms:
-        enabled_transforms: [ResizeShortestEdge, CenterCropper]
         resize_shortest_edge:
           trans_keys: [rgb, depth, semantic, instance_imagegoal]
 

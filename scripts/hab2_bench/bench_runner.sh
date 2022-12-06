@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -14,8 +14,8 @@ export OMP_NUM_THREADS=2
 export MAGNUM_LOG=quiet
 export HABITAT_SIM_LOG=quiet
 
-NO_SLEEP=("habitat.simulator.auto_sleep" False)
-NO_CONCUR=("habitat.simulator.concur_render" False)
+NO_SLEEP="habitat.simulator.auto_sleep=False"
+NO_CONCUR="habitat.simulator.concur_render=False"
 #NO_PHYSICS=("habitat.simulator.step_physics" False) #disables simulation step and robot update
 #NO_ROBOT_UPDATE=("habitat.simulator.update_robot" False) #only disables robot update
 
@@ -30,45 +30,45 @@ do
     # IDLE 4 sensors (arm + head, RGBD)
     ##################################
     # # Ours
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "$NO_CONCUR"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "$NO_SLEEP"
 
     # # Ours (RENDER_ONLY)
-    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
+    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
 
     ##################################
     # IDLE 1 sensor (head RGB)
     ##################################
 
     # # Ours
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "$NO_CONCUR"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "$NO_SLEEP"
 
     # # Ours (RENDER_ONLY)
-    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
+    # python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/idle_single_camera.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "render_$i" "${NO_PHYSICS[@]}" "${NO_ROBOT_UPDATE[@]}"
 
     ##################################
     # INTERACT 4 sensors (arm + head, RGBD)
     ##################################
 
     # # Ours
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "all_$i"
 
     # # Ours (-Concur Render)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "${NO_CONCUR[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "noconcur_$i" "$NO_CONCUR"
 
     # # Ours (-Auto sleep)
-    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/tasks/rearrange/benchmark/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "${NO_SLEEP[@]}"
+    python scripts/hab2_bench/hab2_benchmark.py --cfg habitat-lab/habitat/config/benchmark/rearrange/interact.yaml --n-steps "$NUM_STEPS" --n-procs "$j" --out-name "nosleep_$i" "$NO_SLEEP"
 
   done
 done

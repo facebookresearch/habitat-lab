@@ -1,3 +1,5 @@
+
+
 version: 2.1
 gpu: &gpu
   machine:
@@ -20,7 +22,7 @@ jobs:
           command: |
               pip install black --progress-bar off
               pip install "isort[pyproject]" numpy --progress-bar off
-              pip install mypy==0.950 --progress-bar off
+              pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
               pip install -r habitat-lab/requirements.txt --progress-bar off
       - run:
           name: run black
@@ -37,10 +39,7 @@ jobs:
           name: run mypy
           command: |
               mypy --version
-              mypy habitat-lab/
-              mypy habitat-baselines/
-              mypy examples/
-              mypy test/
+              mypy --exclude="^docs/|setup.py$"
       - run:
           name: run assert no files in habitat and habitat_baselines
           command: |
@@ -68,7 +67,6 @@ jobs:
             pip install -U pip setuptools pre-commit
             # Install the hooks now so that they'll be cached
             pre-commit install-hooks
-
       - save_cache:
           paths:
             - ~/.cache/pre-commit
@@ -149,7 +147,7 @@ jobs:
                 . activate habitat
                 pip install -U pip
                 conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
-                pip install pytest-sugar mock cython pygame
+                pip install pytest-sugar>=0.9.6 mock cython pygame
               fi
       - run:
           name: Install pytorch
@@ -223,6 +221,10 @@ jobs:
               if [ ! -f ./habitat-sim/data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf ]
               then
                 python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/
+              fi
+              if [ ! -f ./habitat-sim/data/robots/hab_stretch/urdf/hab_stretch.urdf ]
+              then
+                python -m habitat_sim.utils.datasets_download --uids hab_stretch --data-path habitat-sim/data/
               fi
       - run:
           name: Download coda scene
@@ -309,14 +311,12 @@ jobs:
               . activate habitat; cd habitat-lab
               pip install -e habitat-lab
               pip install -e habitat-baselines
-
               # Download sim inventory for crosslinking (no need to build
               # the whole sim docs for that)
               # TODO: take it from github.com/facebookmicrosites/habitat-website
               #   instead
               mkdir -p ../habitat-sim/build/docs-public/habitat-sim
               curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
-
               cd docs
               conda install -y -c conda-forge doxygen
               conda install -y  jinja2 pygments docutils
@@ -331,8 +331,6 @@ jobs:
               python -c "import habitat"
               python -m pip install habitat-baselines/
               python -c "import habitat_baselines"
-
-
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
 

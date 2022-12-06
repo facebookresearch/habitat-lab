@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import itertools
 import multiprocessing as mp
 import os
+from typing import List
 
 import numpy as np
 import pytest
 from gym import Wrapper
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
@@ -80,11 +81,8 @@ def _load_test_data():
         with habitat.config.read_write(config):
             config.habitat.simulator.scene = datasets[-1].episodes[0].scene_id
             # remove the teleport action that makes the action space continuous
-            config.habitat.task.possible_actions = [
-                a
-                for a in config.habitat.task.possible_actions
-                if a != "teleport"
-            ]
+            if "teleport" in config.habitat.task.actions:
+                del config.habitat.task.actions["teleport"]
             if not os.path.exists(config.habitat.simulator.scene):
                 pytest.skip(
                     "Please download Habitat test data to data folder."
@@ -199,9 +197,9 @@ def test_env(gpu2gpu):
 
     with habitat.config.read_write(config):
         config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-        config.habitat.task.possible_actions = [
-            a for a in config.habitat.task.possible_actions if a != "teleport"
-        ]
+        # remove the teleport action that makes the action space continuous
+        if "teleport" in config.habitat.task.actions:
+            del config.habitat.task.actions["teleport"]
     with habitat.Env(config=config, dataset=None) as env:
         env.episodes = [
             NavigationEpisode(
@@ -251,7 +249,11 @@ def test_rl_vectorized_envs(gpu2gpu):
     for config in configs:
         with habitat.config.read_write(config):
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-            config.habitat.simulator.agent_0.sensors = ["rgb_sensor"]
+            agent_config = get_agent_config(config.habitat.simulator)
+            # Only keep the rgb_sensor
+            agent_config.sim_sensors = {
+                "rgb_sensor": agent_config.sim_sensors["rgb_sensor"]
+            }
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
@@ -301,9 +303,9 @@ def test_rl_env(gpu2gpu):
 
     with habitat.config.read_write(config):
         config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
-        config.habitat.task.possible_actions = [
-            a for a in config.habitat.task.possible_actions if a != "teleport"
-        ]
+        # remove the teleport action that makes the action space continuous
+        if "teleport" in config.habitat.task.actions:
+            del config.habitat.task.actions["teleport"]
 
     with _make_dummy_env_func(config=config, dataset=None) as env:
         env.episodes = [
@@ -416,7 +418,7 @@ def test_close_with_paused():
 # TODO Bring back this test for the greedy follower
 @pytest.mark.skip
 def test_action_space_shortest_path():
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 
@@ -429,8 +431,8 @@ def test_action_space_shortest_path():
     source_rotation = [0, np.sin(angle / 2), 0, np.cos(angle / 2)]
     source = AgentState(source_position, source_rotation)
 
-    reachable_targets = []
-    unreachable_targets = []
+    reachable_targets: List[AgentState] = []
+    unreachable_targets: List[AgentState] = []
     while len(reachable_targets) < 5:
         position = env.sim.sample_navigable_point()
         angles = list(range(-180, 180, config.habitat.simulator.turn_angle))
@@ -450,18 +452,22 @@ def test_action_space_shortest_path():
             unreachable_targets.append(AgentState(position, rotation))
 
     targets = reachable_targets
-    shortest_path1 = env.action_space_shortest_path(source, targets)
+    shortest_path1 = env.action_space_shortest_path(  # type: ignore[attr-defined]
+        source, targets
+    )
     assert shortest_path1 != []
 
     targets = unreachable_targets
-    shortest_path2 = env.action_space_shortest_path(source, targets)
+    shortest_path2 = env.action_space_shortest_path(  # type: ignore[attr-defined]
+        source, targets
+    )
     assert shortest_path2 == []
     env.close()
 
 
 @pytest.mark.parametrize("set_method", ["current", "list", "iter"])
 def test_set_episodes(set_method):
-    config = get_config()
+    config = get_config("benchmark/nav/pointnav/pointnav_habitat_test.yaml")
     if not os.path.exists(config.habitat.simulator.scene):
         pytest.skip("Please download Habitat test data to data folder.")
 

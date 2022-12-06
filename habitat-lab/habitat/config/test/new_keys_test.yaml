@@ -1,7 +1,0 @@
-habitat:
-  environment:
-    NEW_KEY: 20
-    iterator_options:
-      MY_PARAM: "test"
-  task:
-    MY_NEW_task_PARAM: test

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pyrobot
@@ -13,13 +13,16 @@ from gym import Space, spaces
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     BumpSensor,
-    Config,
     DepthSensor,
     RGBSensor,
     SensorSuite,
     Simulator,
 )
 from habitat.core.utils import center_crop, try_cv2_import
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 cv2 = try_cv2_import()
 
@@ -167,12 +170,11 @@ class PyRobot(Simulator):
         config: configuration for initializing the PyRobot object.
     """
 
-    def __init__(self, config: Config) -> None:
+    def __init__(self, config: "DictConfig") -> None:
         self._config = config
 
         robot_sensors = []
-        for sensor_name in self._config.sensors:
-            sensor_cfg = getattr(self._config, sensor_name)
+        for sensor_cfg in self._config.sensors.values():
             sensor_type = registry.get_sensor(sensor_cfg.type)
 
             assert sensor_type is not None, "invalid sensor type {}".format(
