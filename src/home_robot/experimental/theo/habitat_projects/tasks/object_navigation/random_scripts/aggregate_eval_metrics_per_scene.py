@@ -11,7 +11,7 @@ from collections import defaultdict
 if __name__ == "__main__":
     results_path = "home_robot/experimental/theo/habitat_projects/tasks/object_navigation/datadump/results/eval_floorplanner/val_episode_results.json"
     episode_results = json.load(open(results_path, "r"))
-    scene_results = defaultdict(lambda x: [])
+    scene_results = defaultdict(list)
     for k, v in episode_results.items():
         scene_id = "_".join(k.split("_")[:-1])
         scene_results[scene_id].append(v["success"])
