@@ -28,6 +28,7 @@ habitat_baselines:
   num_checkpoints: 20
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
+  load_resume_state_config: False
   eval:
     use_ckpt_config: False
     should_load_ckpt: False
@@ -45,7 +46,7 @@ habitat_baselines:
             name: "FixedHighLevelPolicy"
             add_arm_rest: True
           defined_skills:
-            NN_OPEN_CAB:
+            nn_open_cab:
               skill_name: "ArtObjSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
@@ -56,7 +57,7 @@ habitat_baselines:
               start_zone_radius: 0.3
               force_end_on_timeout: True
 
-            NN_OPEN_FRIDGE:
+            nn_open_fridge:
               skill_name: "ArtObjSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
@@ -67,7 +68,7 @@ habitat_baselines:
               start_zone_radius: 0.3
               force_end_on_timeout: True
 
-            NN_CLOSE_CAB:
+            nn_close_cab:
               skill_name: "ArtObjSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
@@ -78,7 +79,7 @@ habitat_baselines:
               start_zone_radius: 0.3
               force_end_on_timeout: True
 
-            NN_CLOSE_FRIDGE:
+            nn_close_fridge:
               skill_name: "ArtObjSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
