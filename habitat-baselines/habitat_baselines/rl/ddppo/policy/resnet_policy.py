@@ -96,15 +96,12 @@ class PointNavResNetPolicy(NetPolicy):
     ):
         # Exclude cameras for rendering from the observation space.
         ignore_names: List[str] = []
-        for agent_id in config.habitat.simulator.agents.keys():
+        for agent_config in config.habitat.simulator.agents.values():
             ignore_names.extend(
                 [
-                    config.habitat.simulator.agents[agent_id]
-                    .sim_sensors[k]
-                    .uuid
+                    agent_config.sim_sensors[k].uuid
                     for k in config.habitat_baselines.video_render_views
-                    if k
-                    in config.habitat.simulator.agents[agent_id].sim_sensors
+                    if k in agent_config.sim_sensors
                 ]
             )
         filtered_obs = spaces.Dict(
