@@ -32,16 +32,16 @@ OLD_STOP_ACTION_ID = 3
 TEST_EPISODE_SET = [1, 309, 807, 958, 696, 10, 297, 1021, 1307, 1569]
 
 RGB_EPISODE_MEANS = {
-    1: 123.1576333222566,
-    10: 123.86094605688947,
-    297: 122.69351220853402,
-    309: 118.95794969775298,
-    696: 115.71903709129052,
-    807: 143.7834237211494,
-    958: 141.97871610030387,
-    1021: 119.1051016229882,
-    1307: 102.11408987112925,
-    1569: 91.01973929495183,
+    1: 123.20,
+    10: 120.56,
+    297: 122.69,
+    309: 118.66,
+    696: 116.10,
+    807: 145.77,
+    958: 143.48,
+    1021: 119.10,
+    1307: 102.11,
+    1569: 91.01,
 }
 
 EPISODES_LIMIT = 6
@@ -271,7 +271,7 @@ def test_mp3d_eqa_sim_correspondence():
                     RGB_EPISODE_MEANS[int(episode.episode_id)],
                     rgb_mean,
                     atol=0.5,
-                ), "RGB output doesn't match the ground truth."
+                ), f"RGB output doesn't match the ground truth. Expected {RGB_EPISODE_MEANS[int(episode.episode_id)]} but got {rgb_mean}"
 
             ep_i = (ep_i + 1) % EPISODES_LIMIT
             if ep_i == 0:
