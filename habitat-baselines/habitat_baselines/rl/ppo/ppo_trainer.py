@@ -21,6 +21,7 @@ from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import VectorEnv, logger
 from habitat.config import read_write
+from habitat.config.default import get_agent_config
 from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
@@ -943,28 +944,22 @@ class PPOTrainer(BaseRLTrainer):
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
-            for render_view in config.habitat_baselines.video_render_views:
-                uuid: Optional[str] = None
-                for agent_id in config.habitat.simulator.agents:
-                    if (
-                        render_view
-                        in config.habitat.simulator.agents[
-                            agent_id
-                        ].sim_sensors
-                    ):
-                        uuid = (
-                            config.habitat.simulator.agents[agent_id]
-                            .sim_sensors[render_view]
-                            .uuid
-                        )
-                    else:
-                        raise ValueError(
-                            f"Missing render sensor `{render_view}` from agent `{agent_id}`"
-                        )
-                if uuid is not None:
-                    with read_write(config):
-                        config.habitat.gym.obs_keys.append(uuid)
-                        config.habitat.simulator.debug_render = True
+            agent_config = get_agent_config(config.habitat.simulator)
+            agent_sensors = agent_config.sim_sensors
+            render_view_uuids = [
+                agent_sensors[render_view].uuid
+                for render_view in config.habitat_baselines.video_render_views
+                if render_view in agent_sensors
+            ]
+            assert len(render_view_uuids) > 0, (
+                f"Missing render sensors in agent config: "
+                f"{config.habitat_baselines.video_render_views}."
+            )
+            with read_write(config):
+                for render_view_uuid in render_view_uuids:
+                    if render_view_uuid not in config.habitat.gym.obs_keys:
+                        config.habitat.gym.obs_keys.append(render_view_uuid)
+                config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
