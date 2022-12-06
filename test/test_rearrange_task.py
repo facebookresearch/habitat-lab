@@ -315,44 +315,49 @@ def test_receptacles(
             sim.navmesh_visualization = False
             for isl_ix,mesh_rec in enumerate(receptacles):
                 isl_color = mn.Color4.from_srgb(int(d3_40_colors_hex[isl_ix], base=16))
-                print(f"isl_color = {isl_color}")
+                #print(f"isl_color = {isl_color}")
                 mesh_rec.debug_draw(sim, color=isl_color)
             observations.append(sim.get_sensor_observations())
 
-
     # 5. sample from receptacles
-        stat_samples_per_unit_area = 500
-        render_samples_per_unit_area = 50
+        samples_per_unit_area = 50
 
         rec_samples = []
         for isl_ix,mesh_rec in enumerate(receptacles):
             rec_samples.append([])
-            num_samples = max(1, int(mesh_rec.total_area*stat_samples_per_unit_area))
-            print(f"isl {isl_ix} num samples = {num_samples}")
+            num_samples = max(1, int(mesh_rec.total_area*samples_per_unit_area))
+            #print(f"isl {isl_ix} num samples = {num_samples}")
             for samp_ix in range(num_samples):
-                sample = mesh_rec.sample_uniform_global(sim,sample_region_scale=1.0)
-                #print(f"    - {sample}")
-                rec_samples[-1].append(sample)
+                rec_samples[-1].append(mesh_rec.sample_uniform_global(sim,sample_region_scale=1.0))
+                #test that the samples are on the source NavMesh
+                assert (sim.pathfinder.snap_point(rec_samples[-1][-1], island_index=isl_ix)-rec_samples[-1][-1]).length() < 0.01, "Sample is not on the island."
 
         if debug_visualization:
             dblr = sim.get_debug_line_render()
             #draw the samples
             for isl_ix,samples in enumerate(rec_samples):
                 isl_color = mn.Color4.from_srgb(int(d3_40_colors_hex[isl_ix], base=16))
-                num_samples = max(1, int(mesh_rec.total_area*render_samples_per_unit_area))
-                for sample_ix in range(num_samples):
-                    dblr.draw_circle(samples[sample_ix], 0.05, isl_color)
+                for sample in samples:
+                    dblr.draw_circle(sample, 0.05, isl_color)
                 observations.append(sim.get_sensor_observations())
 
     # 6. test sampling is correct (percent in each triangle equivalent to area weight)
-        
+        samples_per_unit_area = 10000
+        for isl_ix,mesh_rec in enumerate(receptacles):
+            num_samples = max(1, int(mesh_rec.total_area*samples_per_unit_area))
+            rec_samples = [mesh_rec.sample_area_weighted_triangle() for samp_ix in range(num_samples)]
+            for tri_ix in range(len(mesh_rec.area_weighted_accumulator)):
+                #compute the weight from weight accumulator
+                weight = mesh_rec.area_weighted_accumulator[tri_ix]
+                if tri_ix > 0:
+                    weight -= mesh_rec.area_weighted_accumulator[tri_ix-1]
+                num_tri = rec_samples.count(tri_ix)
+                #print(f"got {num_tri/num_samples} expected {weight}, diff = {abs(weight - num_tri/num_samples)}")
+                assert abs(weight - num_tri/num_samples) < 0.005, "area weighting may be off"
+
 
     #show observations
     if debug_visualization:
         from habitat_sim.utils import viz_utils as vut
         for obs in observations:
             vut.observation_to_image(obs["color_sensor"], "color").show()
-
-    logger.info(
-        f"done"
-    )
