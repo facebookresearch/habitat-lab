@@ -293,7 +293,6 @@ class TriangleMeshReceptacle(Receptacle):
             if f_ix > 0:
                 self.area_weighted_accumulator[f_ix] += self.area_weighted_accumulator[f_ix-1]
         print(self.area_weighted_accumulator)
-        #TODO: test this
 
     def get_face_verts(self, f_ix):
         verts = []
