@@ -1,5 +1,9 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os
-from typing import Callable, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 
 import cv2
 import numpy as np
@@ -135,7 +139,7 @@ class EQADataset(wds.Dataset):
     def group_by_keys_(
         self,
         data,
-        keys: Callable[[str], Tuple[str]] = base_plus_ext,
+        keys: Callable[[str], Tuple[str, ...]] = base_plus_ext,
         lcase: bool = True,
         suffixes=None,
     ):
@@ -144,7 +148,7 @@ class EQADataset(wds.Dataset):
         keys: function that splits the key into key and extension (base_plus_ext)
         lcase: convert suffixes to lower case (Default value = True)
         """
-        current_sample = {}
+        current_sample: Dict[str, Any] = {}
         for fname, value in data:
             prefix, suffix = keys(fname)
             if prefix is None:
@@ -224,10 +228,10 @@ class EQADataset(wds.Dataset):
                 pos.position, pos.rotation
             )
             img = observation["rgb"]
-            idx = "{0:0=3d}".format(idx)
+            str_idx = "{0:0=3d}".format(idx)
             episode_id = "{0:0=4d}".format(int(episode_id))
             new_path = os.path.join(
-                self.frame_dataset_path, "{}.{}".format(episode_id, idx)
+                self.frame_dataset_path, "{}.{}".format(episode_id, str_idx)
             )
             cv2.imwrite(new_path + ".jpg", img[..., ::-1])
 

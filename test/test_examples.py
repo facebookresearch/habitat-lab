@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import itertools
 import multiprocessing
 import runpy
@@ -62,6 +66,7 @@ def test_example_modules(args):
         (
             "examples/interactive_play.py",
             "--no-render",
+            "--disable-inverse-kinematics",
         ),
         ("examples/tutorials/nb_python/Habitat2_Quickstart.py",),
         ("examples/tutorials/nb_python/habitat2_gym_tutorial.py",),

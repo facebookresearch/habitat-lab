@@ -14,6 +14,7 @@ from glob import glob
 
 import pytest
 
+from habitat.config.default import get_agent_config
 from habitat.core.vector_env import VectorEnv
 
 try:
@@ -134,7 +135,7 @@ def test_trainers(
     "test_cfg_path",
     (
         "test/ddppo_pointnav_test.yaml",
-        "rearrange/ddppo_pick.yaml",
+        "rearrange/rl_skill.yaml",
     ),
 )
 @pytest.mark.parametrize("variable_experience", [True, False])
@@ -202,7 +203,7 @@ def test_cpca():
 def test_cubemap_stiching(
     test_cfg_path: str, mode: str, camera: str, sensor_type: str
 ):
-    meta_config = get_config(config_paths=test_cfg_path)
+    meta_config = get_config(config_path=test_cfg_path)
     with read_write(meta_config):
         config = meta_config.habitat
         CAMERA_NUM = 6
@@ -216,32 +217,28 @@ def test_cubemap_stiching(
         ]
         sensor_uuids = []
 
+        agent_config = get_agent_config(config.simulator)
         if sensor_type == "rgb":
-            config.simulator.agent_0.sim_sensors = {
+            agent_config.sim_sensors = {
                 "rgb_sensor": HeadRGBSensorConfig(width=256, height=256),
             }
         elif sensor_type == "depth":
-            config.simulator.agent_0.sim_sensors = {
+            agent_config.sim_sensors = {
                 "depth_sensor": HeadDepthSensorConfig(width=256, height=256),
             }
         else:
             raise ValueError(
                 "Typo in the sensor type in test_cubemap_stiching"
             )
-        sensor = getattr(
-            config.simulator.agent_0.sim_sensors, f"{sensor_type}_sensor"
-        )
+
+        sensor = agent_config.sim_sensors[f"{sensor_type}_sensor"]
         for camera_id in range(CAMERA_NUM):
             camera_template = f"{sensor_type}_{camera_id}"
             camera_config = deepcopy(sensor)
             camera_config.orientation = orient[camera_id]
             camera_config.uuid = camera_template.lower()
             sensor_uuids.append(camera_config.uuid)
-            setattr(
-                config.simulator.agent_0.sim_sensors,
-                camera_template,
-                camera_config,
-            )
+            agent_config.sim_sensors[camera_template] = camera_config
 
         meta_config.habitat = config
 
@@ -368,7 +365,7 @@ def __do_pause_test(num_envs, envs_to_pause):
         def pause_at(self, idx):
             self._running.pop(idx)
 
-    envs = PausableShim(num_envs)
+    envs: PausableShim = PausableShim(num_envs)
     test_recurrent_hidden_states = (
         torch.arange(num_envs).view(num_envs, 1, 1).expand(num_envs, 4, 512)
     )
@@ -404,7 +401,7 @@ def __do_pause_test(num_envs, envs_to_pause):
 
     expected = sorted(set(range(num_envs)) - set(envs_to_pause))
 
-    assert envs._running == expected
+    assert envs._running == expected  # type: ignore[attr-defined]
 
     assert list(test_recurrent_hidden_states.size()) == [len(expected), 4, 512]
     assert test_recurrent_hidden_states[:, 0, 0].numpy().tolist() == expected

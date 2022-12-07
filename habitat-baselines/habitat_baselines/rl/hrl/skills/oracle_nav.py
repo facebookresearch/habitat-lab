@@ -1,7 +1,10 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import os.path as osp
 from dataclasses import dataclass
 
-import numpy as np
 import torch
 
 from habitat.core.spaces import ActionSpace
@@ -10,10 +13,7 @@ from habitat.tasks.rearrange.actions.oracle_nav_action import (
 )
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
-from habitat.tasks.rearrange.rearrange_sensors import (
-    TargetGoalGpsCompassSensor,
-    TargetStartGpsCompassSensor,
-)
+from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -59,6 +59,7 @@ class OracleNavPolicy(NnSkillPolicy):
 
         self._is_target_obj = None
         self._targ_obj_idx = None
+        self._prev_pos = [None for _ in range(self._batch_size)]
 
     def on_enter(
         self,
@@ -70,6 +71,11 @@ class OracleNavPolicy(NnSkillPolicy):
     ):
         self._is_target_obj = None
         self._targ_obj_idx = None
+        self._prev_angle = {}
+
+        for i in batch_idx:
+            self._prev_pos[i] = None
+
         ret = super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )
@@ -107,23 +113,18 @@ class OracleNavPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
+        batch_idx,
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
-        for env_i, skill_arg in enumerate(self._cur_skill_args):
-            if skill_arg.is_target_obj:
-                dist, angle = observations[
-                    TargetStartGpsCompassSensor.cls_uuid
-                ][env_i]
-            else:
-                dist, angle = observations[
-                    TargetGoalGpsCompassSensor.cls_uuid
-                ][env_i]
-            angle = np.abs(angle)
-            ret[env_i] = (
-                dist < self._config.stop_dist_thresh
-                and angle < self._config.stop_angle_thresh
-            )
+        cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
+
+        for i, batch_i in enumerate(batch_idx):
+            prev_pos = self._prev_pos[batch_i]
+            if prev_pos is not None:
+                movement = torch.linalg.norm(prev_pos - cur_pos[i])
+                ret[i] = movement < self._config.STOP_THRESH
+            self._prev_pos[batch_i] = cur_pos[i]
 
         return ret
 
@@ -164,8 +165,8 @@ class OracleNavPolicy(NnSkillPolicy):
             match_i, is_target_obj, targ_obj_idx
         )
 
-    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
-        return self._cur_skill_args[batch_idx].target_idx
+    def _get_multi_sensor_index(self, batch_idx):
+        return [self._cur_skill_args[i].target_idx for i in batch_idx]
 
     def _internal_act(
         self,
@@ -177,9 +178,10 @@ class OracleNavPolicy(NnSkillPolicy):
         deterministic=False,
     ):
         full_action = torch.zeros(prev_actions.shape, device=masks.device)
-        full_action = self._keep_holding_state(full_action, observations)
-        cur_args = self._cur_skill_args[cur_batch_idx]
+        action_idxs = torch.FloatTensor(
+            [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
+        )
 
-        full_action[:, self._oracle_nav_ac_idx] = cur_args.action_idx + 1
+        full_action[:, self._oracle_nav_ac_idx] = action_idxs
 
         return full_action, rnn_hidden_states

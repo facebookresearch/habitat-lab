@@ -11,7 +11,7 @@ import pytest
 torch = pytest.importorskip("torch")
 habitat_baselines = pytest.importorskip("habitat_baselines")
 
-import torch.distributed
+import torch.distributed  # type: ignore[no-redef]
 
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port, gather_objects
 
@@ -25,11 +25,10 @@ def _worker_fn(
     torch.distributed.init_process_group(
         "gloo", store=tcp_store, rank=world_rank, world_size=world_size
     )
-
     if all_same_size:
         my_obj = world_rank
     else:
-        my_obj = list(range(world_rank + 1))
+        my_obj = list(range(world_rank + 1))  # type: ignore
 
     output_rank = max(world_size - 4, 0)
 

@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from typing import List, Tuple
 
 import gym.spaces as spaces
@@ -28,13 +32,17 @@ class ResetArmSkill(SkillPolicy):
     def on_enter(
         self,
         skill_arg: List[str],
-        batch_idx: int,
+        batch_idxs: List[int],
         observations,
         rnn_hidden_states,
         prev_actions,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         ret = super().on_enter(
-            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+            skill_arg,
+            batch_idxs,
+            observations,
+            rnn_hidden_states,
+            prev_actions,
         )
 
         self._initial_delta = (
@@ -47,7 +55,7 @@ class ResetArmSkill(SkillPolicy):
         return None
 
     def _is_skill_done(
-        self, observations, rnn_hidden_states, prev_actions, masks
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ):
         current_joint_pos = observations["joint"].cpu().numpy()
 

@@ -4,13 +4,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import Dict, Iterable, Optional, Union
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union
 
 import torch
 from gym import spaces
 from torch import nn as nn
 
-from habitat.config import Config
 from habitat.tasks.nav.nav import (
     ImageGoalSensor,
     IntegratedPointGoalGPSAndCompassSensor,
@@ -26,6 +25,9 @@ from habitat_baselines.utils.common import (
     GaussianNet,
     get_num_actions,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 class Policy(abc.ABC):
@@ -44,6 +46,16 @@ class Policy(abc.ABC):
 
     def forward(self, *x):
         raise NotImplementedError
+
+    def get_policy_info(self, infos, dones) -> List[Dict[str, float]]:
+        """
+        Gets the log information from the policy at the current time step.
+        Currently only called during evaluation. The return list should be
+        empty for no logging or a list of size equal to the number of
+        environments.
+        """
+
+        return []
 
     def act(
         self,
@@ -251,7 +263,7 @@ class PointNavBaselinePolicy(NetPolicy):
     @classmethod
     def from_config(
         cls,
-        config: Config,
+        config: "DictConfig",
         observation_space: spaces.Dict,
         action_space,
         **kwargs,

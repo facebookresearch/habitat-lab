@@ -1,12 +1,13 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange: nav_pick_nav_place
+  - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
 
 habitat_baselines:
+  verbose: False
   trainer_name: "ppo"
   torch_gpu_id: 0
   tensorboard_dir: ""
@@ -31,11 +32,11 @@ habitat_baselines:
         obs_transforms:
           add_virtual_keys:
             virtual_keys:
-              "nav_to_skill": 8
-              "object_to_agent_gps_compass": 2
+              "goal_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
-            name: "GtHighLevelPolicy"
+            name: "FixedHighLevelPolicy"
+            add_arm_rest: True
           defined_skills:
             nn_pick:
               skill_name: "PickSkillPolicy"
@@ -46,7 +47,7 @@ habitat_baselines:
               load_ckpt_file: ""
               max_skill_steps: 200
               force_end_on_timeout: True
-              force_config_file: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_pick.yaml"
+              force_config_file: "benchmark/rearrange=pick"
 
             nn_place:
               skill_name: "PlaceSkillPolicy"
@@ -57,20 +58,20 @@ habitat_baselines:
               load_ckpt_file: ""
               max_skill_steps: 200
               force_end_on_timeout: True
-              force_config_file: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_place.yaml"
+              force_config_file: "benchmark/rearrange=place"
 
             nn_nav:
               skill_name: "NavSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
-              obs_skill_inputs: ["object_to_agent_gps_compass"]
+              obs_skill_inputs: ["goal_to_agent_gps_compass"]
               obs_skill_input_dim: 2
               lin_speed_stop: 0.067
               ang_speed_stop: 0.067
               load_ckpt_file: ""
               max_skill_steps: 300
               force_end_on_timeout: False
-              force_config_file: "habitat-baselines/habitat_baselines/config/rearrange/ddppo_nav_to_obj.yaml"
+              force_config_file: "benchmark/rearrange=nav_to_obj"
 
             wait_skill:
               skill_name: "WaitSkillPolicy"

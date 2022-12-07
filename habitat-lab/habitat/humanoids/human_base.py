@@ -79,7 +79,7 @@ class Humanoid():
             # )
         # self.joint_limits = self.sim_obj.joint_position_limits
 
-        self._update_motor_settings_cache()
+        # self._update_motor_settings_cache()
 
 
     def get_robot_sim_id(self) -> int:

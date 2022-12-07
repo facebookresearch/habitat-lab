@@ -7,9 +7,9 @@
 import gzip
 import json
 import os
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from habitat.config import Config, read_write
+from habitat.config import read_write
 from habitat.core.dataset import ALL_SCENES_MASK, Dataset
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import (
@@ -17,6 +17,10 @@ from habitat.tasks.nav.nav import (
     NavigationGoal,
     ShortestPathPoint,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 CONTENT_SCENES_PATH_FIELD = "content_scenes_path"
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
@@ -30,13 +34,13 @@ class PointNavDatasetV1(Dataset):
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     @staticmethod
-    def check_config_paths_exist(config: Config) -> bool:
+    def check_config_paths_exist(config: "DictConfig") -> bool:
         return os.path.exists(
             config.data_path.format(split=config.split)
         ) and os.path.exists(config.scenes_dir)
 
     @classmethod
-    def get_scenes_to_load(cls, config: Config) -> List[str]:
+    def get_scenes_to_load(cls, config: "DictConfig") -> List[str]:
         r"""Return list of scene ids for which dataset has separate files with
         episodes.
         """
@@ -86,7 +90,7 @@ class PointNavDatasetV1(Dataset):
         scenes.sort()
         return scenes
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.episodes = []
 
         if config is None:

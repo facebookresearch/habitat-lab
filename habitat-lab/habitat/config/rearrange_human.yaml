@@ -18,13 +18,8 @@ habitat:
     max_episode_steps: 0
   task:
     actions:
-      walk_action:
-        type: "WalkAction"
       humanjoint_action:
         type: "HumanJointAction"
-      stop_action:
-        type: "StopAction"
-
       grab_right_action:
         type: "GrabRightAction"
       grab_left_action:

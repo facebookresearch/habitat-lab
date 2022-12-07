@@ -13,8 +13,8 @@ from omegaconf import MISSING
 
 import habitat
 from habitat.config.default_structured_configs import (
+    LabSensorConfig,
     MeasurementConfig,
-    SensorConfig,
 )
 
 
@@ -32,14 +32,14 @@ class EpisodeInfoExample(habitat.Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "episode_info"
 
-    # This is called whenver the environment is reset
+    # This is called whenever the environment is reset
     def reset_metric(self, *args: Any, episode, **kwargs: Any):
         # Our measure always contains all the attributes of the episode
         self._metric = vars(episode).copy()
         # But only on reset, it has an additional field of my_value
         self._metric["my_value"] = self._config.VALUE
 
-    # This is called whenver an action is taken in the environment
+    # This is called whenever an action is taken in the environment
     def update_metric(self, *args: Any, episode, action, **kwargs: Any):
         # Now the measure will just have all the attributes of the episode
         self._metric = vars(episode).copy()
@@ -81,7 +81,7 @@ class AgentPositionSensor(habitat.Sensor):
             dtype=np.float32,
         )
 
-    # This is called whenver reset is called or an action is taken
+    # This is called whenever reset is called or an action is taken
     def get_observation(
         self, observations, *args: Any, episode, **kwargs: Any
     ):
@@ -90,7 +90,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 # define a configuration for this new sensor
 @dataclass
-class AgentPositionSensorConfig(SensorConfig):
+class AgentPositionSensorConfig(LabSensorConfig):
     # Note that typing is required on all fields
     type: str = "my_supercool_sensor"
     # MISSING makes this field have no defaults
@@ -100,7 +100,7 @@ class AgentPositionSensorConfig(SensorConfig):
 def main():
     # Get the default config node
     config = habitat.get_config(
-        config_paths="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     )
     with habitat.config.read_write(config):
         my_value = 5

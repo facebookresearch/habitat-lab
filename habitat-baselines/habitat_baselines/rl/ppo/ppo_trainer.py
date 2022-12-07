@@ -9,7 +9,7 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -19,8 +19,9 @@ from omegaconf import OmegaConf
 from torch import nn
 from torch.optim.lr_scheduler import LambdaLR
 
-from habitat import Config, VectorEnv, logger
+from habitat import VectorEnv, logger
 from habitat.config import read_write
+from habitat.config.default import get_agent_config
 from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
@@ -67,6 +68,9 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -121,7 +125,7 @@ class PPOTrainer(BaseRLTrainer):
 
         return t.to(device=orig_device)
 
-    def _setup_actor_critic_agent(self, ppo_cfg: Config) -> None:
+    def _setup_actor_critic_agent(self, ppo_cfg: "DictConfig") -> None:
         r"""Sets up actor critic and agent for PPO.
 
         Args:
@@ -754,6 +758,7 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             torch.distributed.barrier()
 
+        resume_run_id = None
         if resume_state is not None:
             self.agent.load_state_dict(resume_state["state_dict"])
             self.agent.optimizer.load_state_dict(resume_state["optim_state"])
@@ -774,12 +779,14 @@ class PPOTrainer(BaseRLTrainer):
             self.window_episode_stats.update(
                 requeue_stats["window_episode_stats"]
             )
+            resume_run_id = requeue_stats.get("run_id", None)
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         with (
             get_writer(
                 self.config,
+                resume_run_id=resume_run_id,
                 flush_secs=self.flush_secs,
                 purge_step=int(self.num_steps_done),
             )
@@ -806,6 +813,7 @@ class PPOTrainer(BaseRLTrainer):
                         prev_time=(time.time() - self.t_start) + prev_time,
                         running_episode_stats=self.running_episode_stats,
                         window_episode_stats=dict(self.window_episode_stats),
+                        run_id=writer.get_run_id(),
                     )
 
                     save_resume_state(
@@ -937,11 +945,22 @@ class PPOTrainer(BaseRLTrainer):
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
+            agent_config = get_agent_config(config.habitat.simulator)
+            agent_sensors = agent_config.sim_sensors
+            render_view_uuids = [
+                agent_sensors[render_view].uuid
+                for render_view in config.habitat_baselines.video_render_views
+                if render_view in agent_sensors
+            ]
+            assert len(render_view_uuids) > 0, (
+                f"Missing render sensors in agent config: "
+                f"{config.habitat_baselines.video_render_views}."
+            )
             with read_write(config):
-                for render_view in config.habitat_baselines.video_render_views:
-                    uuid = config.habitat.simulator[render_view].uuid
-                    config.habitat.gym.obs_keys.append(uuid)
-                    config.habitat_baselines.sensors.append(render_view)
+                for render_view_uuid in render_view_uuids:
+                    if render_view_uuid not in config.habitat.gym.obs_keys:
+                        config.habitat.gym.obs_keys.append(render_view_uuid)
+                config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
@@ -1069,6 +1088,9 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            policy_info = self.actor_critic.get_policy_info(infos, dones)
+            for i in range(len(policy_info)):
+                infos[i].update(policy_info[i])
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,

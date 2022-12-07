@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import pytest
 from gym import spaces
 from gym.vector.utils.spaces import batch_space
@@ -13,6 +17,7 @@ from habitat_baselines.config.default_structured_configs import (
     Cube2EqConfig,
     Cube2FishConfig,
     Eq2CubeConfig,
+    ObsTransformConfig,
     ResizeShortestEdgeConfig,
 )
 
@@ -27,7 +32,7 @@ from habitat_baselines.config.default_structured_configs import (
         Eq2CubeConfig(),
     ],
 )
-def test_transforms(obs_transform_config: str):
+def test_transforms(obs_transform_config: ObsTransformConfig):
     transformer_cls = baseline_registry.get_obs_transformer(
         obs_transform_config.type
     )

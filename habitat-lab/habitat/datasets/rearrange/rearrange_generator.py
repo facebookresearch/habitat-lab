@@ -6,16 +6,22 @@
 
 import os.path as osp
 from collections import defaultdict
+
+try:
+    from collections import Sequence
+except ImportError:
+    from collections.abc import Sequence
+
 from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 from tqdm import tqdm
-from yacs.config import CfgNode as CN
 
 import habitat.datasets.rearrange.samplers as samplers
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
+from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
@@ -56,7 +62,7 @@ class RearrangeEpisodeGenerator:
 
     def __init__(
         self,
-        cfg: CN,
+        cfg: DictConfig,
         debug_visualization: bool = False,
         limit_scene_set: Optional[str] = None,
     ) -> None:
@@ -117,8 +123,8 @@ class RearrangeEpisodeGenerator:
                 assert (
                     list_key in scene_set
                 ), f"Expected list key '{list_key}'."
-                assert (
-                    type(scene_set[list_key]) is list
+                assert isinstance(
+                    scene_set[list_key], Sequence
                 ), f"cfg.scene_sets - '{scene_set['name']}' '{list_key}' must be a list of strings."
             self._scene_sets[
                 scene_set["name"]
@@ -138,8 +144,8 @@ class RearrangeEpisodeGenerator:
                 assert (
                     list_key in object_set
                 ), f"Expected list key '{list_key}'."
-                assert (
-                    type(object_set[list_key]) is list
+                assert isinstance(
+                    object_set[list_key], Sequence
                 ), f"cfg.object_sets - '{object_set['name']}' '{list_key}' must be a list of strings."
             self._obj_sets[
                 object_set["name"]
@@ -165,8 +171,8 @@ class RearrangeEpisodeGenerator:
                 assert (
                     list_key in receptacle_set
                 ), f"Expected list key '{list_key}'."
-                assert (
-                    type(receptacle_set[list_key]) is list
+                assert isinstance(
+                    receptacle_set[list_key], Sequence
                 ), f"cfg.receptacle_sets - '{receptacle_set['name']}' '{list_key}' must be a list of strings."
 
             self._receptacle_sets[receptacle_set["name"]] = ReceptacleSet(

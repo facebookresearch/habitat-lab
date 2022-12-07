@@ -38,7 +38,7 @@ class HabDemoRunner:
 
     def step_env(self, action):
         start = time.time()
-        obs = self.envs.step(action[0])
+        obs = self.envs.step(action[0])  # type: ignore[has-type]
         step_time = time.time() - start
 
         return obs, step_time
@@ -50,10 +50,10 @@ class HabDemoRunner:
 
     def do_time_steps(self):
         final_vid = []
-        profile_sums = defaultdict(lambda: 0)
+        profile_sums = defaultdict(lambda: 0)  # type: ignore[var-annotated]
 
         for step_idx in range(self.args.n_steps):
-            actions = self.get_actions(step_idx)
+            actions = self.get_actions(step_idx)  # type: ignore[has-type]
 
             obs, step_time = self.step_env(actions)
             if step_idx >= self.args.n_pre_step:
@@ -87,7 +87,7 @@ class HabDemoRunner:
                 _barrier.reset()
         profile_sums = self.do_time_steps()
         # self.envs.close()
-        del self.envs
+        del self.envs  # type: ignore[has-type]
 
         return profile_sums
 
@@ -207,7 +207,6 @@ if __name__ == "__main__":
     avg_fps = 0
 
     for _trial in range(args.n_trials):
-        final_vid = []
         bench = HabDemoRunner(args)
         profile_sums = bench.benchmark()
 

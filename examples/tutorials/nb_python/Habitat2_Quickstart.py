@@ -29,6 +29,7 @@
 # Play a teaser video
 from dataclasses import dataclass
 
+from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     MeasurementConfig,
     ThirdRGBSensorConfig,
@@ -65,7 +66,7 @@ if "COLAB_GPU" in os.environ:
 
     import PIL
 
-    importlib.reload(PIL.TiffTags)
+    importlib.reload(PIL.TiffTags)  # type:ignore
 
 import os
 
@@ -92,7 +93,8 @@ def insert_render_options(config):
     # Added settings to make rendering higher resolution for better visualization
     with habitat.config.read_write(config):
         config.habitat.simulator.concur_render = False
-        config.habitat.simulator.agent_0.sim_sensors.update(
+        agent_config = get_agent_config(sim_config=config.habitat.simulator)
+        agent_config.sim_sensors.update(
             {"third_rgb_sensor": ThirdRGBSensorConfig(height=512, width=512)}
         )
     return config
@@ -104,7 +106,9 @@ import importlib
 # 'IFD'", then restart the Colab runtime instance and rerun this cell and the previous cell.
 import PIL
 
-importlib.reload(PIL.TiffTags)  # To potentially avoid PIL problem
+importlib.reload(
+    PIL.TiffTags  # type: ignore[attr-defined]
+)  # To potentially avoid PIL problem
 
 
 # %% [markdown]
@@ -181,7 +185,7 @@ if vut.is_notebook():
 # * Measurement definitions to define the reward, termination condition, and additional logging information.
 #
 # For other examples of task, sensor, and measurement definitions, [see here
-# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
+# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
 
 # %%
 @registry.register_task(name="RearrangeDemoNavPickTask-v0")
@@ -347,14 +351,14 @@ cs.store(
 # %% [markdown]
 # We now add all the previously defined task, sensor, and measurement
 # definitions to a config file to finish defining the new Habitat task. For
-# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/tasks/rearrange).
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/habitat/task/rearrange).
 #
 # This config also defines the action space through the `task.actions` key. You
 # can substitute different base control actions from
-# [here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/actions.py),
+# [here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/rearrange/actions/actions.py),
 # different arm control actions [from
-# here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/actions.py),
-# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat/tasks/rearrange/grip_actions.py).
+# here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/rearrange/actions/actions.py),
+# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/rearrange/actions/grip_actions.py).
 
 # %%
 cfg_txt = """
@@ -362,9 +366,8 @@ cfg_txt = """
 
 defaults:
   - /habitat: habitat_config_base
-  - /agent@habitat.simulator.agent_0: agent_base
-  - /habitat/simulator/sim_sensors:
-    - head_rgb_sensor
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: agent_base
+  - /habitat/simulator/sim_sensors@habitat.simulator.agents.main_agent.sim_sensors.head_rgb_sensor: head_rgb_sensor
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
@@ -423,10 +426,7 @@ habitat:
         lin_speed: 12.0
         ang_speed: 12.0
         allow_dyn_slide: True
-        end_on_stop: False
         allow_back: True
-        min_abs_lin_speed: 1.0
-        min_abs_ang_speed: 1.0
   simulator:
     type: RearrangeSim-v0
     additional_object_paths:
@@ -435,18 +435,19 @@ habitat:
     action_space_config: v0
     concur_render: False
     auto_sleep: False
-    agent_0:
-      height: 1.5
-      is_set_start_state: False
-      radius: 0.1
-      sim_sensors:
-        head_rgb_sensor:
-          height: 128
-          width: 128
-      start_position: [0, 0, 0]
-      start_rotation: [0, 0, 0, 1]
-      robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-      robot_type: "FetchRobot"
+    agents:
+      main_agent:
+        height: 1.5
+        is_set_start_state: False
+        radius: 0.1
+        sim_sensors:
+          head_rgb_sensor:
+            height: 128
+            width: 128
+        start_position: [0, 0, 0]
+        start_rotation: [0, 0, 0, 1]
+        robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        robot_type: "FetchRobot"
 
     # Agent setup
     # ARM_REST: [0.6, 0.0, 0.9]

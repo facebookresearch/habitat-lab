@@ -6,18 +6,15 @@ Habitat Lab Demo
 
 .. code:: py
 
-    import habitat
-
-    import numpy as np
     import random
-    from omegaconf import read_write
-
-    %matplotlib inline
     import matplotlib.pyplot as plt
 
+    import habitat
+    from habitat.config import read_write
+
 All the boilerplate code in the habitat-sim to set sensor config and agent
-config is abstracted out in the Habitat Lab config system. Default config is at
-:gh:`habitat-lab/habitat/config/default.py <facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/config/default.py>`.
+config is abstracted out in the Habitat Lab config system. Default habitat structured configs are at
+:gh:`habitat-lab/habitat/config/default_structured_configs.py <facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/config/default_structured_configs.py>`.
 You can override defaults by specifying them in a separate file and pass it to
 the :ref:`habitat.config.get_config()` function or use `read_write` to edit
 the config object.
@@ -26,10 +23,9 @@ the config object.
 
     .. code:: py
 
-        config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
+        config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_mp3d.yaml")
         with read_write(config):
-            config.habitat.dataset.data_path = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
-            config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
+            config.habitat.dataset.split = "val"
 
         env = habitat.Env(config=config)
 
@@ -106,6 +102,8 @@ the config object.
     import numpy as np
     from PIL import Image
     from habitat_sim.utils.common import d3_40_colors_rgb
+    from habitat.config.default import get_agent_config
+    from habitat.config.default_structured_configs import HabitatSimSemanticSensorConfig
 
     def display_sample(rgb_obs, semantic_obs, depth_obs):
         rgb_img = Image.fromarray(rgb_obs, mode="RGB")
@@ -128,13 +126,13 @@ the config object.
             plt.imshow(data)
         plt.show()
 
-    config = habitat.get_config(config_paths='../habitat-lab/habitat/config/tasks/pointnav_mp3d.yaml')
+    config = habitat.get_config(config_paths="benchmark/nav/pointnav/pointnav_mp3d.yaml")
     with read_write(config):
-        config.habitat.dataset.data_path = '../data/datasets/pointnav/mp3d/v1/val/val.json.gz'
-        config.habitat.dataset.scenes_dir = '../data/scene_datasets/'
-        config.habitat.simulator.agent_0.sensors = ['rgb_sensor', 'depth_sensor', 'semantic_sensor']
-        config.habitat.simulator.semantic_sensor.width = 256
-        config.habitat.simulator.semantic_sensor.height = 256
+        config.habitat.dataset.split = "val"
+        agent_config = get_agent_config(sim_config=config.habitat.simulator)
+        agent_config.sim_sensors.update(
+            {"semantic_sensor": HabitatSimSemanticSensorConfig(height=256, width=256)}
+        )
         config.habitat.simulator.turn_angle = 30
 
     env = habitat.Env(config=config)
