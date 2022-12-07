@@ -10,6 +10,7 @@ defaults:
     - base_velocity
     - rearrange_stop
     - oracle_nav_action
+  - /habitat/simulator/sim_sensors@sim_sensors.third_rgb_sensor: third_rgb_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: humanoid_agent_base
   - _self_
 
@@ -25,6 +26,7 @@ habitat:
         human_type: "AmassHuman"
         sim_sensors:
           third_rgb_sensor:
+            type: "HabitatSimRGBSensor"
             height: 212
             width: 120
 

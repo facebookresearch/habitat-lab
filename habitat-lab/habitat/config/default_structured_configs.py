@@ -1124,7 +1124,7 @@ cs.store(
 )
 
 cs.store(
-    group="agent",
+    group="habitat/simulator/agents",
     name="humanoid_agent_base",
     node=HumanAgentConfig,
 )
