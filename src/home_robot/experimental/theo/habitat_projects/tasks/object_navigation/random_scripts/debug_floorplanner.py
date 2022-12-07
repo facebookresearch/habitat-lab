@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import habitat
 from habitat_sim.nav import NavMeshSettings
 
@@ -30,6 +31,7 @@ def visualize_fp_scenes(scenes):
             rot = sim.get_agent_state().rotation
             sim.set_agent_state(pos, rot)
 
+            np.save(f"obs/{i}.npy", sim.render()[:, :, ::-1])
             cv2.imwrite(f"obs/{i}.png", sim.render()[:, :, ::-1])
 
         sim.close(destroy=True)
