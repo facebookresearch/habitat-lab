@@ -6,7 +6,6 @@ python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eva
 from pathlib import Path
 import sys
 import torch
-import cv2
 
 sys.path.insert(
     0,
@@ -63,6 +62,7 @@ if __name__ == "__main__":
     config.defrost()
     config.NUM_ENVIRONMENTS = 1
     config.PRINT_IMAGES = 1
+    config.TASK_CONFIG.DATASET.SPLIT = "train"
     config.freeze()
 
     agent = ObjectNavAgent(config=config)
