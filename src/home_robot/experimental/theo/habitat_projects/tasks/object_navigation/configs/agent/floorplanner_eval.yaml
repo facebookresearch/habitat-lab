@@ -1,7 +1,7 @@
 BASE_TASK_CONFIG_PATH: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/task/floorplanner_val.yaml
 
 NO_GPU: 0                 # 1: ignore IDs above and run on CPU, 0: run on GPUs with IDs above
-NUM_ENVIRONMENTS: 10      # number of environments (per agent process)
+NUM_ENVIRONMENTS: 112     # number of environments (per agent process)
 DUMP_LOCATION: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/datadump # path to dump models and log
 EXP_NAME: eval_floorplanner       # experiment name
 VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
@@ -38,7 +38,7 @@ AGENT:
     goal_dilation_selem_radius: 10  # radius (in cells) of goal dilation structuring element
 
 EVAL_VECTORIZED:
-  simulator_gpu_ids: [0, 1] # IDs of GPUs to use for vectorized environments
+  simulator_gpu_ids: [1, 2, 3, 4, 5, 6, 7] # IDs of GPUs to use for vectorized environments
   specific_episodes: 0      # 1: eval on specific episodes (for debugging), 0: eval on split normally
   goal_on_same_floor: 0     # 1: restrict to episodes with a goal on the same floor as the starting position
   split: train              # eval split
