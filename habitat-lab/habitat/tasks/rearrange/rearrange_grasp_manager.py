@@ -349,7 +349,7 @@ class RearrangeGraspManager:
 
 
 class HumanRearrangeGraspManager(RearrangeGraspManager):
-    def __init__(self, sim, config: Config, robot, hand=0) -> None:
+    def __init__(self, sim, config: "DictConfig", robot, hand=0) -> None:
         super().__init__(sim, config, robot)
         self.ee_index = hand
         

@@ -62,6 +62,7 @@ from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
     ThirdRGBSensorConfig,
+    ThirdDepthSensorConfig
 )
 from habitat.core.logging import logger
 # from habitat.tasks.rearrange.actions.actions import WalkAction
@@ -90,7 +91,7 @@ def step_env(env, action_name, action_args):
 
 def reached_dest(agent_controller, path):
     final_point = path.points[-1]
-    
+
     distance = np.linalg.norm((agent_controller.translation_offset - final_point) * (mn.Vector3.x_axis() + mn.Vector3.z_axis()))
     if distance < 0.1:
         return True
@@ -98,13 +99,13 @@ def reached_dest(agent_controller, path):
 
 def compute_displ(next_point, agent_controller):
     diff_dist = next_point - agent_controller.translation_offset
-    
+
     return [diff_dist[0], diff_dist[2]]
 
 def get_input_vel_ctlr(
     human_controller, skip_pygame, arm_action, env, not_block_input, agent_to_control, agent_path, path_ind, repeat_walk
 ):
-    
+
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
     multi_agent = len(env._sim.robots_mgr) > 1
@@ -147,8 +148,8 @@ def get_input_vel_ctlr(
 
         displ = compute_displ(agent_path.points[path_ind], human_controller)
         # displ = compute_displ(agent_path.points[path_ind], env._sim.robot)
-        
-        
+
+
         displ2 = mn.Vector3([displ[0], 0, displ[1]])
         new_pose, new_trans = human_controller.walk(displ2)
         # breakpoint()
@@ -157,28 +158,11 @@ def get_input_vel_ctlr(
         base_key = "human_joints_trans"
         # base_action = displ
     # breakpoint()
-    if arm_action_name in env.action_space.spaces:
-        arm_action_space = env.action_space.spaces[arm_action_name].spaces[
-            arm_key
-        ]
-        arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
-<<<<<<< HEAD
-        # base_action = None
-=======
-        base_action = None
-    elif "stretch" in DEFAULT_CFG:
-        arm_action_space = np.zeros(10)
-        arm_ctrlr = None
-        base_action = [0, 0]
->>>>>>> remotes/origin/hab2_fixup
-    else:
-        arm_action_space = np.zeros(7)
-        arm_ctrlr = None
-        # base_action = [0, 0]
 
-    if arm_action is None:
-        arm_action = np.zeros(arm_action_space.shape[0])
-        given_arm_action = False
+
+    # if arm_action is None:
+    #     arm_action = np.zeros(arm_action_space.shape[0])
+    #     given_arm_action = False
     # else:
     #     given_arm_action = True
 
@@ -193,11 +177,11 @@ def get_input_vel_ctlr(
         end_ep = True
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
-    
-    
+
+
     if not_block_input:
         # Base control
-        
+
         # if keys[pygame.K_j]:
         #     # Left
         #     base_action_name = 'walk_action'
@@ -221,7 +205,7 @@ def get_input_vel_ctlr(
         elif keys[pygame.K_j]:
             base_action_name = 'grab_right_action'
             base_key = 'base_pos'
-        
+
         # elif keys[pygame.K_y]:
         #     # Left
         #     # ee_pos = env._sim.robot.ee_transform.translation
@@ -255,98 +239,6 @@ def get_input_vel_ctlr(
             # breakpoint()
 
 
-<<<<<<< HEAD
-=======
-            elif keys[pygame.K_e]:
-                arm_action[2] = 1.0
-            elif keys[pygame.K_3]:
-                arm_action[2] = -1.0
-
-            elif keys[pygame.K_r]:
-                arm_action[3] = 1.0
-            elif keys[pygame.K_4]:
-                arm_action[3] = -1.0
-
-            elif keys[pygame.K_t]:
-                arm_action[4] = 1.0
-            elif keys[pygame.K_5]:
-                arm_action[4] = -1.0
-
-            elif keys[pygame.K_y]:
-                arm_action[5] = 1.0
-            elif keys[pygame.K_6]:
-                arm_action[5] = -1.0
-
-            elif keys[pygame.K_u]:
-                arm_action[6] = 1.0
-            elif keys[pygame.K_7]:
-                arm_action[6] = -1.0
-
-        elif arm_action_space.shape[0] == 10:
-            # Velocity control. A different key for each joint
-            if keys[pygame.K_q]:
-                arm_action[0] = 1.0
-            elif keys[pygame.K_1]:
-                arm_action[0] = -1.0
-
-            elif keys[pygame.K_w]:
-                arm_action[4] = 1.0
-            elif keys[pygame.K_2]:
-                arm_action[4] = -1.0
-
-            elif keys[pygame.K_e]:
-                arm_action[5] = 1.0
-            elif keys[pygame.K_3]:
-                arm_action[5] = -1.0
-
-            elif keys[pygame.K_r]:
-                arm_action[6] = 1.0
-            elif keys[pygame.K_4]:
-                arm_action[6] = -1.0
-
-            elif keys[pygame.K_t]:
-                arm_action[7] = 1.0
-            elif keys[pygame.K_5]:
-                arm_action[7] = -1.0
-
-            elif keys[pygame.K_y]:
-                arm_action[8] = 1.0
-            elif keys[pygame.K_6]:
-                arm_action[8] = -1.0
-
-            elif keys[pygame.K_u]:
-                arm_action[9] = 1.0
-            elif keys[pygame.K_7]:
-                arm_action[9] = -1.0
-
-        elif isinstance(arm_ctrlr, ArmEEAction):
-            EE_FACTOR = 0.5
-            # End effector control
-            if keys[pygame.K_d]:
-                arm_action[1] -= EE_FACTOR
-            elif keys[pygame.K_a]:
-                arm_action[1] += EE_FACTOR
-            elif keys[pygame.K_w]:
-                arm_action[0] += EE_FACTOR
-            elif keys[pygame.K_s]:
-                arm_action[0] -= EE_FACTOR
-            elif keys[pygame.K_q]:
-                arm_action[2] += EE_FACTOR
-            elif keys[pygame.K_e]:
-                arm_action[2] -= EE_FACTOR
-        else:
-            raise ValueError("Unrecognized arm action space")
-
-        if keys[pygame.K_p]:
-            logger.info("[play.py]: Unsnapping")
-            # Unsnap
-            magic_grasp = -1
-        elif keys[pygame.K_o]:
-            # Snap
-            logger.info("[play.py]: Snapping")
-            magic_grasp = 1
->>>>>>> remotes/origin/hab2_fixup
-
     if keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
         pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
@@ -376,12 +268,12 @@ def get_input_vel_ctlr(
         else:
             args = {arm_key: arm_action, grip_key: magic_grasp}
 
-    if magic_grasp is None:
-        arm_action = [*arm_action, 0.0]
-    else:
-        arm_action = [*arm_action, magic_grasp]
-    # breakpoint()
-    
+    # if magic_grasp is None:
+    #     arm_action = [*arm_action, 0.0]
+    # else:
+    #     arm_action = [*arm_action, magic_grasp]
+    # # breakpoint()
+    arm_action = []
     return step_env(env, name, args), arm_action, end_ep, repeat_walk
 
 
@@ -464,9 +356,9 @@ class FreeCamHelper:
 
 def update_location_walk(curr_location, env, curr_ind_map, new_loc=None):
     sim = env.sim
-    curr_location = mn.Vector3([curr_location[0], 0, curr_location[2]]) 
+    curr_location = mn.Vector3([curr_location[0], 0, curr_location[2]])
     if new_loc is None:
-        snapped_pos = env.sim.pathfinder.get_random_navigable_point()  
+        snapped_pos = env.sim.pathfinder.get_random_navigable_point()
     else:
         snapped_pos = env.sim.pathfinder.snap_point(new_loc)
     sim.viz_ids['target_loc'] = sim.visualize_position(
@@ -504,7 +396,7 @@ def play_env(env, args, config):
 
     if not args.no_render:
         draw_obs = observations_to_image(obs, {})
-        
+
         pygame.init()
         screen = pygame.display.set_mode(
             [draw_obs.shape[1], draw_obs.shape[0]]
@@ -527,19 +419,18 @@ def play_env(env, args, config):
     agent_location = env._sim.robot.translation_offset
     print(agent_location)
 
-    
 
-    urdf_path = config.habitat.simulator.agent_0.robot_urdf
-    amass_path = config.habitat.simulator.agent_0.amass_path
-    body_model_path = config.habitat.simulator.agent_0.body_model_path
+    urdf_path = config.habitat.simulator.agents.main_agent.robot_urdf
+    amass_path = config.habitat.simulator.agents.main_agent.amass_path
+    body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
     obj_translation = env._sim.robot.sim_obj.translation
-    
+
     link_ids = env._sim.robot.sim_obj.get_link_ids()
     human_controller = AmassHumanController(urdf_path, amass_path, body_model_path, obj_translation, link_ids)
-    
+
     # TODO: remove
     human_controller.sim_obj = env._sim.robot.sim_obj
-    
+
     # breakpoint()
     found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map)
     path_ind = 1
@@ -584,7 +475,7 @@ def play_env(env, args, config):
             # agent_location = env._sim.robot.translation_offset
             found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map, goal_location)
             path_ind = 1
-        
+
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
             agent_to_control = agent_to_control % len(env._sim.robots_mgr)
@@ -594,13 +485,13 @@ def play_env(env, args, config):
 
         delta_dist = 0.1
         # dist = (path.points[path_ind] - env._sim.robot.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
-        
+
         # Get the thing below back
         dist = (path.points[path_ind] - human_controller.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
         if np.linalg.norm(dist) < delta_dist:
-            
+
             path_ind = min(path_ind+1, len(path.points) - 1)
-                
+
         step_result, arm_action, end_ep, repeat_walk = get_input_vel_ctlr(
             human_controller,
             args.no_render,
@@ -811,7 +702,18 @@ if __name__ == "__main__":
         raise ImportError(
             "Need to install PyGame (run `pip install pygame==2.0.1`)"
         )
+    # print(args.opts)
+    # breakpoint()
+    # args.opts=["habitat.task.actions"]
     config = habitat.get_config(args.cfg, args.opts)
+    actions_valid = [
+      'humanjoint_action',
+      'grab_right_action',
+      'grab_left_action',
+      'release_left_action',
+      'release_right_action'
+    ]
+
     with habitat.config.read_write(config):
         env_config = config.habitat.environment
         sim_config = config.habitat.simulator
@@ -824,7 +726,11 @@ if __name__ == "__main__":
                 {
                     "third_rgb_sensor": ThirdRGBSensorConfig(
                         height=args.play_cam_res, width=args.play_cam_res
+                    ),
+                    "third_depth_sensor": ThirdDepthSensorConfig(
+                        height=args.play_cam_res, width=args.play_cam_res
                     )
+
                 }
             )
             if "composite_success" in task_config.measurements:
@@ -858,7 +764,8 @@ if __name__ == "__main__":
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
-    # breakpoint()
     with habitat.Env(config=config) as env:
-        # breakpoint()
+        env.task.actions = {
+            key: value for key, value in env.task.actions.items() if key in actions_valid
+        }
         play_env(env, args, config)

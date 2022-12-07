@@ -46,7 +46,7 @@ class HumanData:
                 "Need to install PyBullet to use IK (`pip install pybullet==3.0.4`)"
             )
         return self._ik_helper
-    
+
 
 class HumanoidManager:
     """
@@ -57,31 +57,31 @@ class HumanoidManager:
         self._sim = sim
         self.agent_names = cfg.agents
         self._all_human_data = []
-        
-        self._is_pb_installed = is_pb_installed()
 
+        self._is_pb_installed = is_pb_installed()
+        # breakpoint()
         for agent_name in cfg.agents:
-            agent_cfg = cfg[agent_name]
+            agent_cfg = cfg.agents[agent_name]
             human_type = agent_cfg.human_type
             assert human_type == "AmassHuman", "Only AmassHuman is implemented"
-            
+
             human_cls = AmassHuman
             human = human_cls(agent_cfg.robot_urdf, sim)
-            
+
 
             grasp_mgr_left = HumanRearrangeGraspManager(sim, cfg, human, 0)
             grasp_mgr_right = HumanRearrangeGraspManager(sim, cfg, human, 1)
             self._all_human_data.append(
                 HumanData(
-                    humanoid=human, 
-                    grasp_mgrs=[grasp_mgr_left, grasp_mgr_right], 
-                    robot=human, 
-                    start_js=np.array(human.params.arm_init_params_left), 
+                    humanoid=human,
+                    grasp_mgrs=[grasp_mgr_left, grasp_mgr_right],
+                    robot=human,
+                    start_js=np.array(human.params.arm_init_params_left),
                     cfg=agent_cfg,
                     is_pb_installed=self._is_pb_installed
                 )
             )
-    
+
     def reconfigure(self, is_new_scene: bool):
         ao_mgr = self._sim.get_articulated_object_manager()
         for human_data in self._all_human_data:
@@ -98,7 +98,7 @@ class HumanoidManager:
                 human_data.humanoid.reconfigure()
             for ind in range(len(human_data.grasp_mgrs)):
                 human_data.grasp_mgrs[ind].reset()
-    
+
     def post_obj_load_reconfigure(self):
         """
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the humanoid if specified in the task config.
@@ -120,7 +120,7 @@ class HumanoidManager:
                 human_data.robot.sim_obj.rotation = mn.Quaternion(
                     mn.Vector3(agent_rot[:3]), agent_rot[3]
                 )
-    
+
     def __getitem__(self, key: int):
         """
         Fetches the robot data at the robot index.
