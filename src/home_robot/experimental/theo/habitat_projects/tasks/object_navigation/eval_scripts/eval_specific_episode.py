@@ -109,7 +109,8 @@ if __name__ == "__main__":
         action = agent.act(obs)
         obs = env.step(action)
 
-        import cv2
-        cv2.imwrite(f"rgb{t}.png", obs["rgb"])
+        import numpy as np
+        print(obs["rgb"].shape)
+        print(np.unique(obs["rgb"]))
 
     print(env.get_metrics())
