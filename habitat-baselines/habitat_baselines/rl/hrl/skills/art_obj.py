@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Tuple
+from typing import List, Tuple
 
 import torch
 
@@ -16,14 +16,18 @@ from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 class ArtObjSkillPolicy(NnSkillPolicy):
     def on_enter(
         self,
-        skill_arg: str,
-        batch_idx: int,
+        skill_arg: List[str],
+        batch_idxs: List[int],
         observations,
         rnn_hidden_states,
         prev_actions,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         result = super().on_enter(
-            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+            skill_arg,
+            batch_idxs,
+            observations,
+            rnn_hidden_states,
+            prev_actions,
         )
         self._did_leave_start_zone = torch.zeros(
             self._batch_size, device=prev_actions.device
@@ -34,11 +38,7 @@ class ArtObjSkillPolicy(NnSkillPolicy):
         return result
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
 
         cur_resting_pos = observations[RelativeRestingPositionSensor.cls_uuid]

@@ -36,15 +36,7 @@ importlib.reload(habitat.utils.gym_adapter)
         (
             "benchmark/rearrange/pick.yaml",
             [],
-            8,
-            dict,
-        ),
-        (
-            "benchmark/rearrange/pick.yaml",
-            [
-                "habitat.task.actions.arm_action.grip_controller=SuctionGraspAction",
-            ],
-            8,
+            10,  # arm = 7 + base = 2 + grip = 1
             dict,
         ),
         (
@@ -218,8 +210,6 @@ def test_auto_gym_wrapper(test_cfg_path):
         "HabitatTidyHouse-v0",
         "HabitatPrepareGroceries-v0",
         "HabitatSetTable-v0",
-        "HabitatNavPick-v0",
-        "HabitatNavPickNavPlace-v0",
     ],
 )
 def test_gym_premade_envs(name):

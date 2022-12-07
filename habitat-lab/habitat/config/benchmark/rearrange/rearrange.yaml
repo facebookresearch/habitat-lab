@@ -23,20 +23,13 @@ habitat:
     max_episode_steps: 3000
   simulator:
     type: RearrangeSim-v0
-    seed: 100
     additional_object_paths:
         - "data/objects/ycb/configs/"
-    grasp_impulse: 10000.0
-    hold_thresh: 0.2
     concur_render: True
     auto_sleep: True
     agents:
       main_agent:
         radius: 0.3
-        sim_sensors:
-          head_depth_sensor:
-            height: 256
-            width: 256
         robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
         robot_type: FetchSuctionRobot
     habitat_sim_v0:

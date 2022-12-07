@@ -6,7 +6,16 @@
 
 import os.path as osp
 from collections import defaultdict
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import magnum as mn
 import numpy as np
@@ -269,13 +278,15 @@ class RearrangeSim(HabitatSim):
         return len(self.robots_mgr)
 
     def set_robot_base_to_random_point(
-        self, max_attempts: int = 50, agent_idx: Optional[int] = None
+        self,
+        max_attempts: int = 50,
+        agent_idx: Optional[int] = None,
+        filter_func: Optional[Callable[[np.ndarray, float], bool]] = None,
     ) -> Tuple[np.ndarray, float]:
         """
         :returns: The set base position and rotation
         """
         robot = self.get_robot_data(agent_idx).robot
-        lower_bound, upper_bound = self.pathfinder.get_bounds()
 
         for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point()
@@ -283,10 +294,15 @@ class RearrangeSim(HabitatSim):
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
 
+            if filter_func is not None and not filter_func(
+                start_pos, start_rot
+            ):
+                continue
+
             robot.base_pos = start_pos
             robot.base_rot = start_rot
             self.perform_discrete_collision_detection()
-            did_collide, details = rearrange_collision(
+            did_collide, _ = rearrange_collision(
                 self, True, ignore_base=False, agent_idx=agent_idx
             )
             if not did_collide:

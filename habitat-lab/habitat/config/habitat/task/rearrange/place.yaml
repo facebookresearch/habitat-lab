@@ -4,11 +4,13 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
+    - base_velocity
   - /habitat/task/measurements:
     - robot_force
     - force_terminate
     - robot_colls
     - end_effector_to_rest_distance
+    - end_effector_to_goal_distance
     - object_to_goal_distance
     - obj_at_goal
     - place_success
@@ -26,18 +28,18 @@ defaults:
   - _self_
 
 type: RearrangePlaceTask-v0
+base_angle_noise: 0.523599
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 reward_measure: place_reward
 success_measure: place_success
 success_reward: 10.0
-slack_reward: 0.0
+slack_reward: -0.005
 end_on_success: True
 actions:
   arm_action:
     grip_controller: SuctionGraspAction
 measurements:
   force_terminate:
-    max_accum_force: 5000.0
-  place_reward:
-    drop_pen: 0.0
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0

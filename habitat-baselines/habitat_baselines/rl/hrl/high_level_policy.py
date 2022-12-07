@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 import torch
 import yaml
@@ -12,18 +12,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
 
 
-class HighLevelPolicy:
-    def get_next_skill(
-        self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
-    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor]:
-        """
-        :returns: A tuple containing the next skill index, a list of arguments
-            for the skill, and if the high-level policy requests immediate
-            termination.
-        """
-
-
-class GtHighLevelPolicy:
+class FixedHighLevelPolicy:
     """
     :property _solution_actions: List of tuples were first tuple element is the
         action name and the second is the action arguments.
@@ -43,8 +32,9 @@ class GtHighLevelPolicy:
         for i, sol_step in enumerate(task_spec["solution"]):
             sol_action = parse_func(sol_step)
             self._solution_actions.append(sol_action)
-            if i < (len(task_spec["solution"]) - 1):
+            if config.add_arm_rest and i < (len(task_spec["solution"]) - 1):
                 self._solution_actions.append(parse_func("reset_arm(0)"))
+
         # Add a wait action at the end.
         self._solution_actions.append(parse_func("wait(30)"))
 
@@ -58,11 +48,9 @@ class GtHighLevelPolicy:
     def get_next_skill(
         self, observations, rnn_hidden_states, prev_actions, masks, plan_masks
     ):
-        next_skill = torch.zeros(self._num_envs, device=prev_actions.device)
+        next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(
-            self._num_envs, device=prev_actions.device, dtype=torch.bool
-        )
+        immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan == 1.0:
                 if self._next_sol_idxs[batch_idx] >= len(

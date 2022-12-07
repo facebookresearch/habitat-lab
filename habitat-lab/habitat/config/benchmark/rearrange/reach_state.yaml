@@ -19,7 +19,6 @@ habitat:
     max_episode_steps: 20
   simulator:
     type: RearrangeSim-v0
-    seed: 100
     concur_render: True
     auto_sleep: True
     agents:
@@ -29,13 +28,6 @@ habitat:
           head_depth_sensor:
             height: 32
             width: 32
-        is_set_start_state: True
-        start_position: [0.0, 0.0, 2.0]
-        start_rotation: [0.0, 0.0, 0.0, 1.0]
-        ik_arm_urdf: ""
-    # Agent setup
-    ac_freq_ratio: 8
-
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True

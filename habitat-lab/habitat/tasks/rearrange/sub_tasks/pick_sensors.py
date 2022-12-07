@@ -40,7 +40,7 @@ class DidPickObjectMeasure(Measure):
 
 @registry.register_measure
 class RearrangePickReward(RearrangeReward):
-    cls_uuid: str = "rearrangepick_reward"
+    cls_uuid: str = "pick_reward"
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self.cur_dist = -1.0
@@ -144,7 +144,7 @@ class RearrangePickReward(RearrangeReward):
 
 @registry.register_measure
 class RearrangePickSuccess(Measure):
-    cls_uuid: str = "rearrangepick_success"
+    cls_uuid: str = "pick_success"
 
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim

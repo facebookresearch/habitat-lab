@@ -31,21 +31,10 @@ Habitat includes an implementation of DD-PPO. As an example, start training a pi
 .. code:: sh
 
     python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/ddppo_pick.yaml \
+        --exp-config habitat_baselines/config/rearrange/rl_skill.yaml  \
         --run-type train
 
-Find the `complete list of RL configurations here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines/config/rearrange>`__, any config starting with "ddppo" can be substituted into :code:`--exp-config`. See `here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines#baselines>`__  for more information on how to run with Habitat Baselines.
-
-`Home Assistant Benchmark (HAB) Tasks`_
-=======================================
-
-To run the HAB tasks, use any of the training configurations `here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines/config/rearrange/hab>`__. For example, to run monolithic RL training on the Tidy House task run:
-
-.. code:: sh
-
-    python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/hab/ddppo_tidy_house.yaml \
-        --run-type train
+This trains the Pick skill by default. To train the other skills, specify: :code:`benchmark/rearrange=skill_name` where :code:`skill_name` can be :code:`close_cab`, :code:`close_fridge`, :code:`open_fridge`, :code:`pick`, :code:`place`, or :code:`nav_to_obj`. See `here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines#baselines>`__  for more information on how to run with Habitat Baselines.
 
 `Task-Planning with Skills RL Baseline`_
 ========================================
@@ -56,20 +45,21 @@ Here we will detail how to run the Task-Planning with Skills trained via reinfor
 .. code:: sh
 
     python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/ddppo_place.yaml \
+        --exp-config habitat_baselines/config/rearrange/rl_skill.yaml \
         --run-type train \
-        checkpoint_folder=./place_checkpoints/
+        checkpoint_folder=./place_checkpoints/ \
+        benchmark/rearrange=place
 
 2. To work on HAB tasks, you must also train a :code:`pick`, :code:`nav_to_obj`, :code:`open_cab`, :code:`close_cab`, :code:`open_fridge`, and :code:`close_fridge` policy. To do so, substitute the name of the other skill for :code:`place` in the above command.
 
-3. By default, the TP-SRL baseline will look for the skill checkpoints as :code:`data/models/[skill name].pth` in the Habitat Lab directory as configured `here for each skill <https://github.com/facebookresearch/habitat-lab/blob/710beab2a5500074793b0c8047e3835fdb8f7b7e/habitat_baselines/config/rearrange/hab/tp_srl.yaml#L94>`__. The :code:`tp-srl.yaml` file can be changed to point to the skills you would like to evaluate, or you can copy the model checkpoints in :code:`data/models/`.
+3. By default, the TP-SRL baseline will look for the skill checkpoints as :code:`data/models/[skill name].pth`. The :code:`tp-srl.yaml` file can be changed to point to the skills you would like to evaluate, or you can copy the model checkpoints in :code:`data/models/`.
 
 4. Evaluate the TP-SRL baseline on the :code:`tidy_house` HAB task via:
 
 .. code:: sh
 
     python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/hab/tp_srl.yaml \
+        --exp-config habitat_baselines/config/rearrange/tp_srl.yaml \
         --run-type eval \
         benchmark/rearrange=tidy_house
 

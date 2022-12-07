@@ -426,10 +426,7 @@ habitat:
         lin_speed: 12.0
         ang_speed: 12.0
         allow_dyn_slide: True
-        end_on_stop: False
         allow_back: True
-        min_abs_lin_speed: 1.0
-        min_abs_ang_speed: 1.0
   simulator:
     type: RearrangeSim-v0
     additional_object_paths:
