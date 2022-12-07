@@ -10,6 +10,8 @@ data_dir = "home_robot/experimental/theo/habitat_projects/datasets/episode_datas
 scene_dataset = "habitat-challenge-data/data/scene_datasets/floorplanner/v1/hab-fp.scene_dataset_config.json"
 
 for path in glob.glob(f"{data_dir}/*/*.gz"):
+    print(path)
+
     with gzip.open(path, "rt") as f:
         scene_data = json.load(f)
 
