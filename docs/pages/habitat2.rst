@@ -34,7 +34,7 @@ Habitat includes an implementation of DD-PPO. As an example, start training a pi
         --exp-config habitat_baselines/config/rearrange/rl_skill.yaml  \
         --run-type train
 
-This trains the Pick skill by default. To train the other skills, specify: :code:`benchmark/rearrange=skill_name` where :code:`skill_name` can be :code:`close_cab`, :code:`close_fridge`, :code:`open_fridge`, :code:`pick`, :code:`place`, :code:`or `nav_to_obj. See `here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines#baselines>`__  for more information on how to run with Habitat Baselines.
+This trains the Pick skill by default. To train the other skills, specify: :code:`benchmark/rearrange=skill_name` where :code:`skill_name` can be :code:`close_cab`, :code:`close_fridge`, :code:`open_fridge`, :code:`pick`, :code:`place`, or :code:`nav_to_obj`. See `here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines#baselines>`__  for more information on how to run with Habitat Baselines.
 
 `Task-Planning with Skills RL Baseline`_
 ========================================
