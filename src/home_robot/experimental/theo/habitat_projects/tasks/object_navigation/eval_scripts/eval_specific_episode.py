@@ -62,7 +62,7 @@ if __name__ == "__main__":
     config.defrost()
     config.NUM_ENVIRONMENTS = 1
     config.PRINT_IMAGES = 1
-    config.TASK_CONFIG.DATASET.SPLIT = "train"
+    config.TASK_CONFIG.DATASET.SPLIT = "val"
     config.freeze()
 
     agent = ObjectNavAgent(config=config)
