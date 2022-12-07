@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange: nav_pick_nav_place
+  - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
@@ -10,22 +10,23 @@ defaults:
     - base_velocity
     - rearrange_stop
     - oracle_nav_action
-  - override agent@habitat.simulator.agent_0: humanoid_agent_base
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: humanoid_agent_base
   - _self_
 
 habitat:
   simulator:
-    agent_0:
-      robot_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
-      ik_arm_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
-      robot_type: 'AmassHuman'
-      amass_path: '/Users/xavierpuig/Documents/human_sim_data/amass_smpl_h/'
-      body_model_path: '/Users/xavierpuig/Documents/human_sim_data/smplh/male/model.npz'
-      human_type: "AmassHuman"
-      sim_sensors:
-        third_rgb_sensor:
-          height: 212
-          width: 120
+    agents:
+      main_agent:
+        robot_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
+        ik_arm_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
+        robot_type: 'AmassHuman'
+        amass_path: '/Users/xavierpuig/Documents/human_sim_data/amass_smpl_h/'
+        body_model_path: '/Users/xavierpuig/Documents/human_sim_data/smplh/male/model.npz'
+        human_type: "AmassHuman"
+        sim_sensors:
+          third_rgb_sensor:
+            height: 212
+            width: 120
 
 habitat_baselines:
   verbose: False
@@ -73,7 +74,7 @@ habitat_baselines:
               force_end_on_timeout: True
               stop_angle_thresh: 0.2
               stop_dist_thresh: 1.0
-            
+
             human_pick:
               skill_name: "PlaceSkillPolicy"
               name: "PointNavResNetPolicy"
