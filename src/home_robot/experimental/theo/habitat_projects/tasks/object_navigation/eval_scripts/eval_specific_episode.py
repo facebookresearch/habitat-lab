@@ -110,6 +110,6 @@ if __name__ == "__main__":
         obs = env.step(action)
 
         import cv2
-        cv2.imwrite(obs["rgb"], "rgb.png")
+        cv2.imwrite(f"rgb{t}.png", obs["rgb"])
 
     print(env.get_metrics())
