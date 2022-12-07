@@ -1,7 +1,7 @@
 BASE_TASK_CONFIG_PATH: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/task/floorplanner_val.yaml
 
 NO_GPU: 0                 # 1: ignore IDs above and run on CPU, 0: run on GPUs with IDs above
-NUM_ENVIRONMENTS: 70      # number of environments (per agent process)
+NUM_ENVIRONMENTS: 35      # number of environments (per agent process)
 DUMP_LOCATION: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/datadump # path to dump models and log
 EXP_NAME: eval_floorplanner       # experiment name
 VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
@@ -42,6 +42,6 @@ EVAL_VECTORIZED:
   specific_episodes: 0      # 1: eval on specific episodes (for debugging), 0: eval on split normally
   goal_on_same_floor: 0     # 1: restrict to episodes with a goal on the same floor as the starting position
   split: train              # eval split
-  num_episodes_per_env: 20  # number of eval episodes per environment
+  num_episodes_per_env: 40  # number of eval episodes per environment
   record_videos: 0          # 1: record videos from printed images, 0: don't
   record_planner_videos: 0  # 1: record planner videos (if record videos), 0: don't
