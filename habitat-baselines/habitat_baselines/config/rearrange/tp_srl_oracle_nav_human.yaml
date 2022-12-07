@@ -11,7 +11,7 @@ defaults:
     - rearrange_stop
     - oracle_nav_action
   - /habitat/simulator/sim_sensors@sim_sensors.third_rgb_sensor: third_rgb_sensor
-  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: humanoid_agent_base
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_human_vis
   - _self_
 
 habitat:
@@ -65,7 +65,8 @@ habitat_baselines:
               "object_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
-            name: "GtHighLevelPolicy"
+            add_arm_rest: False
+            name: "FixedHighLevelPolicy"
           defined_skills:
             GT_NAV:
               skill_name: "OracleNavHumanPolicy"
