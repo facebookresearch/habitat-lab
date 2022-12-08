@@ -1,5 +1,7 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+from pathlib import Path
 from detectron2.config import CfgNode as CN
+
 
 def add_detic_config(cfg):
     _C = cfg
@@ -20,7 +22,7 @@ def add_detic_config(cfg):
     _C.MODEL.ROI_BOX_HEAD.PRIOR_PROB = 0.01
     _C.MODEL.ROI_BOX_HEAD.USE_FED_LOSS = False # Federated Loss
     _C.MODEL.ROI_BOX_HEAD.CAT_FREQ_PATH = \
-        'datasets/metadata/lvis_v1_train_cat_info.json'
+        str(Path(__file__).resolve().parent.parent / 'datasets/metadata/lvis_v1_train_cat_info.json')
     _C.MODEL.ROI_BOX_HEAD.FED_LOSS_NUM_CAT = 50
     _C.MODEL.ROI_BOX_HEAD.FED_LOSS_FREQ_WEIGHT = 0.5
 
