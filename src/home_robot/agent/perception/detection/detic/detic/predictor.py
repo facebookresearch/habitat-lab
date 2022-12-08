@@ -5,6 +5,7 @@ import multiprocessing as mp
 from collections import deque
 import cv2
 import torch
+from pathlib import Path
 
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
@@ -23,7 +24,7 @@ def get_clip_embeddings(vocabulary, prompt='a '):
     return emb
 
 BUILDIN_CLASSIFIER = {
-    'lvis': 'datasets/metadata/lvis_v1_clip_a+cname.npy',
+    'lvis': str(Path(__file__).resolve().parent.parent / 'datasets/metadata/lvis_v1_clip_a+cname.npy'),
     'objects365': 'datasets/metadata/o365_clip_a+cnamefix.npy',
     'openimages': 'datasets/metadata/oid_clip_a+cname.npy',
     'coco': 'datasets/metadata/coco_clip_a+cname.npy',
