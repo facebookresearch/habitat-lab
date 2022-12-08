@@ -47,7 +47,7 @@ class ObsPreprocessor:
             #     sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
             #     visualize=True,
             # )
-            from home_robot.agent.perception.detection.detic.detic import get_detic
+            from home_robot.agent.perception.detection.detic.detic_loader import get_detic
             self.segmentation = get_detic()
 
         self.one_hot_encoding = torch.eye(self.num_sem_categories, device=self.device)
