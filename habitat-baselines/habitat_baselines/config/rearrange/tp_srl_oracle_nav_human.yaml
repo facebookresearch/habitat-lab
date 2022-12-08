@@ -6,7 +6,6 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
   - /habitat/task/actions:
-    - arm_action
     - base_velocity
     - rearrange_stop
     - oracle_nav_action
@@ -48,6 +47,7 @@ habitat_baselines:
   total_num_steps: 1.0e8
   log_interval: 10
   num_checkpoints: 20
+  load_resume_state_config: False
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
   eval:
