@@ -7,9 +7,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / 'third_party/CenterNet2
 
 from detectron2.config import get_cfg
 
-from centernet.config import add_centernet_config
-from detic.config import add_detic_config
-from detic.predictor import VisualizationDemo
+from .centernet.config import add_centernet_config
+from .detic.config import add_detic_config
+from .detic.predictor import VisualizationDemo
 
 
 def setup_cfg(args):
