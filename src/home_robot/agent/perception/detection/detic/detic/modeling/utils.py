@@ -10,6 +10,7 @@ def load_class_freq(
         freq_weight=1.0):
     print()
     print(str(Path(__file__).resolve().parent.parent.parent / 'datasets/metadata/lvis_v1_train_cat_info.json'))
+    print(path)
     print()
     cat_info = json.load(open(path, 'r'))
     cat_info = torch.tensor(
