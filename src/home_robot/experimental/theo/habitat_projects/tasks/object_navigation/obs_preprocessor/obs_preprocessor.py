@@ -39,14 +39,14 @@ class ObsPreprocessor:
         assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
 
         if not self.ground_truth_semantics:
-            from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
-                COCOMaskRCNN,
-            )
-            self.segmentation = COCOMaskRCNN(
-                sem_pred_prob_thr=0.9,
-                sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
-                visualize=True,
-            )
+            # from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
+            #     COCOMaskRCNN,
+            # )
+            # self.segmentation = COCOMaskRCNN(
+            #     sem_pred_prob_thr=0.9,
+            #     sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
+            #     visualize=True,
+            # )
             from home_robot.agent.perception.detection.detic.detic import get_detic
             self.segmentation = get_detic()
 
