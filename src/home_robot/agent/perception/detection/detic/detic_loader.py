@@ -80,7 +80,7 @@ def get_parser():
     return parser
 
 
-def get_detic(config_file=None, vocabulary="lvis", checkpoint_file=None):
+def get_detic(config_file=None, vocabulary="coco", checkpoint_file=None):
     if config_file is None:
         config_file = str(
             Path(__file__).resolve().parent /
