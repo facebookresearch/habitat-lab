@@ -10,7 +10,7 @@ import habitat
 
 def get_config(split: str, shuffle: bool = True):
     config = habitat.get_config(
-        "benchmark/nav/instance_imagenav/instance_imagenav_hm3d_v2.yaml"
+        "habitat-lab/habitat-lab/habitat/config/benchmark/nav/instance_imagenav/instance_imagenav_hm3d_v2.yaml"
     )
     OmegaConf.set_readonly(config, False)
     # for speed: remove/reduce unused sensors
