@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from detectron2.config import get_cfg
-
+print("xxxxxx")
 print(str(Path(__file__).resolve().parent / 'third_party/CenterNet2/'))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'third_party/CenterNet2/'))
 from centernet.config import add_centernet_config
