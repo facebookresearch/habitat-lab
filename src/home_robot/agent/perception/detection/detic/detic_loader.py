@@ -3,6 +3,7 @@ import argparse
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent / 'third_party/CenterNet2/'))
 
 from detectron2.config import get_cfg
