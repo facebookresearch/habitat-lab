@@ -1,4 +1,5 @@
 # Copyright (c) Facebook, Inc. and its affiliates.
+from typing import Optional, Tuple
 import atexit
 import bisect
 import multiprocessing as mp
@@ -6,6 +7,7 @@ from collections import deque
 import cv2
 import torch
 from pathlib import Path
+import numpy as np
 
 from detectron2.data import MetadataCatalog
 from detectron2.engine.defaults import DefaultPredictor
@@ -37,6 +39,7 @@ BUILDIN_METADATA_PATH = {
     'coco': 'coco_2017_val',
 }
 
+
 class VisualizationDemo(object):
     def __init__(self, cfg, args, 
         instance_mode=ColorMode.IMAGE, parallel=False):
@@ -56,7 +59,7 @@ class VisualizationDemo(object):
                 BUILDIN_METADATA_PATH[args.vocabulary])
             classifier = BUILDIN_CLASSIFIER[args.vocabulary]
 
-        num_classes = len(self.metadata.thing_classes)
+        self.num_classes = len(self.metadata.thing_classes)
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
 
@@ -66,7 +69,77 @@ class VisualizationDemo(object):
             self.predictor = AsyncPredictor(cfg, num_gpus=num_gpu)
         else:
             self.predictor = DefaultPredictor(cfg)
-        reset_cls_test(self.predictor.model, classifier, num_classes)
+        reset_cls_test(self.predictor.model, classifier, self.num_classes)
+
+    def get_prediction(
+        self, images: np.ndarray, depths: Optional[np.ndarray] = None
+    ) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Arguments:
+            images: images of shape (batch_size, H, W, 3) (in BGR order)
+            depths: depth frames of shape (batch_size, H, W)
+
+        Returns:
+            one_hot_predictions: one hot segmentation predictions of shape
+             (batch_size, H, W, num_sem_categories)
+            visualizations: prediction visualization images
+             shape (batch_size, H, W, 3) if self.visualize=True, else
+             original images
+        """
+        batch_size, height, width, _ = images.shape
+        print(self.metadata.thing_classes)
+        return
+
+        one_hot_predictions = np.zeros(
+            (batch_size, height, width, self.num_sem_categories)
+        )
+        visualizations = []
+
+
+        predictions, visualizations = self.segmentation_model.get_predictions(
+            images, visualize=self.visualize
+        )
+        one_hot_predictions = np.zeros(
+            (batch_size, height, width, self.num_sem_categories)
+        )
+
+        # t0 = time.time()
+
+        for i in range(batch_size):
+            for j, class_idx in enumerate(
+                predictions[i]["instances"].pred_classes.cpu().numpy()
+            ):
+                if class_idx in list(coco_categories_mapping.keys()):
+                    idx = coco_categories_mapping[class_idx]
+                    obj_mask = predictions[i]["instances"].pred_masks[j] * 1.0
+                    obj_mask = obj_mask.cpu().numpy()
+
+                    if depths is not None:
+                        depth = depths[i]
+                        md = np.median(depth[obj_mask == 1])
+                        if md == 0:
+                            filter_mask = np.ones_like(obj_mask, dtype=bool)
+                        else:
+                            # Restrict objects to 1m depth
+                            filter_mask = (depth >= md + 50) | (depth <= md - 50)
+                        # print(
+                        #     f"Median object depth: {md.item()}, filtering out "
+                        #     f"{np.count_nonzero(filter_mask)} pixels"
+                        # )
+                        obj_mask[filter_mask] = 0.0
+
+                    one_hot_predictions[i, :, :, idx] += obj_mask
+
+        # t1 = time.time()
+        # print(f"[Obs preprocessing] Segmentation depth filtering time: {t1 - t0:.2f}")
+
+        if self.visualize:
+            visualizations = np.stack([vis.get_image() for vis in visualizations])
+        else:
+            # Convert BGR to RGB for visualization
+            visualizations = images[:, :, :, ::-1]
+
+        return one_hot_predictions, visualizations
 
     def run_on_image(self, image):
         """
