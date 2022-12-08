@@ -100,7 +100,7 @@ class VisualizationDemo(object):
         for i, image in enumerate(images):
             prediction, visualization = self.run_on_image(image)
             if self.visualize:
-                visualizations[i] = visualization
+                visualizations[i] = visualization.get_image()
 
                 for j, class_idx in enumerate(
                     prediction["instances"].pred_classes.cpu().numpy()
