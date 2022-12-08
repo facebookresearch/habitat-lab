@@ -80,7 +80,7 @@ def get_parser():
     return parser
 
 
-def get_detic(config_file=None, vocabulary="coco", checkpoint_file=None):
+def get_detic(config_file=None, vocabulary="coco", checkpoint_file=None, visualize=True):
     if config_file is None:
         config_file = str(
             Path(__file__).resolve().parent /
@@ -98,5 +98,5 @@ def get_detic(config_file=None, vocabulary="coco", checkpoint_file=None):
     string_args = string_args.split()
     args = get_parser().parse_args(string_args)
     cfg = setup_cfg(args)
-    demo = VisualizationDemo(cfg, args)
+    demo = VisualizationDemo(cfg, args, visualize=visualize)
     return demo
