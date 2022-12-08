@@ -42,12 +42,13 @@ class ObsPreprocessor:
             from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
                 COCOMaskRCNN,
             )
-
             self.segmentation = COCOMaskRCNN(
                 sem_pred_prob_thr=0.9,
                 sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
                 visualize=True,
             )
+            from home_robot.agent.perception.detection.detic.detic import get_detic
+            self.segmentation = get_detic()
 
         self.one_hot_encoding = torch.eye(self.num_sem_categories, device=self.device)
         self.color_palette = [int(x * 255.0) for x in frame_color_palette]

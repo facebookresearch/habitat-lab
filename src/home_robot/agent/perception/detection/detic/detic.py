@@ -78,9 +78,20 @@ def get_parser():
     return parser
 
 
-def get_detic(config_file, vocabulary, checkpoint):
+def get_detic(config_file=None, vocabulary="lvis", checkpoint_file=None):
+    if config_file is None:
+        config_file = str(
+            Path(__file__).resolve().parent /
+            "configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml"
+        )
+    if checkpoint_file is None:
+        checkpoint_file = str(
+            Path(__file__).resolve().parent /
+            "models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth"
+        )
+    print(f"Loading Detic with config={config_file} and checkpoint={checkpoint_file}")
     string_args = f"""
-        --config-file {config_file} --vocabulary {vocabulary} --opts MODEL.WEIGHTS {checkpoint}
+        --config-file {config_file} --vocabulary {vocabulary} --opts MODEL.WEIGHTS {checkpoint_file}
         """
     string_args = string_args.split()
     args = get_parser().parse_args(string_args)
