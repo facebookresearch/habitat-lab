@@ -16,5 +16,5 @@ if __name__ == "__main__":
         scene_id = "_".join(k.split("_")[:-1])
         scene_results[scene_id].append(v["success"])
     scene_results = dict(scene_results)
-    scene_results = {k: np.mean(v) for k, v in scene_results.items()}
+    scene_results = {k: {"success": np.mean(v), "episodes": len(v)} for k, v in scene_results.items()}
     pprint(scene_results, indent=4)
