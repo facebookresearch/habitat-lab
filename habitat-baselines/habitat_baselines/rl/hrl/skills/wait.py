@@ -16,8 +16,10 @@ class WaitSkillPolicy(SkillPolicy):
         config,
         action_space: spaces.Space,
         batch_size,
+        ignore_grip=False
     ):
-        super().__init__(config, action_space, batch_size, True)
+        
+        super().__init__(config, action_space, batch_size, True, ignore_grip)
         self._wait_time = -1
 
     def _parse_skill_arg(self, skill_arg: str) -> Any:
@@ -41,3 +43,14 @@ class WaitSkillPolicy(SkillPolicy):
     ):
         action = torch.zeros(prev_actions.shape, device=prev_actions.device)
         return action, rnn_hidden_states
+
+
+class HumanWaitSkillPolicy(WaitSkillPolicy):
+    def __init__(
+        self,
+        config,
+        action_space: spaces.Space,
+        batch_size,
+        ignore_grip=True
+    ):
+        super().__init__(config, action_space, batch_size, ignore_grip)

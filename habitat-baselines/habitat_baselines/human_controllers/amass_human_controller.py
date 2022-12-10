@@ -13,9 +13,6 @@ from fairmotion.data import amass
 from fairmotion.ops import motion as motion_ops
 from fairmotion.ops import conversions
 
-from habitat_sim.logging import LoggingContext, logger
-
-import habitat_sim.physics as phy
 
 
 
@@ -34,7 +31,7 @@ class MotionData:
         self,
         motion_: motion.Motion,
     ) -> None:
-        logger.info("Loading Motion data...")
+        # logger.info("Loading Motion data...")
         
         ROOT, FIRST, LAST = 0, 0, -1
         # primary
@@ -156,7 +153,7 @@ class Motions:
         self.amass_path = amass_path
         self.body_model_path = body_model_path
 
-        logger.info("Loading Motion data...")
+        # logger.info("Loading Motion data...")
         
         # TODO: add more diversity here
         motion_files = {
@@ -196,7 +193,7 @@ class Motions:
 
 
 class AmassHumanController:
-    def __init__(self, urdf_path, amass_path, body_model_path, obj_translation, link_ids):
+    def __init__(self, urdf_path, amass_path, body_model_path, obj_translation=None):
         self.motions = Motions(amass_path, body_model_path)
         
         self.last_pose = self.motions.standing_pose
@@ -230,7 +227,8 @@ class AmassHumanController:
         self.path_distance_covered_next_wp = 0 # The distance we will have to cover in the next WP
         self.path_distance_walked = 0
         
-        self.translation_offset = obj_translation + mn.Vector3([0,0.90,0])
+        if obj_translation is not None:
+            self.translation_offset = obj_translation + mn.Vector3([0,0.90,0])
         self.pc_id = p.connect(p.DIRECT)
         self.human_bullet_id = p.loadURDF(urdf_path)
 
@@ -244,10 +242,10 @@ class AmassHumanController:
         
         self.joint_info = [p.getJointInfo(self.human_bullet_id, index) for index in link_indices]
         
-    def reset(self) -> None:
+    def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)
         """
-        super().reset()
+        self.translation_offset = position
         self.last_pose = self.motions.standing_pose
 
     def stop(self, progress=None):
@@ -375,6 +373,7 @@ class AmassHumanController:
 
 
         forward_V[1] = 0.
+        forward_V = mn.Vector3(forward_V)
         forward_V = forward_V.normalized()
 
         look_at_path_T = mn.Matrix4.look_at(

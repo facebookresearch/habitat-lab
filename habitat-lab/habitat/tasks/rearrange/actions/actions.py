@@ -579,16 +579,21 @@ class HumanJointAction(HumanAction):
     @property
     def action_space(self):
         num_joints = 19
-        return spaces.Box(shape=(num_joints+16,), low=-1, high=1, dtype=np.float32)
+
+        return spaces.Dict({
+                'human_joints_trans': spaces.Box(shape=(num_joints+16,), low=-1, high=1, dtype=np.float32)
+            }
+        )
 
 
     def step(self, **kwargs):
         new_pos_transform = kwargs['human_joints_trans']
         new_pos = new_pos_transform[:-16]
         new_pos_transform = new_pos_transform[-16:]
-        vecs = [mn.Vector4(new_pos_transform[i*4:(i+1)*4]) for i in range(4)]
-        new_transform = mn.Matrix4(*vecs)
-        self._sim.robot.set_joint_transform(new_pos, new_transform)
+        if np.array(new_pos_transform).sum() != 0:
+            vecs = [mn.Vector4(new_pos_transform[i*4:(i+1)*4]) for i in range(4)]
+            new_transform = mn.Matrix4(*vecs)
+            self._sim.robot.set_joint_transform(new_pos, new_transform)
         return self._sim.step(HabitatSimActions.changejoint_action)
 
 

@@ -32,7 +32,7 @@ class HumanAction(SimulatorTaskAction):
         """
         The human instance for this action.
         """
-        return self._human_mgr.human
+        return self._human_mgr.humanoid
 
     @property
     def cur_grasp_mgr(self):

@@ -123,6 +123,9 @@ class BaseVelocityActionConfig(ActionConfig):
     allow_dyn_slide: bool = True
     allow_back: bool = True
 
+@dataclass
+class HumanJointActionConfig(ActionConfig):
+    type: str = "HumanJointAction"
 
 @dataclass
 class RearrangeStopActionConfig(ActionConfig):
@@ -148,6 +151,24 @@ class OracleNavActionConfig(ActionConfig):
     allow_dyn_slide: bool = True
     allow_back: bool = True
 
+@dataclass
+class HumanNavActionConfig(ActionConfig):
+    """
+    Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "HumanNavAction"
+    # turn_velocity: float = 1.0
+    # forward_velocity: float = 1.0
+    # turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+    # lin_speed: float = 10.0
+    # ang_speed: float = 10.0
+    # allow_dyn_slide: bool = True
+    # allow_back: bool = True
 
 # -----------------------------------------------------------------------------
 # # EQA actions
@@ -213,6 +234,10 @@ class CompassSensorConfig(LabSensorConfig):
 class GPSSensorConfig(LabSensorConfig):
     type: str = "GPSSensor"
     dimensionality: int = 2
+
+@dataclass
+class LocalizarionSensorConfig(LabSensorConfig):
+    type: str = "LocalizationSensor"
 
 
 @dataclass
@@ -1202,6 +1227,20 @@ cs.store(
     node=OracleNavActionConfig,
 )
 
+cs.store(
+    package="habitat.task.actions.human_nav_action",
+    group="habitat/task/actions",
+    name="human_nav_action",
+    node=HumanNavActionConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.humanjoint_action",
+    group="habitat/task/actions",
+    name="humanjoint_action",
+    node=HumanJointActionConfig,
+)
+
 # Dataset Config Schema
 cs.store(
     package="habitat.dataset",
@@ -1286,6 +1325,13 @@ cs.store(
 
 
 # Task Sensors
+cs.store(
+    package="habitat.task.lab_sensors.localization_sensor",
+    group="habitat/task/lab_sensors",
+    name="localization_sensor",
+    node=LocalizationSensorConfig,
+)
+
 cs.store(
     package="habitat.task.lab_sensors.gps_sensor",
     group="habitat/task/lab_sensors",

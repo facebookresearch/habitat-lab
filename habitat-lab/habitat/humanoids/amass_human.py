@@ -33,6 +33,8 @@ class HumanParams:
     gripper_joints: List[int]
     arm_joints_right: List[int]
     arm_joints_left: List[int]
+    base_link_names: Set[str]
+    base_offset: mn.Vector3
 
 
 
@@ -40,19 +42,20 @@ class HumanParams:
 class AmassHuman(Humanoid):
     def __init__(self, urdf_path, sim):
         self.params = self._get_human_params()
-        
+
         super().__init__(self.params, urdf_path, sim)
-        
+
         self.urdf_path = urdf_path
         self.sim = sim
         self.ROOT = 0
         self.arm_joint_pos_left = self.params.arm_init_params_left
         self.arm_joint_pos_right = self.params.arm_init_params_right
- 
+
 
     def _get_human_params(self):
         return HumanParams(
                 gripper_joints=[0,0],
+                base_offset=mn.Vector3([0, 1.2, 0]),
                 gripper_init_params=np.array([0.00, 0.00], dtype=np.float32),
                 arm_init_params_left=np.array(
                     [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
@@ -65,7 +68,7 @@ class AmassHuman(Humanoid):
                 ee_link_left=9,
                 arm_joints_right=[11, 12, 13],
                 arm_joints_left=[15, 16, 17],
-                
+
                 cameras={
                 "robot_arm": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
@@ -83,11 +86,13 @@ class AmassHuman(Humanoid):
                     cam_offset_pos=mn.Vector3(-1.2, 2., -1.2),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,
-                ),
-            }
-
+                )
+                },
+                base_link_names={
+                    "base_link"
+                }
         )
-        
+
     def reset_path_info(self):
         self.path_ind = 0
         self.path_distance_walked = 0
@@ -150,7 +155,7 @@ class AmassHuman(Humanoid):
             return self.params.ee_link_right
         else:
             return self.params.ee_link_left
-    
+
     @property
     def ee_local_offset(self) -> mn.Vector3:
         """Gets the relative offset of the end-effector center from the
@@ -158,7 +163,12 @@ class AmassHuman(Humanoid):
         """
         return self.params.ee_offset
 
-    def ee_transform(self, hand=0) -> mn.Matrix4:
+    @property
+    def ee_transform(self) -> mn.Matrix4:
+        return self.ee_transform_hand(0)
+
+
+    def ee_transform_hand(self, hand=0) -> mn.Matrix4:
         """Gets the transformation of the end-effector location. This is offset
         from the end-effector link location.
         """
@@ -169,7 +179,7 @@ class AmassHuman(Humanoid):
         ef_link_transform = self.sim_obj.get_link_scene_node(
             ee_link
         ).transformation
-        
+
 
         ef_link_transform.translation = ef_link_transform.transform_point(
             self.ee_local_offset
@@ -184,5 +194,3 @@ class AmassHuman(Humanoid):
 
     def open_gripper(self):
         pass
-
-

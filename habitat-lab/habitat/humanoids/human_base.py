@@ -135,14 +135,28 @@ class Humanoid():
         self.update()
         # Manipulator.reset(self)
         pass
-    
+
+    @property
+    def base_transformation(self):
+        return self.sim_obj.transformation
+
+    def is_base_link(self, link_id: int) -> bool:
+        return (
+            self.sim_obj.get_link_name(link_id) in self.params.base_link_names
+        )
+
     @property
     def base_pos(self):
-        return self.root_position
-    
+        return self.sim_obj.translation - self.sim_obj.transformation.transform_vector(
+            self.params.base_offset
+        )
+
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
-        self.sim_obj.translation = position
+        
+        self.sim_obj.translation = position + self.sim_obj.transformation.transform_vector(
+            self.params.base_offset
+        )
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
         # raise NotImplementedError("The base type is not implemented.")
 
@@ -160,15 +174,15 @@ class Humanoid():
     @property
     def root_pos(self):
         return self.root_position
-    
+
     @property
     def root_rot(self):
         return self.root_orientation
-    
+
     @property
     def joint_pos(self):
         return self.joint_pos
-    
+
     @property
     def joint_rot(self):
         return self.joint_rot

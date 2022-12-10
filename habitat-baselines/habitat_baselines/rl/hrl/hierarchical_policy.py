@@ -28,6 +28,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ResetArmSkill,
     SkillPolicy,
     WaitSkillPolicy,
+    HumanWaitSkillPolicy,
     OracleNavHumanPolicy
 )
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -46,7 +47,6 @@ class HierarchicalPolicy(Policy):
         num_envs: int,
     ):
         super().__init__()
-
         self._action_space = action_space
         self._num_envs: int = num_envs
 
@@ -264,6 +264,7 @@ class HierarchicalPolicy(Policy):
                 "masks": masks,
             },
         )
+
         for skill_id, (batch_ids, batch_dat) in grouped_skills.items():
             tmp_actions, tmp_rnn = self._skills[skill_id].act(
                 observations=batch_dat["observations"],
@@ -272,12 +273,10 @@ class HierarchicalPolicy(Policy):
                 masks=batch_dat["masks"],
                 cur_batch_idx=batch_ids,
             )
-
             # LL skills are not allowed to terminate the overall episode.
             actions[batch_ids] = tmp_actions
             rnn_hidden_states[batch_ids] = tmp_rnn
         actions[:, self._stop_action_idx] = 0.0
-
         should_terminate = bad_should_terminate | hl_terminate
         if should_terminate.sum() > 0:
             # End the episode where requested.
@@ -286,7 +285,8 @@ class HierarchicalPolicy(Policy):
                     f"Calling stop action for batch {batch_idx}, {bad_should_terminate}, {hl_terminate}"
                 )
                 actions[batch_idx, self._stop_action_idx] = 1.0
-
+        # breakpoint()
+        
         return (None, actions, None, rnn_hidden_states)
 
     @classmethod
