@@ -398,6 +398,8 @@ class IsHoldingSensor(UsesRobotInterface, Sensor):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        breakpoint()
+        print("SENSOR", self._sim.get_robot_data(self.robot_id).grasp_mgr.is_grasped)
         return np.array(
             int(self._sim.get_robot_data(self.robot_id).grasp_mgr.is_grasped),
             dtype=np.float32,

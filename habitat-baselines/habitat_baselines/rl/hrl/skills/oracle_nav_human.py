@@ -161,7 +161,6 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         is_target_obj = targ_obj.expr_type.is_subtype_of(
             self._pddl_problem.expr_types[RIGID_OBJ_TYPE]
         )
-
         return OracleNavHumanPolicy.OracleNavActionArgs(
             match_i, is_target_obj, targ_obj_idx
         )

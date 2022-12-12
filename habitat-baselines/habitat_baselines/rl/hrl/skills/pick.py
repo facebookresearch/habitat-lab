@@ -9,6 +9,9 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
+from habitat_baselines.common.logging import baselines_logger
+from habitat.core.spaces import ActionSpace
+from habitat_baselines.rl.hrl.utils import find_action_range
 
 
 class PickSkillPolicy(NnSkillPolicy):
@@ -60,3 +63,92 @@ class PickSkillPolicy(NnSkillPolicy):
         )
         action = self._mask_pick(action, observations)
         return action, hxs
+
+
+class HumanPickSkillPolicy(NnSkillPolicy):
+    def __init__(
+        self,
+        wrap_policy,
+        config,
+        action_space,
+        filtered_obs_space,
+        filtered_action_space,
+        batch_size,
+    ):
+        super().__init__(
+            wrap_policy,
+            config,
+            action_space,
+            filtered_obs_space,
+            filtered_action_space,
+            batch_size,
+            ignore_grip=True
+        )
+        self._pick_ac_idx, _ = find_action_range(
+            action_space, "humanpick_action"
+        )
+        self._hand_ac_idx = self._pick_ac_idx + 1
+
+    def _is_skill_done(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        batch_idx,
+    ) -> torch.BoolTensor:
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        breakpoint()
+        return is_holding.type(torch.bool)
+
+    @classmethod
+    def from_config(
+        cls, config, observation_space, action_space, batch_size, full_config
+    ):
+        filtered_action_space = ActionSpace(
+            {config.PICK_ACTION_NAME: action_space[config.PICK_ACTION_NAME]}
+        )
+
+        baselines_logger.debug(
+            f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
+        )
+        return cls(
+            None,
+            config,
+            action_space,
+            observation_space,
+            filtered_action_space,
+            batch_size
+            
+        )
+    
+    def _mask_pick(self, action, observations):
+        # Mask out the release if the object is already held.
+        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
+        for i in torch.nonzero(is_holding):
+            # Do not release the object once it is held
+            action[i, self._hand_ac_idx] = 1.0
+        return action
+
+    def _parse_skill_arg(self, skill_arg):
+        self._internal_log(f"Parsing skill argument {skill_arg}")
+        return int(skill_arg[0].split("|")[1])
+
+    def _internal_act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_batch_idx,
+        deterministic=False,
+    ):
+        action = torch.zeros(prev_actions.shape, device=masks.device)
+        action_idxs = torch.FloatTensor(
+            [self._cur_skill_args[i] for i in cur_batch_idx]
+        )
+        action[:, self._pick_ac_idx] = action_idxs
+        
+        action = self._mask_pick(action, observations)
+        return action, rnn_hidden_states
+    

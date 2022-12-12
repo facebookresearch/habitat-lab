@@ -36,8 +36,9 @@ class HumanNavAction(HumanJointAction):
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task
-        self.human_controller = kwargs['human_controller']
+        self.human_controller = None
         self._poss_actions = get_possible_nav_to_actions(task.pddl_problem)
+        
         self._prev_ep_id = None
         self._targets = {}
 
@@ -68,7 +69,6 @@ class HumanNavAction(HumanJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            # breakpoint()
             # start_pos = self._sim.robot.base_pos
             start_pos, _, _ = get_robot_spawns(
                 np.array(obj_pos),

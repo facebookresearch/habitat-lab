@@ -462,6 +462,8 @@ class GrabAction(HumanAction):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.grasp_manager_id = 0
+        self._task = kwargs['task']
+
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -486,7 +488,8 @@ class GrabAction(HumanAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32)
+        return spaces.Dict({
+            'object_id': spaces.Box(shape=(2,), low=0, high=1000, dtype=np.uint32)})
 
     # def apply_ee_constraints(self):
     #     self.ee_target = np.clip(
@@ -529,16 +532,22 @@ class GrabAction(HumanAction):
         # breakpoint()
 
     def step(self, **kwargs):
-        ee_pos = np.array(kwargs['base_pos'])
+        
+        ee_pos = np.array(kwargs['object_id'])
         # self.ee_target = ee_pos
         # print(ee_pos)
         # breakpoint()
         # self.set_desired_ee_pos(ee_pos)
+        # obj_id = self._task.pddl_problem.sim_info.obj_ids
+
+        obj_id = int(kwargs['object_id'])
+        # breakpoint()
+        object_id = self._task.pddl_problem.sim_info.sim.scene_obj_ids[obj_id]
 
         grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
         snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
         grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
-        
+        breakpoint()
         
         # print("Step action")
         # self._sim.human.
@@ -597,12 +606,14 @@ class HumanJointAction(HumanAction):
         return self._sim.step(HabitatSimActions.changejoint_action)
 
 
+
 @registry.register_task_action
 class GrabLeftAction(GrabAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self.grasp_manager_id = 0
         self.obj_id = 0 
+        
 
 @registry.register_task_action
 class GrabRightAction(GrabAction):
@@ -637,11 +648,13 @@ class ReleaseAction(HumanAction):
 
     @property
     def action_space(self):
-        return spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32)
+        return spaces.Dict({
+            'object_id': spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32)
+        })
 
 
     def step(self, **kwargs):
-        ee_pos = np.array(kwargs['base_pos'])
+        ee_pos = np.array(kwargs['object_id'])
 
         grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
         # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
@@ -661,3 +674,13 @@ class ReleaseRightAction(ReleaseAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self.grasp_manager_id = 1
+
+
+
+@registry.register_task_action
+class HumanPickAction(GrabLeftAction):
+    dummy_var = True
+
+@registry.register_task_action
+class HumanPlaceAction(ReleaseLeftAction):
+    dummy_var = True

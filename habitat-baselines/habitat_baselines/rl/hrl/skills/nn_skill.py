@@ -139,6 +139,7 @@ class NnSkillPolicy(SkillPolicy):
         self._did_want_done[cur_batch_idx] = full_action[
             cur_batch_idx, self._stop_action_idx
         ]
+        breakpoint()
         return full_action, rnn_hidden_states
 
     @classmethod

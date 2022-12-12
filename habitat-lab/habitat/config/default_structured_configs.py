@@ -127,6 +127,17 @@ class BaseVelocityActionConfig(ActionConfig):
 class HumanJointActionConfig(ActionConfig):
     type: str = "HumanJointAction"
 
+
+@dataclass
+class HumanPickActionConfig(ActionConfig):
+    type: str = "HumanPickAction"
+
+@dataclass
+class HumanPlaceActionConfig(ActionConfig):
+    type: str = "HumanPlaceAction"
+
+
+
 @dataclass
 class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
@@ -1239,6 +1250,21 @@ cs.store(
     group="habitat/task/actions",
     name="humanjoint_action",
     node=HumanJointActionConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.humanpick_action",
+    group="habitat/task/actions",
+    name="humanpick_action",
+    node=HumanPickActionConfig,
+)
+
+
+cs.store(
+    package="habitat.task.actions.humanplace_action",
+    group="habitat/task/actions",
+    name="humanplace_action",
+    node=HumanPlaceActionConfig,
 )
 
 # Dataset Config Schema
