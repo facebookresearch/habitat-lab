@@ -545,7 +545,7 @@ class GrabAction(HumanAction):
         object_id = self._task.pddl_problem.sim_info.sim.scene_obj_ids[obj_id]
 
         grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
-        snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
+        snap_obj_id = self._sim.scene_obj_ids[object_id]
         grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
         breakpoint()
         
