@@ -664,18 +664,15 @@ class Collisions(Measure):
     def __init__(self, sim, config, *args: Any, **kwargs: Any):
         self._sim = sim
         self._config = config
-        self._metric = None
         super().__init__()
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return "collisions"
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
-        self._metric = None
+        self._metric = {"count": 0, "is_collision": False}
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
-        if self._metric is None:
-            self._metric = {"count": 0, "is_collision": False}
         self._metric["is_collision"] = False
         if self._sim.previous_step_collided:
             self._metric["count"] += 1
@@ -853,7 +850,6 @@ class TopDownMap(Measure):
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
-        self._metric = None
         self._top_down_map = self.get_original_map()
         agent_position = self._sim.get_agent_state().position
         a_x, a_y = maps.to_grid(
@@ -877,6 +873,13 @@ class TopDownMap(Measure):
             self._draw_point(
                 episode.start_position, maps.MAP_SOURCE_POINT_INDICATOR
             )
+
+        self._metric = {
+            "map": self._top_down_map,
+            "fog_of_war_mask": self._fog_of_war_mask,
+            "agent_map_coord": (a_x, a_y),
+            "agent_angle": self.get_polar_angle(),
+        }
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._step_count += 1
@@ -969,7 +972,6 @@ class DistanceToGoal(Measure):
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
-        self._metric = None
         if self._config.distance_to == "VIEW_POINTS":
             self._episode_view_points = [
                 view_point.agent_state.position
