@@ -6,17 +6,46 @@
 
 
 import os
+from typing import Any, Dict, Union
 
 import imageio.v2 as imageio
 import numpy as np
 
 import habitat
+from habitat.config.default_structured_configs import (
+    CollisionsMeasurementConfig,
+    FogOfWarConfig,
+    TopDownMapMeasurementConfig,
+)
+from habitat.core.agent import Agent
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
+from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
+from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations import maps
+from habitat.utils.visualizations.utils import (
+    images_to_video,
+    observations_to_image,
+)
 
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
+
+
+class ShortestPathFollowerAgent(Agent):
+    def __init__(self, env, goal_radius):
+        self.env = env
+        self.shortest_path_follower = ShortestPathFollower(
+            sim=env.sim, goal_radius=goal_radius, return_one_hot=False
+        )
+
+    def act(self, observations) -> Union[int, str, Dict[str, Any]]:
+        return self.shortest_path_follower.get_next_action(
+            self.env.current_episode.goals[0].position
+        )
+
+    def reset(self) -> None:
+        pass
 
 
 def example_pointnav_draw_target_birdseye_view():
@@ -102,10 +131,77 @@ def example_get_topdown_map():
         )
 
 
+def example_top_down_map_measure():
+    config = habitat.get_config(
+        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
+    )
+    dataset = habitat.make_dataset(
+        id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
+    )
+    with habitat.config.read_write(config):
+        config.habitat.task.measurements.update(
+            {
+                "top_down_map": TopDownMapMeasurementConfig(
+                    map_padding=3,
+                    map_resolution=1024,
+                    draw_source=True,
+                    draw_border=True,
+                    draw_shortest_path=True,
+                    draw_view_points=True,
+                    draw_goal_positions=True,
+                    draw_goal_aabbs=True,
+                    fog_of_war=FogOfWarConfig(
+                        draw=True,
+                        visibility_dist=5.0,
+                        fov=90,
+                    ),
+                ),
+                "collisions": CollisionsMeasurementConfig(),
+            }
+        )
+
+    num_episodes = 1
+    with habitat.Env(config=config, dataset=dataset) as env:
+        agent = ShortestPathFollowerAgent(
+            env=env,
+            goal_radius=config.habitat.task.measurements.success.success_distance,
+        )
+        for _ in range(num_episodes):
+            observations = env.reset()
+            agent.reset()
+
+            info = env.get_metrics()
+            frame = observations_to_image(observations, info)
+            info.pop("top_down_map")
+            frame = overlay_frame(frame, info)
+            vis_frames = [frame]
+
+            while not env.episode_over:
+                action = agent.act(observations)
+                if action is None:
+                    break
+
+                observations = env.step(action)
+                info = env.get_metrics()
+                frame = observations_to_image(observations, info)
+
+                info.pop("top_down_map")
+                frame = overlay_frame(frame, info)
+                vis_frames.append(frame)
+
+            current_episode = env.current_episode
+            video_name = f"{os.path.basename(current_episode.scene_id)}_{current_episode.episode_id}"
+            images_to_video(
+                vis_frames, IMAGE_DIR, video_name, fps=6, quality=9
+            )
+            vis_frames.clear()
+
+
 def main():
     example_pointnav_draw_target_birdseye_view()
     example_get_topdown_map()
     example_pointnav_draw_target_birdseye_view_agent_on_border()
+    example_top_down_map_measure()
 
 
 if __name__ == "__main__":
