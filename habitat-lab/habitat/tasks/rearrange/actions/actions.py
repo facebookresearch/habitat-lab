@@ -489,7 +489,8 @@ class GrabAction(HumanAction):
     @property
     def action_space(self):
         return spaces.Dict({
-            'object_id': spaces.Box(shape=(2,), low=0, high=1000, dtype=np.uint32)})
+            'object_id': spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32),
+            'snap': spaces.Box(shape=(1,), low=0, high=1, dtype=np.uint32)})
 
     # def apply_ee_constraints(self):
     #     self.ee_target = np.clip(
@@ -539,16 +540,18 @@ class GrabAction(HumanAction):
         # breakpoint()
         # self.set_desired_ee_pos(ee_pos)
         # obj_id = self._task.pddl_problem.sim_info.obj_ids
-
-        obj_id = int(kwargs['object_id'])
         # breakpoint()
-        object_id = self._task.pddl_problem.sim_info.sim.scene_obj_ids[obj_id]
-
-        grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
-        snap_obj_id = self._sim.scene_obj_ids[object_id]
-        grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
-        breakpoint()
+        obj_id = int(kwargs['object_id'])
+        do_snap = bool(kwargs['snap'])
         
+        # breakpoint()
+        if do_snap:
+            snap_obj_id = self._task.pddl_problem.sim_info.sim.scene_obj_ids[obj_id]
+            
+            grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
+            # snap_obj_id = self._sim.scene_obj_ids[object_id]
+            grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
+       
         # print("Step action")
         # self._sim.human.
         # ee_pos = np.clip(ee_pos, -1, 1)
@@ -634,7 +637,6 @@ class ReleaseAction(HumanAction):
 
     def reset(self, *args, **kwargs):
         super().reset()
-        # breakpoint()
         # self._sim.robot.
         link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
         if link_index == 0:
@@ -649,16 +651,18 @@ class ReleaseAction(HumanAction):
     @property
     def action_space(self):
         return spaces.Dict({
-            'object_id': spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32)
+            'desnap': spaces.Box(shape=(1,), low=0, high=1, dtype=np.uint32)
         })
 
 
     def step(self, **kwargs):
-        ee_pos = np.array(kwargs['object_id'])
+
+        should_desnap = bool(kwargs['desnap'])
 
         grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
         # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
-        grasp_mgr.desnap()
+        if should_desnap:
+            grasp_mgr.desnap()
 
         return self._sim.step(HabitatSimActions.changejoint_action)
 

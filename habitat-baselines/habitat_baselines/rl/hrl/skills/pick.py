@@ -98,7 +98,6 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
-        breakpoint()
         return is_holding.type(torch.bool)
 
     @classmethod
@@ -150,5 +149,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         action[:, self._pick_ac_idx] = action_idxs
         
         action = self._mask_pick(action, observations)
+
+        action[:, self._hand_ac_idx] = 1.0
         return action, rnn_hidden_states
     
