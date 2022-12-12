@@ -6,7 +6,7 @@
 
 
 import os
-from typing import Any, Dict, Union
+from typing import TYPE_CHECKING, Union, cast
 
 import imageio.v2 as imageio
 import numpy as np
@@ -27,21 +27,28 @@ from habitat.utils.visualizations.utils import (
     observations_to_image,
 )
 
+if TYPE_CHECKING:
+    from habitat.core.simulator import Observations
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+
+
 IMAGE_DIR = os.path.join("examples", "images")
 if not os.path.exists(IMAGE_DIR):
     os.makedirs(IMAGE_DIR)
 
 
 class ShortestPathFollowerAgent(Agent):
-    def __init__(self, env, goal_radius):
+    def __init__(self, env: habitat.Env, goal_radius: float):
         self.env = env
         self.shortest_path_follower = ShortestPathFollower(
-            sim=env.sim, goal_radius=goal_radius, return_one_hot=False
+            sim=cast("HabitatSim", env.sim),
+            goal_radius=goal_radius,
+            return_one_hot=False,
         )
 
-    def act(self, observations) -> Union[int, str, Dict[str, Any]]:
+    def act(self, observations: "Observations") -> Union[int, np.ndarray]:
         return self.shortest_path_follower.get_next_action(
-            self.env.current_episode.goals[0].position
+            cast(NavigationEpisode, self.env.current_episode).goals[0].position
         )
 
     def reset(self) -> None:
