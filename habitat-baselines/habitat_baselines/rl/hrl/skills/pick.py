@@ -87,6 +87,9 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         self._pick_ac_idx, _ = find_action_range(
             action_space, "humanpick_action"
         )
+        self._desnap_ac_idx, _ = find_action_range(
+            action_space, "humanplace_action"
+        )
         self._hand_ac_idx = self._pick_ac_idx + 1
 
     def _is_skill_done(
@@ -127,6 +130,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         for i in torch.nonzero(is_holding):
             # Do not release the object once it is held
             action[i, self._hand_ac_idx] = 1.0
+            action[i, self._desnap_ac_idx] = 0.0
         return action
 
     def _parse_skill_arg(self, skill_arg):

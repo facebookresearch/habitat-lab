@@ -332,7 +332,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "ik_arm_urdf",
                 "amass_path",
                 "body_model_path",
-                "human_type"
+                "human_type",
+                "draw_fps_human"
             },
         )
 

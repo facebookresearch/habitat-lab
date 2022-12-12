@@ -135,7 +135,8 @@ class Env:
         human_controller = AmassHumanController(
             urdf_path=config_human.robot_urdf,
             amass_path=config_human.amass_path,
-            body_model_path=config_human.body_model_path
+            body_model_path=config_human.body_model_path,
+            draw_fps=config_human.draw_fps_human
         )
         self.task.actions['human_nav_action'].human_controller = human_controller
         self._max_episode_seconds = (

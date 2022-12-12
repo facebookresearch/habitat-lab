@@ -193,7 +193,7 @@ class Motions:
 
 
 class AmassHumanController:
-    def __init__(self, urdf_path, amass_path, body_model_path, obj_translation=None):
+    def __init__(self, urdf_path, amass_path, body_model_path, obj_translation=None, draw_fps=60):
         self.motions = Motions(amass_path, body_model_path)
         
         self.last_pose = self.motions.standing_pose
@@ -213,7 +213,7 @@ class AmassHumanController:
         # smoothing_params
         self.frames_to_stop = 10
         self.frames_to_start = 10
-        self.draw_fps = 60
+        self.draw_fps = draw_fps
 
         # state variables
         self.time_since_stop = 0 # How many frames since we started stopping
@@ -389,9 +389,15 @@ class AmassHumanController:
         if self.mocap_frame == 0:
             dist_diff = 0
         else:
+            
             prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
-            distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
+            if self.mocap_frame - step_size < 0:
+                distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame] + curr_motion_data.map_of_total_displacement[-1]
+            else:
+                distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
+            
             dist_diff = max(0, distance_covered - prev_distance)
+            # breakpoint()
             if did_rotate:
                 dist_diff = 0
             #     self.distance_rot += dist_diff

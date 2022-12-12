@@ -423,10 +423,12 @@ def play_env(env, args, config):
     urdf_path = config.habitat.simulator.agents.main_agent.robot_urdf
     amass_path = config.habitat.simulator.agents.main_agent.amass_path
     body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
+    body_model_path = config.habitat.simulator.agents.main_agent.draw_fps
     obj_translation = env._sim.robot.sim_obj.translation
 
     link_ids = env._sim.robot.sim_obj.get_link_ids()
-    human_controller = AmassHumanController(urdf_path, amass_path, body_model_path, obj_translation, link_ids)
+    human_controller = AmassHumanController(
+        urdf_path, amass_path, body_model_path, obj_translation, link_ids)
 
     # TODO: remove
     human_controller.sim_obj = env._sim.robot.sim_obj

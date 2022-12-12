@@ -30,6 +30,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     WaitSkillPolicy,
     HumanWaitSkillPolicy,
     HumanPickSkillPolicy,
+    HumanPlaceSkillPolicy,
     OracleNavHumanPolicy
 )
 from habitat_baselines.rl.hrl.utils import find_action_range

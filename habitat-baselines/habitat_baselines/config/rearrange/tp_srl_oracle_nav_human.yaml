@@ -22,6 +22,7 @@ habitat:
         robot_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
         ik_arm_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
         robot_type: 'AmassHuman'
+        draw_fps_human: 60
         amass_path: '/Users/xavierpuig/Documents/human_sim_data/amass_smpl_h/'
         body_model_path: '/Users/xavierpuig/Documents/human_sim_data/smplh/male/model.npz'
         human_type: "AmassHuman"
@@ -83,13 +84,13 @@ habitat_baselines:
             human_pick:
               skill_name: "HumanPickSkillPolicy"
               obs_skill_inputs: ["obj_goal_sensor"]
-              PICK_ACTION_NAME: "humanplace_action"
+              PICK_ACTION_NAME: "humanpick_action"
               max_skill_steps: 200
               force_end_on_timeout: True
               load_ckpt_file: ""
             human_place:
-              skill_name: "PlaceSkillPolicy"
-              PLACE_ACTION_NAME: "humanplace_action"
+              skill_name: "HumanPlaceSkillPolicy"
+              PICK_ACTION_NAME: "humanplace_action"
               name: "PointNavResNetPolicy"
               obs_skill_inputs: ["obj_goal_sensor"]
               max_skill_steps: 200
@@ -107,7 +108,7 @@ habitat_baselines:
             # close_cab: "NN_OPEN_CAB"
             # close_fridge: "NN_OPEN_FRIDGE"
             pick: "human_pick"
-            # place: "human_place"
+            place: "human_place"
             nav: "GT_NAV"
             nav_to_receptacle: "GT_NAV"
             wait: "wait_skill"

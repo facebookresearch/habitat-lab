@@ -662,6 +662,7 @@ class ReleaseAction(HumanAction):
         grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
         # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
         if should_desnap:
+            breakpoint()
             grasp_mgr.desnap()
 
         return self._sim.step(HabitatSimActions.changejoint_action)
