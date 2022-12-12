@@ -2,6 +2,7 @@
 .DS_Store
 .vscode
 *.swp
+*.swo
 *.code-workspace
 debug/
 build/
@@ -21,3 +22,9 @@ temp/
 scripts/
 docs_build/
 viz/
+
+# Data types
+*.h5
+*.hdf5
+*.png
+*.mp4
