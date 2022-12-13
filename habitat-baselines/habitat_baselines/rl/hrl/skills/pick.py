@@ -3,15 +3,17 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-
+import os.path as osp
 from habitat.tasks.rearrange.rearrange_sensors import (
     IsHoldingSensor,
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.common.logging import baselines_logger
+
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.core.spaces import ActionSpace
-from habitat_baselines.rl.hrl.utils import find_action_range
+from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
 
 
 class PickSkillPolicy(NnSkillPolicy):
@@ -65,6 +67,7 @@ class PickSkillPolicy(NnSkillPolicy):
         return action, hxs
 
 
+
 class HumanPickSkillPolicy(NnSkillPolicy):
     def __init__(
         self,
@@ -74,6 +77,10 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         filtered_obs_space,
         filtered_action_space,
         batch_size,
+        pddl_domain_path,
+        pddl_task_path,
+        task_config
+
     ):
         super().__init__(
             wrap_policy,
@@ -91,6 +98,18 @@ class HumanPickSkillPolicy(NnSkillPolicy):
             action_space, "humanplace_action"
         )
         self._hand_ac_idx = self._pick_ac_idx + 1
+
+
+        self._pddl_problem = PddlProblem(
+            pddl_domain_path,
+            pddl_task_path,
+            task_config,
+        )
+
+        self.pddl_action_idx = find_action_range_pddl(
+            self._pddl_problem.get_ordered_actions(), "pick"
+        )
+
 
     def _is_skill_done(
         self,
@@ -120,10 +139,16 @@ class HumanPickSkillPolicy(NnSkillPolicy):
             action_space,
             observation_space,
             filtered_action_space,
-            batch_size
-            
+            batch_size,
+            full_config.habitat.task.pddl_domain_def,
+            osp.join(
+                full_config.habitat.task.task_spec_base_path,
+                full_config.habitat.task.task_spec + ".yaml",
+            ),
+            full_config.habitat.task,
+
         )
-    
+
     def _mask_pick(self, action, observations):
         # Mask out the release if the object is already held.
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
@@ -150,10 +175,11 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         action_idxs = torch.FloatTensor(
             [self._cur_skill_args[i] for i in cur_batch_idx]
         )
-        action[:, self._pick_ac_idx] = action_idxs
-        
-        action = self._mask_pick(action, observations)
 
-        action[:, self._hand_ac_idx] = 1.0
+        # TODO: hardcoded, indices based on self._pddl_problem.get_ordered_entities_list()
+        action[:, self._pick_ac_idx+self.pddl_action_idx[0]] = 7
+        action[:, self._pick_ac_idx+self.pddl_action_idx[0]+1] = 8
+        # action = self._mask_pick(action, observations)
+        # action[:, self._hand_ac_idx] = 1.0
+        # breakpoint()
         return action, rnn_hidden_states
-    

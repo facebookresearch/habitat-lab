@@ -3,6 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import numpy as np
+import copy
 from gym import spaces
 
 from habitat.core.registry import registry
@@ -33,12 +34,14 @@ class PddlApplyAction(RobotAction):
         action_n_args = sum(
             [action.n_args for action in self._action_ordering]
         )
-
+        # TODO: it seems like the space here indicates which action type to call
+        # as per the step function. Why is is between -1 and 1
         return spaces.Dict(
+
             {
                 self._action_arg_prefix
                 + "pddl_action": spaces.Box(
-                    shape=(action_n_args,), low=-1, high=1, dtype=np.float32
+                    shape=(action_n_args,), low=-1, high=30, dtype=np.float32
                 )
             }
         )
@@ -57,6 +60,7 @@ class PddlApplyAction(RobotAction):
         return start_idx
 
     def step(self, *args, is_last_action, **kwargs):
+
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         cur_i = 0
         self._was_prev_action_invalid = False
@@ -65,6 +69,7 @@ class PddlApplyAction(RobotAction):
             if sum(action_part) > 0:
                 # Take action
                 # Convert 1 indexed to 0 indexed.
+
                 real_action_idxs = [int(a) - 1 for a in action_part]
                 for a in real_action_idxs:
                     if a < 0.0:
@@ -77,8 +82,10 @@ class PddlApplyAction(RobotAction):
                     self._entities_list[i] for i in real_action_idxs
                 ]
 
-                apply_action = action.copy()
+                apply_action = copy.deepcopy(action)
+
                 apply_action.set_param_values(param_values)
+
                 if self._task.pddl_problem.is_expr_true(apply_action.precond):
                     rearrange_logger.debug(
                         f"Applying action {action} with obj args {param_values}"

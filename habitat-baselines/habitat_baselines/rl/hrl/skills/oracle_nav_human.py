@@ -116,7 +116,7 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         batch_idx
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
-        
+
         cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
         for i, batch_i in enumerate(batch_idx):
             prev_pos = self._prev_pos[batch_i]
@@ -181,6 +181,6 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         action_idxs = torch.FloatTensor(
             [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
         )
-        
+
         full_action[:, self._oracle_nav_ac_idx] = action_idxs
         return full_action, rnn_hidden_states

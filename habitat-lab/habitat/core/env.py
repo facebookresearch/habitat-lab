@@ -31,7 +31,7 @@ from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks.registration import make_task
 from habitat.utils import profiling_wrapper
-from habitat_baselines.human_controllers.amass_human_controller import AmassHumanController
+import human_controllers.amass_human_controller as amass_human_controller
 
 
 if TYPE_CHECKING:
@@ -81,7 +81,7 @@ class Env:
             information. Can be defined as :py:`None` in which case
             ``_episodes`` should be populated from outside.
         """
-        
+
         if "habitat" in config:
             config = config.habitat
         self._config = config
@@ -132,13 +132,15 @@ class Env:
         self.action_space = self._task.action_space
 
         config_human = config.simulator.agents.main_agent
-        human_controller = AmassHumanController(
+        human_controller = amass_human_controller.AmassHumanController(
             urdf_path=config_human.robot_urdf,
             amass_path=config_human.amass_path,
             body_model_path=config_human.body_model_path,
             draw_fps=config_human.draw_fps_human
         )
-        self.task.actions['human_nav_action'].human_controller = human_controller
+        if 'human_nav_action' in self.task.actions:
+            self.task.actions['human_nav_action'].human_controller = human_controller
+
         self._max_episode_seconds = (
             self._config.environment.max_episode_seconds
         )

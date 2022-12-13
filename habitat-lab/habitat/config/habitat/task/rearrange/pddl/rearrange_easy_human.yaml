@@ -26,3 +26,4 @@ solution:
   - nav(goal0|0, robot_0)
   - pick(goal0|0, robot_0)
   - nav(TARGET_goal0|0, robot_0)
+  - place(goal0|0, TARGET_goal0|0, robot_0)

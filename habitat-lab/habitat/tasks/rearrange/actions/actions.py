@@ -31,6 +31,7 @@ from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.actions.human_action import HumanAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
+from habitat.tasks.rearrange.actions.pddl_actions import PddlApplyAction
 
 
 @registry.register_task_action
@@ -455,18 +456,22 @@ class ArmEEAction(RobotAction):
 
 
 @registry.register_task_action
-class GrabAction(HumanAction):
-    
+class GrabAction(HumanAction, PddlApplyAction):
+
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
-        super().__init__(*args, sim=sim, **kwargs)
+        task = kwargs['task']
+        HumanAction.__init__(self, *args, sim=sim, **kwargs)
+        PddlApplyAction.__init__(self, *args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.grasp_manager_id = 0
         self._task = kwargs['task']
 
 
     def reset(self, *args, **kwargs):
-        super().reset()
+        # super().reset()
+        HumanAction.reset(self)
+        PddlApplyAction.reset(self)
         # breakpoint()
         # self._sim.robot.
         link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
@@ -488,6 +493,8 @@ class GrabAction(HumanAction):
 
     @property
     def action_space(self):
+        up_action_space = PddlApplyAction.action_space.__get__(self)
+        return up_action_space
         return spaces.Dict({
             'object_id': spaces.Box(shape=(1,), low=0, high=1000, dtype=np.uint32),
             'snap': spaces.Box(shape=(1,), low=0, high=1, dtype=np.uint32)})
@@ -509,19 +516,19 @@ class GrabAction(HumanAction):
         joint_vel = np.zeros(joint_pos.shape)
 
         # print(self.ee_target)
-        
+
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
         des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
-        
+
         # Convert to joints, can this be set programatically?
         joints_pos = []
 
-        indices_interest = list(range(11)) + [11, 12, 13] + [14, 15, 16] 
+        indices_interest = list(range(11)) + [11, 12, 13] + [14, 15, 16]
         # breakpoint()
         for index in indices_interest:
-            
+
             current_angle = des_joint_pos[(index*3):(index*3 + 3)]
 
             Q = Rotation.from_euler('xyz', current_angle).as_quat()
@@ -529,11 +536,14 @@ class GrabAction(HumanAction):
 
         self._sim.robot.arm_joint_pos = joints_pos
         print(self._sim.robot.sim_obj.joint_positions)
-        
+
         # breakpoint()
 
     def step(self, **kwargs):
-        
+        # kwargs['is_last_action'] = False
+        PddlApplyAction.step(self, None, **kwargs)
+
+        return self._sim.step(HabitatSimActions.changejoint_action)
         ee_pos = np.array(kwargs['object_id'])
         # self.ee_target = ee_pos
         # print(ee_pos)
@@ -543,15 +553,15 @@ class GrabAction(HumanAction):
         # breakpoint()
         obj_id = int(kwargs['object_id'])
         do_snap = bool(kwargs['snap'])
-        
+
         # breakpoint()
         if do_snap:
             snap_obj_id = self._task.pddl_problem.sim_info.sim.scene_obj_ids[obj_id]
-            
+
             grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
             # snap_obj_id = self._sim.scene_obj_ids[object_id]
             grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
-       
+
         # print("Step action")
         # self._sim.human.
         # ee_pos = np.clip(ee_pos, -1, 1)
@@ -566,7 +576,7 @@ class GrabAction(HumanAction):
         # # global_pos = self.ee_target
         # self._sim.viz_ids["true_ee_target"] = self._sim.visualize_position(
         #     global_pos, self._sim.viz_ids["true_ee_target"])
-            
+
         # breakpoint()
         return self._sim.step(HabitatSimActions.changejoint_action)
 
@@ -578,7 +588,7 @@ class GrabAction(HumanAction):
 
 @registry.register_task_action
 class HumanJointAction(HumanAction):
-    
+
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
         super().__init__(*args, sim=sim, **kwargs)
@@ -615,8 +625,8 @@ class GrabLeftAction(GrabAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self.grasp_manager_id = 0
-        self.obj_id = 0 
-        
+        self.obj_id = 0
+
 
 @registry.register_task_action
 class GrabRightAction(GrabAction):
@@ -628,7 +638,7 @@ class GrabRightAction(GrabAction):
 
 @registry.register_task_action
 class ReleaseAction(HumanAction):
-    
+
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
         super().__init__(*args, sim=sim, **kwargs)
