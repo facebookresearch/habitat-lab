@@ -94,7 +94,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         self._pick_ac_idx, _ = find_action_range(
             action_space, "humanpick_action"
         )
-        self._desnap_ac_idx, _ = find_action_range(
+        self._place_ac_idx, _ = find_action_range(
             action_space, "humanplace_action"
         )
         self._hand_ac_idx = self._pick_ac_idx + 1

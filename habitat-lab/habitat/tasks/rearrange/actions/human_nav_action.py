@@ -151,7 +151,7 @@ class HumanNavAction(HumanJointAction):
         dist_to_curr_nav_targ = np.linalg.norm(
             (cur_nav_targ - robot_pos)[[0, 2]]
         )
-        # print(dist_to_final_nav_targ, dist_to_curr_nav_targ)
+        print(dist_to_final_nav_targ, dist_to_curr_nav_targ)
 
         at_goal = (
             dist_to_final_nav_targ < self._config.dist_thresh

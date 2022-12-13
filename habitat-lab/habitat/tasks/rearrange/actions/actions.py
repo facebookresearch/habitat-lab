@@ -466,6 +466,8 @@ class GrabAction(HumanAction, PddlApplyAction):
         self._sim: RearrangeSim = sim
         self.grasp_manager_id = 0
         self._task = kwargs['task']
+        self._action_suffix = 'grab'
+        
 
 
     def reset(self, *args, **kwargs):
@@ -637,45 +639,53 @@ class GrabRightAction(GrabAction):
 
 
 @registry.register_task_action
-class ReleaseAction(HumanAction):
+class ReleaseAction(GrabAction):
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.grasp_manager_id = 0
+        self._action_suffix = 'pick'
 
     def reset(self, *args, **kwargs):
         super().reset()
+
+        # return self._sim.step(HabitatSimActions.changejoint_action)
+
         # self._sim.robot.
-        link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
-        if link_index == 0:
-            curr_link = self._sim.robot.params.ee_link_left
-        else:
-            curr_link = self._sim.robot.params.ee_link_right
+        # link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
+        # if link_index == 0:
+        #     curr_link = self._sim.robot.params.ee_link_left
+        # else:
+        #     curr_link = self._sim.robot.params.ee_link_right
 
-        ef_link_transform = self._sim.robot.sim_obj.get_link_scene_node(
-            curr_link
-        ).transformation
+        # ef_link_transform = self._sim.robot.sim_obj.get_link_scene_node(
+        #     curr_link
+        # ).transformation
 
-    @property
-    def action_space(self):
-        return spaces.Dict({
-            'desnap': spaces.Box(shape=(1,), low=0, high=1, dtype=np.uint32)
-        })
+    # @property
+    # def action_space(self):
+    #     return spaces.Dict({
+    #         'desnap': spaces.Box(shape=(1,), low=0, high=1, dtype=np.uint32)
+    #     })
 
 
     def step(self, **kwargs):
-
-        should_desnap = bool(kwargs['desnap'])
-
-        grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
-        # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
-        if should_desnap:
-            breakpoint()
-            grasp_mgr.desnap()
+        # breakpoint()
+        PddlApplyAction.step(self, None, **kwargs)
 
         return self._sim.step(HabitatSimActions.changejoint_action)
+
+        # should_desnap = bool(kwargs['desnap'])
+
+        # grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
+        # # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
+        # if should_desnap:
+        #     breakpoint()
+        #     grasp_mgr.desnap()
+
+        # return self._sim.step(HabitatSimActions.changejoint_action)
 
 
 @registry.register_task_action

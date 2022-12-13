@@ -20,6 +20,7 @@ class PddlApplyAction(RobotAction):
         self._entities_list = None
         self._action_ordering = None
         self._was_prev_action_invalid = False
+        self._action_suffix = ""
 
     @property
     def action_space(self):
@@ -40,7 +41,7 @@ class PddlApplyAction(RobotAction):
 
             {
                 self._action_arg_prefix
-                + "pddl_action": spaces.Box(
+                + "pddl_action" + self._action_suffix: spaces.Box(
                     shape=(action_n_args,), low=-1, high=30, dtype=np.float32
                 )
             }
@@ -61,7 +62,7 @@ class PddlApplyAction(RobotAction):
 
     def step(self, *args, is_last_action, **kwargs):
 
-        apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
+        apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action" +  self._action_suffix]
         cur_i = 0
         self._was_prev_action_invalid = False
         for action in self._action_ordering:
@@ -85,7 +86,8 @@ class PddlApplyAction(RobotAction):
                 apply_action = copy.deepcopy(action)
 
                 apply_action.set_param_values(param_values)
-
+                # print(action)
+                # breakpoint()
                 if self._task.pddl_problem.is_expr_true(apply_action.precond):
                     rearrange_logger.debug(
                         f"Applying action {action} with obj args {param_values}"
