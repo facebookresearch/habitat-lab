@@ -128,9 +128,33 @@ class WeightsAndBiasesWriter:
             raise ValueError(
                 "Requested to log with wandb, but wandb is not installed."
             )
+
         if resume_run_id is not None:
             wb_kwargs["id"] = resume_run_id
             wb_kwargs["resume"] = "must"
+
+        else:
+            wandb_id = wandb.util.generate_id()
+            wandb_dir = (
+                os.path.dirname(config.habitat_baselines.eval_ckpt_path_dir)
+                if os.path.isfile(config.habitat_baselines.eval_ckpt_path_dir)
+                else config.habitat_baselines.eval_ckpt_path_dir
+            )
+            resume = "allow"
+            if config.habitat_baselines.eval_ckpt_path_dir is not None:
+                wandb_filename = os.path.join(wandb_dir, "wandb_id.txt")
+                if os.path.exists(wandb_filename):
+                    # if file exists, then we are resuming from a previous eval
+                    with open(wandb_filename, "r") as file:
+                        wandb_id = file.read().rstrip("\n")
+                    resume = "must"
+                else:
+                    os.makedirs(os.path.dirname(wandb_filename), exist_ok=True)
+                    with open(wandb_filename, "w") as file:
+                        file.write(wandb_id)
+
+            wb_kwargs["id"] = wandb_id
+            wb_kwargs["resume"] = resume
 
         self.run = wandb.init(  # type: ignore[attr-defined]
             config={

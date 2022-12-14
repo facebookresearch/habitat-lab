@@ -388,7 +388,7 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
 
 
 def get_robot_spawns(
-    target_position: np.ndarray,
+    target_positions: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: int,
     sim,
@@ -413,6 +413,9 @@ def get_robot_spawns(
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         sim.set_state(state)
+        target_position = target_positions[
+            np.random.choice(target_positions.shape[0])
+        ]
         start_position = sim.pathfinder.get_random_navigable_point_near(
             target_position, distance_threshold
         )

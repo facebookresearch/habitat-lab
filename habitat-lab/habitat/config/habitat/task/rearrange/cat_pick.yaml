@@ -11,10 +11,13 @@ defaults:
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
     - did_pick_object
+    - distance_to_goal
+    - distance_to_goal_reward
     - pick_success
     - pick_reward
     - did_violate_hold_constraint
     - num_steps
+
   - /habitat/task/lab_sensors:
     - target_start_sensor
     - joint_sensor

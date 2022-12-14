@@ -235,6 +235,8 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
     hierarchical_policy: HierarchicalPolicy = MISSING
+    ovrl: bool = False
+    no_downscaling: bool = False
 
 
 @dataclass

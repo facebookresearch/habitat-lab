@@ -13,24 +13,6 @@ import numpy as np
 
 @registry.register_simulator(name="ObjectRearrangeSim-v0")
 class ObjectRearrangeSim(RearrangeSim):
-    # def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
-    #     """Get a mapping of object ids to goal positions for rearrange targets.
-
-    #     :return: ([idx: int], [goal_pos: list]) The index of the target object
-    #       in self.scene_obj_ids and the 3D goal POSITION, rotation is IGNORED.
-    #       Note that goal_pos is the desired position of the object, not the
-    #       starting position.
-    #     """
-    #     if self.ep_info['candidate_objects'] is not None:
-    #         target_ids = []
-    #         target_trans = []
-    #         for goal in self.ep_info['candidate_objects']:
-    #             target_ids.append(goal.object_id)
-    #             target_trans.append(goal.position)
-    #         return target_ids, target_trans
-    #     else:
-    #         return super().get_targets()
-
     def _setup_targets(self):
         super()._setup_targets()
         self.target_categories = {}

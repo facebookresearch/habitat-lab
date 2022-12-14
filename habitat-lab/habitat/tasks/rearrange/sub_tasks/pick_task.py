@@ -50,10 +50,28 @@ class RearrangePickTaskV1(RearrangeTask):
             sel_idx = np.random.randint(0, len(self._get_targ_pos(sim)))
         return sel_idx
 
+    def _get_spawn_recs(self, sim, episode):
+        return [
+            sim.receptacles[
+                episode.name_to_receptacle[
+                    list(sim.instance_handle_to_ref_handle.keys())[0]
+                ]
+            ]
+        ]
+
     def _gen_start_pos(self, sim, episode, sel_idx):
-        target_positions = self._get_targ_pos(sim)
-        targ_pos = target_positions[sel_idx]
-        snap_pos = targ_pos
+        if self._config.biased_init:
+            target_positions = self._get_targ_pos(sim)
+            snap_pos = np.expand_dims(target_positions[sel_idx], axis=0)
+        else:
+            snap_pos = np.array(
+                [
+                    r.get_global_transform(sim).transform_point(
+                        r.bounds.center()
+                    )
+                    for r in self._get_spawn_recs(sim, episode)
+                ]
+            )
 
         start_pos, angle_to_obj, was_succ = get_robot_spawns(
             snap_pos,

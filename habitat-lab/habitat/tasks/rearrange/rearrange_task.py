@@ -17,6 +17,7 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.obj_rearrange_sim import ObjectRearrangeSim
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
     CollisionDetails,
