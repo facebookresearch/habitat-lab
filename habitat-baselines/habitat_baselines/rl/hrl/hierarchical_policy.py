@@ -28,11 +28,14 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ResetArmSkill,
     SkillPolicy,
     WaitSkillPolicy,
+)
+from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
     HumanWaitSkillPolicy,
     HumanPickSkillPolicy,
     HumanPlaceSkillPolicy,
     OracleNavHumanPolicy
 )
+
 from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions

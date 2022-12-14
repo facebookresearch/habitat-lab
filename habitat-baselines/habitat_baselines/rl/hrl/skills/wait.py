@@ -44,13 +44,3 @@ class WaitSkillPolicy(SkillPolicy):
         action = torch.zeros(prev_actions.shape, device=prev_actions.device)
         return action, rnn_hidden_states
 
-
-class HumanWaitSkillPolicy(WaitSkillPolicy):
-    def __init__(
-        self,
-        config,
-        action_space: spaces.Space,
-        batch_size,
-        ignore_grip=True
-    ):
-        super().__init__(config, action_space, batch_size, ignore_grip)
