@@ -36,6 +36,7 @@
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=false bash -s
 
 # %%
+# [setup]
 import os
 from typing import TYPE_CHECKING, Union, cast
 
@@ -71,9 +72,10 @@ if TYPE_CHECKING:
 output_path = "examples/tutorials/habitat_lab_visualization/"
 if not os.path.exists(output_path):
     os.makedirs(output_path)
-
+# [/setup]
 
 # %%
+# [example_1]
 def example_pointnav_draw_target_birdseye_view():
     # Define NavigationEpisode parameters
     goal_radius = 0.5
@@ -104,7 +106,11 @@ def example_pointnav_draw_target_birdseye_view():
     plt.show()
 
 
+# [/example_1]
+
+
 # %%
+# [example_2]
 def example_pointnav_draw_target_birdseye_view_agent_on_border():
     # Define NavigationGoal
     goal_radius = 0.5
@@ -142,7 +148,11 @@ def example_pointnav_draw_target_birdseye_view_agent_on_border():
             plt.show()
 
 
+# [/example_2]
+
+
 # %%
+# [example_3]
 def example_get_topdown_map():
     # Create habitat config
     config = habitat.get_config(
@@ -174,7 +184,11 @@ def example_get_topdown_map():
         plt.show()
 
 
+# [/example_3]
+
+
 # %%
+# [example_4]
 class ShortestPathFollowerAgent(Agent):
     r"""Implementation of the :ref:`habitat.core.agent.Agent` interface that
     uses :ref`habitat.tasks.nav.shortest_path_follower.ShortestPathFollower` utility class
@@ -280,6 +294,9 @@ def example_top_down_map_measure():
             vis_frames.clear()
             # Display video
             vut.display_video(f"{output_path}/{video_name}.mp4")
+
+
+# [/example_4]
 
 
 # %%
