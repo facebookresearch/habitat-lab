@@ -59,13 +59,14 @@ def reset_to_episode(env: Env, scene_id: str, episode_id: str) -> Observations:
 
 if __name__ == "__main__":
     config_path = (
-        Path(__file__).resolve().parent.parent / "configs/agent/hm3d_eval.yaml"
+        Path(__file__).resolve().parent.parent / "configs/agent/floorplanner_eval.yaml"
     )
     config, config_str = get_config(config_path)
     config.defrost()
     config.NUM_ENVIRONMENTS = 1
     config.PRINT_IMAGES = 1
     config.TASK_CONFIG.DATASET.SPLIT = "val"
+    config.EXP_NAME = "debug"
     config.freeze()
 
     agent = ObjectNavAgent(config=config)
