@@ -1,6 +1,9 @@
 """
 This script is intended to run from the "src" root:
 python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eval_scripts/eval_specific_episode.py
+
+View printed images at:
+home_robot/experimental/theo/habitat_projects/tasks/object_navigation/datadump/images
 """
 
 from pathlib import Path
