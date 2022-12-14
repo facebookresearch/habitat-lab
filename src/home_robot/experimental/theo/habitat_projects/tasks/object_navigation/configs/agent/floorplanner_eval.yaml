@@ -5,7 +5,7 @@ NUM_ENVIRONMENTS: 35      # number of environments (per agent process)
 DUMP_LOCATION: home_robot/experimental/theo/habitat_projects/tasks/object_navigation/datadump # path to dump models and log
 EXP_NAME: eval_floorplanner       # experiment name
 VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
-PRINT_IMAGES: 0           # 1: save visualization as images, 0: no image saving
+PRINT_IMAGES: 1           # 1: save visualization as images, 0: no image saving
 GROUND_TRUTH_SEMANTICS: 1 # 1: use ground-truth semantics (for debugging / ablations)
 
 ENVIRONMENT:
@@ -43,5 +43,5 @@ EVAL_VECTORIZED:
   goal_on_same_floor: 0     # 1: restrict to episodes with a goal on the same floor as the starting position
   split: train              # eval split
   num_episodes_per_env: 40  # number of eval episodes per environment
-  record_videos: 0          # 1: record videos from printed images, 0: don't
+  record_videos: 1          # 1: record videos from printed images, 0: don't
   record_planner_videos: 0  # 1: record planner videos (if record videos), 0: don't
