@@ -17,14 +17,14 @@ While artists and users can produce individual arrangements of a scene using sta
 [Habitat 2.0: Training Home Assistants to Rearrange their Habitat](https://arxiv.org/abs/2106.14405) Andrew Szot, Alex Clegg, Eric Undersander, Erik Wijmans, Yili Zhao, John Turner, Noah Maestre, Mustafa Mukadam, Devendra Chaplot, Oleksandr Maksymets, Aaron Gokaslan, Vladimir Vondrus, Sameer Dharur, Franziska Meier, Wojciech Galuba, Angel Chang, Zsolt Kira, Vladlen Koltun, Jitendra Malik, Manolis Savva, Dhruv Batra. Advances in Neural Information Processing Systems (NeurIPS), 2021.
 
 # The Semi-Automated Receptacle Annotation Process
-This approach utilizes Habitat-sim’s [Recast|Detour NavMesh](https://aihabitat.org/docs/habitat-sim/habitat_sim.nav.PathFinder.html) integration to compute a set of surfaces which may support or contain the clutter objects. The resulting mesh data is then post-processed into mesh receptacle data structures and manually culled or adjusted by an artist or user in Blender. 
+This approach utilizes Habitat-sim’s [Recast|Detour NavMesh](https://aihabitat.org/docs/habitat-sim/habitat_sim.nav.PathFinder.html) integration to compute a set of surfaces which may support or contain the clutter objects. The resulting mesh data is then post-processed into mesh receptacle data structures and manually culled or adjusted by an artist or user in Blender.
 
 The final result is a set of [PLY](https://en.wikipedia.org/wiki/PLY_(file_format)) mesh files and a chunk of JSON metadata which can be included in the stage or object configuration files.
 
 ## Setup
 First install habitat-sim and habitat-lab with support for Bullet physics as described in the [installation section](https://github.com/facebookresearch/habitat-lab#installation) of Habitat-lab.
 
-- [Download Blender](https://www.blender.org/download/) (tested with v3.3) and install. 
+- [Download Blender](https://www.blender.org/download/) (tested with v3.3) and install.
   - *Note: run Blender from the terminal on OSX and Linux to see script debug output and errors.*
 - Pepare your scene assets in SceneDataset format as described [here](https://aihabitat.org/docs/habitat-sim/attributesJSON.html). For an example, see [ReplicaCAD](https://aihabitat.org/datasets/replica_cad/).
 - Configure a custom [NavMeshSettings](https://aihabitat.org/docs/habitat-sim/habitat_sim.nav.NavMeshSettings.html) JSON file or use the provided *clutter_object.navmeshsettings.json* (for small rearrange objects like cans).
@@ -49,7 +49,7 @@ Generates a default navmesh for a human sized entity and places all output in `n
 python scripts/receptacle_annotation/generate_recetacle_navmesh_objs.py --dataset path/to/my_scene.scene_dataset.json
 ```
 
-optionally provide a modified path for script output: 
+optionally provide a modified path for script output:
 
 ```bash
 --output-dir path/to/directory/
@@ -99,7 +99,7 @@ The goal of this manual phase is to select which meshes will make-up the final r
 #### **Blender UI Tips:**
 1. Select an object in the outline and press `numpad-'.'` with cursor in the 3D view panel to center camera view on an object. With the cursor in the outline panel, `numpad-'.'` will center on the object's outline entry.
 1. `'TAB'` with an object selected and cursor in the 3D view panel to toggle between `Edit` and `Object` modes.
-1. In `Edit` mode you can add, delete, and modify the meshes. 
+1. In `Edit` mode you can add, delete, and modify the meshes.
 1. If your meshes are not aligned when initially imported, it may be the case that Habitat configs for your scene define a global re-orientation from the base asset. Rotate the parent object of your scene named "scene_frame" to correctly align with the loaded meshes.
 
 #### **Common Operations:**
@@ -143,12 +143,12 @@ The easiest way to test your annotations is to run the [rearrange generator](htt
 
 1. Direct  `dataset_path:` in *habitat-lab/habitat/datasets/rearrange/configs/all_receptacles_test.yaml* to your SceneDataset config file. Optionally modify object sets, receptacle sets, and sampler paramters.
 1. Run the generator `--list` for a quick view of your receptacle configuration:
-    ```python 
+    ```python
     python habitat-lab/habitat/datasets/rearrange/run_episode_generator.py --list --config habitat-lab/habitat/datasets/rearrange/configs/all_receptacles_test.yaml
     ```
     The output should list all the receptacles you have configured in stage and object config files.
 1. Run the generator in verbose debug mode for log output, videos, and images of the sampling process:
-    ```python 
+    ```python
     python habitat-lab/habitat/datasets/rearrange/run_episode_generator.py --run --debug --verbose --config habitat-lab/habitat/datasets/rearrange/configs/all_receptacles_test.yaml --out mesh_receptacle_out/rearrange_generator_out/ --db-output mesh_receptacle_out/rearrange_generator_out/
     ```
     *NOTE: optionally configure `--out` for generated episodes and `--db-output` for debugging media output.*
@@ -157,7 +157,7 @@ The easiest way to test your annotations is to run the [rearrange generator](htt
     - process timing (e.g. time to sample N objects)
     - sampling failure statistics
     - dynamic stability analysis: run on after sampling all objects to ensure placements are stable. Issues can indicate poor receptacle support surfaces (e.g. a sloped or un-even bed cover)
-    
+
     Visual debug output includes:
     - Video showing debug renders of all active receptacles
     - Video from stability test
