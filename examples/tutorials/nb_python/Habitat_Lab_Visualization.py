@@ -35,6 +35,26 @@
 
 # !curl -L https://raw.githubusercontent.com/facebookresearch/habitat-sim/main/examples/colab_utils/colab_install.sh | NIGHTLY=false bash -s
 
+# %% [markdown]
+# Download (testing) 3D scenes:
+
+# %%
+# [download_scenes]
+
+# !python -m habitat_sim.utils.datasets_download --uids habitat_test_scenes --data-path data/
+
+# [/download_scenes]
+
+# %% [markdown]
+# Download point-goal navigation episodes for the test scenes:
+
+# %%
+# [download_nav_episodes]
+
+# !python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
+
+# [/download_nav_episodes]
+
 # %%
 # [setup]
 import os
