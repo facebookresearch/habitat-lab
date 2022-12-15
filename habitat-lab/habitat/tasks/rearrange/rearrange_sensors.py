@@ -160,6 +160,49 @@ class StartReceptacleSensor(ObjectCategorySensor):
         )
 
 
+@registry.register_sensor
+class ObjectSegmentationSensor(Sensor):
+    cls_uuid: str = "object_segmentation"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._config = config
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(
+                self._config.dimensionality,
+                self._config.dimensionality,
+                1,
+            ),
+            low=0,
+            high=1,
+            dtype=np.uint8,
+        )
+
+    def get_observation(self, observations, *args, episode, task, **kwargs):
+        obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
+        if np.random.random() < self._config.blank_out_prob:
+            return np.zeros_like(
+                observations["robot_head_semantic"], dtype=np.uint8
+            )
+        else:
+            return observations["robot_head_semantic"] == obj_id
+
+
 class MultiObjSensor(PointGoalSensor):
     """
     Abstract parent class for a sensor that specifies the locations of all targets.

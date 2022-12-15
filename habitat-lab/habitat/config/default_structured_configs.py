@@ -912,6 +912,13 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class HeadSemanticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "robot_head_semantic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_arm_rgb"
     width: int = 256
@@ -1301,6 +1308,12 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="head_rgb_sensor",
     node=HeadRGBSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_semantic_sensor",
+    node=HeadSemanticSensorConfig,
 )
 
 cs.store(

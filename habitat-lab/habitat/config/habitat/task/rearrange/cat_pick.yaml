@@ -25,6 +25,7 @@ defaults:
     - end_effector_sensor
     - relative_resting_pos_sensor
     - object_category_sensor
+    - object_segmentation_sensor
   - _self_
 
 type: RearrangePickTask-v0

@@ -148,10 +148,6 @@ class WeightsAndBiasesWriter:
                     with open(wandb_filename, "r") as file:
                         wandb_id = file.read().rstrip("\n")
                     resume = "must"
-                else:
-                    os.makedirs(os.path.dirname(wandb_filename), exist_ok=True)
-                    with open(wandb_filename, "w") as file:
-                        file.write(wandb_id)
 
             wb_kwargs["id"] = wandb_id
             wb_kwargs["resume"] = resume
@@ -163,6 +159,11 @@ class WeightsAndBiasesWriter:
             },
             **wb_kwargs,
         )
+
+        if wb_kwargs["resume"] != "must":
+            os.makedirs(os.path.dirname(wandb_filename), exist_ok=True)
+            with open(wandb_filename, "w") as file:
+                file.write(wandb_id)
 
     def __getattr__(self, item):
         if self.writer:
