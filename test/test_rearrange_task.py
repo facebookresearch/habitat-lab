@@ -457,10 +457,8 @@ def test_receptacle_parsing(debug_visualization):
             # then sample and draw:
             # TODO: necessary here?
             # 5. sample from receptacles
-            samples_per_unit_area = 50
-
             rec_samples = []
-            num_samples = max(1, int(rec.total_area * samples_per_unit_area))
+            num_samples = 50
             for _samp_ix in range(num_samples):
                 rec_samples.append(
                     rec.sample_uniform_global(sim, sample_region_scale=1.0)
