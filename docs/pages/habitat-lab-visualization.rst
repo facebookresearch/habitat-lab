@@ -4,23 +4,36 @@ Habitat Lab Visualization Examples
 .. contents::
     :class: m-block m-default
 
-The example code below is available on `Collab`_, or runnable via:
-
-.. _Collab: <https://colab.research.google.com/github/facebookresearch/habitat-lam/blob/main/examples/tutorials/colabs/Habitat_Lab_Visualization.ipynb>
+The example code below is available on `Collab <https://colab.research.google.com/github/facebookresearch/habitat-lam/blob/main/examples/tutorials/colabs/Habitat_Lab_Visualization.ipynb>`_, or runnable via:
 
 .. code:: shell-session
 
     $ python path/to/habitat-lab/examples/tutorials/nb_python/Habitat_Lab_Visualization.py
 
+First, download (testing) 3D scenes:
 
-Imports ...
+.. code:: shell-session
+
+    $ python -m habitat_sim.utils.datasets_download --uids habitat_test_scenes --data-path data/
+
+and point-goal navigation episodes for the test scenes:
+
+.. code:: shell-session
+
+    $ python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
+
+
+Then import necessary modules:
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
     :start-after: # [setup]
     :end-before: # [/setup]
 
-example_pointnav_draw_target_birdseye_view ...
+Below we define four example functions to show how to use Habitat's visualisation functionality to draw a navigation episode
+bird-eye view and top-down maps.
+
+In the first example, a dummy episode birdseye view is drawn using :ref:`habitat.utils.visualizations.maps.pointnav_draw_target_birdseye_view()`.
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
@@ -30,7 +43,7 @@ example_pointnav_draw_target_birdseye_view ...
 .. image:: ../images/habitat-lab-visualization-images/pointnav_target_image.png
     :width: 20em
 
-example_pointnav_draw_target_birdseye_view_agent_on_border ...
+The procedure is repeated in the second example, with the agent initialized at four different borders.
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
@@ -46,7 +59,8 @@ example_pointnav_draw_target_birdseye_view_agent_on_border ...
 .. image:: ../images/habitat-lab-visualization-images/pointnav_target_image_edge_4.png
     :width: 20em
 
-example_get_topdown_map ...
+Third example shows how to use :ref:`habitat.utils.visualizations.maps.get_topdown_map_from_sim()` to
+get top-down map from Simulator instance (of type :ref:`habitat.sims.habitat_simulator.habitat_simulator.HabitatSim`).
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
@@ -56,7 +70,10 @@ example_get_topdown_map ...
 .. image:: ../images/habitat-lab-visualization-images/top_down_map.png
     :width: 20em
 
-example_top_down_map_measure ...
+The last example defines `ShortestPathFollowerAgent` that extracts the actions on the shortest path to the goal.
+This agent is launched in the simulation environment to navigate to the target location specified in the
+first habitat test scenes navigation episode. Agent's observations and images from :ref:`habitat.tasks.nav.nav.TopDownMap`
+measure are collected along the trajectory and further used to generate and display navigation video.
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
