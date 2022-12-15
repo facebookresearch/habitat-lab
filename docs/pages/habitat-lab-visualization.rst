@@ -24,8 +24,8 @@ example_pointnav_draw_target_birdseye_view ...
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
-    :start-after: # [example_pointnav_draw_target_birdseye_view]
-    :end-before: # [/example_pointnav_draw_target_birdseye_view]
+    :start-after: # [example_1]
+    :end-before: # [/example_1]
 
 .. image:: ../images/habitat-lab-visualization-images/pointnav_target_image.png
     :width: 20em
@@ -34,8 +34,8 @@ example_pointnav_draw_target_birdseye_view_agent_on_border ...
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
-    :start-after: # [example_pointnav_draw_target_birdseye_view_agent_on_border]
-    :end-before: # [/example_pointnav_draw_target_birdseye_view_agent_on_border]
+    :start-after: # [example_2]
+    :end-before: # [/example_2]
 
 .. image:: ../images/habitat-lab-visualization-images/pointnav_target_image_edge_1.png
     :width: 20em
@@ -50,8 +50,8 @@ example_get_topdown_map ...
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
-    :start-after: # [example_get_topdown_map]
-    :end-before: # [/example_get_topdown_map]
+    :start-after: # [example_3]
+    :end-before: # [/example_3]
 
 .. image:: ../images/habitat-lab-visualization-images/top_down_map.png
     :width: 20em
@@ -60,7 +60,7 @@ example_top_down_map_measure ...
 
 .. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
     :code: py
-    :start-after: # [example_top_down_map_measure]
-    :end-before: # [/example_top_down_map_measure]
+    :start-after: # [example_4]
+    :end-before: # [/example_4]
 
 .. image:: ../images/habitat-lab-visualization-images/skokloster-castle.glb_3662.gif
