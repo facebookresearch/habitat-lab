@@ -6,6 +6,8 @@
 r"""
 Script for loading a GFX replay file into Blender. This allows playing back a trajectory from Habitat in Blender.
 
+See the following tutorial for more information on GFX: https://colab.research.google.com/github/facebookresearch/habitat-sim/blob/main/examples/tutorials/colabs/replay_tutorial.ipynb
+
 Example Usage:
 ```
 /Applications/Blender.app/Contents/MacOS/Blender --python src_python/habitat_sim/utils/blender_load_replay.py -- --replay data/replays/episode8362.replay.json --root-dir ./
