@@ -4,6 +4,8 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
+    - base_velocity
+    - rearrange_stop
   - /habitat/task/measurements:
     - robot_force
     - force_terminate
@@ -12,13 +14,13 @@ defaults:
     - ee_dist_to_marker
     - art_obj_at_desired_state
     - art_obj_state
+    - does_want_terminate
     - art_obj_success
     - art_obj_reward
     - num_steps
     - did_violate_hold_constraint
   - /habitat/task/lab_sensors:
     - joint_sensor
-    - joint_velocity_sensor
     - is_holding_sensor
     - end_effector_sensor
     - relative_resting_pos_sensor
@@ -43,3 +45,6 @@ measurements:
     art_at_desired_state_reward: 5.0
     marker_dist_reward: 1.0
     constraint_violate_pen: 1.0
+  force_terminate:
+    max_accum_force: 20_000.0
+    max_instant_force: 10_000.0

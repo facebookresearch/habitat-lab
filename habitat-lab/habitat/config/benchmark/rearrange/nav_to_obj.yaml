@@ -12,31 +12,25 @@ habitat:
     auto_name: NavToObj
     obs_keys:
       - robot_head_depth
-      - object_to_agent_gps_compass
+      - goal_to_agent_gps_compass
       - joint
-      - nav_to_skill
   environment:
     max_episode_steps: 400
   simulator:
     type: RearrangeSim-v0
-    seed: 100
     additional_object_paths:
       - data/objects/ycb/configs/
     debug_render_goal: False
+    concur_render: True
+    auto_sleep: True
     agents:
       main_agent:
         radius: 0.3
-        sim_sensors:
-          head_depth_sensor:
-            height: 256
-            width: 256
         robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
         robot_type: FetchSuctionRobot
-    hold_thresh: 0.2
-    grasp_impulse: 10000.0
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
     needs_markers: false
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

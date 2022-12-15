@@ -17,27 +17,21 @@ habitat:
       - is_holding
       - relative_resting_position
   environment:
-    max_episode_steps: 200
+    max_episode_steps: 300
   simulator:
     type: RearrangeSim-v0
-    seed: 100
     additional_object_paths:
     - data/objects/ycb/configs/
-    debug_render_goal: False
     needs_markers: False
+    concur_render: True
+    auto_sleep: True
     agents:
       main_agent:
-        sim_sensors:
-          head_depth_sensor:
-            width: 256
-            height: 256
         radius: 0.3
         robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
         robot_type: FetchSuctionRobot
-    hold_thresh: 0.2
-    grasp_impulse: 10000.0
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

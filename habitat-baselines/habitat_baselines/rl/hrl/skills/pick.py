@@ -18,6 +18,7 @@ class PickSkillPolicy(NnSkillPolicy):
         rnn_hidden_states,
         prev_actions,
         masks,
+        batch_idx,
     ) -> torch.BoolTensor:
         # Is the agent holding the object and is the end-effector at the
         # resting position?
@@ -37,7 +38,7 @@ class PickSkillPolicy(NnSkillPolicy):
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_holding):
             # Do not release the object once it is held
-            action[i, self._ac_start + self._ac_len - 1] = 1.0
+            action[i, self._grip_ac_idx] = 1.0
         return action
 
     def _internal_act(

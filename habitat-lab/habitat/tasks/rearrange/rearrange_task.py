@@ -25,8 +25,6 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 
-ADD_CACHE_KEY = "add_cache_key"
-
 
 @registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
@@ -65,7 +63,9 @@ class RearrangeTask(NavigationTask):
         sensor_suite.sensors = task_new_sensors
         sensor_suite.observation_spaces = spaces.Dict(spaces=task_obs_spaces)
 
-    def __init__(self, *args, sim, dataset=None, **kwargs) -> None:
+    def __init__(
+        self, *args, sim, dataset=None, should_place_robot=True, **kwargs
+    ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
 
         super().__init__(sim=sim, dataset=dataset, **kwargs)
@@ -77,14 +77,16 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
+        self._should_place_robot = should_place_robot
 
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
-            osp.dirname(data_path), f"{fname}_robot_start.pickle"
+            osp.dirname(data_path),
+            f"{fname}_{self._config.type}_robot_start.pickle",
         )
 
-        if self._config.cache_robot_init or osp.exists(cache_path):
+        if self._config.should_save_to_cache or osp.exists(cache_path):
             self._robot_init_cache = CacheHelper(
                 cache_path,
                 def_val={},
@@ -118,24 +120,38 @@ class RearrangeTask(NavigationTask):
     def set_sim_reset(self, sim_reset):
         self._sim_reset = sim_reset
 
-    def _set_robot_start(self, agent_idx: int) -> None:
-        start_ident = f"{self._episode_id}_{agent_idx}"
+    def _get_cached_robot_start(self, agent_idx: int = 0):
+        start_ident = self._get_ep_init_ident(agent_idx)
         if (
             self._robot_pos_start is None
             or start_ident not in self._robot_pos_start
             or self._config.force_regenerate
         ):
+            return None
+        else:
+            return self._robot_pos_start[start_ident]
+
+    def _get_ep_init_ident(self, agent_idx):
+        return f"{self._episode_id}_{agent_idx}"
+
+    def _cache_robot_start(self, cache_data, agent_idx: int = 0):
+        if (
+            self._robot_pos_start is not None
+            and self._config.should_save_to_cache
+        ):
+            start_ident = self._get_ep_init_ident(agent_idx)
+            self._robot_pos_start[start_ident] = cache_data
+            self._robot_init_cache.save(self._robot_pos_start)
+
+    def _set_robot_start(self, agent_idx: int) -> None:
+        robot_start = self._get_cached_robot_start(agent_idx)
+        if robot_start is None:
             robot_pos, robot_rot = self._sim.set_robot_base_to_random_point(
                 agent_idx=agent_idx
             )
-            if (
-                self._robot_pos_start is not None
-                and self._config.should_save_to_cache
-            ):
-                self._robot_pos_start[start_ident] = (robot_pos, robot_rot)
-                self._robot_init_cache.save(self._robot_pos_start)
+            self._cache_robot_start((robot_pos, robot_rot), agent_idx)
         else:
-            robot_pos, robot_rot = self._robot_pos_start[start_ident]
+            robot_pos, robot_rot = robot_start
         robot = self._sim.get_robot_data(agent_idx).robot
         robot.base_pos = robot_pos
         robot.base_rot = robot_rot
@@ -150,8 +166,9 @@ class RearrangeTask(NavigationTask):
                 action_instance.reset(episode=episode, task=self)
             self._is_episode_active = True
 
-            for agent_idx in range(self._sim.num_robots):
-                self._set_robot_start(agent_idx)
+            if self._should_place_robot:
+                for agent_idx in range(self._sim.num_robots):
+                    self._set_robot_start(agent_idx)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
@@ -176,7 +193,26 @@ class RearrangeTask(NavigationTask):
         obs.update(task_obs)
         return obs
 
+    def _is_violating_safe_drop(self, action_args):
+        idxs, goal_pos = self._sim.get_targets()
+        scene_pos = self._sim.get_scene_pos()
+        target_pos = scene_pos[idxs]
+        min_dist = np.min(
+            np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
+        )
+        return (
+            self._sim.grasp_mgr.is_grasped
+            and action_args.get("grip_action", None) is not None
+            and action_args["grip_action"] < 0
+            and min_dist < self._config.obj_succ_thresh
+        )
+
     def step(self, action: Dict[str, Any], episode: Episode):
+        action_args = action["action_args"]
+        if self._config.enable_safe_drop and self._is_violating_safe_drop(
+            action_args
+        ):
+            action_args["grip_action"] = None
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
@@ -228,10 +264,8 @@ class RearrangeTask(NavigationTask):
             match_contacts = [
                 x
                 for x in contact_points
-                if check_id in [x.object_id_a, x.object_id_b]
-            ]
-            match_contacts = [
-                x for x in match_contacts if x.object_id_a != x.object_id_b
+                if (check_id in [x.object_id_a, x.object_id_b])
+                and (x.object_id_a != x.object_id_b)
             ]
 
             max_force = 0

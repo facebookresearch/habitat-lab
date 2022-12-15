@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from collections import OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -93,8 +94,25 @@ class PointNavResNetPolicy(NetPolicy):
         action_space,
         **kwargs,
     ):
+        # Exclude cameras for rendering from the observation space.
+        ignore_names: List[str] = []
+        for agent_config in config.habitat.simulator.agents.values():
+            ignore_names.extend(
+                agent_config.sim_sensors[k].uuid
+                for k in config.habitat_baselines.video_render_views
+                if k in agent_config.sim_sensors
+            )
+        filtered_obs = spaces.Dict(
+            OrderedDict(
+                (
+                    (k, v)
+                    for k, v in observation_space.items()
+                    if k not in ignore_names
+                )
+            )
+        )
         return cls(
-            observation_space=observation_space,
+            observation_space=filtered_obs,
             action_space=action_space,
             hidden_size=config.habitat_baselines.rl.ppo.hidden_size,
             rnn_type=config.habitat_baselines.rl.ddppo.rnn_type,
@@ -122,9 +140,7 @@ class ResNetEncoder(nn.Module):
         self.visual_keys = [
             k
             for k, v in observation_space.spaces.items()
-            if len(v.shape) > 1
-            and k != ImageGoalSensor.cls_uuid
-            and "debug" not in k
+            if len(v.shape) > 1 and k != ImageGoalSensor.cls_uuid
         ]
         self.key_needs_rescaling = {k: None for k in self.visual_keys}
         for k, v in observation_space.spaces.items():

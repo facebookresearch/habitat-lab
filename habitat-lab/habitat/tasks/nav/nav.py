@@ -849,7 +849,7 @@ class TopDownMap(Measure):
     ):
         if ref_floor_height is None:
             ref_floor_height = self._sim.get_agent(0).state.position[1]
-        return ref_floor_height < height < ref_floor_height + ceiling_height
+        return ref_floor_height <= height < ref_floor_height + ceiling_height
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
@@ -866,7 +866,7 @@ class TopDownMap(Measure):
 
         self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
-        if hasattr(episode, "goal"):
+        if hasattr(episode, "goals"):
             # draw source and target parts last to avoid overlap
             self._draw_goals_view_points(episode)
             self._draw_goals_aabb(episode)

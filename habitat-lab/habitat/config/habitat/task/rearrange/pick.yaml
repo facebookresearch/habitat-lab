@@ -4,6 +4,7 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
+    - base_velocity
   - /habitat/task/measurements:
     - robot_force
     - force_terminate
@@ -23,21 +24,18 @@ defaults:
   - _self_
 
 type: RearrangePickTask-v0
+base_angle_noise: 0.523599
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
-reward_measure: "rearrangepick_reward"
-success_measure: "rearrangepick_success"
-success_reward: 100.0
+reward_measure: "pick_reward"
+success_measure: "pick_success"
+success_reward: 10.0
+slack_reward: -0.005
 end_on_success: True
 actions:
   arm_action:
     grip_controller: SuctionGraspAction
 measurements:
-  pick_success:
-    ee_resting_success_threshold: 0.2
   force_terminate:
-    max_accum_force: 5000.0
-  pick_reward:
-    use_diff: True
-    drop_obj_should_end: True
-    wrong_pick_should_end: True
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0

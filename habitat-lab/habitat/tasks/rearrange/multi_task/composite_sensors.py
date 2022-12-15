@@ -14,6 +14,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import (
+    DoesWantTerminate,
     EndEffectorToObjectDistance,
     ObjectToGoalDistance,
     RearrangeReward,
@@ -178,46 +179,6 @@ class MoveObjectsReward(RearrangeReward):
 
 
 @registry.register_measure
-class DoesWantTerminate(Measure):
-    cls_uuid: str = "does_want_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return DoesWantTerminate.cls_uuid
-
-    def reset_metric(self, *args, **kwargs):
-        self.update_metric(*args, **kwargs)
-
-    def update_metric(self, *args, task, **kwargs):
-        self._metric = task.actions["rearrange_stop"].does_want_terminate
-
-
-@registry.register_measure
-class CompositeBadCalledTerminate(Measure):
-    cls_uuid: str = "composite_bad_called_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return CompositeBadCalledTerminate.cls_uuid
-
-    def reset_metric(self, *args, task, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid, [DoesWantTerminate.cls_uuid, CompositeSuccess.cls_uuid]
-        )
-        self.update_metric(*args, task=task, **kwargs)
-
-    def update_metric(self, *args, task, **kwargs):
-        does_action_want_stop = task.measurements.measures[
-            DoesWantTerminate.cls_uuid
-        ].get_metric()
-        is_succ = task.measurements.measures[
-            CompositeSuccess.cls_uuid
-        ].get_metric()
-
-        self._metric = (not is_succ) and does_action_want_stop
-
-
-@registry.register_measure
 class CompositeSuccess(Measure):
     """
     Did satisfy all the goal predicates?
@@ -259,8 +220,8 @@ class CompositeSuccess(Measure):
 @registry.register_measure
 class CompositeStageGoals(Measure):
     """
-    Adds to the metrics `[task_NAME]_success`: Did the agent complete a
-        particular stage defined in `stage_goals`.
+    Adds to the metrics `[TASK_NAME]_success`: Did the agent complete a
+        particular stage defined in `stage_goals` at ANY point in the episode.
     """
 
     _stage_succ: List[str]

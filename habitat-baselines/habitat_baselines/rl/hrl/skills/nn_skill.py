@@ -54,6 +54,7 @@ class NnSkillPolicy(SkillPolicy):
         self._filtered_action_space = filtered_action_space
         self._ac_start = 0
         self._ac_len = get_num_actions(filtered_action_space)
+        self._did_want_done = torch.zeros(self._batch_size)
 
         for k, space in action_space.items():
             if k not in filtered_action_space.spaces.keys():
@@ -80,8 +81,26 @@ class NnSkillPolicy(SkillPolicy):
 
     def to(self, device):
         super().to(device)
+        self._did_want_done = self._did_want_done.to(device)
         if self._wrap_policy is not None:
             self._wrap_policy.to(device)
+
+    def on_enter(
+        self,
+        skill_arg,
+        batch_idxs,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+    ):
+        super().on_enter(
+            skill_arg,
+            batch_idxs,
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+        )
+        self._did_want_done *= 0.0
 
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         return TensorDict(
@@ -114,8 +133,11 @@ class NnSkillPolicy(SkillPolicy):
             masks,
             deterministic,
         )
-        full_action = torch.zeros(prev_actions.shape)
+        full_action = torch.zeros(prev_actions.shape, device=masks.device)
         full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
+        self._did_want_done[cur_batch_idx] = full_action[
+            cur_batch_idx, self._stop_action_idx
+        ]
         return full_action, rnn_hidden_states
 
     @classmethod
@@ -125,7 +147,10 @@ class NnSkillPolicy(SkillPolicy):
         # Load the wrap policy from file
         if len(config.load_ckpt_file) == 0:
             ckpt_dict = {}
-            policy_cfg = get_config(config.force_config_file)
+            policy_cfg = get_config(
+                "rearrange/rl_skill.yaml",
+                [config.force_config_file],
+            )
         else:
             try:
                 ckpt_dict = torch.load(
@@ -137,13 +162,12 @@ class NnSkillPolicy(SkillPolicy):
                 ) from e
 
             policy_cfg = ckpt_dict["config"]
+
         policy = baseline_registry.get_policy(config.name)
 
         expected_obs_keys = policy_cfg.habitat.gym.obs_keys
         filtered_obs_space = spaces.Dict(
-            OrderedDict(
-                [(k, observation_space.spaces[k]) for k in expected_obs_keys]
-            )
+            {k: observation_space.spaces[k] for k in expected_obs_keys}
         )
 
         for k in config.obs_skill_inputs:

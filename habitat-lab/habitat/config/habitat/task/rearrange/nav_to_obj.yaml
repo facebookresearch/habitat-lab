@@ -4,6 +4,7 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - base_velocity
+    - rearrange_stop
   - /habitat/task/measurements:
     - object_to_goal_distance
     - robot_force
@@ -12,36 +13,25 @@ defaults:
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
+    - does_want_terminate
     - rearrange_nav_to_obj_success
     - bad_called_terminate
     - rearrange_nav_to_obj_reward
     - num_steps
   - /habitat/task/lab_sensors:
-    - target_start_point_goal_sensor
+    - nav_goal_sensor
     - joint_sensor
-    - nav_to_skill_sensor
   - _self_
 
 type: NavToObjTask-v0
 reward_measure: nav_to_obj_reward
 success_measure: nav_to_obj_success
 success_reward: 10.0
-slack_reward: 0.0
+slack_reward: -0.005
 end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
-task_spec: nav_pick_nav_place
-actions:
-  base_velocity:
-    end_on_stop: true
 measurements:
   force_terminate:
-    max_instant_force: 10000.0
-  rearrange_nav_to_obj_reward:
-    turn_reward_dist: 0.6
-    constraint_violate_pen: 10.0
-    force_end_pen: 5.0
-  nav_to_pos_succ:
-    success_distance: 0.3
-  rearrange_nav_to_obj_success:
-    success_angle_dist: 0.3
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0

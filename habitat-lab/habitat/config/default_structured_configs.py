@@ -121,10 +121,7 @@ class BaseVelocityActionConfig(ActionConfig):
     lin_speed: float = 10.0
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
-    end_on_stop: bool = False
     allow_back: bool = True
-    min_abs_lin_speed: float = 1.0
-    min_abs_ang_speed: float = 1.0
 
 
 @dataclass
@@ -148,10 +145,7 @@ class OracleNavActionConfig(ActionConfig):
     dist_thresh: float = 0.2
     lin_speed: float = 10.0
     ang_speed: float = 10.0
-    min_abs_lin_speed: float = 1.0
-    min_abs_ang_speed: float = 1.0
     allow_dyn_slide: bool = True
-    end_on_stop: bool = False
     allow_back: bool = True
 
 
@@ -306,8 +300,8 @@ class GoalSensorConfig(LabSensorConfig):
 
 
 @dataclass
-class TargetOrGoalStartPointGoalSensorConfig(LabSensorConfig):
-    type: str = "TargetOrGoalStartPointGoalSensor"
+class NavGoalPointGoalSensorConfig(LabSensorConfig):
+    type: str = "NavGoalPointGoalSensor"
 
 
 @dataclass
@@ -454,6 +448,11 @@ class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "EndEffectorToGoalDistance"
+
+
+@dataclass
 class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
@@ -479,6 +478,7 @@ class ArtObjStateMeasurementConfig(MeasurementConfig):
 class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
+    must_call_stop: bool = True
 
 
 @dataclass
@@ -519,7 +519,7 @@ class BadCalledTerminateMeasurementConfig(MeasurementConfig):
 @dataclass
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
     type: str = "NavToPosSucc"
-    success_distance: float = 0.2
+    success_distance: float = 1.5
 
 
 @dataclass
@@ -528,14 +528,14 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     # reward the agent for facing the object?
     should_reward_turn: bool = True
     # what distance do we start giving the reward for facing the object?
-    turn_reward_dist: float = 0.1
+    turn_reward_dist: float = 3.0
     # multiplier on the angle distance to the goal.
     angle_dist_reward: float = 1.0
-    dist_reward: float = 10.0
-    constraint_violate_pen: float = 10.0
-    force_pen: float = 0.0
-    max_force_pen: float = 1.0
-    force_end_pen: float = 10.0
+    dist_reward: float = 1.0
+    constraint_violate_pen: float = 1.0
+    force_pen: float = 0.0001
+    max_force_pen: float = 0.01
+    force_end_pen: float = 1.0
 
 
 @dataclass
@@ -544,8 +544,7 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_look_at_targ: bool = True
     must_call_stop: bool = True
     # distance in radians.
-    success_angle_dist: float = 0.15
-    heuristic_stop: bool = False
+    success_angle_dist: float = 0.261799
 
 
 @dataclass
@@ -593,19 +592,17 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
 @dataclass
 class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickReward"
-    dist_reward: float = 20.0
-    succ_reward: float = 10.0
-    pick_reward: float = 20.0
-    constraint_violate_pen: float = 10.0
-    drop_pen: float = 5.0
-    wrong_pick_pen: float = 5.0
-    max_accum_force: float = 5000.0
-    force_pen: float = 0.001
-    max_force_pen: float = 1.0
-    force_end_pen: float = 10.0
+    dist_reward: float = 2.0
+    pick_reward: float = 2.0
+    constraint_violate_pen: float = 1.0
+    drop_pen: float = 0.5
+    wrong_pick_pen: float = 0.5
+    force_pen: float = 0.0001
+    max_force_pen: float = 0.01
+    force_end_pen: float = 1.0
     use_diff: bool = True
-    drop_obj_should_end: bool = False
-    wrong_pick_should_end: bool = False
+    drop_obj_should_end: bool = True
+    wrong_pick_should_end: bool = True
 
 
 @dataclass
@@ -623,16 +620,17 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
 @dataclass
 class PlaceRewardMeasurementConfig(MeasurementConfig):
     type: str = "PlaceReward"
-    dist_reward: float = 20.0
-    succ_reward: float = 10.0
-    place_reward: float = 20.0
-    drop_pen: float = 5.0
+    dist_reward: float = 2.0
+    place_reward: float = 5.0
+    drop_pen: float = 0.0
     use_diff: bool = True
-    wrong_drop_should_end: bool = False
-    constraint_violate_pen: float = 10.0
-    force_pen: float = 0.001
-    max_force_pen: float = 1.0
-    force_end_pen: float = 10.0
+    use_ee_dist: bool = False
+    wrong_drop_should_end: bool = True
+    constraint_violate_pen: float = 0.0
+    force_pen: float = 0.0001
+    max_force_pen: float = 0.0
+    force_end_pen: float = 1.0
+    min_dist_to_goal: float = 0.15
 
 
 @dataclass
@@ -667,11 +665,6 @@ class CompositeRewardMeasurementConfig(MeasurementConfig):
 @dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     type: str = "DoesWantTerminate"
-
-
-@dataclass
-class CompositeBadCalledTerminateMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeBadCalledTerminate"
 
 
 @dataclass
@@ -721,15 +714,20 @@ class TaskConfig(HabitatBaseConfig):
     # Forced to regenerate the starts even if they are already cached
     force_regenerate: bool = False
     # Saves the generated starts to a cache if they are not already generated
-    should_save_to_cache: bool = True
+    should_save_to_cache: bool = False
     must_look_at_targ: bool = True
     object_in_hand_sample_prob: float = 0.167
+    min_start_distance: float = 3.0
     gfx_replay_dir = "data/replays"
     render_target: bool = True
+    # Spawn parameters
+    physics_stability_steps: int = 1
+    num_spawn_attempts: int = 200
+    spawn_max_dists_to_obj: float = 2.0
+    base_angle_noise: float = 0.523599
+    # EE sample parameters
     ee_sample_factor: float = 0.2
     ee_exclude_region: float = 0.0
-    # In radians
-    base_angle_noise: float = 0.15
     base_noise: float = 0.05
     spawn_region_scale: float = 0.2
     joint_max_impulse: float = -1.0
@@ -750,6 +748,8 @@ class TaskConfig(HabitatBaseConfig):
     # PDDL domain params
     pddl_domain_def: str = "replica_cad"
     obj_succ_thresh: float = 0.3
+    # Disable drop except for when the object is at its goal.
+    enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = field(default_factory=list)
@@ -854,26 +854,36 @@ class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
 @dataclass
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_head_rgb"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_head_depth"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_arm_rgb"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_arm_depth"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
+    width: int = 512
+    height: int = 512
 
 
 @dataclass
@@ -890,7 +900,7 @@ class AgentConfig(HabitatBaseConfig):
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
-    joint_start_noise: float = 0.0
+    joint_start_noise: float = 0.1
     robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     robot_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
@@ -925,7 +935,6 @@ class SimulatorConfig(HabitatBaseConfig):
     forward_step_size: float = 0.25  # in metres
     create_renderer: bool = False
     requires_textures: bool = True
-    lag_observations: int = 0
     auto_sleep: bool = False
     step_physics: bool = True
     concur_render: bool = False
@@ -959,8 +968,8 @@ class SimulatorConfig(HabitatBaseConfig):
     ac_freq_ratio: int = 4
     load_objs: bool = False
     # Rearrange agent grasping
-    hold_thresh: float = 0.09
-    grasp_impulse: float = 1000.0
+    hold_thresh: float = 0.15
+    grasp_impulse: float = 10000.0
     # we assume agent(s) to be set explicitly
     agents: Dict[str, AgentConfig] = MISSING
     # agents_order specifies the order in which the agents
@@ -1395,10 +1404,10 @@ cs.store(
     node=NavToSkillSensorConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.target_start_point_goal_sensor",
+    package="habitat.task.lab_sensors.nav_goal_sensor",
     group="habitat/task/lab_sensors",
-    name="target_start_point_goal_sensor",
-    node=TargetOrGoalStartPointGoalSensorConfig,
+    name="nav_goal_sensor",
+    node=NavGoalPointGoalSensorConfig,
 )
 
 
@@ -1468,6 +1477,12 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_rest_distance",
     node=EndEffectorToRestDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.end_effector_to_goal_distance",
+    group="habitat/task/measurements",
+    name="end_effector_to_goal_distance",
+    node=EndEffectorToGoalDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.did_pick_object",
@@ -1552,12 +1567,6 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_success",
     node=CompositeSuccessMeasurementConfig,
-)
-cs.store(
-    package="habitat.task.measurements.composite_bad_called_terminate",
-    group="habitat/task/measurements",
-    name="composite_bad_called_terminate",
-    node=CompositeBadCalledTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.gfx_replay_measure",
