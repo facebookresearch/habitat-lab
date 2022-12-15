@@ -1,6 +1,6 @@
 ---
 ## All receptacles and objects are used.
-# Define your own dataset path, 
+# Define your own dataset path,
 dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/configs/"
