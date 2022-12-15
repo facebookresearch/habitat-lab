@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Union, Tuple, Any
 import magnum as mn
 import numpy as np
 import random
+import os
 
 import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
@@ -107,7 +108,7 @@ class Receptacle(ABC):
         return []
 
     @abstractmethod
-    def debug_draw(self, sim, color=None):
+    def debug_draw(self, sim, color=None)->None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame. 
         Simulator must be provided. If color is provided, the debug render will use it.
@@ -136,6 +137,14 @@ class OnTopOfReceptacle(Receptacle):
 
         return mn.Matrix4([[targ_T[j][i] for j in range(4)] for i in range(4)])
 
+    def debug_draw(self, sim, color=None)->None:
+        """
+        Render the Receptacle with DebugLineRender utility at the current frame. 
+        Simulator must be provided. If color is provided, the debug render will use it.
+        Must be called after each frame is rendered, before querying the image data.
+        """
+        #TODO:
+        pass
 
 class AABBReceptacle(Receptacle):
     """
@@ -257,6 +266,25 @@ class AABBReceptacle(Receptacle):
             )
         return [box_obj]
 
+    def debug_draw(self, sim, color=None):
+        """
+        Render the AABBReceptacle with DebugLineRender utility at the current frame. 
+        Simulator must be provided. If color is provided, the debug render will use it.
+        Must be called after each frame is rendered, before querying the image data.
+        """
+        #draw the box
+        if color is None:
+            color = mn.Color4.magenta()
+        dblr = sim.get_debug_line_render()
+        dblr.push_transform(self.get_global_transform(sim))
+        dblr.draw_box(
+            self.bounds.min,
+            self.bounds.max,
+            color
+        )
+        dblr.pop_transform()
+        #TODO: test this
+
 class TriangleMeshReceptacle(Receptacle):
     """
     Defines a Receptacle surface as a triangle mesh. 
@@ -292,7 +320,7 @@ class TriangleMeshReceptacle(Receptacle):
             self.area_weighted_accumulator[f_ix] = self.area_weighted_accumulator[f_ix]/self.total_area
             if f_ix > 0:
                 self.area_weighted_accumulator[f_ix] += self.area_weighted_accumulator[f_ix-1]
-        print(self.area_weighted_accumulator)
+        #print(self.area_weighted_accumulator)
 
     def get_face_verts(self, f_ix):
         verts = []
@@ -385,6 +413,7 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
         stage_template = stm.get_template_by_handle(template_handle)
         for item in stage_template.get_user_config().get_subconfig_keys():
             if item.startswith("receptacle_"):
+                print(f"template file_directory = {stage_template.file_directory}")
                 if template_handle not in receptacles["stage"]:
                     receptacles["stage"][template_handle] = []
                 receptacles["stage"][template_handle].append(item)
@@ -395,6 +424,7 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
         obj_template = rotm.get_template_by_handle(template_handle)
         for item in obj_template.get_user_config().get_subconfig_keys():
             if item.startswith("receptacle_"):
+                print(f"template file_directory = {obj_template.file_directory}")
                 if template_handle not in receptacles["rigid"]:
                     receptacles["rigid"][template_handle] = []
                 receptacles["rigid"][template_handle].append(item)
@@ -412,10 +442,50 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
 
     return receptacles
 
+def import_tri_mesh_ply(ply_file:str) -> Tuple[List[mn.Vector3], List[int]]:
+    """
+    Returns a Tuple of (verts,indices) from a ply mesh.
+    NOTE: the input PLY must contain only triangles.
+    TODO: This could be replaced by a standard importer, but I didn't want to add additional dependencies for such as small feature.
+    """
+    mesh_data = ([], [])
+    with open(ply_file) as f:
+        lines = [line.rstrip() for line in f]
+        assert lines[0] == "ply", f"Must be PLY format. '{ply_file}'"
+        assert "format ascii" in lines[1], f"Must be ascii PLY. '{ply_file}'"
+        #parse the header
+        line_index = 2
+        num_verts = 0
+        num_faces = 0
+        while line_index < len(lines):
+            if lines[line_index].startswith("element vertex"):
+                num_verts = int(lines[line_index][14:])
+                print(f"num_verts = {num_verts}")
+            elif lines[line_index].startswith("element face"):
+                num_faces = int(lines[line_index][12:])
+                print(f"num_faces = {num_faces}")
+            elif lines[line_index] == "end_header":
+                #done parsing header
+                line_index += 1
+                break
+            line_index += 1
+        assert len(lines) - line_index  == num_verts + num_faces, f"Lines after header ({len(lines) - line_index}) should agree with forward declared content. {num_verts} verts and {num_faces} faces expected. '{ply_file}'"
+        #parse the verts
+        for vert_line in range(line_index, num_verts+line_index):
+            coords = [float(x) for x in lines[vert_line].split(" ")]
+            mesh_data[0].append(mn.Vector3(coords))
+        line_index += num_verts
+        for face_line in range(line_index, num_faces+line_index):
+            assert int(lines[face_line][0]) == 3, f"Faces must be triangles. '{ply_file}'"
+            indices = [int(x) for x in lines[face_line].split(" ")[1:]]
+            mesh_data[1].extend(indices)
+
+    return mesh_data
 
 def parse_receptacles_from_user_config(
     user_subconfig: habitat_sim._ext.habitat_sim_bindings.Configuration,
     parent_object_handle: Optional[str] = None,
+    parent_template_directory: str = "",
     valid_link_names: Optional[List[str]] = None,
     ao_uniform_scaling: float = 1.0,
 ) -> List[Union[Receptacle, AABBReceptacle]]:
@@ -430,11 +500,16 @@ def parse_receptacles_from_user_config(
 
     Construct and return a list of Receptacle objects. Multiple Receptacles can be defined in a single user subconfig.
     """
-    receptacles: List[Union[Receptacle, AABBReceptacle]] = []
+    receptacles: List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]] = []
+
+    #pre-define unique specifier strings for parsing receptacle types
+    receptacle_prefix_string = "receptacle_"
+    mesh_receptacle_id_string = "receptacle_mesh_"
+    aabb_receptacle_id_string = "receptacle_aabb_"
 
     # search the generic user subconfig metadata looking for receptacles
     for sub_config_key in user_subconfig.get_subconfig_keys():
-        if sub_config_key.startswith("receptacle_"):
+        if sub_config_key.startswith(receptacle_prefix_string):
             sub_config = user_subconfig.get_subconfig(sub_config_key)
             # this is a receptacle, parse it
             assert sub_config.has_value("position")
@@ -486,20 +561,37 @@ def parse_receptacles_from_user_config(
             )
             receptacle_scale = ao_uniform_scaling * sub_config.get("scale")
 
-            # TODO: adding more receptacle types will require additional logic here
-            receptacles.append(
-                AABBReceptacle(
-                    name=receptacle_name,
-                    bounds=mn.Range3D.from_center(
-                        receptacle_position,
-                        receptacle_scale,
-                    ),
-                    rotation=rotation,
-                    up=up,
-                    parent_object_handle=parent_object_handle,
-                    parent_link=parent_link_ix,
+            if aabb_receptacle_id_string in sub_config_key:
+                receptacles.append(
+                    AABBReceptacle(
+                        name=receptacle_name,
+                        bounds=mn.Range3D.from_center(
+                            receptacle_position,
+                            receptacle_scale,
+                        ),
+                        rotation=rotation,
+                        up=up,
+                        parent_object_handle=parent_object_handle,
+                        parent_link=parent_link_ix,
+                    )
                 )
-            )
+            elif mesh_receptacle_id_string in sub_config_key:
+                mesh_file = os.path.join(parent_template_directory, sub_config.get("mesh_filepath"))
+                assert os.path.exists(mesh_file), f"Configured receptacle mesh asset '{mesh_file}' not found."
+                #TODO: build the mesh_data entry from scale and mesh
+                mesh_data = import_tri_mesh_ply(mesh_file)
+
+                receptacles.append(
+                    TriangleMeshReceptacle(
+                        name=receptacle_name,
+                        mesh_data=mesh_data,
+                        up=up,
+                        parent_object_handle=parent_object_handle,
+                        parent_link=parent_link_ix
+                    )
+                )
+            else:
+                assert False, f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
 
     return receptacles
 
@@ -514,32 +606,36 @@ def find_receptacles(
     obj_mgr = sim.get_rigid_object_manager()
     ao_mgr = sim.get_articulated_object_manager()
 
-    receptacles: List[Union[Receptacle, AABBReceptacle]] = []
+    receptacles: List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]] = []
 
     # search for global receptacles included with the stage
     stage_config = sim.get_stage_initialization_template()
     if stage_config is not None:
         stage_user_attr = stage_config.get_user_config()
-        receptacles.extend(parse_receptacles_from_user_config(stage_user_attr))
+        receptacles.extend(parse_receptacles_from_user_config(stage_user_attr, parent_template_directory=stage_config.file_directory))
 
     # rigid object receptacles
     for obj_handle in obj_mgr.get_object_handles():
         obj = obj_mgr.get_object_by_handle(obj_handle)
+        source_template_file = obj.creation_attributes.file_directory
         user_attr = obj.user_attributes
         receptacles.extend(
             parse_receptacles_from_user_config(
-                user_attr, parent_object_handle=obj_handle
+                user_attr, parent_object_handle=obj_handle, parent_template_directory=source_template_file
             )
         )
 
     # articulated object receptacles
     for obj_handle in ao_mgr.get_object_handles():
         obj = ao_mgr.get_object_by_handle(obj_handle)
+        #TODO: no way to get filepath from AO currently. Add this API.
+        source_template_file = ""
         user_attr = obj.user_attributes
         receptacles.extend(
             parse_receptacles_from_user_config(
                 user_attr,
                 parent_object_handle=obj_handle,
+                parent_template_directory=source_template_file,
                 valid_link_names=[
                     obj.get_link_name(link)
                     for link in range(-1, obj.num_links)
