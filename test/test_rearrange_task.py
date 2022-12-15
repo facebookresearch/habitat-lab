@@ -11,6 +11,7 @@ import os
 import os.path as osp
 import time
 from glob import glob
+from typing import List
 
 import magnum as mn
 import pytest
@@ -342,7 +343,7 @@ def test_mesh_receptacles(debug_visualization, scene_asset):
         # 5. sample from receptacles
         samples_per_unit_area = 50
 
-        rec_samples = []
+        rec_samples: List[List[mn.Vector3]] = []
         for isl_ix, mesh_rec in enumerate(receptacles):
             rec_samples.append([])
             num_samples = max(
@@ -380,7 +381,7 @@ def test_mesh_receptacles(debug_visualization, scene_asset):
             num_samples = max(
                 1, int(mesh_rec.total_area * samples_per_unit_area)
             )
-            rec_samples = [
+            tri_samples: List[int] = [
                 mesh_rec.sample_area_weighted_triangle()
                 for samp_ix in range(num_samples)
             ]
@@ -389,7 +390,7 @@ def test_mesh_receptacles(debug_visualization, scene_asset):
                 weight = mesh_rec.area_weighted_accumulator[tri_ix]
                 if tri_ix > 0:
                     weight -= mesh_rec.area_weighted_accumulator[tri_ix - 1]
-                num_tri = rec_samples.count(tri_ix)
+                num_tri = tri_samples.count(tri_ix)
                 # print(f"got {num_tri/num_samples} expected {weight}, diff = {abs(weight - num_tri/num_samples)}")
                 assert (
                     abs(weight - num_tri / num_samples) < 0.005
