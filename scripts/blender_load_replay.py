@@ -111,6 +111,8 @@ def import_item(item):
     import_scene_helper(item.filepath)
 
     bpy.ops.object.select_all(action="SELECT")
+    if len(bpy.context.selected_objects) == 0:
+        raise ValueError("No objects found in scene")
     bpy.context.view_layer.objects.active = bpy.context.selected_objects[0]
     if "Stage" in item.filepath:
 
@@ -179,7 +181,6 @@ def import_gfx_replay(replay_filepath, settings):
     render_asset_map = {}
     asset_info_by_filepath = {}
     asset_info_by_key = {}
-    keyframes = keyframes[:500]
 
     do_add_anim_keyframes = len(keyframes) > 1
     for keyframe_index, keyframe in enumerate(keyframes):
@@ -305,11 +306,6 @@ def import_gfx_replay(replay_filepath, settings):
     )
 
 
-def main(replay_filepath, root_dir, settings):
-    os.chdir(root_dir)  # todo: get working directory from the replay, itself
-    import_gfx_replay(replay_filepath, settings)
-
-
 if __name__ == "__main__":
 
     import sys
@@ -318,9 +314,24 @@ if __name__ == "__main__":
     argv = argv[argv.index("--") + 1 :]  # get all args after "--"
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--replay", type=str, required=True)
-    parser.add_argument("--root-dir", type=str, required=True)
-    parser.add_argument("--settings-path", type=str, default=None)
+    parser.add_argument(
+        "--replay",
+        type=str,
+        required=True,
+        help="Path to the replay file relative to the `root-dir`.",
+    )
+    parser.add_argument(
+        "--root-dir",
+        type=str,
+        required=True,
+        help="The root directory for the assets and replay file.",
+    )
+    parser.add_argument(
+        "--settings-path",
+        type=str,
+        default=None,
+        help="Optional. Path to a yaml file describing additional scene settings. See doc string at top of this file for more info.",
+    )
     args = parser.parse_args(argv)
 
     if args.settings_path is not None:
@@ -329,4 +340,7 @@ if __name__ == "__main__":
     else:
         settings = {}
 
-    main(args.replay, args.root_dir, settings)
+    os.chdir(
+        args.root_dir
+    )  # todo: get working directory from the replay, itself
+    import_gfx_replay(args.replay, settings)
