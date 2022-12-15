@@ -6,12 +6,12 @@
 
 import math
 import random
+import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
-import time
 
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
@@ -418,7 +418,7 @@ class ObjectSampler:
                     self.receptacle_candidates = None
 
             if new_object is not None:
-                #when an object placement is successful, reset the try counter.
+                # when an object placement is successful, reset the try counter.
                 logger.info(
                     f"    found obj|receptacle pairing ({len(new_objects)}/{self.target_objects_number}) in {num_pairing_tries} attempts ({time.time()-pairing_start_time}sec)."
                 )
