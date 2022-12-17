@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -224,7 +224,7 @@ def test_pointnav_episode_generator():
         for episode in episodes:
             check_shortest_path(env, episode)
 
-        dataset = habitat.Dataset()
+        dataset: habitat.Dataset = habitat.Dataset()
         dataset.episodes = episodes
         assert (
             dataset.to_json()

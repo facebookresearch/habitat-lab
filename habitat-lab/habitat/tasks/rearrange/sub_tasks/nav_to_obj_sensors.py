@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -11,21 +11,24 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
-from habitat.tasks.rearrange.utils import UsesRobotInterface
+from habitat.tasks.rearrange.rearrange_sensors import (
+    DoesWantTerminate,
+    RearrangeReward,
+)
+from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_sensor
-class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
+class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
     """
 
-    cls_uuid: str = "object_to_agent_gps_compass"
+    cls_uuid: str = "goal_to_agent_gps_compass"
 
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
@@ -33,7 +36,7 @@ class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
         super().__init__(*args, task=task, **kwargs)
 
     def _get_uuid(self, *args, **kwargs):
-        return TargetOrGoalStartPointGoalSensor.cls_uuid
+        return NavGoalPointGoalSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -51,142 +54,10 @@ class TargetOrGoalStartPointGoalSensor(UsesRobotInterface, Sensor):
             self.robot_id
         ).robot.base_transformation
 
-        if not hasattr(task, "pddl_problem"):
-            raise ValueError(f"Must use task with PDDL. {task} does not.")
-
-        pddl = task.pddl_problem
-
-        entity = None
-        if task.nav_to_entity_name != "":
-            entity = pddl.get_entity(task.nav_to_entity_name)
-
-        if entity is None or entity.expr_type.is_subtype_of(
-            pddl.expr_types["goal_type"]
-        ):
-            to_pos = self._sim.get_targets()[1][self._task.targ_idx]
-        elif entity.expr_type.is_subtype_of(pddl.expr_types["rigid_obj_type"]):
-            to_pos = self._sim.get_target_objs_start()[self._task.targ_idx]
-        else:
-            raise ValueError(f"Unknown {entity}.")
-
-        dir_vector = robot_T.inverted().transform_point(to_pos)
+        dir_vector = robot_T.inverted().transform_point(task.nav_goal_pos)
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
         return np.array([rho, -phi], dtype=np.float32)
-
-
-@registry.register_sensor
-class NavToSkillSensor(Sensor):
-    cls_uuid: str = "nav_to_skill"
-
-    def __init__(self, sim, config, *args, **kwargs):
-        self._config = config
-        self._action_names = None
-        super().__init__(config=config)
-
-    def _get_uuid(self, *args, **kwargs):
-        return NavToSkillSensor.cls_uuid
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(self._config.num_skills,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, task, *args, **kwargs):
-        ret = np.zeros(self._config.num_skills, dtype=np.float32)
-        if self._action_names is None:
-            self._action_names = list(task.pddl_problem.actions.keys())
-
-        cur_idx = self._action_names.index(task.nav_to_task_name)
-        ret[cur_idx] = 1.0
-        return ret
-
-
-@registry.register_sensor
-class DistToNavGoalSensor(Sensor):
-    cls_uuid: str = "dist_to_nav_goal"
-
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(config=config)
-        self._sim = sim
-
-    def _get_uuid(self, *args, **kwargs):
-        return DistToNavGoalSensor.cls_uuid
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(1,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, task, *args, **kwargs):
-        agent_pos = self._sim.safe_snap_point(self._sim.robot.base_pos)
-        distance_to_target = self._sim.geodesic_distance(
-            agent_pos,
-            task.nav_target_pos,
-        )
-        return np.array([distance_to_target])
-
-
-@registry.register_sensor
-class NavGoalSensor(Sensor):
-    cls_uuid: str = "nav_goal"
-
-    def __init__(self, *args, sim, task, **kwargs):
-        super().__init__(*args, task=task, **kwargs)
-        self._task = task
-        self._prev_ep_id = None
-        self._sim = sim
-
-    def _get_uuid(self, *args, **kwargs):
-        return NavGoalSensor.cls_uuid
-
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(
-            shape=(3,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def _generate_targets(self, task):
-        robot_entity = task.pddl_problem.all_entities["robot_0"]
-        poss_actions = task.pddl_problem.get_possible_actions(
-            allowed_action_names=["nav", "nav_to_receptacle"],
-            filter_entities=[robot_entity],
-            true_preds=task.pddl_problem.get_true_predicates(),
-        )
-        targets = []
-        state = self._sim.capture_state(True)
-        for action in poss_actions:
-            task = action.init_task(
-                task.pddl_problem.sim_info, should_reset=True
-            )
-            target_pos = task.nav_target_pos
-            targets.append(target_pos)
-        self._sim.set_state(state, True)
-        return np.stack(targets, axis=0).astype(np.float32)
-
-    def get_observation(self, task, *args, **kwargs):
-        if task._episode_id != self._prev_ep_id:
-            self._cur_targs = self._generate_targets(task)
-            self._prev_ep_id = task._episode_id
-
-        return self._cur_targs
 
 
 @registry.register_sensor
@@ -227,40 +98,6 @@ class OracleNavigationActionSensor(Sensor):
         return path[1]
 
 
-class GeoMeasure(Measure):
-    def __init__(self, *args, sim, config, task, **kwargs):
-        self._config = config
-        self._sim = sim
-        self._prev_dist = None
-        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._prev_dist = self._get_cur_geo_dist(task)
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
-
-    def _get_agent_pos(self):
-        current_pos = self._sim.robot.base_pos
-        return self._sim.safe_snap_point(current_pos)
-
-    def _get_cur_geo_dist(self, task):
-        distance_to_target = self._sim.geodesic_distance(
-            self._get_agent_pos(),
-            task.nav_target_pos,
-        )
-
-        if distance_to_target == np.inf:
-            distance_to_target = self._prev_dist
-        if distance_to_target is None:
-            distance_to_target = 30
-        return distance_to_target
-
-
 @registry.register_measure
 class NavToObjReward(RearrangeReward):
     cls_uuid: str = "nav_to_obj_reward"
@@ -274,13 +111,11 @@ class NavToObjReward(RearrangeReward):
             self.uuid,
             [
                 NavToObjSuccess.cls_uuid,
-                BadCalledTerminate.cls_uuid,
                 DistToGoal.cls_uuid,
                 RotDistToGoal.cls_uuid,
             ],
         )
         self._cur_angle_dist = -1.0
-        self._give_turn_reward = False
         self._prev_dist = -1.0
         super().reset_metric(
             *args,
@@ -301,17 +136,10 @@ class NavToObjReward(RearrangeReward):
         reward += self._config.dist_reward * dist_diff
         self._prev_dist = cur_dist
 
-        bad_terminate_pen = task.measurements.measures[
-            BadCalledTerminate.cls_uuid
-        ].reward_pen
-        reward -= bad_terminate_pen
-
         if (
             self._config.should_reward_turn
             and cur_dist < self._config.turn_reward_dist
         ):
-            self._give_turn_reward = True
-
             angle_dist = task.measurements.measures[
                 RotDistToGoal.cls_uuid
             ].get_metric()
@@ -328,17 +156,18 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class SPLToObj(GeoMeasure):
-    cls_uuid: str = "spl_to_obj"
+class DistToGoal(Measure):
+    cls_uuid: str = "dist_to_goal"
 
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return SPLToObj.cls_uuid
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._config = config
+        self._sim = sim
+        self._prev_dist = None
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._start_dist = self._get_cur_geo_dist(task)
-        self._previous_pos = self._get_agent_pos()
-        super().reset_metric(
+        self._prev_dist = self._get_cur_geo_dist(task)
+        self.update_metric(
             *args,
             episode=episode,
             task=task,
@@ -346,19 +175,11 @@ class SPLToObj(GeoMeasure):
             **kwargs,
         )
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        is_success = float(
-            task.measurements.measures[NavToObjSuccess.cls_uuid].get_metric()
+    def _get_cur_geo_dist(self, task):
+        return np.linalg.norm(
+            np.array(self._sim.robot.base_pos)[[0, 2]]
+            - task.nav_goal_pos[[0, 2]]
         )
-        current_pos = self._get_agent_pos()
-        dist = np.linalg.norm(current_pos - self._previous_pos)
-        self._previous_pos = current_pos
-        return is_success * (self._start_dist / max(self._start_dist, dist))
-
-
-@registry.register_measure
-class DistToGoal(GeoMeasure):
-    cls_uuid: str = "dist_to_goal"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -369,76 +190,49 @@ class DistToGoal(GeoMeasure):
 
 
 @registry.register_measure
-class RotDistToGoal(GeoMeasure):
+class RotDistToGoal(Measure):
     cls_uuid: str = "rot_dist_to_goal"
+
+    def __init__(self, *args, sim, **kwargs):
+        self._sim = sim
+        super().__init__(*args, sim=sim, **kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return RotDistToGoal.cls_uuid
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        heading_angle = float(self._sim.robot.base_rot)
-        angle_dist = np.arctan2(
-            np.sin(heading_angle - task.nav_target_angle),
-            np.cos(heading_angle - task.nav_target_angle),
-        )
-        self._metric = np.abs(angle_dist)
-
-
-@registry.register_measure
-class BadCalledTerminate(GeoMeasure):
-    cls_uuid: str = "bad_called_terminate"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return BadCalledTerminate.cls_uuid
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.reward_pen = 0.0
-        super().reset_metric(
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(
             *args,
-            episode=episode,
-            task=task,
-            observations=observations,
             **kwargs,
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        success_measure = task.measurements.measures[NavToObjSuccess.cls_uuid]
-        if (
-            success_measure.does_action_want_stop(task, observations)
-            and not success_measure.get_metric()
-        ):
-            assert (
-                not self._config.decay_bad_term
-            ), "decay_bad_term is not supported for this measure"
-            self.reward_pen = self._config.bad_term_pen
-            self._metric = 1.0
-        else:
-            self._metric = 0.0
+        targ = task.nav_goal_pos
+        robot = self._sim.robot
+        T = robot.base_transformation
+        angle = get_angle_to_pos(T.transform_vector(targ))
+        self._metric = np.abs(float(angle))
 
 
 @registry.register_measure
-class NavToPosSucc(GeoMeasure):
+class NavToPosSucc(Measure):
     cls_uuid: str = "nav_to_pos_success"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return NavToPosSucc.cls_uuid
 
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+        super().__init__(*args, config=config, **kwargs)
+
+    def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [DistToGoal.cls_uuid],
         )
-
-        super().reset_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
+        self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
@@ -446,28 +240,23 @@ class NavToPosSucc(GeoMeasure):
 
 
 @registry.register_measure
-class NavToObjSuccess(GeoMeasure):
+class NavToObjSuccess(Measure):
     cls_uuid: str = "nav_to_obj_success"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return NavToObjSuccess.cls_uuid
 
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        # Get the end_on_stop property from the action
+    def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [NavToPosSucc.cls_uuid, RotDistToGoal.cls_uuid],
         )
-        self._end_on_stop = task.actions[BASE_ACTION_NAME].end_on_stop
+        self.update_metric(*args, task=task, **kwargs)
 
-        super().reset_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs,
-        )
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+        super().__init__(*args, config=config, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         angle_dist = task.measurements.measures[
@@ -478,6 +267,10 @@ class NavToObjSuccess(GeoMeasure):
             NavToPosSucc.cls_uuid
         ].get_metric()
 
+        called_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+
         if self._config.must_look_at_targ:
             self._metric = (
                 nav_pos_succ and angle_dist < self._config.success_angle_dist
@@ -485,17 +278,8 @@ class NavToObjSuccess(GeoMeasure):
         else:
             self._metric = nav_pos_succ
 
-        called_stop = self.does_action_want_stop(task, observations)
-
         if self._config.must_call_stop:
             if called_stop:
-                if self._end_on_stop:
-                    task.should_end = True
+                task.should_end = True
             else:
                 self._metric = False
-
-    def does_action_want_stop(self, task, obs):
-        assert (
-            not self._config.heuristic_stop
-        ), "heuristic_stop not supported in this metric"
-        return task.actions[BASE_ACTION_NAME].does_want_terminate

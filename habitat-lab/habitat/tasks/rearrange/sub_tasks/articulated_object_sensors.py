@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -12,6 +12,7 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.rearrange_sensors import (
+    DoesWantTerminate,
     EndEffectorToRestDistance,
     RearrangeReward,
 )
@@ -210,6 +211,10 @@ class ArtObjSuccess(Measure):
             ArtObjAtDesiredState.cls_uuid
         ].get_metric()
 
+        called_stop = task.measurements.measures[
+            DoesWantTerminate.cls_uuid
+        ].get_metric()
+
         # If not absolute distance, we can have a joint state greater than the
         # target.
         self._metric = (
@@ -217,6 +222,11 @@ class ArtObjSuccess(Measure):
             and ee_to_rest_distance < self._config.rest_dist_threshold
             and not self._sim.grasp_mgr.is_grasped
         )
+        if self._config.must_call_stop:
+            if called_stop:
+                task.should_end = True
+            else:
+                self._metric = False
 
 
 @registry.register_measure

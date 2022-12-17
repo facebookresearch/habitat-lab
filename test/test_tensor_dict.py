@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -68,7 +68,7 @@ def test_tensor_dict_index():
     with pytest.raises(KeyError):
         tensor_dict["b"][1] = tmp
 
-    tensor_dict["b"].set(1, tmp, strict=False)
+    tensor_dict["b"].set(1, tmp, strict=False)  # type: ignore
     assert torch.allclose(tensor_dict["b"]["c"]["d"][1], tmp["c"]["d"])
 
     tmp = dict(c=dict(d=torch.randn(1, 3)))
@@ -83,7 +83,7 @@ def test_tensor_dict_map():
     tensor_dict = TensorDict.from_tree(dict_tree)
 
     res = tensor_dict.map(lambda x: x + 1)
-    assert (res["a"]["b"] == 1).all()
+    assert (res["a"]["b"] == 1).all()  # type: ignore
 
     tensor_dict.map_in_place(lambda x: x + 1)
 

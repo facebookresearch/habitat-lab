@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
@@ -22,7 +22,6 @@ import numpy as np
 import quaternion
 from gym import Space, spaces
 
-from habitat.config import Config
 from habitat.core.dataset import Episode
 
 if TYPE_CHECKING:
@@ -30,13 +29,14 @@ if TYPE_CHECKING:
         from torch import Tensor
     except ImportError:
         pass
+    from omegaconf import DictConfig
 
 VisualObservation = Union[np.ndarray, "Tensor"]
 
 
 @attr.s(auto_attribs=True)
 class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
-    config: Config
+    config: "DictConfig"
 
     @abc.abstractmethod
     def get(self) -> Any:
@@ -76,7 +76,7 @@ class Sensor(metaclass=abc.ABCMeta):
     """
 
     uuid: str
-    config: Config
+    config: "DictConfig"
     sensor_type: SensorTypes
     observation_space: Space
 
@@ -231,7 +231,7 @@ class SensorSuite:
 
 @attr.s(auto_attribs=True)
 class AgentState:
-    position: Optional[np.ndarray]
+    position: Union[None, List[float], np.ndarray]
     rotation: Union[None, np.ndarray, quaternion.quaternion] = None
 
 
@@ -246,7 +246,7 @@ class Simulator:
     r"""Basic simulator class for habitat. New simulators to be added to habtiat
     must derive from this class and implement the abstarct methods.
     """
-    habitat_config: Config
+    habitat_config: "DictConfig"
 
     def __init__(self, *args, **kwargs) -> None:
         pass
@@ -277,7 +277,7 @@ class Simulator:
     def seed(self, seed: int) -> None:
         raise NotImplementedError
 
-    def reconfigure(self, config: Config) -> None:
+    def reconfigure(self, config: "DictConfig") -> None:
         raise NotImplementedError
 
     def geodesic_distance(

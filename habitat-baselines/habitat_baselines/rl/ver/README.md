@@ -13,7 +13,7 @@ The system has 5 components. 3 of these are the key components for learning:
 
 How these pieces are connected together is best seen via this diagram:
 
-![ver System Diagram](/habitat_baselines/rl/ver/images/ver-system.svg)
+![ver System Diagram](images/ver-system.svg)
 
 The Shared CPU Memory block is implemented via the `transfer_buffers` and the Shared GPU Memory block is implemented via the `rollouts`.
 
@@ -30,31 +30,31 @@ To use VER, simply change the `trainer_name` to `"ver"` in either the config or 
 python -u habitat_baselines/run.py \
   --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
   --run-type train \
-  trainer_name ver
+  habitat_baselines.trainer_name=ver
 ```
 
-By default this will configure the VER with the recommended settings: variable experience rollouts, 2 inference workers, and non-overlapped experience collection and learning. Depending on your workload, you may get better performance by changing these values. Here are some guidelines for when
+By default, this will configure the VER with the recommended settings: variable experience rollouts, 2 inference workers, and non-overlapped experience collection and learning. Depending on your workload, you may get better performance by changing these values. Here are some guidelines for when
 to change these values.
 
 If you have environments with extreme differences in simulation time (i.e. the fastest environment is more than 100x faster than the slowest), consider disabling variable experience rollouts.
 
 ```bash
 python .... \
-  rl.ver.variable_experience False
+  habitat_baselines.rl.ver.variable_experience=False
 ```
 
 If you have a very small policy, consider reducing the number of inference workers. If you have a very large model, consider increasing the number of inference workers.
 
 ```bash
 python .... \
-  rl.ver.num_inference_workers <number of inference workers>
+  habitat_baselines.rl.ver.num_inference_workers=<number of inference workers>
 ```
 
 If your environment is largely dominated by CPU time, consider overlapping experience collection and learning. This will harm sample efficiency and increase memory usage but can be worthwhile in certain cases.
 
 ```bash
 python .... \
-  rl.ver.overlap_rollouts_and_learn True
+  habitat_baselines.rl.ver.overlap_rollouts_and_learn=True
 ```
 
 ## Citing

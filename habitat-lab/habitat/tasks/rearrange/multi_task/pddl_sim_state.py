@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -25,8 +25,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     robot_type,
 )
-from habitat.tasks.rearrange.utils import rearrange_logger
-from habitat.tasks.utils import get_angle
+from habitat.tasks.rearrange.utils import get_angle_to_pos, rearrange_logger
 
 
 class ArtSampler:
@@ -139,14 +138,7 @@ class PddlRobotState:
             robo_pos = sim_info.sim.safe_snap_point(targ_pos)
             robot = sim.get_robot_data(robot_id).robot
             robot.base_pos = robo_pos
-
-            forward = np.array([1.0, 0.0])
-            rel_pos = np.array(targ_pos - robo_pos)[[0, 2]]
-            angle = get_angle(forward, rel_pos)
-            rearrange_logger.debug(
-                f"Setting robot base to {self.pos} at {targ_pos} with angle {angle}."
-            )
-            robot.base_rot = angle
+            robot.base_rot = get_angle_to_pos(np.array(targ_pos - robo_pos))
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")
 

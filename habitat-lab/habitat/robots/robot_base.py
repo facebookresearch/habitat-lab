@@ -1,9 +1,9 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 from collections import defaultdict
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
@@ -30,7 +30,8 @@ class RobotBase(RobotInterface):
         r"""Constructor"""
         assert base_type in [
             "mobile",
-        ], f"'{base_type}' is invalid - valid options are [mobile]. Or you write your own class."
+            "leg",
+        ], f"'{base_type}' is invalid - valid options are [mobile, leg]. Or you write your own class."
         RobotInterface.__init__(self)
         # Assign the variables
         self.params = params
@@ -87,17 +88,41 @@ class RobotBase(RobotInterface):
                 self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
         self._update_motor_settings_cache()
 
+        # set correct gains for legs
+        if (
+            hasattr(self.params, "leg_joints")
+            and self.params.leg_joints is not None
+        ):
+            jms = JointMotorSettings(
+                0,  # position_target
+                self.params.leg_mtr_pos_gain,  # position_gain
+                0,  # velocity_target
+                self.params.leg_mtr_vel_gain,  # velocity_gain
+                self.params.leg_mtr_max_impulse,  # max_impulse
+            )
+            # pylint: disable=not-an-iterable
+            for i in self.params.leg_joints:
+                self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
+            self.leg_joint_pos = self.params.leg_init_params
+        self._update_motor_settings_cache()
+
     def update(self) -> None:
         pass
 
     def reset(self) -> None:
-        pass
+        if (
+            hasattr(self.params, "leg_joints")
+            and self.params.leg_init_params is not None
+        ):
+            self.leg_joint_pos = self.params.leg_init_params
+        self._update_motor_settings_cache()
+        self.update()
 
     @property
     def base_pos(self):
         """Get the robot base ground position"""
         # via configured local offset from origin
-        if self._base_type == "mobile":
+        if self._base_type in ["mobile", "leg"]:
             return (
                 self.sim_obj.translation
                 + self.sim_obj.transformation.transform_vector(
@@ -111,7 +136,7 @@ class RobotBase(RobotInterface):
     def base_pos(self, position: mn.Vector3):
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
         # via configured local offset from origin.
-        if self._base_type == "mobile":
+        if self._base_type in ["mobile", "leg"]:
             if len(position) != 3:
                 raise ValueError("Base position needs to be three dimensions")
             self.sim_obj.translation = (
@@ -129,12 +154,67 @@ class RobotBase(RobotInterface):
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
-        if self._base_type == "mobile":
+        if self._base_type == "mobile" or self._base_type == "leg":
             self.sim_obj.rotation = mn.Quaternion.rotation(
                 mn.Rad(rotation_y_rad), mn.Vector3(0, 1, 0)
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
+
+    @property
+    def leg_motor_pos(self):
+        """Get the current target of the leg joint motors."""
+        if self._base_type == "leg":
+            motor_targets = np.zeros(len(self.params.leg_init_params))
+            for i, jidx in enumerate(self.params.leg_joints):
+                motor_targets[i] = self._get_motor_pos(jidx)
+            return motor_targets
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
+
+    @leg_motor_pos.setter
+    def leg_motor_pos(self, ctrl: List[float]) -> None:
+        """Set the desired target of the leg joint motors."""
+        if self._base_type == "leg":
+            self._validate_ctrl_input(ctrl, self.params.leg_joints)
+            for i, jidx in enumerate(self.params.leg_joints):
+                self._set_motor_pos(jidx, ctrl[i])
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
+
+    @property
+    def leg_joint_pos(self):
+        """Get the current arm joint positions."""
+        if self._base_type == "leg":
+            joint_pos_indices = self.joint_pos_indices
+            leg_joints = self.params.leg_joints
+            leg_pos_indices = [joint_pos_indices[x] for x in leg_joints]
+            return [self.sim_obj.joint_positions[i] for i in leg_pos_indices]
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
+
+    @leg_joint_pos.setter
+    def leg_joint_pos(self, ctrl: List[float]):
+        """Kinematically sets the arm joints and sets the motors to target."""
+        if self._base_type == "leg":
+            self._validate_ctrl_input(ctrl, self.params.leg_joints)
+
+            joint_positions = self.sim_obj.joint_positions
+
+            for i, jidx in enumerate(self.params.leg_joints):
+                self._set_motor_pos(jidx, ctrl[i])
+                joint_positions[self.joint_pos_indices[jidx]] = ctrl[i]
+            self.sim_obj.joint_positions = joint_positions
+        else:
+            raise NotImplementedError(
+                "There are no leg motors other than leg robots"
+            )
 
     @property
     def base_transformation(self):
@@ -145,14 +225,30 @@ class RobotBase(RobotInterface):
             self.sim_obj.get_link_name(link_id) in self.params.base_link_names
         )
 
-    def _update_motor_settings_cache(self):
-        """Updates the JointMotorSettings cache for cheaper future updates"""
-        self.joint_motors = {}
-        for (
-            motor_id,
-            joint_id,
-        ) in self.sim_obj.existing_joint_motor_ids.items():
-            self.joint_motors[joint_id] = (
-                motor_id,
-                self.sim_obj.get_joint_motor_settings(motor_id),
+    def update_base(self, rigid_state, target_rigid_state):
+
+        end_pos = self._sim.step_filter(
+            rigid_state.translation, target_rigid_state.translation
+        )
+        # Offset the end position
+        end_pos -= self.params.base_offset
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(), end_pos
+        )
+        self.sim_obj.transformation = target_trans
+
+        if self._base_type == "leg":
+            # Fix the leg joints
+            self.leg_joint_pos = [0.0, 0.7, -1.5] * 4
+
+    def _validate_ctrl_input(self, ctrl: List[float], joints: List[int]):
+        """
+        Raises an exception if the control input is NaN or does not match the
+        joint dimensions.
+        """
+        if len(ctrl) != len(joints):
+            raise ValueError(
+                f"Control dimension does not match joint dimension: {len(ctrl)} vs {len(joints)}"
             )
+        if np.any(np.isnan(ctrl)):
+            raise ValueError("Control is NaN")

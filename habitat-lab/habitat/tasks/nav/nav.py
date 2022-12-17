@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 # TODO, lots of typing errors in here
 
-from typing import Any, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
 import attr
 import numpy as np
 import quaternion
 from gym import spaces
 
-from habitat.config import Config, read_write
+from habitat.config.default import get_agent_config
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.embodied_task import (
     EmbodiedTask,
@@ -52,6 +52,10 @@ try:
 except ImportError:
     pass
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
+
 cv2 = try_cv2_import()
 
 
@@ -60,24 +64,6 @@ MAP_THICKNESS_SCALAR: int = 128
 # These metrics are not scalars and cannot be easily reported
 # (unless using videos)
 NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
-
-
-def merge_sim_episode_config(sim_config: Config, episode: Episode) -> Any:
-    with read_write(sim_config):
-        sim_config.scene = episode.scene_id
-    if (
-        episode.start_position is not None
-        and episode.start_rotation is not None
-    ):
-        agent_name = sim_config.agents[sim_config.default_agent_id]
-        agent_cfg = getattr(sim_config, agent_name)
-        with read_write(agent_cfg):
-            agent_cfg.start_position = episode.start_position
-            agent_cfg.start_rotation = [
-                float(k) for k in episode.start_rotation
-            ]
-            agent_cfg.is_set_start_state = True
-    return sim_config
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -148,7 +134,7 @@ class PointGoalSensor(Sensor):
     cls_uuid: str = "pointgoal"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -241,7 +227,7 @@ class ImageGoalSensor(Sensor):
     cls_uuid: str = "imagegoal"
 
     def __init__(
-        self, *args: Any, sim: Simulator, config: Config, **kwargs: Any
+        self, *args: Any, sim: Simulator, config: "DictConfig", **kwargs: Any
     ):
         self._sim = sim
         sensors = self._sim.sensor_suite.sensors
@@ -355,7 +341,7 @@ class HeadingSensor(Sensor):
     cls_uuid: str = "heading"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
         super().__init__(config=config)
@@ -428,7 +414,7 @@ class EpisodicGPSSensor(Sensor):
     cls_uuid: str = "gps"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
 
@@ -528,7 +514,7 @@ class Success(Measure):
     cls_uuid: str = "success"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -573,9 +559,9 @@ class SPL(Measure):
     """
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
-        self._previous_position: Optional[np.ndarray] = None
+        self._previous_position: Union[None, np.ndarray, List[float]] = None
         self._start_end_episode_distance: Optional[float] = None
         self._agent_episode_distance: Optional[float] = None
         self._episode_view_points: Optional[
@@ -701,7 +687,11 @@ class TopDownMap(Measure):
     r"""Top Down Map measure"""
 
     def __init__(
-        self, sim: "HabitatSim", config: Config, *args: Any, **kwargs: Any
+        self,
+        sim: "HabitatSim",
+        config: "DictConfig",
+        *args: Any,
+        **kwargs: Any,
     ):
         self._sim = sim
         self._config = config
@@ -859,7 +849,7 @@ class TopDownMap(Measure):
     ):
         if ref_floor_height is None:
             ref_floor_height = self._sim.get_agent(0).state.position[1]
-        return ref_floor_height < height < ref_floor_height + ceiling_height
+        return ref_floor_height <= height < ref_floor_height + ceiling_height
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._step_count = 0
@@ -876,7 +866,7 @@ class TopDownMap(Measure):
 
         self.update_fog_of_war_mask(np.array([a_x, a_y]))
 
-        if hasattr(episode, "goal"):
+        if hasattr(episode, "goals"):
             # draw source and target parts last to avoid overlap
             self._draw_goals_view_points(episode)
             self._draw_goals_aabb(episode)
@@ -963,7 +953,7 @@ class DistanceToGoal(Measure):
     cls_uuid: str = "distance_to_goal"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._previous_position: Optional[Tuple[float, float, float]] = None
         self._sim = sim
@@ -1030,7 +1020,7 @@ class DistanceToGoalReward(Measure):
     cls_uuid: str = "distance_to_goal_reward"
 
     def __init__(
-        self, sim: Simulator, config: Config, *args: Any, **kwargs: Any
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
     ):
         self._sim = sim
         self._config = config
@@ -1322,12 +1312,26 @@ class VelocityAction(SimulatorTaskAction):
 @registry.register_task(name="Nav-v0")
 class NavigationTask(EmbodiedTask):
     def __init__(
-        self, config: Config, sim: Simulator, dataset: Optional[Dataset] = None
+        self,
+        config: "DictConfig",
+        sim: Simulator,
+        dataset: Optional[Dataset] = None,
     ) -> None:
         super().__init__(config=config, sim=sim, dataset=dataset)
 
     def overwrite_sim_config(self, sim_config: Any, episode: Episode) -> Any:
-        return merge_sim_episode_config(sim_config, episode)
+        sim_config.scene = episode.scene_id
+        if (
+            episode.start_position is not None
+            and episode.start_rotation is not None
+        ):
+            agent_config = get_agent_config(sim_config)
+            agent_config.start_position = episode.start_position
+            agent_config.start_rotation = [
+                float(k) for k in episode.start_rotation
+            ]
+            agent_config.is_set_start_state = True
+        return sim_config
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import habitat
-from habitat.config.default import get_config
+from habitat.config.default import get_agent_config, get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.logging import logger
 from habitat.datasets import make_dataset
@@ -32,16 +32,16 @@ OLD_STOP_ACTION_ID = 3
 TEST_EPISODE_SET = [1, 309, 807, 958, 696, 10, 297, 1021, 1307, 1569]
 
 RGB_EPISODE_MEANS = {
-    1: 123.1576333222566,
-    10: 123.86094605688947,
-    297: 122.69351220853402,
-    309: 118.95794969775298,
-    696: 115.71903709129052,
-    807: 143.7834237211494,
-    958: 141.97871610030387,
-    1021: 119.1051016229882,
-    1307: 102.11408987112925,
-    1569: 91.01973929495183,
+    1: 123.20,
+    10: 120.56,
+    297: 122.69,
+    309: 118.66,
+    696: 116.10,
+    807: 145.77,
+    958: 143.48,
+    1021: 119.10,
+    1307: 102.11,
+    1569: 91.01,
 }
 
 EPISODES_LIMIT = 6
@@ -173,9 +173,10 @@ def test_mp3d_eqa_sim():
             obs = env.step(env.task.action_space.sample())
             if not env.episode_over:
                 assert "rgb" in obs, "RGB image is missing in observation."
+                agent_config = get_agent_config(eqa_config.habitat.simulator)
                 assert obs["rgb"].shape[:2] == (
-                    eqa_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.height,
-                    eqa_config.habitat.simulator.agent_0.sim_sensors.rgb_sensor.width,
+                    agent_config.sim_sensors.rgb_sensor.height,
+                    agent_config.sim_sensors.rgb_sensor.width,
                 ), (
                     "Observation resolution {} doesn't correspond to config "
                     "({}, {}).".format(
@@ -221,7 +222,7 @@ def test_mp3d_eqa_sim_correspondence():
                 start_state.position, episode.start_position
             ), "Agent's start position diverges from the shortest path's one."
 
-            rgb_mean = 0
+            rgb_mean = 0.0
             logger.info(
                 "{id} {question}\n{answer}".format(
                     id=episode.episode_id,
@@ -270,7 +271,7 @@ def test_mp3d_eqa_sim_correspondence():
                     RGB_EPISODE_MEANS[int(episode.episode_id)],
                     rgb_mean,
                     atol=0.5,
-                ), "RGB output doesn't match the ground truth."
+                ), f"RGB output doesn't match the ground truth. Expected {RGB_EPISODE_MEANS[int(episode.episode_id)]} but got {rgb_mean}"
 
             ep_i = (ep_i + 1) % EPISODES_LIMIT
             if ep_i == 0:

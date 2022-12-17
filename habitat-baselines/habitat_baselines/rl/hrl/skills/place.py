@@ -1,3 +1,7 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from dataclasses import dataclass
 
 import torch
@@ -15,23 +19,19 @@ class PlaceSkillPolicy(PickSkillPolicy):
         obj: int
         targ: int
 
-    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
-        return self._cur_skill_args[batch_idx].targ
+    def _get_multi_sensor_index(self, batch_idx):
+        return [self._cur_skill_args[i].targ for i in batch_idx]
 
     def _mask_pick(self, action, observations):
         # Mask out the grasp if the object is already released.
         is_not_holding = 1 - observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_not_holding):
             # Do not regrasp the object once it is released.
-            action[i, self._ac_start + self._ac_len - 1] = -1.0
+            action[i, self._grip_ac_idx] = -1.0
         return action
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         # Is the agent not holding an object and is the end-effector at the
         # resting position?

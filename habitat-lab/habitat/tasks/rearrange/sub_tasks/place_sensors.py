@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -8,6 +8,7 @@
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
+    EndEffectorToGoalDistance,
     EndEffectorToRestDistance,
     ForceTerminate,
     ObjAtGoal,
@@ -64,6 +65,9 @@ class PlaceReward(RearrangeReward):
             **kwargs
         )
         reward = self._metric
+        ee_to_goal_dist = task.measurements.measures[
+            EndEffectorToGoalDistance.cls_uuid
+        ].get_metric()
         obj_to_goal_dist = task.measurements.measures[
             ObjectToGoalDistance.cls_uuid
         ].get_metric()
@@ -78,9 +82,14 @@ class PlaceReward(RearrangeReward):
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
-            dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
+            if self._config.use_ee_dist:
+                dist_to_goal = ee_to_goal_dist[str(task.abs_targ_idx)]
+            else:
+                dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
+            min_dist = self._config.min_dist_to_goal
         else:
             dist_to_goal = ee_to_rest_distance
+            min_dist = 0.0
 
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
@@ -100,17 +109,18 @@ class PlaceReward(RearrangeReward):
                     self._metric = reward
                     return
 
-        if self._config.use_diff:
-            if self._prev_dist < 0:
-                dist_diff = 0.0
-            else:
-                dist_diff = self._prev_dist - dist_to_goal
+        if dist_to_goal >= min_dist:
+            if self._config.use_diff:
+                if self._prev_dist < 0:
+                    dist_diff = 0.0
+                else:
+                    dist_diff = self._prev_dist - dist_to_goal
 
-            # Filter out the small fluctuations
-            dist_diff = round(dist_diff, 3)
-            reward += self._config.dist_reward * dist_diff
-        else:
-            reward -= self._config.dist_reward * dist_to_goal
+                # Filter out the small fluctuations
+                dist_diff = round(dist_diff, 3)
+                reward += self._config.dist_reward * dist_diff
+            else:
+                reward -= self._config.dist_reward * dist_to_goal
         self._prev_dist = dist_to_goal
 
         self._metric = reward

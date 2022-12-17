@@ -1,0 +1,52 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - /habitat/task/rearrange: play
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+# Config for empty task to explore the scene.
+habitat:
+  environment:
+    max_episode_steps: 0
+  task:
+    actions:
+      arm_action:
+        type: "ArmAction"
+        arm_controller: "ArmRelPosKinematicReducedActionStretch"
+        grip_controller: "MagicGraspAction"
+        arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
+        arm_joint_dimensionality: 10
+        grasp_thresh_dist: 0.15
+        disable_grip: False
+        delta_pos_limit: 0.0125
+        ee_ctrl_lim: 0.015
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    agents:
+      main_agent:
+        radius: 0.3
+        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        robot_type: "StretchRobot"
+        sim_sensors:
+          head_rgb_sensor:
+            height: 212
+            width: 120
+          head_depth_sensor:
+            height: 212
+            width: 120
+          arm_depth_sensor:
+            height: 212
+            width: 120
+          arm_rgb_sensor:
+            height: 212
+            width: 120
+    habitat_sim_v0:
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz

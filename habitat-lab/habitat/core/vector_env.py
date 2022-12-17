@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -11,6 +11,7 @@ from multiprocessing.context import BaseContext
 from queue import Queue
 from threading import Thread
 from typing import (
+    TYPE_CHECKING,
     Any,
     Callable,
     Dict,
@@ -30,7 +31,6 @@ import numpy as np
 from gym import spaces
 
 import habitat
-from habitat.config import Config
 from habitat.core.env import Env, RLEnv
 from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
@@ -53,6 +53,9 @@ except ImportError:
     torch = None
     import multiprocessing as mp  # type:ignore
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 STEP_COMMAND = "step"
 RESET_COMMAND = "reset"
@@ -71,7 +74,9 @@ OBSERVATION_SPACE_NAME = "observation_space"
 
 
 def _make_env_fn(
-    config: Config, dataset: Optional[habitat.Dataset] = None, rank: int = 0
+    config: "DictConfig",
+    dataset: Optional[habitat.Dataset] = None,
+    rank: int = 0,
 ) -> Env:
     """Constructor for default habitat :ref:`env.Env`.
 
@@ -311,7 +316,7 @@ class VectorEnv:
         for worker_conn, parent_conn, env_args in zip(
             worker_connections, parent_connections, env_fn_args
         ):
-            ps = self._mp_ctx.Process(
+            ps = self._mp_ctx.Process(  # type: ignore[attr-defined]
                 target=self._worker_env,
                 args=(
                     worker_conn.recv,

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -9,7 +9,7 @@ import os
 import os.path as osp
 import sys
 import uuid
-from typing import Callable, List, Optional
+from typing import TYPE_CHECKING, Callable, List, Optional
 
 import numpy as np
 from gym import spaces
@@ -31,8 +31,6 @@ except ImportError:
 
 from copy import copy
 
-from yacs.config import CfgNode
-
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import CollisionDetails, make_border_red
 from habitat_baselines.motion_planning.grasp_generator import GraspGenerator
@@ -40,13 +38,16 @@ from habitat_baselines.motion_planning.mp_sim import HabMpSim, MpSim
 from habitat_baselines.motion_planning.mp_spaces import JsMpSpace, MpSpace
 from habitat_baselines.motion_planning.robot_target import RobotTarget
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 def is_ompl_installed() -> bool:
     return ou is not None
 
 
 class MotionPlanner:
-    def __init__(self, sim: RearrangeSim, config: CfgNode):
+    def __init__(self, sim: RearrangeSim, config: "DictConfig"):
         if not is_ompl_installed:
             raise ImportError("Need to install OMPL to use motion planning")
         self._config = config
@@ -157,7 +158,7 @@ class MotionPlanner:
         count_obj_collisions: bool,
         grasp_thresh: float,
         n_gen_grasps: int,
-        run_cfg: CfgNode,
+        run_cfg: "DictConfig",
         ignore_first: bool = False,
         use_prev: bool = False,
     ):

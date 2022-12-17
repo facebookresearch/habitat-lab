@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import json
 import os
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from habitat.config import Config
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
@@ -23,6 +22,9 @@ from habitat.tasks.nav.instance_image_nav_task import (
 )
 from habitat.tasks.nav.object_nav_task import ObjectViewLocation
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @registry.register_dataset(name="InstanceImageNav-v1")
 class InstanceImageNavDatasetV1(PointNavDatasetV1):
@@ -31,7 +33,7 @@ class InstanceImageNavDatasetV1(PointNavDatasetV1):
     goals: Dict[str, InstanceImageGoal]
     episodes: List[InstanceImageGoalNavEpisode] = []  # type: ignore[assignment]
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.goals = {}
         super().__init__(config)
 

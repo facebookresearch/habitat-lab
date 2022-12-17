@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, List
+from typing import Any, List, Optional
 
 import numpy as np
 import torch
+from omegaconf import OmegaConf
 from torch.utils.tensorboard import SummaryWriter
 
 try:
@@ -29,7 +30,13 @@ def get_writer(config, **kwargs):
 
 
 class TensorboardWriter:
-    def __init__(self, log_dir: str, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        log_dir: str,
+        *args: Any,
+        resume_run_id: Optional[str] = None,
+        **kwargs: Any,
+    ):
         r"""A Wrapper for tensorboard SummaryWriter. It creates a dummy writer
         when log_dir is empty string or None. It also has functionality that
         generates tb video directly from numpy images.
@@ -43,6 +50,9 @@ class TensorboardWriter:
         self.writer = None
         if log_dir is not None and len(log_dir) > 0:
             self.writer = SummaryWriter(log_dir, *args, **kwargs)
+
+    def get_run_id(self) -> Optional[str]:
+        return None
 
     def __getattr__(self, item):
         if self.writer:
@@ -90,7 +100,13 @@ class TensorboardWriter:
 
 
 class WeightsAndBiasesWriter:
-    def __init__(self, config, *args: Any, **kwargs: Any):
+    def __init__(
+        self,
+        config,
+        *args: Any,
+        resume_run_id: Optional[str] = None,
+        **kwargs: Any,
+    ):
         r"""
         Integrates with https://wandb.ai logging service.
         """
@@ -112,9 +128,16 @@ class WeightsAndBiasesWriter:
             raise ValueError(
                 "Requested to log with wandb, but wandb is not installed."
             )
+        if resume_run_id is not None:
+            wb_kwargs["id"] = resume_run_id
+            wb_kwargs["resume"] = "must"
 
-        self.run = wandb.init(
-            config={"slurm": slurm_info_dict, **config}, **wb_kwargs
+        self.run = wandb.init(  # type: ignore[attr-defined]
+            config={
+                "slurm": slurm_info_dict,
+                **OmegaConf.to_container(config),  # type: ignore[arg-type]
+            },
+            **wb_kwargs,
         )
 
     def __getattr__(self, item):
@@ -128,13 +151,16 @@ class WeightsAndBiasesWriter:
             f"{log_group}/{k.replace(' ', '')}": v
             for k, v in data_dict.items()
         }
-        wandb.log(log_data_dict, step=int(step_id))
+        wandb.log(log_data_dict, step=int(step_id))  # type: ignore[attr-defined]
 
     def add_scalar(self, key, value, step_id):
-        wandb.log({key: value}, step=int(step_id))
+        wandb.log({key: value}, step=int(step_id))  # type: ignore[attr-defined]
 
     def __enter__(self):
         return self
+
+    def get_run_id(self) -> Optional[str]:
+        return self.run.id
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         if self.run:

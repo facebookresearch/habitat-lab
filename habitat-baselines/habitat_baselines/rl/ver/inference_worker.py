@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -9,13 +9,13 @@ import queue
 import time
 from multiprocessing import SimpleQueue
 from multiprocessing.context import BaseContext
-from typing import List, Optional, Tuple
+from typing import TYPE_CHECKING, List, Optional, Tuple
 
 import attr
 import numpy as np
 import torch
 
-from habitat import Config, logger
+from habitat import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -46,13 +46,16 @@ from habitat_baselines.rl.ver.worker_common import (
 )
 from habitat_baselines.utils.common import batch_obs, inference_mode
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @attr.s(auto_attribs=True)
 class InferenceWorkerProcess(ProcessBase):
     setup_queue: SimpleQueue
     inference_worker_idx: int
     num_inference_workers: int
-    config: Config
+    config: "DictConfig"
     queues: WorkerQueues
     iw_sync: InferenceWorkerSync
     _torch_transfer_buffers: TensorDict

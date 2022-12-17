@@ -1,18 +1,29 @@
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 from dataclasses import dataclass
-from typing import Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, Optional
 
 import magnum as mn
 import numpy as np
-from yacs.config import CfgNode
 
 # flake8: noqa
-from habitat.robots import FetchRobot, FetchRobotNoWheels
+from habitat.robots import (
+    FetchRobot,
+    FetchRobotNoWheels,
+    SpotRobot,
+    StretchRobot,
+)
 from habitat.robots.fetch_suction import FetchSuctionRobot
 from habitat.robots.mobile_manipulator import MobileManipulator
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @dataclass
@@ -23,7 +34,7 @@ class RobotData:
 
     robot: MobileManipulator
     grasp_mgr: RearrangeGraspManager
-    cfg: CfgNode
+    cfg: "DictConfig"
     start_js: np.ndarray
     is_pb_installed: bool
     _ik_helper: Optional[IkHelper] = None
@@ -48,8 +59,8 @@ class RobotManager:
         self._is_pb_installed = is_pb_installed()
         self.agent_names = cfg.agents
 
-        for agent_name in cfg.agents:
-            agent_cfg = cfg[agent_name]
+        for agent_name in cfg.agents_order:
+            agent_cfg = cfg.agents[agent_name]
             robot_cls = eval(agent_cfg.robot_type)
             robot = robot_cls(agent_cfg.robot_urdf, sim)
             grasp_mgr = RearrangeGraspManager(sim, cfg, robot)

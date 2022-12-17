@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -40,7 +40,7 @@ class DidPickObjectMeasure(Measure):
 
 @registry.register_measure
 class RearrangePickReward(RearrangeReward):
-    cls_uuid: str = "rearrangepick_reward"
+    cls_uuid: str = "pick_reward"
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self.cur_dist = -1.0
@@ -144,7 +144,7 @@ class RearrangePickReward(RearrangeReward):
 
 @registry.register_measure
 class RearrangePickSuccess(Measure):
-    cls_uuid: str = "rearrangepick_success"
+    cls_uuid: str = "pick_success"
 
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim

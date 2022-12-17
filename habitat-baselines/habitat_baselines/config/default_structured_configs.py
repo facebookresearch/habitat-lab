@@ -1,3 +1,9 @@
+#!/usr/bin/env python3
+
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
 import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
@@ -77,7 +83,7 @@ class ActionDistributionConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class ObsTransformConfig(HabitatBaselinesBaseConfig):
-    pass
+    type: str = MISSING
 
 
 @dataclass
@@ -86,7 +92,7 @@ class CenterCropperConfig(ObsTransformConfig):
     height: int = 256
     width: int = 256
     channels_last: bool = True
-    trans_keys: Tuple[str] = (
+    trans_keys: Tuple[str, ...] = (
         "rgb",
         "depth",
         "semantic",
@@ -106,7 +112,7 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
     type: str = "ResizeShortestEdge"
     size: int = 256
     channels_last: bool = True
-    trans_keys: Tuple[str] = (
+    trans_keys: Tuple[str, ...] = (
         "rgb",
         "depth",
         "semantic",
@@ -153,7 +159,7 @@ class Cube2FishConfig(ObsTransformConfig):
     height: int = 256
     width: int = 256
     fov: int = 180
-    params: Tuple[float] = (0.2, 0.2, 0.2)
+    params: Tuple[float, ...] = (0.2, 0.2, 0.2)
     sensor_uuids: List[str] = field(
         default_factory=lambda: [
             "BACK",

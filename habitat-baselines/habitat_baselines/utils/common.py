@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -12,7 +12,16 @@ import re
 import shutil
 import tarfile
 from io import BytesIO
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Union
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Tuple,
+    Union,
+)
 
 import attr
 import numpy as np
@@ -23,7 +32,6 @@ from torch import Size, Tensor
 from torch import nn as nn
 
 from habitat import logger
-from habitat.config import Config
 from habitat.core.dataset import Episode
 from habitat.core.spaces import EmptySpace
 from habitat.core.utils import Singleton, try_cv2_import
@@ -35,6 +43,10 @@ from habitat_baselines.common.tensor_dict import (
     TensorOrNDArrayDict,
 )
 from habitat_baselines.common.tensorboard_utils import TensorboardWriter
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 cv2 = try_cv2_import()
 
@@ -104,7 +116,7 @@ class GaussianNet(nn.Module):
         self,
         num_inputs: int,
         num_outputs: int,
-        config: Config,
+        config: "DictConfig",
     ) -> None:
         super().__init__()
 

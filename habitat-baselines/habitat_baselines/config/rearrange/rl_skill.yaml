@@ -1,13 +1,13 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange: nav_pick_nav_place
+  - /benchmark/rearrange: pick
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 
 habitat_baselines:
   verbose: False
-  trainer_name: "ddppo"
+  trainer_name: "ver"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
@@ -16,8 +16,8 @@ habitat_baselines:
     - "third_rgb_sensor"
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
-  num_environments: 32
-  writer_type: 'tb'
+  # 26 environments will just barely be below 16gb.
+  num_environments: 26
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1.0e8
@@ -26,7 +26,7 @@ habitat_baselines:
   # Force PyTorch to be single threaded as
   # this improves performance considerably
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['reward', 'force', 'success']
+  eval_keys_to_include_in_name: ["reward", "force", "success"]
 
   eval:
     video_option: ["disk"]
@@ -37,14 +37,17 @@ habitat_baselines:
         action_distribution_type: "gaussian"
         action_dist:
            use_log_std: True
+           clamp_std: True
+           std_init: -1.0
+           use_std_param: True
     ppo:
       # ppo params
       clip_param: 0.2
       ppo_epoch: 2
       num_mini_batch: 2
       value_loss_coef: 0.5
-      entropy_coef: 0.0001
-      lr: 2.5e-4
+      entropy_coef: 0.001
+      lr: 3e-4
       eps: 1e-5
       max_grad_norm: 0.2
       num_steps: 128
@@ -80,6 +83,6 @@ habitat_baselines:
       reset_critic: True
 
       # Model parameters
-      backbone: resnet50
+      backbone: resnet18
       rnn_type: LSTM
       num_recurrent_layers: 2

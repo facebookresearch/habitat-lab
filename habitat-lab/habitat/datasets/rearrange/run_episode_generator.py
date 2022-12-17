@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os
 import os.path as osp
 import random
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any, List
 
 import numpy as np
-from yacs.config import CfgNode as CN
+from omegaconf import OmegaConf
 
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
@@ -20,64 +22,81 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     get_all_scenedataset_receptacles,
 )
 
+if TYPE_CHECKING:
+    from habitat.config import DictConfig
 
-def get_config_defaults() -> CN:
-    """
-    Populates and resturns a default config for a RearrangeEpisode.
-    """
-    _C = CN()
+
+@dataclass
+class SceneSamplerParamsConfig:
+    scene: str = "v3_sc1_staging_00"
+    scene_sets: List[Any] = field(default_factory=list)
+
+
+@dataclass
+class SceneSamplerConfig:
+    type: str = "single"
+    params: SceneSamplerParamsConfig = SceneSamplerParamsConfig()
+    comment: str = ""
+
+
+@dataclass
+class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
-    _C.min_dist_from_start_to_goal = 0.5
-
+    min_dist_from_start_to_goal: float = 0.5
     # ----- import/initialization parameters ------
     # the scene dataset from which scenes and objects are sampled
-    _C.dataset_path = "data/replica_cad/replicaCAD.scene_dataset_config.json"
+    dataset_path: str = "data/replica_cad/replicaCAD.scene_dataset_config.json"
     # any additional object assets to load before defining object sets
-    _C.additional_object_paths = ["data/objects/ycb/"]
-
+    additional_object_paths: List[str] = field(
+        default_factory=lambda: ["data/objects/ycb/"]
+    )
     # ----- resource set definitions ------
     # Define the sets of scenes, objects, and receptacles which can be sampled from.
     # The SceneDataset will be searched for resources of each type with handles containing ANY "included" substrings and NO "excluded" substrings.
 
     # Define sets of scene instance handles which can be sampled from for initialization:
-    _C.scene_sets = [
-        {
-            "name": "any",
-            "included_substrings": [""],
-            "excluded_substrings": [],
-            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
-            "comment": "The empty substring acts like a wildcard, selecting all scenes.",
-        },
-    ]
-
+    scene_sets: List[Any] = field(
+        default_factory=lambda: [
+            {
+                "name": "any",
+                "included_substrings": [""],
+                "excluded_substrings": [],
+                # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+                "comment": "The empty substring acts like a wildcard, selecting all scenes.",
+            },
+        ]
+    )
     # Define the sets of object handles which can be sampled from for placement and target sampling:
     # NOTE: Each set must have a unique name.
-    _C.object_sets = [
-        {
-            "name": "any",
-            "included_substrings": [""],
-            "excluded_substrings": [],
-            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
-            "comment": "The empty substring acts like a wildcard, selecting all objects.",
-        },
-    ]
+    object_sets: List[Any] = field(
+        default_factory=lambda: [
+            {
+                "name": "any",
+                "included_substrings": [""],
+                "excluded_substrings": [],
+                # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+                "comment": "The empty substring acts like a wildcard, selecting all objects.",
+            },
+        ]
+    )
 
     # Define the sets of receptacles which can be sampled from for placing objects and targets:
     # The SceneDataset will be searched for objects containing receptacle metadata.
     # Receptacle name substrings are used to further constrain sets.
     # NOTE: Each set must have a unique name.
-    _C.receptacle_sets = [
-        {
-            "name": "any",
-            "included_object_substrings": [""],
-            "excluded_object_substrings": [],
-            "included_receptacle_substrings": [""],
-            "excluded_receptacle_substrings": [],
-            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
-            "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
-        },
-    ]
-
+    receptacle_sets: List[Any] = field(
+        default_factory=lambda: [
+            {
+                "name": "any",
+                "included_object_substrings": [""],
+                "excluded_object_substrings": [],
+                "included_receptacle_substrings": [""],
+                "excluded_receptacle_substrings": [],
+                # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+                "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
+            },
+        ]
+    )
     # ----- sampler definitions ------
     # Define the scene sampling configuration
     # NOTE: There must be exactly one scene sampler!
@@ -89,87 +108,79 @@ def get_config_defaults() -> CN:
     # NOTE: "single" scene sampler asserts that only a single scene contains the "scene" name substring
     # NOTE: "subset" scene sampler allows sampling from multiple scene sets by name
     # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
-    _C.scene_sampler = CN()
-    _C.scene_sampler.type = "single"
-    _C.scene_sampler.params = CN()
-    _C.scene_sampler.params.scene = "v3_sc1_staging_00"
-    _C.scene_sampler.params.scene_sets = []
-    _C.scene_sampler.comment = ""
+    scene_sampler: SceneSamplerConfig = SceneSamplerConfig()
 
     # Specify name of receptacle and maximum # of placemenets in
     # receptacle. To allow only two objects in the chair, specify:
     # - ["receptacle_aabb_Chr1_Top1_frl_apartment_chair_01", 2]
-    _C.max_objects_per_receptacle = []
+    max_objects_per_receptacle: List[Any] = field(default_factory=list)
 
     # Define the object sampling configuration
-    _C.object_samplers = [
-        # {"name":str, "type:str", "params":{})
-        # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
-        # NOTE: "orientation_sampling" options: "none", "up", "all"
-        # TODO: convert some special examples to yaml:
-        # (
-        #     "fridge_middle",
-        #     "uniform",
-        #     (["any"], ["fridge_middle"], 1, 30, "up"),
-        # ),
-        # Composite object sampling (e.g. apple in bowl)
-        #  - parameterized by object and receptacle sets, but inclusive of listed samplers BEFORE the composite sampler
-        # Example: sample a basket placement on a table and then place apples in the basket
-        # ("basket_sampling", "uniform", (["basket"], ["table"], 1, 1, "up")),
-        # (
-        #     "in_basket_sampling",
-        #     "uniform",
-        #     (["apple"], ["basket"], 1, 2, "any"),
-        # ),
-        # {
-        #     "name": "any_one",
-        #     "type": "uniform",
-        #     "params": {
-        #         "object_sets": ["any"],
-        #         "receptacle_sets": ["any"],
-        #         "num_samples": [1, 1],
-        #         "orientation_sampling": "up",
-        #     },
-        #     "comment": "Sample any one object from any receptacle.",
-        # }
-    ]
+    object_samplers: List[Any] = field(default_factory=list)
+    # {"name":str, "type:str", "params":{})
+    # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
+    # NOTE: "orientation_sampling" options: "none", "up", "all"
+    # TODO: convert some special examples to yaml:
+    # (
+    #     "fridge_middle",
+    #     "uniform",
+    #     (["any"], ["fridge_middle"], 1, 30, "up"),
+    # ),
+    # Composite object sampling (e.g. apple in bowl)
+    #  - parameterized by object and receptacle sets, but inclusive of listed samplers BEFORE the composite sampler
+    # Example: sample a basket placement on a table and then place apples in the basket
+    # ("basket_sampling", "uniform", (["basket"], ["table"], 1, 1, "up")),
+    # (
+    #     "in_basket_sampling",
+    #     "uniform",
+    #     (["apple"], ["basket"], 1, 2, "any"),
+    # ),
+    # {
+    #     "name": "any_one",
+    #     "type": "uniform",
+    #     "params": {
+    #         "object_sets": ["any"],
+    #         "receptacle_sets": ["any"],
+    #         "num_samples": [1, 1],
+    #         "orientation_sampling": "up",
+    #     },
+    #     "comment": "Sample any one object from any receptacle.",
+    # }
 
     # Define the desired object target sampling (i.e., where should an existing object be moved to)
-    _C.object_target_samplers = [
-        # {"name":str, "type:str", "params":{})
-        # - uniform target sampler params:
-        # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
-        # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
-        # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
-        # {
-        #     "name": "any_one_target",
-        #     "type": "uniform",
-        #     "params": {
-        #         "object_samplers": ["any_one"],
-        #         "receptacle_sets": ["any"],
-        #         "num_samples": [1, 1],
-        #         "orientation_sampling": "up",
-        #     },
-        #     "comment": "Sample a target for the object instanced by the 'any_one' object sampler from any receptacle.",
-        # }
-    ]
+    object_target_samplers: List[Any] = field(default_factory=list)
+    # {"name":str, "type:str", "params":{})
+    # - uniform target sampler params:
+    # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
+    # NOTE: random instances are chosen from the specified, previously excecuted object sampler up to the maximum number specified in params.
+    # NOTE: previous samplers referenced must have: combined minimum samples >= minimum requested targets
+    # {
+    #     "name": "any_one_target",
+    #     "type": "uniform",
+    #     "params": {
+    #         "object_samplers": ["any_one"],
+    #         "receptacle_sets": ["any"],
+    #         "num_samples": [1, 1],
+    #         "orientation_sampling": "up",
+    #     },
+    #     "comment": "Sample a target for the object instanced by the 'any_one' object sampler from any receptacle.",
+    # }
 
     # define ArticulatedObject(AO) joint state sampling (when a scene is initialized, all samplers are run for all matching AOs)
-    _C.ao_state_samplers = [
-        # TODO: the cupboard asset needs to be modified to remove self-collisions or have collision geometry not intersecting the wall.
-        # TODO: does not support spherical joints (3 dof joints)
-        # - uniform continuous range for a single joint. params: ("ao_handle", "link name", min, max)
-        # Example:
-        #     {"name": "open_fridge_top_door",
-        #     "type": "uniform",
-        #     "params": ["fridge", "top_door", 1.5, 1.5]}
-        # - "composite" type sampler (rejection sampling of composite configuration)
-        # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
-        # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
-        # for example, should_sample_all_joints should be true for the fridge since the joints (the door) angle need to be sampled when the object
-        # is inside. But for kitchen drawers, this should be false since the joints (all drawers) should not be sampled when the object is on the
-        # countertop (only need to sample for the drawer the object is in)
-    ]
+    ao_state_samplers: List[Any] = field(default_factory=list)
+    # TODO: the cupboard asset needs to be modified to remove self-collisions or have collision geometry not intersecting the wall.
+    # TODO: does not support spherical joints (3 dof joints)
+    # - uniform continuous range for a single joint. params: ("ao_handle", "link name", min, max)
+    # Example:
+    #     {"name": "open_fridge_top_door",
+    #     "type": "uniform",
+    #     "params": ["fridge", "top_door", 1.5, 1.5]}
+    # - "composite" type sampler (rejection sampling of composite configuration)
+    # params: [{"ao_handle":str, "joint_states":[[link name, min max], ], "should_sample_all_joints:bool"}, ]
+    # If should_sample_all_joints is True (defaults to False) then all joints of an AO will be sampled and not just the one the target is in.
+    # for example, should_sample_all_joints should be true for the fridge since the joints (the door) angle need to be sampled when the object
+    # is inside. But for kitchen drawers, this should be false since the joints (all drawers) should not be sampled when the object is on the
+    # countertop (only need to sample for the drawer the object is in)
 
     # ----- marker definitions ------
     # A marker defines a point in the local space of a rigid object or articulated link which can be registered to instances in a scene and tracked
@@ -181,9 +192,14 @@ def get_config_defaults() -> CN:
     #   "link": str (if "articulated_object")
     #   "offset": vec3 []
     #  }
-    _C.markers = []
+    markers: List[Any] = field(default_factory=list)
 
-    return _C.clone()
+
+def get_config_defaults() -> "DictConfig":
+    """
+    Populates and resturns a default config for a RearrangeEpisode.
+    """
+    return OmegaConf.create(RearrangeEpisodeGeneratorConfig())  # type: ignore[call-overload]
 
 
 if __name__ == "__main__":
@@ -261,7 +277,8 @@ if __name__ == "__main__":
         assert osp.exists(
             args.config
         ), f"Provided config, '{args.config}', does not exist."
-        cfg.merge_from_file(args.config)
+        override_config = OmegaConf.load(args.config)
+        cfg = OmegaConf.merge(cfg, override_config)  # type: ignore[assignment]
 
     logger.info(f"\n\nModified Config:\n{cfg}\n\n")
 

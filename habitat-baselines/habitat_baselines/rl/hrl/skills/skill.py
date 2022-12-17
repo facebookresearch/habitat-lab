@@ -1,10 +1,15 @@
-from typing import Any, List, Tuple
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
+# This source code is licensed under the MIT license found in the
+# LICENSE file in the root directory of this source tree.
+
+from typing import Any, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
 
 from habitat.tasks.rearrange.rearrange_sensors import IsHoldingSensor
 from habitat_baselines.common.logging import baselines_logger
+from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy
 from habitat_baselines.utils.common import get_num_actions
 
@@ -29,6 +34,9 @@ class SkillPolicy(Policy):
         self._cur_skill_args: List[Any] = [
             None for _ in range(self._batch_size)
         ]
+        self._raw_skill_args: List[Optional[str]] = [
+            None for _ in range(self._batch_size)
+        ]
 
         self._grip_ac_idx = 0
         found_grip = False
@@ -42,19 +50,22 @@ class SkillPolicy(Policy):
                 break
         if not found_grip:
             raise ValueError(f"Could not find grip action in {action_space}")
+        self._stop_action_idx, _ = find_action_range(
+            action_space, "rearrange_stop"
+        )
 
     def _internal_log(self, s, observations=None):
         baselines_logger.debug(
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
         )
 
-    def _get_multi_sensor_index(self, batch_idx: int, sensor_name: str) -> int:
+    def _get_multi_sensor_index(self, batch_idx: List[int]) -> List[int]:
         """
         Gets the index to select the observation object index in `_select_obs`.
         Used when there are multiple possible goals in the scene, such as
         multiple objects to possibly rearrange.
         """
-        return self._cur_skill_args[batch_idx]
+        return [self._cur_skill_args[i] for i in batch_idx]
 
     def _keep_holding_state(
         self, full_action: torch.Tensor, observations
@@ -77,12 +88,13 @@ class SkillPolicy(Policy):
         rnn_hidden_states,
         prev_actions,
         masks,
+        batch_idx,
     ) -> Tuple[torch.BoolTensor, torch.BoolTensor]:
         """
         :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
         """
         is_skill_done = self._is_skill_done(
-            observations, rnn_hidden_states, prev_actions, masks
+            observations, rnn_hidden_states, prev_actions, masks, batch_idx
         )
         if is_skill_done.sum() > 0:
             self._internal_log(
@@ -113,7 +125,7 @@ class SkillPolicy(Policy):
     def on_enter(
         self,
         skill_arg: List[str],
-        batch_idx: int,
+        batch_idxs: List[int],
         observations,
         rnn_hidden_states,
         prev_actions,
@@ -122,17 +134,17 @@ class SkillPolicy(Policy):
         Passes in the data at the current `batch_idx`
         :returns: The new hidden state and prev_actions ONLY at the batch_idx.
         """
-        self._cur_skill_step[batch_idx] = 0
-        self._cur_skill_args[batch_idx] = self._parse_skill_arg(skill_arg)
 
-        self._internal_log(
-            f"Entering skill with arguments {skill_arg} parsed to {self._cur_skill_args[batch_idx]}",
-            observations,
-        )
+        self._cur_skill_step[batch_idxs] = 0
+        for i, batch_idx in enumerate(batch_idxs):
+            self._raw_skill_args[batch_idx] = skill_arg[i]
+            self._cur_skill_args[batch_idx] = self._parse_skill_arg(
+                skill_arg[i]
+            )
 
         return (
-            rnn_hidden_states[batch_idx] * 0.0,
-            prev_actions[batch_idx] * 0.0,
+            rnn_hidden_states[batch_idxs] * 0.0,
+            prev_actions[batch_idxs] * 0.0,
         )
 
     @classmethod
@@ -176,24 +188,25 @@ class SkillPolicy(Policy):
         """
         for k in self._config.obs_skill_inputs:
             cur_multi_sensor_index = self._get_multi_sensor_index(
-                cur_batch_idx, k
+                cur_batch_idx
             )
             if k not in obs:
                 raise ValueError(
                     f"Skill {self._config.skill_name}: Could not find {k} out of {obs.keys()}"
                 )
+
             entity_positions = obs[k].view(
-                1, -1, self._config.get("obs_skill_input_dim", 3)
+                len(cur_batch_idx),
+                -1,
+                self._config.get("obs_skill_input_dim", 3),
             )
-            obs[k] = entity_positions[:, cur_multi_sensor_index]
+            obs[k] = entity_positions[
+                torch.arange(len(cur_batch_idx)), cur_multi_sensor_index
+            ]
         return obs
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         """
         :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.

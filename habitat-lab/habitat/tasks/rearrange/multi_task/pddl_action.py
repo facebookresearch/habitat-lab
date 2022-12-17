@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
-from habitat import Config
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
@@ -22,10 +21,13 @@ from habitat.tasks.rearrange.multi_task.task_creator_utils import (
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 @dataclass
 class ActionTaskInfo:
-    task_config: Optional[Config]
+    task_config: Optional["DictConfig"]
     task: str
     task_def: str
     config_args: Dict[str, Any] = field(default_factory=dict)

@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import gzip
 import json
 import os
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from habitat.config import Config
 from habitat.core.dataset import Dataset
 from habitat.core.registry import registry
 from habitat.datasets.utils import VocabDict
 from habitat.tasks.nav.nav import NavigationGoal
 from habitat.tasks.vln.vln import InstructionData, VLNEpisode
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 
 DEFAULT_SCENE_PATH_PREFIX = "data/scene_datasets/"
 
@@ -29,12 +32,12 @@ class VLNDatasetV1(Dataset):
     instruction_vocab: VocabDict
 
     @staticmethod
-    def check_config_paths_exist(config: Config) -> bool:
+    def check_config_paths_exist(config: "DictConfig") -> bool:
         return os.path.exists(
             config.data_path.format(split=config.split)
         ) and os.path.exists(config.scenes_dir)
 
-    def __init__(self, config: Optional[Config] = None) -> None:
+    def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.episodes = []
 
         if config is None:

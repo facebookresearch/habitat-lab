@@ -1,16 +1,15 @@
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
 import os
-from typing import Any, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import attr
 import numpy as np
 from gym import Space, spaces
 
 import habitat_sim
-from habitat.config import Config
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -32,6 +31,9 @@ try:
     )
 except ImportError:
     pass
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -107,7 +109,7 @@ class InstanceImageGoalSensor(RGBSensor):
     def __init__(
         self,
         sim,
-        config: Config,
+        config: "DictConfig",
         dataset: "InstanceImageNavDatasetV1",
         *args: Any,
         **kwargs: Any,

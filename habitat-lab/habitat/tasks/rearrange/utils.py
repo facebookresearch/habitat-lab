@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Facebook, Inc. and its affiliates.
+# Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
@@ -18,6 +18,7 @@ import quaternion
 
 import habitat_sim
 from habitat.core.logging import HabitatLogger
+from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
 
 rearrange_logger = HabitatLogger(
@@ -384,3 +385,95 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
     )
     with open(filepath, "w") as text_file:
         text_file.write(gfx_keyframe_str)
+
+
+def get_robot_spawns(
+    target_position: np.ndarray,
+    rotation_perturbation_noise: float,
+    distance_threshold: int,
+    sim,
+    num_spawn_attempts: int,
+    physics_stability_steps: int,
+):
+    """
+    Attempts to place the robot near the target position, facing towards it
+
+    :param target_position: The position of the target.
+    :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
+    :param distance_threshold: The maximum distance from the target.
+    :param sim: The simulator instance.
+    :param num_spawn_attempts: The number of sample attempts for the distance threshold.
+    :param physics_stability_steps: The number of steps to perform for physics stability check.
+
+    :return: The robot's start position, rotation, and whether the placement was successful.
+    """
+
+    state = sim.capture_state()
+
+    # Try to place the robot.
+    for _ in range(num_spawn_attempts):
+        sim.set_state(state)
+        start_position = sim.pathfinder.get_random_navigable_point_near(
+            target_position, distance_threshold
+        )
+
+        relative_target = target_position - start_position
+
+        angle_to_object = get_angle_to_pos(relative_target)
+
+        target_distance = np.linalg.norm(
+            (start_position - target_position)[[0, 2]]
+        )
+
+        is_navigable = sim.pathfinder.is_navigable(start_position)
+
+        # Face the robot towards the object.
+        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
+        start_rotation = angle_to_object + rotation_noise
+
+        if target_distance > distance_threshold or not is_navigable:
+            continue
+
+        sim.robot.base_pos = start_position
+        sim.robot.base_rot = start_rotation
+
+        # Make sure the robot is not colliding with anything in this
+        # position.
+        for _ in range(physics_stability_steps):
+            sim.perform_discrete_collision_detection()
+            _, details = rearrange_collision(
+                sim,
+                False,
+                ignore_base=False,
+            )
+
+            # Only care about collisions between the robot and scene.
+            did_collide = details.robot_scene_colls != 0
+
+            if did_collide:
+                break
+
+        if not did_collide:
+            sim.set_state(state)
+            return start_position, start_rotation, False
+
+    sim.set_state(state)
+    return start_position, start_rotation, True
+
+
+def get_angle_to_pos(rel_pos: np.ndarray) -> float:
+    """
+    :param rel_pos: Relative 3D positive from the robot to the target like: `target_pos - robot_pos`.
+    :returns: Angle in radians.
+    """
+
+    forward = np.array([1.0, 0, 0])
+    rel_pos = np.array(rel_pos)
+    forward = forward[[0, 2]]
+    rel_pos = rel_pos[[0, 2]]
+
+    heading_angle = get_angle(forward, rel_pos)
+    c = np.cross(forward, rel_pos) < 0
+    if not c:
+        heading_angle = -1.0 * heading_angle
+    return heading_angle
