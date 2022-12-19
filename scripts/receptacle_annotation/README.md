@@ -30,7 +30,7 @@ First install habitat-sim and habitat-lab with support for Bullet physics as des
 - Configure a custom [NavMeshSettings](https://aihabitat.org/docs/habitat-sim/habitat_sim.nav.NavMeshSettings.html) JSON file or use the provided *clutter_object.navmeshsettings.json* (for small rearrange objects like cans).
 
 ## Annotation Process
-*NOTE: This process currently supports ONLY global receptacles. While mesh recetpacles can be added to object configs and will be parsed by the generator code, this use case has not yet been tested.*
+*NOTE: This process currently supports ONLY global receptacles. While mesh receptacles can be added to object configs and will be parsed by the generator code, this use case has not yet been tested.*
 
 ### Overview:
 1. [Generate Receptacles:](#1-generate-receptacles) Generate a NavMesh for the scene and export all islands as [.OBJ](https://en.wikipedia.org/wiki/Wavefront_.obj_file) files. (*generate_receptacle_navmesh_obj.py*)
@@ -46,7 +46,7 @@ Generates navmeshes and island .obj files for all stages or scenes in the provid
 Generates a default navmesh for a human sized entity and places all output in `navmeshes/` directory:
 ```bash
 #from root habitat-lab/ directory
-python scripts/receptacle_annotation/generate_recetacle_navmesh_objs.py --dataset path/to/my_scene.scene_dataset.json
+python scripts/receptacle_annotation/generate_receptacle_navmesh_objs.py --dataset path/to/my_scene.scene_dataset.json
 ```
 
 optionally provide a modified path for script output:
@@ -60,7 +60,7 @@ You can optionally configure a custom [NavMeshSettings](https://aihabitat.org/do
 
 ```bash
 #from root habitat-lab/ directory
-python scripts/receptacle_annotation/generate_recetacle_navmesh_objs.py --dataset path/to/my_scene.scene_dataset.json --navmesh-settings path/to/my_settings.navmesh_settings.json
+python scripts/receptacle_annotation/generate_receptacle_navmesh_objs.py --dataset path/to/my_scene.scene_dataset.json --navmesh-settings path/to/my_settings.navmesh_settings.json
 ```
 
 Example *clutter_object.navmeshsettings.json* is provided pre-configured for reasonable receptacle generation results for small clutter objects such as [YCB](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#ycb-benchmarks---object-and-model-set).
@@ -128,7 +128,7 @@ To use the new annotations in Habitat, you should copy the meshes and metadata i
 - Meshes should be copied into the scene dataset such that the relative path from the metadata correctly routes to them from the *.json* location.
 
 # The Manual Process
-*NOTE: This process currently supports ONLY axis-aligned bounding box (aabb) recetpacles.*
+*NOTE: This process currently supports ONLY axis-aligned bounding box (aabb) receptacles.*
 1. Load the object or scene in Blender
 1. Load the provided metadata export script (*blender_export_aabb_receptacle.py*)
 1. Create a new Cube mesh primitive
