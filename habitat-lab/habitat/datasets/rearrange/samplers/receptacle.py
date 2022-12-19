@@ -11,6 +11,7 @@ from typing import Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
+import re
 
 import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
@@ -30,6 +31,7 @@ class Receptacle(ABC):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
+        category: Optional[str] = None,
     ):
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -48,6 +50,7 @@ class Receptacle(ABC):
         self.up_axis = nonzero_indices[0]
         self.parent_object_handle = parent_object_handle
         self.parent_link = parent_link
+        self.category = category
 
     @property
     def is_parent_object_articulated(self):
@@ -126,6 +129,7 @@ class AABBReceptacle(Receptacle):
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
         rotation: Optional[mn.Quaternion] = None,
+        category: Optional[str] = None,
     ) -> None:
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -135,7 +139,7 @@ class AABBReceptacle(Receptacle):
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
-        super().__init__(name, parent_object_handle, parent_link, up)
+        super().__init__(name, parent_object_handle, parent_link, up, category)
         self.bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
 
@@ -363,6 +367,15 @@ def parse_receptacles_from_user_config(
             )
             receptacle_scale = ao_uniform_scaling * sub_config.get("scale")
 
+            # TODO: parse this from user config
+            category = re.sub(
+                r"_[0-9]+",
+                "",
+                parent_object_handle.split(":")[0][:-1].replace(
+                    "frl_apartment_", ""
+                ),
+            )
+
             # TODO: adding more receptacle types will require additional logic here
             receptacles.append(
                 AABBReceptacle(
@@ -375,6 +388,7 @@ def parse_receptacles_from_user_config(
                     up=up,
                     parent_object_handle=parent_object_handle,
                     parent_link=parent_link_ix,
+                    category=category,
                 )
             )
 

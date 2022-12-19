@@ -24,10 +24,11 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         )
 
     def get_spawn_recs(self, sim, episode):
+        # TODO: handle this for geometric place (currently using biased_init=True for geometric place)
         return [
             r
             for r, rec in sim.receptacles.items()
-            if episode.goal_recep_category in rec.parent_object_handle
+            if episode.goal_recep_category == rec.category
         ]
 
     def reset(self, episode: Episode):
