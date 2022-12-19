@@ -1,0 +1,1299 @@
+---
+dataset_path: "data/test_scene_dataset/floorplanner.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/configs/"
+  - "data/objects/amazon_berkeley/configs/"
+  - "data/objects/google_object_dataset/configs/"
+scene_sets:
+  -
+    name: "any"
+    included_substrings:
+      - "102815859"
+    excluded_substrings: []
+
+object_sets:
+  - 
+    name: 1box
+    included_substrings:
+      - Frozen_Scrabble_Jr # GSO|300
+    excluded_substrings: []
+  - 
+    name: action figure
+    included_substrings:
+      - Playmates_Industrial_CoSplinter_Teenage_Mutant_Ninja_Turtle_Action_Figure # GSO|664
+      - Playmates_nickelodeon_teenage_mutant_ninja_turtles_shredder # GSO|665
+    excluded_substrings: []
+  - 
+    name: action_figure
+    included_substrings:
+      - Dino_3 # GSO|212
+      - Dino_4 # GSO|213
+      - Dino_5 # GSO|214
+      - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Leonardo # GSO|522
+      - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Michelangelo # GSO|523
+      - Nickelodeon_Teenage_Mutant_Ninja_Turtles_Raphael # GSO|524
+      - Nintendo_Mario_Action_Figure # GSO|529
+      - Nintendo_Yoshi_Action_Figure # GSO|531
+      - SpiderMan_Titan_Hero_12Inch_Action_Figure_5Hnn4mtkFsP # GSO|840
+      - Teenage_Mutant_Ninja_Turtles_Rahzar_Action_Figure # GSO|879
+      - SpiderMan_Titan_Hero_12Inch_Action_Figure_oo1qph4wwiW # GSO|841
+    excluded_substrings: []
+  - 
+    name: android_figure
+    included_substrings:
+      - Android_Figure_Chrome # GSO|38
+      - Android_Figure_Orange # GSO|39
+      - Android_Figure_Panda # GSO|40
+    excluded_substrings: []
+  - 
+    name: android_lego_duplo
+    included_substrings:
+      - Android_Lego # GSO|41
+    excluded_substrings: []
+  - 
+    name: anti_slip_tape
+    included_substrings:
+      - 3M_Antislip_Surfacing_Light_Duty_White # GSO|10
+    excluded_substrings: []
+  - 
+    name: antidepressant_bottle
+    included_substrings:
+      - 5_HTP # GSO|14
+    excluded_substrings: []
+  - 
+    name: backpack
+    included_substrings:
+      - Olive_Kids_Dinosaur_Land_Lunch_Box # GSO|580
+    excluded_substrings: []
+  - 
+    name: basket
+    included_substrings:
+      - RJ_Rabbit_Easter_Basket_Blue # GSO|696
+    excluded_substrings: []
+  - 
+    name: bath_sheet
+    included_substrings:
+      - Threshold_Performance_Bath_Sheet_Sandoval_Blue_33_x_63 # GSO|896
+    excluded_substrings: []
+  - 
+    name: battery_charger
+    included_substrings:
+      - B00TS18AEA # ABO|10
+    excluded_substrings: []
+  - 
+    name: blender_jar_box
+    included_substrings:
+      - Black_and_Decker_PBJ2000_FusionBlade_Blender_Jars # GSO|92
+    excluded_substrings: []
+  - 
+    name: board_game
+    included_substrings:
+      - Clue_Board_Game_Classic_Edition # GSO|138
+      - Connect_4_Launchers # GSO|165
+      - FRACTION_FUN_n4h4qte23QR # GSO|284
+      - Frozen_Olafs_In_Trouble_PopOMatic_Game_OEu83W9T8pD # GSO|299
+    excluded_substrings: []
+  - 
+    name: board_game_box
+    included_substrings:
+      - Balderdash_Game # GSO|78
+    excluded_substrings: []
+  - 
+    name: book
+    included_substrings:
+      - B078GTTCCF # ABO|196
+      - Eat_to_Live_The_Amazing_NutrientRich_Program_for_Fast_and_Sustained_Weight_Loss_Revised_Edition_Book # GSO|222
+    excluded_substrings: []
+  - 
+    name: bottle
+    included_substrings:
+      - Pet_Dophilus_powder # GSO|654
+      - PhosphOmega # GSO|662
+      - Prostate_Optimizer # GSO|680
+    excluded_substrings: []
+  - 
+    name: bowl
+    included_substrings:
+      - B075HWDSDK # ABO|125
+      - B075HWTX4Z # ABO|132
+      - Bradshaw_International_11642_7_Qt_MP_Plastic_Bowl # GSO|98
+      - Calphalon_Kitchen_Essentials_12_Cast_Iron_Fry_Pan_Black # GSO|118
+      - Cole_Hardware_Bowl_Scirocco_YellowBlue # GSO|144
+      - Footed_Bowl_Sand # GSO|296
+      - Neat_Solutions_Character_Bib_2_pack # GSO|503
+      - Now_Designs_Bowl_Akita_Black # GSO|534
+      - Sea_to_Summit_Xl_Bowl # GSO|813
+      - Threshold_Bead_Cereal_Bowl_White # GSO|892
+      - Threshold_Porcelain_Serving_Bowl_Coupe_White # GSO|899
+    excluded_substrings: []
+  - 
+    name: box
+    included_substrings:
+      - Deskstar_Desk_Top_Hard_Drive_1_TB # GSO|208
+      - Epson_273XL_Ink_Cartridge_Magenta # GSO|265
+      - Epson_DURABrite_Ultra_786_Black_Ink_Cartridge_T786120S # GSO|266
+      - Epson_Ink_Cartridge_126_Yellow # GSO|267
+      - Epson_Ink_Cartridge_Black_200 # GSO|268
+      - Epson_LabelWorks_LC4WBN9_Tape_reel_labels_047_x_295_Roll_Black_on_White # GSO|269
+      - Epson_LabelWorks_LC5WBN9_Tape_reel_labels_071_x_295_Roll_Black_on_White # GSO|270
+      - Epson_T5803_Ink_Cartridge_Magenta_1pack # GSO|271
+      - Epson_UltraChrome_T0543_Ink_Cartridge_Magenta_1pack # GSO|272
+      - Epson_UltraChrome_T0548_Ink_Cartridge_Matte_Black_1pack # GSO|273
+      - FemDophilus # GSO|289
+      - Firefly_Clue_Board_Game # GSO|291
+      - FisherPrice_Make_A_Match_Game_Thomas_Friends # GSO|292
+      - Frozen_Olafs_In_Trouble_PopOMatic_Game # GSO|298
+      - Perricoen_MD_No_Concealer_Concealer # GSO|618
+      - Perricone_MD_AcylGlutathione_Deep_Crease_Serum # GSO|619
+      - Perricone_MD_AcylGlutathione_Eye_Lid_Serum # GSO|620
+      - Perricone_MD_Best_of_Perricone_7Piece_Collection_MEGsO6GIsyL # GSO|621
+      - Perricone_MD_Chia_Serum # GSO|623
+      - Perricone_MD_Cold_Plasma # GSO|624
+      - Perricone_MD_Cold_Plasma_Body # GSO|625
+      - Perricone_MD_Face_Finishing_Moisturizer # GSO|626
+      - Perricone_MD_Firming_Neck_Therapy_Treatment # GSO|628
+      - Perricone_MD_High_Potency_Evening_Repair # GSO|630
+      - Perricone_MD_Hypoallergenic_Firming_Eye_Cream_05_oz # GSO|631
+      - Perricone_MD_Neuropeptide_Facial_Conformer # GSO|633
+      - Perricone_MD_Neuropeptide_Firming_Moisturizer # GSO|634
+      - Perricone_MD_No_Bronzer_Bronzer # GSO|635
+      - Perricone_MD_No_Foundation_Serum # GSO|637
+      - Perricone_MD_Nutritive_Cleanser # GSO|640
+      - Perricone_MD_OVM # GSO|641
+      - Perricone_MD_Omega_3_Supplements # GSO|642
+      - Perricone_MD_Photo_Plasma # GSO|643
+      - Perricone_MD_Super_Berry_Powder_with_Acai_Supplements # GSO|646
+      - Perricone_MD_The_Cold_Plasma_Face_Eyes_Duo # GSO|647
+      - Perricone_MD_The_Crease_Cure_Duo # GSO|648
+      - Perricone_MD_The_Metabolic_Formula_Supplements # GSO|649
+      - Perricone_MD_The_Power_Treatments # GSO|650
+      - Perricone_MD_Vitamin_C_Ester_15 # GSO|651
+      - Perricone_MD_Vitamin_C_Ester_Serum # GSO|652
+      - Philips_60ct_Warm_White_LED_Smooth_Mini_String_Lights # GSO|655
+      - Philips_EcoVantage_43_W_Light_Bulbs_Natural_Light_2_pack # GSO|656
+      - Philips_Sonicare_Tooth_Brush_2_count # GSO|657
+      - Phillips_Caplets_Size_24 # GSO|658
+      - Phillips_Colon_Health_Probiotic_Capsule # GSO|659
+      - "Pok\xE9mon_Omega_Ruby_Alpha_Sapphire_Dual_Pack_Nintendo_3DS" # GSO|670
+      - Sonicare_2_Series_Toothbrush_Plaque_Control # GSO|830
+      - Sony_Acid_Music_Studio # GSO|832
+      - Sony_Downloadable_Loops # GSO|833
+      - Sorry_Sliders_Board_Game # GSO|836
+      - Supernatural_Ouija_Board_Game # GSO|854
+      - Swiss_Miss_Hot_Cocoa_KCups_Milk_Chocolate_12_count # GSO|856
+      - Tena_Pads_Heavy_Long_42_pads # GSO|880
+      - Tetris_Link_Game # GSO|881
+      - The_Coffee_Bean_Tea_Leaf_KCup_Packs_Jasmine_Green_Tea_16_count # GSO|882
+    excluded_substrings: []
+  - 
+    name: box_butter
+    included_substrings:
+      - Nestle_Nips_Hard_Candy_Peanut_Butter # GSO|513
+    excluded_substrings: []
+  - 
+    name: box_cake
+    included_substrings:
+      - Nestle_Carnation_Cinnamon_Coffeecake_Kit_1913OZ # GSO|511
+    excluded_substrings: []
+  - 
+    name: box_candy
+    included_substrings:
+      - Nestle_Skinny_Cow_Dreamy_Clusters_Candy_Dark_Chocolate_6_pack_1_oz_pouches # GSO|517
+      - Nips_Hard_Candy_Rich_Creamy_Butter_Rum_4_oz_1133_g # GSO|532
+    excluded_substrings: []
+  - 
+    name: box_chocolate
+    included_substrings:
+      - Nestl_Skinny_Cow_Heavenly_Crisp_Candy_Bar_Chocolate_Raspberry_6_pack_462_oz_total # GSO|509
+    excluded_substrings: []
+  - 
+    name: box_coffee
+    included_substrings:
+      - NESCAFE_NESCAFE_TC_STKS_DECAF_6_CT # GSO|500
+      - Nescafe_16Count_Dolce_Gusto_Cappuccino_Capsules # GSO|504
+      - Nescafe_Memento_Latte_Caramel_8_08_oz_23_g_packets_64_oz_184_g # GSO|505
+      - Nescafe_Momento_Mocha_Specialty_Coffee_Mix_8_ct # GSO|506
+    excluded_substrings: []
+  - 
+    name: box_cookie
+    included_substrings:
+      - Nestl_Crunch_Girl_Scouts_Cookie_Flavors_Caramel_Coconut_78_oz_box # GSO|508
+    excluded_substrings: []
+  - 
+    name: box_ink
+    included_substrings:
+      - Dell_Ink_Cartridge # GSO|204
+      - Dell_Ink_Cartridge_Yellow_31 # GSO|205
+      - Dell_Series_9_Color_Ink_Cartridge_MK993_High_Yield # GSO|206
+      - Office_Depot_Canon_CL211XL_Remanufactured_Ink_Cartridge_TriColor # GSO|544
+      - Office_Depot_Canon_CLI_221BK_Ink_Cartridge_Black_2946B001 # GSO|546
+      - Office_Depot_Canon_CLI_8CMY_Remanufactured_Ink_Cartridges_Color_Cyan_Magenta_Yellow_3_count # GSO|547
+      - Office_Depot_Canon_CLI_8Y_Ink_Cartridge_Yellow_0623B002 # GSO|548
+      - Office_Depot_Canon_CL_41_Remanufactured_Ink_Cartridge_TriColor # GSO|549
+      - Office_Depot_Canon_PG21XL_Remanufactured_Ink_Cartridge_Black # GSO|550
+      - Office_Depot_Canon_PGI22_Remanufactured_Ink_Cartridge_Black # GSO|551
+      - Office_Depot_Canon_PGI35_Remanufactured_Ink_Cartridge_Black # GSO|552
+      - Office_Depot_Canon_PGI5BK_Remanufactured_Ink_Cartridge_Black # GSO|553
+      - Office_Depot_Canon_PG_240XL_Ink_Cartridge_Black_5206B001 # GSO|554
+      - Office_Depot_Dell_Series_11_Remanufactured_Ink_Cartridge_Black # GSO|555
+      - Office_Depot_Dell_Series_11_Remanufactured_Ink_Cartridge_TriColor # GSO|556
+      - Office_Depot_Dell_Series_1_Remanufactured_Ink_Cartridge_Black # GSO|557
+      - Office_Depot_Dell_Series_1_Remanufactured_Ink_Cartridge_TriColor # GSO|558
+      - Office_Depot_Dell_Series_5_Remanufactured_Ink_Cartridge_Black # GSO|559
+      - Office_Depot_Dell_Series_9_Color_Ink_Ink_Cartridge_MK991_MK993 # GSO|560
+      - Office_Depot_Dell_Series_9_Ink_Cartridge_Black_MK992 # GSO|561
+      - Office_Depot_HP_2_Remanufactured_Ink_Cartridges_Color_Cyan_Magenta_Yellow_3_count # GSO|562
+      - Office_Depot_HP_564XL_Ink_Cartridge_Black_CN684WN # GSO|563
+      - Office_Depot_HP_564XL_Remanufactured_Ink_Cartridges_Color_Cyan_Magenta_Yellow_3_count # GSO|564
+      - Office_Depot_HP_61Tricolor_Ink_Cartridge # GSO|565
+      - Office_Depot_HP_71_Remanufactured_Ink_Cartridge_Black # GSO|566
+      - Office_Depot_HP_74XL75_Remanufactured_Ink_Cartridges_BlackTriColor_2_count # GSO|567
+      - Office_Depot_HP_75_Remanufactured_Ink_Cartridge_TriColor # GSO|568
+      - Office_Depot_HP_920XL_920_High_Yield_Black_and_Standard_CMY_Color_Ink_Cartridges # GSO|569
+      - Office_Depot_HP_932XL_Ink_Cartridge_Black_CN053A # GSO|570
+      - Office_Depot_HP_950XL_Ink_Cartridge_Black_CN045AN # GSO|571
+      - Office_Depot_HP_96_Remanufactured_Ink_Cartridge_Black # GSO|572
+      - Office_Depot_HP_98_Remanufactured_Ink_Cartridge_Black # GSO|573
+    excluded_substrings: []
+  - 
+    name: box_wii
+    included_substrings:
+      - Nintendo_Wii_Party_U_with_Controller_Wii_U_Game # GSO|530
+    excluded_substrings: []
+  - 
+    name: bundt_pan
+    included_substrings:
+      - Nordic_Ware_Original_Bundt_Pan # GSO|533
+    excluded_substrings: []
+  - 
+    name: butter_dish
+    included_substrings:
+      - Cole_Hardware_Butter_Dish_Square_Red # GSO|145
+    excluded_substrings: []
+  - 
+    name: c-clamp
+    included_substrings:
+      - Pony_C_Clamp_1440 # GSO|673
+    excluded_substrings: []
+  - 
+    name: cake_pan
+    included_substrings:
+      - Chef_Style_Round_Cake_Pan_9_inch_pan # GSO|129
+    excluded_substrings: []
+  - 
+    name: camera
+    included_substrings:
+      - Nikon_1_AW1_w11275mm_Lens_Silver # GSO|527
+    excluded_substrings: []
+  - 
+    name: can
+    included_substrings:
+      - Don_Franciscos_Gourmet_Coffee_Medium_Decaf_100_Colombian_12_oz_340_g # GSO|217
+    excluded_substrings: []
+  - 
+    name: can_opener
+    included_substrings:
+      - OXO_Soft_Works_Can_Opener_SnapLock # GSO|540
+    excluded_substrings: []
+  - 
+    name: candle_holder
+    included_substrings:
+      - B075HR7LD2 # ABO|121
+      - B075HX7JB2 # ABO|135
+      - B075HXHKTZ # ABO|136
+    excluded_substrings: []
+  - 
+    name: candy_bar
+    included_substrings:
+      - Nestle_Candy_19_oz_Butterfinger_Singles_116567 # GSO|510
+    excluded_substrings: []
+  - 
+    name: canister
+    included_substrings:
+      - B07M6PJ66Q # ABO|456
+      - B07M6PK8QN # ABO|459
+      - B07MBFDKYY # ABO|475
+      - B07MF1SFKD # ABO|495
+    excluded_substrings: []
+  - 
+    name: card_game_box
+    included_substrings:
+      - Apples_to_Apples_Kids_Edition # GSO|44
+    excluded_substrings: []
+  - 
+    name: carrying_case
+    included_substrings:
+      - B00F5CKWBA # ABO|6
+    excluded_substrings: []
+  - 
+    name: casserole_dish
+    included_substrings:
+      - Corningware_CW_by_Corningware_3qt_Oblong_Casserole_Dish_Blue # GSO|169
+    excluded_substrings: []
+  - 
+    name: chocolate
+    included_substrings:
+      - Nestle_Raisinets_Milk_Chocolate_35_oz_992_g # GSO|516
+    excluded_substrings: []
+  - 
+    name: chocolate_powder
+    included_substrings:
+      - Nestle_Nesquik_Chocolate_Powder_Flavored_Milk_Additive_109_Oz_Canister # GSO|512
+    excluded_substrings: []
+  - 
+    name: clock
+    included_substrings:
+      - Crosley_Alarm_Clock_Vintage_Metal # GSO|186
+    excluded_substrings: []
+  - 
+    name: coffee_beans
+    included_substrings:
+      - Nescafe_Tasters_Choice_Instant_Coffee_Decaf_House_Blend_Light_7_oz # GSO|507
+    excluded_substrings: []
+  - 
+    name: cube_storage_box
+    included_substrings:
+      - B0711RQMNF # ABO|55
+      - B071225BBS # ABO|56
+      - B073PB1H88 # ABO|77
+      - B073PB3FXD # ABO|78
+      - B073V1SPHP # ABO|79
+    excluded_substrings: []
+  - 
+    name: cup
+    included_substrings:
+      - Ecoforms_Cup_B4_SAN # GSO|223
+    excluded_substrings: []
+  - 
+    name: diaper_pack_box
+    included_substrings:
+      - Arm_Hammer_Diaper_Pail_Refills_12_Pack_MFWkmoweejt # GSO|45
+    excluded_substrings: []
+  - 
+    name: dietary_supplement
+    included_substrings:
+      - Folic_Acid # GSO|295
+      - NattoMax # GSO|502
+      - Organic_Whey_Protein_Unflavored # GSO|593
+      - Organic_Whey_Protein_Vanilla # GSO|594
+      - Perricone_MD_Health_Weight_Management_Supplements # GSO|629
+      - QAbsorb_CoQ10 # GSO|688
+      - QAbsorb_CoQ10_53iUqjWjW3O # GSO|689
+      - QHPomegranate # GSO|690
+      - Quercetin_500 # GSO|691
+      - Sleep_Optimizer # GSO|827
+      - Theanine # GSO|884
+    excluded_substrings: []
+  - 
+    name: dietary_supplement_bottle
+    included_substrings:
+      - AllergenFree_JarroDophilus # GSO|37
+      - Bifidus_Balance_FOS # GSO|82
+      - Blackcurrant_Lutein # GSO|94
+      - Borage_GLA240Gamma_Tocopherol # GSO|97
+    excluded_substrings: []
+  - 
+    name: dietary_supplement_box
+    included_substrings:
+      - Black_Elderberry_Syrup_54_oz_Gaia_Herbs # GSO|89
+    excluded_substrings: []
+  - 
+    name: dishtowel
+    included_substrings:
+      - Cole_Hardware_Dishtowel_Blue # GSO|147
+      - Cole_Hardware_Dishtowel_BlueWhite # GSO|148
+      - Cole_Hardware_Dishtowel_Multicolors # GSO|149
+      - Cole_Hardware_Dishtowel_Red # GSO|150
+      - Cole_Hardware_Dishtowel_Stripe # GSO|151
+      - Envision_Home_Dish_Drying_Mat_Red_6_x_18 # GSO|264
+      - Tag_Dishtowel_18_x_26 # GSO|873
+      - Tag_Dishtowel_Basket_Weave_Red_18_x_26 # GSO|874
+      - Tag_Dishtowel_Dobby_Stripe_Blue_18_x_26 # GSO|875
+      - Tag_Dishtowel_Green # GSO|876
+      - Tag_Dishtowel_Waffle_Gray_Checks_18_x_26 # GSO|877
+    excluded_substrings: []
+  - 
+    name: doll
+    included_substrings:
+      - 3D_Dollhouse_Happy_Brother # GSO|3
+    excluded_substrings: []
+  - 
+    name: duct_tape
+    included_substrings:
+      - Shurtape_30_Day_Removal_UV_Delct_15 # GSO|822
+      - Shurtape_Gaffers_Tape_Silver_2_x_60_yd # GSO|823
+      - Shurtape_Tape_Purple_CP28 # GSO|824
+    excluded_substrings: []
+  - 
+    name: dumbbell
+    included_substrings:
+      - B00R3MZITG # ABO|9
+      - B01LR5R18K # ABO|38
+      - B01LR5RBZ8 # ABO|39
+      - B01LR5RG08 # ABO|40
+      - B01LR5RK0Y # ABO|41
+      - B01LR5RO5U # ABO|42
+      - B01LR5RSG0 # ABO|43
+      - B01LR5RVYE # ABO|44
+      - B01LR5S1WA # ABO|45
+      - B01LR5S6HK # ABO|46
+      - B01LR5SAIA # ABO|47
+      - B01LR5SEKE # ABO|48
+      - B01LR5SIRI # ABO|49
+      - B071WSFSGC # ABO|57
+      - B074DYLY5V # ABO|82
+      - B074DZ5YL9 # ABO|83
+      - B074DZ65J3 # ABO|84
+      - B074DZ6NGS # ABO|85
+      - B074DZ6NJB # ABO|86
+      - B074DZFKH6 # ABO|87
+      - B074DZGRMG # ABO|88
+      - B074DZHYS6 # ABO|89
+      - B074DZNJ3T # ABO|90
+    excluded_substrings: []
+  - 
+    name: dustpan_and_brush
+    included_substrings:
+      - Ocedar_Snap_On_Dust_Pan_And_Brush_1_ct # GSO|543
+    excluded_substrings: []
+  - 
+    name: easter_basket
+    included_substrings:
+      - Spritz_Easter_Basket_Plastic_Teal # GSO|842
+    excluded_substrings: []
+  - 
+    name: electronic_cable
+    included_substrings:
+      - Shaxon_100_Molded_Category_6_RJ45RJ45_Shielded_Patch_Cord_White # GSO|821
+    excluded_substrings: []
+  - 
+    name: file_sorter
+    included_substrings:
+      - Poppin_File_Sorter_Blue # GSO|674
+      - Poppin_File_Sorter_Pink # GSO|675
+    excluded_substrings: []
+  - 
+    name: folder
+    included_substrings:
+      - B01B254OVC # ABO|21
+    excluded_substrings: []
+  - 
+    name: fruit_snack_box
+    included_substrings:
+      - Black_Forest_Fruit_Snacks_28_Pack_Grape # GSO|90
+      - Black_Forest_Fruit_Snacks_Juicy_Filled_Centers_10_pouches_9_oz_total # GSO|91
+    excluded_substrings: []
+  - 
+    name: hammer
+    included_substrings:
+      - Cole_Hardware_Hammer_Black # GSO|155
+    excluded_substrings: []
+  - 
+    name: hand_bell
+    included_substrings:
+      - The_Scooper_Hooper # GSO|883
+    excluded_substrings: []
+  - 
+    name: handbag
+    included_substrings:
+      - B00DUGZFA6 # ABO|4
+      - B00DUGZFLK # ABO|5
+    excluded_substrings: []
+  - 
+    name: handheld_video_game_console
+    included_substrings:
+      - BlackBlack_Nintendo_3DSXL # GSO|86
+      - BlueBlack_Nintendo_3DSXL # GSO|95
+    excluded_substrings: []
+  - 
+    name: hard_drive
+    included_substrings:
+      - Seagate_1TB_Backup_Plus_portable_drive_Blue # GSO|814
+      - Seagate_1TB_Backup_Plus_portable_drive_Silver # GSO|815
+      - Seagate_1TB_Backup_Plus_portable_drive_for_Mac # GSO|816
+      - Seagate_1TB_Wireless_Plus_mobile_device_storage # GSO|817
+      - Seagate_Archive_HDD_8_TB_Internal_hard_drive_SATA_6Gbs_35_ST8000AS0002 # GSO|819
+    excluded_substrings: []
+  - 
+    name: hat
+    included_substrings:
+      - DPC_Handmade_Hat_Brown # GSO|196
+      - DPC_tropical_Trends_Hat # GSO|198
+      - Object_REmvBDJStub # GSO|542
+    excluded_substrings: []
+  - 
+    name: helmet
+    included_substrings:
+      - Ortho_Forward_Facing_CkAW6rL25xH # GSO|597
+    excluded_substrings: []
+  - 
+    name: herring_fillets
+    included_substrings:
+      - Polar_Herring_Fillets_Smoked_Peppered_705_oz_total # GSO|672
+    excluded_substrings: []
+  - 
+    name: jar
+    included_substrings:
+      - B07MF1NJ7Q # ABO|485
+    excluded_substrings: []
+  - 
+    name: jenga
+    included_substrings:
+      - 2_of_Jenga_Classic_Game # GSO|1
+    excluded_substrings: []
+  - 
+    name: jewelry_box
+    included_substrings:
+      - B075HWBL9Q # ABO|123
+      - B075HWDS7Y # ABO|124
+      - B075HXHKVF # ABO|137
+      - B075HXQJT1 # ABO|143
+    excluded_substrings: []
+  - 
+    name: lamp
+    included_substrings:
+      - B075X2LLWF # ABO|164
+      - B07HK3PNSK # ABO|317
+      - B07HK83QRB # ABO|321
+    excluded_substrings: []
+  - 
+    name: laptop_cover
+    included_substrings:
+      - B00JM5TTWO # ABO|7
+      - B013TGFGWS # ABO|15
+    excluded_substrings: []
+  - 
+    name: laptop_stand
+    included_substrings:
+      - B00WRDRRWW # ABO|11
+      - B00WRDS0AU # ABO|12
+      - B00WRDS8H0 # ABO|13
+      - B01MZ81SKB # ABO|51
+    excluded_substrings: []
+  - 
+    name: laundry_box
+    included_substrings:
+      - B07F3W4QWM # ABO|308
+    excluded_substrings: []
+  - 
+    name: lime_squeezer
+    included_substrings:
+      - Focus_8643_Lime_Squeezer_10x35x188_Enamelled_Aluminum_Light # GSO|294
+    excluded_substrings: []
+  - 
+    name: lunch_bag
+    included_substrings:
+      - Now_Designs_Snack_Bags_Bicycle_2_count # GSO|536
+    excluded_substrings: []
+  - 
+    name: lunch_box
+    included_substrings:
+      - Olive_Kids_Birdie_Lunch_Box # GSO|574
+      - Paul_Frank_Dot_Lunch_Box # GSO|612
+    excluded_substrings: []
+  - 
+    name: medicine_bottle
+    included_substrings:
+      - Beta_Glucan # GSO|80
+    excluded_substrings: []
+  - 
+    name: milk_frother_cup
+    included_substrings:
+      - Aroma_Stainless_Steel_Milk_Frother_2_Cup # GSO|46
+    excluded_substrings: []
+  - 
+    name: monitor_stand
+    included_substrings:
+      - B017DORX3M # ABO|18
+      - B017DOS5C0 # ABO|19
+    excluded_substrings: []
+  - 
+    name: motherboard_box
+    included_substrings:
+      - Asus_M5A78LMUSB3_Motherboard_Micro_ATX_Socket_AM3 # GSO|48
+      - Asus_M5A99FX_PRO_R20_Motherboard_ATX_Socket_AM3 # GSO|49
+      - Asus_Sabertooth_990FX_20_Motherboard_ATX_Socket_AM3 # GSO|50
+      - Asus_Sabertooth_Z97_MARK_1_Motherboard_ATX_LGA1150_Socket # GSO|51
+      - Asus_X99Deluxe_Motherboard_ATX_LGA2011v3_Socket # GSO|52
+      - Asus_Z87PRO_Motherboard_ATX_LGA1150_Socket # GSO|53
+      - Asus_Z97AR_LGA_1150_Intel_ATX_Motherboard # GSO|54
+      - Asus_Z97IPLUS_Motherboard_Mini_ITX_LGA1150_Socket # GSO|55
+    excluded_substrings: []
+  - 
+    name: mouse_pad
+    included_substrings:
+      - B003QTD4Y6 # ABO|1
+      - B06X3W3YQD # ABO|53
+      - B06X6H2WF7 # ABO|54
+    excluded_substrings: []
+  - 
+    name: movie_dvd_box
+    included_substrings:
+      - Beyonc_Life_is_But_a_Dream_DVD # GSO|81
+      - Blue_Jasmine_Includes_Digital_Copy_UltraViolet_DVD # GSO|96
+    excluded_substrings: []
+  - 
+    name: mug
+    included_substrings:
+      - ACE_Coffee_Mug_Kristen_16_oz_cup # GSO|16
+      - Cole_Hardware_Mug_Classic_Blue # GSO|157
+      - Threshold_Porcelain_Coffee_Mug_All_Over_Bead_White # GSO|897
+    excluded_substrings: []
+  - 
+    name: multiport_hub
+    included_substrings:
+      - B076YFLYFR # ABO|180
+      - B076YFNTRS # ABO|181
+      - B076YFNTSN # ABO|182
+      - B076YJ1XZS # ABO|183
+      - B076YJFGCN # ABO|184
+      - B076YJFGCW # ABO|185
+      - B076YKYHCB # ABO|186
+      - B076YL2CTT # ABO|187
+      - B076YLWTPR # ABO|188
+      - B076YNV36K # ABO|189
+      - B076YRSP32 # ABO|190
+      - B076YRSWGH # ABO|191
+      - B076YRSWGW # ABO|192
+      - B076YRSWH2 # ABO|193
+      - B076YRSWH3 # ABO|194
+      - B076YS4SJT # ABO|195
+    excluded_substrings: []
+  - 
+    name: nintendo_switch
+    included_substrings:
+      - Nintendo_2DS_Crimson_Red # GSO|528
+    excluded_substrings: []
+  - 
+    name: notepad
+    included_substrings:
+      - B01DN8TB5U # ABO|22
+    excluded_substrings: []
+  - 
+    name: object_box
+    included_substrings:
+      - Brother_Ink_Cartridge_Magenta_LC75M # GSO|101
+      - Brother_LC_1053PKS_Ink_Cartridge_CyanMagentaYellow_1pack # GSO|102
+      - Canon_225226_Ink_Cartridges_BlackColor_Cyan_Magenta_Yellow_6_count # GSO|119
+      - Canon_Ink_Cartridge_Green_6 # GSO|120
+      - Canon_Pixma_Chromalife_100_Magenta_8 # GSO|121
+      - Canon_Pixma_Ink_Cartridge_251_M # GSO|122
+      - Canon_Pixma_Ink_Cartridge_8 # GSO|123
+      - Canon_Pixma_Ink_Cartridge_8_Green # GSO|124
+      - Canon_Pixma_Ink_Cartridge_8_Red # GSO|125
+      - Canon_Pixma_Ink_Cartridge_Cyan_251 # GSO|126
+      - Cootie_Game_tDhURNbfU5J # GSO|167
+      - Crayola_Bonus_64_Crayons # GSO|172
+      - Crayola_Crayons_120_crayons # GSO|173
+      - Crayola_Crayons_24_count # GSO|174
+      - Crayola_Crayons_Washable_24_crayons # GSO|175
+      - Crayola_Model_Magic_Modeling_Material_Single_Packs_6_pack_05_oz_packs # GSO|176
+      - Crayola_Model_Magic_Modeling_Material_White_3_oz # GSO|177
+      - Crayola_Washable_Fingerpaint_Red_Blue_Yellow_3_count_8_fl_oz_bottes_each # GSO|178
+      - Crayola_Washable_Sidewalk_Chalk_16_pack # GSO|179
+      - Crayola_Washable_Sidewalk_Chalk_16_pack_wDZECiw7J6s # GSO|180
+      - Crunch_Girl_Scouts_Candy_Bars_Peanut_Butter_Creme_78_oz_box # GSO|187
+    excluded_substrings: []
+  - 
+    name: pass the popcorn
+    included_substrings:
+      - Pass_The_Popcorn_Movie_Guessing_Game # GSO|611
+    excluded_substrings: []
+  - 
+    name: pencil case
+    included_substrings:
+      - Pinwheel_Pencil_Case # GSO|663
+    excluded_substrings: []
+  - 
+    name: pencil_case
+    included_substrings:
+      - Olive_Kids_Butterfly_Garden_Pencil_Case # GSO|579
+      - Olive_Kids_Paisley_Pencil_Case # GSO|588
+      - Olive_Kids_Robots_Pencil_Case # GSO|589
+    excluded_substrings: []
+  - 
+    name: pencil_pouch
+    included_substrings:
+      - Big_Dot_Aqua_Pencil_Case # GSO|83
+      - Big_Dot_Pink_Pencil_Case # GSO|84
+    excluded_substrings: []
+  - 
+    name: peppermint
+    included_substrings:
+      - Orbit_Bubblemint_Mini_Bottle_6_ct # GSO|592
+    excluded_substrings: []
+  - 
+    name: pepsi_can_pack
+    included_substrings:
+      - Pepsi_Caffeine_Free_Diet_12_CT # GSO|614
+      - Pepsi_Cola_Wild_Cherry_Diet_12_12_fl_oz_355_ml_cans_144_fl_oz_426_lt # GSO|616
+    excluded_substrings: []
+  - 
+    name: phone_stand
+    included_substrings:
+      - B01IJ5A0PC # ABO|32
+      - B01IJ5A2UA # ABO|33
+    excluded_substrings: []
+  - 
+    name: pill_bottle
+    included_substrings:
+      - CoQ10_wSSVoxVppVD # GSO|141
+    excluded_substrings: []
+  - 
+    name: pillow
+    included_substrings:
+      - B07JKJKDKD # ABO|335
+      - B07JKJKDKM # ABO|336
+      - B07JKJKDLD # ABO|337
+      - B07JKJKH43 # ABO|338
+      - B07JKJKH4H # ABO|339
+      - B07JKJKJCC # ABO|340
+      - B07JKJP5N2 # ABO|341
+      - B07JKJP5N5 # ABO|342
+      - B07JKJP5N6 # ABO|343
+      - B07JKJP7Q9 # ABO|344
+      - B07JKJP7QG # ABO|345
+      - B07JKJP8MD # ABO|346
+      - B07JKJP8V6 # ABO|347
+      - B07JKJSHMT # ABO|348
+      - B07JKJSJ8G # ABO|349
+      - B07JKJSJ9F # ABO|350
+      - B07JKJSKMF # ABO|351
+      - B07JKJSLWM # ABO|352
+      - B07JKJSLXQ # ABO|353
+      - B07JKJSLXR # ABO|354
+      - B07JKJSM2S # ABO|355
+      - B07JKJSQ4B # ABO|356
+      - B07JKJSRQG # ABO|357
+      - B07JKJSTL1 # ABO|358
+      - B07JKJSTL4 # ABO|359
+      - B07JKJSTVJ # ABO|360
+      - B07JKJSTWH # ABO|361
+      - B07JKJSTYT # ABO|362
+      - B07JL5PLPD # ABO|363
+      - B07JL5PLPK # ABO|364
+      - B07JL5PNGZ # ABO|365
+      - B07JL5PNHK # ABO|366
+      - B07JL5PNHT # ABO|367
+      - B07JL5PPBP # ABO|368
+      - B07JL5PRQM # ABO|369
+      - B07JL5PRR1 # ABO|370
+      - B07JL5PRR9 # ABO|371
+      - B07JL5PT18 # ABO|372
+      - B07JL5PT1J # ABO|373
+      - B07JL5PT64 # ABO|374
+      - B07JL5PYZH # ABO|375
+      - B07JL5PZ1S # ABO|376
+      - B07JL5Q123 # ABO|377
+      - B07JL5Q12D # ABO|378
+      - B07JL5Q1Z6 # ABO|379
+      - B07JL5Q2XQ # ABO|380
+      - B07JL5Q3RL # ABO|381
+      - B07JL5Q77N # ABO|382
+      - B07JL5Q7FC # ABO|383
+      - B07JLGBY2C # ABO|385
+      - B07JLGBYXF # ABO|386
+      - B07JLGC56Z # ABO|387
+      - B07JLGC7XK # ABO|388
+      - B07JLGC7XN # ABO|389
+      - B07JLGC7Y8 # ABO|390
+      - B07JLGC7YC # ABO|391
+      - B07JLGCKJJ # ABO|392
+      - B07JLGCKKJ # ABO|393
+      - B07JLGCKP6 # ABO|394
+      - B07JLGCKPV # ABO|395
+      - B07JLGCLV3 # ABO|396
+      - B07JLSNT7M # ABO|397
+      - B07JLSP8JF # ABO|398
+      - B07JLSP8TR # ABO|399
+      - B07JLSP8VB # ABO|400
+      - B07JLSP8VB # ABO|400
+      - B07JLSSTN1 # ABO|401
+      - B07JLSSW6K # ABO|402
+      - B07JLSSWCP # ABO|403
+      - B07JLSSWLL # ABO|404
+      - B07JLSSWLN # ABO|405
+      - B07JLSSWM6 # ABO|406
+      - B07JLSSYT5 # ABO|407
+      - B07JLSSYTG # ABO|408
+      - B07JLST2G7 # ABO|409
+      - B07JLST325 # ABO|410
+      - B07JLZ7QC7 # ABO|411
+      - B07JLZ7QDP # ABO|412
+      - B07JLZC567 # ABO|413
+      - B07JLZC56G # ABO|414
+      - B07JLZC571 # ABO|415
+      - B07JLZC7JS # ABO|416
+      - B07JLZJ93B # ABO|417
+      - B07JLZJ93D # ABO|418
+      - B07JLZJ94P # ABO|419
+      - B07JLZJ94R # ABO|420
+      - B07JLZJ9JM # ABO|421
+      - B07JLZJFVL # ABO|422
+      - B07JLZJFWW # ABO|423
+      - B07JLZJG2V # ABO|424
+      - B07JM1QSL6 # ABO|427
+      - B07JM1QSLX # ABO|428
+      - B07JM1QT5Y # ABO|429
+      - B07JM1QT63 # ABO|430
+      - B07JM1XVHS # ABO|431
+      - B07JM1ZP24 # ABO|432
+      - B07JPG7K3N # ABO|434
+      - B07JQ47NHZ # ABO|435
+      - B07JQX8DV8 # ABO|438
+      - B07JQX8S3L # ABO|441
+      - B07JQYHQ9D # ABO|443
+      - B07JQZMSF1 # ABO|445
+      - B07JXDPKBQ # ABO|446
+      - B07JXDPKBR # ABO|447
+      - B07JXDPKGC # ABO|448
+      - B07JXF7251 # ABO|449
+      - B07JY4GZW8 # ABO|451
+      - B07M6PHSCP # ABO|453
+      - B07M6PJ4LX # ABO|454
+      - B07M6PJ4MC # ABO|455
+      - B07M6PJ67T # ABO|457
+      - B07M6PK8QS # ABO|460
+      - B07M6PKCPF # ABO|461
+      - B07MBF93XS # ABO|463
+      - B07MBFDQPK # ABO|477
+      - B07MBFDS2R # ABO|478
+      - B07MBFDX67 # ABO|479
+      - B07MBFF1K5 # ABO|480
+      - B07MBFGB46 # ABO|483
+      - B07MBFGB51 # ABO|484
+      - B07MF1RKS9 # ABO|486
+      - B07MF1RR14 # ABO|491
+      - B07MF1S25C # ABO|493
+      - B07MF1SVV1 # ABO|499
+    excluded_substrings: []
+  - 
+    name: pitcher_base
+    included_substrings:
+      - Threshold_Porcelain_Pitcher_White # GSO|898
+    excluded_substrings: []
+  - 
+    name: plant_container
+    included_substrings:
+      - Central_Garden_Flower_Pot_Goo_425 # GSO|128
+      - Cole_Hardware_Deep_Bowl_Good_Earth_1075 # GSO|146
+      - Cole_Hardware_Electric_Pot_Assortment_55 # GSO|152
+      - Cole_Hardware_Electric_Pot_Cabana_55 # GSO|153
+      - Cole_Hardware_Flower_Pot_1025 # GSO|154
+      - Cole_Hardware_Orchid_Pot_85 # GSO|158
+      - Ecoforms_Plant_Container_S14Turquoise # GSO|238
+      - Ecoforms_Plant_Container_S24NATURAL # GSO|239
+      - Ecoforms_Plant_Container_S24Turquoise # GSO|240
+      - Ecoforms_Plant_Pot_GP9AAvocado # GSO|247
+      - Ecoforms_Plant_Pot_GP9_SAND # GSO|248
+      - Sapota_Threshold_4_Ceramic_Round_Planter_Red # GSO|804
+    excluded_substrings: []
+  - 
+    name: plant_saucer
+    included_substrings:
+      - Cole_Hardware_Plant_Saucer_Brown_125 # GSO|159
+      - Cole_Hardware_Plant_Saucer_Glazed_9 # GSO|160
+      - Cole_Hardware_Saucer_Electric # GSO|161
+      - Cole_Hardware_Saucer_Glazed_6 # GSO|162
+      - Ecoforms_Plant_Plate_S11Turquoise # GSO|246
+      - Ecoforms_Plant_Saucer_S14MOCHA # GSO|249
+      - Ecoforms_Plant_Saucer_S14NATURAL # GSO|250
+      - Ecoforms_Plant_Saucer_S17MOCHA # GSO|251
+      - Ecoforms_Plant_Saucer_SQ1HARVEST # GSO|253
+      - Ecoforms_Quadra_Saucer_SQ1_Avocado # GSO|260
+    excluded_substrings: []
+  - 
+    name: plate
+    included_substrings:
+      - Threshold_Bistro_Ceramic_Dinner_Plate_Ruby_Ring # GSO|893
+      - Threshold_Dinner_Plate_Square_Rim_White_Porcelain # GSO|894
+    excluded_substrings: []
+  - 
+    name: puzzle_game
+    included_substrings:
+      - TWISTED_PUZZLE # GSO|869
+    excluded_substrings: []
+  - 
+    name: ramekin
+    included_substrings:
+      - 45oz_RAMEKIN_ASST_DEEP_COLORS # GSO|12
+      - BIA_Porcelain_Ramekin_With_Glazed_Rim_35_45_oz_cup # GSO|69
+    excluded_substrings: []
+  - 
+    name: router_box
+    included_substrings:
+      - Asus_80211ac_DualBand_Gigabit_Wireless_Router_RTAC68R # GSO|47
+    excluded_substrings: []
+  - 
+    name: scissors
+    included_substrings:
+      - Diamond_Visions_Scissors_Red # GSO|209
+    excluded_substrings: []
+  - 
+    name: screwdriver
+    included_substrings:
+      - Craftsman_Grip_Screwdriver_Phillips_Cushion # GSO|171
+    excluded_substrings: []
+  - 
+    name: shoe
+    included_substrings:
+      - 11pro_SL_TRX_FG # GSO|0
+      - AMBERLIGHT_UP_W # GSO|19
+      - ASICS_GEL1140V_WhiteBlackSilver # GSO|20
+      - ASICS_GEL1140V_WhiteRoyalSilver # GSO|21
+      - ASICS_GELAce_Pro_Pearl_WhitePink # GSO|22
+      - ASICS_GELBlur33_20_GS_BlackWhiteSafety_Orange # GSO|23
+      - ASICS_GELBlur33_20_GS_Flash_YellowHot_PunchSilver # GSO|24
+      - ASICS_GELChallenger_9_Royal_BlueWhiteBlack # GSO|25
+      - ASICS_GELDirt_Dog_4_SunFlameBlack # GSO|26
+      - ASICS_GELLinksmaster_WhiteCoffeeSand # GSO|27
+      - ASICS_GELLinksmaster_WhiteRasberryGunmetal # GSO|28
+      - ASICS_GELLinksmaster_WhiteSilverCarolina_Blue # GSO|29
+      - ASICS_GELResolution_5_Flash_YellowBlackSilver # GSO|30
+      - ASICS_GELTour_Lyte_WhiteOrchidSilver # GSO|31
+      - ASICS_HyperRocketgirl_SP_5_WhiteMalibu_BlueBlack # GSO|32
+      - Adrenaline_GTS_13_Color_DrkDenimWhtBachlorBttnSlvr_Size_50_yfK40TNjq0V # GSO|34
+      - Adrenaline_GTS_13_Color_WhtObsdianBlckOlmpcSlvr_Size_70 # GSO|35
+      - Azure_Snake_Tieks_Leather_Snake_Print_Ballet_Flats # GSO|58
+      - CLIMACOOL_BOAT_BREEZE_IE6CyqSaDwN # GSO|112
+      - California_Navy_Tieks_Italian_Leather_Ballet_Flats # GSO|117
+      - Cascadia_8_Color_AquariusHibscsBearingSeaBlk_Size_50 # GSO|127
+      - Chelsea_BlkHeelPMP_DwxLtZNxLZZ # GSO|131
+      - Chelsea_lo_fl_rdheel_zAQrnhlEfw8 # GSO|133
+      - ClimaCool_Aerate_2_W_Wide # GSO|135
+      - Colton_Wntr_Chukka_y4jO0I8JQFW # GSO|164
+      - Copperhead_Snake_Tieks_Brown_Snake_Print_Ballet_Flats # GSO|168
+      - Court_Attitude # GSO|170
+      - Crazy_8 # GSO|181
+      - Crazy_Shadow_2 # GSO|182
+      - Crazy_Shadow_2_oW4Jd10HFFr # GSO|183
+      - Cream_Tieks_Italian_Leather_Ballet_Flats # GSO|184
+      - D_ROSE_45 # GSO|200
+      - D_ROSE_773_II_Kqclsph05pE # GSO|201
+      - D_ROSE_773_II_hvInJwJ5HUD # GSO|202
+      - D_ROSE_ENGLEWOOD_II # GSO|203
+      - ENFR_MID_ENFORCER # GSO|221
+      - F10_TRX_FG_ssscuo9tGxb # GSO|274
+      - F10_TRX_TF_rH7tmKCdUJq # GSO|275
+      - F5_TRX_FG # GSO|276
+      - FYW_ALTERNATION # GSO|287
+      - FYW_DIVISION # GSO|288
+      - PHEEHAN_RUN # GSO|604
+      - Predator_LZ_TRX_FG # GSO|677
+      - PureCadence_2_Color_HiRskRedNghtlfeSlvrBlckWht_Size_70 # GSO|682
+      - PureCadence_2_Color_TleBluLmePnchSlvMoodIndgWh_Size_50_EEzAfcBfHHO # GSO|683
+      - PureConnect_2_Color_AnthrcteKnckoutPnkGrnGecko_Size_50 # GSO|684
+      - PureConnect_2_Color_BlckBrllntBluNghtlfeAnthrct_Size_70 # GSO|685
+      - PureConnect_2_Color_FernNightlifeSilverBlack_Size_70_5w0BYsiogeV # GSO|686
+      - PureFlow_2_Color_RylPurHibiscusBlkSlvrWht_Size_50 # GSO|687
+      - REEF_BANTU # GSO|692
+      - REEF_BRAIDED_CUSHION # GSO|693
+      - REEF_ZENFUN # GSO|694
+      - Ravenna_4_Color_WhtOlyBluBlkShkOrngSlvRdO_Size_70 # GSO|699
+      - Santa_Cruz_Mens_G7kQXK7cIky # GSO|800
+      - Santa_Cruz_Mens_YmsMDkFf11Z # GSO|801
+      - Santa_Cruz_Mens_umxTczr1Ygg # GSO|802
+      - Santa_Cruz_Mens_vnbiTDDt5xH # GSO|803
+      - Sienna_Brown_Croc_Tieks_Patent_Leather_Crocodile_Print_Ballet_Flats # GSO|825
+      - Sperry_TopSider_pSUFPWQXPp3 # GSO|838
+      - Sperry_TopSider_tNB9t6YBUf3 # GSO|839
+      - Starstruck_Tieks_Glittery_Gold_Italian_Leather_Ballet_Flats # GSO|847
+      - TERREX_FAST_R # GSO|861
+      - TERREX_FAST_X_GTX # GSO|862
+      - TOP_TEN_HI # GSO|864
+      - TOP_TEN_HI_60KlbRbdoJA # GSO|865
+      - TROCHILUS_BOOST # GSO|867
+      - TZX_Runner # GSO|872
+    excluded_substrings: []
+  - 
+    name: skillet
+    included_substrings:
+      - Chefmate_8_Frypan # GSO|130
+    excluded_substrings: []
+  - 
+    name: soap_dish
+    included_substrings:
+      - Threshold_Bamboo_Ceramic_Soap_Dish # GSO|890
+    excluded_substrings: []
+  - 
+    name: soap_dispenser
+    included_substrings:
+      - B07FFSKHK4 # ABO|310
+    excluded_substrings: []
+  - 
+    name: spatula
+    included_substrings:
+      - OXO_Cookie_Spatula # GSO|539
+    excluded_substrings: []
+  - 
+    name: sponge
+    included_substrings:
+      - Big_O_Sponges_Assorted_Cellulose_12_pack # GSO|85
+    excluded_substrings: []
+  - 
+    name: stuffed_toy
+    included_substrings:
+      - Elephant # GSO|262
+      - Ortho_Forward_Facing # GSO|595
+      - Ortho_Forward_Facing_3Q6J2oKJD92 # GSO|596
+      - Ortho_Forward_Facing_QCaor9ImJ2G # GSO|598
+      - Racoon # GSO|698
+      - Shark # GSO|820
+      - Sootheze_Cold_Therapy_Elephant # GSO|834
+      - Sootheze_Toasty_Orca # GSO|835
+      - Squirrel # GSO|843
+    excluded_substrings: []
+  - 
+    name: stuffed_toy_dragon
+    included_substrings:
+      - Animal_Planet_Foam_2Headed_Dragon # GSO|43
+    excluded_substrings: []
+  - 
+    name: sushi_mat
+    included_substrings:
+      - Sushi_Mat # GSO|855
+    excluded_substrings: []
+  - 
+    name: tape
+    included_substrings:
+      - Cole_Hardware_Antislip_Surfacing_Material_White # GSO|142
+      - Cole_Hardware_Antislip_Surfacing_White_2_x_60 # GSO|143
+    excluded_substrings: []
+  - 
+    name: toothbrush_holder
+    included_substrings:
+      - Circo_Fish_Toothbrush_Holder_14995988 # GSO|134
+    excluded_substrings: []
+  - 
+    name: towel
+    included_substrings:
+      - Provence_Bath_Towel_Royal_Blue # GSO|681
+      - Threshold_Hand_Towel_Blue_Medallion_16_x_27 # GSO|895
+    excluded_substrings: []
+  - 
+    name: toy
+    included_substrings:
+      - FIRE_ENGINE # GSO|280
+      - FIRE_TRUCK # GSO|281
+      - Fisher_price_Classic_Toys_Buzzy_Bee # GSO|293
+      - Fruity_Friends # GSO|301
+    excluded_substrings: []
+  - 
+    name: toy pineapple
+    included_substrings:
+      - PINEAPPLE_MARACA_6_PCSSET # GSO|605
+    excluded_substrings: []
+  - 
+    name: toy_airplane
+    included_substrings:
+      - Air_Hogs_Wind_Flyers_Set_Airplane_Red # GSO|36
+      - TURBOPROP_AIRPLANE_WITH_PILOT # GSO|868
+    excluded_substrings: []
+  - 
+    name: toy_animal
+    included_substrings:
+      - BUNNY_RACER # GSO|75
+      - Breyer_Horse_Of_The_Year_2015 # GSO|99
+      - CHICKEN_RACER # GSO|108
+      - DANCING_ALLIGATOR # GSO|189
+      - DANCING_ALLIGATOR_zoWBjc0jbTs # GSO|190
+      - Schleich_African_Black_Rhino # GSO|805
+      - Schleich_Allosaurus # GSO|806
+      - Schleich_Bald_Eagle # GSO|807
+      - Schleich_Hereford_Bull # GSO|808
+      - Schleich_Lion_Action_Figure # GSO|809
+      - Schleich_S_Bayala_Unicorn_70432 # GSO|810
+      - Schleich_Spinosaurus_Action_Figure # GSO|811
+      - Schleich_Therizinosaurus_ln9cruulPqc # GSO|812
+    excluded_substrings: []
+  - 
+    name: toy_cactus
+    included_substrings:
+      - BALANCING_CACTUS # GSO|62
+    excluded_substrings: []
+  - 
+    name: toy_construction_set
+    included_substrings:
+      - CREATIVE_BLOCKS_35_MM # GSO|116
+    excluded_substrings: []
+  - 
+    name: toy_food
+    included_substrings:
+      - Squirt_Strain_Fruit_Basket # GSO|844
+    excluded_substrings: []
+  - 
+    name: toy_lamp
+    included_substrings:
+      - 3D_Dollhouse_Lamp # GSO|4
+    excluded_substrings: []
+  - 
+    name: toy_rattle
+    included_substrings:
+      - BIRD_RATTLE # GSO|70
+      - BUNNY_RATTLE # GSO|76
+    excluded_substrings: []
+  - 
+    name: toy_refrigerator
+    included_substrings:
+      - 3D_Dollhouse_Refrigerator # GSO|5
+    excluded_substrings: []
+  - 
+    name: toy_sink
+    included_substrings:
+      - 3D_Dollhouse_Sink # GSO|6
+    excluded_substrings: []
+  - 
+    name: toy_sofa
+    included_substrings:
+      - 3D_Dollhouse_Sofa # GSO|7
+    excluded_substrings: []
+  - 
+    name: toy_swing
+    included_substrings:
+      - 3D_Dollhouse_Swing # GSO|8
+    excluded_substrings: []
+  - 
+    name: toy_table
+    included_substrings:
+      - 3D_Dollhouse_TablePurple # GSO|9
+    excluded_substrings: []
+  - 
+    name: toy_vehicle
+    included_substrings:
+      - BABY_CAR # GSO|59
+      - CAR_CARRIER_TRAIN # GSO|105
+      - COAST_GUARD_BOAT # GSO|113
+      - Sonny_School_Bus # GSO|831
+      - Thomas_Friends_Woodan_Railway_Henry # GSO|885
+      - Thomas_Friends_Wooden_Railway_Deluxe_Track_Accessory_Pack # GSO|887
+      - Thomas_Friends_Wooden_Railway_Porter_5JzRhMm3a9o # GSO|888
+      - Thomas_Friends_Wooden_Railway_Talking_Thomas_z7yi7UFHJRj # GSO|889
+    excluded_substrings: []
+  - 
+    name: utensil_holder_cup
+    included_substrings:
+      - BIA_Cordon_Bleu_White_Porcelain_Utensil_Holder_900028 # GSO|68
+    excluded_substrings: []
+  - 
+    name: vase
+    included_substrings:
+      - B075HR4ZDB # ABO|118
+      - B075HR7DM7 # ABO|119
+      - B075HR7KY9 # ABO|120
+      - B075HWMC6S # ABO|131
+      - B075HWX46K # ABO|133
+      - B075HXJPW6 # ABO|138
+      - B075HXLWT5 # ABO|140
+      - B075HXPFTG # ABO|142
+      - B078JGHZT3 # ABO|198
+      - B078JGYJTG # ABO|201
+      - B078JJDPR2 # ABO|202
+      - B078JMJC46 # ABO|205
+      - B078JMJC49 # ABO|206
+      - B07B8NVHX1 # ABO|255
+      - B07B8NZQ68 # ABO|256
+      - B07B8PXTSY # ABO|258
+      - B07B8VJBCL # ABO|260
+      - B07B8W8FBV # ABO|261
+      - B07HSJVP5C # ABO|330
+      - B07HSLG6WR # ABO|332
+      - B07HSMVFMP # ABO|333
+      - B07JLBDT51 # ABO|384
+      - B07JM1K8VH # ABO|425
+      - B07JM6GHC8 # ABO|433
+    excluded_substrings: []
+  - 
+    name: video game
+    included_substrings:
+      - Persona_Q_Shadow_of_the_Labyrinth_Nintendo_3DS # GSO|653
+    excluded_substrings: []
+  - 
+    name: video_game
+    included_substrings:
+      - Final_Fantasy_XIV_A_Realm_Reborn_60Day_Subscription # GSO|290
+      - New_Super_Mario_BrosWii_Wii_Game # GSO|521
+      - Paper_Mario_Sticker_Star_Nintendo_3DS_Game # GSO|610
+      - Pokmon_Conquest_Nintendo_DS_Game # GSO|667
+      - Pokmon_X_Nintendo_3DS_Game # GSO|668
+      - "Pok\xE9mon_Yellow_Special_Pikachu_Edition_Nintendo_Game_Boy_Color" # GSO|671
+      - Simon_Swipe_Game # GSO|826
+      - Super_Mario_3D_World_Deluxe_Set # GSO|849
+    excluded_substrings: []
+  - 
+    name: video_game_box
+    included_substrings:
+      - Animal_Crossing_New_Leaf_Nintendo_3DS_Game # GSO|42
+      - Super_Mario_3D_World_Wii_U_Game # GSO|851
+    excluded_substrings: []
+  - 
+    name: video_game_cartridge
+    included_substrings:
+      - Beetle_Adventure_Racing_Nintendo_64 # GSO|79
+    excluded_substrings: []
+  - 
+    name: vinyl_tape
+    included_substrings:
+      - 3M_Vinyl_Tape_Green_1_x_36_yd # GSO|11
+    excluded_substrings: []
+  - 
+    name: wireless_accessory
+    included_substrings:
+      - Seagate_3TB_Central_shared_storage # GSO|818
+    excluded_substrings: []
+
+receptacle_sets:
+  -
+    name: "hab2"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - "receptacle_hall_shelf_lower"
+      - "receptacle_hall_shelf_middle"
+      - "receptacle_kitchen_counter_corner"
+      - "receptacle_kitchen_counter_left"
+      - "receptacle_kitchen_counter_middle"
+      - "receptacle_kitchen_counter_right"
+      - "receptacle_kitchen_island"
+      - "receptacle_living_left_shelf_lower_left"
+      - "receptacle_living_left_shelf_lower_middle_right"
+      - "receptacle_living_left_shelf_lower_midle_left"
+      - "receptacle_living_left_shelf_lower_right"
+      - "receptacle_living_mantle"
+      - "receptacle_living_right_shelf_lower_left"
+      - "receptacle_living_right_shelf_lower_middle_right"
+      - "receptacle_living_right_shelf_lower_midle_left"
+      - "receptacle_living_right_shelf_lower_right"
+      - "receptacle_living_table"
+      - "receptacle_office_desk"
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: "subset"
+  params:
+  #   scene_sets: ["scene_train_split", "scene_val_split"]
+    scene_sets: ["any"]
+
+object_samplers:
+  -
+    name: "hab2"
+    type: "uniform"
+    params:
+      object_sets: 
+        - android_figure
+        - action_figure
+      receptacle_sets: ["hab2"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+      nav_to_min_distance: 1.5
+
+object_target_samplers:
+  -
+    name: "hab2"
+    type: "uniform"
+    params:
+      object_samplers: ["hab2"]
+      receptacle_sets: ["hab2"]
+      num_samples: [1, 1]
+      orientation_sampling: "up"
+      nav_to_min_distance: 1.5
