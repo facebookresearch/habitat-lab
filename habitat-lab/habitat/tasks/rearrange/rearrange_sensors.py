@@ -58,7 +58,6 @@ class ObjectCategorySensor(Sensor):
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
         sensor_shape = (1,)
-        max_value = self.config.goal_spec_max_val - 1
         max_value = max(
             getattr(self._dataset, self._name_to_id_mapping).values()
         )

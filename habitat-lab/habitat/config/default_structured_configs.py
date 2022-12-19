@@ -347,19 +347,16 @@ class DistToNavGoalSensorConfig(LabSensorConfig):
 @dataclass
 class ObjectCategorySensorConfig(LabSensorConfig):
     type: str = "ObjectCategorySensor"
-    goal_spec_max_val: int = 5000
 
 
 @dataclass
 class GoalReceptacleSensorConfig(LabSensorConfig):
     type: str = "GoalReceptacleSensor"
-    goal_spec_max_val: int = 100
 
 
 @dataclass
 class StartReceptacleSensorConfig(LabSensorConfig):
     type: str = "StartReceptacleSensor"
-    goal_spec_max_val: int = 100
 
 
 @dataclass
