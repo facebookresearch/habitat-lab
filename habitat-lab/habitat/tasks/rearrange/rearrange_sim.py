@@ -110,13 +110,16 @@ class RearrangeSim(HabitatSim):
         self.robots_mgr = RobotManager(self.habitat_config, self)
 
         receptacles = find_receptacles(self)
-        # find sampling volumes per receptacle object
+
+        # all sampling volumes in a receptacle object
         self.recep_sampling_volumes = defaultdict(list)
+        self.recep_handle_to_category = defaultdict(str)
         self.receptacles = {}
         for r in receptacles:
             self.recep_sampling_volumes[r.parent_object_handle].append(
                 r.bounds
             )
+            self.recep_handle_to_category[r.parent_object_handle] = r.category
             self.receptacles[r.name] = r
 
     @property

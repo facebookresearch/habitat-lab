@@ -44,7 +44,6 @@ class ObjAnywhereOnGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         rom = self._sim.get_rigid_object_manager()
         aom = self._sim.get_articulated_object_manager()
-        # import pdb; pdb.set_trace()
         self._sim.perform_discrete_collision_detection()
         cps = self._sim.get_physics_contact_points()
         relevant_cps = []
@@ -60,17 +59,6 @@ class ObjAnywhereOnGoal(Measure):
                 else:
                     other_obj_id = cp.object_id_a + cp.object_id_b - abs_obj_id
 
-                    def get_category_name(handle):
-                        import re
-
-                        return re.sub(
-                            r"_[0-9]+",
-                            "",
-                            handle.split(":")[0][:-1].replace(
-                                "frl_apartment_", ""
-                            ),
-                        )
-
                     if aom.get_library_has_id(other_obj_id):
                         handle = aom.get_object_handle_by_id(other_obj_id)
                     elif rom.get_library_has_id(other_obj_id):
@@ -79,8 +67,11 @@ class ObjAnywhereOnGoal(Measure):
                         self._metric = False
                         return
 
-                    category = get_category_name(handle)
-                    if category == self._sim.target_categories["goal_recep"]:
+                    if (
+                        handle in self._sim.recep_handle_to_category
+                        and self._sim.recep_handle_to_category[handle]
+                        == self._sim.target_categories["goal_recep"]
+                    ):
                         self._metric = True
                     else:
                         self._metric = False
