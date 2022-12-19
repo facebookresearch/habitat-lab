@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<launch>
+	<node name="joy_node" type="joy_node" pkg="joy"/>
+	<node name="run_controller" type="run_controller_teleop.py" pkg="home_robot"/>
+</launch>

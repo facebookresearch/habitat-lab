@@ -168,6 +168,7 @@ class TeleopMarkerServer(object):
 
         # create a timer to update the published transforms
         self.counter = 0
+        self.done = False
         self.br = TransformBroadcaster()
         self.add_base_marker()
         self.add_arm_marker()
@@ -203,9 +204,9 @@ class TeleopMarkerServer(object):
         with self._lock:
             q, _ = self.robot.update()
             q[HelloStretchIdx.ARM] = 0
+            q[HelloStretchIdx.LIFT] = 1.1
             # q = self.model.update_look_front(q)
             self.robot.goto(q, move_base=False, wait=True)
-            q[HelloStretchIdx.LIFT] = 1.1
             q = self.model.update_look_at_ee(q)
             self.robot.goto(q, move_base=False, wait=False)
 

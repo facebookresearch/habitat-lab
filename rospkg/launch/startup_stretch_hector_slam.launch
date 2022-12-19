@@ -19,15 +19,18 @@
 	<!-- -->
 
 	<!-- Realsense driver -->
-	<include file="$(find stretch_core)/launch/d435i_high_resolution.launch"></include>
+	<!--include file="$(find stretch_core)/launch/d435i_high_resolution.launch"></include>
 	<node name="d435i_configure" pkg="stretch_core" type="d435i_configure" output="screen">
 	   <param name="initial_mode" type="string" value="High Accuracy"/>
-	</node>
-	<!--include file="$(find realsense2_camera)/launch/rs_aligned_depth.launch" if="$(arg start_rs_ros)">
+	</node-->
+	<include file="$(find realsense2_camera)/launch/rs_aligned_depth.launch" if="$(arg start_rs_ros)">
 		<arg name="camera" value="camera"/>
 		<arg name="align_depth" value="true"/>
 		<arg name="filters" value="temporal,decimation,spatial,disparity"/>
-	</include-->
+	</include>
+	<node name="d435i_configure" pkg="stretch_core" type="d435i_configure" output="screen">
+	   <param name="initial_mode" type="string" value="High Accuracy"/>
+	</node>
 	<!--param name="serial_no" value="032622071943"/-->
 
 	<!-- LASER RANGE FINDER -->

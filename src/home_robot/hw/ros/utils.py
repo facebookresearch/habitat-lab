@@ -42,3 +42,9 @@ def ros_pose_to_transform(pose_msg):
     t.rotation.z = pose_msg.orientation.z
     t.rotation.w = pose_msg.orientation.w
     return t
+
+
+def to_normalized_quaternion_msg(w, x, y, z):
+    quat = np.array([w, x, y, z])
+    quat = quat / np.linalg.norm(quat)
+    return Quaternion(x, y, z, w)

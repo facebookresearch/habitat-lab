@@ -5,6 +5,10 @@ install_requires = [
     "pytest",
 ]
 
+# For data_tools sub-module
+data_tools_requires = ["h5py", "imageio", "pygifsicle"]
+install_requires += data_tools_requires
+
 setup(
     name="home_robot",
     version="1.0.0",

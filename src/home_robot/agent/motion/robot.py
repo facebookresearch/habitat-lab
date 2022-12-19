@@ -508,7 +508,24 @@ class HelloStretch(Robot):
     def lift_arm_ik_from_matrix(self, pose_matrix, q0):
         end_arm_idx = 3 + self.lift_arm_ik_solver.number_of_joints
         q0 = self._to_ik_format(q0)
+        ee_pose = self.get_ee_pose()
+        print(ee_pose[0])
+        print(ee_pose[1])
+        print(pose_matrix[:3, 3])
+        w, x, y, z = tra.quaternion_from_matrix(pose_matrix)
+        print([x, y, z, w])
+        print("----------------")
+
         q = self.lift_arm_ik_solver.ik(pose_matrix, q0[3:end_arm_idx])
+
+        se3 = pb.getMatrixFromQuaternion(ee_pose[1])
+        pose2 = np.eye(4)
+        pose2[:3, :3] = np.array(se3).reshape(3, 3)
+        pose2[:3, 3] = np.array(ee_pose[0])
+        q2 = self.lift_arm_ik_solver.ik(pose2, q0[3:end_arm_idx])
+        print(q)
+        print(q2)
+
         if q is not None:
             res = q0.copy()
             res[3:end_arm_idx] = q

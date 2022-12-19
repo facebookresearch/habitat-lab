@@ -1,15 +1,18 @@
 import rospy
 import time
 import numpy as np
+import os
 from sensor_msgs.msg import JointState, Joy
 from home_robot.hw.teleop.stretch_xbox_controller_teleop import (
     manage_lift_arm,
     manage_base,
     manage_end_of_arm,
     manage_head,
+    set_use_dex_wrist_mapping,
 )
 from home_robot.hw.ros.stretch_ros import HelloStretchROSInterface
 from home_robot.hw.ros.recorder import Recorder, pngs_to_mp4
+from home_robot.hw.ros.path import get_package_path
 from home_robot.agent.motion.robot import HelloStretch
 
 
@@ -341,11 +344,15 @@ if __name__ == "__main__":
     video_filename = "test"
     fps = 10
 
+    stretch_planner_urdf_path = os.path.join(
+        get_package_path(), "../assets/hab_stretch/urdf/planner_calibrated.urdf"
+    )
     model = HelloStretch(
         visualize=False,
         root="",
-        urdf_path="assets/hab_stretch/urdf/planner_calibrated.urdf",
+        urdf_path=stretch_planner_urdf_path,
     )
+    # Create recorder - if we are going to use it
     recorder = Recorder(output_filename, model=model)
     controller = StretchXboxController(
         model, on_first_joystick_input=recorder.start_recording

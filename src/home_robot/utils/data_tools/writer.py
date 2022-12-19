@@ -2,8 +2,8 @@ import h5py
 import numpy as np
 import os
 
-import home_robot.utils.data.base as base
-import home_robot.utils.data.image as image
+import home_robot.utils.data_tools.base as base
+import home_robot.utils.data_tools.image as image
 
 
 class DataWriter(object):

@@ -5,8 +5,8 @@ import h5py
 from tqdm import tqdm
 
 from home_robot.hw.ros.stretch_ros import HelloStretchROSInterface
-from home_robot.utils.data.writer import DataWriter
-from home_robot.utils.data.image import img_from_bytes
+from home_robot.utils.data_tools.writer import DataWriter
+from home_robot.utils.data_tools.image import img_from_bytes
 
 import argparse
 import cv2
@@ -32,9 +32,11 @@ class Recorder(object):
         self._recording_started = False
 
     def start_recording(self):
+        print("Starting to record...")
         self._recording_started = True
 
     def finish_recording(self):
+        print("... done recording.")
         self.writer.write_trial(self.idx)
         self.idx += 1
 
@@ -49,7 +51,7 @@ class Recorder(object):
 
     def save_frame(self):
         # record rgb and depth
-        rgb, depth = self.robot.get_images(filter_depth=False, compute_xyz=False)
+        rgb, depth = self.robot.get_images(compute_xyz=False)
         q, dq = self.robot.update()
         color_camera_info = self._construct_camera_info(self.robot.rgb_cam)
         depth_camera_info = self._construct_camera_info(self.robot.dpt_cam)
@@ -68,7 +70,7 @@ class Recorder(object):
     def spin(self, rate=10):
         rate = rospy.Rate(rate)
         while not rospy.is_shutdown():
-            if not self.start_recording:
+            if not self._recording_started:
                 print("...")
                 rate.sleep()
                 continue

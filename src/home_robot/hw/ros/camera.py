@@ -100,6 +100,22 @@ class RosCamera(Camera):
     def get_K(self):
         return self.K.copy()
 
+    def get_info(self):
+        return {
+            "D": self.D,
+            "K": self.K,
+            "fx": self.fx,
+            "fy": self.fy,
+            "px": self.px,
+            "py": self.py,
+            "near_val": self.near_val,
+            "far_val": self.far_val,
+            "R": self.R,
+            "P": self.P,
+            "height": self.height,
+            "width": self.width,
+        }
+
     def __init__(
         self, name="/camera/color", verbose=True, flipxy=False, buffer_size=None
     ):
@@ -136,4 +152,7 @@ class RosCamera(Camera):
             print(cam_info)
             print("---------------")
         self.frame_id = cam_info.header.frame_id
-        self._sub = rospy.Subscriber(name + "/image_raw", Image, self._cb, queue_size=1)
+        self.topic_name = name + "/image_raw"
+        self._sub = rospy.Subscriber(self.topic_name, Image, self._cb, queue_size=10)
+        print("Waiting for", self.topic_name)
+        self.wait_for_image()

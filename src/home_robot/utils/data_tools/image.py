@@ -7,9 +7,9 @@ from tqdm import tqdm
 from pygifsicle import optimize
 
 
-def img_from_bytes(data: bytes, height=None, width=None) -> np.ndarray:
+def img_from_bytes(data: bytes, height=None, width=None, format="png") -> np.ndarray:
     """Convert image from png bytes"""
-    image = Image.open(io.BytesIO(data), mode="r", formats=["png"])
+    image = Image.open(io.BytesIO(data), mode="r", formats=[format])
     # TODO: decide if default image format should switch over to webp
     # Issue: not quite as good at handling depth
     # image = Image.open(data, mode='r', formats=['webp'])
@@ -18,17 +18,17 @@ def img_from_bytes(data: bytes, height=None, width=None) -> np.ndarray:
     return np.asarray(image)
 
 
-def pil_to_bytes(img: Image) -> bytes:
+def pil_to_bytes(img: Image, format="png") -> bytes:
     """Convert image to bytes using PIL"""
     data = io.BytesIO()
-    img.save(data, format="png")
+    img.save(data, format=format)
     return data.getvalue()
 
 
-def img_to_bytes(img: np.ndarray) -> bytes:
+def img_to_bytes(img: np.ndarray, format="png") -> bytes:
     # return bytes(Image.fromarray(data)).tobytes()
     img = Image.fromarray(img)
-    return pil_to_bytes(img)
+    return pil_to_bytes(img, format)
 
 
 def torch_to_bytes(img: np.ndarray) -> bytes:

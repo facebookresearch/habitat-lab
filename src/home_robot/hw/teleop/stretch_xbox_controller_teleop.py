@@ -9,7 +9,7 @@ Copied from stretch-body/stretch_xbox_controller_teleop.py
 from __future__ import print_function
 import stretch_body.xbox_controller as xc
 
-# import stretch_body.robot as rb
+import stretch_body.robot as rb
 from stretch_body.hello_utils import *
 import os
 import time

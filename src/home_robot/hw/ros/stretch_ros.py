@@ -455,10 +455,10 @@ class HelloStretchROSInterface(AbstractStretchInterface):
     def in_position_mode(self):
         return self.mode == "position"
 
-    def get_images(self, filter_depth=True, compute_xyz=True):
+    def get_images(self, compute_xyz=True):
         """helper logic to get images from the robot's camera feed"""
         rgb = self.rgb_cam.get()
-        if filter_depth:
+        if self.filter_depth:
             dpt = self.dpt_cam.get_filtered()
         else:
             dpt = self.dpt_cam.get()
@@ -494,8 +494,10 @@ class HelloStretchROSInterface(AbstractStretchInterface):
         visualize_planner=False,
         root=".",
         init_cameras=True,
-        depth_buffer_size=5,
+        depth_buffer_size=None,
         urdf_path=None,
+        color_topic=None,
+        depth_topic=None,
     ):
         """Create an interface into ROS execution here. This one needs to connect to:
             - joint_states to read current position
@@ -517,12 +519,16 @@ class HelloStretchROSInterface(AbstractStretchInterface):
         # Create the tf2 buffer first, used in camera init
         self.tf2_buffer = tf2_ros.Buffer()
 
+        if color_topic is None:
+            color_topic = "/camera/color"
+        if depth_topic is None:
+            depth_topic = "/camera/aligned_depth_to_color"
+
         if init_cameras:
             print("Creating cameras...")
-            self.rgb_cam = RosCamera("/camera/color")
-            self.dpt_cam = RosCamera(
-                "/camera/aligned_depth_to_color", buffer_size=depth_buffer_size
-            )
+            self.rgb_cam = RosCamera(color_topic)
+            self.dpt_cam = RosCamera(depth_topic, buffer_size=depth_buffer_size)
+            self.filter_depth = depth_buffer_size is not None
             print("Waiting for rgb camera images...")
             self.rgb_cam.wait_for_image()
             print("Waiting for depth camera images...")
