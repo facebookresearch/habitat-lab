@@ -291,6 +291,11 @@ class RearrangeSim(HabitatSim):
             self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
+        rom = self.get_rigid_object_manager()
+        for i, handle in enumerate(rom.get_object_handles()):
+            obj = rom.get_object_by_handle(handle)
+            for node in obj.visual_scene_nodes:
+                node.semantic_id = obj.object_id
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:

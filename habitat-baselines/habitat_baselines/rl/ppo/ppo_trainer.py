@@ -953,7 +953,7 @@ class PPOTrainer(BaseRLTrainer):
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
-            agent_config = get_agent_config(config.habitat.simulator)
+            agent_config = get_agent_config(self.config.habitat.simulator)
             agent_sensors = agent_config.sim_sensors
             render_view_uuids = [
                 agent_sensors[render_view].uuid
@@ -1181,7 +1181,9 @@ class PPOTrainer(BaseRLTrainer):
                         rgb_frames[i] = []
 
                     if len(stats_episodes) % 50 == 0:
-                        save_dir = self.config.CHECKPOINT_FOLDER
+                        save_dir = (
+                            self.config.habitat_baselines.checkpoint_folder
+                        )
                         os.makedirs(save_dir, exist_ok=True)
                         if os.path.isfile(save_dir):
                             save_dir = os.path.dirname(save_dir)

@@ -94,7 +94,7 @@ class ObjectEmbeddingSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
-        with open(config.EMBEDDINGS_FILE, "rb") as f:
+        with open(config.embeddings_file, "rb") as f:
             self._embeddings = pickle.load(f)
 
         super().__init__(config=config)
@@ -107,7 +107,7 @@ class ObjectEmbeddingSensor(Sensor):
 
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
-            shape=(self._config.DIM,),
+            shape=(self._config.dimensionality,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
