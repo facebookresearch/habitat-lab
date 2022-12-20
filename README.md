@@ -24,8 +24,8 @@ Mostly Hello Stretch infrastructure
     cd stretch_install
 
     # Run setup script (DO NOT RUN BOTH)
-    ./stretch_new_robot_installation.sh  # if installing into a new robot
-    ./stretch_new_user_installation.sh  # if installing into a new user account on a already-set-up robot
+    ./stretch_new_robot_install.sh  # if installing into a new robot
+    ./stretch_new_user_install.sh  # if installing into a new user account on a already-set-up robot
     ```
 1. Open `~/.bashrc`. You will see a block of commands that initializes Stretch, and another block that initializes Conda. If needed, move the stretch setup block BEFORE the conda initialization.
 1. Launch a new bash shell. Activate an conda env with Python 3.8 installed.
@@ -42,7 +42,7 @@ Mostly Hello Stretch infrastructure
     catkin_make
 
     # Add newly built setup.bash to .bashrc
-    echo "source ~/catkin_ws/devel/setup.bash" > ~/.bashrc
+    echo "source ~/catkin_ws/devel/setup.bash" >> ~/.bashrc
     ```
 1. Calibrate robot following instructions [here](https://github.com/hello-robot/stretch_ros/tree/master/stretch_calibration#checking-the-current-calibration-with-new-observations).
 1. Generate URDF from calibration data: `rosrun stretch_calibration update_urdf_after_xacro_change.sh`.
