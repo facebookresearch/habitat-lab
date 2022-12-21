@@ -24,7 +24,7 @@ def get_writer(config, **kwargs):
             config.habitat_baselines.tensorboard_dir, **kwargs
         )
     elif config.habitat_baselines.writer_type == "wb":
-        return WeightsAndBiasesWriter(config)
+        return WeightsAndBiasesWriter(config, **kwargs)
     else:
         raise ValueError("Unrecongized writer")
 
@@ -133,25 +133,6 @@ class WeightsAndBiasesWriter:
             wb_kwargs["id"] = resume_run_id
             wb_kwargs["resume"] = "must"
 
-        else:
-            wandb_id = wandb.util.generate_id()
-            wandb_dir = (
-                os.path.dirname(config.habitat_baselines.eval_ckpt_path_dir)
-                if os.path.isfile(config.habitat_baselines.eval_ckpt_path_dir)
-                else config.habitat_baselines.eval_ckpt_path_dir
-            )
-            resume = "allow"
-            if config.habitat_baselines.eval_ckpt_path_dir is not None:
-                wandb_filename = os.path.join(wandb_dir, "wandb_id.txt")
-                if os.path.exists(wandb_filename):
-                    # if file exists, then we are resuming from a previous eval
-                    with open(wandb_filename, "r") as file:
-                        wandb_id = file.read().rstrip("\n")
-                    resume = "must"
-
-            wb_kwargs["id"] = wandb_id
-            wb_kwargs["resume"] = resume
-
         self.run = wandb.init(  # type: ignore[attr-defined]
             config={
                 "slurm": slurm_info_dict,
@@ -159,11 +140,6 @@ class WeightsAndBiasesWriter:
             },
             **wb_kwargs,
         )
-
-        if wb_kwargs["resume"] != "must":
-            os.makedirs(os.path.dirname(wandb_filename), exist_ok=True)
-            with open(wandb_filename, "w") as file:
-                file.write(wandb_id)
 
     def __getattr__(self, item):
         if self.writer:
