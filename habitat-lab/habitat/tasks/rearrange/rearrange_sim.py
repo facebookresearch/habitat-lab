@@ -25,6 +25,10 @@ import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+from habitat.datasets.rearrange.samplers.receptacle import (
+    AABBReceptacle,
+    find_receptacles,
+)
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -43,7 +47,6 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
-from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -116,11 +119,14 @@ class RearrangeSim(HabitatSim):
         self.recep_handle_to_category = defaultdict(str)
         self.receptacles = {}
         for r in receptacles:
-            self.recep_sampling_volumes[r.parent_object_handle].append(
-                r.bounds
-            )
-            self.recep_handle_to_category[r.parent_object_handle] = r.category
-            self.receptacles[r.name] = r
+            if isinstance(r, AABBReceptacle):
+                self.recep_sampling_volumes[r.parent_object_handle].append(
+                    r.bounds
+                )
+                self.recep_handle_to_category[
+                    r.parent_object_handle
+                ] = r.category
+                self.receptacles[r.name] = r
 
     @property
     def robot(self):

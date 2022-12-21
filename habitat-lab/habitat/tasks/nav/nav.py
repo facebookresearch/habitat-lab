@@ -30,10 +30,11 @@ from habitat.core.simulator import (
     ShortestPathPoint,
     Simulator,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -983,6 +984,9 @@ class DistanceToGoal(UsesRobotInterface, Measure):
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
         if self._config.distance_from == "END_EFFECTOR":
+            assert isinstance(
+                self._sim, RearrangeSim
+            ), f"DistanceToGoal (distance_from=END_EFFECTOR): Not implemented for simulator type {type(self._sim)}"
             current_position = self._sim.get_robot_data(
                 self.robot_id
             ).robot.ee_transform.translation

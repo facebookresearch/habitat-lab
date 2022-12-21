@@ -7,6 +7,7 @@
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
+from habitat.tasks.nav.nav import DistanceToGoal
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
@@ -14,7 +15,6 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.nav.nav import DistanceToGoal
 from habitat.tasks.rearrange.utils import rearrange_logger
 
 

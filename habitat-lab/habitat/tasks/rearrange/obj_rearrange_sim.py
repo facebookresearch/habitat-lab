@@ -7,8 +7,6 @@
 
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from typing import Tuple
-import numpy as np
 
 
 @registry.register_simulator(name="ObjectRearrangeSim-v0")

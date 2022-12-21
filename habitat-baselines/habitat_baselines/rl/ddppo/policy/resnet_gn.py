@@ -1,7 +1,7 @@
-import torch
-import torch.nn as nn
 import math
 
+import torch
+import torch.nn as nn
 
 __all__ = ["ResNet", "resnet50", "resnet101"]
 
@@ -197,7 +197,7 @@ class ResNet(nn.Module):
             )
         )
         self.inplanes = planes * block.expansion
-        for i in range(1, blocks):
+        for _ in range(1, blocks):
             layers.append(
                 block(
                     self.inplanes,

@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
@@ -11,7 +12,6 @@ from typing import Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
-import re
 
 import habitat_sim
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box

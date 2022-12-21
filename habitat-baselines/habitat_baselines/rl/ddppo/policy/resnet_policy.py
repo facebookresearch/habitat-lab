@@ -31,8 +31,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     StartReceptacleSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.ddppo.policy import resnet
-from habitat_baselines.rl.ddppo.policy import resnet_gn
+from habitat_baselines.rl.ddppo.policy import resnet, resnet_gn
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
 )
@@ -310,6 +309,7 @@ class PointNavResNetNet(Net):
                 InstanceImageGoalSensor.cls_uuid,
             }
             fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
+
         self._fuse_keys_1d: List[str] = [
             k
             for k in fuse_keys
@@ -320,7 +320,6 @@ class PointNavResNetNet(Net):
                 observation_space.spaces[k].shape[0]
                 for k in self._fuse_keys_1d
             )
-
         if (
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid
             in observation_space.spaces

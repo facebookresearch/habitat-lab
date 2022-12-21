@@ -176,7 +176,7 @@ class PPOTrainer(BaseRLTrainer):
                     k.replace("module.", ""): v
                     for k, v in pretrained_state["teacher"].items()
                 }
-                msg = self.actor_critic.net.visual_encoder.load_state_dict(
+                self.actor_critic.net.visual_encoder.load_state_dict(
                     state_dict=state_dict, strict=False
                 )
             else:
