@@ -41,3 +41,8 @@ measurements:
   force_terminate:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
+  place_success:
+    place_anywhere: True
+  place_reward:
+    place_anywhere: True
+    sparse_reward: True

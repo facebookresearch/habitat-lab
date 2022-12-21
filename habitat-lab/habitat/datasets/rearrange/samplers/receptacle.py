@@ -367,14 +367,17 @@ def parse_receptacles_from_user_config(
             )
             receptacle_scale = ao_uniform_scaling * sub_config.get("scale")
 
-            # TODO: parse this from user config
-            category = re.sub(
-                r"_[0-9]+",
-                "",
-                parent_object_handle.split(":")[0][:-1].replace(
-                    "frl_apartment_", ""
-                ),
-            )
+            category = None
+            if sub_config.has_value("category"):
+                category = sub_config.get("category")
+            elif parent_object_handle is not None:
+                category = re.sub(
+                    r"_[0-9]+",
+                    "",
+                    parent_object_handle.split(":")[0][:-1].replace(
+                        "frl_apartment_", ""
+                    ),
+                )
 
             # TODO: adding more receptacle types will require additional logic here
             receptacles.append(

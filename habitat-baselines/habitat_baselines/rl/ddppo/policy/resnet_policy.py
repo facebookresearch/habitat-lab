@@ -28,7 +28,6 @@ from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     GoalReceptacleSensor,
     ObjectCategorySensor,
-    ObjectEmbeddingSensor,
     StartReceptacleSensor,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -309,7 +308,6 @@ class PointNavResNetNet(Net):
                 EpisodicCompassSensor.cls_uuid,
                 ImageGoalSensor.cls_uuid,
                 InstanceImageGoalSensor.cls_uuid,
-                ObjectEmbeddingSensor.cls_uuid,
             }
             fuse_keys = [k for k in fuse_keys if k not in goal_sensor_keys]
         self._fuse_keys_1d: List[str] = [
@@ -347,11 +345,6 @@ class PointNavResNetNet(Net):
                 self._n_object_categories, 32
             )
             rnn_input_size += 32
-
-        if ObjectEmbeddingSensor.cls_uuid in observation_space.spaces:
-            rnn_input_size += observation_space.spaces[
-                ObjectEmbeddingSensor.cls_uuid
-            ].shape[0]
 
         if ObjectCategorySensor.cls_uuid in observation_space.spaces:
             self._n_rearrange_obj_categories = (
@@ -611,9 +604,6 @@ class PointNavResNetNet(Net):
         if ObjectGoalSensor.cls_uuid in observations:
             object_goal = observations[ObjectGoalSensor.cls_uuid].long()
             x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
-
-        if ObjectEmbeddingSensor.cls_uuid in observations:
-            x.append(observations[ObjectEmbeddingSensor.cls_uuid])
 
         if ObjectCategorySensor.cls_uuid in observations:
             object_goal = observations[ObjectCategorySensor.cls_uuid].long()

@@ -45,3 +45,11 @@ measurements:
   force_terminate:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
+  distance_to_goal:
+    distance_to: EUCLIDEAN_POINT
+    distance_from: END_EFFECTOR
+    goals_attr: candidate_objects
+  pick_success:
+    object_goal: True
+  pick_reward:
+    object_goal: True
