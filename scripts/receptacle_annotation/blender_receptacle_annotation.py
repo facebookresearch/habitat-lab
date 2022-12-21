@@ -307,11 +307,11 @@ def write_receptacle_metadata(output_filename, mesh_relative_path=""):
 
 # NOTE: This should be the global system path of "output_dir" from "generate_receptacle_navmesh_objs.py"
 path_to_receptacle_navmesh_assets = (
-    "/home/alexclegg/Documents/dev/habitat-lab/navmeshes/"
+    "/Users/andrewszot/Documents/code/p-lang/habitat-lab/data/fp_navmeshes"
 )
 
 # define the output directory for meshes and metadata
-output_dir = "/home/alexclegg/Documents/dev/habitat-lab/mesh_receptacle_out/"
+output_dir = "/Users/andrewszot/Documents/code/p-lang/habitat-lab/data/fp_mesh_receptacle_out/"
 # Optionally specify a custom relative path between the metadata and meshes.
 # For example, "meshes/" for .ply files in a `meshes` sub-directory relative to the .json
 mesh_relative_path = ""
