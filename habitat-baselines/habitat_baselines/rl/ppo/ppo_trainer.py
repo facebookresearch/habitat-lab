@@ -171,14 +171,23 @@ class PPOTrainer(BaseRLTrainer):
                 }
             )
         elif self.config.habitat_baselines.rl.ddppo.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            self.actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
+            if self.config.habitat_baselines.rl.policy.ovrl:
+                state_dict = {
+                    k.replace("module.", ""): v
+                    for k, v in pretrained_state["teacher"].items()
                 }
-            )
+                self.actor_critic.net.visual_encoder.load_state_dict(
+                    state_dict=state_dict, strict=False
+                )
+            else:
+                prefix = "actor_critic.net.visual_encoder."
+                self.actor_critic.net.visual_encoder.load_state_dict(
+                    {
+                        k[len(prefix) :]: v
+                        for k, v in pretrained_state["state_dict"].items()
+                        if k.startswith(prefix)
+                    }
+                )
 
         if not self.config.habitat_baselines.rl.ddppo.train_encoder:
             self._static_encoder = True
@@ -944,7 +953,7 @@ class PPOTrainer(BaseRLTrainer):
             len(config.habitat_baselines.video_render_views) > 0
             and len(self.config.habitat_baselines.eval.video_option) > 0
         ):
-            agent_config = get_agent_config(config.habitat.simulator)
+            agent_config = get_agent_config(self.config.habitat.simulator)
             agent_sensors = agent_config.sim_sensors
             render_view_uuids = [
                 agent_sensors[render_view].uuid
@@ -1170,6 +1179,18 @@ class PPOTrainer(BaseRLTrainer):
                         )
 
                         rgb_frames[i] = []
+
+                    if len(stats_episodes) % 50 == 0:
+                        save_dir = (
+                            self.config.habitat_baselines.checkpoint_folder
+                        )
+                        os.makedirs(save_dir, exist_ok=True)
+                        if os.path.isfile(save_dir):
+                            save_dir = os.path.dirname(save_dir)
+                        np.save(
+                            os.path.join(save_dir, "all_episode_stats.npy"),
+                            stats_episodes,
+                        )
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":

@@ -33,6 +33,8 @@ from habitat.core.simulator import (
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -947,7 +949,7 @@ class TopDownMap(Measure):
 
 
 @registry.register_measure
-class DistanceToGoal(Measure):
+class DistanceToGoal(UsesRobotInterface, Measure):
     """The measure calculates a distance towards the goal."""
 
     cls_uuid: str = "distance_to_goal"
@@ -981,15 +983,37 @@ class DistanceToGoal(Measure):
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
-        current_position = self._sim.get_agent_state().position
+        if self._config.distance_from == "END_EFFECTOR":
+            assert isinstance(
+                self._sim, RearrangeSim
+            ), f"DistanceToGoal (distance_from=END_EFFECTOR): Not implemented for simulator type {type(self._sim)}"
+            current_position = self._sim.get_robot_data(
+                self.robot_id
+            ).robot.ee_transform.translation
+        else:
+            current_position = self._sim.get_agent_state().position
 
         if self._previous_position is None or not np.allclose(
             self._previous_position, current_position, atol=1e-4
         ):
-            if self._config.distance_to == "POINT":
+            if self._config.distance_to == "EUCLIDEAN_POINT":
+                distance_to_target = min(
+                    [
+                        np.linalg.norm(
+                            np.array(goal.position) - current_position,
+                            ord=2,
+                            axis=-1,
+                        )
+                        for goal in getattr(episode, self._config.goals_attr)
+                    ]
+                )
+            elif self._config.distance_to == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position,
-                    [goal.position for goal in episode.goals],
+                    [
+                        goal.position
+                        for goal in getattr(episode, self._config.goals_attr)
+                    ],
                     episode,
                 )
             elif self._config.distance_to == "VIEW_POINTS":
@@ -1000,7 +1024,6 @@ class DistanceToGoal(Measure):
                 logger.error(
                     f"Non valid distance_to parameter was provided: {self._config.distance_to}"
                 )
-
             self._previous_position = (
                 current_position[0],
                 current_position[1],

@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import pickle
+from typing import Any, Optional
 
 import numpy as np
 from gym import spaces
@@ -11,6 +13,10 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.datasets.rearrange.rearrange_dataset import (
+    ObjectRearrangeDatasetV0,
+    ObjectRearrangeEpisode,
+)
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -21,6 +27,179 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
+
+
+@registry.register_sensor
+class ObjectCategorySensor(Sensor):
+    cls_uuid: str = "object_category"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        dataset: "ObjectRearrangeDatasetV0",
+        category_attribute="object_category",
+        name_to_id_mapping="obj_category_to_obj_category_id",
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._sim = sim
+        self._dataset = dataset
+        self._category_attribute = category_attribute
+        self._name_to_id_mapping = name_to_id_mapping
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (1,)
+        max_value = max(
+            getattr(self._dataset, self._name_to_id_mapping).values()
+        )
+
+        return spaces.Box(
+            low=0, high=max_value, shape=sensor_shape, dtype=np.int64
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode: ObjectRearrangeEpisode,
+        **kwargs: Any,
+    ) -> Optional[np.ndarray]:
+
+        category_name = getattr(episode, self._category_attribute)
+        return np.array(
+            [getattr(self._dataset, self._name_to_id_mapping)[category_name]],
+            dtype=np.int64,
+        )
+
+
+@registry.register_sensor
+class ObjectEmbeddingSensor(Sensor):
+    cls_uuid: str = "object_embedding"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._config = config
+        with open(config.embeddings_file, "rb") as f:
+            self._embeddings = pickle.load(f)
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(self._config.dimensionality,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, *args, episode, **kwargs):
+        category_name = episode.object_category
+        return self._embeddings[category_name]
+
+
+@registry.register_sensor
+class GoalReceptacleSensor(ObjectCategorySensor):
+    cls_uuid: str = "goal_receptacle"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        dataset: "ObjectRearrangeDatasetV0",
+        *args: Any,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            sim=sim,
+            config=config,
+            dataset=dataset,
+            category_attribute="goal_recep_category",
+            name_to_id_mapping="recep_category_to_recep_category_id",
+        )
+
+
+@registry.register_sensor
+class StartReceptacleSensor(ObjectCategorySensor):
+    cls_uuid: str = "start_receptacle"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        dataset: "ObjectRearrangeDatasetV0",
+        *args: Any,
+        **kwargs: Any,
+    ):
+        super().__init__(
+            sim=sim,
+            config=config,
+            dataset=dataset,
+            category_attribute="start_recep_category",
+            name_to_id_mapping="recep_category_to_recep_category_id",
+        )
+
+
+@registry.register_sensor
+class ObjectSegmentationSensor(Sensor):
+    cls_uuid: str = "object_segmentation"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._config = config
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(
+                self._config.dimensionality,
+                self._config.dimensionality,
+                1,
+            ),
+            low=0,
+            high=1,
+            dtype=np.uint8,
+        )
+
+    def get_observation(self, observations, *args, episode, task, **kwargs):
+        obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
+        if np.random.random() < self._config.blank_out_prob:
+            return np.zeros_like(
+                observations["robot_head_semantic"], dtype=np.uint8
+            )
+        else:
+            return observations["robot_head_semantic"] == obj_id
 
 
 class MultiObjSensor(PointGoalSensor):
