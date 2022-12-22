@@ -85,7 +85,8 @@ class PointNavResNetPolicy(NetPolicy):
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
-                no_downscaling=policy_config.no_downscaling,
+                no_downscaling=hasattr(policy_config, "no_downscaling")
+                and policy_config.no_downscaling,
                 ovrl=hasattr(policy_config, "ovrl") and policy_config.ovrl,
             ),
             action_space=action_space,
