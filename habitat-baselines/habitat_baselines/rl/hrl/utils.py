@@ -24,5 +24,5 @@ def find_action_range(
             break
         start_idx += get_num_actions(action_space[k])
     if not found:
-        raise ValueError(f"Could not find stop action in {action_space}")
+        return None
     return start_idx, end_idx

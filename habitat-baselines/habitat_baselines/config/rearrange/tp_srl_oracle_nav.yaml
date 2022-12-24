@@ -6,11 +6,26 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
   - /habitat/task/actions:
+    - oracle_nav_action
     - arm_action
     - base_velocity
     - rearrange_stop
-    - oracle_nav_action
   - _self_
+
+AGENT_0_ORACLE_NAV_ACTION:
+          TYPE: "OracleNavAction"
+          TURN_VELOCITY: 1.0
+          FORWARD_VELOCITY: 1.0
+          TURN_THRESH: 0.1
+          DIST_THRESH: 0.2
+          AGENT: 0
+          LIN_SPEED: 40.0
+          ANG_SPEED: 20.0
+          MIN_ABS_LIN_SPEED: 1.0
+          MIN_ABS_ANG_SPEED: 1.0
+          ALLOW_DYN_SLIDE: False
+          END_ON_STOP: False
+          ALLOW_BACK: True
 
 habitat_baselines:
   verbose: False
@@ -32,10 +47,11 @@ habitat_baselines:
   num_checkpoints: 20
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
+  load_resume_state_config: False
   eval:
-    video_option: ["disk"]
     use_ckpt_config: False
     should_load_ckpt: False
+    video_option: ["disk"]
 
   rl:
     policy:
@@ -49,51 +65,30 @@ habitat_baselines:
             name: "FixedHighLevelPolicy"
             add_arm_rest: True
           defined_skills:
-            NN_OPEN_CAB:
+            open_cab:
               skill_name: "ArtObjSkillPolicy"
               name: "PointNavResNetPolicy"
-              action_distribution_type: "gaussian"
-              at_resting_threshold: 0.15
-              obs_skill_inputs: []
               load_ckpt_file: "data/models/open_cab.pth"
               max_skill_steps: 200
-              start_zone_radius: 0.3
-              force_end_on_timeout: True
 
-            NN_OPEN_FRIDGE:
+            open_fridge:
               skill_name: "ArtObjSkillPolicy"
-              name: "PointNavResNetPolicy"
-              action_distribution_type: "gaussian"
-              at_resting_threshold: 0.15
-              obs_skill_inputs: []
               load_ckpt_file: "data/models/open_fridge.pth"
               max_skill_steps: 200
-              start_zone_radius: 0.3
-              force_end_on_timeout: True
 
-            NN_CLOSE_CAB:
+            close_cab:
               skill_name: "ArtObjSkillPolicy"
-              name: "PointNavResNetPolicy"
-              action_distribution_type: "gaussian"
-              at_resting_threshold: 0.2
               obs_skill_inputs: ["obj_start_sensor"]
               load_ckpt_file: "data/models/close_cab.pth"
               max_skill_steps: 200
-              start_zone_radius: 0.3
-              force_end_on_timeout: True
 
-            NN_CLOSE_FRIDGE:
+            close_fridge:
               skill_name: "ArtObjSkillPolicy"
-              name: "PointNavResNetPolicy"
-              action_distribution_type: "gaussian"
-              at_resting_threshold: 0.2
               obs_skill_inputs: ["obj_start_sensor"]
               load_ckpt_file: "data/models/close_fridge.pth"
               max_skill_steps: 200
-              start_zone_radius: 0.3
-              force_end_on_timeout: True
 
-            nn_pick:
+            pick:
               skill_name: "PickSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
@@ -101,19 +96,8 @@ habitat_baselines:
               obs_skill_inputs: ["obj_start_sensor"]
               load_ckpt_file: "data/models/pick.pth"
               max_skill_steps: 200
-              force_end_on_timeout: True
 
-            GT_NAV:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              goal_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
-              NAV_ACTION_NAME: "base_velocity"
-              max_skill_steps: 300
-              force_end_on_timeout: True
-              stop_angle_thresh: 0.2
-              stop_dist_thresh: 1.0
-
-            nn_place:
+            place:
               skill_name: "PlaceSkillPolicy"
               name: "PointNavResNetPolicy"
               action_distribution_type: "gaussian"
@@ -121,12 +105,16 @@ habitat_baselines:
               obs_skill_inputs: ["obj_goal_sensor"]
               load_ckpt_file: "data/models/place.pth"
               max_skill_steps: 200
-              force_end_on_timeout: True
 
             wait_skill:
               skill_name: "WaitSkillPolicy"
-              max_skill_steps: -1.0
+              max_skill_steps: -1
               force_end_on_timeout: False
+
+            gt_nav:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 300
 
             reset_arm_skill:
               skill_name: "ResetArmSkill"
@@ -136,60 +124,19 @@ habitat_baselines:
 
           use_skills:
             # Uncomment if you are also using these skills
-            # open_cab: "NN_OPEN_CAB"
-            # open_fridge: "NN_OPEN_FRIDGE"
-            # close_cab: "NN_OPEN_CAB"
-            # close_fridge: "NN_OPEN_FRIDGE"
-            pick: "nn_pick"
-            place: "nn_place"
-            nav: "GT_NAV"
-            nav_to_receptacle: "GT_NAV"
+            # open_cab: "open_cab"
+            # open_fridge: "open_fridge"
+            # close_cab: "open_cab"
+            # close_fridge: "open_fridge"
+            pick: "pick"
+            place: "place"
+            nav: "gt_nav"
+            nav_to_receptacle: "gt_nav"
             wait: "wait_skill"
             reset_arm: "reset_arm_skill"
 
-    ppo:
-      # ppo params
-      clip_param: 0.2
-      ppo_epoch: 2
-      num_mini_batch: 2
-      value_loss_coef: 0.5
-      entropy_coef: 0.0001
-      lr: 2.5e-4
-      eps: 1e-5
-      max_grad_norm: 0.2
-      num_steps: 128
-      use_gae: True
-      gamma: 0.99
-      tau: 0.95
-      use_linear_clip_decay: False
-      use_linear_lr_decay: False
-      reward_window_size: 50
-
-      use_normalized_advantage: False
-
-      hidden_size: 512
-
-      # Use double buffered sampling, typically helps
-      # when environment time is similar or larger than
-      # policy inference time during rollout generation
-      use_double_buffered_sampler: False
-
     ddppo:
-      sync_frac: 0.6
-      # The PyTorch distributed backend to use
-      distrib_backend: NCCL
-      # Visual encoder backbone
-      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
-      # Initialize with pretrained weights
       pretrained: False
-      # Initialize just the visual encoder backbone with pretrained weights
       pretrained_encoder: False
-      # Whether the visual encoder backbone will be trained.
       train_encoder: True
-      # Whether to reset the critic linear layer
       reset_critic: False
-
-      # Model parameters
-      backbone: resnet18
-      rnn_type: LSTM
-      num_recurrent_layers: 2

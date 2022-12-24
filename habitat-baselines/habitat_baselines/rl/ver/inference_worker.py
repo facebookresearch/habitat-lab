@@ -323,6 +323,7 @@ class InferenceWorkerProcess(ProcessBase):
                 actions,
                 actions_log_probs,
                 next_recurrent_hidden_states,
+                policy_info,
             ) = self.actor_critic.act(
                 obs,
                 recurrent_hidden_states,

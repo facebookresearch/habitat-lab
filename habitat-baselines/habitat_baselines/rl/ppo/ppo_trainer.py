@@ -469,12 +469,7 @@ class PPOTrainer(BaseRLTrainer):
             ]
 
             profiling_wrapper.range_push("compute actions")
-            (
-                values,
-                actions,
-                actions_log_probs,
-                recurrent_hidden_states,
-            ) = self.actor_critic.act(
+            action_data = self.actor_critic.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
@@ -488,7 +483,8 @@ class PPOTrainer(BaseRLTrainer):
         t_step_env = time.time()
 
         for index_env, act in zip(
-            range(env_slice.start, env_slice.stop), actions.cpu().unbind(0)
+            range(env_slice.start, env_slice.stop),
+            action_data.env_actions.cpu().unbind(0),
         ):
             if is_continuous_action_space(self.policy_action_space):
                 # Clipping actions to the specified limits
@@ -504,10 +500,10 @@ class PPOTrainer(BaseRLTrainer):
         self.env_time += time.time() - t_step_env
 
         self.rollouts.insert(
-            next_recurrent_hidden_states=recurrent_hidden_states,
-            actions=actions,
-            action_log_probs=actions_log_probs,
-            value_preds=values,
+            next_recurrent_hidden_states=action_data.rnn_hidden_states,
+            actions=action_data.actions,
+            action_log_probs=action_data.action_log_probs,
+            value_preds=action_data.values,
             buffer_index=buffer_index,
         )
 
@@ -1052,20 +1048,16 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes_info = self.envs.current_episodes()
 
             with inference_mode():
-                (
-                    _,
-                    actions,
-                    _,
-                    test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
+                action_data = self.actor_critic.act(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
                     not_done_masks,
                     deterministic=False,
                 )
+                test_recurrent_hidden_states = action_data.rnn_hidden_states
 
-                prev_actions.copy_(actions)  # type: ignore
+                prev_actions.copy_(action_data.actions)  # type: ignore
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
@@ -1077,19 +1069,21 @@ class PPOTrainer(BaseRLTrainer):
                         self.policy_action_space.low,
                         self.policy_action_space.high,
                     )
-                    for a in actions.cpu()
+                    for a in action_data.env_actions.cpu()
                 ]
             else:
-                step_data = [a.item() for a in actions.cpu()]
+                step_data = [a.item() for a in action_data.env_actions.cpu()]
 
             outputs = self.envs.step(step_data)
 
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            policy_info = self.actor_critic.get_policy_info(infos, dones)
-            for i in range(len(policy_info)):
-                infos[i].update(policy_info[i])
+            policy_infos = self.actor_critic.extract_policy_info(
+                action_data, infos, dones
+            )
+            for i in range(len(policy_infos)):
+                infos[i].update(policy_infos[i])
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,

@@ -8,6 +8,7 @@ import gym.spaces as spaces
 import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
+from habitat_baselines.rl.ppo.policy import PolicyAction
 
 
 class WaitSkillPolicy(SkillPolicy):
@@ -40,4 +41,6 @@ class WaitSkillPolicy(SkillPolicy):
         deterministic=False,
     ):
         action = torch.zeros(prev_actions.shape, device=prev_actions.device)
-        return action, rnn_hidden_states
+        return PolicyAction(
+            actions=action, rnn_hidden_states=rnn_hidden_states
+        )

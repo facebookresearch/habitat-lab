@@ -1,12 +1,18 @@
 # @package _global_
+# Pick and place are kinematically simulated.
+# Navigation is fully simulated.
 
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
+  - /habitat/task/actions:
+    - oracle_nav_action
+    - arm_action
+    - base_velocity
+    - rearrange_stop
   - _self_
-
 
 habitat_baselines:
   verbose: False
@@ -29,6 +35,7 @@ habitat_baselines:
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
   load_resume_state_config: False
+
   eval:
     use_ckpt_config: False
     should_load_ckpt: False
@@ -43,57 +50,59 @@ habitat_baselines:
               "goal_to_agent_gps_compass": 2
         hierarchical_policy:
           high_level_policy:
-            name: "FixedHighLevelPolicy"
-            add_arm_rest: True
+            name: "NeuralHighLevelPolicy"
+            allow_other_place: False
+            hidden_dim: 512
+            use_rnn: True
+            rnn_type: 'LSTM'
+            backbone: resnet18
+            normalize_visual_inputs: False
+            num_rnn_layers: 2
+            policy_input_keys:
+              - "robot_head_depth"
           defined_skills:
             open_cab:
               skill_name: "ArtObjSkillPolicy"
               name: "PointNavResNetPolicy"
+              action_distribution_type: "gaussian"
               load_ckpt_file: "data/models/open_cab.pth"
               max_skill_steps: 200
+              apply_postconds: True
 
             open_fridge:
               skill_name: "ArtObjSkillPolicy"
               load_ckpt_file: "data/models/open_fridge.pth"
               max_skill_steps: 200
+              apply_postconds: True
 
             close_cab:
-              skill_name: "ArtObjSkillPolicy"
+              skill_name: "NoopSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
               load_ckpt_file: "data/models/close_cab.pth"
               max_skill_steps: 200
 
             close_fridge:
-              skill_name: "ArtObjSkillPolicy"
+              skill_name: "NoopSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
-              load_ckpt_file: "data/models/close_fridge.pth"
-              max_skill_steps: 200
+              max_skill_steps: 1
+              apply_postconds: True
 
             pick:
-              skill_name: "PickSkillPolicy"
-              name: "PointNavResNetPolicy"
-              action_distribution_type: "gaussian"
-              at_resting_threshold: 0.15
+              skill_name: "NoopSkillPolicy"
               obs_skill_inputs: ["obj_start_sensor"]
-              load_ckpt_file: "data/models/pick.pth"
-              max_skill_steps: 200
+              max_skill_steps: 1
+              apply_postconds: True
 
             place:
-              skill_name: "PlaceSkillPolicy"
-              name: "PointNavResNetPolicy"
-              action_distribution_type: "gaussian"
-              at_resting_threshold: 0.15
+              skill_name: "NoopSkillPolicy"
               obs_skill_inputs: ["obj_goal_sensor"]
-              load_ckpt_file: "data/models/place.pth"
-              max_skill_steps: 200
+              max_skill_steps: 1
+              apply_postconds: True
 
             nav_to_obj:
-              skill_name: "NavSkillPolicy"
-              obs_skill_inputs: ["goal_to_agent_gps_compass"]
-              obs_skill_input_dim: 2
-              load_ckpt_file: "data/models/nav.pth"
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
-              force_end_on_timeout: False
 
             wait_skill:
               skill_name: "WaitSkillPolicy"
@@ -111,7 +120,7 @@ habitat_baselines:
             # open_cab: "open_cab"
             # open_fridge: "open_fridge"
             # close_cab: "open_cab"
-            # close_fridgE: "open_fridge"
+            # close_fridge: "open_fridge"
             pick: "pick"
             place: "place"
             nav: "nav_to_obj"
@@ -119,8 +128,49 @@ habitat_baselines:
             wait: "wait_skill"
             reset_arm: "reset_arm_skill"
 
+    ppo:
+      # ppo params
+      clip_param: 0.2
+      ppo_epoch: 2
+      num_mini_batch: 2
+      value_loss_coef: 0.5
+      entropy_coef: 0.0001
+      lr: 2.5e-4
+      eps: 1e-5
+      max_grad_norm: 0.2
+      num_steps: 128
+      use_gae: True
+      gamma: 0.99
+      tau: 0.95
+      use_linear_clip_decay: False
+      use_linear_lr_decay: False
+      reward_window_size: 50
+
+      use_normalized_advantage: False
+
+      hidden_size: 512
+
+      # Use double buffered sampling, typically helps
+      # when environment time is similar or larger than
+      # policy inference time during rollout generation
+      use_double_buffered_sampler: False
+
     ddppo:
+      sync_frac: 0.6
+      # The PyTorch distributed backend to use
+      distrib_backend: NCCL
+      # Visual encoder backbone
+      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
+      # Initialize with pretrained weights
       pretrained: False
+      # Initialize just the visual encoder backbone with pretrained weights
       pretrained_encoder: False
+      # Whether the visual encoder backbone will be trained.
       train_encoder: True
+      # Whether to reset the critic linear layer
       reset_critic: False
+
+      # Model parameters
+      backbone: resnet18
+      rnn_type: LSTM
+      num_recurrent_layers: 2
