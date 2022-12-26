@@ -7,7 +7,7 @@ import torch.nn as nn
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 
 
-class HighLevelPolicy:
+class HighLevelPolicy(nn.Module):
     def __init__(
         self,
         config,
@@ -17,6 +17,7 @@ class HighLevelPolicy:
         observation_space: spaces.Space,
         action_space: spaces.Space,
     ):
+        super().__init__()
         self._config = config
         self._pddl_prob = pddl_problem
         self._num_envs = num_envs
@@ -32,7 +33,7 @@ class HighLevelPolicy:
         return 0
 
     def parameters(self):
-        return nn.Parameter(torch.zeros((1,), device=self._device))
+        return iter([nn.Parameter(torch.zeros((1,), device=self._device))])
 
     def get_next_skill(
         self,

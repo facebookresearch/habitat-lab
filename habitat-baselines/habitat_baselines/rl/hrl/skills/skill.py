@@ -44,7 +44,9 @@ class SkillPolicy(Policy):
             )
         else:
             self._pddl_ac_start = None
-        self._delay_term = [None for _ in range(self._batch_size)]
+        self._delay_term: List[Optional[bool]] = [
+            None for _ in range(self._batch_size)
+        ]
 
         self._grip_ac_idx = 0
         found_grip = False
@@ -104,6 +106,10 @@ class SkillPolicy(Policy):
         action = self._pddl_problem.actions[skill_name]
 
         entities = [self._pddl_problem.get_entity(x) for x in skill_args]
+        if self._pddl_ac_start is None:
+            raise ValueError(
+                "Apply post cond not supported when pddl action not in action space"
+            )
 
         ac_idx = self._pddl_ac_start
         found = False
@@ -139,6 +145,7 @@ class SkillPolicy(Policy):
         rnn_hidden_states,
         prev_actions,
         masks,
+        actions,
         hl_says_term,
         batch_idx: List[int],
         skill_name: List[str],
@@ -156,37 +163,43 @@ class SkillPolicy(Policy):
                 observations,
             )
 
+        cur_skill_step = self._cur_skill_step[batch_idx]
         bad_terminate = torch.zeros(
-            self._cur_skill_step.shape,
-            device=self._cur_skill_step.device,
+            cur_skill_step.shape,
+            dtype=torch.bool,
+        )
+
+        bad_terminate = torch.zeros(
+            cur_skill_step.shape,
+            device=cur_skill_step.device,
             dtype=torch.bool,
         )
         if self._config.max_skill_steps > 0:
-            over_max_len = self._cur_skill_step > self._config.max_skill_steps
+            over_max_len = cur_skill_step > self._config.max_skill_steps
             if self._config.force_end_on_timeout:
                 bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len
 
-        # for i, env_i in enumerate(batch_idx):
-        #     if self._delay_term[env_i]:
-        #         self._delay_term[env_i] = False
-        #         is_skill_done[i] = 1.0
-        #     elif (
-        #         self._config.apply_postconds
-        #         and is_skill_done[i] == 1.0
-        #         and hl_says_term[i] == 0.0
-        #     ):
-        #         actions = self._apply_postcond(
-        #             actions, log_info, skill_name[i], env_i, i
-        #         )
-        #         self._delay_term[env_i] = True
-        #         is_skill_done[i] = 0.0
+        for i, env_i in enumerate(batch_idx):
+            if self._delay_term[env_i]:
+                self._delay_term[env_i] = False
+                is_skill_done[i] = 1.0
+            elif (
+                self._config.apply_postconds
+                and is_skill_done[i] == 1.0
+                and hl_says_term[i] == 0.0
+            ):
+                actions = self._apply_postcond(
+                    actions, log_info, skill_name[i], env_i, i
+                )
+                self._delay_term[env_i] = True
+                is_skill_done[i] = 0.0
         is_skill_done |= hl_says_term
 
         if bad_terminate.sum() > 0:
             self._internal_log(
-                f"Bad terminating due to timeout {self._cur_skill_step}, {bad_terminate}",
+                f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
                 observations,
             )
 

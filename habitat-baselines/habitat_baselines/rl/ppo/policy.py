@@ -39,6 +39,7 @@ class PolicyAction:
     action_log_probs: Optional[torch.Tensor] = None
     take_actions: Optional[torch.Tensor] = None
     policy_info: Optional[List[Dict[str, Any]]] = None
+    should_inserts: Optional[torch.Tensor] = None
 
     def write_action(self, write_idx, write_action):
         self.actions[:, write_idx] = write_action

@@ -36,12 +36,14 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
-from habitat_baselines.common.rollout_storage import RolloutStorage
+from habitat_baselines.common.rollout_storage import (  # noqa: F401.
+    RolloutStorage,
+)
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,
 )
-from habitat_baselines.rl.ddppo.algo import DDPPO
+from habitat_baselines.rl.ddppo.algo import DDPPO  # noqa: F401.
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
     get_distrib_size,
@@ -59,7 +61,7 @@ from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
-from habitat_baselines.rl.ppo import PPO
+from habitat_baselines.rl.ppo import PPO  # noqa: F401.
 from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -189,9 +191,14 @@ class PPOTrainer(BaseRLTrainer):
             nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
             nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
 
-        self.agent = (DDPPO if self._is_distributed else PPO).from_config(
-            self.actor_critic, ppo_cfg
-        )
+        if self._is_distributed:
+            agent_cls = baseline_registry.get_updater(
+                self.config.distrib_updater_name
+            )
+        else:
+            agent_cls = baseline_registry.get_updater(self.config.updater_name)
+
+        self.agent = agent_cls.from_config(self.actor_critic, ppo_cfg)
 
     def _init_envs(self, config=None, is_eval: bool = False):
         if config is None:
@@ -329,13 +336,16 @@ class PPOTrainer(BaseRLTrainer):
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
 
-        self.rollouts = RolloutStorage(
+        rollouts_cls = baseline_registry.get_storage(
+            self.config.rollout_storage
+        )
+        self.rollouts = rollouts_cls(
             ppo_cfg.num_steps,
             self.envs.num_envs,
             obs_space,
             self.policy_action_space,
             ppo_cfg.hidden_size,
-            num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
+            num_recurrent_layers=self.actor_critic.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
             action_shape=action_shape,
             discrete_actions=discrete_actions,
@@ -505,6 +515,7 @@ class PPOTrainer(BaseRLTrainer):
             action_log_probs=action_data.action_log_probs,
             value_preds=action_data.values,
             buffer_index=buffer_index,
+            should_inserts=action_data.should_inserts,
         )
 
     def _collect_environment_result(self, buffer_index: int = 0):

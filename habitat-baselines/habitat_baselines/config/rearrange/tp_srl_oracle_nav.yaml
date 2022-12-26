@@ -12,20 +12,19 @@ defaults:
     - rearrange_stop
   - _self_
 
-AGENT_0_ORACLE_NAV_ACTION:
-          TYPE: "OracleNavAction"
-          TURN_VELOCITY: 1.0
-          FORWARD_VELOCITY: 1.0
-          TURN_THRESH: 0.1
-          DIST_THRESH: 0.2
-          AGENT: 0
-          LIN_SPEED: 40.0
-          ANG_SPEED: 20.0
-          MIN_ABS_LIN_SPEED: 1.0
-          MIN_ABS_ANG_SPEED: 1.0
-          ALLOW_DYN_SLIDE: False
-          END_ON_STOP: False
-          ALLOW_BACK: True
+habitat:
+  gym:
+    auto_name: RearrangeEasy
+    obs_keys:
+      - robot_head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - localization_sensor
 
 habitat_baselines:
   verbose: False

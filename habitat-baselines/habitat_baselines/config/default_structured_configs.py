@@ -404,6 +404,8 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # )
     # cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
+    updater_name: str = "PPO"
+    distrib_updater_name: str = "DDPPO"
     torch_gpu_id: int = 0
     video_render_views: List[str] = field(default_factory=list)
     tensorboard_dir: str = "tb"
@@ -415,6 +417,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
+    rollout_storage: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10

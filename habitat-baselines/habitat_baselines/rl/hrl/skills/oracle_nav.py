@@ -124,7 +124,7 @@ class OracleNavPolicy(NnSkillPolicy):
             prev_pos = self._prev_pos[batch_i]
             if prev_pos is not None:
                 movement = torch.linalg.norm(prev_pos - cur_pos[i])
-                ret[i] = movement < self._config.STOP_THRESH
+                ret[i] = movement < self._config.stop_thresh
             self._prev_pos[batch_i] = cur_pos[i]
 
         return ret

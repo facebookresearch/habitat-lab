@@ -154,19 +154,24 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     [
         (
             "habitat-baselines/habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml",
-            "eval",
+            "train",
             "ppo",
         ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/tp_srl_oracle_nav.yaml",
-            "eval",
-            "ppo",
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/tp_srl.yaml",
-            "eval",
-            "ppo",
-        ),
+        # (
+        #     "habitat-baselines/habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml",
+        #     "eval",
+        #     "ppo",
+        # ),
+        # (
+        #     "habitat-baselines/habitat_baselines/config/rearrange/tp_srl_oracle_nav.yaml",
+        #     "eval",
+        #     "ppo",
+        # ),
+        # (
+        #     "habitat-baselines/habitat_baselines/config/rearrange/tp_srl.yaml",
+        #     "eval",
+        #     "ppo",
+        # ),
     ],
 )
 def test_hrl(config_path, mode, trainer_name):
@@ -180,6 +185,7 @@ def test_hrl(config_path, mode, trainer_name):
         [
             "habitat_baselines.num_updates=1",
             "habitat_baselines.eval.split=minival",
+            "habitat.dataset.split=minival",
             "habitat_baselines.total_num_steps=-1.0",
             "habitat_baselines.test_episode_count=1",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",

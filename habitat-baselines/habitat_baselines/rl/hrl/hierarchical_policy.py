@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
+import torch.nn as nn
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.multi_task.composite_sensors import (
@@ -38,7 +39,7 @@ from habitat_baselines.utils.common import get_num_actions
 
 
 @baseline_registry.register_policy
-class HierarchicalPolicy(Policy):
+class HierarchicalPolicy(nn.Module, Policy):
     def __init__(
         self,
         config,
@@ -212,6 +213,11 @@ class HierarchicalPolicy(Policy):
             self._cur_skills,
             log_info,
         )
+        # Compute the actions from the current skills
+        actions = torch.zeros(
+            (self._num_envs, get_num_actions(self._action_space)),
+            device=masks.device,
+        )
 
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
@@ -220,6 +226,7 @@ class HierarchicalPolicy(Policy):
                 "rnn_hidden_states": rnn_hidden_states,
                 "prev_actions": prev_actions,
                 "masks": masks,
+                "actions": actions,
                 "hl_says_term": hl_says_term,
             },
             # Only decide on skill termination if the episode is active.
@@ -288,12 +295,6 @@ class HierarchicalPolicy(Policy):
             self._cur_skills = (
                 (~self._call_high_level) * self._cur_skills
             ) + (self._call_high_level * new_skills)
-
-        # Compute the actions from the current skills
-        actions = torch.zeros(
-            (self._num_envs, get_num_actions(self._action_space)),
-            device=masks.device,
-        )
 
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,

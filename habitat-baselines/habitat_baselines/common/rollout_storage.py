@@ -10,6 +10,7 @@ from typing import Any, Dict, Iterator, Optional, Tuple
 import numpy as np
 import torch
 
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
@@ -17,6 +18,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
 )
 
 
+@baseline_registry.register_storage
 class RolloutStorage:
     r"""Class for storing rollout information for RL trainers."""
 
@@ -116,6 +118,7 @@ class RolloutStorage:
         rewards=None,
         next_masks=None,
         buffer_index: int = 0,
+        **kwargs,
     ):
         if not self.is_double_buffered:
             assert buffer_index == 0
