@@ -193,10 +193,12 @@ class PPOTrainer(BaseRLTrainer):
 
         if self._is_distributed:
             agent_cls = baseline_registry.get_updater(
-                self.config.distrib_updater_name
+                self.config.habitat_baselines.distrib_updater_name
             )
         else:
-            agent_cls = baseline_registry.get_updater(self.config.updater_name)
+            agent_cls = baseline_registry.get_updater(
+                self.config.habitat_baselines.updater_name
+            )
 
         self.agent = agent_cls.from_config(self.actor_critic, ppo_cfg)
 
@@ -337,7 +339,7 @@ class PPOTrainer(BaseRLTrainer):
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
 
         rollouts_cls = baseline_registry.get_storage(
-            self.config.rollout_storage
+            self.config.habitat_baselines.rollout_storage
         )
         self.rollouts = rollouts_cls(
             ppo_cfg.num_steps,

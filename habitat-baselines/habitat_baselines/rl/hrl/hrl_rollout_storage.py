@@ -15,7 +15,7 @@ from habitat_baselines.common.tensor_dict import TensorDict
 EPS_PPO = 1e-5
 
 
-@baseline_registry.register_policy
+@baseline_registry.register_storage
 class HrlRolloutStorage(RolloutStorage):
     def __init__(self, numsteps, num_envs, *args, **kwargs):
         super().__init__(numsteps, num_envs, *args, **kwargs)
