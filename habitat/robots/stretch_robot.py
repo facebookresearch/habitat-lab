@@ -26,19 +26,20 @@ class StretchRobot(MobileManipulator):
             # 40: joint_wrist_roll
             # 7: joint_head_pan
             # 8: joint_head_tilt
-            #arm_joints=[28, 27, 26, 25, 23, 31, 39, 40, 7, 8],
+            # arm_joints=[28, 27, 26, 25, 23, 31, 39, 40, 7, 8],
             arm_joints=[28, 27, 26, 25, 23, 31, 33, 34, 7, 8],
             # 34: joint_gripper_finger_left
             # 36: joint_gripper_finger_right
-            #gripper_joints=[34, 36],
+            # gripper_joints=[34, 36],
             gripper_joints=[36, 38],
             # 4: joint_left_wheel
             # 44: joint_right_wheel
-            #wheel_joints=[4, 44],
+            # wheel_joints=[4, 44],
             wheel_joints=[4, 42],
             # We for the camera to point toward the target object want to to pick-up
             arm_init_params=np.array(
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.70, -0.43],
+                # [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, -1.70, -0.43],
+                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 dtype=np.float32,
             ),
             gripper_init_params=np.array([0.0, 0.0], dtype=np.float32),
@@ -50,7 +51,7 @@ class StretchRobot(MobileManipulator):
             #     [[0.00, 0.23], [-0.74, -0.34], [-0.06, 1.03]]
             # ),
             ee_constraint=np.array(
-                #[[-0.15, 0.32], [-0.90, -0.38], [0.02, 1.12]]
+                # [[-0.15, 0.32], [-0.90, -0.38], [0.02, 1.12]]
                 [[-0.08, 0.29], [-0.84, -0.27], [0.01, 1.12]]
             ),
             # Camera color optical frame...
@@ -104,12 +105,12 @@ class StretchRobot(MobileManipulator):
                 ),
             },
             gripper_closed_state=np.array([0.0, 0.0], dtype=np.float32),
-            #gripper_open_state=np.array([0.6, 0.6], dtype=np.float32),
+            # gripper_open_state=np.array([0.6, 0.6], dtype=np.float32),
             # Samller number to make it more relaisit
             gripper_open_state=np.array([0.02, 0.02], dtype=np.float32),
             gripper_state_eps=0.1,
-            arm_mtr_pos_gain=0.3,
-            arm_mtr_vel_gain=0.3,
+            arm_mtr_pos_gain=1.0,  # default: 0.3
+            arm_mtr_vel_gain=1.0,  # default: 0.3
             arm_mtr_max_impulse=10.0,
             wheel_mtr_pos_gain=0.0,
             wheel_mtr_vel_gain=1.3,

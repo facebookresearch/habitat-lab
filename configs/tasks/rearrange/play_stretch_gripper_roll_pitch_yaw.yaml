@@ -17,7 +17,9 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    #DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
+    #DATA_PATH: /Users/jimmytyyang/Habitat_lang_reg/habitat-lab/data/datasets/floorplanner/v1/train/rearrange.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeEmptyTask-v0
@@ -110,7 +112,7 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosKinematicReducedActionStretch" #  or ArmRelPosAction
+            ARM_CONTROLLER: "ArmRelPosReducedActionStretch" #  Default: ArmRelPosAction
             GRIP_CONTROLLER: "MagicGraspAction"
             ARM_JOINT_MASK: [1,0,0,0,1,1,1,1,1,1] # mask out the arm
             ARM_JOINT_DIMENSIONALITY: 10
@@ -118,10 +120,12 @@ TASK:
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+            CONTROL_METHOD: "kinematic" # kinematic or dynamic
+            CONTACT_DETECTION: True
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
-            LIN_SPEED: 1.0
-            ANG_SPEED: 1.0
+            LIN_SPEED: 10.0
+            ANG_SPEED: 10.0
             ALLOW_DYN_SLIDE: True
             END_ON_STOP: False
             ALLOW_BACK: True
@@ -157,15 +161,16 @@ SIMULATOR:
         ROBOT_TYPE: "StretchRobot"
         IK_ARM_URDF:
     HEAD_RGB_SENSOR:
-        WIDTH: 120
-        HEIGHT: 212
-        HFOV: 69
+        WIDTH: 480 # 120
+        HEIGHT: 640 # 212
+        HFOV: 56
     HEAD_DEPTH_SENSOR:
-        WIDTH: 120
-        HEIGHT: 212
+        WIDTH: 480 # 120
+        HEIGHT: 640 # 212
         MIN_DEPTH: 0.0
         MAX_DEPTH: 10.0
-        NORMALIZE_DEPTH: True
+        NORMALIZE_DEPTH: False
+        HFOV: 56
     ARM_SEMANTIC_SENSOR:
       HEIGHT: 128
       WIDTH: 128

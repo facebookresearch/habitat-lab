@@ -4,7 +4,8 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH:  data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
     SCENES_DIR: "data/replica_cad/"
 TASK:
     TYPE: RearrangeEmptyTask-v0
@@ -97,15 +98,19 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosKinematicReducedAction" #  or ArmRelPosAction
+            # Kinematic simulated arm control
+            ARM_CONTROLLER: "ArmRelPosReducedActionSpot" #"ArmRelPosKinematicReducedAction" #  or ArmRelPosAction
             GRIP_CONTROLLER: "MagicGraspAction"
-            ARM_JOINT_MASK: [1,1,0,1,0,1,0]
+            # ARM_JOINT_MASK: [1,1,1,1,1,1,1] # [1,1,0,1,0,1,0] the third is wrong, shoud be zero
+            ARM_JOINT_MASK: [1,1,0,1,1,1,1]
             ARM_JOINT_DIMENSIONALITY: 7
             PREVENT_PENETRATION: True
             GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
+            CONTROL_METHOD: "kinematic" # kinematic or dynamic
+            CONTACT_DETECTION: True
         BASE_VELOCITY:
             TYPE: "BaseVelAction"
             LIN_SPEED: 10.0
@@ -138,6 +143,7 @@ SIMULATOR:
         RADIUS: 0.3
         SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR", "ARM_SEMANTIC_SENSOR"]
         ROBOT_URDF: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        #ROBOT_URDF: /Users/jimmytyyang/Desktop/spot_arm/urdf/spot_arm.urdf
         ROBOT_TYPE: "SpotRobot"
         IK_ARM_URDF: data/robots/hab_spot_arm/urdf/hab_spot_onlyarm.urdf
     HEAD_RGB_SENSOR:
@@ -199,3 +205,9 @@ SIMULATOR:
     # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
     # for the collision detection.
     COLLISION_DETECTION_METHOD: "ContactTestRevert"
+    # Force the simulation to be the kinematic mode
+    # Teleporting the robot to the goal location
+    # In addition, after close the gripper, the object will not drop if the mode is
+    # kinematic since there is no physics
+    KINEMATIC_MODE: True
+    STEP_PHYSICS: True

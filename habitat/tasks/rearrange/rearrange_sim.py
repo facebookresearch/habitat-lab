@@ -613,6 +613,31 @@ class RearrangeSim(HabitatSim):
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
+        ii = 0
+        ao = self.art_objs[3]
+
+        # ao.joint_positions = [0.0, 0.5]
+        # print("joint_positions:", ao.joint_positions)
+        # print("ao:", ao.translation)
+        # print("ee:", self.robot.ee_transform.translation)
+        x = ao.translation[0] + 0.5 * np.cos(ao.joint_positions[1])
+        y = ao.translation[2] + 0.5 * np.sin(ao.joint_positions[1])
+
+        ef_link_transform_1 = ao.get_link_scene_node(
+            0
+        ).transformation.translation
+        ef_link_transform_2 = ao.get_link_scene_node(
+            1
+        ).transformation.translation
+        ef_link_transform_3 = ao.get_link_scene_node(
+            2
+        ).transformation.translation
+        # print(ef_link_transform_1)
+        # print(ef_link_transform_2)
+        # print(ef_link_transform_3)
+
+        # import pdb; pdb.set_trace()
+
         if self.habitat_config.DEBUG_RENDER:
             if self.habitat_config.DEBUG_RENDER_ROBOT:
                 self.robots_mgr.update_debug()

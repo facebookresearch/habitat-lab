@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import re
 from typing import Optional
 
 import magnum as mn
@@ -188,10 +189,13 @@ class ArmRelPosKinematicReducedAction(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self.last_arm_action = None
+        self.last_no_contact_angle = []
+        self.kinematic = True
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         self.last_arm_action = None
+        self.last_no_contact_angle = []
 
     @property
     def action_space(self):
@@ -248,14 +252,56 @@ class ArmRelPosKinematicReducedAction(RobotAction):
             src_idx += 1
 
         min_limit, max_limit = self.cur_robot.arm_joint_limits
-        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        if True:
+            set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        else:
+            # self.cur_robot.arm_joint_pos drifts becuase that it is not
+            # getting the information of the motor target position
+            set_arm_pos = expanded_delta_pos + self.cur_robot.arm_joint_pos
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
         # Reset to zero based on the mask
         for i, v in enumerate(self._config.ARM_JOINT_MASK):
             if v == 0:
                 set_arm_pos[i] = 0
 
-        self.cur_robot.arm_motor_pos = set_arm_pos
+        contact = self.cur_robot._sim.contact_test(
+            self.cur_robot.sim_obj.object_id
+        )
+        # If there is a contact, this means that the motor angle should revert to the
+        # previous uncontact state.
+        if False:  # contact:
+            # This is the dynamics simulation
+            if len(self.last_no_contact_angle) >= 5:
+                if not self.kinematic:
+                    self.cur_robot.arm_motor_pos = self.last_no_contact_angle[
+                        -5
+                    ]
+                else:
+                    self.cur_robot.arm_joint_pos = self.last_no_contact_angle[
+                        -5
+                    ]
+            else:
+                if not self.kinematic:
+                    self.cur_robot.arm_motor_pos = set_arm_pos
+                else:
+                    self.cur_robot.arm_joint_pos = set_arm_pos
+        else:
+            # This means that there is no contact after applying the last motor angles. So we should
+            # store this motor angles.
+            if not self.kinematic:
+                self.last_no_contact_angle.append(
+                    self.cur_robot.arm_motor_pos.copy()
+                )
+                self.cur_robot.arm_motor_pos = set_arm_pos
+            else:
+                self.last_no_contact_angle.append(
+                    self.cur_robot.arm_joint_pos.copy()
+                )
+                self.cur_robot.arm_joint_pos = set_arm_pos
+
+        if len(self.last_no_contact_angle) >= 10:
+            self.last_no_contact_angle[-10:]
+
         # #if self._config.PREVENT_PENETRATION:
         # if False:
         #     # Get the ee position
@@ -285,7 +331,7 @@ class ArmRelPosKinematicReducedAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosKinematicReducedActionStretch(RobotAction):
+class ArmRelPosReducedActionStretch(RobotAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -294,14 +340,23 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self.last_arm_action = None
+        self.control_method = self._config.CONTROL_METHOD
+        self.contact_detection = self._config.CONTACT_DETECTION
+        self.contact = False
+        self.previous_no_contact_arm_joint_pos_list = []
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
         self.last_arm_action = None
+        self.contact = False
+        self.previous_no_contact_arm_joint_pos_list = []
+        for i in range(5):
+            self.previous_no_contact_arm_joint_pos_list.append(
+                list(self.cur_robot.arm_joint_pos)
+            )
 
     @property
     def action_space(self):
-        self.step_c = 0
         return spaces.Box(
             shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
             low=-1,
@@ -329,11 +384,15 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
             tgt_idx += 1
             src_idx += 1
 
+        # Get the max and min of each arm joint
         min_limit, max_limit = self.cur_robot.arm_joint_limits
+        # Determine the arm position by adding the control value into
+        # the previous arm motor position. Note that self.cur_robot.arm_motor_pos
+        # will output the target motor angle, which is fixed unless you
+        # motify it. In contrast, arm_joint_pos drifts.
         set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
-        # print('1. expanded_delta_pos:', expanded_delta_pos)
-        # print('2. set_arm_pos:', set_arm_pos)
-        # Perform roll over to the joints
+
+        # Perform roll over to the joints.
         if expanded_delta_pos[0] >= 0:
             for i in range(3):
                 if set_arm_pos[i] > max_limit[i]:
@@ -344,16 +403,184 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
                 if set_arm_pos[i] < min_limit[i]:
                     set_arm_pos[i + 1] -= min_limit[i] - set_arm_pos[i]
                     set_arm_pos[i] = min_limit[i]
-        # print('3. set_arm_pos:', set_arm_pos)
+
+        # Clip the arm.
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+        # Get the current arm position.
+        if self.control_method == "dynamic":
+            # For the dynamics simulation, since the true joint angle, arm_joint_pos, needs
+            # some time to reach the arm_motor_pos angles, we have to wait until arm does
+            # not have collision.
+            contact = self.cur_robot._sim.contact_test(
+                self.cur_robot.sim_obj.object_id
+            )
+            # We want to make sure that there are at least two consecutive states the robot
+            # does not collide with the object.
+            # Case #1: contact True and self.contact False: the arm contorl input produces the collision
+            # Case #2: contact False and self.contact True: the robot is going to revert the collision angles
+            if not contact and not self.contact:
+                cur_arm_pos = self.cur_robot.arm_motor_pos.copy()
+                if (
+                    list(cur_arm_pos)
+                    not in self.previous_no_contact_arm_joint_pos_list
+                ):
+                    self.previous_no_contact_arm_joint_pos_list.append(
+                        list(cur_arm_pos)
+                    )
 
-        self.cur_robot.arm_motor_pos = set_arm_pos
+        elif self.control_method == "kinematic":
+            cur_arm_pos = self.cur_robot.arm_motor_pos.copy()
+        else:
+            print("There is no such a simulation method")
 
-    def arccos(self, v1, v2):
-        inner_product = v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2]
-        norm_v1 = (v1[0] ** 2 + v1[1] ** 2 + v1[2] ** 2) ** 0.5
-        norm_v2 = (v2[0] ** 2 + v2[1] ** 2 + v2[2] ** 2) ** 0.5
-        return np.arccos(inner_product / (norm_v1 * norm_v2))
+        # Set the motor position.
+        if self.control_method == "dynamic":
+            self.cur_robot.arm_motor_pos = set_arm_pos
+        elif self.control_method == "kinematic":
+            self.cur_robot.arm_joint_pos = set_arm_pos
+        else:
+            print("There is no such a simulation method")
+
+        # If there is a contact after controlling the arm
+        contact = self.cur_robot._sim.contact_test(
+            self.cur_robot.sim_obj.object_id
+        )
+        self.contact = contact
+        if contact and self.contact_detection:
+            # Revert the motor position.
+            if self.control_method == "dynamic":
+                cur_arm_pos = np.array(
+                    self.previous_no_contact_arm_joint_pos_list[-5]
+                )
+                self.cur_robot.arm_motor_pos = cur_arm_pos
+                if len(self.previous_no_contact_arm_joint_pos_list) > 10:
+                    self.previous_no_contact_arm_joint_pos_list = (
+                        self.previous_no_contact_arm_joint_pos_list[-10:]
+                    )
+            elif self.control_method == "kinematic":
+                self.cur_robot.arm_joint_pos = cur_arm_pos
+            else:
+                print("There is no such a simulation method")
+
+
+@registry.register_task_action
+class ArmRelPosReducedActionSpot(RobotAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self.last_arm_action = None
+        self.control_method = self._config.CONTROL_METHOD
+        self.contact_detection = self._config.CONTACT_DETECTION
+        self.contact = False
+        self.previous_no_contact_arm_joint_pos_list = []
+
+    def reset(self, *args, **kwargs):
+        super().reset(*args, **kwargs)
+        self.last_arm_action = None
+        self.contact = False
+        self.previous_no_contact_arm_joint_pos_list = []
+        for i in range(5):
+            self.previous_no_contact_arm_joint_pos_list.append(
+                list(self.cur_robot.arm_joint_pos)
+            )
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.ARM_JOINT_DIMENSIONALITY,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, *args, **kwargs):
+        if self._config.get("SHOULD_CLIP", True):
+            # clip from -1 to 1
+            delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._config.DELTA_POS_LIMIT
+        self._sim: RearrangeSim
+
+        # Expand delta_pos based on mask
+        expanded_delta_pos = np.zeros(len(self._config.ARM_JOINT_MASK))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._config.ARM_JOINT_MASK:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            expanded_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        # Get the max and min of each arm joint
+        min_limit, max_limit = self.cur_robot.arm_joint_limits
+        # Determine the arm position by adding the control value into
+        # the previous arm motor position. Note that self.cur_robot.arm_motor_pos
+        # will output the target motor angle, which is fixed unless you
+        # motify it. In contrast, arm_joint_pos drifts.
+        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        # Clip the arm.
+        set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+        # Get the current arm position.
+        if self.control_method == "dynamic":
+            # For the dynamics simulation, since the true joint angle, arm_joint_pos, needs
+            # some time to reach the arm_motor_pos angles, we have to wait until arm does
+            # not have collision.
+            contact = self.cur_robot._sim.contact_test(
+                self.cur_robot.sim_obj.object_id
+            )
+            # We want to make sure that there are at least two consecutive states the robot
+            # does not collide with the object.
+            # Case #1: contact True and self.contact False: the arm contorl input produces the collision
+            # Case #2: contact False and self.contact True: the robot is going to revert the collision angles
+            if not contact and not self.contact:
+                cur_arm_pos = self.cur_robot.arm_motor_pos.copy()
+                if (
+                    list(cur_arm_pos)
+                    not in self.previous_no_contact_arm_joint_pos_list
+                ):
+                    self.previous_no_contact_arm_joint_pos_list.append(
+                        list(cur_arm_pos)
+                    )
+
+        elif self.control_method == "kinematic":
+            cur_arm_pos = self.cur_robot.arm_motor_pos.copy()
+        else:
+            print("There is no such a simulation method")
+
+        # Set the motor position.
+        if self.control_method == "dynamic":
+            self.cur_robot.arm_motor_pos = set_arm_pos
+        elif self.control_method == "kinematic":
+            self.cur_robot.arm_joint_pos = set_arm_pos
+        else:
+            print("There is no such a simulation method")
+
+        # If there is a contact after controlling the arm
+        contact = self.cur_robot._sim.contact_test(
+            self.cur_robot.sim_obj.object_id
+        )
+        self.contact = contact
+        if contact and self.contact_detection:
+            # Revert the motor position.
+            if self.control_method == "dynamic":
+                cur_arm_pos = np.array(
+                    self.previous_no_contact_arm_joint_pos_list[-5]
+                )
+                self.cur_robot.arm_motor_pos = cur_arm_pos
+                if len(self.previous_no_contact_arm_joint_pos_list) > 10:
+                    self.previous_no_contact_arm_joint_pos_list = (
+                        self.previous_no_contact_arm_joint_pos_list[-10:]
+                    )
+            elif self.control_method == "kinematic":
+                self.cur_robot.arm_joint_pos = cur_arm_pos
+            else:
+                print("There is no such a simulation method")
 
 
 @registry.register_task_action
@@ -456,6 +683,33 @@ class BaseVelAction(RobotAction):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
 
+    def get_collisions(self):
+        def extract_coll_info(coll, n_point):
+            parts = coll.split(",")
+            coll_type, name, link = parts[:3]
+            return {
+                "type": coll_type.strip(),
+                "name": name.strip(),
+                "link": link.strip(),
+                "n_points": n_point,
+            }
+
+        sum_str = self._sim.get_physics_step_collision_summary()
+        colls = sum_str.split("\n")
+        if "no active" in colls[0]:
+            return []
+        n_points = [
+            int(c.split(",")[-1].strip().split(" ")[0])
+            for c in colls
+            if c != ""
+        ]
+        colls = [
+            [extract_coll_info(x, n) for x in re.findall("\[(.*?)\]", s)]
+            for n, s in zip(n_points, colls)
+        ]
+        colls = [x for x in colls if len(x) != 0]
+        return colls
+
     def check_step(self):
         before_trans_state = self._capture_robot_state()
         trans = self.cur_robot.sim_obj.transformation
@@ -464,10 +718,11 @@ class BaseVelAction(RobotAction):
             # Check if in the new robot state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
-            colls = self._sim.get_collisions()
+            colls = self.get_collisions()
             did_coll, _ = rearrange_collision(
-                colls, self._sim.snapped_obj_id, False
+                colls, self.cur_grasp_mgr._snapped_obj_id, False
             )
+            did_coll = False
             if did_coll:
                 # Don't allow the step, revert back.
                 self._set_robot_state(before_trans_state)
@@ -498,8 +753,6 @@ class BaseVelAction(RobotAction):
             if self._config.VEL_BASE_MASK[1] == 0:
                 ang_vel = 0.0
 
-        print("@actions.py, lin_vel:", lin_vel)
-        print("@actions.py, ang_vel:", ang_vel)
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 

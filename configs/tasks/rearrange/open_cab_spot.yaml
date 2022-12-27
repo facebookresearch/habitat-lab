@@ -103,21 +103,19 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosKinematicReducedAction"
-            #ARM_CONTROLLER: "ArmRelPosAction"
-            SHOULD_CLIP: False
-            ARM_JOINT_MASK: [1,1,0,1,0,1,1] # Ideally sums to JOINT_SENSOR DIMENSIONALITY
-            GRIP_CONTROLLER: "MagicGraspAction" # "SuctionGraspAction" #
-            #GRIP_CONTROLLER: "GazeGraspAction"
-            GAZE_DISTANCE_RANGE: [0.3, 0.75]
-            CENTER_CONE_ANGLE: 20
+            # Kinematic simulated arm control
+            ARM_CONTROLLER: "ArmRelPosReducedActionSpot" #"ArmRelPosKinematicReducedAction" #  or ArmRelPosAction
+            GRIP_CONTROLLER: "MagicGraspAction"
+            # ARM_JOINT_MASK: [1,1,1,1,1,1,1] # [1,1,0,1,0,1,0] the third is wrong, shoud be zero
+            ARM_JOINT_MASK: [1,1,0,1,1,1,1]
             ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15 #0.15
-            DISABLE_GRIP: False # We want to disable the grip so that we focus on the Spot control
-            DELTA_POS_LIMIT: 0.025 #0.025 -> 0.1 -> 0.005
-            EE_CTRL_LIM: 0.015
-            RENDER_EE_TARGET: True
             PREVENT_PENETRATION: True
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+            CONTROL_METHOD: "kinematic" # kinematic or dynamic
+            CONTACT_DETECTION: False
     POSSIBLE_ACTIONS:
         - ARM_ACTION
 SIMULATOR:
@@ -177,7 +175,7 @@ SIMULATOR:
     CTRL_FREQ: 120.0
     AC_FREQ_RATIO: 4
     FORWARD_STEP_SIZE: 0.25
-    HOLD_THRESH: 0.2
+    HOLD_THRESH: 1.0  # defualt 0.2
     GRASP_IMPULSE: 10000.0
     DEFAULT_AGENT_ID: 0
     HABITAT_SIM_V0:
@@ -196,4 +194,4 @@ SIMULATOR:
     ARM_RGB_SENSOR:
         HEIGHT: 128
         WIDTH: 128
-    KINEMATIC_MOD: True
+    KINEMATIC_MODE: False

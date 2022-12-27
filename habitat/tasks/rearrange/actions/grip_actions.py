@@ -53,6 +53,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             )
 
             keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
+            # print("@grip_actions.py: scene_obj_pos:", to_target, self._config.GRASP_THRESH_DIST)
             if to_target < self._config.GRASP_THRESH_DIST:
                 self.cur_grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx],
@@ -73,6 +74,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             )
 
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
+            # print("@grip_actions.py: markers:", to_target, self._config.GRASP_THRESH_DIST)
 
             if to_target < self._config.GRASP_THRESH_DIST:
                 self.cur_robot.open_gripper()
@@ -275,7 +277,7 @@ class GazeGraspAction(GripSimulatorTaskAction):
             object_angle = self.get_grasp_object_angle(object_pos)
 
             # print('Dist: {}, Angle {}'.format(dist, object_angle))
-            print(abs(object_angle), self.central_cone)
+            # print(abs(object_angle), self.central_cone)
             if abs(object_angle) > self.central_cone:
                 continue
 

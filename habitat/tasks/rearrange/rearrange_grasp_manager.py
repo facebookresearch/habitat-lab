@@ -40,6 +40,8 @@ class RearrangeGraspManager:
         self._config = config
         self._managed_robot = robot
 
+        self.init_position_of_marker = None
+
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
         Called from _sim.reconfigure().
@@ -64,8 +66,8 @@ class RearrangeGraspManager:
         the agent violated the hold constraint.
         """
         ee_pos = self._managed_robot.ee_transform.translation
-        if self._snapped_obj_id is not None:
-            print("obj dis:",  np.linalg.norm(ee_pos - self.snap_rigid_obj.translation))
+        # if self._snapped_obj_id is not None:
+        # print("rearrange_grasp_manager.py: obj dis:",  np.linalg.norm(ee_pos - self.snap_rigid_obj.translation))
         if self._snapped_obj_id is not None and (
             np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
             >= self._config.HOLD_THRESH
@@ -73,12 +75,64 @@ class RearrangeGraspManager:
             return True
         if self._snapped_marker_id is not None:
             marker = self._sim.get_marker(self._snapped_marker_id)
-            print("marker dis:", np.linalg.norm(ee_pos - marker.get_current_position()))
+            # print("rearrange_grasp_manager.py: marker dis:", np.linalg.norm(ee_pos - marker.get_current_position()))
+            # print("rearrange_grasp_manager.py: ee_pos:", ee_pos)
+            # print("rearrange_grasp_manager.py: marker.get_current_position():", marker.get_current_position())
+            # print("rearrange_grasp_manager.py: marker z dis", np.abs(ee_pos[1] - marker.get_current_position()[1]))
+            # print("marker.get_current_position():", marker.get_current_position())
+            max_iter = 100
+            if self._sim.habitat_config.KINEMATIC_MODE:
+                if self.init_position_of_marker is None:
+                    self.init_position_of_marker = (
+                        marker.get_current_position()
+                    )
+                    self.last_position_of_ee = np.array(ee_pos)
+                    self.last_cur_dis = np.linalg.norm(
+                        self.init_position_of_marker - self.last_position_of_ee
+                    )
+                else:
+                    cur_dis = np.linalg.norm(
+                        self.init_position_of_marker - ee_pos
+                    )
+                    if (
+                        cur_dis < self.last_cur_dis
+                        and abs(cur_dis - self.last_cur_dis) > 0.005
+                    ):
+                        # while not self._managed_robot._sim.contact_test(self._managed_robot.get_robot_sim_id()):
+                        angle = marker.ao_parent.joint_positions[1]
+                        marker.ao_parent.joint_positions = [
+                            0.0,
+                            angle - abs(cur_dis - self.last_cur_dis) * 2,
+                        ]
+
+                    elif (
+                        cur_dis > self.last_cur_dis
+                        and abs(cur_dis - self.last_cur_dis) > 0.005
+                    ):
+                        # while not self._managed_robot._sim.contact_test(self._managed_robot.get_robot_sim_id()):
+                        angle = marker.ao_parent.joint_positions[1]
+                        marker.ao_parent.joint_positions = [
+                            0.0,
+                            angle + abs(cur_dis - self.last_cur_dis) * 2,
+                        ]
+
+                    self.last_position_of_ee = np.array(ee_pos)
+                    self.last_cur_dis = np.linalg.norm(
+                        self.init_position_of_marker - self.last_position_of_ee
+                    )
+
             if (
                 np.linalg.norm(ee_pos - marker.get_current_position())
                 >= self._config.HOLD_THRESH
+                and not self._config.HOLD_MAKER_DIS_AT_Z
             ):
-                import pdb; pdb.set_trace()
+                return True
+
+            if (
+                np.abs(ee_pos[1] - marker.get_current_position()[1])
+                >= self._config.HOLD_THRESH
+                and self._config.HOLD_MAKER_DIS_AT_Z
+            ):
                 return True
 
         return False

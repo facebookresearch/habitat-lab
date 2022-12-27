@@ -74,6 +74,19 @@ def quaternion_rotate_vector(
     return (quat * vq * quat.inverse()).imag
 
 
+def quaternion_rotate_vector_v2(quat, v) -> np.ndarray:
+    r"""Rotates a vector by a quaternion
+    Args:
+        quaternion: The quaternion to rotate by
+        v: The vector to rotate
+    Returns:
+        np.ndarray: The rotated vector
+    """
+    vq = quaternion.quaternion(0, 0, 0, 0)
+    vq.imag = v
+    return (quat * vq * quat).imag
+
+
 def agent_state_target2ref(
     ref_agent_state: Union[List, Tuple], target_agent_state: Union[List, Tuple]
 ) -> Tuple[quaternion.quaternion, np.ndarray]:

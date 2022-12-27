@@ -122,14 +122,15 @@ class SpotRobot(MobileManipulator):
                 -1.5,
             ],
             ee_offset=mn.Vector3(0.2, 0, 0),
-            ee_link=6,
+            ee_link=6,  # 6-> arm0.wr1 -> rotation of the gripper joints; 7 -> arm0.f1x -> upper gripper itself
             # TODO: figure this one out if necessary
-            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [-.4, 1.5]]),
+            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [-0.4, 1.5]]),
+            # ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
             # ee_constraint=np.array([[0.50, 0.85], [-0.29, 0.41], [-0.13, 0.94]]),
             # TODO: these need to be adjusted. Copied from Fetch currently.
             cameras={
                 "robot_arm": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(-0.05603 + .19, 0.0, 0.0375),
+                    cam_offset_pos=mn.Vector3(-0.05603 + 0.19, 0.0, 0.0375),
                     cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                     attached_link_id=6,

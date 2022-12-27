@@ -69,6 +69,7 @@ except ImportError:
     pygame = None
 
 # DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
+# DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/pointnav.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_fetch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_spot.yaml"
@@ -79,12 +80,14 @@ except ImportError:
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_spot_blind.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/pick_stretch_final_DRS.yaml"
-DEFAULT_CFG = "configs/tasks/rearrange/open_fridge_stretch.yaml"
+# DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/rearrange/pddl/nav_pick_nav_place.yaml"
+# DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/pointnav.yaml"
+# DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/rearrange/pddl/nav_pick_nav_place.yaml"
+# /Users/jimmytyyang/Habitat_1108/habitat-lab/habitat-lab/habitat/config/tasks/rearrange/pddl/nav_pick_nav_place.yaml
+# DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/rearrange/open_fridge_stretch.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/open_cab_stretch.yaml"
-# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml" <- common one for the stretch
-DEFAULT_CFG = (
-    "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
-)
+# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml" #<- common one for the stretch
+DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/play_stretch_v2.yaml"
 # DEFAULT_CFG = "configs/tasks/rearrange/check_nav_stretch.yaml"
 # DEFAULT_CFG = "/Users/jimmytyyang/Habitat/habitat-lab/habitat_baselines/config/rearrange/ddppo_pick_spot.yaml"
@@ -98,6 +101,70 @@ import os
 # Quiet the Habitat simulator logging
 os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
+
+
+def check_nav(env):
+
+    # Get the navmesh setting.
+
+    for r in [
+        0.001,
+        0.01,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.4,
+        1.5,
+    ]:
+        navmesh_settings = env._sim.pathfinder.nav_mesh_settings
+        navmesh_settings.agent_radius = r
+        env._sim.recompute_navmesh(env._sim.pathfinder, navmesh_settings, True)
+        pts = env._sim.pathfinder.build_navmesh_vertices()
+        area = env._sim.pathfinder.navigable_area
+        num_islands = env._sim.pathfinder.num_islands
+        print(
+            "r:",
+            r,
+            "true r:",
+            navmesh_settings.agent_radius,
+            "area:",
+            area,
+            "islands:",
+            num_islands,
+            "pts:",
+            len(pts),
+        )
+
+    # origin_pts = env._sim.pathfinder.build_navmesh_vertices()
+
+    # print("pts:", len(pts))
+    # navmesh_settings = env._sim.pathfinder.nav_mesh_settings
+    # print(env._sim.pathfinder.nav_mesh_settings.agent_radius)
+    # navmesh_settings.agent_radius *= 1.1
+
+    # print(env._sim.pathfinder.nav_mesh_settings.agent_radius)
+
+    # pts = env._sim.pathfinder.build_navmesh_vertices()
+
+    # num_is_nav_pt = 0
+    # for pt in pts:
+    #     num_is_nav_pt += env._sim.pathfinder.is_navigable(pt)
+    # print("pertange:", num_is_nav_pt, float(num_is_nav_pt)/float(len(pts)))
+
+    navmesh_settings = env._sim.pathfinder.nav_mesh_settings
+    navmesh_settings.agent_radius = 0.01
+    env._sim.recompute_navmesh(env._sim.pathfinder, navmesh_settings, True)
+    return env
 
 
 def step_env(env, action_name, action_args):
@@ -167,7 +234,6 @@ def get_input_vel_ctlr(
         elif keys[pygame.K_i]:
             # Forward
             base_action = [1, 0]
-
         if arm_action_space.shape[0] == 7:
             # Velocity control. A different key for each joint
             if keys[pygame.K_q]:
@@ -356,7 +422,7 @@ def get_input_vel_ctlr(
         arm_action = [*arm_action, 0.0]
     else:
         arm_action = [*arm_action, magic_grasp]
-
+    # import pdb; pdb.set_trace()
     return step_env(env, name, args), arm_action, end_ep
 
 
@@ -471,24 +537,29 @@ def play_env(env, args, config):
     )
     is_multi_agent = len(env._sim.robots_mgr) > 1
 
+    # Motified the nav mesh
+    # check_nav(env)
+    # import pdb; pdb.set_trace()
+
     while True:
         # print(env.sim.robot.base_pos, env.sim.robot.base_rot)
         # print("ee_transform:", env.sim.robot.ee_transform.translation)
         trans = env.sim.robot.base_transformation
         ee_pos = env.sim.robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
-        print(
-            "@interactive_play.py: env.sim.robot.arm_joint_pos:",
-            env.sim.robot.arm_joint_pos,
-        )
-        print(
-            "@interactive_play.py: env.sim.robot.arm_motor_pos:",
-            env.sim.robot.arm_motor_pos,
-        )
+        # print(
+        #     "@interactive_play.py: env.sim.robot.arm_joint_pos:",
+        #     env.sim.robot.arm_joint_pos,
+        # )
+        # print(
+        #     "@interactive_play.py: env.sim.robot.arm_motor_pos:",
+        #     env.sim.robot.arm_motor_pos,
+        # )
         # print("@interactive_play.py: arm_joint_angle",env.sim.robot)
         # print("@interactive_play.py, location of robot:", env.sim.robot.base_transformation.translation)
         # print("@interactive_play.py, rotation of robot:", env.sim.robot.sim_obj.rotation)
         # print("rel target pos:", rel_targ_pos)
+        # import pdb; pdb.set_trace()
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count

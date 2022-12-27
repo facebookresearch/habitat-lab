@@ -4,23 +4,23 @@ TRAINER_NAME: "ddppo"
 SIMULATOR_GPU_ID: 0
 TORCH_GPU_ID: 0
 VIDEO_OPTION: ["disk"]
-TENSORBOARD_DIR: "tb"
-VIDEO_DIR: "video_dir"
+TENSORBOARD_DIR: "tb_1205"
+VIDEO_DIR: "video_dir_1205"
 VIDEO_FPS: 30
 VIDEO_RENDER_TOP_DOWN: False
 VIDEO_RENDER_ALL_INFO: True
 VIDEO_RENDER_VIEWS:
   - "THIRD_RGB_SENSOR"
 TEST_EPISODE_COUNT: -1
-EVAL_CKPT_PATH_DIR: "data/new_checkpoints"
-NUM_ENVIRONMENTS: 32
+EVAL_CKPT_PATH_DIR: "data/new_checkpoints_1205"
+NUM_ENVIRONMENTS: 1
 # Visual sensors to include
 SENSORS: ['HEAD_STEREO_RIGHT_DEPTH_SENSOR', 'HEAD_STEREO_RIGHT_RGB_SENSOR','HEAD_STEREO_LEFT_DEPTH_SENSOR', 'HEAD_STEREO_LEFT_RGB_SENSOR', "ARM_RGB_SENSOR", "ARM_DEPTH_SENSOR"]
-CHECKPOINT_FOLDER: "data/new_checkpoints"
+CHECKPOINT_FOLDER: "data/new_checkpoints_1205"
 NUM_UPDATES: -1
 TOTAL_NUM_STEPS: 1.0e8
 LOG_INTERVAL: 10
-NUM_CHECKPOINTS: 20
+NUM_CHECKPOINTS: 1
 # Force PyTorch to be single threaded as
 # this improves performance considerably
 FORCE_TORCH_SINGLE_THREADED: True
@@ -38,7 +38,7 @@ RL:
   PPO:
     # ppo params
     clip_param: 0.2
-    ppo_epoch: 2
+    ppo_epoch: 1
     num_mini_batch: 2
     value_loss_coef: 0.5
     entropy_coef: 0.0001

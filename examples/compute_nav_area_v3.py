@@ -51,14 +51,13 @@ import time
 from collections import defaultdict
 
 import magnum as mn
+import matplotlib.pyplot as plt
 import numpy as np
-from scipy.spatial.transform import Rotation
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.core.logging import logger
-from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
@@ -71,11 +70,14 @@ try:
 except ImportError:
     pygame = None
 
-# DEFAULT_CFG = "configs/tasks/rearrange/play_stretch.yaml"
-DEFAULT_CFG = (
-    "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
-)
+# DEFAULT_CFG = "configs/tasks/rearrange/play_spot.yaml"
+# DEFAULT_CFG = (
+#     "configs/tasks/rearrange/play_stretch_gripper_roll_pitch_yaw.yaml"
+# )
+# DEFAULT_CFG = "configs/tasks/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
+AGENT_RADIUS = 0.1
+MULTIPLIER_OF_POINTS = 3
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
 
@@ -85,402 +87,77 @@ import os
 os.environ["MAGNUM_LOG"] = "quiet"
 os.environ["HABITAT_SIM_LOG"] = "quiet"
 
-# How many random way points you want to generate
-LEN_WAY_POINT = 1500
 
-# The output limit
-V_MAX_DEFAULT = 1.0  # 0.45  # base.params["motion"]["default"]["vel_m"]
-W_MAX_DEFAULT = 1.0  # 0.45  # (vel_m_max - vel_m_default) / wheel_separation_m
-# The coeffcienet
-ACC_LIN = 2.4  # 1.2  # 0.5 * base.params["motion"]["max"]["accel_m"]
-ACC_ANG = (
-    2.4  # 1.2  # 0.5 * (accel_m_max - accel_m_default) / wheel_separation_m
-)
-MAX_HEADING_ANG = np.pi / 10  # / 2.0
+def check_nav(env):
 
-LIN_ERROR_TOL = V_MAX_DEFAULT / 120  # 120
-ANG_ERROR_TOL = W_MAX_DEFAULT / 120  # 120
+    # Get the navmesh setting.
 
-VIS_PATH = True
-
-
-def transform_global_to_base(XYT, current_pose, env=None):
-    """
-    Transforms the point cloud into geocentric frame to account for
-    camera position
-    Input:
-        XYT                     : target goal ...x3
-        current_pose            : base position (x, y, theta (radians))
-    Output:
-        XYT : ...x3
-    """
-
-    trans = env.sim.robot.base_transformation
-    local_pos = trans.inverted().transform_point(env.sim.robot.base_pos)
-    goal_pos = trans.inverted().transform_point(
-        np.array([XYT[0], env.sim.robot.base_pos[1], XYT[1]])
-    )
-
-    error_t = XYT[2] - current_pose[2]
-    error_x = goal_pos[0] - local_pos[0]
-    error_y = goal_pos[1] - local_pos[1]
-
-    return [error_x, error_y, error_t]
-
-
-class Controller:
-    def __init__(self, track_yaw=True):
-        self.track_yaw = track_yaw
-
-        # Params
-        self.v_max = V_MAX_DEFAULT
-        self.w_max = W_MAX_DEFAULT
-
-        # Init
-        self.xyt_goal = np.zeros(3)
-        self.dxyt_goal = np.zeros(3)
-
-    def set_goal(self, goal, vel_goal=None):
-        self.xyt_goal = goal
-        if vel_goal is not None:
-            self.dxyt_goal = vel_goal
-
-    def _compute_error_pose(self, xyt_base, env=None):
-        """
-        Updates error based on robot localization
-        """
-        xyt_err = transform_global_to_base(self.xyt_goal, xyt_base, env)
-        if not self.track_yaw:
-            xyt_err[2] = 0.0
-
-        return xyt_err
-
-    @staticmethod
-    def _velocity_feedback_control(x_err, a, v_max):
-        """
-        Computes velocity based on distance from target.
-        Used for both linear and angular motion.
-
-        Current implementation: Trapezoidal velocity profile
-        """
-        t = np.sqrt(2.0 * abs(x_err) / a)  # x_err = (1/2) * a * t^2
-        v = min(a * t, v_max)
-        return v * np.sign(x_err)
-
-    @staticmethod
-    def _turn_rate_limit(lin_err, heading_diff, w_max, tol=0.0):
-        """
-        Compute velocity limit that prevents path from overshooting goal
-
-        heading error decrease rate > linear error decrease rate
-        (w - v * np.sin(phi) / D) / phi > v * np.cos(phi) / D
-        v < (w / phi) / (np.sin(phi) / D / phi + np.cos(phi) / D)
-        v < w * D / (np.sin(phi) + phi * np.cos(phi))
-
-        (D = linear error, phi = angular error)
-        """
-        assert lin_err >= 0.0
-        assert heading_diff >= 0.0
-        # import pdb; pdb.set_trace()
-        if heading_diff > MAX_HEADING_ANG:
-            return 0.0
-        else:
-            return (
-                w_max
-                * lin_err
-                / (
-                    np.sin(heading_diff)
-                    + heading_diff * np.cos(heading_diff)
-                    + 1e-5
-                )
-            )
-
-    def _feedback_traj_track(self, xyt_err):
-        xyt_err = self._compute_error_pose(xyt)
-        v_raw = (
-            V_MAX_DEFAULT
-            * (K1 * xyt_err[0] + xyt_err[1] * np.tan(xyt_err[2]))
-            / np.cos(xyt_err[2])
+    for r in [
+        0.001,
+        0.01,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1,
+        1.2,
+        1.3,
+        1.4,
+        1.5,
+    ]:
+        navmesh_settings = env._sim.pathfinder.nav_mesh_settings
+        navmesh_settings.agent_radius = r
+        env._sim.recompute_navmesh(env._sim.pathfinder, navmesh_settings, True)
+        pts = env._sim.pathfinder.build_navmesh_vertices()
+        area = env._sim.pathfinder.navigable_area
+        num_islands = env._sim.pathfinder.num_islands
+        print(
+            "r:",
+            r,
+            "true r:",
+            navmesh_settings.agent_radius,
+            "area:",
+            area,
+            "islands:",
+            num_islands,
+            "pts:",
+            len(pts),
         )
-        w_raw = (
-            V_MAX_DEFAULT
-            * (K2 * xyt_err[1] + K3 * np.tan(xyt_err[2]))
-            / np.cos(xyt_err[2]) ** 2
-        )
-        v_out = min(v_raw, V_MAX_DEFAULT)
-        w_out = min(w_raw, W_MAX_DEFAULT)
-        return np.array([v_out, w_out])
 
-    def _feedback_simple(self, xyt_err):
-        v_cmd = w_cmd = 0
+    # origin_pts = env._sim.pathfinder.build_navmesh_vertices()
 
-        lin_err_abs = np.linalg.norm(xyt_err[0:2])
-        ang_err = xyt_err[2]
+    # print("pts:", len(pts))
+    # navmesh_settings = env._sim.pathfinder.nav_mesh_settings
+    # print(env._sim.pathfinder.nav_mesh_settings.agent_radius)
+    # navmesh_settings.agent_radius *= 1.1
 
-        # Go to goal XY position if not there yet
-        if lin_err_abs > LIN_ERROR_TOL:
-            heading_err = np.arctan2(xyt_err[1], xyt_err[0])
-            heading_err_abs = abs(heading_err)
+    # print(env._sim.pathfinder.nav_mesh_settings.agent_radius)
 
-            # Compute linear velocity
-            v_raw = self._velocity_feedback_control(
-                lin_err_abs, ACC_LIN, self.v_max
-            )
-            v_limit = self._turn_rate_limit(
-                lin_err_abs,
-                heading_err_abs,
-                self.w_max / 2.0,
-                tol=LIN_ERROR_TOL,
-            )
-            # import pdb; pdb.set_trace()
-            v_cmd = np.clip(v_raw, 0.0, v_limit)
+    # pts = env._sim.pathfinder.build_navmesh_vertices()
 
-            # Compute angular velocity
-            w_cmd = self._velocity_feedback_control(
-                heading_err, ACC_ANG, self.w_max
-            )
+    # num_is_nav_pt = 0
+    # for pt in pts:
+    #     num_is_nav_pt += env._sim.pathfinder.is_navigable(pt)
+    # print("pertange:", num_is_nav_pt, float(num_is_nav_pt)/float(len(pts)))
 
-        # Rotate to correct yaw if yaw tracking is on and XY position is at goal
-        elif abs(ang_err) > ANG_ERROR_TOL and self.track_yaw:
-            # Compute angular velocity
-            w_cmd = self._velocity_feedback_control(
-                ang_err, ACC_ANG, self.w_max
-            )
-
-        # v_cmd and w_cmd will be clip for [-1, 1]
-        return v_cmd, w_cmd
-
-    def forward(self, xyt, env):
-        xyt_err = self._compute_error_pose(xyt, env)
-        return self._feedback_simple(xyt_err)
+    navmesh_settings = env._sim.pathfinder.nav_mesh_settings
+    navmesh_settings.agent_radius = AGENT_RADIUS
+    env._sim.recompute_navmesh(env._sim.pathfinder, navmesh_settings, True)
+    return env
 
 
 def step_env(env, action_name, action_args):
     return env.step({"action": action_name, "action_args": action_args})
 
 
-class ContinuousPathFollower:
-    def __init__(self, sim, path, agent_scene_node, waypoint_threshold):
-        self._sim = sim
-        self._points = path.points[:]
-        assert len(self._points) > 0
-        self._length = path.geodesic_distance
-        self._node = agent_scene_node
-        self._threshold = waypoint_threshold
-        self._step_size = 0.01
-        self.progress = 0  # geodesic distance -> [0,1]
-        self.waypoint = path.points[0]
-
-        # setup progress waypoints
-        _point_progress = [0]
-        _segment_tangents = []
-        _length = self._length
-        for ix, point in enumerate(self._points):
-            if ix > 0:
-                segment = point - self._points[ix - 1]
-                segment_length = np.linalg.norm(segment)
-                segment_tangent = segment / segment_length
-                _point_progress.append(
-                    segment_length / _length + _point_progress[ix - 1]
-                )
-                # t-1 -> t
-                _segment_tangents.append(segment_tangent)
-        self._point_progress = _point_progress
-        self._segment_tangents = _segment_tangents
-        # final tangent is duplicated
-        self._segment_tangents.append(self._segment_tangents[-1])
-
-        print("self._length = " + str(self._length))
-        print("num points = " + str(len(self._points)))
-        print("self._point_progress = " + str(self._point_progress))
-        print("self._segment_tangents = " + str(self._segment_tangents))
-
-    def pos_at(self, progress):
-        if progress <= 0:
-            return self._points[0]
-        elif progress >= 1.0:
-            return self._points[-1]
-
-        path_ix = 0
-        for ix, prog in enumerate(self._point_progress):
-            if prog > progress:
-                path_ix = ix
-                break
-
-        segment_distance = self._length * (
-            progress - self._point_progress[path_ix - 1]
-        )
-        return (
-            self._points[path_ix - 1]
-            + self._segment_tangents[path_ix - 1] * segment_distance
-        )
-
-    def update_waypoint(self):
-        if self.progress < 1.0:
-            cur_position = self._node.absolute_translation
-            cur_position[1] = self.waypoint[1]
-            wp_disp = self.waypoint - cur_position
-            wp_dist = np.linalg.norm(wp_disp)
-            node_pos = cur_position
-            step_size = self._step_size
-            threshold = self._threshold
-            while wp_dist < threshold:
-                self.progress += step_size
-                self.waypoint = self.pos_at(self.progress)
-                if self.progress >= 1.0:
-                    break
-                wp_disp = self.waypoint - node_pos
-                wp_dist = np.linalg.norm(wp_disp)
-
-
-def waypoint_generator(env, args, config):
-
-    """Generate the waypoints that the robot should navigate"""
-    # Get the velocity of control
-    base_vel_ctrl = habitat_sim.physics.VelocityControl()
-    base_vel_ctrl.controlling_lin_vel = True
-    base_vel_ctrl.lin_vel_is_local = True
-    base_vel_ctrl.controlling_ang_vel = True
-    base_vel_ctrl.ang_vel_is_local = True
-
-    navmesh_settings = habitat_sim.NavMeshSettings()
-    navmesh_settings.set_defaults()
-
-    env.sim.recompute_navmesh(
-        env.sim.pathfinder,
-        navmesh_settings,
-        include_static_objects=True,
-    )
-
-    before_base_pos = env.sim.robot.base_pos
-    before_base_rot = env.sim.robot.base_rot
-
-    success_flag = False
-    collision_count = 1
-    while not success_flag:
-        visited_points = []
-        used_actions = []
-
-        env.sim.robot.base_pos = before_base_pos
-        env.sim.robot.base_rot = before_base_rot
-
-        agent = env.sim.agents[0]
-        # navmesh_settings.agent_height = agent.height
-        # navmesh_settings.agent_radius = agent.radius
-
-        # Get the path finder
-        pf = env.sim.pathfinder
-        state = habitat_sim.AgentState()
-        while True:
-            state.position = before_base_pos
-            rotation = [
-                env.sim.robot.sim_obj.rotation.vector[0],
-                env.sim.robot.sim_obj.rotation.vector[1],
-                env.sim.robot.sim_obj.rotation.vector[2],
-                env.sim.robot.sim_obj.rotation.scalar,
-            ]
-            state.rotation = rotation
-            goal_pos = pf.get_random_navigable_point()
-            path = habitat_sim.ShortestPath()
-            path.requested_start = state.position
-            path.requested_end = goal_pos
-
-            if (
-                pf.is_navigable(goal_pos)
-                and pf.find_path(path)
-                and path.geodesic_distance > 5.0
-            ):
-                break
-
-        # Check the feasibility of the waypoints
-        waypoints = []
-        for i, pt in enumerate(path.points):
-            # Update the position of the robot
-            env.sim.robot.base_pos = pt
-            waypoints.append([pt, env.sim.robot.base_rot])
-            # Check the collision
-            is_navigable = env.sim.pathfinder.is_navigable(pt)
-            is_contact = env.sim.contact_test(env.sim.robot.get_robot_sim_id())
-            if (not is_navigable) or is_contact:
-                success_flag = False
-                break
-            if i == len(path.points) - 1:
-                success_flag = True
-
-    env.sim.robot.base_pos = before_base_pos
-    env.sim.robot.base_rot = before_base_rot
-
-    return path
-
-
-####This is the important part#####
-# path_follower is a class (ContinuousPathFollower) that gives you the waypoint
-def setup_path_visualization(path_follower, env, vis_samples=100):
-    obj_attr_mgr = env.sim.get_object_template_manager()
-    rigid_obj_mgr = env.sim.get_rigid_object_manager()
-    vis_objs = []
-    sphere_handle = obj_attr_mgr.get_template_handles("uvSphereSolid")[0]
-    sphere_template_cpy = obj_attr_mgr.get_template_by_handle(sphere_handle)
-    sphere_template_cpy.scale *= 0.2
-    template_id = obj_attr_mgr.register_template(
-        sphere_template_cpy, "mini-sphere"
-    )
-
-    if template_id < 0:
-        return None
-    vis_objs.append(rigid_obj_mgr.add_object_by_template_handle(sphere_handle))
-
-    # Here is the place you should add your waypoints
-    # The path_follower._points give you
-    # [array([ 3.1160288 ,  0.22979212, -1.0067971 ], dtype=float32),
-    #  array([2.1882367 , 0.15225519, 0.6902213 ], dtype=float32),
-    #  array([1.7598894 , 0.15225519, 7.133915  ], dtype=float32)]
-    for point in path_follower._points:
-        cp_obj = rigid_obj_mgr.add_object_by_template_handle(sphere_handle)
-        if cp_obj.object_id < 0:
-            print(cp_obj.object_id)
-            return None
-        cp_obj.translation = point
-        vis_objs.append(cp_obj)
-
-    # The line consists of many small points.
-    for i in range(vis_samples):
-        cp_obj = rigid_obj_mgr.add_object_by_template_handle("mini-sphere")
-        if cp_obj.object_id < 0:
-            print(cp_obj.object_id)
-            return None
-        cp_obj.translation = path_follower.pos_at(float(i / vis_samples))
-        vis_objs.append(cp_obj)
-
-    for obj in vis_objs:
-        if obj.object_id < 0:
-            print(obj.object_id)
-            return None
-
-    for obj in vis_objs:
-        obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-
-    return vis_objs
-
-
-def distance_angle(alpha, beta):
-    alpha = float(alpha)
-    beta = float(beta)
-    phi = abs(beta - alpha) % (2 * np.pi)
-    # This is either the distance or 360 - distance
-    if phi > np.pi:
-        return 2 * np.pi - phi
-    else:
-        return phi
-
-
 def get_input_vel_ctlr(
-    skip_pygame,
-    arm_action,
-    env,
-    not_block_input,
-    agent_to_control,
-    base_action,
+    skip_pygame, arm_action, env, not_block_input, agent_to_control
 ):
     if skip_pygame:
         return step_env(env, "EMPTY", {}), None, False
@@ -504,11 +181,11 @@ def get_input_vel_ctlr(
             arm_key
         ]
         arm_ctrlr = env.task.actions[arm_action_name].arm_ctrlr
-        # base_action = None
+        base_action = None
     else:
         arm_action_space = np.zeros(7)
         arm_ctrlr = None
-        # base_action = [0, 0]
+        base_action = [0, 0]
 
     if arm_action is None:
         arm_action = np.zeros(arm_action_space.shape[0])
@@ -527,6 +204,7 @@ def get_input_vel_ctlr(
         end_ep = True
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
+    env._sim.navmesh_visualization = True
 
     if not_block_input:
         # Base control
@@ -542,7 +220,6 @@ def get_input_vel_ctlr(
         elif keys[pygame.K_i]:
             # Forward
             base_action = [1, 0]
-
         if arm_action_space.shape[0] == 7:
             # Velocity control. A different key for each joint
             if keys[pygame.K_q]:
@@ -579,8 +256,9 @@ def get_input_vel_ctlr(
                 arm_action[6] = 1.0
             elif keys[pygame.K_7]:
                 arm_action[6] = -1.0
-        elif arm_action_space.shape[0] == 10:
+        elif arm_action_space.shape[0] == 8:
             # Velocity control. A different key for each joint
+
             if keys[pygame.K_q]:
                 arm_action[0] = 1.0
             elif keys[pygame.K_1]:
@@ -617,9 +295,59 @@ def get_input_vel_ctlr(
                 arm_action[6] = -1.0
 
             elif keys[pygame.K_8]:
-                arm_action[6] = 1.0
+                arm_action[7] = 1.0
             elif keys[pygame.K_9]:
+                arm_action[7] = -1.0
+        elif arm_action_space.shape[0] == 10:
+            # Velocity control. A different key for each joint
+            # arm_control, arm_joints index, name
+            # 0 28: joint_arm_l0
+            # 1 27: joint_arm_l1
+            # 2 26: joint_arm_l2
+            # 3 25: joint_arm_l3
+            # 4 23: joint_lift
+            # 5 31: joint_wrist_yaw
+            # 6 39: joint_wrist_pitch
+            # 7 40: joint_wrist_roll
+            # 8 7: joint_head_pan
+            # 9 8: joint_head_tilt
+
+            if keys[
+                pygame.K_q
+            ]:  # joint_arm_l0, joint_arm_l1, joint_arm_l2, joint_arm_l3
+                arm_action[0] = 1.0
+            elif keys[pygame.K_1]:
+                arm_action[0] = -1.0
+
+            elif keys[pygame.K_w]:  # joint_lift
+                arm_action[4] = 1.0
+            elif keys[pygame.K_2]:
+                arm_action[4] = -1.0
+
+            elif keys[pygame.K_e]:  # joint_wrist_yaw
+                arm_action[5] = 1.0
+            elif keys[pygame.K_3]:
+                arm_action[5] = -1.0
+
+            elif keys[pygame.K_r]:  # joint_wrist_pitch
+                arm_action[6] = 1.0
+            elif keys[pygame.K_4]:
                 arm_action[6] = -1.0
+
+            elif keys[pygame.K_t]:  # joint_wrist_roll
+                arm_action[7] = 1.0
+            elif keys[pygame.K_5]:
+                arm_action[7] = -1.0
+
+            elif keys[pygame.K_y]:  # joint_head_pan
+                arm_action[8] = 1.0
+            elif keys[pygame.K_6]:
+                arm_action[8] = -1.0
+
+            elif keys[pygame.K_u]:  # joint_head_tilt
+                arm_action[9] = 1.0
+            elif keys[pygame.K_7]:
+                arm_action[9] = -1.0
 
         elif isinstance(arm_ctrlr, ArmEEAction):
             EE_FACTOR = 0.5
@@ -680,7 +408,7 @@ def get_input_vel_ctlr(
         arm_action = [*arm_action, 0.0]
     else:
         arm_action = [*arm_action, magic_grasp]
-
+    # import pdb; pdb.set_trace()
     return step_env(env, name, args), arm_action, end_ep
 
 
@@ -695,17 +423,45 @@ def get_wrapped_prop(venv, prop):
     return None
 
 
-def reached(cur_pos, target_pos, cur_rot, target_rot):
-    p = 0
-    for i in [0, 2]:
-        p += (cur_pos[i] - target_pos[i]) ** 2
+def setup_path_visualization(points):
 
-    a = abs(float(cur_rot) - float(target_rot))
+    obj_attr_mgr = env.sim.get_object_template_manager()
+    rigid_obj_mgr = env.sim.get_rigid_object_manager()
+    vis_objs = []
+    sphere_handle = obj_attr_mgr.get_template_handles("uvSphereSolid")[0]
+    sphere_template_cpy = obj_attr_mgr.get_template_by_handle(sphere_handle)
+    sphere_template_cpy.scale *= 0.2
+    template_id = obj_attr_mgr.register_template(
+        sphere_template_cpy, "mini-sphere"
+    )
 
-    if p**0.5 <= LIN_ERROR_TOL and a <= ANG_ERROR_TOL:
-        return True
-    else:
-        return False
+    if template_id < 0:
+        return None
+    vis_objs.append(rigid_obj_mgr.add_object_by_template_handle(sphere_handle))
+
+    # Here is the place you should add your waypoints
+    # The path_follower._points give you
+    # [array([ 3.1160288 ,  0.22979212, -1.0067971 ], dtype=float32),
+    #  array([2.1882367 , 0.15225519, 0.6902213 ], dtype=float32),
+    #  array([1.7598894 , 0.15225519, 7.133915  ], dtype=float32)]
+    for point in points:
+        cp_obj = rigid_obj_mgr.add_object_by_template_handle(sphere_handle)
+        # cp_obj = rigid_obj_mgr.add_object_by_template_handle("mini-sphere")
+        if cp_obj.object_id < 0:
+            print(cp_obj.object_id)
+            return None
+        cp_obj.translation = point
+        vis_objs.append(cp_obj)
+
+    for obj in vis_objs:
+        if obj.object_id < 0:
+            print(obj.object_id)
+            return None
+
+    for obj in vis_objs:
+        obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+
+    return vis_objs
 
 
 class FreeCamHelper:
@@ -808,33 +564,364 @@ def play_env(env, args, config):
     )
     is_multi_agent = len(env._sim.robots_mgr) > 1
 
-    before_base_pos = env.sim.robot.base_pos
-    before_base_rot = env.sim.robot.base_rot
+    # Motified the nav mesh
+    check_nav(env)
+    pts = env._sim.pathfinder.build_navmesh_vertices()
+    cur_num_pts = len(pts)
+    for i in range(int(cur_num_pts * MULTIPLIER_OF_POINTS)):
+        pts.append(env._sim.pathfinder.get_random_navigable_point())
+    # random.shuffle(pts)
+    pt_i = 0
 
-    # Define the fixed starting points
-    # before_base_pos[0] = 1.972760
-    # before_base_pos[1] = 0.652255
-    # before_base_pos[2] = 7.207250
-    # before_base_rot = 0.673229
+    init_height = env.sim.robot.base_pos[1]
 
-    env.sim.robot.base_pos = before_base_pos
-    env.sim.robot.base_rot = before_base_rot
+    num_non_contact_pts = 0
 
-    path = waypoint_generator(env, args, config)
-    continuous_path_follower = ContinuousPathFollower(
-        env.sim,
-        path,
-        env.sim.robot.sim_obj.root_scene_node,
-        waypoint_threshold=0.2,
+    # Get the x y locations of the visited points.
+    plot_x = []
+    plot_y = []
+    plot_c = []
+    plot_c_2 = []
+
+    vis_pts = []
+    while pt_i < len(pts):
+        # Record if that point can be placed without any contact on all orientations
+        no_contact_all_orientation = True
+        no_contact_at_least_one_orientation = 0
+        for rotation_y_rad in [
+            0,
+            np.pi * 0.25,
+            np.pi * 0.5,
+            np.pi * 0.75,
+            np.pi * 1.0,
+            -np.pi * 0.25,
+            -np.pi * 0.5,
+            -np.pi * 0.75,
+        ]:
+            env.reset()
+            # Get the point
+            pt = pts[pt_i]
+            # Motify the base pos
+            robot_base_pos = env.sim.robot.base_pos
+            robot_base_pos[0] = pt[0]
+            robot_base_pos[1] = init_height
+            robot_base_pos[2] = pt[2]
+            env.sim.robot.base_pos = robot_base_pos
+            # Motify the base rot
+            env.sim.robot.base_rot = rotation_y_rad
+
+            is_contact = env.sim.contact_test(env.sim.robot.get_robot_sim_id())
+            num_non_contact_pts += not is_contact
+
+            if is_contact:
+                no_contact_all_orientation = False
+            if not is_contact:
+                no_contact_at_least_one_orientation += 1
+
+            if (
+                args.save_actions
+                and len(all_arm_actions) > args.save_actions_count
+            ):
+                # quit the application when the action recording queue is full
+                break
+            if (
+                render_steps_limit is not None
+                and update_idx > render_steps_limit
+            ):
+                break
+
+            if args.no_render:
+                keys = defaultdict(lambda: False)
+            else:
+                keys = pygame.key.get_pressed()
+
+            if not args.no_render and is_multi_agent and keys[pygame.K_x]:
+                agent_to_control += 1
+                agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+                logger.info(
+                    f"Controlled agent changed. Controlling agent {agent_to_control}."
+                )
+
+            step_result, arm_action, end_ep = get_input_vel_ctlr(
+                args.no_render,
+                use_arm_actions[update_idx]
+                if use_arm_actions is not None
+                else None,
+                env,
+                not free_cam.is_free_cam_mode,
+                agent_to_control,
+            )
+
+            if not args.no_render and keys[pygame.K_c]:
+                pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
+                logger.info("Actions:")
+                actions = pddl_action._action_ordering
+                for i, action in enumerate(actions):
+                    logger.info(f"{i}: {action}")
+                entities = pddl_action._entities_list
+                logger.info("Entities")
+                for i, entity in enumerate(entities):
+                    logger.info(f"{i}: {entity}")
+                action_sel = input("Enter Action Selection: ")
+                entity_sel = input("Enter Entity Selection: ")
+                action_sel = int(action_sel)
+                entity_sel = [int(x) + 1 for x in entity_sel.split(",")]
+                ac = np.zeros(pddl_action.action_space["pddl_action"].shape[0])
+                ac_start = pddl_action.get_pddl_action_start(action_sel)
+                ac[ac_start : ac_start + len(entity_sel)] = entity_sel
+
+                step_env(env, "PDDL_APPLY_ACTION", {"pddl_action": ac})
+
+            if not args.no_render and keys[pygame.K_g]:
+                pred_list = env.task.sensor_suite.sensors[
+                    "all_predicates"
+                ]._predicates_list
+                pred_values = step_result["all_predicates"]
+                logger.info("\nPredicate Truth Values:")
+                for i, (pred, pred_value) in enumerate(
+                    zip(pred_list, pred_values)
+                ):
+                    logger.info(f"{i}: {pred.compact_str} = {pred_value}")
+
+            if step_result is None:
+                break
+
+            if end_ep:
+                total_reward = 0
+                # Clear the saved keyframes.
+                if gfx_measure is not None:
+                    gfx_measure.get_metric(force_get=True)
+                env.reset()
+
+            if not args.no_render:
+                step_result = free_cam.update(env, step_result, update_idx)
+
+            all_arm_actions.append(arm_action)
+            update_idx += 1
+            if use_arm_actions is not None and update_idx >= len(
+                use_arm_actions
+            ):
+                break
+
+            obs = step_result
+            info = env.get_metrics()
+            reward_key = [k for k in info if "reward" in k]
+            if len(reward_key) > 0:
+                reward = info[reward_key[0]]
+            else:
+                reward = 0.0
+
+            total_reward += reward
+            info["Total Reward"] = total_reward
+
+            if free_cam.is_free_cam_mode:
+                cam = obs["robot_third_rgb"]
+                use_ob = np.zeros(draw_obs.shape)
+                use_ob[:, : cam.shape[1]] = cam[:, :, :3]
+
+            else:
+                use_ob = observations_to_image(obs, info)
+                if not args.skip_render_text:
+                    use_ob = overlay_frame(use_ob, info)
+
+            draw_ob = use_ob[:]
+
+            if not args.no_render:
+                draw_ob = np.transpose(draw_ob, (1, 0, 2))
+                draw_obuse_ob = pygame.surfarray.make_surface(draw_ob)
+                screen.blit(draw_obuse_ob, (0, 0))
+                pygame.display.update()
+            if args.save_obs:
+                all_obs.append(draw_ob)
+
+            if not args.no_render:
+                pygame.event.pump()
+
+            if env.episode_over:
+                total_reward = 0
+                env.reset()
+
+            curr_time = time.time()
+            diff = curr_time - prev_time
+            delay = max(1.0 / target_fps - diff, 0)
+            time.sleep(delay)
+            prev_time = curr_time
+
+        pt_i += 1
+
+        # Store the location
+        plot_x.append(pt[0])
+        plot_y.append(pt[2])
+        plot_c.append(int(no_contact_all_orientation))
+        if no_contact_at_least_one_orientation > 0:
+            plot_c_2.append(1)
+        else:
+            plot_c_2.append(0)
+        if not no_contact_all_orientation:
+            robot_base_array = np.array(
+                [
+                    env.sim.robot.base_pos[0],
+                    env.sim.robot.base_pos[1],
+                    env.sim.robot.base_pos[2],
+                ]
+            )
+            vis_pts.append(robot_base_array)
+
+    print("====Result===")
+    print("num_non_contact_pts:", num_non_contact_pts)
+    print("total_num_nav_mesh_pts:", len(pts) * 8)
+    print(
+        "pertange of nav pts:",
+        float(num_non_contact_pts) / float(len(pts) * 8),
     )
 
-    env.sim.robot.base_pos = before_base_pos
-    env.sim.robot.base_rot = before_base_rot
+    # Plot the figure for visualization.
 
-    if VIS_PATH:
-        vis_objs = setup_path_visualization(continuous_path_follower, env)
+    plot_x_safe = []
+    plot_y_safe = []
+    plot_x_contact = []
+    plot_y_contact = []
+    for c_i in range(len(plot_c)):
+        if plot_c[c_i]:
+            plot_x_safe.append(plot_x[c_i])
+            plot_y_safe.append(plot_y[c_i])
+        else:
+            plot_x_contact.append(plot_x[c_i])
+            plot_y_contact.append(plot_y[c_i])
 
+    plot_x_safe_2 = []
+    plot_y_safe_2 = []
+    plot_x_contact_2 = []
+    plot_y_contact_2 = []
+    for c_i in range(len(plot_c_2)):
+        if plot_c_2[c_i]:
+            plot_x_safe_2.append(plot_x[c_i])
+            plot_y_safe_2.append(plot_y[c_i])
+        else:
+            plot_x_contact_2.append(plot_x[c_i])
+            plot_y_contact_2.append(plot_y[c_i])
+
+    fig, ax = plt.subplots()
+    plt.figure(figsize=(7, 7), dpi=300)
+    percent = (
+        len(plot_x_safe) / (len(plot_x_safe) + len(plot_x_contact)) * 100.0
+    )
+    plt.scatter(
+        plot_x_safe,
+        plot_y_safe,
+        c="green",
+        label="no contact: "
+        + str(len(plot_x_safe))
+        + ", "
+        + str(percent)
+        + "%",
+    )
+    percent = (
+        len(plot_x_contact) / (len(plot_x_safe) + len(plot_x_contact)) * 100.0
+    )
+    plt.scatter(
+        plot_x_contact,
+        plot_y_contact,
+        c="red",
+        label="contact: "
+        + str(len(plot_x_contact))
+        + ", "
+        + str(percent)
+        + "%",
+    )
+    # plt.legend(loc='upper left', numpoints=1, ncol=1, fontsize=8, bbox_to_anchor=(0, 0))
+    plt.legend(ncol=1, fontsize=15)
+    if "spot" in DEFAULT_CFG:
+        SAVE_NAME = "spot"
+    elif "stretch" in DEFAULT_CFG:
+        SAVE_NAME = "stretch"
+    else:
+        SAVE_NAME = "fetch"
+    plt.title(SAVE_NAME, fontsize=20)
+    SAVE_NAME = SAVE_NAME + "_radius" + str(AGENT_RADIUS)
+    plt.xlabel(r"x", fontsize=20)
+    plt.ylabel(r"y", fontsize=20)
+    plt.savefig(
+        "/Users/jimmytyyang/Documents/"
+        + SAVE_NAME
+        + "_area_1214_no_contact_in_all_orientation.png"
+    )
+
+    fig, ax = plt.subplots()
+    plt.figure(figsize=(7, 7), dpi=300)
+    percent = (
+        len(plot_x_safe_2)
+        / (len(plot_x_safe_2) + len(plot_x_contact_2))
+        * 100.0
+    )
+    plt.scatter(
+        plot_x_safe_2,
+        plot_y_safe_2,
+        c="green",
+        label="no contact: "
+        + str(len(plot_x_safe_2))
+        + ", "
+        + str(percent)
+        + "%",
+    )
+    percent = (
+        len(plot_x_contact_2)
+        / (len(plot_x_safe_2) + len(plot_x_contact_2))
+        * 100.0
+    )
+    plt.scatter(
+        plot_x_contact_2,
+        plot_y_contact_2,
+        c="red",
+        label="contact: "
+        + str(len(plot_x_contact_2))
+        + ", "
+        + str(percent)
+        + "%",
+    )
+    # plt.legend(loc='upper left', numpoints=1, ncol=1, fontsize=8, bbox_to_anchor=(0, 0))
+    plt.legend(ncol=1, fontsize=15)
+    if "spot" in DEFAULT_CFG:
+        SAVE_NAME = "spot"
+    elif "stretch" in DEFAULT_CFG:
+        SAVE_NAME = "stretch"
+    else:
+        SAVE_NAME = "fetch"
+    plt.title(SAVE_NAME, fontsize=20)
+    SAVE_NAME = SAVE_NAME + "_radius" + str(AGENT_RADIUS)
+    plt.xlabel(r"x", fontsize=20)
+    plt.ylabel(r"y", fontsize=20)
+    plt.savefig(
+        "/Users/jimmytyyang/Documents/"
+        + SAVE_NAME
+        + "_area_1214_no_contact_at_least_in_one_orientation.png"
+    )
+
+    # After the running the collision examination. Explore the enviornment again.
+    # Setting up the visual points
+    vis_objs = setup_path_visualization(vis_pts)
     while True:
+        # print(env.sim.robot.base_pos, env.sim.robot.base_rot)
+        # print("ee_transform:", env.sim.robot.ee_transform.translation)
+        trans = env.sim.robot.base_transformation
+        ee_pos = env.sim.robot.ee_transform.translation
+        local_ee_pos = trans.inverted().transform_point(ee_pos)
+        # print(
+        #     "@interactive_play.py: env.sim.robot.arm_joint_pos:",
+        #     env.sim.robot.arm_joint_pos,
+        # )
+        # print(
+        #     "@interactive_play.py: env.sim.robot.arm_motor_pos:",
+        #     env.sim.robot.arm_motor_pos,
+        # )
+        # print("@interactive_play.py: arm_joint_angle",env.sim.robot)
+        print(
+            "@interactive_play.py, location of robot:",
+            env.sim.robot.base_transformation.translation,
+        )
+        # print("@interactive_play.py, rotation of robot:", env.sim.robot.sim_obj.rotation)
+        # print("rel target pos:", rel_targ_pos)
+        # import pdb; pdb.set_trace()
         if (
             args.save_actions
             and len(all_arm_actions) > args.save_actions_count
@@ -856,26 +943,6 @@ def play_env(env, args, config):
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )
 
-        continuous_path_follower.update_waypoint()
-        agent = Controller()
-        xyt_goal = [
-            continuous_path_follower.waypoint[0],
-            continuous_path_follower.waypoint[2],
-            float(env.sim.robot.base_rot),
-        ]
-        agent.set_goal(xyt_goal)
-        xyt = [
-            env.sim.robot.base_pos[0],
-            env.sim.robot.base_pos[2],
-            float(env.sim.robot.base_rot),
-        ]
-        base_action = agent.forward(xyt, env)
-
-        if VIS_PATH:
-            vis_objs[0].translation = continuous_path_follower.waypoint
-
-        print("progress:", continuous_path_follower.progress, len(vis_objs))
-
         step_result, arm_action, end_ep = get_input_vel_ctlr(
             args.no_render,
             use_arm_actions[update_idx]
@@ -884,7 +951,6 @@ def play_env(env, args, config):
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
-            base_action,
         )
 
         if not args.no_render and keys[pygame.K_c]:
@@ -927,28 +993,12 @@ def play_env(env, args, config):
             if gfx_measure is not None:
                 gfx_measure.get_metric(force_get=True)
             env.reset()
-            before_base_pos = env.sim.robot.base_pos
-            before_base_rot = env.sim.robot.base_rot
 
-            path = waypoint_generator(env, args, config)
-            continuous_path_follower = ContinuousPathFollower(
-                env.sim,
-                path,
-                env.sim.robot.sim_obj.root_scene_node,
-                waypoint_threshold=0.2,
-            )
-
-            if VIS_PATH:
-                for vis_obj in vis_objs:
-                    env.sim.get_rigid_object_manager().remove_object_by_id(
-                        vis_obj.object_id
-                    )
-                vis_objs = setup_path_visualization(
-                    continuous_path_follower, env
+            for vis_obj in vis_objs:
+                env.sim.get_rigid_object_manager().remove_object_by_id(
+                    vis_obj.object_id
                 )
-
-            env.sim.robot.base_pos = before_base_pos
-            env.sim.robot.base_rot = before_base_rot
+            vis_objs = setup_path_visualization(vis_pts)
 
         if not args.no_render:
             step_result = free_cam.update(env, step_result, update_idx)

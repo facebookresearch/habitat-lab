@@ -235,7 +235,16 @@ class Env:
             self._episode_iterator is not None
             and self._episode_from_iter_on_reset
         ):
-            self._current_episode = next(self._episode_iterator)
+            is_valid = False
+            num_attemp = 100
+            attemp_i = 0
+            while is_valid is False and attemp_i <= num_attemp:
+                self._current_episode = next(self._episode_iterator)
+                contact = self.sim.robot._sim.contact_test(
+                    self.sim.robot.sim_obj.object_id
+                )
+                is_valid = not contact
+                attemp_i += 1
 
         # This is always set to true after a reset that way
         # on the next reset an new episode is taken (if possible)
@@ -254,14 +263,20 @@ class Env:
         self.reconfigure(self._config)
         observations = self.task.reset(episode=self.current_episode)
 
-        # Prevent the episode from fails
-        # while True:
-        #     if self.task.fail_pos_episode:
-        #         self.episode_gen()
-        #         self.reconfigure(self._config)
-        #         observations = self.task.reset(episode=self.current_episode)
-        #     else:
-        #         break
+        max_attemp = 100
+        # Prevent the episode from contacting
+        attempt_i = 0
+        while attempt_i < max_attemp:
+            contact = self.sim.robot._sim.contact_test(
+                self.sim.robot.sim_obj.object_id
+            )
+            if contact:
+                self.episode_gen()
+                self.reconfigure(self._config)
+                observations = self.task.reset(episode=self.current_episode)
+                attempt_i += 1
+            else:
+                break
 
         self._task.measurements.reset_measures(
             episode=self.current_episode,

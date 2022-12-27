@@ -63,8 +63,8 @@ TASK:
         MIN_FORCE: 20.0
     FORCE_TERMINATE:
         TYPE: "ForceTerminate"
-        MAX_ACCUM_FORCE: 2.0
-        MAX_INSTANT_FORCE: 2.0
+        MAX_ACCUM_FORCE: 5000.0
+        MAX_INSTANT_FORCE: -1.0
     END_EFFECTOR_TO_OBJECT_DISTANCE:
         TYPE: "EndEffectorToObjectDistance"
     END_EFFECTOR_TO_REST_DISTANCE:
@@ -109,28 +109,18 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosReducedActionStretch" #  Default: ArmRelPosAction
+            ARM_CONTROLLER: "ArmRelPosReducedActionStretch"
             GRIP_CONTROLLER: "MagicGraspAction"
-            ARM_JOINT_MASK: [1,0,0,0,1,1,1,1,1,1] # mask out the arm
+            ARM_JOINT_MASK: [1,0,0,0,1,1,1,1,1,1]
             ARM_JOINT_DIMENSIONALITY: 10
-            GRASP_THRESH_DIST: 0.15 # default: 0.15
+            GRASP_THRESH_DIST: 0.15
             DISABLE_GRIP: False
             DELTA_POS_LIMIT: 0.0125
             EE_CTRL_LIM: 0.015
-            CONTROL_METHOD: "kinematic" # kinematic or dynamic
+            CONTROL_METHOD: "kinematic"
             CONTACT_DETECTION: True
-        BASE_VELOCITY:
-            TYPE: BaseVelAction
-            LIN_SPEED: 10.0
-            ANG_SPEED: 10.0
-            ALLOW_DYN_SLIDE: true
-            END_ON_STOP: false
-            ALLOW_BACK: true
-            MIN_ABS_LIN_SPEED: 0.0
-            MIN_ABS_ANG_SPEED: 0.0
     POSSIBLE_ACTIONS:
         - ARM_ACTION
-        - BASE_VELOCITY
 
 SIMULATOR:
     ADDITIONAL_OBJECT_PATHS:
@@ -144,8 +134,8 @@ SIMULATOR:
         HEIGHT: 1.5
         RADIUS: 0.3
         SENSORS: [HEAD_RGB_SENSOR, HEAD_DEPTH_SENSOR, HEAD_SEMANTIC_SENSOR]
-        ROBOT_URDF:  /Users/jimmytyyang/Documents/hab_stretch/urdf/hab_stretch.urdf
-        ROBOT_TYPE: "StretchRobot"
+        ROBOT_URDF: /private/home/jimmytyyang/habitat-data/robot_data/hab_stretch/urdf/hab_stretch.urdf
+        ROBOT_TYPE: "StretchRobotFinal_v2" # point to the target object
         IK_ARM_URDF:
     HEAD_RGB_SENSOR:
         WIDTH: 120
@@ -181,5 +171,5 @@ SIMULATOR:
     TYPE: RearrangeSim-v0
     # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
     # for the collision detection.
-    COLLISION_DETECTION_METHOD: "ContactTestRevert"
-    KINEMATIC_MODE: True # For AI Habitat
+    COLLISION_DETECTION_METHOD: "NevMesh"
+    KINEMATIC_MODE: True

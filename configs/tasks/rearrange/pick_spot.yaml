@@ -15,8 +15,8 @@ ENVIRONMENT:
 DATASET:
     TYPE: RearrangeDataset-v0
     SPLIT: train
-    DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
-    #DATA_PATH: data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
+    # DATA_PATH: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    DATA_PATH: data/datasets/replica_cad/rearrange/v1/train/rearrange_easy.json.gz
     SCENES_DIR: "data/replica_cad/"
 EVAL:
     SPLIT: train # train or val
@@ -144,21 +144,19 @@ TASK:
     ACTIONS:
         ARM_ACTION:
             TYPE: "ArmAction"
-            ARM_CONTROLLER: "ArmRelPosKinematicReducedAction"
-            #ARM_CONTROLLER: "ArmRelPosAction"
-            SHOULD_CLIP: False
-            ARM_JOINT_MASK: [1,1,0,1,0,1,0] # Ideally sums to JOINT_SENSOR DIMENSIONALITY
-            GRIP_CONTROLLER: "MagicGraspAction" # "SuctionGraspAction" #
-            #GRIP_CONTROLLER: "GazeGraspAction"
-            GAZE_DISTANCE_RANGE: [0.3, 0.75]
-            CENTER_CONE_ANGLE: 20
+            # Kinematic simulated arm control
+            ARM_CONTROLLER: "ArmRelPosReducedActionSpot" #"ArmRelPosKinematicReducedAction" #  or ArmRelPosAction
+            GRIP_CONTROLLER: "MagicGraspAction"
+            # ARM_JOINT_MASK: [1,1,1,1,1,1,1] # [1,1,0,1,0,1,0] the third is wrong, shoud be zero
+            ARM_JOINT_MASK: [1,1,0,1,1,1,1]
             ARM_JOINT_DIMENSIONALITY: 7
-            GRASP_THRESH_DIST: 0.15 #0.15
-            DISABLE_GRIP: False # We want to disable the grip so that we focus on the Spot control
-            DELTA_POS_LIMIT: 0.025 #0.025 -> 0.1 -> 0.005
-            EE_CTRL_LIM: 0.015
-            RENDER_EE_TARGET: True
             PREVENT_PENETRATION: True
+            GRASP_THRESH_DIST: 0.15
+            DISABLE_GRIP: False
+            DELTA_POS_LIMIT: 0.0125
+            EE_CTRL_LIM: 0.015
+            CONTROL_METHOD: "kinematic" # kinematic or dynamic
+            CONTACT_DETECTION: True
     POSSIBLE_ACTIONS:
         - ARM_ACTION
 
@@ -244,3 +242,4 @@ SIMULATOR:
     # There are three options: [ContactTestRevert, ContactTestProj, ContactTestProjSliding, NevMesh]
     # for the collision detection.
     COLLISION_DETECTION_METHOD: "ContactTestRevert"
+    KINEMATIC_MODE: True

@@ -167,7 +167,8 @@ class ArtObjAtDesiredState(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.success_js_state - task.get_use_marker().get_targ_js()
-
+        # print(task.get_use_marker().get_targ_js())
+        # import pdb; pdb.set_trace()
         # If not absolute distance, we can have a joint state greater than the
         # target.
         if self._config.USE_ABSOLUTE_DISTANCE:

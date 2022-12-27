@@ -326,4 +326,5 @@ class RearrangePickTaskV1(RearrangeTask):
         if fetch_observations:
             self._sim.maybe_update_robot()
             return self._get_observations(episode)
+
         return None
