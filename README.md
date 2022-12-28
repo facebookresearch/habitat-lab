@@ -152,7 +152,7 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     pip install pygame==2.0.1 pybullet==3.0.4
 
     # Interactive play script
-    python examples/interactive_play.py --never-end --add-ik
+    python examples/interactive_play.py --never-end
     ```
 
    Use I/J/K/L keys to move the robot base forward/left/backward/right and W/A/S/D to move the arm end-effector forward/left/backward/right and E/Q to move the arm up/down. The arm can be difficult to control via end-effector control. More details in documentation. Try to move the base and the arm to touch the red bowl on the table. Have fun!
