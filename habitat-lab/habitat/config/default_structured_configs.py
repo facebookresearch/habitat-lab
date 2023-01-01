@@ -962,7 +962,6 @@ class SimulatorConfig(HabitatBaseConfig):
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
     debug_render_goal: bool = True
-    robot_joint_start_noise: float = 0.0
     # Rearrange agent setup
     ctrl_freq: float = 120.0
     ac_freq_ratio: int = 4

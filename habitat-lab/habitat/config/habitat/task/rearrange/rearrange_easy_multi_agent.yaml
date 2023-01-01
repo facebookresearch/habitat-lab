@@ -2,6 +2,8 @@
 
 defaults:
   - /habitat/task: task_config_base
+  # Actions are defined per agent. Unlike the sensors, actions are not
+  # automatically duplicated per agent.
   - /habitat/task/actions@actions.agent_0_arm_action: arm_action
   - /habitat/task/actions@actions.agent_0_base_velocity: base_velocity
   - /habitat/task/actions@actions.agent_0_rearrange_stop: rearrange_stop
@@ -36,8 +38,6 @@ constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 task_spec: rearrange_easy
 actions:
-  # Actions are defined per agent. Unlike the sensors, actions are not
-  # automatically duplicated per agent.
   agent_0_arm_action:
     grip_controller: MagicGraspAction
   agent_1_arm_action:

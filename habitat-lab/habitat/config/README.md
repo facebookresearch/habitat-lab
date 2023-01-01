@@ -139,7 +139,6 @@ habitat:
     debug_render_robot: false
     kinematic_mode: false
     debug_render_goal: true
-    robot_joint_start_noise: 0.0
     ctrl_freq: 120.0
     ac_freq_ratio: 4
     load_objs: false
