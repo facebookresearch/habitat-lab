@@ -6,71 +6,50 @@ from PIL import Image
 import skimage.morphology
 from typing import Optional
 
+from habitat import Config
+
 import home_robot.agent.utils.visualization_utils as vu
 import home_robot.agent.utils.pose_utils as pu
-from home_robot.agent.perception.detection.coco_maskrcnn.coco_categories import (
-    coco_categories_color_palette,
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.constants import (
+    HM3DtoCOCOIndoor,
+    FloorplannertoCOCOIndoor,
+    HM3DtoLongTailIndoor
 )
 
 
-map_color_palette = [
-    1.0,
-    1.0,
-    1.0,  # empty space
-    0.6,
-    0.6,
-    0.6,  # obstacles
-    0.95,
-    0.95,
-    0.95,  # explored area
-    0.96,
-    0.36,
-    0.26,  # visited area
-    0.12,
-    0.46,
-    0.70,  # closest goal
-    0.63,
-    0.78,
-    0.95,  # rest of goal
-    *coco_categories_color_palette,
-]
-
-
-class ObjectNavVisualizer:
+class Visualizer:
     """
     This class is intended to visualize a single object goal navigation task.
     """
 
-    def __init__(
-        self,
-        num_sem_categories: int,
-        map_size_cm: int,
-        map_resolution: int,
-        show_images: bool,
-        print_images: bool,
-        dump_location: str,
-        exp_name: str,
-    ):
-        """
-        Arguments:
-            num_sem_categories: number of semantic segmentation categories
-            map_size_cm: global map size (in centimeters)
-            map_resolution: size of map bins (in centimeters)
-            show_images: if True, render observation and predicted semantic map
-            print_images: if True, save visualization as images
-        """
-        self.show_images = show_images
-        self.print_images = print_images
-        self.default_vis_dir = f"{dump_location}/images/{exp_name}"
+    def __init__(self, config: Config):
+        self.show_images = config.VISUALIZE
+        self.print_images = config.PRINT_IMAGES
+        self.default_vis_dir = f"{config.DUMP_LOCATION}/images/{config.EXP_NAME}"
         os.makedirs(self.default_vis_dir, exist_ok=True)
 
-        self.color_palette = [int(x * 255.0) for x in map_color_palette]
+        self.episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
+        assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
+        if "hm3d" in self.episodes_data_path:
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.semantic_category_mapping = HM3DtoCOCOIndoor()
+            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+                self.semantic_category_mapping = HM3DtoLongTailIndoor()
+            else:
+                raise NotImplementedError
+        elif "floorplanner" in self.episodes_data_path:
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.semantic_category_mapping = FloorplannertoCOCOIndoor()
+            else:
+                raise NotImplementedError
+
         self.legend = cv2.imread(
-            "home_robot/agent/perception/detection/coco_maskrcnn/coco_categories_legend.png"
+            self.semantic_category_mapping.categories_legend_path
         )
 
-        self.num_sem_categories = num_sem_categories
-        self.map_resolution = map_resolution
+        self.num_sem_categories = config.AGENT.SEMANTIC_MAP.num_sem_categories
+        self.map_resolution = config.AGENT.SEMANTIC_MAP.map_resolution
+        map_size_cm = config.AGENT.SEMANTIC_MAP.map_size_cm
         self.map_shape = (
             map_size_cm // self.map_resolution,
             map_size_cm // self.map_resolution,
@@ -181,7 +160,7 @@ class ObjectNavVisualizer:
         semantic_map_vis = Image.new(
             "P", (semantic_map.shape[1], semantic_map.shape[0])
         )
-        semantic_map_vis.putpalette(self.color_palette)
+        semantic_map_vis.putpalette(self.semantic_category_mapping.map_color_palette)
         semantic_map_vis.putdata(semantic_map.flatten().astype(np.uint8))
         semantic_map_vis = semantic_map_vis.convert("RGB")
         semantic_map_vis = np.flipud(semantic_map_vis)
@@ -203,7 +182,7 @@ class ObjectNavVisualizer:
             np.deg2rad(-curr_o),
         )
         agent_arrow = vu.get_contour_points(pos, origin=(670, 50))
-        color = self.color_palette[9:12][::-1]
+        color = self.semantic_category_mapping.map_color_palette[9:12][::-1]
         cv2.drawContours(self.image_vis, [agent_arrow], 0, color, -1)
 
         if self.show_images:

@@ -80,7 +80,11 @@ def get_parser():
     return parser
 
 
-def get_detic(config_file=None, vocabulary="coco", checkpoint_file=None, visualize=True):
+def get_detic(config_file=None, vocabulary="coco", custom_vocabulary="",
+              checkpoint_file=None, visualize=True):
+    assert vocabulary in ["coco", "custom"]
+    if vocabulary == "custom":
+        assert custom_vocabulary != ""
     if config_file is None:
         config_file = str(
             Path(__file__).resolve().parent /
@@ -93,7 +97,7 @@ def get_detic(config_file=None, vocabulary="coco", checkpoint_file=None, visuali
         )
     print(f"Loading Detic with config={config_file} and checkpoint={checkpoint_file}")
     string_args = f"""
-        --config-file {config_file} --vocabulary {vocabulary} --opts MODEL.WEIGHTS {checkpoint_file}
+        --config-file {config_file} --vocabulary {vocabulary} --custom_vocabulary {custom_vocabulary} --opts MODEL.WEIGHTS {checkpoint_file}
         """
     string_args = string_args.split()
     args = get_parser().parse_args(string_args)

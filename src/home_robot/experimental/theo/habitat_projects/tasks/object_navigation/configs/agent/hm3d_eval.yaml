@@ -9,7 +9,6 @@ PRINT_IMAGES: 0           # 1: save visualization as images, 0: no image saving
 GROUND_TRUTH_SEMANTICS: 0 # 1: use ground-truth semantics (for debugging / ablations)
 
 ENVIRONMENT:
-  num_sem_categories: 16  # number of semantic segmentation categories
   turn_angle: 30.0        # agent turn angle (in degrees)
   frame_height: 480       # first-person frame height (in pixels)
   frame_width: 640        # first-person frame width (in pixels)
@@ -23,6 +22,8 @@ AGENT:
   panorama_start: 1       # 1: turn around 360 degrees when starting an episode, 0: don't
 
   SEMANTIC_MAP:
+    semantic_categories: coco_indoor # map semantic channel categories, one of "coco_indoor" or "longtail_indoor"
+    num_sem_categories: 16           # number of map semantic channel categories (16 or 247)
     map_size_cm: 4800        # global map size (in centimeters)
     map_resolution: 5        # size of map bins (in centimeters)
     vision_range: 100        # diameter of local map region visible by the agent (in cells)

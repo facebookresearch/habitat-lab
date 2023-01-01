@@ -18,7 +18,7 @@ class ObjectNavAgentModule(nn.Module):
             frame_width=config.ENVIRONMENT.frame_width,
             camera_height=config.ENVIRONMENT.camera_height,
             hfov=config.ENVIRONMENT.hfov,
-            num_sem_categories=config.ENVIRONMENT.num_sem_categories,
+            num_sem_categories=config.AGENT.SEMANTIC_MAP.num_sem_categories,
             map_size_cm=config.AGENT.SEMANTIC_MAP.map_size_cm,
             map_resolution=config.AGENT.SEMANTIC_MAP.map_resolution,
             vision_range=config.AGENT.SEMANTIC_MAP.vision_range,

@@ -55,6 +55,11 @@ class VisualizationDemo(object):
             self.metadata = MetadataCatalog.get("__unused")
             self.metadata.thing_classes = args.custom_vocabulary.split(',')
             classifier = get_clip_embeddings(self.metadata.thing_classes)
+            self.categories_mapping = {i: i for i in range(len(self.metadata.thing_classes))}
+            self.num_sem_categories = len(self.categories_mapping)
+        elif args.vocabulary == 'coco':
+            self.categories_mapping = coco_categories_mapping
+            self.num_sem_categories = len(coco_categories)
         else:
             self.metadata = MetadataCatalog.get(
                 BUILDIN_METADATA_PATH[args.vocabulary])
@@ -63,9 +68,7 @@ class VisualizationDemo(object):
         num_classes = len(self.metadata.thing_classes)
         self.cpu_device = torch.device("cpu")
         self.instance_mode = instance_mode
-
         self.visualize = visualize
-        self.num_sem_categories = len(coco_categories)
 
         self.parallel = parallel
         if parallel:
@@ -105,8 +108,8 @@ class VisualizationDemo(object):
                 for j, class_idx in enumerate(
                     prediction["instances"].pred_classes.cpu().numpy()
                 ):
-                    if class_idx in list(coco_categories_mapping.keys()):
-                        idx = coco_categories_mapping[class_idx]
+                    if class_idx in self.categories_mapping:
+                        idx = self.categories_mapping[class_idx]
                         obj_mask = prediction["instances"].pred_masks[j] * 1.0
                         obj_mask = obj_mask.cpu().numpy()
 

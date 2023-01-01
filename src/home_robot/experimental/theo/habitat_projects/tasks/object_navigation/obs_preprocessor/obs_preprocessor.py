@@ -6,15 +6,15 @@ import numpy as np
 from PIL import Image
 
 from habitat import Config
+from habitat.core.env import Env
 from habitat.core.simulator import Observations
 
 import home_robot.agent.utils.pose_utils as pu
 from .constants import (
-    hm3d_goal_id_to_goal_name,
-    hm3d_goal_id_to_coco_id,
-    floorplanner_goal_id_to_goal_name,
-    floorplanner_goal_id_to_coco_id,
-    frame_color_palette,
+    HM3DtoCOCOIndoor,
+    FloorplannertoCOCOIndoor,
+    HM3DtoLongTailIndoor,
+    long_tail_indoor_categories,
     MIN_DEPTH_REPLACEMENT_VALUE,
     MAX_DEPTH_REPLACEMENT_VALUE,
 )
@@ -29,14 +29,26 @@ class ObsPreprocessor:
     def __init__(self, config: Config, num_environments: int, device: torch.device):
         self.num_environments = num_environments
         self.device = device
-        self.num_sem_categories = config.ENVIRONMENT.num_sem_categories
         self.frame_height = config.ENVIRONMENT.frame_height
         self.frame_width = config.ENVIRONMENT.frame_width
         self.min_depth = config.ENVIRONMENT.min_depth
         self.max_depth = config.ENVIRONMENT.max_depth
         self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
+
         self.episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
         assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
+        if "hm3d" in self.episodes_data_path:
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.semantic_category_mapping = HM3DtoCOCOIndoor()
+            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+                self.semantic_category_mapping = HM3DtoLongTailIndoor()
+            else:
+                raise NotImplementedError
+        elif "floorplanner" in self.episodes_data_path:
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.semantic_category_mapping = FloorplannertoCOCOIndoor()
+            else:
+                raise NotImplementedError
 
         if not self.ground_truth_semantics:
             # from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
@@ -48,22 +60,26 @@ class ObsPreprocessor:
             #     visualize=True,
             # )
             from home_robot.agent.perception.detection.detic.detic_loader import get_detic
-            self.segmentation = get_detic()
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.segmentation = get_detic(
+                    vocabulary="coco",
+                )
+            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+                self.segmentation = get_detic(
+                    vocabulary="custom",
+                    custom_vocabulary=",".join(long_tail_indoor_categories)
+                )
 
-        self.one_hot_encoding = torch.eye(self.num_sem_categories, device=self.device)
-        self.color_palette = [int(x * 255.0) for x in frame_color_palette]
+        self.one_hot_encoding = torch.eye(self.semantic_category_mapping.num_sem_categories,
+                                          device=self.device)
 
         self.last_poses = None
         self.last_actions = None
-        self.instance_id_to_category_id = None
 
-    def reset(self):
+    def reset(self, env: Env):
         self.last_poses = [np.zeros(3)] * self.num_environments
         self.last_actions = [None] * self.num_environments
-        self.instance_id_to_category_id = None
-
-    def set_instance_id_to_category_id(self, instance_id_to_category_id):
-        self.instance_id_to_category_id = instance_id_to_category_id.to(self.device)
+        self.semantic_category_mapping.reset_instance_id_to_category_id(env)
 
     def preprocess(
         self,
@@ -134,15 +150,15 @@ class ObsPreprocessor:
 
     def preprocess_goal(self, obs: List[Observations]) -> Tuple[Tensor, List[str]]:
         if "objectgoal" in obs[0]:
-            if "hm3d" in self.episodes_data_path:
-                goal = torch.tensor([hm3d_goal_id_to_coco_id[ob["objectgoal"][0]] for ob in obs])
-                goal_name = [hm3d_goal_id_to_goal_name[ob["objectgoal"][0]] for ob in obs]
-            elif "floorplanner" in self.episodes_data_path:
-                goal = torch.tensor([floorplanner_goal_id_to_coco_id[ob["objectgoal"][0]] for ob in obs])
-                goal_name = [floorplanner_goal_id_to_goal_name[ob["objectgoal"][0]] for ob in obs]
+            goal_ids, goal_names = [], []
+            for ob in obs:
+                goal_id, goal_name = self.semantic_category_mapping.map_goal_id(ob["objectgoal"][0])
+                goal_ids.append(goal_id)
+                goal_names.append(goal_name)
+            goal_ids = torch.tensor(goal_ids)
         else:
-            goal, goal_name = None, None
-        return goal, goal_name
+            goal_ids, goal_names = None, None
+        return goal_ids, goal_names
 
     def preprocess_frame(self, obs: List[Observations]) -> Tuple[Tensor, np.ndarray]:
         """Preprocess frame information in the observation."""
@@ -192,7 +208,7 @@ class ObsPreprocessor:
         if (
             self.ground_truth_semantics
             and "semantic" in obs[0]
-            and self.instance_id_to_category_id is not None
+            and self.semantic_category_mapping.instance_id_to_category_id is not None
         ):
             # Ground-truth semantic segmentation (useful for debugging)
             # TODO Allow multiple environments with ground-truth segmentation
@@ -200,7 +216,7 @@ class ObsPreprocessor:
             semantic = torch.from_numpy(
                 np.stack([ob["semantic"] for ob in obs]).squeeze(-1).astype(np.int64)
             ).to(self.device)
-            semantic = self.instance_id_to_category_id[semantic]
+            semantic = self.semantic_category_mapping.instance_id_to_category_id[semantic]
             semantic = self.one_hot_encoding[semantic]
 
             # Also need depth filtering on ground-truth segmentation
@@ -243,7 +259,7 @@ class ObsPreprocessor:
         vis_content[:, :, -1] = 1e-5
         vis_content = vis_content.argmax(-1)
         vis = Image.new("P", (height, width))
-        vis.putpalette(self.color_palette)
+        vis.putpalette(self.semantic_category_mapping.frame_color_palette)
         vis.putdata(vis_content.flatten().astype(np.uint8))
         vis = vis.convert("RGB")
         vis = np.array(vis)

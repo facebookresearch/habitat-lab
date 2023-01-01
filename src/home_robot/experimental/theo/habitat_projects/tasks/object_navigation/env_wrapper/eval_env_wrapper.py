@@ -10,14 +10,11 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.core.dataset import EpisodeIterator
 
 from home_robot.agent.navigation_planner.discrete_planner import DiscretePlanner
-from home_robot.agent.visualization.object_navigation.objectnav_visualizer import (
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.visualizer.visualizer import (
     ObjectNavVisualizer,
 )
 from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
     ObsPreprocessor,
-)
-from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.constants import (
-    mp3d_to_coco, hm3d_to_mp3d
 )
 
 
@@ -40,10 +37,6 @@ class EvalEnvWrapper(Env):
         os.environ["MAGNUM_LOG"] = "quiet"
         os.environ["HABITAT_SIM_LOG"] = "quiet"
 
-        self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
-        if self.ground_truth_semantics:
-            self.episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
-            assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
         self.device = (
             torch.device("cpu")
             if config.NO_GPU
@@ -147,7 +140,7 @@ class EvalEnvWrapper(Env):
         self.episode_idx += 1
         self.episode_panorama_start_steps = self.panorama_start_steps
 
-        self.obs_preprocessor.reset()
+        self.obs_preprocessor.reset(self)
         self.planner.reset()
         self.visualizer.reset()
 
@@ -159,30 +152,6 @@ class EvalEnvWrapper(Env):
             and self.episode_id not in self.forced_episode_ids
         ):
             self._disable_print_images()
-
-        if self.ground_truth_semantics:
-            if "hm3d" in self.episodes_data_path:
-                instance_id_to_category_id = torch.tensor([
-                    mp3d_to_coco.get(
-                        hm3d_to_mp3d.get(obj.category.name().lower().strip()),
-                        self.num_sem_categories - 1
-                    )
-                    for obj in self.sim.semantic_annotations().objects
-                ])
-            elif "floorplanner" in self.episodes_data_path:
-                # Temporary
-                instance_id_to_category_id = torch.tensor([
-                    self.num_sem_categories - 1,  # misc
-                    3,  # bed
-                    0,  # chair
-                    2,  # plant
-                    1,  # couch
-                    4,  # toilet
-                    5,  # tv
-                ])
-            self.obs_preprocessor.set_instance_id_to_category_id(
-                instance_id_to_category_id
-            )
 
         obs_preprocessed, info = self._preprocess_obs(obs)
 
