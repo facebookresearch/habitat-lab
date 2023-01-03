@@ -207,13 +207,17 @@ class HierarchicalPolicy(Policy):
                 should_terminate[batch_ids] = 1.0
                 continue
             (
-                should_terminate[batch_ids],
-                bad_should_terminate[batch_ids],
+                sh_terminate,
+                bad_sh_terminate,
             ) = self._skills[skill_id].should_terminate(
                 **dat,
                 batch_idx=batch_ids,
             )
-        self._call_high_level = should_terminate
+            (
+                should_terminate[batch_ids],
+                bad_should_terminate[batch_ids],
+            ) = sh_terminate.cpu(), bad_sh_terminate.cpu()
+            self._call_high_level = should_terminate
 
         # Always call high-level if the episode is over.
         self._call_high_level = self._call_high_level | (~masks).view(-1).cpu()
@@ -282,7 +286,7 @@ class HierarchicalPolicy(Policy):
             actions[batch_ids] = tmp_actions
             rnn_hidden_states[batch_ids] = tmp_rnn
         actions[:, self._stop_action_idx] = 0.0
-        should_terminate = bad_should_terminate | hl_terminate
+        should_terminate = bad_should_terminate.cpu() | hl_terminate
         if should_terminate.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate):

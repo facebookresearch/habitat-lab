@@ -331,6 +331,22 @@ class AmassHumanController:
         )
         return full_transform
 
+    @property
+    def step_distance(self):
+        step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
+        curr_motion_data = self.motions.walk_to_walk
+
+        prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame]
+        new_pos = self.mocap_frame + step_size  
+        if new_pos < len(curr_motion_data.map_of_total_displacement):
+            distance_covered = curr_motion_data.map_of_total_displacement[new_pos]
+        else:
+            pos_norm = new_pos % len(curr_motion_data.map_of_total_displacement)
+            distance_covered = curr_motion_data.map_of_total_displacement[-1]
+            distance_covered +=  max(0, (step_size // len(curr_motion_data.map_of_total_displacement)) - 1)
+            distance_covered += curr_motion_data.map_of_total_displacement[pos_norm];
+        return distance_covered - prev_distance
+
     def walk(self, position: mn.Vector3):
         """ Walks to the desired position. Rotates the character if facing in a different direction """
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
@@ -381,27 +397,29 @@ class AmassHumanController:
                 )
 
         full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
-
         # while transform is facing -Z, remove forward displacement
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         full_transform = look_at_path_T @ full_transform
         
-        if self.mocap_frame == 0:
-            dist_diff = 0
+        
+        # if self.mocap_frame == 0:
+        #     dist_diff = 0
+        # else:
+            
+        prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
+        if (self.mocap_frame - step_size) < 0:
+            distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame] + curr_motion_data.map_of_total_displacement[-1]
         else:
-            
-            prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
-            if self.mocap_frame - step_size < 0:
-                distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame] + curr_motion_data.map_of_total_displacement[-1]
-            else:
-                distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
-            
-            dist_diff = max(0, distance_covered - prev_distance)
-            # breakpoint()
-            if did_rotate:
-                dist_diff = 0
+            distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
+        
+        dist_diff = max(0, distance_covered - prev_distance)
+        # breakpoint()
+        # if did_rotate:
+        #     dist_diff = 0
             #     self.distance_rot += dist_diff
-
+        
+        # print("TRANSFORM WALK", full_transform.translation, dist_diff)
+        
         self.translation_offset = self.translation_offset + forward_V * dist_diff;
         self.prev_orientation = forward_V
         

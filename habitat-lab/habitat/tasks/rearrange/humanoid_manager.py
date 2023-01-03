@@ -1,11 +1,13 @@
 
 from dataclasses import dataclass
+
+from typing import TYPE_CHECKING, Iterator, Optional
+
 from typing import Iterator, Optional, List
 
 
 import magnum as mn
 import numpy as np
-from yacs.config import CfgNode
 
 from habitat.humanoids.amass_human import AmassHuman
 from habitat.humanoids.human_base import Humanoid
@@ -15,6 +17,10 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
 )
 
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
+
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 @dataclass
 class HumanData:
@@ -26,7 +32,7 @@ class HumanData:
     robot: Humanoid
     start_js: np.ndarray
     is_pb_installed: bool
-    cfg: CfgNode
+    cfg: "DictConfig"
     _ik_helper: Optional[IkHelper] = None
 
 

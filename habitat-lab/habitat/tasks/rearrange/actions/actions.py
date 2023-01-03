@@ -537,7 +537,7 @@ class GrabAction(HumanAction, PddlApplyAction):
             joints_pos += list(Q)
 
         self._sim.robot.arm_joint_pos = joints_pos
-        print(self._sim.robot.sim_obj.joint_positions)
+        # print(self._sim.robot.sim_obj.joint_positions)
 
         # breakpoint()
 

@@ -125,11 +125,12 @@ class HumanNavAction(HumanJointAction):
         distance = 0
 
         robot_pos = np.array(self.cur_human.base_pos)
-        while index < (len(curr_path_points) - 1) and distance < 0.1:
+        AGENT_DIST = self.human_controller.step_distance * 5
+        while index < (len(curr_path_points) - 1) and distance < AGENT_DIST:
             index += 1
             distance = np.linalg.norm(curr_path_points[index] - robot_pos)
 
-        cur_nav_targ = self._path_to_point(final_nav_targ)[index]
+        cur_nav_targ = curr_path_points[index]
         # breakpoint()
         # base_T = self.cur_human.base_transformation
         # forward = np.array([1.0, 0, 0])
@@ -151,8 +152,7 @@ class HumanNavAction(HumanJointAction):
         dist_to_curr_nav_targ = np.linalg.norm(
             (cur_nav_targ - robot_pos)[[0, 2]]
         )
-        print(dist_to_final_nav_targ, dist_to_curr_nav_targ)
-
+        
         at_goal = (
             dist_to_final_nav_targ < self._config.dist_thresh
         )
@@ -163,5 +163,6 @@ class HumanNavAction(HumanJointAction):
         # breakpoint()
         # print("DISTANCE AND MOTION", dist_to_final_nav_targ, rel_targ, new_trans.translation, 'offset', self.human_controller.translation_offset)
         base_action = amass_human_controller.AmassHumanController.transformAction(new_pos, new_trans)
+        # print(new_trans, robot_pos)
         kwargs[f"{self._action_arg_prefix}human_joints_trans"] = base_action
         return super().step(*args, is_last_action=is_last_action, **kwargs)
