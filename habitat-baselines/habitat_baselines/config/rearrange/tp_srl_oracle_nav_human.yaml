@@ -19,12 +19,12 @@ habitat:
   simulator:
     agents:
       main_agent:
-        robot_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
-        ik_arm_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
+        robot_urdf: 'data/human_sim_data/amass_male.urdf'
+        ik_arm_urdf: 'data/human_sim_data/amass_male.urdf'
         robot_type: 'AmassHuman'
-        draw_fps_human: 60
-        amass_path: '/Users/xavierpuig/Documents/human_sim_data/amass_smpl_h/'
-        body_model_path: '/Users/xavierpuig/Documents/human_sim_data/smplh/male/model.npz'
+        draw_fps_human: 15
+        amass_path: 'data/human_sim_data/amass_smpl_h/'
+        body_model_path: 'data/human_sim_data/smplh/male/model.npz'
         human_type: "AmassHuman"
         sim_sensors:
           third_rgb_sensor:
