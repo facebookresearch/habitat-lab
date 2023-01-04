@@ -3,7 +3,7 @@
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy: hierarchical_learned_nav
+  - /habitat_baselines/rl/policy: hierarchical_srl_learned_nav
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
   - _self_
