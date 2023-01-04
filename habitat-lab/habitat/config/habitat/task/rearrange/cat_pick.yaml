@@ -41,6 +41,7 @@ end_on_success: True
 actions:
   arm_action:
     grip_controller: SuctionGraspAction
+    arm_joint_dimensionality: 10
 measurements:
   force_terminate:
     max_accum_force: 10_000.0
@@ -53,3 +54,8 @@ measurements:
     object_goal: True
   pick_reward:
     object_goal: True
+lab_sensors:
+  joint_sensor:
+    dimensionality: 10
+  joint_velocity_sensor:
+    dimensionality: 10
