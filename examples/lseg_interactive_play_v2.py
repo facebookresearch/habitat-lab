@@ -58,6 +58,7 @@ from numpy.linalg import inv
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+import habitat_sim
 from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
@@ -106,6 +107,7 @@ from home_robot.agent.perception.detection.lseg import load_lseg_for_inference
 
 checkpoint_path = "/Users/jimmytyyang/LSeg/checkpoints/demo_e200.ckpt"
 device = torch.device("cpu")
+DEVICE = device
 model = load_lseg_for_inference(checkpoint_path, device)
 
 from home_robot.agent.mapping.dense.semantic.vision_language_2d_semantic_map_module import (
@@ -114,17 +116,24 @@ from home_robot.agent.mapping.dense.semantic.vision_language_2d_semantic_map_mod
 from home_robot.agent.mapping.dense.semantic.vision_language_2d_semantic_map_state import (
     VisionLanguage2DSemanticMapState,
 )
+from home_robot.agent.perception.detection.coco_maskrcnn.coco_categories import (
+    coco_categories,
+    coco_categories_color_palette,
+    text_label_color_palette,
+)
+from PIL import Image
 
 ENABLE_PLOT_SEM_MAP = False
-MAP_SIZE_CM = 2000
+MAP_SIZE_CM = 2000  # 2000cm=20m
 TARGET_SEQ_LEN = 500
-GLOAL_DOWNSCALING = 4
-MAP_RESOLUTION = 4
-VISION_RANGE = 50
+GLOBAL_DOWNSCALING = 4  # local map size = 500/4 = 125 cell
+MAP_RESOLUTION = 4  # 1 cell = 4cm, so global map cell size = 2000/4=500
+VISION_RANGE = 63  # in radius(cell), to fit into the local map, it needs to be 125/2~=63 cell=2.52m
 DU_SCALE = 4
 EXP_PRED_THRESHOLD = 1
 OBS_PRED_THRESHOLD = 150
-FOLDER_NAME = "test_0103_2023_v1"
+RADIUS_EXPLORE = 125  # cell
+FOLDER_NAME = "debug_0103_2023_v13"
 TEXT_LABELS = [
     "stair",
     "tree",
@@ -139,15 +148,551 @@ TEXT_LABELS = [
     "door",
     "other",
 ]
-MAP_SEQ_LEN = [TARGET_SEQ_LEN]
 
 # Make dir
-SAVE_DIR = "/Users/jimmytyyang/Documents/lseg_image/" + FOLDER_NAME
+SAVE_IMG_DIR = "/Users/jimmytyyang/Documents/lseg_image/" + FOLDER_NAME
 try:
-    os.mkdir(SAVE_DIR)
+    os.mkdir(SAVE_IMG_DIR)
 except:
     print("Save Folder Created...")
-SAVE_DIR += "/"
+
+SAVE_DIR = SAVE_IMG_DIR + "/"
+SAVE_IMG_DIR += "/"
+
+
+def waypoint_generator(env, args, config):
+    """Generate the waypoints that the robot should navigate"""
+    # Get the velocity of control
+    base_vel_ctrl = habitat_sim.physics.VelocityControl()
+    base_vel_ctrl.controlling_lin_vel = True
+    base_vel_ctrl.lin_vel_is_local = True
+    base_vel_ctrl.controlling_ang_vel = True
+    base_vel_ctrl.ang_vel_is_local = True
+
+    navmesh_settings = habitat_sim.NavMeshSettings()
+    navmesh_settings.set_defaults()
+
+    env.sim.recompute_navmesh(
+        env.sim.pathfinder,
+        navmesh_settings,
+        include_static_objects=True,
+    )
+
+    before_base_pos = env.sim.robot.base_pos
+    before_base_rot = env.sim.robot.base_rot
+
+    success_flag = False
+    collision_count = 1
+    while not success_flag:
+        visited_points = []
+        used_actions = []
+
+        env.sim.robot.base_pos = before_base_pos
+        env.sim.robot.base_rot = before_base_rot
+
+        agent = env.sim.agents[0]
+        # navmesh_settings.agent_height = agent.height
+        # navmesh_settings.agent_radius = agent.radius
+
+        # Get the path finder
+        pf = env.sim.pathfinder
+        state = habitat_sim.AgentState()
+        while True:
+            state.position = before_base_pos
+            rotation = [
+                env.sim.robot.sim_obj.rotation.vector[0],
+                env.sim.robot.sim_obj.rotation.vector[1],
+                env.sim.robot.sim_obj.rotation.vector[2],
+                env.sim.robot.sim_obj.rotation.scalar,
+            ]
+            state.rotation = rotation
+            goal_pos = pf.get_random_navigable_point()
+            path = habitat_sim.ShortestPath()
+            path.requested_start = state.position
+            path.requested_end = goal_pos
+
+            if (
+                pf.is_navigable(goal_pos)
+                and pf.find_path(path)
+                and path.geodesic_distance > 5.0
+            ):
+                break
+
+        # Check the feasibility of the waypoints
+        waypoints = []
+        for i, pt in enumerate(path.points):
+            # Update the position of the robot
+            env.sim.robot.base_pos = pt
+            waypoints.append([pt, env.sim.robot.base_rot])
+            # Check the collision
+            is_navigable = env.sim.pathfinder.is_navigable(pt)
+            is_contact = env.sim.contact_test(env.sim.robot.get_robot_sim_id())
+            if (not is_navigable) or is_contact:
+                success_flag = False
+                break
+            if i == len(path.points) - 1:
+                success_flag = True
+
+    env.sim.robot.base_pos = before_base_pos
+    env.sim.robot.base_rot = before_base_rot
+
+    return path
+
+
+class track_pose:
+    """Keep track of the robot pose between each update."""
+
+    def __init__(self):
+        self.map_T_global = None
+        self.global_T_map = None
+        self.robot_recenter_yaw = None
+        self.map_origin_row = int(MAP_SIZE_CM / MAP_RESOLUTION / 2)
+        self.map_origin_col = self.map_origin_row
+        self.map_size = int(MAP_SIZE_CM / MAP_RESOLUTION)
+        self.cm_per_cell = MAP_RESOLUTION
+
+    def update_origin(self, x, y, yaw):
+        """Update the transformation of the pose given current pose (i.e., x, y, yaw)."""
+        # x here is the "global" robot's x
+        # y here is the "global" robot's y
+        print(yaw)
+        self.map_T_global = self._get_map_T_global(x, y, yaw).copy()
+        self.global_T_map = np.linalg.inv(self.map_T_global).copy()
+        self.robot_recenter_yaw = yaw
+
+    def xy_yaw_global_to_map(self, x, y, yaw):
+        """Do the transformation given the transformation matrix. The code is from spot.py."""
+        x, y, w = self.global_T_map.dot(np.array([x, y, 1.0]))
+        x, y = x / w, y / w
+
+        return x, y, self.wrap_heading(yaw - self.robot_recenter_yaw)
+
+    def xy_yaw_map_to_global(self, x, y, yaw):
+        """Do the transformation given the transformation matrix. The code is from spot.py."""
+        x, y, w = self.map_T_global.dot(np.array([x, y, 1.0]))
+        x, y = x / w, y / w
+
+        return x, y, self.wrap_heading(yaw - self.robot_recenter_yaw)
+
+    def _get_map_T_global(self, x=None, y=None, yaw=None):
+        # Create offset transformation matrix in real Spot
+        # map_T_global = np.array(
+        #     [
+        #         [np.cos(yaw), -np.sin(yaw), x],
+        #         [np.sin(yaw), np.cos(yaw), y],
+        #         [0.0, 0.0, 1.0],
+        #     ]
+        # )
+
+        # In habitat, the robot is pointed to -y direction
+        map_T_global = np.array(
+            [
+                [np.cos(yaw), np.sin(yaw), x],
+                [-np.sin(yaw), np.cos(yaw), y],
+                [0.0, 0.0, 1.0],
+            ]
+        )
+        print("map_T_global:", map_T_global)
+        return map_T_global
+
+    def wrap_heading(self, heading):
+        """Ensure input heading is between -180 an 180; can be float or np.ndarray."""
+        return (heading + np.pi) % (2 * np.pi) - np.pi
+
+    def global_2_map(
+        self, global_x, global_y, global_yaw, origin_top_left=True
+    ):
+        meter_x, meter_y, meter_yaw = self.xy_yaw_global_to_map(
+            global_x, global_y, global_yaw
+        )
+        print("meter_xy:", meter_x, meter_y)
+        # meter to cm
+        cm_x = meter_x * 100.0
+        cm_y = meter_y * 100.0
+        # cm to cell
+        cell_x = int(cm_x / self.cm_per_cell)
+        cell_y = int(cm_y / self.cm_per_cell)
+        # Recenter the pose
+        if origin_top_left:
+            array_row = self.map_origin_row - cell_y
+            array_col = self.map_origin_col + cell_x
+            if array_row < 0:
+                array_row = 0
+            elif array_row >= self.map_size:
+                array_row = self.map_size - 1
+            if array_col < 0:
+                array_col = 0
+            elif array_col >= self.map_size:
+                array_col = self.map_size - 1
+            # map array format
+            return array_row, array_col
+        else:
+            # x, y map foramt
+            if cell_x >= int(self.map_size / 2):
+                cell_x = int(self.map_size / 2) - 1
+            elif cell_x < -int(self.map_size / 2):
+                cell_x = -int(self.map_size / 2)
+            if cell_y >= int(self.map_size / 2):
+                cell_y = int(self.map_size / 2) - 1
+            elif cell_y < -int(self.map_size / 2):
+                cell_y = -int(self.map_size / 2)
+            return cell_x, cell_y
+
+    def map_2_global(self, x, y, yaw, origin_top_left=False):
+        """Origin is in the map center."""
+        if not origin_top_left:
+            # cell to cm to meter
+            cell_x = x
+            cell_y = y
+            cell_yaw = yaw
+            m_x = cell_x * self.cm_per_cell / 100.0
+            m_y = cell_y * self.cm_per_cell / 100.0
+            global_x, global_y, global_yaw = self.xy_yaw_map_to_global(
+                m_x, m_y, cell_yaw
+            )
+            return global_x, global_y
+        else:
+            array_row = x
+            array_col = y
+            array_yaw = yaw
+            cell_y = self.map_origin_row - array_row
+            cell_x = array_col - self.map_origin_col
+            # cell to cm to meter
+            m_x = cell_x * self.cm_per_cell / 100.0
+            m_y = cell_y * self.cm_per_cell / 100.0
+            global_x, global_y, global_yaw = self.xy_yaw_map_to_global(
+                m_x, m_y, array_yaw
+            )
+            return global_x, global_y
+
+
+class SEM_MAP:
+    """This is a class that generates the semantic map given the observations"""
+
+    def __init__(
+        self, frame_height=640, frame_width=480, hfov=56.0, base_flag=True
+    ):
+        # State holds global and local map and sensor pose
+        # See class definition for argument info
+        self.semantic_map = VisionLanguage2DSemanticMapState(
+            device=DEVICE,
+            num_environments=1,
+            lseg_features_dim=512,
+            map_resolution=MAP_RESOLUTION,
+            map_size_cm=MAP_SIZE_CM,
+            global_downscaling=GLOBAL_DOWNSCALING,
+        )
+        self.semantic_map.init_map_and_pose()
+        # Module is responsible for updating the local and global maps and poses
+        # See class definition for argument info
+        self.semantic_map_module = VisionLanguage2DSemanticMapModule(
+            lseg_checkpoint_path=checkpoint_path,
+            lseg_features_dim=512,
+            frame_height=frame_height,
+            frame_width=frame_width,
+            camera_height=1.85,  # camera sensor height (in metres)
+            hfov=hfov,  # horizontal field of view (in degrees)
+            map_size_cm=MAP_SIZE_CM,  # global map size (in centimetres)
+            map_resolution=MAP_RESOLUTION,  #  size of map bins (in centimeters): 1 cell = map_resolution cm
+            vision_range=VISION_RANGE,  # radius of the circular region of the local map
+            # that is visible by the agent located in its center (unit is
+            # the number of local map cells). This vision range also affects the
+            # global map. True vision radius = vision_range * map_resolution =
+            # 63 * 2 = 126 cm
+            global_downscaling=GLOBAL_DOWNSCALING,  # ratio of global over local map
+            du_scale=DU_SCALE,  #  frame downscaling before projecting to point cloud
+            exp_pred_threshold=EXP_PRED_THRESHOLD,  # number of depth points to be in bin to consider it as explored
+            map_pred_threshold=OBS_PRED_THRESHOLD,  # number of depth points to be in bin to consider it as obstacle
+            # Global map size = MAP_SIZE_CM / map_resolution (unit: cells) = 1000cm / 2 = 500 cells
+            # Local map size = MAP_SIZE_CM / global_downscaling / map_resolution (unit: cells) = 1000cm/4/2=125 cells
+            # Spot vision radius = 300cm, which is 600cm in diameter. This is euqal to 600cm/2 map_resolution = 300 cells
+            # The local map only has the size of 125 cells. So the vision range is 125cells / 2 = 63 cells
+            radius_explore=RADIUS_EXPLORE,
+        ).to(DEVICE)
+        # Get the update iteration
+        self.update_i = 0
+        # Save folder
+        self.base_flag = base_flag
+
+    def update_sem_map(self, img_rgb, img_depth, delta_x_y_raw):
+        """Update the semantic map"""
+
+        # Process the image data
+        # img_rgbs = (seq, 3, 640, 640)
+        # img_depths = (seq, 1, 640, 640)
+        seq_obs = np.concatenate((img_rgb, img_depth), axis=1)
+
+        # Process the pose data
+        seq_pose_delta = delta_x_y_raw
+
+        # Format the data
+        seq_obs = (
+            torch.from_numpy(seq_obs[:, :4, :, :]).unsqueeze(0).to(DEVICE)
+        )
+        seq_pose_delta = (
+            torch.from_numpy(seq_pose_delta[:]).unsqueeze(0).to(DEVICE)
+        )
+        seq_dones = (
+            torch.tensor([False] * seq_obs.shape[1]).unsqueeze(0).to(DEVICE)
+        )
+        seq_update_global = (
+            torch.tensor([True] * seq_obs.shape[1]).unsqueeze(0).to(DEVICE)
+        )
+
+        # Compute the map
+        (
+            seq_map_features,
+            self.semantic_map.local_map,
+            self.semantic_map.global_map,
+            seq_local_pose,
+            seq_global_pose,
+            seq_lmb,
+            seq_origins,
+        ) = self.semantic_map_module(
+            seq_obs,
+            seq_pose_delta,
+            seq_dones,
+            seq_update_global,
+            self.semantic_map.local_map,
+            self.semantic_map.global_map,
+            self.semantic_map.local_pose,
+            self.semantic_map.global_pose,
+            self.semantic_map.lmb,
+            self.semantic_map.origins,
+        )
+
+        # Update the map local and global poses and the origins
+        # We use the last seq_local_pose and seq_global_pose as the intilial poses for the next round,
+        # and same for origins
+        self.semantic_map.local_pose = seq_local_pose[:, -1]
+        self.semantic_map.global_pose = seq_global_pose[:, -1]
+        self.semantic_map.lmb = seq_lmb[:, -1]
+        self.semantic_map.origins = seq_origins[:, -1]
+
+        print("seq_global_pose:", seq_global_pose)
+
+        # Update the counter
+        self.update_i += 1
+
+    def export_legend(self, legend, filename="legend.png", save_legend=False):
+        """Save the legend"""
+        fig = legend.figure
+        fig.canvas.draw()
+        bbox = legend.get_window_extent().transformed(
+            fig.dpi_scale_trans.inverted()
+        )
+        if save_legend:
+            fig.savefig(filename, dpi="figure", bbox_inches=bbox)
+
+    def get_legend(self, text_label_color_palette):
+        """Get the legend given color map of the text labels"""
+        colors = []
+        texts = []
+        text_i = 0
+        for cc in range(0, len(text_label_color_palette), 3):
+            r = text_label_color_palette[cc]
+            g = text_label_color_palette[cc + 1]
+            b = text_label_color_palette[cc + 2]
+            temp = (r, g, b)
+            colors.append(temp)
+            texts.append(TEXT_LABELS[text_i])
+            text_i += 1
+        f = lambda m, c: plt.plot([], [], marker=m, color=c, ls="none")[0]
+        handles = [f("s", colors[i]) for i in range(text_i)]
+        labels = texts
+        legend = plt.legend(
+            handles, labels, loc=3, framealpha=1, frameon=False
+        )
+        self.export_legend(
+            legend, SAVE_IMG_DIR + "Legend_" + str(self.update_i) + ".png"
+        )
+
+    def plot_sem_map(self):
+        """Plot the semantic map function"""
+
+        map_color_palette = [
+            1.0,
+            1.0,
+            1.0,  # empty space
+            0.6,
+            0.6,
+            0.6,  # obstacles
+            0.95,
+            0.95,
+            0.95,  # explored area
+            0.96,
+            0.36,
+            0.26,  # visited area
+            *text_label_color_palette,
+        ]
+        map_color_palette = [int(x * 255.0) for x in map_color_palette]
+        num_sem_categories = len(TEXT_LABELS)
+
+        semantic_categories_map = self.semantic_map.get_semantic_map(
+            0, self.semantic_map_module.lseg, labels=TEXT_LABELS
+        )
+
+        # Locate the position of the text and class
+        label_x = {}
+        label_y = {}
+        for i in range(semantic_categories_map.shape[0]):
+            for j in range(semantic_categories_map.shape[1]):
+                if semantic_categories_map[i][j] != len(TEXT_LABELS) - 1:
+                    text = TEXT_LABELS[semantic_categories_map[i][j]]
+                    if text not in label_x:
+                        label_x[text] = []
+                        label_y[text] = []
+                    label_x[text].append(i)
+                    label_y[text].append(j)
+
+        # Plot the map
+        plt.figure(figsize=(20, 14))
+        for text in label_x:
+            plt.scatter(label_x[text], label_y[text], label=text)
+        plt.legend()
+        if self.base_flag:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Local_Map_Raw_"
+                + str(self.update_i)
+                + ".png"
+            )
+        else:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Local_Map_Raw_"
+                + str(self.update_i)
+                + "_camera.png"
+            )
+        plt.close()
+
+        obstacle_map = self.semantic_map.get_obstacle_map(0)
+        explored_map = self.semantic_map.get_explored_map(0)
+        visited_map = self.semantic_map.get_visited_map(0)
+
+        # Process the semantic map
+        semantic_categories_map += 4
+        no_category_mask = (
+            semantic_categories_map == 4 + num_sem_categories - 1
+        )
+        obstacle_mask = np.rint(obstacle_map) == 1
+        explored_mask = np.rint(explored_map) == 1
+        visited_mask = visited_map == 1
+        semantic_categories_map[no_category_mask] = 0
+        semantic_categories_map[
+            np.logical_and(no_category_mask, explored_mask)
+        ] = 2
+        semantic_categories_map[
+            np.logical_and(no_category_mask, obstacle_mask)
+        ] = 1
+        semantic_categories_map[visited_mask] = 3
+
+        # Plot the vis
+        semantic_map_vis = Image.new("P", semantic_categories_map.shape)
+        semantic_map_vis.putpalette(map_color_palette)
+        semantic_map_vis.putdata(
+            semantic_categories_map.flatten().astype(np.uint8)
+        )
+        semantic_map_vis = semantic_map_vis.convert("RGB")
+        # Change it to array.
+        semantic_map_vis_flip = np.flipud(semantic_map_vis)
+        self.get_legend(text_label_color_palette)
+        plt.imshow(semantic_map_vis_flip)
+        if self.base_flag:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Local_Map_Package_"
+                + str(self.update_i)
+                + ".png"
+            )
+        else:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Local_Map_Package_"
+                + str(self.update_i)
+                + "_camera.png"
+            )
+        plt.close()
+
+        print("Finished local map...")
+
+        # Get the same thing for the global map
+        semantic_categories_global_map = (
+            self.semantic_map.get_semantic_global_map(
+                0,
+                self.semantic_map_module.lseg,
+                labels=TEXT_LABELS,
+            )
+        )
+
+        obstacle_map = self.semantic_map.get_obstacle_global_map(0)
+        explored_map = self.semantic_map.get_explored_global_map(0)
+        visited_map = self.semantic_map.get_visited_global_map(0)
+
+        semantic_categories_global_map += 4
+        no_category_mask = (
+            semantic_categories_global_map == 4 + num_sem_categories - 1
+        )
+        obstacle_mask = np.rint(obstacle_map) == 1
+        explored_mask = np.rint(explored_map) == 1
+        visited_mask = visited_map == 1
+        semantic_categories_global_map[no_category_mask] = 0
+        semantic_categories_global_map[
+            np.logical_and(no_category_mask, explored_mask)
+        ] = 2
+        semantic_categories_global_map[
+            np.logical_and(no_category_mask, obstacle_mask)
+        ] = 1
+        semantic_categories_global_map[visited_mask] = 3
+
+        semantic_map_vis = Image.new("P", semantic_categories_global_map.shape)
+        semantic_map_vis.putpalette(map_color_palette)
+        semantic_map_vis.putdata(
+            semantic_categories_global_map.flatten().astype(np.uint8)
+        )
+        semantic_map_vis = semantic_map_vis.convert("RGB")
+        # Change it to array.
+        semantic_map_vis_flip = np.flipud(semantic_map_vis)
+        self.get_legend(text_label_color_palette)
+        plt.imshow(semantic_map_vis_flip)
+        if self.base_flag:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Global_Map_Package_"
+                + str(self.update_i)
+                + ".png"
+            )
+        else:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Global_Map_Package_"
+                + str(self.update_i)
+                + "_camera.png"
+            )
+        plt.close()
+
+        semantic_map_vis_flip = np.flipud(semantic_map_vis)
+        semantic_map_vis_unflip = np.flipud(semantic_map_vis_flip)
+        self.get_legend(text_label_color_palette)
+        plt.imshow(semantic_map_vis_unflip)
+        if self.base_flag:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Global_Unflip_Map_Package_"
+                + str(self.update_i)
+                + ".png"
+            )
+        else:
+            plt.savefig(
+                SAVE_IMG_DIR
+                + "Sem_Global_Unflip_Map_Package_"
+                + str(self.update_i)
+                + "_camera.png"
+            )
+        plt.close()
+
+        print("Finished global map...")
+
 
 # The robot's camera is facing +y direction, which is z in habitat
 # The robot's right is facing +x direction, which is z in habitat
@@ -155,9 +700,10 @@ SAVE_DIR += "/"
 # The robot moves counter-clock-wise is negative delta (cur_angle - prev_angle)
 
 
-def compute_delta_angle(base_action, cur_angle, last_angle):
+def compute_delta_angle(base_action, last_yaw, curr_yaw):
     """Compute the delta angle. Habitat has a weird angle formation, we
     we need this function to get a correct delta angle."""
+
     # Get the control rotation
     if base_action is not None:
         rot_ctr = base_action[1]
@@ -173,24 +719,22 @@ def compute_delta_angle(base_action, cur_angle, last_angle):
         return 0.0
 
     # Get the angle delta
-    decision_angle_120 = np.pi * 120.0 / 180.0
-    decision_angle_240 = np.pi * 240.0 / 180.0
+    decision_yaw_120 = np.pi * 120.0 / 180.0
+    decision_yaw_240 = np.pi * 240.0 / 180.0
     # Set the threshold to detect the change between 120 and 240 degree.
     threshold = 2.0
-    if abs(last_angle - cur_angle) >= threshold:
-        if abs(cur_angle - decision_angle_120) < abs(
-            cur_angle - decision_angle_240
-        ):
-            delta_angle = abs(cur_angle - decision_angle_120) + abs(
-                last_angle - decision_angle_240
+    if abs(last_yaw - curr_yaw) >= threshold:
+        if abs(curr_yaw - decision_yaw_120) < abs(curr_yaw - decision_yaw_240):
+            delta_yaw = abs(curr_yaw - decision_yaw_120) + abs(
+                last_yaw - decision_yaw_240
             )
         else:
-            delta_angle = abs(cur_angle - decision_angle_240) + abs(
-                last_angle - decision_angle_120
+            delta_yaw = abs(curr_yaw - decision_yaw_240) + abs(
+                last_yaw - decision_yaw_120
             )
     else:
-        delta_angle = abs(last_angle - cur_angle)
-    return delta_angle * rot_sign
+        delta_yaw = abs(last_yaw - curr_yaw)
+    return delta_yaw * rot_sign
 
 
 def step_env(env, action_name, action_args):
@@ -574,9 +1118,25 @@ def play_env(env, args, config):
 
     image_i = 0
 
+    # Initialize the container.
     seq_obs_all = []
     seq_pose_delta_all = []
+    seq_pose_delta_all_camera = []
     last_seq_pose_for_trans = None
+
+    # Get the initial base transformation.
+    last_trans = env._sim.robot.sim_obj.transformation
+    last_trans_rgb_camera = env._sim.robot.camera_transform
+    last_yaw = float(env._sim.robot.sim_obj.rotation.angle())
+
+    raw_increase = 0.08333396911621094
+    raw_tracker = last_yaw
+
+    # Track pose init
+    robot_track_pose = track_pose()
+    robot_track_pose.update_origin(
+        last_trans.translation[0], last_trans.translation[2], raw_tracker
+    )
 
     while True:
         if (
@@ -625,110 +1185,101 @@ def play_env(env, args, config):
         # Combine rgb and depth
         obs_for_map = np.concatenate((rgb_for_map, depth_for_map), axis=3)
 
-        # For the dataset
-        if len(seq_obs_all) == 0:
-            seq_obs_all.append(obs_for_map.copy())
-            seq_pose_delta_temp = np.array([0.0, 0.0, 0.0])
-            seq_pose_delta_all.append(
-                np.expand_dims(seq_pose_delta_temp, axis=0).copy()
-            )
-        else:
-            # Append the image observation
-            seq_obs_all.append(obs_for_map.copy())
+        # Save the image data
+        seq_obs_all.append(obs_for_map.copy())
 
-            # Get the current camera pose
-            cur_camera_position = (
-                env.sim.agents[0]
-                .get_state()
-                .sensor_states["robot_head_rgb"]
-                .position.copy()
-            )
-            cur_camera_rotation = (
-                env.sim.agents[0]
-                .get_state()
-                .sensor_states["robot_head_rgb"]
-                .rotation.copy()
-            )
+        # For the data of pose (x, y, and yaw of the robot)
+        # Get the current base transformation
+        curr_trans = env._sim.robot.sim_obj.transformation
+        curr_trans_rgb_camera = env._sim.robot.camera_transform
 
-            # Process the pose delta
-            angle_correction = compute_delta_angle(
-                base_action,
-                cur_camera_rotation.angle(),
-                prev_camera_rotation.angle(),
-            )
-
-            # Compute the detla of the pose
-            rotation_delta = (
-                prev_camera_rotation.inverse() * cur_camera_rotation
-            )
-            position_delta = quaternion_rotate_vector(
-                prev_camera_rotation.inverse(),
-                cur_camera_position,
-            ) - quaternion_rotate_vector(
-                prev_camera_rotation.inverse(),
-                prev_camera_position,
-            )
-            # The issue of 120-240 jump
-            if base_action != None:
-                # Process the data
-                if (
-                    abs(abs(rotation_delta.angle()) - abs(angle_correction))
-                    > 1e-1
-                ):
-                    # If there is too much differecne
-                    seq_pose_delta_temp = np.array(
-                        [
-                            position_delta[0],
-                            -position_delta[2],
-                            angle_correction,
-                        ]
-                    )
-                else:
-                    seq_pose_delta_temp = np.array(
-                        [
-                            position_delta[0],
-                            -position_delta[2],
-                            np.sign(angle_correction) * rotation_delta.angle(),
-                        ]
-                    )
-            # The issue of arm control of camera does not have the sign
-            elif arm_action[8] != 0:
-                seq_pose_delta_temp = np.array(
-                    [
-                        position_delta[0],
-                        -position_delta[2],
-                        -arm_action[8] * rotation_delta.angle(),
-                    ]
-                )
-            # Normal operation mode
-            else:
-                seq_pose_delta_temp = np.array(
-                    [
-                        position_delta[0],
-                        -position_delta[2],
-                        np.sign(angle_correction) * rotation_delta.angle(),
-                    ]
-                )
-            print("step:", image_i, "delta pose:", seq_pose_delta_temp)
-            print("trans:", rotation_delta.angle())
-            print("camera:", angle_correction)
-
-            seq_pose_delta_all.append(
-                np.expand_dims(seq_pose_delta_temp, axis=0).copy()
-            )
-
-        # Get the previous camera pose
-        prev_camera_position = (
-            env.sim.agents[0]
-            .get_state()
-            .sensor_states["robot_head_rgb"]
-            .position.copy()
+        delta_curr_pose = last_trans.inverted().transform_point(
+            curr_trans.translation
         )
-        prev_camera_rotation = (
-            env.sim.agents[0]
-            .get_state()
-            .sensor_states["robot_head_rgb"]
-            .rotation.copy()
+        delta_curr_pose_rgb_camera = (
+            last_trans_rgb_camera.inverted().transform_point(
+                curr_trans_rgb_camera.translation
+            )
+        )
+
+        # Get the pose delta for yaw
+        curr_yaw = float(env._sim.robot.sim_obj.rotation.angle())
+        delta_yaw = compute_delta_angle(base_action, last_yaw, curr_yaw)
+
+        # Get the pose delta for x, y of the base
+        delta_x = delta_curr_pose[0]
+        delta_y = delta_curr_pose[2]
+        seq_pose_delta_all.append(
+            np.array([delta_x, delta_y, delta_yaw]).copy()
+        )
+
+        # Get the pose delta for x, y of the camera
+        delta_x = delta_curr_pose_rgb_camera[2]
+        delta_y = delta_curr_pose_rgb_camera[0]
+        seq_pose_delta_all_camera.append(
+            np.array([delta_x, delta_y, delta_yaw]).copy()
+        )
+
+        # Store the last transformation
+        last_trans = curr_trans
+        last_trans_rgb_camera = curr_trans_rgb_camera
+        last_yaw = curr_yaw
+
+        print("Step:", image_i)
+        print(
+            "Global x, y, yaw at base:",
+            curr_trans.translation[0],
+            curr_trans.translation[2],
+            curr_yaw,
+        )
+        print("trans:", last_trans)
+
+        if base_action is not None:
+            raw_tracker += -raw_increase * base_action[1]
+            raw_tracker = robot_track_pose.wrap_heading(raw_tracker)
+        map_pose_false = robot_track_pose.global_2_map(
+            curr_trans.translation[0],
+            curr_trans.translation[2],
+            raw_tracker,
+            False,
+        )
+        map_pose_true = robot_track_pose.global_2_map(
+            curr_trans.translation[0],
+            curr_trans.translation[2],
+            raw_tracker,
+            True,
+        )
+
+        global_pose_false = robot_track_pose.map_2_global(
+            map_pose_false[0], map_pose_false[1], raw_tracker, False
+        )
+        global_pose_true = robot_track_pose.map_2_global(
+            map_pose_true[0], map_pose_true[1], raw_tracker, True
+        )
+
+        print(
+            "Local delta x, y, yaw at base:",
+            delta_curr_pose[0],
+            delta_curr_pose[2],
+            delta_yaw,
+        )
+        print(
+            "Global x, y, yaw at camera:",
+            curr_trans_rgb_camera.translation[0],
+            curr_trans_rgb_camera.translation[2],
+            curr_yaw,
+        )
+        print(
+            "Local delta x, y, yaw at camera:",
+            delta_curr_pose_rgb_camera[0],
+            delta_curr_pose_rgb_camera[2],
+            delta_yaw,
+        )
+        print(
+            "Map x, y, yaw via base:", map_pose_false, "<->", global_pose_false
+        )
+        print(
+            "Map x, y, yaw via base:", map_pose_true, "<->", global_pose_true
         )
 
         # Get the an rgb image
@@ -835,10 +1386,6 @@ def play_env(env, args, config):
 
         image_i += 1
 
-        # if base_action is not None:
-        #     if base_action[1] == 1:
-        #         import pdb; pdb.set_trace()
-
         if not args.no_render and keys[pygame.K_c]:
             pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
             logger.info("Actions:")
@@ -935,8 +1482,11 @@ def play_env(env, args, config):
     # Change it the numpy from list
     seq_obs_all = np.stack(seq_obs_all, axis=0)
     seq_pose_delta_all = np.stack(seq_pose_delta_all, axis=0)
+    seq_pose_delta_all_camera = np.stack(seq_pose_delta_all_camera, axis=0)
+
     seq_obs_all = np.squeeze(seq_obs_all)
     seq_pose_delta_all = np.squeeze(seq_pose_delta_all)
+    seq_pose_delta_all_camera = np.squeeze(seq_pose_delta_all_camera)
 
     # Build the map here
     # Remove the reductant position.
@@ -951,306 +1501,71 @@ def play_env(env, args, config):
     # Filter out the reductant part
     seq_obs_all_final = seq_obs_all[keep_i_list]
     seq_pose_delta_all_final = seq_pose_delta_all[keep_i_list]
+    seq_pose_delta_all_final_camera = seq_pose_delta_all_camera[keep_i_list]
 
     print(seq_pose_delta_all_final)
     print("seq length:", seq_pose_delta_all_final.shape)
     print("keep_i_list:", keep_i_list)
 
-    for tt in MAP_SEQ_LEN:
+    interval_map = 10
+    start_index = 0
+    end_index = start_index + interval_map
+    length_obs = seq_pose_delta_all_final.shape[0]
+    while start_index < length_obs:
+
+        print("Progress:", start_index, "/", length_obs)
+
         # Shorten the observations.
-        seq_obs_all = seq_obs_all_final[0:tt].copy()
-        seq_pose_delta_all = seq_pose_delta_all_final[0:tt].copy()
+        seq_obs_all = seq_obs_all_final[start_index:end_index].copy()
+        seq_pose_delta_all = seq_pose_delta_all_final[
+            start_index:end_index
+        ].copy()
+        seq_pose_delta_all_camera = seq_pose_delta_all_final_camera[
+            start_index:end_index
+        ].copy()
 
         # Reshape the data
         seq_obs_all = np.transpose(seq_obs_all, (0, 3, 1, 2))
-        # Format the data
-        seq_obs = (
-            torch.from_numpy(seq_obs_all[:, :4, :, :]).unsqueeze(0).to(device)
+
+        if start_index == 0:
+            # State holds global and local map and sensor pose
+            # See class definition for argument info
+            sem_map = SEM_MAP(base_flag=True)
+            sem_map_camera = SEM_MAP(base_flag=False)
+
+        # Update the map
+        sem_map.update_sem_map(
+            seq_obs_all[:, 0:3, :, :],
+            np.expand_dims(seq_obs_all[:, 3, :, :], axis=1),
+            seq_pose_delta_all,
         )
-        seq_pose_delta = (
-            torch.from_numpy(seq_pose_delta_all[:]).unsqueeze(0).to(device)
+        # Plot the global and local map
+        sem_map.plot_sem_map()
+
+        # Update the map
+        sem_map_camera.update_sem_map(
+            seq_obs_all[:, 0:3, :, :],
+            np.expand_dims(seq_obs_all[:, 3, :, :], axis=1),
+            seq_pose_delta_all_camera,
         )
-        seq_dones = (
-            torch.tensor([False] * seq_obs.shape[1]).unsqueeze(0).to(device)
-        )
-        seq_update_global = (
-            torch.tensor([True] * seq_obs.shape[1]).unsqueeze(0).to(device)
-        )
+        # Plot the global and local map
+        sem_map_camera.plot_sem_map()
 
-        # State holds global and local map and sensor pose
-        # See class definition for argument info
-        semantic_map = VisionLanguage2DSemanticMapState(
-            device=device,
-            num_environments=1,
-            lseg_features_dim=512,
-            map_resolution=MAP_RESOLUTION,
-            map_size_cm=MAP_SIZE_CM,
-            global_downscaling=GLOAL_DOWNSCALING,
-        )
-        semantic_map.init_map_and_pose()
+        # Increase the index
+        start_index += interval_map
+        end_index += interval_map
 
-        # Module is responsible for updating the local and global maps and poses
-        # See class definition for argument info
-        semantic_map_module = VisionLanguage2DSemanticMapModule(
-            lseg_checkpoint_path=checkpoint_path,
-            lseg_features_dim=512,
-            frame_height=640,
-            frame_width=480,
-            camera_height=1.85,  # camera sensor height (in metres)
-            hfov=56.0,  # horizontal field of view (in degrees)
-            map_size_cm=MAP_SIZE_CM,  # global map size (in centimetres)
-            map_resolution=MAP_RESOLUTION,  #  size of map bins (in centimeters)
-            vision_range=VISION_RANGE,  # diameter of the circular region of the local map
-            # that is visible by the agent located in its center (unit is
-            # the number of local map cells)
-            global_downscaling=GLOAL_DOWNSCALING,  # ratio of global over local map
-            du_scale=DU_SCALE,  #  frame downscaling before projecting to point cloud
-            exp_pred_threshold=EXP_PRED_THRESHOLD,  # number of depth points to be in bin to consider it as explored
-            map_pred_threshold=OBS_PRED_THRESHOLD,  # number of depth points to be in bin to consider it as obstacle
-        ).to(device)
-
-        (
-            seq_map_features,
-            semantic_map.local_map,
-            semantic_map.global_map,
-            seq_local_pose,
-            seq_global_pose,
-            seq_lmb,
-            seq_origins,
-        ) = semantic_map_module(
-            seq_obs,
-            seq_pose_delta,
-            seq_dones,
-            seq_update_global,
-            semantic_map.local_map,
-            semantic_map.global_map,
-            semantic_map.local_pose,
-            semantic_map.global_pose,
-            semantic_map.lmb,
-            semantic_map.origins,
-        )
-
-        semantic_map.local_pose = seq_local_pose[:, -1]
-        semantic_map.global_pose = seq_global_pose[:, -1]
-        semantic_map.lmb = seq_lmb[:, -1]
-        semantic_map.origins = seq_origins[:, -1]
-
-        print("Finished Map...")
-
-        # Global semantic map of shape
-        # (batch_size, num_channels, M, M)
-        # where num_channels = 4 + 512
-        # 0: obstacle map
-        # 1: explored area
-        # 2: current agent location
-        # 3: past agent locations
-        # 4: number of cell updates
-        # 5, 6, .., 5 + 512: CLIP map cell features
-        from home_robot.agent.perception.detection.coco_maskrcnn.coco_categories import (
-            coco_categories,
-            coco_categories_color_palette,
-            text_label_color_palette,
-        )
-        from PIL import Image
-
-        map_color_palette = [
-            1.0,
-            1.0,
-            1.0,  # empty space
-            0.6,
-            0.6,
-            0.6,  # obstacles
-            0.95,
-            0.95,
-            0.95,  # explored area
-            0.96,
-            0.36,
-            0.26,  # visited area
-            # *coco_categories_color_palette,
-            *text_label_color_palette,
-        ]
-        map_color_palette = [int(x * 255.0) for x in map_color_palette]
-        num_sem_categories = len(TEXT_LABELS)  # len(coco_categories)
-
-        semantic_categories_map = semantic_map.get_semantic_map(
-            0,
-            semantic_map_module.lseg,
-            # labels=list(coco_categories.keys())[:-1] + ["other"]
-            labels=TEXT_LABELS,
-        )
-
-        semantic_categories_global_map = semantic_map.get_semantic_global_map(
-            0,
-            semantic_map_module.lseg,
-            # labels=list(coco_categories.keys())[:-1] + ["other"]
-            labels=TEXT_LABELS,
-        )
-
-        # Locate the position of the text and class
-        label_x = {}
-        label_y = {}
-        for i in range(semantic_categories_map.shape[0]):
-            for j in range(semantic_categories_map.shape[1]):
-                if semantic_categories_map[i][j] != len(TEXT_LABELS) - 1:
-                    text = TEXT_LABELS[semantic_categories_map[i][j]]
-                    if text not in label_x:
-                        label_x[text] = []
-                        label_y[text] = []
-                    label_x[text].append(i)
-                    label_y[text].append(j)
-
-        # Plot the map
-        plt.figure(figsize=(20, 14))
-        for text in label_x:
-            plt.scatter(label_x[text], label_y[text], label=text)
-        plt.legend()
-        plt.savefig(SAVE_DIR + "Sem_Map_Raw_" + str(tt) + ".png")
-        plt.close()
-
-        obstacle_map = semantic_map.get_obstacle_map(0)
-        explored_map = semantic_map.get_explored_map(0)
-        visited_map = semantic_map.get_visited_map(0)
-
-        semantic_categories_map += 4
-        # "other" class
-        no_category_mask = (
-            semantic_categories_map == 4 + num_sem_categories - 1
-        )
-        obstacle_mask = np.rint(obstacle_map) == 1
-        explored_mask = np.rint(explored_map) == 1
-        visited_mask = visited_map == 1
-        semantic_categories_map[no_category_mask] = 0
-        semantic_categories_map[
-            np.logical_and(no_category_mask, explored_mask)
-        ] = 2
-        # If we cannot identify there is a class there, we just treat it as a obstacle
-        semantic_categories_map[
-            np.logical_and(no_category_mask, obstacle_mask)
-        ] = 1
-        semantic_categories_map[visited_mask] = 3
-
-        semantic_map_vis = Image.new("P", semantic_categories_map.shape)
-        semantic_map_vis.putpalette(map_color_palette)
-        semantic_map_vis.putdata(
-            semantic_categories_map.flatten().astype(np.uint8)
-        )
-        semantic_map_vis = semantic_map_vis.convert("RGB")
-        # Change it to array.
-        semantic_map_vis_flip = np.flipud(semantic_map_vis)
-        semantic_map_vis_unflip = np.flipud(semantic_map_vis_flip)
-        plt.imshow(semantic_map_vis_flip)
-        plt.savefig(SAVE_DIR + "Sem_Map_Package_" + str(tt) + ".png")
-        plt.close()
-
-        plt.imshow(semantic_map_vis_unflip)
-        plt.savefig(SAVE_DIR + "Unflip_Sem_Map_Package_" + str(tt) + ".png")
-        plt.close()
-
-        # Add text
-        semantic_map_vis_text = np.array(semantic_map_vis.copy())
-        for key in label_x:
-            x_pos = label_y[key][0]
-            y_pos = label_x[key][0]
-            semantic_map_vis_text = cv2.putText(
-                semantic_map_vis_text,
-                key,
-                (x_pos, y_pos),
-                font,
-                fontScale,
-                (0, 0, 0),
-                1,
-                cv2.LINE_AA,
-            )
-        cv2.imwrite(
-            SAVE_DIR + "Sem_Map_Package_Text_" + str(tt) + ".png",
-            semantic_map_vis_text,
-        )
-
-        print("Finished Local Map...")
-
-        # Get the same thing for the global map
-        obstacle_map = semantic_map.get_obstacle_global_map(0)
-        explored_map = semantic_map.get_explored_global_map(0)
-        visited_map = semantic_map.get_visited_global_map(0)
-
-        semantic_categories_global_map += 4
-        no_category_mask = (
-            semantic_categories_global_map == 4 + num_sem_categories - 1
-        )
-        obstacle_mask = np.rint(obstacle_map) == 1
-        explored_mask = np.rint(explored_map) == 1
-        visited_mask = visited_map == 1
-        semantic_categories_global_map[no_category_mask] = 0
-        semantic_categories_global_map[
-            np.logical_and(no_category_mask, explored_mask)
-        ] = 2
-        semantic_categories_global_map[
-            np.logical_and(no_category_mask, obstacle_mask)
-        ] = 1
-        semantic_categories_global_map[visited_mask] = 3
-
-        semantic_map_vis = Image.new("P", semantic_categories_global_map.shape)
-        semantic_map_vis.putpalette(map_color_palette)
-        semantic_map_vis.putdata(
-            semantic_categories_global_map.flatten().astype(np.uint8)
-        )
-        semantic_map_vis = semantic_map_vis.convert("RGB")
-        # Change it to array.
-        semantic_map_vis_flip = np.flipud(semantic_map_vis)
-        plt.imshow(semantic_map_vis_flip)
-        plt.savefig(SAVE_DIR + "Sem_Global_Map_Package_" + str(tt) + ".png")
-        plt.close()
-
-        semantic_map_vis_flip = np.flipud(semantic_map_vis)
-        semantic_map_vis_unflip = np.flipud(semantic_map_vis_flip)
-        plt.imshow(semantic_map_vis_unflip)
-        plt.savefig(
-            SAVE_DIR + "Unflip_Sem_Global_Map_Package_" + str(tt) + ".png"
-        )
-        plt.close()
-
-        # Add text
-        semantic_map_vis_text = np.array(semantic_map_vis.copy())
-        for key in label_x:
-            x_pos = label_y[key][0]
-            y_pos = label_x[key][0]
-            semantic_map_vis_text = cv2.putText(
-                semantic_map_vis_text,
-                key,
-                (x_pos, y_pos),
-                font,
-                fontScale,
-                (0, 0, 0),
-                1,
-                cv2.LINE_AA,
-            )
-        cv2.imwrite(
-            SAVE_DIR + "Sem_Global_Map_Package_Text_" + str(tt) + ".png",
-            semantic_map_vis_text,
-        )
-
-        # Save the legend
-        colors = []
-        texts = []
-        text_i = 0
-        for cc in range(0, len(text_label_color_palette), 3):
-            r = text_label_color_palette[cc]
-            g = text_label_color_palette[cc + 1]
-            b = text_label_color_palette[cc + 2]
-            temp = (r, g, b)
-            colors.append(temp)
-            texts.append(TEXT_LABELS[text_i])
-            text_i += 1
-        f = lambda m, c: plt.plot([], [], marker=m, color=c, ls="none")[0]
-        handles = [f("s", colors[i]) for i in range(text_i)]
-        labels = texts
-        legend = plt.legend(
-            handles, labels, loc=3, framealpha=1, frameon=False
-        )
-        export_legend(legend, SAVE_DIR + "Legend_" + str(tt) + ".png")
-
-        print("Finished Global Map...")
-
+    # Save the global map
+    # Save the global map tensor for future use
+    torch.save(
+        sem_map.semantic_map.global_map,
+        SAVE_IMG_DIR + "final_global_map_base.pt",
+    )
+    torch.save(
+        sem_map_camera.semantic_map.global_map,
+        SAVE_IMG_DIR + "final_global_map_camera.pt",
+    )
+    print("Done...")
     import pdb
 
     pdb.set_trace()

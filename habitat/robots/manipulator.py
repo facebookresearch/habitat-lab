@@ -145,7 +145,7 @@ class Manipulator(RobotInterface):
                         link_trans = self.sim_obj.transformation
                     else:
                         link_trans = self.sim_obj.get_link_scene_node(
-                            #self.params.ee_link
+                            # self.params.ee_link
                             cam_info.attached_link_id
                         ).transformation
 
@@ -243,6 +243,19 @@ class Manipulator(RobotInterface):
         ).transformation
         ef_link_transform.translation = ef_link_transform.transform_point(
             self.ee_local_offset
+        )
+        return ef_link_transform
+
+    @property
+    def camera_transform(self) -> mn.Matrix4:
+        """Gets the transformation of the end-effector location. This is offset
+        from the end-effector link location.
+        """
+        ef_link_transform = self.sim_obj.get_link_scene_node(
+            self.params.cameras["robot_head"].attached_link_id
+        ).transformation
+        ef_link_transform.translation = ef_link_transform.transform_point(
+            self.params.cameras["robot_head"].cam_offset_pos
         )
         return ef_link_transform
 
