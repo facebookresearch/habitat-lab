@@ -2,6 +2,7 @@
 
 defaults:
   - /benchmark/rearrange: rearrange
+  - /habitat_baselines/rl/policy: monolithic_pointnav
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 
@@ -32,11 +33,6 @@ habitat_baselines:
     video_option: ["disk"]
 
   rl:
-    policy:
-      name: "PointNavResNetPolicy"
-      action_distribution_type: "gaussian"
-      action_dist:
-        use_log_std: True
     ppo:
       # ppo params
       clip_param: 0.2
