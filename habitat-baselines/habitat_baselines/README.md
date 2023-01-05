@@ -70,8 +70,9 @@ To run a rearrangement episode with oracle in both low- and high-level, you can 
 
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/rearrange/hierarchical_tp_noop_onav.yaml \
-  --run-type eval
+  --exp-config habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml \
+  --run-type eval \
+  habitat_baselines/rl/policy=hierarchical_tp_noop_onav
 ```
 
 To change the task (like set table) that you train your skills on, you can change the line `/habitat/task/rearrange: rearrange_easy` to `/habitat/task/rearrange: set_table` in the defaults of your config.
