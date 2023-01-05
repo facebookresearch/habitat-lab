@@ -1,4 +1,6 @@
+---
 dataset_path: data/test_scene_dataset/floorplanner.scene_dataset_config.json
+# dataset_path: "data/hab-fp-dataset-no-doors/hab-fp.scene_dataset_config.json"
 additional_object_paths:
 - data/objects/ycb/configs/
 - data/objects/amazon_berkeley/configs/
@@ -8,6 +10,12 @@ scene_sets:
   included_substrings:
   - '102815859'
   excluded_substrings: []
+  # -
+  #   name: "any"
+  #   included_substrings:
+  #     - "102344094"
+  #   excluded_substrings: []
+
 object_sets:
 - name: seen_action_figure
   included_substrings:
@@ -361,6 +369,7 @@ receptacle_sets:
   - receptacle_living_right_shelf_lower_midle_left
   - receptacle_living_right_shelf_lower_right
   - receptacle_living_table
+  - receptacle_mesh_counter1
   - receptacle_office_desk
   excluded_receptacle_substrings: []
 scene_sampler:
