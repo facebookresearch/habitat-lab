@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_agent_vis
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_agent
   - /habitat/task/rearrange: rearrange_easy
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
