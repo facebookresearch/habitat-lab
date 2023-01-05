@@ -1,6 +1,7 @@
 # @package _global_
-# Pick and place are kinematically simulated.
-# Navigation is fully simulated.
+# Pick and place are instantaneous skills, 
+# where environment is reset to final state.
+# Navigation is kinematically simulated.
 
 defaults:
   - /benchmark/rearrange: rearrange_easy
