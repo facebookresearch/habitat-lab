@@ -1,6 +1,6 @@
 # @package _global_
 # Pick and place are instantaneous skills, 
-# where environment is reset to final state.
+# where environment is set to final state.
 # Navigation is kinematically simulated.
 
 defaults:
