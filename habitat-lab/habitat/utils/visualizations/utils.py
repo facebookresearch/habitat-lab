@@ -243,7 +243,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
     if "top_down_map.map" in info:
         map_info = {
-            k[len("top_down_map."):]: v
+            k[len("top_down_map.") :]: v
             for k, v in info.items()
             if k.startswith("top_down_map.")
         }
