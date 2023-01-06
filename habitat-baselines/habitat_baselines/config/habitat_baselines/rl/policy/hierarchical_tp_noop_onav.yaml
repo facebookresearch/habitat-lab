@@ -56,7 +56,7 @@ hierarchical_policy:
     reset_arm_skill:
       skill_name: "ResetArmSkill"
       max_skill_steps: 50
-      reset_joint_state: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+      reset_joint_state: [-4.50e-01, -1.07e00, 9.95e-02, 9.38e-01, -7.88e-04, 1.57e00, 4.62e-03]
       force_end_on_timeout: False
 
   use_skills:

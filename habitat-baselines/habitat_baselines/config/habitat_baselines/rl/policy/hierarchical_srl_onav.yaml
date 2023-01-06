@@ -5,56 +5,54 @@ obs_transforms:
       "goal_to_agent_gps_compass": 2
 hierarchical_policy:
   high_level_policy:
-    name: "FixedHighLevelPolicy"
-    add_arm_rest: True
+    name: "NeuralHighLevelPolicy"
+    allow_other_place: False
+    hidden_dim: 512
+    use_rnn: True
+    rnn_type: 'LSTM'
+    backbone: resnet18
+    normalize_visual_inputs: False
+    num_rnn_layers: 2
+    policy_input_keys:
+      - "robot_head_depth"
   defined_skills:
     open_cab:
       skill_name: "ArtObjSkillPolicy"
       name: "PointNavResNetPolicy"
       load_ckpt_file: "data/models/open_cab.pth"
-      max_skill_steps: 200
 
     open_fridge:
       skill_name: "ArtObjSkillPolicy"
       load_ckpt_file: "data/models/open_fridge.pth"
-      max_skill_steps: 200
 
     close_cab:
       skill_name: "ArtObjSkillPolicy"
       obs_skill_inputs: ["obj_start_sensor"]
       load_ckpt_file: "data/models/close_cab.pth"
-      max_skill_steps: 200
 
     close_fridge:
       skill_name: "ArtObjSkillPolicy"
       obs_skill_inputs: ["obj_start_sensor"]
       load_ckpt_file: "data/models/close_fridge.pth"
-      max_skill_steps: 200
 
     pick:
       skill_name: "PickSkillPolicy"
       name: "PointNavResNetPolicy"
-      action_distribution_type: "gaussian"
-      at_resting_threshold: 0.15
       obs_skill_inputs: ["obj_start_sensor"]
       load_ckpt_file: "data/models/pick.pth"
-      max_skill_steps: 200
 
     place:
       skill_name: "PlaceSkillPolicy"
       name: "PointNavResNetPolicy"
-      action_distribution_type: "gaussian"
-      at_resting_threshold: 0.15
       obs_skill_inputs: ["obj_goal_sensor"]
       load_ckpt_file: "data/models/place.pth"
-      max_skill_steps: 200
 
     wait_skill:
       skill_name: "WaitSkillPolicy"
       max_skill_steps: -1
       force_end_on_timeout: False
 
-    gt_nav:
+    oracle_nav:
       skill_name: "OracleNavPolicy"
       obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
       max_skill_steps: 300
@@ -62,7 +60,7 @@ hierarchical_policy:
     reset_arm_skill:
       skill_name: "ResetArmSkill"
       max_skill_steps: 50
-      reset_joint_state: [-4.5003259e-01, -1.0799699e00, 9.9526465e-02, 9.3869519e-01, -7.8854430e-04, 1.5702540e00, 4.6168058e-03]
+      reset_joint_state: [-4.50e-01, -1.08e00, 9.95e-02, 9.38e-01, -7.88e-04, 1.57e00, 4.62e-03]
       force_end_on_timeout: False
 
   use_skills:
@@ -73,7 +71,7 @@ hierarchical_policy:
     # close_fridge: "open_fridge"
     pick: "pick"
     place: "place"
-    nav: "gt_nav"
-    nav_to_receptacle: "gt_nav"
+    nav: "oracle_nav"
+    nav_to_receptacle: "oracle_nav"
     wait: "wait_skill"
     reset_arm: "reset_arm_skill"

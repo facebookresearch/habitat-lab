@@ -35,15 +35,12 @@ habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  tensorboard_dir: "tb"
   rollout_storage: "HrlRolloutStorage"
   updater_name: "HrlPPO"
   distrib_updater_name: "HrlDDPPO"
-  video_dir: "video_dir"
   video_fps: 30
   video_render_views:
     - "third_rgb_sensor"
-  test_episode_count: -1
   eval_ckpt_path_dir: ""
   num_environments: 3
   writer_type: 'tb'
@@ -76,18 +73,6 @@ habitat_baselines:
       use_gae: True
       gamma: 0.99
       tau: 0.95
-      use_linear_clip_decay: False
-      use_linear_lr_decay: False
-      reward_window_size: 50
-
-      use_normalized_advantage: False
-
-      hidden_size: 512
-
-      # Use double buffered sampling, typically helps
-      # when environment time is similar or larger than
-      # policy inference time during rollout generation
-      use_double_buffered_sampler: False
 
     ddppo:
       sync_frac: 0.6
@@ -103,7 +88,6 @@ habitat_baselines:
       train_encoder: True
       # Whether to reset the critic linear layer
       reset_critic: False
-
       # Model parameters
       backbone: resnet18
       rnn_type: LSTM
