@@ -11,6 +11,8 @@ from typing import Any, Dict, List, Tuple
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
 
+from habitat.config.default_structured_configs import SimulatorSensorConfig
+
 cs = ConfigStore.instance()
 
 
@@ -46,6 +48,9 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     video_option: List[str] = field(
         # available options are "disk" and "tensorboard"
         default_factory=list
+    )
+    extra_sim_sensors: Dict[str, SimulatorSensorConfig] = field(
+        default_factory=dict
     )
 
 
@@ -384,7 +389,6 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
-    video_render_views: List[str] = field(default_factory=list)
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
     video_dir: str = "video_dir"
