@@ -12,7 +12,7 @@ import home_robot.agent.utils.visualization_utils as vu
 import home_robot.agent.utils.pose_utils as pu
 from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.constants import (
     HM3DtoCOCOIndoor,
-    FloorplannertoCOCOIndoor,
+    FloorplannertoMukulIndoor,
     HM3DtoLongTailIndoor
 )
 
@@ -33,13 +33,13 @@ class Visualizer:
         if "hm3d" in self.episodes_data_path:
             if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
                 self.semantic_category_mapping = HM3DtoCOCOIndoor()
-            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
-                self.semantic_category_mapping = HM3DtoLongTailIndoor()
+            # elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+            #     self.semantic_category_mapping = HM3DtoLongTailIndoor()
             else:
                 raise NotImplementedError
         elif "floorplanner" in self.episodes_data_path:
-            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
-                self.semantic_category_mapping = FloorplannertoCOCOIndoor()
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
+                self.semantic_category_mapping = FloorplannertoMukulIndoor()
             else:
                 raise NotImplementedError
 

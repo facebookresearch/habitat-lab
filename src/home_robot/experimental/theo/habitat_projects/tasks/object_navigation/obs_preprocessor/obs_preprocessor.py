@@ -12,9 +12,10 @@ from habitat.core.simulator import Observations
 import home_robot.agent.utils.pose_utils as pu
 from .constants import (
     HM3DtoCOCOIndoor,
-    FloorplannertoCOCOIndoor,
+    FloorplannertoMukulIndoor,
     HM3DtoLongTailIndoor,
     long_tail_indoor_categories,
+    mukul_34categories,
     MIN_DEPTH_REPLACEMENT_VALUE,
     MAX_DEPTH_REPLACEMENT_VALUE,
 )
@@ -40,13 +41,13 @@ class ObsPreprocessor:
         if "hm3d" in self.episodes_data_path:
             if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
                 self.semantic_category_mapping = HM3DtoCOCOIndoor()
-            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
-                self.semantic_category_mapping = HM3DtoLongTailIndoor()
+            # elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+            #     self.semantic_category_mapping = HM3DtoLongTailIndoor()
             else:
                 raise NotImplementedError
         elif "floorplanner" in self.episodes_data_path:
-            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
-                self.semantic_category_mapping = FloorplannertoCOCOIndoor()
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
+                self.semantic_category_mapping = FloorplannertoMukulIndoor()
             else:
                 raise NotImplementedError
 
@@ -63,11 +64,20 @@ class ObsPreprocessor:
             if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
                 self.segmentation = get_detic(
                     vocabulary="coco",
+                    sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
                 )
             elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+                # self.segmentation = get_detic(
+                #     vocabulary="custom",
+                #     custom_vocabulary=",".join(long_tail_indoor_categories),
+                #     sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
+                # )
+                raise NotImplementedError
+            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
                 self.segmentation = get_detic(
                     vocabulary="custom",
-                    custom_vocabulary=",".join(long_tail_indoor_categories)
+                    custom_vocabulary=",".join(mukul_34categories),
+                    sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
                 )
 
         self.one_hot_encoding = torch.eye(self.semantic_category_mapping.num_sem_categories,

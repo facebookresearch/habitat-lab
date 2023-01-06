@@ -197,6 +197,7 @@ class VectorizedEvaluator:
             for k in metrics:
                 aggregated_metrics[f"{k}/total"].append(v[k])
                 aggregated_metrics[f"{k}/{v['goal_name']}"].append(v[k])
+
         aggregated_metrics = dict(
             sorted(
                 {

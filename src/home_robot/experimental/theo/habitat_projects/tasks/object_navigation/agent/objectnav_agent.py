@@ -69,7 +69,7 @@ class ObjectNavAgent(habitat.Agent):
             dump_location=config.DUMP_LOCATION,
             exp_name=config.EXP_NAME,
         )
-        self.visualizer = Visualizer(Config)
+        self.visualizer = Visualizer(config)
 
         self.goal_update_steps = self._module.goal_update_steps
         self.timesteps = None

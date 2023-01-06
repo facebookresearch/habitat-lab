@@ -54,8 +54,11 @@ def reset_to_episode(env: Env, scene_id: str, episode_id: str) -> Observations:
 
 
 if __name__ == "__main__":
+    # config_path = (
+    #     Path(__file__).resolve().parent.parent / "configs/agent/hm3d_eval.yaml"
+    # )
     config_path = (
-        Path(__file__).resolve().parent.parent / "configs/agent/hm3d_eval.yaml"
+            Path(__file__).resolve().parent.parent / "configs/agent/floorplanner_eval.yaml"
     )
     config, config_str = get_config(config_path)
     config.defrost()
@@ -71,6 +74,7 @@ if __name__ == "__main__":
     # scene_id = "ziup5kvtCCR"
     # episode_id = "2"
     # obs = reset_to_episode(env, scene_id, episode_id)
+    obs = env.reset()
     obs = env.reset()
 
     agent.reset(env)

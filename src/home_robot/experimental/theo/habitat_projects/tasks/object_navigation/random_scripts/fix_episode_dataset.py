@@ -5,9 +5,13 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# Fixing episode dataset as advised in https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md
 
-data_dir = "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/objectgoal_floorplanner/v1/train/content"
-scene_dataset = "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/floorplanner/v1/hab-fp.scene_dataset_config.json"
+data_dir = "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/objectgoal_floorplanner_receptacles/val/content"
+scene_dataset = "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/floorplanner/hab-fp.scene_dataset_config.json"
+
+# data_dir = "home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/objectgoal_hm3d/val/content"
+# scene_dataset = "home_robot/experimental/theo/habitat_projects/datasets/scene_datasets/hm3d/hm3d_annotated_basis.scene_dataset_config.json"
 
 
 for path in glob.glob(f"{data_dir}/*.gz"):

@@ -19,7 +19,10 @@ from .coco_categories import coco_categories_mapping, coco_categories
 
 
 def get_clip_embeddings(vocabulary, prompt='a '):
-    from detic.modeling.text.text_encoder import build_text_encoder
+    try:
+        from home_robot.agent.perception.detection.detic.detic.modeling.text.text_encoder import build_text_encoder
+    except:
+        from detic.modeling.text.text_encoder import build_text_encoder
     text_encoder = build_text_encoder(pretrain=True)
     text_encoder.eval()
     texts = [prompt + x for x in vocabulary]
@@ -58,6 +61,9 @@ class VisualizationDemo(object):
             self.categories_mapping = {i: i for i in range(len(self.metadata.thing_classes))}
             self.num_sem_categories = len(self.categories_mapping)
         elif args.vocabulary == 'coco':
+            self.metadata = MetadataCatalog.get(
+                BUILDIN_METADATA_PATH[args.vocabulary])
+            classifier = BUILDIN_CLASSIFIER[args.vocabulary]
             self.categories_mapping = coco_categories_mapping
             self.num_sem_categories = len(coco_categories)
         else:
