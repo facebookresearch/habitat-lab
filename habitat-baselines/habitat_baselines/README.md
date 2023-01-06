@@ -53,6 +53,31 @@ To use them download pre-trained pytorch models from [link](https://dl.fbaipubli
 The `habitat_baselines/config/pointnav/ppo_pointnav.yaml` config has better hyperparameters for large scale training and loads the [Gibson PointGoal Navigation Dataset](/README.md#datasets) instead of the test scenes.
 Change the `/benchmark/nav/pointnav: pointnav_gibson` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `/benchmark/nav/pointnav: pointnav_mp3d` in the defaults list for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#datasets).
 
+### Hierarchical Reinforcement Learning (HRL)
+
+We provide a two-layer hierarchical policy class, consisting of a low-level skill that moves the robot, and a high-level policy that reasons about which low-level skill to use in the current state. This can be especially powerful in long-horizon mobile manipulation tasks, like those introduced in [Habitat2.0](https://arxiv.org/abs/2106.14405). Both the low- and high- level can be either learned or an oracle. For oracle high-level we use [PDDL] (https://planning.wiki/guide/whatis/pddl), and for oracle low-level we use instantaneous transitions, with the environment set to the final desired state. Additionally, for navigation, we provide an oracle navigation skill that uses A-star and the map of the environment to move the robot to its goal.
+
+To run the following examples, you need the [ReplicaCAD dataset](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#replicacad). 
+
+To train a high-level policy, while using pre-learned low-level skills (SRL baseline from [Habitat2.0](https://arxiv.org/abs/2106.14405)), you can run:
+
+```bash
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml \
+  --run-type train
+```
+To run a rearrangement episode with oracle in both low- and high-level, you can run:
+
+```bash
+python -u habitat_baselines/run.py \
+  --exp-config habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml \
+  --run-type eval \
+  habitat_baselines/rl/policy=hierarchical_tp_noop_onav
+```
+
+To change the task (like set table) that you train your skills on, you can change the line `/habitat/task/rearrange: rearrange_easy` to `/habitat/task/rearrange: set_table` in the defaults of your config.
+
+
 ### Classic
 
 **SLAM based**
