@@ -174,6 +174,15 @@ class ObsPreprocessor:
         """Preprocess frame information in the observation."""
 
         def preprocess_depth(depth):
+            # Attempt to deal with black holes in depth: set the holes with zero depth
+            # to the max depth value in the image row
+            zero_mask = depth == 0.
+            row_max = depth.max(axis=1, keepdims=True).values
+            depth += zero_mask * row_max
+            zero_mask = depth == 0.
+            col_max = depth.max(axis=2, keepdims=True).values
+            depth += zero_mask * col_max
+
             # Rescale depth from [0.0, 1.0] to [min_depth, max_depth]
             rescaled_depth = (
                 self.min_depth * 100.0
