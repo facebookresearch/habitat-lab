@@ -3,7 +3,7 @@
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy: monolithic_pointnav
+  - /habitat_baselines/rl/policy: monolithic
   - _self_
 
 habitat_baselines:
