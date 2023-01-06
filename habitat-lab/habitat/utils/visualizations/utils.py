@@ -250,6 +250,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
             map_info, render_frame.shape[0]
         )
+        render_frame = np.concatenate((render_frame, top_down_map), axis=1)
     return render_frame
 
 
