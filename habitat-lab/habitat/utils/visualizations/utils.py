@@ -238,7 +238,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         render_frame = np.concatenate(render_obs_images, axis=1)
 
     # draw collision
-    if "collisions" in info and info["collisions"]["is_collision"]:
+    if info.get("collisions.is_collision", False):
         render_frame = draw_collision(render_frame)
 
     if "top_down_map.map" in info:
