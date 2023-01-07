@@ -208,7 +208,7 @@ mukul_34categories = [mukul_34categories_indexes[i] for i in range(len(mukul_34c
 
 mukul_34categories_frame_color_palette = d3_40_colors_rgb
 mukul_34categories_frame_color_palette[0] = [255, 255, 255]  # no category
-mukul_34categories_frame_color_palette = mukul_34categories_frame_color_palette[:34]
+mukul_34categories_frame_color_palette = mukul_34categories_frame_color_palette[:34].flatten()
 
 mukul_34categories_legend_path = (
     "home_robot/experimental/theo/habitat_projects/tasks/object_navigation/obs_preprocessor/mukul_34categories_legend.png"
@@ -233,7 +233,7 @@ mukul_34categories_map_color_palette = [int(x * 255.0) for x in [
     0.63,
     0.78,
     0.95,  # rest of goal
-    *mukul_34categories_frame_color_palette.flatten() / 255.0
+    *mukul_34categories_frame_color_palette / 255.0
 ]]
 
 

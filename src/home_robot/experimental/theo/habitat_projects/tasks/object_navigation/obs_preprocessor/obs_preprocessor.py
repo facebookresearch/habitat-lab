@@ -239,16 +239,13 @@ class ObsPreprocessor:
             semantic = self.one_hot_encoding[semantic]
 
             # Also need depth filtering on ground-truth segmentation
-            for i in range(semantic.shape[-1]):
-                depth_ = depth[0, :, :, -1]
-                semantic_ = semantic[0, :, :, i]
-                depth_md = torch.median(depth_[semantic_ == 1])
-                if depth_md != 0:
-                    filter_mask = (depth_ >= depth_md + 50) | (depth_ <= depth_md - 50)
-                    # pixels = int(semantic_[filter_mask].sum().item())
-                    # if pixels > 0:
-                    #     print(f"Filtering out {pixels} pixels")
-                    semantic[0, :, :, i][filter_mask] = 0.0
+            # for i in range(semantic.shape[-1]):
+            #     depth_ = depth[0, :, :, -1]
+            #     semantic_ = semantic[0, :, :, i]
+            #     depth_md = torch.median(depth_[semantic_ == 1])
+            #     if depth_md != 0:
+            #         filter_mask = (depth_ >= depth_md + 50) | (depth_ <= depth_md - 50)
+            #         semantic[0, :, :, i][filter_mask] = 0.0
 
             semantic_vis = self._get_semantic_frame_vis(
                 rgb[0].cpu().numpy(), semantic[0].cpu().numpy()
