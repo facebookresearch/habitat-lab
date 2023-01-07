@@ -20,9 +20,9 @@ git clone https://github.com/3dlg-hcvc/habitat-sim/tree/floorplanner
 cd habitat-sim
 git checkout floorplanner
 pip install -r requirements.txt
-python setup.py install --headless --bullet
+python setup.py install --headless
 # (if the above commands runs out of memory) 
-# python setup.py build_ext --parallel 8 install --headless --bullet --with-cuda
+# python setup.py build_ext --parallel 8 install --headless
 
 cd ..
 git clone --branch v0.2.2 https://github.com/facebookresearch/habitat-lab.git
@@ -32,6 +32,12 @@ python setup.py develop --all
 pip install natsort scikit-image scikit-fmm pandas
 
 cd ..
+```
+
+**[IMPORTANT]: Add habitat-lab path to PYTHONPATH**:
+
+```
+export PYTHONPATH=$PYTHONPATH:/path/to/home-robot-dev/habitat-lab/
 ```
 
 [TEMPORARY]: Until we port to habitat v0.2.3.
