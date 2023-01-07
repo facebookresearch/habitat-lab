@@ -20,3 +20,5 @@ temp/
 scripts/
 docs_build/
 viz/
+
+datasets/

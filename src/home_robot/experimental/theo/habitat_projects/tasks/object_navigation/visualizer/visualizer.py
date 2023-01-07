@@ -191,7 +191,7 @@ class Visualizer:
 
         if self.print_images:
             cv2.imwrite(
-                os.path.join(self.vis_dir, f"snapshot_{timestep}.png"), self.image_vis
+                os.path.join(self.vis_dir, "snapshot_{:03d}.png".format(timestep)), self.image_vis
             )
 
     def _init_vis_image(self, goal_name: str):
