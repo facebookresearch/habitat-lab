@@ -190,6 +190,13 @@ def bb_ray_prescreen(
                         hit_point, -gravity_dir
                     )
 
+                    # Ensure that the hit point is not on ground
+                    if (
+                        support_obj_ids == [-1]
+                        and support_impact_height < 0.05
+                    ):
+                        break
+
                     if (
                         highest_support_impact is None
                         or highest_support_impact_height
