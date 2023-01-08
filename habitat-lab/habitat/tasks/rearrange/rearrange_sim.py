@@ -290,7 +290,9 @@ class RearrangeSim(HabitatSim):
         for i, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
-                node.semantic_id = obj.object_id
+                node.semantic_id = (
+                    obj.object_id + self.habitat_config.obj_instance_id_start
+                )
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -451,12 +453,23 @@ class RearrangeSim(HabitatSim):
                 matching_templates = (
                     obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
                 )
-                assert (
-                    len(matching_templates.values()) == 1
-                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
-                ro = rom.add_object_by_template_handle(
-                    list(matching_templates.keys())[0]
-                )
+                if len(matching_templates.values()) > 1:
+                    # handle collision in object handles. eg: 'Elephant.object_config.json', 'Sootheze_Cold_Therapy_Elephant.object_config.json'
+                    exactly_matching = list(
+                        filter(
+                            lambda x: obj_handle == osp.basename(x),
+                            matching_templates.keys(),
+                        )
+                    )
+                    if len(exactly_matching) == 1:
+                        matching_template = exactly_matching[0]
+                    else:
+                        raise Exception(
+                            f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. {len(exactly_matching)} templates exactly match the handle. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
+                        )
+                else:
+                    matching_template = list(matching_templates.keys())[0]
+                ro = rom.add_object_by_template_handle(matching_template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
 
