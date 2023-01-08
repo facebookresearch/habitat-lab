@@ -1033,6 +1033,8 @@ class SimulatorConfig(HabitatBaseConfig):
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
+    # instance ids are recorded in the semantic sensor by adding obj_instance_id_start. This is added to avoid collision with scene semantic categories.
+    obj_instance_id_start: Optional[int] = 50
 
 
 @dataclass
