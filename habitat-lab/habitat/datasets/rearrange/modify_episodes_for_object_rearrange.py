@@ -4,10 +4,14 @@ import json
 import os
 import os.path as osp
 import re
+from typing import List
 
+import magnum as mn
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
+import habitat_sim
 from habitat.core.utils import DatasetFloatJSONEncoder
 
 
@@ -29,12 +33,15 @@ def get_rec_category(rec_id, rec_category_mapping=None):
             "living",
             "dining",
             "hall",
+            "office",
             "left",
             "right",
             "corner",
             "midle",
             "middle",
             "lower",
+            "aabb",
+            "mesh",
         ]
         for r in remove_strings:
             rec_category = rec_category.replace(r, "")
@@ -149,6 +156,43 @@ def collect_receptacle_positions(episode):
     return recep_positions
 
 
+def initialize_sim(
+    sim,
+    scene_name: str,
+    dataset_path: str,
+    additional_obj_config_paths: List[str],
+) -> habitat_sim.Simulator:
+    """
+    Initialize a new Simulator object with a selected scene and dataset.
+    """
+    backend_cfg = habitat_sim.SimulatorConfiguration()
+    backend_cfg.scene_dataset_config_file = dataset_path
+    backend_cfg.scene_id = scene_name
+    backend_cfg.create_renderer = True
+    backend_cfg.enable_physics = True
+
+    agent_cfg = habitat_sim.agent.AgentConfiguration()
+
+    hab_cfg = habitat_sim.Configuration(backend_cfg, [agent_cfg])
+    if sim is None:
+        sim = habitat_sim.Simulator(hab_cfg)
+        object_attr_mgr = sim.get_object_template_manager()
+        for object_path in additional_obj_config_paths:
+            object_attr_mgr.load_configs(osp.abspath(object_path))
+    else:
+        if sim.config.sim_cfg.scene_id == scene_name:
+            proxy_backend_cfg = habitat_sim.SimulatorConfiguration()
+            proxy_backend_cfg.scene_id = "NONE"
+            proxy_backend_cfg.create_renderer = False
+            proxy_hab_cfg = habitat_sim.Configuration(
+                proxy_backend_cfg, [agent_cfg]
+            )
+            sim.reconfigure(proxy_hab_cfg)
+        sim.reconfigure(hab_cfg)
+
+    return sim
+
+
 def get_matching_recep_handle(receptacle_name, handles):
     return [handle for handle in handles if handle in receptacle_name][0]
 
@@ -157,9 +201,11 @@ def get_candidate_starts(
     objects,
     category,
     start_rec_cat,
+    obj_idx_to_name,
     name_to_receptacle,
     obj_rearrange_easy=True,
     obj_category_mapping=None,
+    rec_category_mapping=None,
 ):
     obj_goals = []
     for i, (obj, pos) in enumerate(objects):
@@ -179,8 +225,12 @@ def get_candidate_starts(
             if not obj_rearrange_easy:
                 obj_goals.append(obj_goal)
             else:
-                # TODO: Needed for the nav before pick in the easy version of the task. Check if start receptacle matches before appending. This information is missing in GeoGoal rearrange episodes. Need to load scene in sim for this.
-                obj_goals.append(obj_goal)
+                recep_cat = get_rec_category(
+                    name_to_receptacle[obj_idx_to_name[i]],
+                    rec_category_mapping=rec_category_mapping,
+                )
+                if recep_cat == start_rec_cat:
+                    obj_goals.append(obj_goal)
     return obj_goals
 
 
@@ -192,6 +242,7 @@ def get_candidate_receptacles(
         recep_category = get_rec_category(
             recep, rec_category_mapping=rec_category_mapping
         )
+
         if recep_category == goal_recep_category:
             goal = {
                 "position": position,
@@ -202,6 +253,41 @@ def get_candidate_receptacles(
             }
             goals.append(goal)
     return goals
+
+
+def load_objects(sim, objects):
+    rom = sim.get_rigid_object_manager()
+    obj_idx_to_name = {}
+    for i, (obj_handle, transform) in enumerate(objects):
+        obj_attr_mgr = sim.get_object_template_manager()
+        matching_templates = obj_attr_mgr.get_templates_by_handle_substring(
+            obj_handle
+        )
+        if len(matching_templates.values()) > 1:
+            exactly_matching = list(
+                filter(
+                    lambda x: obj_handle == osp.basename(x),
+                    matching_templates.keys(),
+                )
+            )
+            if len(exactly_matching) == 1:
+                matching_template = exactly_matching[0]
+            else:
+                raise Exception(
+                    f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}."
+                )
+        else:
+            matching_template = list(matching_templates.keys())[0]
+        ro = rom.add_object_by_template_handle(matching_template)
+
+        # The saved matrices need to be flipped when reloading.
+        ro.transformation = mn.Matrix4(
+            [[transform[j][i] for j in range(4)] for i in range(4)]
+        )
+        ro.angular_velocity = mn.Vector3.zero_init()
+        ro.linear_velocity = mn.Vector3.zero_init()
+        obj_idx_to_name[i] = ro.handle
+    return obj_idx_to_name
 
 
 def add_cat_fields_to_episodes(
@@ -218,7 +304,19 @@ def add_cat_fields_to_episodes(
     episodes = json.load(gzip.open(episodes_file))
     episodes["obj_category_to_obj_category_id"] = obj_to_id
     episodes["recep_category_to_recep_category_id"] = rec_to_id
-    for episode in episodes["episodes"]:
+
+    sim = None
+    initialize_sim(
+        sim, "NONE", episodes["episodes"][0]["scene_dataset_config"], []
+    )
+    for episode in tqdm(episodes["episodes"]):
+        sim = initialize_sim(
+            sim,
+            episode["scene_id"],
+            episode["scene_dataset_config"],
+            episode["additional_obj_config_paths"],
+        )
+        obj_idx_to_name = load_objects(sim, episode["rigid_objs"])
         rec_positions = collect_receptacle_positions(episode)
         obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
             episode,
@@ -232,9 +330,11 @@ def add_cat_fields_to_episodes(
             episode["rigid_objs"],
             obj_cat,
             start_rec_cat,
+            obj_idx_to_name,
             episode["name_to_receptacle"],
             obj_rearrange_easy=obj_rearrange_easy,
             obj_category_mapping=obj_category_mapping,
+            rec_category_mapping=rec_category_mapping,
         )
         episode["candidate_start_receps"] = get_candidate_receptacles(
             rec_positions,
@@ -246,19 +346,28 @@ def add_cat_fields_to_episodes(
             goal_rec_cat,
             rec_category_mapping=rec_category_mapping,
         )
-
+        assert (
+            len(episode["candidate_objects"]) > 0
+            and len(episode["candidate_start_receps"]) > 0
+            and len(episode["candidate_goal_receps"]) > 0
+        )
     return episodes
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--data_dir",
+        "--source_data_dir",
         type=str,
         default="data/datasets/replica_cad/rearrange/v1/",
     )
     parser.add_argument(
         "--source_episodes_tag", type=str, default="rearrange_easy"
+    )
+    parser.add_argument(
+        "--target_data_dir",
+        type=str,
+        default="data/datasets/replica_cad/rearrange/v1/",
     )
     parser.add_argument(
         "--target_episodes_tag", type=str, default="categorical_rearrange_easy"
@@ -269,8 +378,9 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    data_dir = args.data_dir
+    source_data_dir = args.source_data_dir
     source_episodes_tag = args.source_episodes_tag
+    target_data_dir = args.target_data_dir
     target_episodes_tag = args.target_episodes_tag
 
     obj_category_mapping = None
@@ -287,7 +397,7 @@ if __name__ == "__main__":
 
     # Retrieve object and receptacle categories in train episodes
     train_episode_file = osp.join(
-        data_dir, "train", f"{source_episodes_tag}.json.gz"
+        source_data_dir, "train", f"{source_episodes_tag}.json.gz"
     )
     obj_to_id, rec_to_id = get_cats_list(
         train_episode_file,
@@ -298,9 +408,9 @@ if __name__ == "__main__":
     print(f"Number of receptacle categories: {len(rec_to_id)}")
     print(obj_to_id, rec_to_id)
     # Add category fields and save episodes
-    for split in os.listdir(data_dir):
+    for split in os.listdir(source_data_dir):
         episodes_file = osp.join(
-            data_dir, split, f"{source_episodes_tag}.json.gz"
+            source_data_dir, split, f"{source_episodes_tag}.json.gz"
         )
         if not osp.exists(episodes_file):
             continue
@@ -313,8 +423,9 @@ if __name__ == "__main__":
             rec_category_mapping=rec_category_mapping,
         )
         episodes_json = DatasetFloatJSONEncoder().encode(episodes)
+        os.makedirs(osp.join(target_data_dir, split), exist_ok=True)
         target_episodes_file = osp.join(
-            data_dir, split, f"{target_episodes_tag}.json.gz"
+            target_data_dir, split, f"{target_episodes_tag}.json.gz"
         )
         with gzip.open(target_episodes_file, "wt") as f:
             f.write(episodes_json)

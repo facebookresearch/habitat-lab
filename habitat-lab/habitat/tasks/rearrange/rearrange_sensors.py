@@ -193,13 +193,21 @@ class ObjectSegmentationSensor(Sensor):
         )
 
     def get_observation(self, observations, *args, episode, task, **kwargs):
-        obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
         if np.random.random() < self._config.blank_out_prob:
             return np.zeros_like(
                 observations["robot_head_semantic"], dtype=np.uint8
             )
         else:
-            return observations["robot_head_semantic"] == obj_id
+            segmentation_sensor = np.zeros_like(
+                observations["robot_head_semantic"], dtype=np.uint8
+            )
+            for g in episode.candidate_objects:
+                segmentation_sensor = segmentation_sensor | (
+                    observations["robot_head_semantic"]
+                    == self._sim.scene_obj_ids[g.object_id]
+                    + self._sim.habitat_config.obj_instance_id_start
+                )
+            return segmentation_sensor
 
 
 class MultiObjSensor(PointGoalSensor):
