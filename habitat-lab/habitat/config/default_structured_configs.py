@@ -948,7 +948,7 @@ class HumanAgentConfig(AgentConfig):
     body_model_path: str = ""
     human_type: str = "AmassHuman"
     draw_fps_human: int = 60
-    # ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    grab_path: str = ""
 
 
 
