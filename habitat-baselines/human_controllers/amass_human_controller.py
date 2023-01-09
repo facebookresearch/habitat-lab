@@ -274,7 +274,6 @@ class AmassHumanController:
         if grab_path is None:
             self.use_ik_grab = False
         if self.use_ik_grab:
-            grab_path = self.grab_path
             graph_path_split = osp.splitext(grab_path)
             grab_poses = "{}{}.{}".format(graph_path_split[0], '_processed_', graph_path_split[1])
             grab_data = np.load(grab_path)
