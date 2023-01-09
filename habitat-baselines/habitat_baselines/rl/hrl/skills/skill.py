@@ -195,6 +195,8 @@ class SkillPolicy(Policy):
                 )
                 self._delay_term[env_i] = True
                 is_skill_done[i] = 0.0
+        
+        is_skill_done = is_skill_done.to(hl_says_term.device)
         is_skill_done |= hl_says_term
 
         if bad_terminate.sum() > 0:
