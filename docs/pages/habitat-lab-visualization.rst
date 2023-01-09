@@ -1,14 +1,14 @@
-Habitat Lab Visualization Examples
+Habitat Lab TopdownMap Visualization Examples
 ##################################
 
 .. contents::
     :class: m-block m-default
 
-The example code below is available on `Colab <https://colab.research.google.com/github/facebookresearch/habitat-lam/blob/main/examples/tutorials/colabs/Habitat_Lab_Visualization.ipynb>`_, or runnable via:
+The example code below is available on `Colab <https://colab.research.google.com/github/facebookresearch/habitat-lam/blob/main/examples/tutorials/colabs/Habitat_Lab_TopdownMap_Visualization.ipynb>`_, or runnable via:
 
 .. code:: shell-session
 
-    $ python path/to/habitat-lab/examples/tutorials/nb_python/Habitat_Lab_Visualization.py
+    $ python path/to/habitat-lab/examples/tutorials/nb_python/Habitat_Lab_TopdownMap_Visualization.py
 
 First, download (testing) 3D scenes:
 
@@ -25,7 +25,7 @@ and point-goal navigation episodes for the test scenes:
 
 Then import necessary modules:
 
-.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
+.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_TopdownMap_Visualization.py
     :code: py
     :start-after: # [setup]
     :end-before: # [/setup]
@@ -35,7 +35,7 @@ bird-eye view and top-down maps.
 
 In the first example, a dummy episode birdseye view is drawn using :ref:`habitat.utils.visualizations.maps.pointnav_draw_target_birdseye_view()`.
 
-.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
+.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_TopdownMap_Visualization.py
     :code: py
     :start-after: # [example_1]
     :end-before: # [/example_1]
@@ -45,7 +45,7 @@ In the first example, a dummy episode birdseye view is drawn using :ref:`habitat
 
 The procedure is repeated in the second example, with the agent initialized at four different borders.
 
-.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
+.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_TopdownMap_Visualization.py
     :code: py
     :start-after: # [example_2]
     :end-before: # [/example_2]
@@ -62,7 +62,7 @@ The procedure is repeated in the second example, with the agent initialized at f
 Third example shows how to use :ref:`habitat.utils.visualizations.maps.get_topdown_map_from_sim()` to
 get top-down map from Simulator instance (of type :ref:`habitat.sims.habitat_simulator.habitat_simulator.HabitatSim`).
 
-.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
+.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_TopdownMap_Visualization.py
     :code: py
     :start-after: # [example_3]
     :end-before: # [/example_3]
@@ -75,7 +75,7 @@ This agent is launched in the simulation environment to navigate to the target l
 first habitat test scenes navigation episode. Agent's observations and images from :ref:`habitat.tasks.nav.nav.TopDownMap`
 measure are collected along the trajectory and further used to generate and display navigation video.
 
-.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_Visualization.py
+.. include:: ../../examples/tutorials/nb_python/Habitat_Lab_TopdownMap_Visualization.py
     :code: py
     :start-after: # [example_4]
     :end-before: # [/example_4]
