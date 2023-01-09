@@ -1,5 +1,5 @@
 Habitat Lab TopdownMap Visualization Examples
-##################################
+#############################################
 
 .. contents::
     :class: m-block m-default
@@ -40,7 +40,7 @@ In the first example, a dummy episode birdseye view is drawn using :ref:`habitat
     :start-after: # [example_1]
     :end-before: # [/example_1]
 
-.. image:: ../images/habitat-lab-visualization-images/pointnav_target_image.png
+.. image:: ../images/habitat-lab-tdmap-viz-images/pointnav_target_image.png
     :width: 20em
 
 The procedure is repeated in the second example, with the agent initialized at four different borders.
@@ -50,13 +50,13 @@ The procedure is repeated in the second example, with the agent initialized at f
     :start-after: # [example_2]
     :end-before: # [/example_2]
 
-.. image:: ../images/habitat-lab-visualization-images/pointnav_target_image_edge_1.png
+.. image:: ../images/habitat-lab-tdmap-viz-images/pointnav_target_image_edge_1.png
     :width: 20em
-.. image:: ../images/habitat-lab-visualization-images/pointnav_target_image_edge_2.png
+.. image:: ../images/habitat-lab-tdmap-viz-images/pointnav_target_image_edge_2.png
     :width: 20em
-.. image:: ../images/habitat-lab-visualization-images/pointnav_target_image_edge_3.png
+.. image:: ../images/habitat-lab-tdmap-viz-images/pointnav_target_image_edge_3.png
     :width: 20em
-.. image:: ../images/habitat-lab-visualization-images/pointnav_target_image_edge_4.png
+.. image:: ../images/habitat-lab-tdmap-viz-images/pointnav_target_image_edge_4.png
     :width: 20em
 
 Third example shows how to use :ref:`habitat.utils.visualizations.maps.get_topdown_map_from_sim()` to
@@ -67,7 +67,7 @@ get top-down map from Simulator instance (of type :ref:`habitat.sims.habitat_sim
     :start-after: # [example_3]
     :end-before: # [/example_3]
 
-.. image:: ../images/habitat-lab-visualization-images/top_down_map.png
+.. image:: ../images/habitat-lab-tdmap-viz-images/top_down_map.png
     :width: 20em
 
 The last example defines `ShortestPathFollowerAgent` that extracts the actions on the shortest path to the goal.
@@ -80,4 +80,4 @@ measure are collected along the trajectory and further used to generate and disp
     :start-after: # [example_4]
     :end-before: # [/example_4]
 
-.. image:: ../images/habitat-lab-visualization-images/skokloster-castle.glb_3662.gif
+.. image:: ../images/habitat-lab-tdmap-viz-images/skokloster-castle.glb_3662.gif
