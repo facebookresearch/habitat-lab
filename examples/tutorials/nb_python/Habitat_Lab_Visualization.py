@@ -229,10 +229,6 @@ def example_top_down_map_measure():
     config = habitat.get_config(
         config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml"
     )
-    # Create dataset
-    dataset = habitat.make_dataset(
-        id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
-    )
     # Add habitat.tasks.nav.nav.TopDownMap and habitat.tasks.nav.nav.Collisions measures
     with habitat.config.read_write(config):
         config.habitat.task.measurements.update(
@@ -255,6 +251,10 @@ def example_top_down_map_measure():
                 "collisions": CollisionsMeasurementConfig(),
             }
         )
+    # Create dataset
+    dataset = habitat.make_dataset(
+        id_dataset=config.habitat.dataset.type, config=config.habitat.dataset
+    )
     # Create simulation environment
     with habitat.Env(config=config, dataset=dataset) as env:
         # Create ShortestPathFollowerAgent agent
@@ -288,7 +288,7 @@ def example_top_down_map_measure():
                 if action is None:
                     break
 
-                # Sten in the environment
+                # Step in the environment
                 observations = env.step(action)
                 info = env.get_metrics()
                 frame = observations_to_image(observations, info)

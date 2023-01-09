@@ -4,7 +4,7 @@ Habitat Lab Visualization Examples
 .. contents::
     :class: m-block m-default
 
-The example code below is available on `Collab <https://colab.research.google.com/github/facebookresearch/habitat-lam/blob/main/examples/tutorials/colabs/Habitat_Lab_Visualization.ipynb>`_, or runnable via:
+The example code below is available on `Colab <https://colab.research.google.com/github/facebookresearch/habitat-lam/blob/main/examples/tutorials/colabs/Habitat_Lab_Visualization.ipynb>`_, or runnable via:
 
 .. code:: shell-session
 
