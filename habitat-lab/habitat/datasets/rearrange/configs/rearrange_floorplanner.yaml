@@ -1,5 +1,5 @@
 ---
-dataset_path: "data/test_scene_dataset/floorplanner.scene_dataset_config.json"
+dataset_path: "data/hab-fp-dataset-no-doors/hab-fp.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/configs/"
   - "data/objects/amazon_berkeley/configs/"
@@ -8,7 +8,7 @@ scene_sets:
   -
     name: "any"
     included_substrings:
-      - "102815859"
+      - "102344094"
     excluded_substrings: []
 
 object_sets:
@@ -1248,24 +1248,7 @@ receptacle_sets:
       - ""
     excluded_object_substrings: []
     included_receptacle_substrings:
-      - "receptacle_hall_shelf_lower"
-      - "receptacle_hall_shelf_middle"
-      - "receptacle_kitchen_counter_corner"
-      - "receptacle_kitchen_counter_left"
-      - "receptacle_kitchen_counter_middle"
-      - "receptacle_kitchen_counter_right"
-      - "receptacle_kitchen_island"
-      - "receptacle_living_left_shelf_lower_left"
-      - "receptacle_living_left_shelf_lower_middle_right"
-      - "receptacle_living_left_shelf_lower_midle_left"
-      - "receptacle_living_left_shelf_lower_right"
-      - "receptacle_living_mantle"
-      - "receptacle_living_right_shelf_lower_left"
-      - "receptacle_living_right_shelf_lower_middle_right"
-      - "receptacle_living_right_shelf_lower_midle_left"
-      - "receptacle_living_right_shelf_lower_right"
-      - "receptacle_living_table"
-      - "receptacle_office_desk"
+      - receptacle_mesh_counter1
     excluded_receptacle_substrings: []
 
 scene_sampler:
