@@ -204,7 +204,7 @@ class ObjectSegmentationSensor(Sensor):
             for g in episode.candidate_objects:
                 segmentation_sensor = segmentation_sensor | (
                     observations["robot_head_semantic"]
-                    == self._sim.scene_obj_ids[g.object_id]
+                    == self._sim.scene_obj_ids[int(g.object_id)]
                     + self._sim.habitat_config.obj_instance_id_start
                 )
             return segmentation_sensor
