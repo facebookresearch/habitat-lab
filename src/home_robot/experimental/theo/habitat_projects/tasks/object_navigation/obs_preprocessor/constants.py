@@ -62,16 +62,16 @@ class SemanticCategoryMapping(ABC):
 # COCO Indoor Categories
 # ----------------------------------------------------
 
+coco_categories_legend_path = (
+    "home_robot/agent/perception/detection/coco_maskrcnn/coco_categories_legend.png"
+)
+
 coco_frame_color_palette = [int(x * 255.0) for x in [
     *coco_categories_color_palette,
     1.0,
     1.0,
     1.0,  # no category
 ]]
-
-coco_categories_legend_path = (
-    "home_robot/agent/perception/detection/coco_maskrcnn/coco_categories_legend.png"
-)
 
 coco_map_color_palette = [int(x * 255.0) for x in [
     1.0,
@@ -165,11 +165,10 @@ class HM3DtoCOCOIndoor(SemanticCategoryMapping):
 
 
 # ----------------------------------------------------
-# Mukul 34 Indoor Categories
+# Mukul 33 Indoor Categories
 # ----------------------------------------------------
 
-mukul_34categories_indexes = {
-    0: "misc",
+mukul_33categories_indexes = {
     1: "alarm_clock",
     2: "bathtub",
     3: "bed",
@@ -204,17 +203,16 @@ mukul_34categories_indexes = {
     32: "wardrobe",
     33: "washer_dryer"
 }
-mukul_34categories = [mukul_34categories_indexes[i] for i in range(len(mukul_34categories_indexes))]
+mukul_33categories_padded = ["."] + [mukul_33categories_indexes[i] for i in range(1, 34)] + ["other"]
 
-mukul_34categories_frame_color_palette = d3_40_colors_rgb
-mukul_34categories_frame_color_palette[0] = [255, 255, 255]  # no category
-mukul_34categories_frame_color_palette = mukul_34categories_frame_color_palette[:34].flatten()
-
-mukul_34categories_legend_path = (
-    "home_robot/experimental/theo/habitat_projects/tasks/object_navigation/obs_preprocessor/mukul_34categories_legend.png"
+mukul_33categories_legend_path = (
+    "home_robot/experimental/theo/habitat_projects/tasks/object_navigation/obs_preprocessor/mukul_33categories_legend.png"
 )
 
-mukul_34categories_map_color_palette = [int(x * 255.0) for x in [
+mukul_33categories_color_palette = [255, 255, 255] + list(d3_40_colors_rgb[1:34].flatten())
+mukul_33categories_frame_color_palette = mukul_33categories_color_palette + [255, 255, 255]
+
+mukul_33categories_map_color_palette = [int(x * 255.0) for x in [
     1.0,
     1.0,
     1.0,  # empty space
@@ -233,14 +231,14 @@ mukul_34categories_map_color_palette = [int(x * 255.0) for x in [
     0.63,
     0.78,
     0.95,  # rest of goal
-    *mukul_34categories_frame_color_palette / 255.0
+    *[x / 255.0 for x in mukul_33categories_color_palette]
 ]]
 
 
 class FloorplannertoMukulIndoor(SemanticCategoryMapping):
     def __init__(self):
         super().__init__()
-        self.floorplanner_goal_id_to_goal_name = mukul_34categories_indexes
+        self.floorplanner_goal_id_to_goal_name = mukul_33categories_indexes
         self._instance_id_to_category_id = None
 
     def map_goal_id(self, goal_id: int) -> Tuple[int, str]:
@@ -250,7 +248,9 @@ class FloorplannertoMukulIndoor(SemanticCategoryMapping):
         )
 
     def reset_instance_id_to_category_id(self, env: Env):
+        # Identity everywhere except index 0 mapped to 34
         self._instance_id_to_category_id = torch.arange(self.num_sem_categories)
+        self._instance_id_to_category_id[0] = self.num_sem_categories - 1
 
     @property
     def instance_id_to_category_id(self) -> torch.Tensor:
@@ -258,19 +258,20 @@ class FloorplannertoMukulIndoor(SemanticCategoryMapping):
 
     @property
     def map_color_palette(self):
-        return mukul_34categories_map_color_palette
+        return mukul_33categories_map_color_palette
 
     @property
     def frame_color_palette(self):
-        return mukul_34categories_frame_color_palette
+        return mukul_33categories_frame_color_palette
 
     @property
     def categories_legend_path(self):
-        return mukul_34categories_legend_path
+        return mukul_33categories_legend_path
 
     @property
     def num_sem_categories(self):
-        return 34
+        # 0 is unused, 1 to 33 are semantic categories, 34 is "other/misc"
+        return 35
 
 
 # ----------------------------------------------------

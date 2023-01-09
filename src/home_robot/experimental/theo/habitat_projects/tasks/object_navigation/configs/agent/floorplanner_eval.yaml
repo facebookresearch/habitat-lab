@@ -6,7 +6,7 @@ DUMP_LOCATION: home_robot/experimental/theo/habitat_projects/tasks/object_naviga
 EXP_NAME: eval_floorplanner       # experiment name
 VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
 PRINT_IMAGES: 1           # 1: save visualization as images, 0: no image saving
-GROUND_TRUTH_SEMANTICS: 1 # 1: use ground-truth semantics (for debugging / ablations)
+GROUND_TRUTH_SEMANTICS: 0 # 1: use ground-truth semantics (for debugging / ablations)
 
 ENVIRONMENT:
   turn_angle: 30.0        # agent turn angle (in degrees)
@@ -23,7 +23,7 @@ AGENT:
 
   SEMANTIC_MAP:
     semantic_categories: mukul_indoor # map semantic channel categories ("coco_indoor", "longtail_indoor", "mukul_indoor")
-    num_sem_categories: 34           # number of map semantic channel categories (16, 257, 34)
+    num_sem_categories: 35            # number of map semantic channel categories (16, 257, 35)
     map_size_cm: 4800        # global map size (in centimeters)
     map_resolution: 5        # size of map bins (in centimeters)
     vision_range: 100        # diameter of local map region visible by the agent (in cells)

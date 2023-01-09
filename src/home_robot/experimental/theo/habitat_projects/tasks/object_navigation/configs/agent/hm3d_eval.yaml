@@ -23,7 +23,7 @@ AGENT:
 
   SEMANTIC_MAP:
     semantic_categories: coco_indoor # map semantic channel categories ("coco_indoor", "longtail_indoor", "mukul_indoor")
-    num_sem_categories: 16           # number of map semantic channel categories (16, 257, 34)
+    num_sem_categories: 16           # number of map semantic channel categories (16, 257, 35)
     map_size_cm: 4800        # global map size (in centimeters)
     map_resolution: 5        # size of map bins (in centimeters)
     vision_range: 100        # diameter of local map region visible by the agent (in cells)

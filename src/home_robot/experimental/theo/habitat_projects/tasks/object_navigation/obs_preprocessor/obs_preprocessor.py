@@ -15,7 +15,7 @@ from .constants import (
     FloorplannertoMukulIndoor,
     HM3DtoLongTailIndoor,
     long_tail_indoor_categories,
-    mukul_34categories,
+    mukul_33categories_padded,
     MIN_DEPTH_REPLACEMENT_VALUE,
     MAX_DEPTH_REPLACEMENT_VALUE,
 )
@@ -76,7 +76,7 @@ class ObsPreprocessor:
             elif config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
                 self.segmentation = get_detic(
                     vocabulary="custom",
-                    custom_vocabulary=",".join(mukul_34categories),
+                    custom_vocabulary=",".join(mukul_33categories_padded),
                     sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
                 )
 
@@ -272,14 +272,18 @@ class ObsPreprocessor:
         """Visualize first-person semantic segmentation frame."""
         width, height = semantics.shape[:2]
         vis_content = semantics
-        vis_content[:, :, -1] = 1e-5
+        vis_content[:, :, -1] += 1e-5  # Assumes the last category is "other"
         vis_content = vis_content.argmax(-1)
         vis = Image.new("P", (height, width))
         vis.putpalette(self.semantic_category_mapping.frame_color_palette)
         vis.putdata(vis_content.flatten().astype(np.uint8))
+        mask = np.array(vis)
+        mask = (mask == self.semantic_category_mapping.num_sem_categories - 1).astype(np.uint8) * 255
+        mask = Image.fromarray(mask)
+        rgb_pil = Image.fromarray(rgb)
         vis = vis.convert("RGB")
+        vis.paste(rgb_pil, mask=mask)
         vis = np.array(vis)
-        vis = np.where(vis != 255, vis, rgb)
         vis = vis[:, :, ::-1]
         return vis
 

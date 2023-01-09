@@ -133,7 +133,7 @@ class Visualizer:
         semantic_map += 6
 
         # Obstacles, explored, and visited areas
-        no_category_mask = semantic_map == 6 + self.num_sem_categories - 1
+        no_category_mask = semantic_map == 6 + self.num_sem_categories - 1  # Assumes the last category is "other"
         obstacle_mask = np.rint(obstacle_map) == 1
         explored_mask = np.rint(explored_map) == 1
         visited_mask = self.visited_map_vis[gy1:gy2, gx1:gx2] == 1
