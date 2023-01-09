@@ -47,6 +47,7 @@ INPUT_PAGES = [
     "pages/quickstart.rst",
     "pages/habitat-sim-demo.rst",
     "pages/habitat-lab-demo.rst",
+    "pages/habitat-lab-tdmap-viz.rst",
     "pages/habitat2.rst",
     "pages/view-transform-warp.rst",
 ]
@@ -81,6 +82,7 @@ LINKS_NAVBAR1 = [
             ("Quickstart", "quickstart"),
             ("Habitat Sim Demo", "habitat-sim-demo"),
             ("Habitat Lab Demo", "habitat-lab-demo"),
+            ("Habitat Lab TopdownMap Visualization", "habitat-lab-tdmap-viz"),
             ("Habitat 2.0 Overview", "habitat2"),
             ("View, Transform and Warp", "view-transform-warp"),
         ],
