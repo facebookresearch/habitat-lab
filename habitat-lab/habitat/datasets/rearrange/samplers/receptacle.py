@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
+import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
@@ -91,6 +92,9 @@ class Receptacle(ABC):
                 self.parent_link
             ).absolute_transformation()
 
+    def get_local_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
+        return self.get_global_transform(sim).inverted()
+
     def get_surface_center(self, sim: habitat_sim.Simulator) -> mn.Vector3:
         """
         Returns the center of receptacle surface in world space
@@ -104,6 +108,16 @@ class Receptacle(ABC):
     ) -> mn.Vector3:
         """
         Returns the center of receptacle surface in local space
+        """
+
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        """
+        Check if point lies within a `threshold` distance of the receptacle's surface
         """
 
     def sample_uniform_global(
@@ -254,6 +268,20 @@ class AABBReceptacle(Receptacle):
         local_center.y = self.bounds.y().min
         return local_center
 
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        local_point = self.get_local_transform(sim).transform_point(point)
+        bounds = self.bounds
+        return (
+            bounds.x().contains(local_point.x)
+            and bounds.z().contains(local_point.z)
+            and np.abs(bounds.y().min - local_point.y) < threshold
+        )
+
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
     ) -> List[habitat_sim.physics.ManagedRigidObject]:
@@ -335,10 +363,12 @@ class TriangleMeshReceptacle(Receptacle):
         )  # normalized float weights for each triangle for sampling
         assert len(mesh_data[1]) % 3 == 0, "must be triangles"
         self.total_area = 0
+        triangles = []
         for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
+            triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * np.linalg.norm(np.cross(w1, w2))
             )
@@ -351,7 +381,9 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-        # print(self.area_weighted_accumulator)
+        self.trimesh = trimesh.Trimesh(
+            **trimesh.triangles.to_kwargs(triangles)
+        )
 
     def get_face_verts(self, f_ix):
         verts = []
@@ -381,6 +413,22 @@ class TriangleMeshReceptacle(Receptacle):
         sample_val = random.random()
         tri_index = find_ge(self.area_weighted_accumulator, sample_val)
         return tri_index
+
+    def get_local_surface_center(
+        self, sim: habitat_sim.Simulator
+    ) -> mn.Vector3:
+        return self.trimesh.centroid
+
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        return (
+            np.abs(trimesh.proximity.signed_distance(self.trimesh, [point]))
+            < threshold
+        )
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -521,10 +569,15 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
         line_index += num_verts
         for face_line in range(line_index, num_faces + line_index):
             assert (
-                int(lines[face_line][0]) == 3
-            ), f"Faces must be triangles. '{ply_file}'"
-            indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-            mesh_data[1].extend(indices)
+                int(lines[face_line][0]) <= 4
+            ), f"Faces must be triangles. '{ply_file}' {lines[face_line][0]}"
+            if int(lines[face_line][0]) == 4:
+                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
+                mesh_data[1].extend(indices[:-1])
+                mesh_data[1].extend(indices[1:])
+            else:
+                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
+                mesh_data[1].extend(indices)
 
     return mesh_data
 
@@ -555,7 +608,6 @@ def parse_receptacles_from_user_config(
     receptacle_prefix_string = "receptacle_"
     mesh_receptacle_id_string = "receptacle_mesh_"
     aabb_receptacle_id_string = "receptacle_aabb_"
-
     # search the generic user subconfig metadata looking for receptacles
     for sub_config_key in user_subconfig.get_subconfig_keys():
         if sub_config_key.startswith(receptacle_prefix_string):
@@ -661,7 +713,6 @@ def parse_receptacles_from_user_config(
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
                 )
-
     return receptacles
 
 

@@ -21,3 +21,10 @@ class ObjectRearrangeSim(RearrangeSim):
             self.target_categories["start_recep"] = self.ep_info[
                 "start_recep_category"
             ]
+        self.valid_goal_rec_obj_ids = {
+            int(g.object_id) for g in self.ep_info["candidate_goal_receps"]
+        }
+
+        self.valid_goal_rec_names = [
+            g.object_name for g in self.ep_info["candidate_goal_receps"]
+        ]
