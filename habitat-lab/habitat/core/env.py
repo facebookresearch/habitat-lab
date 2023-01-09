@@ -136,6 +136,7 @@ class Env:
             urdf_path=config_human.robot_urdf,
             amass_path=config_human.amass_path,
             body_model_path=config_human.body_model_path,
+            grab_path=config_human.grab_path,
             draw_fps=config_human.draw_fps_human
         )
         if 'human_nav_action' in self.task.actions:

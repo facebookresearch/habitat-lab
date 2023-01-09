@@ -7,6 +7,8 @@ from dataclasses import dataclass
 
 import magnum as mn
 import numpy as np
+import os
+from os import path as osp
 
 from fairmotion.core import motion
 from fairmotion.data import amass
@@ -139,6 +141,31 @@ class MotionData:
             summ += root_T.translation
         self.center_of_root_drift = summ / self.num_of_frames
 
+    @classmethod
+    def obtain_pose(cls, skel: motion.Skeleton, body_info, index)-> motion.Pose:
+        pose_body = body_info['pose'][index]
+        root_orient = body_info['root_orient'][index]
+        root_trans = body_info['trans'][index]
+        num_joints = (pose_body.shape[0] // 3) + 1
+        # breakpoint()
+        pose_data = []
+        for j in range(num_joints):
+            if j == 0:
+                T = conversions.Rp2T(
+                    conversions.A2R(root_orient), root_trans
+                )
+            else:
+                T = conversions.R2T(
+                    conversions.A2R(
+                        pose_body[(j - 1) * 3 : (j - 1) * 3 + 3]
+                    )
+                )
+            pose_data.append(T)
+        return motion.Pose(skel, pose_data)
+        
+
+
+
 
 
 
@@ -160,9 +187,6 @@ class Motions:
             "walk": f"{self.amass_path}/CMU/10/10_04_poses.npz",  # [0] cycle walk
             "run": f"{self.amass_path}/CMU/09/09_01_poses.npz",  # [1] cycle run
         }
-        # breakpoint()
-        # amass.load("/Users/xavierpuig/Documents/human_sim_data/amass_smpl_h//CMU/10/10_04_poses.npz", bm_path="/Users/xavierpuig/Documents/human_sim_data/smplh/male/model.npz")
-        # breakpoint()
         
         motion_data = {key: amass.load(value, bm_path=body_model_path) for key, value in motion_files.items()}
         
@@ -192,8 +216,9 @@ class Motions:
 
 
 
+
 class AmassHumanController:
-    def __init__(self, urdf_path, amass_path, body_model_path, obj_translation=None, draw_fps=60):
+    def __init__(self, urdf_path, amass_path, body_model_path, grab_path=None, obj_translation=None, draw_fps=60):
         self.motions = Motions(amass_path, body_model_path)
         
         self.last_pose = self.motions.standing_pose
@@ -203,7 +228,7 @@ class AmassHumanController:
         self.ROOT = 0
  
         self.mocap_frame = 0
-        self.curr_trans = mn.Vector3([0,0,0])
+        self.curr_trans = mn.Vector3([0,0,0.3])
         self.rotation_offset: Optional[mn.Quaternion] = mn.Quaternion()
         self.translation_offset: Optional[mn.Vector3] = mn.Vector3([0, 0, 0])
         self.obj_transform = self.obtain_root_transform_at_frame(0)
@@ -226,6 +251,9 @@ class AmassHumanController:
         self.path_ind = 0
         self.path_distance_covered_next_wp = 0 # The distance we will have to cover in the next WP
         self.path_distance_walked = 0
+
+        # Option args
+        self.use_ik_grab = True
         
         if obj_translation is not None:
             self.translation_offset = obj_translation + mn.Vector3([0,0.90,0])
@@ -241,7 +269,44 @@ class AmassHumanController:
         # https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html#getjointinfo
         
         self.joint_info = [p.getJointInfo(self.human_bullet_id, index) for index in link_indices]
-        
+
+        # Data used to grab
+        if grab_path is None:
+            self.use_ik_grab = False
+        if self.use_ik_grab:
+            grab_path = self.grab_path
+            graph_path_split = osp.splitext(grab_path)
+            grab_poses = "{}{}.{}".format(graph_path_split[0], '_processed_', graph_path_split[1])
+            grab_data = np.load(grab_path)
+            num_poses = grab_data['trans'].shape[0]
+            self.num_pos = num_poses
+                
+            # TODO: change this literal argument
+            if not os.path.isfile(grab_poses):
+                self.grab_quaternions = np.zeros((num_poses, 68))
+                self.grab_transform = np.zeros((num_poses, 16))
+                from tqdm import tqdm
+                for pose_index in tqdm(range(num_poses)):
+                    current_pose = MotionData.obtain_pose(self.last_pose.skel, grab_data, pose_index)
+                    pose_quaternion, root_trans, root_rot = self.convert_CMUamass_single_pose(current_pose, raw=True)
+                    transform_as_mat = np.array(mn.Matrix4.from_(root_rot.to_matrix(), root_trans)).reshape(-1)
+                    self.grab_quaternions[pose_index, :] = pose_quaternion
+                    self.grab_transform[pose_index, :] = transform_as_mat
+                np.savez(grab_poses, joints=self.grab_quaternions, root_transform=self.grab_transform)
+            else:
+                pick = np.load(grab_poses)
+                self.grab_quaternions = pick['joints']
+                self.grab_transform = pick['root_transform']
+            self.coords_grab = grab_data['coord']
+            # breakpoint()
+            self.vpose = {
+                'min': self.coords_grab.min(0),
+                'max': self.coords_grab.max(0),
+                'bins': [40, 40, 10]
+            }
+        self.reach_pos = 0
+        # breakpoint()
+
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)
         """
@@ -346,6 +411,50 @@ class AmassHumanController:
             distance_covered +=  max(0, (step_size // len(curr_motion_data.map_of_total_displacement)) - 1)
             distance_covered += curr_motion_data.map_of_total_displacement[pos_norm];
         return distance_covered - prev_distance
+
+    def _select_index(self, position: mn.Vector3):
+        def find_index_quant(minv, maxv, num_bins, value):
+            # Find the quantization bin
+            value = max(min(value, maxv), minv)
+            value_norm = (value - minv) / (maxv - minv)
+            # TODO: make sure that this is not round
+            index = int(value_norm * num_bins)
+            return min(index, num_bins - 1)
+        
+        relative_pos = position
+        x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
+        # breakpoint()
+        coord_data = [
+            (self.vpose['min'][0], self.vpose['max'][0], self.vpose['bins'][0], x_diff),
+            (self.vpose['min'][1], self.vpose['max'][1], self.vpose['bins'][1], y_diff),
+            (self.vpose['min'][2], self.vpose['max'][2], self.vpose['bins'][2], z_diff),
+        ]
+        # print(x_diff, y_diff, z_diff)
+        # breakpoint()
+        x_ind, y_ind, z_ind = [find_index_quant(*data) for data in coord_data]
+        # print(x_ind, y_ind, z_ind)
+        index = y_ind * self.vpose['bins'][0] * self.vpose['bins'][2] + x_ind * self.vpose['bins'][2] + z_ind
+        # print(self.coords_grab[index])
+        # breakpoint()
+        return index
+
+    def reach(self, position: mn.Vector3):
+        # Move the X hand towards that position
+
+        # Make position relative to the root
+        # position_relative = position - self.root_pos
+        
+
+        if not self.use_ik_grab:
+            raise KeyError(
+                "Error: reach behavior is not defined when use_ik_grab is off"
+            )
+        reach_pos = self._select_index(position)
+        curr_pose = list(self.grab_quaternions[reach_pos])
+        curr_transform = mn.Matrix4(self.grab_transform[reach_pos].reshape(4,4))
+        curr_transform.translation = self.obj_transform.translation
+        # breakpoint()
+        return curr_pose, curr_transform
 
     def walk(self, position: mn.Vector3):
         """ Walks to the desired position. Rotates the character if facing in a different direction """
@@ -477,7 +586,7 @@ class AmassHumanController:
         return rotation2 * rotation1
 
     def convert_CMUamass_single_pose(
-        self, pose, raw=False
+        self, pose, raw=False, apply_rot=False
     ) -> Tuple[List[float], mn.Vector3, mn.Quaternion]:
         """
         This conversion is specific to the datasets from CMU
@@ -531,15 +640,16 @@ class AmassHumanController:
             
             if joint_type == p.JOINT_SPHERICAL:
                 Q, _ = conversions.T2Qp(T)
-
+            
             new_pose += list(Q)
-        
+        # breakpoint()
         return new_pose, root_translation, root_rotation
 
     @classmethod
     def transformAction(cls, pose: List, transform: mn.Matrix4):
         # breakpoint()
         # list(np.asarray(transform).flatten())
+        # breakpoint()
         return pose + list(np.asarray(transform.transposed()).flatten())
 
     

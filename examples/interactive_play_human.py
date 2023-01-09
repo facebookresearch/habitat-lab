@@ -55,6 +55,7 @@ from typing import Any, Dict, List
 import habitat_sim
 import magnum as mn
 import numpy as np
+import math
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
@@ -71,7 +72,7 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
-from habitat_baselines import AmassHumanController
+from human_controllers import AmassHumanController
 
 
 try:
@@ -109,7 +110,7 @@ def get_input_vel_ctlr(
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
     multi_agent = len(env._sim.robots_mgr) > 1
-    print(env.task.actions)
+    # print(env.task.actions)
     arm_action_name = "arm_action"
     base_action_name = "empty"
     arm_key = "arm_action"
@@ -140,22 +141,23 @@ def get_input_vel_ctlr(
 
 
         else:
-            base_action_name = 'empty'
+            base_action_name = 'humanjoint_action'
             base_key = "human_joints_trans"
+
 
         # if path_ind != 1:
         #     breakpoint()
+        if repeat_walk:
+            displ = compute_displ(agent_path.points[path_ind], human_controller)
+            # displ = compute_displ(agent_path.points[path_ind], env._sim.robot)
 
-        displ = compute_displ(agent_path.points[path_ind], human_controller)
-        # displ = compute_displ(agent_path.points[path_ind], env._sim.robot)
 
-
-        displ2 = mn.Vector3([displ[0], 0, displ[1]])
-        new_pose, new_trans = human_controller.walk(displ2)
-        # breakpoint()
-        base_action = AmassHumanController.transformAction(new_pose, new_trans)
-        base_action_name = "humanjoint_action"
-        base_key = "human_joints_trans"
+            displ2 = mn.Vector3([displ[0], 0, displ[1]])
+            new_pose, new_trans = human_controller.walk(displ2)
+            # breakpoint()
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+            base_action_name = "humanjoint_action"
+            base_key = "human_joints_trans"
         # base_action = displ
     # breakpoint()
 
@@ -202,24 +204,86 @@ def get_input_vel_ctlr(
         if keys[pygame.K_i]:
             base_action_name = 'grab_left_action'
             base_key = 'base_pos'
+
+            base_action_name = 'grab_right_action'
+            base_key = 'base_pos'
+
+            repeat_walk = False
+            base_action_name = 'humanjoint_action'
+            base_action = mn.Vector3([-0.01, 0.00, 0])
+            human_controller.curr_trans += base_action
+            
+            current_point = human_controller.translation_offset + human_controller.curr_trans
+            env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
+                current_point, env._sim.viz_ids['target_ee']
+            )
+            base_key = 'human_joints_trans'
+            # breakpoint()
+            new_pose, new_trans = human_controller.reach(human_controller.curr_trans)
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
+            human_controller.reach_pos = (human_controller.reach_pos + 1) % human_controller.num_pos
+
+
         elif keys[pygame.K_j]:
             base_action_name = 'grab_right_action'
             base_key = 'base_pos'
 
-        # elif keys[pygame.K_y]:
-        #     # Left
-        #     # ee_pos = env._sim.robot.ee_transform.translation
-        #     # print(ee_pos)
-        #     repeat_walk = False
-        #     base_action_name = 'humanjoint_action'
-        #     base_action = mn.Vector3([0, 0.05, 0])
-        #     env._sim.robot.curr_trans = base_action
-        # elif keys[pygame.K_t]:
-        #     # Left
-        #     repeat_walk = False
-        #     base_action_name = 'humanjoint_action'
-        #     base_action = mn.Vector3([0, -0.05, 0])
-        #     env._sim.robot.curr_trans = base_action
+            repeat_walk = False
+            base_action_name = 'humanjoint_action'
+            base_action = mn.Vector3([0.01, 0.00, 0])
+            human_controller.curr_trans += base_action
+            
+            current_point = human_controller.translation_offset + human_controller.curr_trans
+            env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
+                current_point, env._sim.viz_ids['target_ee']
+            )
+            base_key = 'human_joints_trans'
+            # breakpoint()
+            new_pose, new_trans = human_controller.reach(human_controller.curr_trans)
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
+            human_controller.reach_pos = (human_controller.reach_pos + 1) % human_controller.num_pos
+
+
+        elif keys[pygame.K_y]:
+            # Left
+            # ee_pos = env._sim.robot.ee_transform.translation
+            # print(ee_pos)
+            repeat_walk = False
+            base_action_name = 'humanjoint_action'
+            base_action = mn.Vector3([0, 0.01, 0])
+            human_controller.curr_trans += base_action
+            
+            current_point = human_controller.translation_offset + human_controller.curr_trans
+            env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
+                current_point, env._sim.viz_ids['target_ee']
+            )
+            base_key = 'human_joints_trans'
+            # breakpoint()
+            new_pose, new_trans = human_controller.reach(human_controller.curr_trans)
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
+            human_controller.reach_pos = (human_controller.reach_pos + 1) % human_controller.num_pos
+
+        elif keys[pygame.K_t]:
+            # Left
+            repeat_walk = False
+            base_action_name = 'humanjoint_action'
+            base_action = mn.Vector3([0, -0.01, 0])
+            human_controller.curr_trans += base_action
+            current_point = human_controller.translation_offset + human_controller.curr_trans
+            env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
+                current_point, env._sim.viz_ids['target_ee']
+            )
+
+            base_key = 'human_joints_trans'
+            # breakpoint()
+            new_pose, new_trans = human_controller.reach(human_controller.curr_trans)
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
+            human_controller.reach_pos = (human_controller.reach_pos - 1 + human_controller.num_pos) % human_controller.num_pos
+        
 
         elif keys[pygame.K_e]:
             # Left
@@ -228,7 +292,13 @@ def get_input_vel_ctlr(
             repeat_walk = False
             base_action_name = 'release_left_action'
             base_action = mn.Vector3([0, 0, 0.05])
-            env._sim.robot.curr_trans = base_action
+            human_controller.curr_trans += base_action
+
+
+            base_key = 'human_joints_trans'
+            new_pose, new_trans = human_controller.stop()
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
         elif keys[pygame.K_r]:
             # Right
             repeat_walk = False
@@ -376,6 +446,8 @@ def update_location_walk(curr_location, env, curr_ind_map, new_loc=None):
     # else:
     if 'cont' not in curr_ind_map:
         curr_ind_map['cont'] = 0
+    
+    # TODO: for some reason this requires different indices ot update the path planner
     curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object("current_path_{}".format(curr_ind_map['cont']), path.points, colors=colors, radius=0.03)
     curr_ind_map['cont'] += 1
     # breakpoint()
@@ -423,16 +495,16 @@ def play_env(env, args, config):
     urdf_path = config.habitat.simulator.agents.main_agent.robot_urdf
     amass_path = config.habitat.simulator.agents.main_agent.amass_path
     body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
-    body_model_path = config.habitat.simulator.agents.main_agent.draw_fps
+    draw_fps = config.habitat.simulator.agents.main_agent.draw_fps_human
     obj_translation = env._sim.robot.sim_obj.translation
 
     link_ids = env._sim.robot.sim_obj.get_link_ids()
     human_controller = AmassHumanController(
-        urdf_path, amass_path, body_model_path, obj_translation, link_ids)
+        urdf_path, amass_path, body_model_path, obj_translation, draw_fps=draw_fps)
 
     # TODO: remove
-    human_controller.sim_obj = env._sim.robot.sim_obj
-
+    
+    human_controller.reset(env._sim.robot.sim_obj.translation)
     # breakpoint()
     found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map)
     path_ind = 1
@@ -442,6 +514,7 @@ def play_env(env, args, config):
         env.sim.viz_ids[f'next_loc_{path_i}'] = env.sim.visualize_position(
             path.points[path_i], env.sim.viz_ids[f'next_loc_{path_i}']
         )
+    angle_pos = 0.
     while True:
         # breakpoint()
 
@@ -460,14 +533,35 @@ def play_env(env, args, config):
             keys = pygame.key.get_pressed()
 
         do_update = True
+        dist = 0.05
+        
+        agent_location = human_controller.translation_offset
+        radius = np.linalg.norm((agent_location- goal_location) * (mn.Vector3.x_axis() + mn.Vector3.z_axis()))
+            
         if keys[pygame.K_w]:
-            goal_location += mn.Vector3([0.05, 0, 0])
+            radius += 0.05
+            
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)]) 
+            
         elif keys[pygame.K_s]:
-            goal_location += mn.Vector3([-0.05, 0, 0])
+            radius -= 0.05
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)]) 
+            
         elif keys[pygame.K_a]:
-            goal_location += mn.Vector3([0, 0, 0.05])
+            angle_pos -= (5./180.) * math.pi
+            if angle_pos > (2 * math.pi):
+                angle_pos -= 2 * math.pi
+            if angle_pos < 0:
+                    angle_pos = 2 * math.pi - angle_pos
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)])
         elif keys[pygame.K_d]:
-            goal_location += mn.Vector3([0, 0, -0.05])
+            angle_pos += (5./180.) * math.pi
+            if angle_pos > (2 * math.pi):
+                angle_pos -= 2 * math.pi
+            if angle_pos < 0:
+                    angle_pos = 2 * math.pi - angle_pos
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)]) 
+            # goal_location = mn.Vector3([0, 0, -0.05])
         else:
             do_update = False
 
@@ -510,6 +604,7 @@ def play_env(env, args, config):
 
         if not args.no_render and keys[pygame.K_c]:
             pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
+            breakpoint()
             logger.info("Actions:")
             actions = pddl_action._action_ordering
             for i, action in enumerate(actions):

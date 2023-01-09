@@ -15,14 +15,14 @@ habitat:
     actions:
       humanjoint_action:
         type: "HumanJointAction"
-      grab_right_action:
-        type: "GrabRightAction"
-      grab_left_action:
-        type: "GrabLeftAction"
-      release_left_action:
-        type: "ReleaseLeftAction"
-      release_right_action:
-        type: "ReleaseRightAction"
+      # grab_right_action:
+      #   type: "GrabRightAction"
+      # grab_left_action:
+      #   type: "GrabLeftAction"
+      # release_left_action:
+      #   type: "ReleaseLeftAction"
+      # release_right_action:
+      #   type: "ReleaseRightAction"
 
   simulator:
     type: RearrangeSim-v0
@@ -33,11 +33,12 @@ habitat:
       main_agent:
         is_set_start_state: False
         radius: 0.3
-        robot_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
-        ik_arm_urdf: '/Users/xavierpuig/Documents/human_sim_data/amass_male.urdf'
+        robot_urdf: 'data/human_sim_data/amass_male.urdf'
+        ik_arm_urdf: 'data/human_sim_data/amass_male.urdf'
         robot_type: 'AmassHuman'
-        amass_path: '/Users/xavierpuig/Documents/human_sim_data/amass_smpl_h/'
-        body_model_path: '/Users/xavierpuig/Documents/human_sim_data/smplh/male/model.npz'
+        amass_path: 'data/human_sim_data/amass_smpl_h/'
+        body_model_path: 'data/human_sim_data/smplh/male/model.npz'
+        grab_path: 'data/human_sim_data/left_hand_smpl_hand.npz'
         human_type: "AmassHuman"
         sim_sensors:
           third_rgb_sensor:
