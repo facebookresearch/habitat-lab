@@ -13,6 +13,7 @@ from tqdm import tqdm
 
 import habitat_sim
 from habitat.core.utils import DatasetFloatJSONEncoder
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
 
 def get_rec_category(rec_id, rec_category_mapping=None):
@@ -34,11 +35,24 @@ def get_rec_category(rec_id, rec_category_mapping=None):
             "dining",
             "hall",
             "office",
+            "bath",
+            "closet",
+            "laundry",
+            "coffee",
+            "garage",
+            "bd",
+            "deck",
+            "half",
+            "upper",
+            "side",
+            "top",
             "left",
             "right",
             "corner",
             "midle",
             "middle",
+            "round",
+            "patio",
             "lower",
             "aabb",
             "mesh",
@@ -46,6 +60,7 @@ def get_rec_category(rec_id, rec_category_mapping=None):
         for r in remove_strings:
             rec_category = rec_category.replace(r, "")
         rec_category = re.sub("_+", "_", rec_category).lstrip("_").rstrip("_")
+        rec_category = re.sub("[.0-9]", "", rec_category)
         print(
             f"Warning: {rec_id} not found in receptacle category mapping. Using {rec_category} as the category."
         )
@@ -118,42 +133,39 @@ def get_cats_list(
     return obj_to_id_mapping, rec_to_id_mapping
 
 
-def collect_receptacle_positions(episode):
-    with open(episode["scene_id"], "r") as f:
-        scene_data = json.load(f)
-    # For ReplicaCAD: positions of receptacle object models. TODO: Replace these with receptacle sample volumes, need to load scene in sim for this.
-    recep_positions = {}
-    for recep_type in ["object_instances", "articulated_object_instances"]:
-        if recep_type not in scene_data:
-            continue
-        for recep_data in scene_data[recep_type]:
-            recep_positions[recep_data["template_name"]] = recep_data[
-                "translation"
-            ]
+def collect_receptacle_goals(sim, rec_category_mapping=None):
+    recep_goals = []
+    receptacles = find_receptacles(sim)
+    rom = sim.get_rigid_object_manager()
+    aom = sim.get_articulated_object_manager()
 
-    # Receptacle positions are taken from sampling volumes for Floorplanner scenes
-    with open(episode["scene_dataset_config"], "r") as f:
-        scene_config_file = json.load(f)
-    stage_config_folder = scene_config_file["stages"]["paths"][".json"][0]
-    if not osp.isdir(stage_config_folder):
-        stage_config_folder = osp.dirname(stage_config_folder)
+    for receptacle in receptacles:
+        if receptacle.parent_object_handle is None:
+            object_id = -1
+        elif aom.get_library_has_handle(receptacle.parent_object_handle):
+            object_id = aom.get_object_id_by_handle(
+                receptacle.parent_object_handle
+            )
+        elif rom.get_library_has_handle(receptacle.parent_object_handle):
+            object_id = rom.get_object_id_by_handle(
+                receptacle.parent_object_handle
+            )
+        else:
+            object_id = -1
+        pos = receptacle.get_surface_center(sim)
+        recep_goals.append(
+            {
+                "position": [pos.x, pos.y, pos.z],
+                "object_name": receptacle.name,
+                "object_id": str(object_id),
+                "object_category": get_rec_category(
+                    receptacle.name, rec_category_mapping=rec_category_mapping
+                ),
+                "view_points": [],
+            }
+        )
 
-    stage_config_file = osp.join(
-        osp.dirname(episode["scene_dataset_config"]),
-        stage_config_folder,
-        scene_data["stage_instance"]["template_name"] + ".stage_config.json",
-    )
-
-    if osp.exists(stage_config_file):
-        with open(stage_config_file, "r") as f:
-            stage_configs = json.load(f)
-        if "user_defined" in stage_configs:
-            for receptacle, recep_data in stage_configs[
-                "user_defined"
-            ].items():
-                recep_positions[receptacle] = recep_data["position"]
-
-    return recep_positions
+    return recep_goals
 
 
 def initialize_sim(
@@ -218,7 +230,7 @@ def get_candidate_starts(
             obj_goal = {
                 "position": np.array(pos)[:3, 3].tolist(),
                 "object_name": obj,
-                "object_id": i,
+                "object_id": str(i),
                 "object_category": category,
                 "view_points": [],
             }
@@ -234,25 +246,10 @@ def get_candidate_starts(
     return obj_goals
 
 
-def get_candidate_receptacles(
-    rec_positions, goal_recep_category, rec_category_mapping=None
-):
-    goals = []
-    for recep, position in rec_positions.items():
-        recep_category = get_rec_category(
-            recep, rec_category_mapping=rec_category_mapping
-        )
-
-        if recep_category == goal_recep_category:
-            goal = {
-                "position": position,
-                "object_name": recep,
-                "object_id": -1,
-                "object_category": recep_category,
-                "view_points": [],
-            }
-            goals.append(goal)
-    return goals
+def get_candidate_receptacles(recep_goals, goal_recep_category):
+    return [
+        g for g in recep_goals if g["object_category"] == goal_recep_category
+    ]
 
 
 def load_objects(sim, objects):
@@ -317,7 +314,9 @@ def add_cat_fields_to_episodes(
             episode["additional_obj_config_paths"],
         )
         obj_idx_to_name = load_objects(sim, episode["rigid_objs"])
-        rec_positions = collect_receptacle_positions(episode)
+        all_rec_goals = collect_receptacle_goals(
+            sim, rec_category_mapping=rec_category_mapping
+        )
         obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
             episode,
             obj_category_mapping=obj_category_mapping,
@@ -337,14 +336,10 @@ def add_cat_fields_to_episodes(
             rec_category_mapping=rec_category_mapping,
         )
         episode["candidate_start_receps"] = get_candidate_receptacles(
-            rec_positions,
-            start_rec_cat,
-            rec_category_mapping=rec_category_mapping,
+            all_rec_goals, start_rec_cat
         )
         episode["candidate_goal_receps"] = get_candidate_receptacles(
-            rec_positions,
-            goal_rec_cat,
-            rec_category_mapping=rec_category_mapping,
+            all_rec_goals, goal_rec_cat
         )
         assert (
             len(episode["candidate_objects"]) > 0

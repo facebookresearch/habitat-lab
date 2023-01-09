@@ -75,6 +75,21 @@ class Receptacle(ABC):
         Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
         """
 
+    def get_surface_center(self, sim: habitat_sim.Simulator) -> mn.Vector3:
+        """
+        Returns the center of receptacle surface in world space
+        """
+        local_center = self.get_local_surface_center(sim)
+        return self.get_global_transform(sim).transform_point(local_center)
+
+    @abstractmethod
+    def get_local_surface_center(
+        self, sim: habitat_sim.Simulator
+    ) -> mn.Vector3:
+        """
+        Returns the center of receptacle surface in local space
+        """
+
     def sample_uniform_global(
         self, sim: habitat_sim.Simulator, sample_region_scale: float
     ) -> mn.Vector3:
@@ -207,6 +222,13 @@ class AABBReceptacle(Receptacle):
             return obj.get_link_scene_node(
                 self.parent_link
             ).absolute_transformation()
+
+    def get_local_surface_center(
+        self, sim: habitat_sim.Simulator
+    ) -> mn.Vector3:
+        local_center = self.bounds.center()
+        local_center.y = self.bounds.y().min
+        return local_center
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator

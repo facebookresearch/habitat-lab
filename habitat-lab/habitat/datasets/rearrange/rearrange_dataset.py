@@ -123,7 +123,6 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
             view_location = ObjectViewLocation(**view)  # type: ignore
             view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
             g.view_points[vidx] = view_location
-
         return g
 
     def from_json(
@@ -154,7 +153,7 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                         goal_type,
                         [
                             self.__deserialize_goal(g)
-                            for g in episode["candidate_objects"]
+                            for g in episode[goal_type]
                         ],
                     )
             self.episodes.append(rearrangement_episode)
