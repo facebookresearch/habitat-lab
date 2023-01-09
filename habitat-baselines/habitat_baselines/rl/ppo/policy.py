@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 import abc
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
 
 import torch
 from gym import spaces
@@ -30,6 +31,27 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
+@dataclass
+class PolicyAction:
+    rnn_hidden_states: torch.Tensor
+    actions: torch.Tensor
+    values: Optional[torch.Tensor] = None
+    action_log_probs: Optional[torch.Tensor] = None
+    take_actions: Optional[torch.Tensor] = None
+    policy_info: Optional[List[Dict[str, Any]]] = None
+    should_inserts: Optional[torch.Tensor] = None
+
+    def write_action(self, write_idx, write_action):
+        self.actions[:, write_idx] = write_action
+
+    @property
+    def env_actions(self) -> torch.Tensor:
+        if self.take_actions is None:
+            return self.actions
+        else:
+            return self.take_actions
+
+
 class Policy(abc.ABC):
     action_distribution: nn.Module
 
@@ -47,7 +69,9 @@ class Policy(abc.ABC):
     def forward(self, *x):
         raise NotImplementedError
 
-    def get_policy_info(self, infos, dones) -> List[Dict[str, float]]:
+    def extract_policy_info(
+        self, action_data: PolicyAction, infos, dones
+    ) -> List[Dict[str, float]]:
         """
         Gets the log information from the policy at the current time step.
         Currently only called during evaluation. The return list should be
@@ -64,7 +88,7 @@ class Policy(abc.ABC):
         prev_actions,
         masks,
         deterministic=False,
-    ):
+    ) -> PolicyAction:
         raise NotImplementedError
 
     @classmethod
@@ -155,8 +179,12 @@ class NetPolicy(nn.Module, Policy):
             action = distribution.sample()
 
         action_log_probs = distribution.log_probs(action)
-
-        return value, action, action_log_probs, rnn_hidden_states
+        return PolicyAction(
+            values=value,
+            actions=value,
+            action_log_probs=action_log_probs,
+            rnn_hidden_states=rnn_hidden_states,
+        )
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         features, _, _ = self.net(

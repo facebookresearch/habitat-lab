@@ -220,9 +220,30 @@ cs.store(
 
 
 @dataclass
+class HrlDefinedSkill(HabitatBaselinesBaseConfig):
+    skill_name: str = MISSING
+    name: str = "PointNavResNetPolicy"
+    action_distribution_type: str = "gaussian"
+    load_ckpt_file: str = ""
+    max_skill_steps: int = 200
+    force_end_on_timeout: bool = True
+    force_config_file: str = ""
+    at_resting_threshold: float = 0.15
+    apply_postconds: bool = False
+    obs_skill_inputs: List[str] = field(default_factory=list)
+    obs_skill_input_dim: int = 3
+    start_zone_radius: float = 0.3
+    # For the oracle navigation skill
+    nav_action_name: str = "base_velocity"
+    stop_thresh: float = 0.001
+    # For the reset_arm_skill
+    reset_joint_state: List[float] = MISSING
+
+
+@dataclass
 class HierarchicalPolicy(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
-    defined_skills: Dict[str, Any] = field(default_factory=dict)
+    defined_skills: Dict[str, HrlDefinedSkill] = field(default_factory=dict)
     use_skills: Dict[str, str] = field(default_factory=dict)
 
 
@@ -383,6 +404,8 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # )
     # cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
+    updater_name: str = "PPO"
+    distrib_updater_name: str = "DDPPO"
     torch_gpu_id: int = 0
     video_render_views: List[str] = field(default_factory=list)
     tensorboard_dir: str = "tb"
@@ -394,6 +417,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
+    rollout_storage: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10

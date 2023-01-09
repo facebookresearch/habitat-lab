@@ -13,6 +13,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 from habitat_baselines.rl.hrl.human_skills.pick import HumanPickSkillPolicy
 
 from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
+from habitat_baselines.rl.ppo.policy import PolicyAction
 
 
 
@@ -101,4 +102,6 @@ class HumanPlaceSkillPolicy(HumanPickSkillPolicy):
         action[:, self._pick_ac_idx+self.pddl_action_idx[0]+1] = 1
         action[:, self._pick_ac_idx+self.pddl_action_idx[0]+2] = 8
 
-        return action, rnn_hidden_states
+        return PolicyAction(
+            actions=action, rnn_hidden_states=rnn_hidden_states
+        )

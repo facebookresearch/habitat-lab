@@ -9,6 +9,7 @@ import numpy as np
 import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
+from habitat_baselines.rl.ppo.policy import PolicyAction
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -93,4 +94,6 @@ class ResetArmSkill(SkillPolicy):
             delta
         ).to(device=action.device, dtype=action.dtype)
 
-        return action, rnn_hidden_states
+        return PolicyAction(
+            actions=action, rnn_hidden_states=rnn_hidden_states
+        )

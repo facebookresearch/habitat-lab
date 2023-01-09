@@ -18,6 +18,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
+from habitat_baselines.rl.ppo.policy import PolicyAction
 
 
 class OracleNavHumanPolicy(NnSkillPolicy):
@@ -87,7 +88,7 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         cls, config, observation_space, action_space, batch_size, full_config
     ):
         filtered_action_space = ActionSpace(
-            {config.NAV_ACTION_NAME: action_space[config.NAV_ACTION_NAME]}
+            {config.nav_action_name: action_space[config.nav_action_name]}
         )
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
@@ -183,4 +184,6 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         )
 
         full_action[:, self._oracle_nav_ac_idx] = action_idxs
-        return full_action, rnn_hidden_states
+        return PolicyAction(
+            actions=full_action, rnn_hidden_states=rnn_hidden_states
+        )

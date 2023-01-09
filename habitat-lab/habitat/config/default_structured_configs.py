@@ -144,6 +144,11 @@ class RearrangeStopActionConfig(ActionConfig):
 
 
 @dataclass
+class PddlApplyActionConfig(ActionConfig):
+    type: str = "PddlApplyAction"
+
+
+@dataclass
 class OracleNavActionConfig(ActionConfig):
     """
     Oracle navigation action.
@@ -157,6 +162,9 @@ class OracleNavActionConfig(ActionConfig):
     forward_velocity: float = 1.0
     turn_thresh: float = 0.1
     dist_thresh: float = 0.2
+    stop_thresh: float = 0.001
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
     lin_speed: float = 10.0
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
@@ -759,7 +767,7 @@ class TaskConfig(HabitatBaseConfig):
     # Spawn parameters
     physics_stability_steps: int = 1
     num_spawn_attempts: int = 200
-    spawn_max_dists_to_obj: float = 2.0
+    spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
     # EE sample parameters
     ee_sample_factor: float = 0.2
@@ -1238,6 +1246,12 @@ cs.store(
     name="oracle_nav_action",
     node=OracleNavActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.pddl_apply_action",
+    group="habitat/task/actions",
+    name="pddl_apply_action",
+    node=PddlApplyActionConfig,
+)
 
 cs.store(
     package="habitat.task.actions.human_nav_action",
@@ -1400,6 +1414,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="instance_imagegoal_hfov_sensor",
     node=InstanceImageGoalHFOVSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.localization_sensor",
+    group="habitat/task/lab_sensors",
+    name="localization_sensor",
+    node=LocalizationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_sensor",

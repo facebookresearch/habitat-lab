@@ -271,6 +271,7 @@ class AmassHumanController:
         self.joint_info = [p.getJointInfo(self.human_bullet_id, index) for index in link_indices]
 
         # Data used to grab
+        self.use_ik_grab = False
         if grab_path is None:
             self.use_ik_grab = False
         if self.use_ik_grab:

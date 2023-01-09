@@ -9,11 +9,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
-from habitat_baselines.common.logging import baselines_logger
-
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.core.spaces import ActionSpace
-from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
+from habitat_baselines.rl.ppo.policy import PolicyAction
 
 
 class PickSkillPolicy(NnSkillPolicy):
@@ -38,12 +34,12 @@ class PickSkillPolicy(NnSkillPolicy):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[0].split("|")[1])
 
-    def _mask_pick(self, action, observations):
+    def _mask_pick(self, action: PolicyAction, observations) -> PolicyAction:
         # Mask out the release if the object is already held.
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_holding):
             # Do not release the object once it is held
-            action[i, self._grip_ac_idx] = 1.0
+            action.actions[i, self._grip_ac_idx] = 1.0
         return action
 
     def _internal_act(
@@ -55,7 +51,7 @@ class PickSkillPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        action, hxs = super()._internal_act(
+        action = super()._internal_act(
             observations,
             rnn_hidden_states,
             prev_actions,
@@ -64,7 +60,4 @@ class PickSkillPolicy(NnSkillPolicy):
             deterministic,
         )
         action = self._mask_pick(action, observations)
-        return action, hxs
-
-
-
+        return action

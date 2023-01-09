@@ -12,6 +12,7 @@ defaults:
     - humanpick_action
     - humanplace_action
   - /habitat/simulator/sim_sensors@sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat_baselines/rl/policy: hierarchical_tp_noop_onav_human
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_human_vis
   - _self_
 
@@ -59,61 +60,6 @@ habitat_baselines:
     should_load_ckpt: False
 
   rl:
-    policy:
-        name: "HierarchicalPolicy"
-        obs_transforms:
-          add_virtual_keys:
-            virtual_keys:
-              "nav_to_skill": 8
-              "object_to_agent_gps_compass": 2
-        hierarchical_policy:
-          high_level_policy:
-            add_arm_rest: False
-            name: "FixedHighLevelPolicy"
-          defined_skills:
-            GT_NAV:
-              skill_name: "OracleNavHumanPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              goal_sensors: ["obj_goal_sensor", "abs_obj_goal_sensor"]
-              NAV_ACTION_NAME: "humanjoint_action"
-              max_skill_steps: 300
-              force_end_on_timeout: True
-              stop_angle_thresh: 0.2
-              stop_dist_thresh: 1.0
-
-            human_pick:
-              skill_name: "HumanPickSkillPolicy"
-              obs_skill_inputs: ["obj_goal_sensor"]
-              PICK_ACTION_NAME: "humanpick_action"
-              max_skill_steps: 200
-              force_end_on_timeout: True
-              load_ckpt_file: ""
-            human_place:
-              skill_name: "HumanPlaceSkillPolicy"
-              PICK_ACTION_NAME: "humanplace_action"
-              name: "PointNavResNetPolicy"
-              obs_skill_inputs: ["obj_goal_sensor"]
-              max_skill_steps: 200
-              force_end_on_timeout: True
-
-            wait_skill:
-              skill_name: "HumanWaitSkillPolicy"
-              max_skill_steps: -1.0
-              force_end_on_timeout: False
-
-          use_skills:
-            # Uncomment if you are also using these skills
-            # open_cab: "NN_OPEN_CAB"
-            # open_fridge: "NN_OPEN_FRIDGE"
-            # close_cab: "NN_OPEN_CAB"
-            # close_fridge: "NN_OPEN_FRIDGE"
-            pick: "human_pick"
-            place: "human_place"
-            nav: "GT_NAV"
-            nav_to_receptacle: "GT_NAV"
-            wait: "wait_skill"
-            # reset_arm: "reset_arm_skill"
-
     ppo:
       # ppo params
       clip_param: 0.2

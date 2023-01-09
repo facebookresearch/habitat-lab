@@ -1,35 +1,61 @@
 # @package _global_
+# Pick and place are instantaneous skills, 
+# where environment is set to final state.
+# Navigation is kinematically simulated.
 
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy: monolithic
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy: hierarchical_srl_onav
+  - /habitat/task/actions:
+    - pddl_apply_action
+    - oracle_nav_action
+    - arm_action
+    - base_velocity
+    - rearrange_stop
   - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - robot_head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - localization_sensor
+
 
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
   torch_gpu_id: 0
-  tensorboard_dir: "tb"
-  video_dir: "video_dir"
+  rollout_storage: "HrlRolloutStorage"
+  updater_name: "HrlPPO"
+  distrib_updater_name: "HrlDDPPO"
   video_fps: 30
   video_render_views:
     - "third_rgb_sensor"
-  test_episode_count: -1
-  eval_ckpt_path_dir: "data/new_checkpoints"
-  num_environments: 32
+  eval_ckpt_path_dir: ""
+  num_environments: 3
   writer_type: 'tb'
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1.0e8
   log_interval: 10
   num_checkpoints: 20
-  # Force PyTorch to be single threaded as
-  # this improves performance considerably
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['reward', 'force', 'success']
+  eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
+  load_resume_state_config: False
 
   eval:
+    use_ckpt_config: False
+    should_load_ckpt: False
     video_option: ["disk"]
 
   rl:
@@ -47,18 +73,6 @@ habitat_baselines:
       use_gae: True
       gamma: 0.99
       tau: 0.95
-      use_linear_clip_decay: False
-      use_linear_lr_decay: False
-      reward_window_size: 50
-
-      use_normalized_advantage: False
-
-      hidden_size: 512
-
-      # Use double buffered sampling, typically helps
-      # when environment time is similar or larger than
-      # policy inference time during rollout generation
-      use_double_buffered_sampler: False
 
     ddppo:
       sync_frac: 0.6
@@ -73,8 +87,7 @@ habitat_baselines:
       # Whether the visual encoder backbone will be trained.
       train_encoder: True
       # Whether to reset the critic linear layer
-      reset_critic: True
-
+      reset_critic: False
       # Model parameters
       backbone: resnet18
       rnn_type: LSTM

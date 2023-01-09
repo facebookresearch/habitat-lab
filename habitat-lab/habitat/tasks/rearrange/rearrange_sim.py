@@ -299,7 +299,6 @@ class RearrangeSim(HabitatSim):
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
 
-
             if filter_func is not None and not filter_func(
                 start_pos, start_rot
             ):
