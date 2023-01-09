@@ -15,7 +15,7 @@ habitat:
     actions:
       arm_action:
         type: "ArmAction"
-        arm_controller: "ArmRelPosKinematicReducedActionStretch"
+        arm_controller: "ArmRelPosReducedActionStretch"
         grip_controller: "MagicGraspAction"
         arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
         arm_joint_dimensionality: 10
@@ -30,7 +30,7 @@ habitat:
       - "data/objects/ycb/configs/"
     agents:
       main_agent:
-        radius: 0.3
+        radius: 0.25
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
         sim_sensors:

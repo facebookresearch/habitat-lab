@@ -224,7 +224,7 @@ class ArmAbsPosKinematicAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosKinematicReducedActionStretch(RobotAction):
+class ArmRelPosReducedActionStretch(RobotAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action and the mask. This function is used for Stretch.
