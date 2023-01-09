@@ -35,17 +35,13 @@ habitat:
         robot_type: "StretchRobot"
         sim_sensors:
           head_rgb_sensor:
-            height: 212
-            width: 120
+            height: 640
+            width: 480
+            hfov: 43
           head_depth_sensor:
-            height: 212
-            width: 120
-          arm_depth_sensor:
-            height: 212
-            width: 120
-          arm_rgb_sensor:
-            height: 212
-            width: 120
+            height: 640
+            width: 480
+            hfov: 43
     habitat_sim_v0:
       enable_physics: True
   dataset:

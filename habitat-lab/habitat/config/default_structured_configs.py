@@ -345,6 +345,35 @@ class DistToNavGoalSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ObjectCategorySensorConfig(LabSensorConfig):
+    type: str = "ObjectCategorySensor"
+
+
+@dataclass
+class GoalReceptacleSensorConfig(LabSensorConfig):
+    type: str = "GoalReceptacleSensor"
+
+
+@dataclass
+class StartReceptacleSensorConfig(LabSensorConfig):
+    type: str = "StartReceptacleSensor"
+
+
+@dataclass
+class ObjectEmbeddingSensorConfig(LabSensorConfig):
+    type: str = "ObjectEmbeddingSensor"
+    embeddings_file: str = "clip_embeddings.pickle"
+    dimensionality: int = 512
+
+
+@dataclass
+class ObjectSegmentationSensorConfig(LabSensorConfig):
+    type: str = "ObjectSegmentationSensor"
+    blank_out_prob: float = 0.0
+    dimensionality: int = 256
+
+
+@dataclass
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
@@ -603,18 +632,26 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     use_diff: bool = True
     drop_obj_should_end: bool = True
     wrong_pick_should_end: bool = True
+    object_goal: bool = False
+    sparse_reward: bool = False
 
 
 @dataclass
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
+    object_goal: bool = True
 
 
 @dataclass
 class ObjAtGoalMeasurementConfig(MeasurementConfig):
     type: str = "ObjAtGoal"
     succ_thresh: float = 0.15
+
+
+@dataclass
+class ObjAnywhereOnGoalMeasurementConfig(MeasurementConfig):
+    type: str = "ObjAnywhereOnGoal"
 
 
 @dataclass
@@ -631,12 +668,15 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
+    place_anywhere: bool = False
+    sparse_reward: bool = False
 
 
 @dataclass
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
+    place_anywhere: bool = False
 
 
 @dataclass
@@ -681,6 +721,8 @@ class EpisodeInfoMeasurementConfig(MeasurementConfig):
 class DistanceToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToGoal"
     distance_to: str = "POINT"
+    goals_attr: str = "goals"
+    distance_from: str = "BASE"
 
 
 @dataclass
@@ -741,6 +783,7 @@ class TaskConfig(HabitatBaseConfig):
     # If true, does not care about navigability or collisions
     # with objects when spawning robot
     easy_init: bool = False
+    biased_init: bool = False
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
     task_spec_base_path: str = "habitat/task/rearrange/pddl/"
@@ -861,6 +904,13 @@ class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
 @dataclass
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_head_depth"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class HeadSemanticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "robot_head_semantic"
     width: int = 256
     height: int = 256
 
@@ -1259,6 +1309,12 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="head_semantic_sensor",
+    node=HeadSemanticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="third_depth_sensor",
     node=ThirdDepthSensorConfig,
 )
@@ -1409,7 +1465,36 @@ cs.store(
     name="nav_goal_sensor",
     node=NavGoalPointGoalSensorConfig,
 )
-
+cs.store(
+    package="habitat.task.lab_sensors.object_category_sensor",
+    group="habitat/task/lab_sensors",
+    name="object_category_sensor",
+    node=ObjectCategorySensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.goal_receptacle_sensor",
+    group="habitat/task/lab_sensors",
+    name="goal_receptacle_sensor",
+    node=GoalReceptacleSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.start_receptacle_sensor",
+    group="habitat/task/lab_sensors",
+    name="start_receptacle_sensor",
+    node=StartReceptacleSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.object_embedding_sensor",
+    group="habitat/task/lab_sensors",
+    name="object_embedding_sensor",
+    node=ObjectEmbeddingSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.object_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="object_segmentation_sensor",
+    node=ObjectSegmentationSensorConfig,
+)
 
 # Task Measurements
 cs.store(
@@ -1537,6 +1622,12 @@ cs.store(
     group="habitat/task/measurements",
     name="obj_at_goal",
     node=ObjAtGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.obj_anywhere_on_goal",
+    group="habitat/task/measurements",
+    name="obj_anywhere_on_goal",
+    node=ObjAnywhereOnGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.place_success",

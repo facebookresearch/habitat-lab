@@ -25,6 +25,10 @@ import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+from habitat.datasets.rearrange.samplers.receptacle import (
+    AABBReceptacle,
+    find_receptacles,
+)
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -107,6 +111,22 @@ class RearrangeSim(HabitatSim):
         self.ctrl_arm = True
 
         self.robots_mgr = RobotManager(self.habitat_config, self)
+
+        receptacles = find_receptacles(self)
+
+        # all sampling volumes in a receptacle object
+        self.recep_sampling_volumes = defaultdict(list)
+        self.recep_handle_to_category = defaultdict(str)
+        self.receptacles = {}
+        for r in receptacles:
+            if isinstance(r, AABBReceptacle):
+                self.recep_sampling_volumes[r.parent_object_handle].append(
+                    r.bounds
+                )
+                self.recep_handle_to_category[
+                    r.parent_object_handle
+                ] = r.category
+                self.receptacles[r.name] = r
 
     @property
     def robot(self):
@@ -266,6 +286,11 @@ class RearrangeSim(HabitatSim):
             self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
+        rom = self.get_rigid_object_manager()
+        for i, handle in enumerate(rom.get_object_handles()):
+            obj = rom.get_object_by_handle(handle)
+            for node in obj.visual_scene_nodes:
+                node.semantic_id = obj.object_id
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:

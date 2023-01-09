@@ -6,6 +6,7 @@
 
 import os
 import random
+import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
@@ -33,6 +34,7 @@ class Receptacle(ABC):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
+        category: Optional[str] = None,
     ):
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -51,6 +53,7 @@ class Receptacle(ABC):
         self.up_axis = nonzero_indices[0]
         self.parent_object_handle = parent_object_handle
         self.parent_link = parent_link
+        self.category = category
 
     @property
     def is_parent_object_articulated(self):
@@ -158,6 +161,7 @@ class AABBReceptacle(Receptacle):
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
         rotation: Optional[mn.Quaternion] = None,
+        category: Optional[str] = None,
     ) -> None:
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -167,7 +171,7 @@ class AABBReceptacle(Receptacle):
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
-        super().__init__(name, parent_object_handle, parent_link, up)
+        super().__init__(name, parent_object_handle, parent_link, up, category)
         self.bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
 
@@ -294,6 +298,7 @@ class TriangleMeshReceptacle(Receptacle):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
+        category: Optional[str] = None,
     ) -> None:
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -301,7 +306,7 @@ class TriangleMeshReceptacle(Receptacle):
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         """
-        super().__init__(name, parent_object_handle, parent_link, up)
+        super().__init__(name, parent_object_handle, parent_link, up, category)
         self.mesh_data = mesh_data
         self.area_weighted_accumulator = (
             []
@@ -583,6 +588,18 @@ def parse_receptacles_from_user_config(
             )
             receptacle_scale = ao_uniform_scaling * sub_config.get("scale")
 
+            category = None
+            if sub_config.has_value("category"):
+                category = sub_config.get("category")
+            elif parent_object_handle is not None:
+                category = re.sub(
+                    r"_[0-9]+",
+                    "",
+                    parent_object_handle.split(":")[0][:-1].replace(
+                        "frl_apartment_", ""
+                    ),
+                )
+
             if aabb_receptacle_id_string in sub_config_key:
                 receptacles.append(
                     AABBReceptacle(
@@ -595,6 +612,7 @@ def parse_receptacles_from_user_config(
                         up=up,
                         parent_object_handle=parent_object_handle,
                         parent_link=parent_link_ix,
+                        category=category,
                     )
                 )
             elif mesh_receptacle_id_string in sub_config_key:
@@ -614,6 +632,7 @@ def parse_receptacles_from_user_config(
                         up=up,
                         parent_object_handle=parent_object_handle,
                         parent_link=parent_link_ix,
+                        category=category,
                     )
                 )
             else:

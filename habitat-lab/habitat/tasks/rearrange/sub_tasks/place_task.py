@@ -23,6 +23,14 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             and action_args["grip_action"] >= 0
         )
 
+    def get_spawn_recs(self, sim, episode):
+        # TODO: handle this for geometric place (currently using biased_init=True for geometric place)
+        return [
+            r
+            for r, rec in sim.receptacles.items()
+            if episode.goal_recep_category == rec.category
+        ]
+
     def reset(self, episode: Episode):
         sim = self._sim
         # Remove whatever the agent is currently holding.
