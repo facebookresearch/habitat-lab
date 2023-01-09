@@ -43,7 +43,7 @@ class EvalEnvWrapper(Env):
             else torch.device(f"cuda:{self.sim.gpu_device}")
         )
         self.max_steps = config.AGENT.max_steps
-        self.num_sem_categories = config.ENVIRONMENT.num_sem_categories
+        self.num_sem_categories = config.AGENT.SEMANTIC_MAP.num_sem_categories
         if config.AGENT.panorama_start:
             self.panorama_start_steps = int(360 / config.ENVIRONMENT.turn_angle)
         else:
@@ -113,15 +113,7 @@ class EvalEnvWrapper(Env):
             dump_location=config.DUMP_LOCATION,
             exp_name=config.EXP_NAME,
         )
-        self.visualizer = ObjectNavVisualizer(
-            num_sem_categories=config.ENVIRONMENT.num_sem_categories,
-            map_size_cm=config.AGENT.SEMANTIC_MAP.map_size_cm,
-            map_resolution=config.AGENT.SEMANTIC_MAP.map_resolution,
-            show_images=config.VISUALIZE,
-            print_images=config.PRINT_IMAGES,
-            dump_location=config.DUMP_LOCATION,
-            exp_name=config.EXP_NAME,
-        )
+        self.visualizer = Visualizer(config)
         self.obs_preprocessor = ObsPreprocessor(config, 1, self.device)
 
         self.scene_id = None
