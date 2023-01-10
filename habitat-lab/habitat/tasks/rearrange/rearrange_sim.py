@@ -622,9 +622,15 @@ class RearrangeSim(HabitatSim):
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
         robot = self.get_robot_data(agent_id).robot
         rotation = mn.Quaternion.rotation(
-            mn.Rad(robot.base_rot) - mn.Rad(np.pi / 2), mn.Vector3(0, 1, 0)
+            mn.Rad(robot.base_rot) - mn.Rad(0 * np.pi / 2), mn.Vector3(0, 1, 0)
         )
-        return AgentState(robot.base_pos, quat_from_magnum(rotation))
+        rot_offset = mn.Quaternion.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(0, 1, 0)
+        )
+        return AgentState(
+            robot.base_pos,
+            quat_from_magnum(robot.sim_obj.rotation * rot_offset),
+        )
 
     def set_agent_state(
         self,
