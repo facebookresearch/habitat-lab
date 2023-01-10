@@ -940,25 +940,19 @@ class PPOTrainer(BaseRLTrainer):
         with read_write(config):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
-        if (
-            len(config.habitat_baselines.video_render_views) > 0
-            and len(self.config.habitat_baselines.eval.video_option) > 0
-        ):
+        if len(self.config.habitat_baselines.eval.video_option) > 0:
             agent_config = get_agent_config(config.habitat.simulator)
             agent_sensors = agent_config.sim_sensors
-            render_view_uuids = [
-                agent_sensors[render_view].uuid
-                for render_view in config.habitat_baselines.video_render_views
-                if render_view in agent_sensors
-            ]
-            assert len(render_view_uuids) > 0, (
-                f"Missing render sensors in agent config: "
-                f"{config.habitat_baselines.video_render_views}."
-            )
+            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+            with read_write(agent_sensors):
+                agent_sensors.update(extra_sensors)
             with read_write(config):
-                for render_view_uuid in render_view_uuids:
-                    if render_view_uuid not in config.habitat.gym.obs_keys:
-                        config.habitat.gym.obs_keys.append(render_view_uuid)
+                if config.habitat.gym.obs_keys is not None:
+                    for render_view in extra_sensors.values():
+                        if render_view.uuid not in config.habitat.gym.obs_keys:
+                            config.habitat.gym.obs_keys.append(
+                                render_view.uuid
+                            )
                 config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
