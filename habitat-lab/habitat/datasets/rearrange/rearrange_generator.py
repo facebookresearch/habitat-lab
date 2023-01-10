@@ -470,7 +470,7 @@ class RearrangeEpisodeGenerator:
         rom = self.sim.get_rigid_object_manager()
         self.existing_rigid_objects = set(rom.get_object_handles())
 
-        scene_name = ep_scene_handle.split(".")[0]
+        scene_name = osp.basename(ep_scene_handle).split(".")[0]
         navmesh_path = osp.join(
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
         )
