@@ -886,8 +886,8 @@ class TopDownMap(Measure):
             "agent_angle": map_angles,
         }
 
-    @classmethod
-    def get_polar_angle(cls, agent_state):
+    @staticmethod
+    def get_polar_angle(agent_state):
         # quaternion is in x, y, z, w format
         ref_rotation = agent_state.rotation
         heading_vector = quaternion_rotate_vector(

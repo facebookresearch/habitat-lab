@@ -15,7 +15,6 @@ defaults:
     - robot_colls
     - composite_success
     - num_steps
-    - top_down_map
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
