@@ -948,10 +948,10 @@ class PPOTrainer(BaseRLTrainer):
                 agent_sensors.update(extra_sensors)
             with read_write(config):
                 if config.habitat.gym.obs_keys is not None:
-                    for render_view_uuid in extra_sensors.keys():
-                        if render_view_uuid not in config.habitat.gym.obs_keys:
+                    for render_view in extra_sensors.values():
+                        if render_view.uuid not in config.habitat.gym.obs_keys:
                             config.habitat.gym.obs_keys.append(
-                                render_view_uuid
+                                render_view.uuid
                             )
                 config.habitat.simulator.debug_render = True
 
