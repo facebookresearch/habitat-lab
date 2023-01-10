@@ -68,7 +68,7 @@ class RearrangeGraspManager:
         Returns true if the object is too far away from the gripper, meaning
         the agent violated the hold constraint.
         """
-        ee_pos = self._managed_robot.ee_transform_hand(self.ee_index).translation
+        ee_pos = self._managed_robot.ee_transform.translation
         if self._snapped_obj_id is not None and (
             np.linalg.norm(ee_pos - self.snap_rigid_obj.translation)
             >= self._config.hold_thresh
@@ -279,7 +279,7 @@ class RearrangeGraspManager:
             rel_T = mn.Matrix4.identity_init()
 
         self.snap_rigid_obj.transformation = (
-            self._managed_robot.ee_transform_hand(self.ee_index) @ rel_T
+            self._managed_robot.ee_transform @ rel_T
         )
 
     def snap_to_obj(

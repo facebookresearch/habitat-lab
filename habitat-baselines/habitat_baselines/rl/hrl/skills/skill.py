@@ -159,7 +159,7 @@ class SkillPolicy(Policy):
         """
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
-        )
+        ).cpu()
         if is_skill_done.sum() > 0:
             self._internal_log(
                 f"Requested skill termination {is_skill_done}",
@@ -180,9 +180,9 @@ class SkillPolicy(Policy):
         if self._config.max_skill_steps > 0:
             over_max_len = cur_skill_step > self._config.max_skill_steps
             if self._config.force_end_on_timeout:
-                bad_terminate = over_max_len
+                bad_terminate = over_max_len.cpu()
             else:
-                is_skill_done = is_skill_done | over_max_len
+                is_skill_done = is_skill_done | over_max_len.cpu()
 
         for i, env_i in enumerate(batch_idx):
             if self._delay_term[env_i]:
@@ -199,8 +199,7 @@ class SkillPolicy(Policy):
                 self._delay_term[env_i] = True
                 is_skill_done[i] = 0.0
         
-        is_skill_done = is_skill_done.to(hl_says_term.device)
-        is_skill_done |= hl_says_term
+        is_skill_done |= hl_says_term.cpu()
 
         if bad_terminate.sum() > 0:
             self._internal_log(

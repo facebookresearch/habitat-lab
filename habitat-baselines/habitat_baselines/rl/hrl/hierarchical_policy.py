@@ -218,7 +218,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             masks,
             self._cur_skills,
             log_info,
-        )
+        ).cpu()
         # Compute the actions from the current skills
         actions = torch.zeros(
             (self._num_envs, get_num_actions(self._action_space)),

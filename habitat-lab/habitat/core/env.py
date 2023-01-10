@@ -131,16 +131,18 @@ class Env:
         )
         self.action_space = self._task.action_space
 
-        config_human = config.simulator.agents.main_agent
-        human_controller = amass_human_controller.AmassHumanController(
-            urdf_path=config_human.robot_urdf,
-            amass_path=config_human.amass_path,
-            body_model_path=config_human.body_model_path,
-            grab_path=config_human.grab_path,
-            draw_fps=config_human.draw_fps_human
-        )
-        if 'human_nav_action' in self.task.actions:
-            self.task.actions['human_nav_action'].human_controller = human_controller
+
+        if 'human_type' in config.simulator.agents.main_agent:
+            config_human = config.simulator.agents.main_agent
+            human_controller = amass_human_controller.AmassHumanController(
+                urdf_path=config_human.robot_urdf,
+                amass_path=config_human.amass_path,
+                body_model_path=config_human.body_model_path,
+                grab_path=config_human.grab_path,
+                draw_fps=config_human.draw_fps_human
+            )
+            if 'human_nav_action' in self.task.actions:
+                self.task.actions['human_nav_action'].human_controller = human_controller
 
         self._max_episode_seconds = (
             self._config.environment.max_episode_seconds

@@ -106,11 +106,12 @@ class RearrangeSim(HabitatSim):
         # some scene sensing (used in the sense phase of the sense-plan act
         # architecture).
         self.ctrl_arm = True
-
-        # self.robots_mgr = RobotManager(self.habitat_config, self)
-        # breakpoint()
-        self.humans_mgr = HumanoidManager(self.habitat_config, self)
-        self.robots_mgr = self.humans_mgr
+        if 'human_type' not in self.habitat_config.agents.main_agent:
+            self.robots_mgr = RobotManager(self.habitat_config, self)
+            self.humans_mgr = None
+        else:
+            self.humans_mgr = HumanoidManager(self.habitat_config, self)
+            self.robots_mgr = self.humans_mgr
 
     @property
     def robot(self):
@@ -214,7 +215,8 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         self.robots_mgr.reconfigure(new_scene)
-        self.humans_mgr.reconfigure(new_scene)
+        if self.humans_mgr is not None:
+            self.humans_mgr.reconfigure(new_scene)
         
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info["rigid_objs"]]
