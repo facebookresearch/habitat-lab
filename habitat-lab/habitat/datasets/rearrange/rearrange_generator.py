@@ -308,6 +308,7 @@ class RearrangeEpisodeGenerator:
         self._ao_state_samplers: Dict[
             str, samplers.ArticulatedObjectStateSampler
         ] = {}
+        self.ao_states: Dict[str, Dict[int, float]] = {}
         for ao_info in self.cfg.ao_state_samplers:
             assert "name" in ao_info
             assert "type" in ao_info
@@ -778,9 +779,9 @@ class RearrangeEpisodeGenerator:
         else:
             if self.sim.config.sim_cfg.scene_id == scene_name:
                 rom = self.sim.get_rigid_object_manager()
-                for object in rom.get_object_handles():
-                    if object not in self.existing_rigid_objects:
-                        rom.remove_object_by_handle(object)
+                for obj in rom.get_object_handles():
+                    if obj not in self.existing_rigid_objects:
+                        rom.remove_object_by_handle(obj)
                 aom = self.sim.get_articulated_object_manager()
                 for ao_handle in self.ao_states.keys():
                     aom.get_object_by_handle(ao_handle).clear_joint_states()
