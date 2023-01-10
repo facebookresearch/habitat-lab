@@ -108,7 +108,6 @@ class PointNavResNetPolicy(NetPolicy):
                 )
             )
         )
-        print(">>>>>>", filtered_obs, ignore_names)
         return cls(
             observation_space=filtered_obs,
             action_space=action_space,
