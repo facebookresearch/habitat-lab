@@ -4,12 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
 from hydra.core.config_store import ConfigStore
-from omegaconf import II, MISSING
+from omegaconf import MISSING
 
 from habitat.config.default_structured_configs import SimulatorSensorConfig
 
@@ -333,48 +332,6 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
-class ORBSLAMConfig(HabitatBaselinesBaseConfig):
-    """ORB-SLAM config"""
-
-    slam_vocab_path: str = "habitat_baselines/slambased/data/ORBvoc.txt"
-    slam_settings_path: str = (
-        "habitat_baselines/slambased/data/mp3d3_small1k.yaml"
-    )
-    map_cell_size: float = 0.1
-    map_size: int = 40
-    # camera_height = (
-    #     get_task_config().habitat.simulator.depth_sensor.position[1]
-    # )
-    camera_height: float = II("habitat.simulator.depth_sensor.position[1]")
-    beta: int = 100
-    # h_obstacle_min = 0.3 * _C.orbslam2.camera_height
-    h_obstacle_min: float = 0.3 * 1.25
-    # h_obstacle_max = 1.0 * _C.orbslam2.camera_height
-    h_obstacle_max = 1.0 * 1.25
-    d_obstacle_min: float = 0.1
-    d_obstacle_max: float = 4.0
-    preprocess_map: bool = True
-    # Note: hydra does not support basic operators in interpolations of numbers
-    # see https://github.com/omry/omegaconf/issues/91 for more details
-    # min_pts_in_obstacle = (
-    #     get_task_config().habitat.simulator.depth_sensor.width / 2.0
-    # )
-    # Workaround for the operation above:
-    # (640 is the default habitat depth sensor width)
-    min_pts_in_obstacle: float = 640 / 2.0
-    angle_th: float = math.radians(15)  # float(np.deg2rad(15))
-    dist_reached_th: float = 0.15
-    next_waypoint_th: float = 0.5
-    num_actions: int = 3
-    dist_to_stop: float = 0.05
-    planner_max_steps: int = 500
-    # depth_denorm = (
-    #     get_task_config().habitat.simulator.depth_sensor.max_depth
-    # )
-    depth_denorm: float = II("habitat.simulator.depth_sensor.max_depth")
-
-
-@dataclass
 class ProfilingConfig(HabitatBaselinesBaseConfig):
     capture_start_step: int = -1
     num_steps_to_capture: int = -1
@@ -438,11 +395,6 @@ class HabitatBaselinesILConfig(HabitatBaselinesConfig):
 
 
 @dataclass
-class HabitatBaselinesORBSLAMConfig(HabitatBaselinesConfig):
-    orbslam2: ORBSLAMConfig = ORBSLAMConfig()
-
-
-@dataclass
 class HabitatBaselinesSPAConfig(HabitatBaselinesConfig):
     sense_plan_act: Any = MISSING
 
@@ -452,11 +404,6 @@ cs.store(
     group="habitat_baselines",
     name="habitat_baselines_rl_config_base",
     node=HabitatBaselinesRLConfig(),
-)
-cs.store(
-    group="habitat_baselines",
-    name="habitat_baselines_orbslam2_config_base",
-    node=HabitatBaselinesORBSLAMConfig,
 )
 cs.store(
     group="habitat_baselines",
