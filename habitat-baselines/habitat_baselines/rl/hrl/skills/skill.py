@@ -38,7 +38,7 @@ class SkillPolicy(Policy):
             None for _ in range(self._batch_size)
         ]
 
-        if "pddl_apply_action" in action_space:
+        if "pddl_apply_action" in list(action_space.keys()):
             self._pddl_ac_start, _ = find_action_range(
                 action_space, "pddl_apply_action"
             )
