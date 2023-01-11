@@ -54,15 +54,30 @@ DEFAULT_STRETCH_URDF = "assets/hab_stretch/urdf/stretch_dex_wrist_simplified.urd
 PLANNER_STRETCH_URDF = "assets/hab_stretch/urdf/planner_calibrated.urdf"
 STRETCH_HOME_Q = np.array(
     [
-        0,
-        0,
-        0,
-        0.2,
-        0.057,  # lift, arm
-        0.0,  # gripper
+        0,  # x
+        0,  # y
+        0,  # theta
+        0.2,  # lift
+        0.057,  # arm
+        0.0,  # gripper rpy
         0.0,
         0.0,
         3.0,  # wrist,
+        0.0,
+        0.0,
+    ]
+)
+STRETCH_PREGRASP_Q = np.array(
+    [
+        0,  # x
+        0,  # y
+        0,  # theta
+        0.6,  # lift
+        0.06,  # arm
+        0.0,  # gripper rpy
+        3.14,  # wrist roll
+        -1.57,  # wrist pitch
+        0.0,  # wrist yaw
         0.0,
         0.0,
     ]
@@ -72,8 +87,10 @@ STRETCH_HOME_Q = np.array(
 STRETCH_GRASP_FRAME = "link_straight_gripper"
 STRETCH_STANDOFF_DISTANCE = 0.235
 STRETCH_STANDOFF_WITH_MARGIN = 0.25
+# Offset from a predicted grasp point to STRETCH_GRASP_FRAME
 STRETCH_GRASP_OFFSET = np.eye(4)
 STRETCH_GRASP_OFFSET[:3, 3] = np.array([0, 0, -1 * STRETCH_STANDOFF_DISTANCE])
+# Offset from STRETCH_GRASP_FRAME to predicted grasp point
 STRETCH_TO_GRASP = np.eye(4)
 STRETCH_TO_GRASP[:3, 3] = np.array([0, 0, STRETCH_STANDOFF_DISTANCE])
 STRETCH_GRIPPER_OPEN = 0.22
@@ -491,7 +508,24 @@ class HelloStretch(Robot):
     def lift_arm_ik_from_matrix(self, pose_matrix, q0):
         end_arm_idx = 3 + self.lift_arm_ik_solver.number_of_joints
         q0 = self._to_ik_format(q0)
+        ee_pose = self.get_ee_pose()
+        print(ee_pose[0])
+        print(ee_pose[1])
+        print(pose_matrix[:3, 3])
+        w, x, y, z = tra.quaternion_from_matrix(pose_matrix)
+        print([x, y, z, w])
+        print("----------------")
+
         q = self.lift_arm_ik_solver.ik(pose_matrix, q0[3:end_arm_idx])
+
+        se3 = pb.getMatrixFromQuaternion(ee_pose[1])
+        pose2 = np.eye(4)
+        pose2[:3, :3] = np.array(se3).reshape(3, 3)
+        pose2[:3, 3] = np.array(ee_pose[0])
+        q2 = self.lift_arm_ik_solver.ik(pose2, q0[3:end_arm_idx])
+        print(q)
+        print(q2)
+
         if q is not None:
             res = q0.copy()
             res[3:end_arm_idx] = q

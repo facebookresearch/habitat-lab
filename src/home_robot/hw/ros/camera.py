@@ -100,13 +100,32 @@ class RosCamera(Camera):
     def get_K(self):
         return self.K.copy()
 
+    def get_info(self):
+        return {
+            "D": self.D,
+            "K": self.K,
+            "fx": self.fx,
+            "fy": self.fy,
+            "px": self.px,
+            "py": self.py,
+            "near_val": self.near_val,
+            "far_val": self.far_val,
+            "R": self.R,
+            "P": self.P,
+            "height": self.height,
+            "width": self.width,
+        }
+
     def __init__(
         self, name="/camera/color", verbose=True, flipxy=False, buffer_size=None
     ):
         self.name = name
         self._img = None
         self._lock = threading.Lock()
-        cam_info = rospy.wait_for_message(name + "/camera_info", CameraInfo)
+        self._camera_info_topic = name + "/camera_info"
+        print("Waiting for camera info on", self._camera_info_topic + "...")
+        cam_info = rospy.wait_for_message(self._camera_info_topic, CameraInfo)
+        print(cam_info)
         self.buffer_size = buffer_size
         if self.buffer_size is not None:
             # create buffer
@@ -115,11 +134,15 @@ class RosCamera(Camera):
         self.width = cam_info.width
         self.pos, self.orn, self.pose_matrix = None, None, None
         # Get camera information and save it here
+        self.distortion_model = cam_info.distortion_model
+        self.D = np.array(cam_info.D)  # Distortion parameters
         self.K = np.array(cam_info.K).reshape(3, 3)
         self.fx = self.K[0, 0]
         self.fy = self.K[1, 1]
         self.px = self.K[0, 2]
         self.py = self.K[1, 2]
+        self.R = np.array(cam_info.R).reshape(3, 3)  # Rectification matrix
+        self.P = np.array(cam_info.P).reshape(3, 4)  # Projection/camera matrix
         self.near_val = 0.1
         self.far_val = 5.0
         if verbose:
@@ -129,4 +152,7 @@ class RosCamera(Camera):
             print(cam_info)
             print("---------------")
         self.frame_id = cam_info.header.frame_id
-        self._sub = rospy.Subscriber(name + "/image_raw", Image, self._cb, queue_size=1)
+        self.topic_name = name + "/image_raw"
+        self._sub = rospy.Subscriber(self.topic_name, Image, self._cb, queue_size=10)
+        print("Waiting for", self.topic_name)
+        self.wait_for_image()

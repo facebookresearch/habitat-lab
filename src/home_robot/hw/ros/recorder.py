@@ -4,9 +4,9 @@ import h5py
 
 from tqdm import tqdm
 
-from home_robot.hardware.stretch_ros import HelloStretchROSInterface
-from data_tools.writer import DataWriter
-from data_tools.image import img_from_bytes
+from home_robot.hw.ros.stretch_ros import HelloStretchROSInterface
+from home_robot.utils.data_tools.writer import DataWriter
+from home_robot.utils.data_tools.image import img_from_bytes
 
 import argparse
 import cv2
@@ -15,27 +15,68 @@ import cv2
 class Recorder(object):
     """ROS object that subscribes from information from the robot and publishes it out."""
 
-    def __init__(self, filename, *args, **kwargs):
+    def __init__(self, filename, start_recording=True, model=None, robot=None):
         """Collect information"""
         print("robot")
-        self.robot = HelloStretchROSInterface(visualize_planner=False)
+        self.robot = (
+            HelloStretchROSInterface(visualize_planner=False, model=model)
+            if robot is None
+            else robot
+        )
+        print("done")
         print("done")
         self.rgb_cam = self.robot.rgb_cam
         self.dpt_cam = self.robot.dpt_cam
         self.writer = DataWriter(filename)
         self.idx = 0
+        self._recording_started = False
+
+    def start_recording(self):
+        print("Starting to record...")
+        self._recording_started = True
+
+    def finish_recording(self):
+        print("... done recording.")
+        self.writer.write_trial(self.idx)
+        self.idx += 1
+
+    def _construct_camera_info(self, camera):
+        return {
+            "distortion_model": camera.distortion_model,
+            "D": camera.D,
+            "K": camera.K,
+            "R": camera.R,
+            "P": camera.P,
+        }
+
+    def save_frame(self):
+        # record rgb and depth
+        rgb, depth = self.robot.get_images(compute_xyz=False)
+        q, dq = self.robot.update()
+        color_camera_info = self._construct_camera_info(self.robot.rgb_cam)
+        depth_camera_info = self._construct_camera_info(self.robot.dpt_cam)
+        camera_pose = self.robot.get_camera_pose()
+        self.writer.add_img_frame(rgb=rgb, depth=(depth * 10000).astype(np.uint16))
+        self.writer.add_frame(
+            q=q,
+            dq=dq,
+            color_camera_info=color_camera_info,
+            depth_camera_info=depth_camera_info,
+            camera_pose=camera_pose,
+        )  # TODO: camera info every frame...? Probably not necessary
+
+        return rgb, depth, q, dq
 
     def spin(self, rate=10):
         rate = rospy.Rate(rate)
         while not rospy.is_shutdown():
-            print("...")
-            # record rgb and depth
-            rgb, depth = self.robot.get_images(filter_depth=False, compute_xyz=False)
-            q, dq = self.robot.update()
-            self.writer.add_img_frame(rgb=rgb, depth=(depth * 10000).astype(np.uint16))
-            self.writer.add_frame(q=q, dq=dq)
-        self.writer.write_trial(self.idx)
-        self.idx += 1
+            if not self._recording_started:
+                print("...")
+                rate.sleep()
+                continue
+            self.save_frame()
+            rate.sleep()
+        self.finish_recording()
 
 
 def png_to_mp4(group: h5py.Group, key: str, name: str, fps=10):

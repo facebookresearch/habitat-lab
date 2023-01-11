@@ -62,7 +62,13 @@ class PbObject(object):
         self.assets_path = assets_path
         if self.assets_path is not None:
             pb.setAdditionalSearchPath(assets_path)
-        self.id = pb.loadURDF(filename, start_pos, start_rot, useFixedBase=static)
+        self.id = pb.loadURDF(
+            filename,
+            start_pos,
+            start_rot,
+            useFixedBase=static,
+            physicsClientId=self.client,
+        )
 
     def set_pose(self, pos, rot):
         pb.resetBasePositionAndOrientation(

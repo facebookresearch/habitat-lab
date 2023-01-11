@@ -20,19 +20,21 @@ def get_pcd(xyz, rgb=None):
     return pcd
 
 
-def show_point_cloud(xyz, rgb=None, orig=None, R=None, save=None, grasps=[]):
+def show_point_cloud(xyz, rgb=None, orig=None, R=None, save=None, grasps=None):
     # http://www.open3d.org/docs/0.9.0/tutorial/Basic/working_with_numpy.html
     if rgb is not None:
         rgb = rgb.reshape(-1, 3)
-    #    if np.any(rgb > 1):
-    #        print("WARNING: rgb values too high! Normalizing...")
-    #        rgb = rgb / np.max(rgb)
+        if np.any(rgb > 1):
+            print("WARNING: rgb values too high! Normalizing...")
+            rgb = rgb / np.max(rgb)
 
     pcd = get_pcd(xyz, rgb)
     show_pcd(pcd, orig, R, save, grasps)
 
 
-def show_pcd(pcd, orig=None, R=None, save=None, grasps=[]):
+def show_pcd(pcd, orig=None, R=None, save=None, grasps=None):
+    """Visualize a point cloud from Open3d, with some optional helpers for visualizing extras
+    like origin cooridnate frame or grasp locations."""
     geoms = [pcd]
     if orig is not None:
         coords = o3d.geometry.TriangleMesh.create_coordinate_frame(
@@ -41,12 +43,15 @@ def show_pcd(pcd, orig=None, R=None, save=None, grasps=[]):
         if R is not None:
             coords = coords.rotate(R)
         geoms.append(coords)
-    for grasp in grasps:
-        coords = o3d.geometry.TriangleMesh.create_coordinate_frame(
-            size=0.05, origin=grasp[:3, 3]
-        )
-        coords = coords.rotate(grasp[:3, :3])
-        geoms.append(coords)
+    if grasps is not None:
+        # If we were given grasps to visualize, then visualize them
+        # Otherwise we can skip this part
+        for grasp in grasps:
+            coords = o3d.geometry.TriangleMesh.create_coordinate_frame(
+                size=0.05, origin=grasp[:3, 3]
+            )
+            coords = coords.rotate(grasp[:3, :3])
+            geoms.append(coords)
     viz = o3d.visualization.Visualizer()
     viz.create_window()
     for geom in geoms:
@@ -255,8 +260,8 @@ def add_multiplicative_noise(depth_img, gamma_shape=10000, gamma_scale=0.0001):
 
 def add_additive_noise_to_xyz(
     xyz_img,
-    gp_rescale_factor_range=[12, 20],
-    gaussian_scale_range=[0.0, 0.003],
+    gp_rescale_factor_range=(12, 20),
+    gaussian_scale_range=(0.0, 0.003),
     valid_mask=None,
 ):
     """Add (approximate) Gaussian Process noise to ordered point cloud
@@ -339,51 +344,3 @@ def dropout_random_ellipses(
         depth_img[mask == 1] = 0
 
     return depth_img
-
-
-def get_xyz_coordinates(
-    depth: Tensor, mask: Tensor, pose: Tensor, inv_intrinsics: Tensor
-) -> Tensor:
-    """Returns the XYZ coordinates for a posed RGBD image.
-
-    Args:
-        depth: The depth tensor, with shape (B, 1, H, W)
-        mask: The mask tensor, with the same shape as the depth tensor,
-            where True means that the point should be masked (not included)
-        inv_intrinsics: The inverse intrinsics, with shape (B, 3, 3)
-        pose: The poses, with shape (B, 4, 4)
-
-    Returns:
-        XYZ coordinates, with shape (N, 3) where N is the number of points in
-        the depth image which are unmasked
-    """
-
-    bsz, _, height, width = depth.shape
-    flipped_mask = ~mask
-
-    # Gets the pixel grid.
-    xs, ys = torch.meshgrid(
-        torch.arange(0, width), torch.arange(0, height), indexing="xy"
-    )
-    xy = torch.stack([xs, ys], dim=-1)[None, :, :].repeat_interleave(bsz, dim=0)
-    xy = xy[flipped_mask.squeeze(1)]
-    xyz = torch.cat((xy, torch.ones_like(xy[..., :1])), dim=-1)
-
-    # Associates poses and intrinsics with XYZ coordinates.
-    inv_intrinsics = inv_intrinsics[:, None, None, :, :].expand(
-        bsz, height, width, 3, 3
-    )[flipped_mask.squeeze(1)]
-    pose = pose[:, None, None, :, :].expand(bsz, height, width, 4, 4)[
-        flipped_mask.squeeze(1)
-    ]
-    depth = depth[flipped_mask]
-
-    # Applies intrinsics and extrinsics.
-    xyz = xyz.to(inv_intrinsics).unsqueeze(1) @ inv_intrinsics
-    xyz = xyz * depth[:, None, None]
-    xyz = (xyz[..., None, :] * pose[..., None, :3, :3]).sum(dim=-1) + pose[
-        ..., None, :3, 3
-    ]
-    xyz = xyz.squeeze(1)
-
-    return xyz
