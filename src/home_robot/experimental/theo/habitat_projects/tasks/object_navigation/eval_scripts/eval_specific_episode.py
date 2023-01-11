@@ -35,7 +35,7 @@ def reset_to_episode(env: Env, scene_id: str, episode_id: str) -> Observations:
     episode = [
         e
         for e in env.episodes
-        if e.episode_id == episode_id and e.scene_id.endswith(f"{scene_id}.basis.glb")
+        if e.episode_id == episode_id and scene_id in e.scene_id
     ][0]
     env._current_episode = episode
 
@@ -71,11 +71,10 @@ if __name__ == "__main__":
     agent = ObjectNavAgent(config=config)
     env = Env(config=config.TASK_CONFIG)
 
-    # scene_id = "ziup5kvtCCR"
-    # episode_id = "2"
-    # obs = reset_to_episode(env, scene_id, episode_id)
-    obs = env.reset()
-    obs = env.reset()
+    scene_id = "102343992"
+    episode_id = "1446"
+    obs = reset_to_episode(env, scene_id, episode_id)
+    # obs = env.reset()
 
     agent.reset(env)
     # agent.set_vis_dir(scene_id=scene_id, episode_id=episode_id)

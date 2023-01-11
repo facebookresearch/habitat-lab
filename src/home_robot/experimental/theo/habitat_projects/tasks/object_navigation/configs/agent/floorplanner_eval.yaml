@@ -6,7 +6,7 @@ DUMP_LOCATION: home_robot/experimental/theo/habitat_projects/tasks/object_naviga
 EXP_NAME: eval_floorplanner       # experiment name
 VISUALIZE: 0              # 1: render observation and predicted semantic map, 0: no visualization
 PRINT_IMAGES: 1           # 1: save visualization as images, 0: no image saving
-GROUND_TRUTH_SEMANTICS: 0 # 1: use ground-truth semantics (for debugging / ablations)
+GROUND_TRUTH_SEMANTICS: 1 # 1: use ground-truth semantics (for debugging / ablations)
 
 ENVIRONMENT:
   turn_angle: 30.0        # agent turn angle (in degrees)
