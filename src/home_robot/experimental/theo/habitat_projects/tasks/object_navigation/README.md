@@ -13,12 +13,11 @@ git clone git@github.com:cpaxton/home-robot-dev.git
 cd home-robot-dev
 git checkout lang-rearrange-baseline
 
-conda create -n home-robot python=3.10 cmake pytorch -y
+conda create -n home-robot python=3.10 cmake pytorch pytorch-cuda=11.7 -c pytorch -c nvidia -y
 conda activate home-robot
 
-git clone https://github.com/3dlg-hcvc/habitat-sim/tree/floorplanner
+git clone https://github.com/3dlg-hcvc/habitat-sim --branch floorplanner
 cd habitat-sim
-git checkout floorplanner
 pip install -r requirements.txt
 python setup.py install --headless
 # (if the above commands runs out of memory) 
@@ -70,6 +69,8 @@ wget https://www.dropbox.com/s/hbpipa4bslussad/val_6_categories.zip -O src/home_
 unzip src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/val_6_categories.zip -d src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/val_6categories
 wget https://www.dropbox.com/s/x2cid4m01a8glci/val_33_categories.zip -O src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/val_33_categories.zip
 unzip src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/val_33_categories.zip -d src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/objectgoal_floorplanner_33categories
+wget https://www.dropbox.com/s/hia29wa9crv4ytj/val_receptacles_only.zip -O src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/val_receptacle_categories.zip
+unzip src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/val_receptacle_categories.zip -d src/home_robot/experimental/theo/habitat_projects/datasets/episode_datasets/objectgoal_floorplanner_receptacle_categories
 ```
 
 [TEMPORARY] Floorplanner dataset episodes need to point to the right scene dataset config for scenes to load correctly:
@@ -103,13 +104,6 @@ wget https://dl.fbaipublicfiles.com/detic/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_f
 # Test it with
 wget https://web.eecs.umich.edu/~fouhey/fun/desk/desk.jpg
 python demo.py --config-file configs/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.yaml --input desk.jpg --output out.jpg --vocabulary lvis --opts MODEL.WEIGHTS models/Detic_LCOCOI21k_CLIP_SwinB_896b32_4x_ft4x_max-size.pth
-```
-
-[Optional]: If you face issues with torch's installation, uninstalling and re-installing using conda can help:
-
-```
-pip uninstall torch torch-vision
-conda install pytorch torchvision pytorch-cuda=11.7 -c pytorch -c nvidia
 ```
 
 ## Run

@@ -235,7 +235,8 @@ class ObsPreprocessor:
             semantic = torch.from_numpy(
                 np.stack([ob["semantic"] for ob in obs]).squeeze(-1).astype(np.int64)
             ).to(self.device)
-            semantic = self.semantic_category_mapping.instance_id_to_category_id[semantic]
+            instance_id_to_category_id = self.semantic_category_mapping.instance_id_to_category_id.to(self.device)
+            semantic = instance_id_to_category_id[semantic]
             semantic = self.one_hot_encoding[semantic]
 
             # Also need depth filtering on ground-truth segmentation
