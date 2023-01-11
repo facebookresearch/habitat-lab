@@ -6,10 +6,12 @@ from habitat_baselines.rl.hrl.human_skills.oracle_nav_human import OracleNavHuma
 from habitat_baselines.rl.hrl.human_skills.pick import HumanPickSkillPolicy
 from habitat_baselines.rl.hrl.human_skills.place import HumanPlaceSkillPolicy
 from habitat_baselines.rl.hrl.human_skills.wait import HumanWaitSkillPolicy
+from habitat_baselines.rl.hrl.human_skills.noop import NoopHumanSkillPolicy
 
 __all__ = [
     "HumanPickSkillPolicy",
     "HumanPlaceSkillPolicy",
     "HumanWaitSkillPolicy",
-    "OracleNavHumanPolicy"
+    "OracleNavHumanPolicy",
+    "NoopHumanSkillPolicy"
 ]

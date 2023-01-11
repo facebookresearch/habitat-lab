@@ -6,11 +6,10 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
   - /habitat/task/actions:
+    - pddl_apply_action
     - rearrange_stop
     - human_nav_action
     - humanjoint_action
-    - humanpick_action
-    - humanplace_action
   - /habitat/simulator/sim_sensors@sim_sensors.third_rgb_sensor: third_rgb_sensor
   - /habitat_baselines/rl/policy: hierarchical_tp_noop_onav_human
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: depth_head_human_vis

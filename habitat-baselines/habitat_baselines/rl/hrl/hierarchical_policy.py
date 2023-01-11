@@ -37,7 +37,8 @@ from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
     HumanWaitSkillPolicy,
     HumanPickSkillPolicy,
     HumanPlaceSkillPolicy,
-    OracleNavHumanPolicy
+    OracleNavHumanPolicy,
+    NoopHumanSkillPolicy
 )
 
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -245,9 +246,12 @@ class HierarchicalPolicy(nn.Module, Policy):
                 # Policy has not prediced a skill yet.
                 should_terminate[batch_ids] = 1.0
                 continue
+            # TODO: maybe actions should not be assigned here, but this is the only 
+            # way that apply_postconds works
             (
                 should_terminate[batch_ids],
                 bad_should_terminate[batch_ids],
+                actions[batch_ids]
             ) = self._skills[skill_id].should_terminate(
                 **dat,
                 batch_idx=batch_ids,
@@ -257,6 +261,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                     for i in batch_ids
                 ],
             )
+
         self._call_high_level = should_terminate
 
         # Always call high-level if the episode is over.
@@ -281,7 +286,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 deterministic,
                 log_info,
             )
-
+            
             sel_grouped_skills = self._broadcast_skill_ids(
                 new_skills,
                 sel_dat={},
@@ -322,7 +327,8 @@ class HierarchicalPolicy(nn.Module, Policy):
 
             # LL skills are not allowed to terminate the overall episode.
             try:
-                actions[batch_ids] = action_data.actions
+                # Add actions from apply_postcond
+                actions[batch_ids] += action_data.actions
             except:
                 breakpoint()
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states

@@ -39,11 +39,12 @@ class SkillPolicy(Policy):
             None for _ in range(self._batch_size)
         ]
 
-        if "pddl_apply_action" in action_space:
+        if "pddl_apply_action" in list(action_space.keys()):
             self._pddl_ac_start, _ = find_action_range(
                 action_space, "pddl_apply_action"
             )
         else:
+            
             self._pddl_ac_start = None
         self._delay_term: List[Optional[bool]] = [
             None for _ in range(self._batch_size)
@@ -105,6 +106,9 @@ class SkillPolicy(Policy):
         env_i,
         idx,
     ):
+        """
+        Modifies the actions according to the postconditions set in self._pddl_problem.actions[skill_name]
+        """
         skill_args = self._raw_skill_args[env_i]
         action = self._pddl_problem.actions[skill_name]
 
@@ -138,9 +142,8 @@ class SkillPolicy(Policy):
         )
         apply_action = action.clone()
         apply_action.set_param_values(entities)
-
         log_info[env_i]["pddl_action"] = apply_action.compact_str
-        return actions
+        return actions[idx]
 
     def should_terminate(
         self,
@@ -184,6 +187,7 @@ class SkillPolicy(Policy):
             else:
                 is_skill_done = is_skill_done | over_max_len.cpu()
 
+        new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._delay_term[env_i]:
                 self._delay_term[env_i] = False
@@ -193,7 +197,7 @@ class SkillPolicy(Policy):
                 and is_skill_done[i] == 1.0
                 and hl_says_term[i] == 0.0
             ):
-                actions = self._apply_postcond(
+                new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
                 self._delay_term[env_i] = True
@@ -206,8 +210,7 @@ class SkillPolicy(Policy):
                 f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
                 observations,
             )
-
-        return is_skill_done, bad_terminate
+        return is_skill_done, bad_terminate, new_actions
 
     def on_enter(
         self,

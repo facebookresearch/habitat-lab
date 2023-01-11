@@ -39,8 +39,6 @@ habitat_baselines:
   updater_name: "HrlPPO"
   distrib_updater_name: "HrlDDPPO"
   video_fps: 30
-  video_render_views:
-    - "third_rgb_sensor"
   eval_ckpt_path_dir: ""
   num_environments: 3
   writer_type: 'tb'
