@@ -61,10 +61,6 @@ cv2 = try_cv2_import()
 
 MAP_THICKNESS_SCALAR: int = 128
 
-# These metrics are not scalars and cannot be easily reported
-# (unless using videos)
-NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
-
 
 @attr.s(auto_attribs=True, kw_only=True)
 class NavigationGoal:
