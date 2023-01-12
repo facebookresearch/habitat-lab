@@ -24,7 +24,7 @@ import numpy.typing as npt
 import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
-from habitat.core.simulator import Observations
+from habitat.core.simulator import AgentState, Observations
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -43,6 +43,7 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
+from habitat_sim.utils.common import quat_from_magnum
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -617,6 +618,19 @@ class RearrangeSim(HabitatSim):
             else:
                 for grasp_mgr in self.robots_mgr.grasp_iter:
                     grasp_mgr.desnap(True)
+
+    def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
+        robot = self.get_robot_data(agent_id).robot
+        rotation = mn.Quaternion.rotation(
+            mn.Rad(robot.base_rot) - mn.Rad(0 * np.pi / 2), mn.Vector3(0, 1, 0)
+        )
+        rot_offset = mn.Quaternion.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(0, 1, 0)
+        )
+        return AgentState(
+            robot.base_pos,
+            quat_from_magnum(robot.sim_obj.rotation * rot_offset),
+        )
 
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()

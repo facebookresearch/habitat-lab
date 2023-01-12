@@ -22,7 +22,6 @@ from torch.optim.lr_scheduler import LambdaLR
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
-from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
@@ -67,6 +66,11 @@ from habitat_baselines.utils.common import (
     get_num_actions,
     inference_mode,
     is_continuous_action_space,
+)
+from habitat_baselines.utils.info_dict import (
+    NON_SCALAR_METRICS,
+    extract_scalars_from_info,
+    extract_scalars_from_infos,
 )
 
 if TYPE_CHECKING:
@@ -413,45 +417,6 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    @classmethod
-    def _extract_scalars_from_info(
-        cls, info: Dict[str, Any]
-    ) -> Dict[str, float]:
-        result = {}
-        for k, v in info.items():
-            if not isinstance(k, str) or k in NON_SCALAR_METRICS:
-                continue
-
-            if isinstance(v, dict):
-                result.update(
-                    {
-                        k + "." + subk: subv
-                        for subk, subv in cls._extract_scalars_from_info(
-                            v
-                        ).items()
-                        if isinstance(subk, str)
-                        and k + "." + subk not in NON_SCALAR_METRICS
-                    }
-                )
-            # Things that are scalar-like will have an np.size of 1.
-            # Strings also have an np.size of 1, so explicitly ban those
-            elif np.size(v) == 1 and not isinstance(v, str):
-                result[k] = float(v)
-
-        return result
-
-    @classmethod
-    def _extract_scalars_from_infos(
-        cls, infos: List[Dict[str, Any]]
-    ) -> Dict[str, List[float]]:
-
-        results = defaultdict(list)
-        for i in range(len(infos)):
-            for k, v in cls._extract_scalars_from_info(infos[i]).items():
-                results[k].append(v)
-
-        return results
-
     def _compute_actions_and_step_envs(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
         env_slice = slice(
@@ -552,7 +517,7 @@ class PPOTrainer(BaseRLTrainer):
         current_ep_reward = self.current_episode_reward[env_slice]
         self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
         self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-        for k, v_k in self._extract_scalars_from_infos(infos).items():
+        for k, v_k in extract_scalars_from_infos(infos).items():
             v = torch.tensor(
                 v_k,
                 dtype=torch.float,
@@ -1009,9 +974,9 @@ class PPOTrainer(BaseRLTrainer):
         ] = {}  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
-        rgb_frames = [
+        rgb_frames: List[List[np.ndarray]] = [
             [] for _ in range(self.config.habitat_baselines.num_environments)
-        ]  # type: List[List[np.ndarray]]
+        ]
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
@@ -1127,7 +1092,7 @@ class PPOTrainer(BaseRLTrainer):
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
                     frame = overlay_frame(
-                        frame, self._extract_scalars_from_info(infos[i])
+                        frame, extract_scalars_from_info(infos[i])
                     )
                     rgb_frames[i].append(frame)
 
@@ -1137,9 +1102,7 @@ class PPOTrainer(BaseRLTrainer):
                     episode_stats = {
                         "reward": current_episode_reward[i].item()
                     }
-                    episode_stats.update(
-                        self._extract_scalars_from_info(infos[i])
-                    )
+                    episode_stats.update(extract_scalars_from_info(infos[i]))
                     current_episode_reward[i] = 0
                     k = (
                         current_episodes_info[i].scene_id,
@@ -1159,7 +1122,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes_info[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metrics=self._extract_scalars_from_info(infos[i]),
+                            metrics=extract_scalars_from_info(infos[i]),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,

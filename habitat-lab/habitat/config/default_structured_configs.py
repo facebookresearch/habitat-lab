@@ -40,6 +40,7 @@ class EnvironmentConfig(HabitatBaseConfig):
 @dataclass
 class ActionConfig(HabitatBaseConfig):
     type: str = MISSING
+    agent_index: int = 0
 
 
 @dataclass

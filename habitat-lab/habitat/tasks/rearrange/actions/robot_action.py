@@ -19,10 +19,7 @@ class RobotAction(SimulatorTaskAction):
         """
         Underlying robot mananger for the robot instance the action is attached to.
         """
-
-        if "agent" not in self._config or self._config.agent is None:
-            return self._sim.robots_mgr[0]
-        return self._sim.robots_mgr[self._config.agent]
+        return self._sim.robots_mgr[self._config.agent_index]
 
     @property
     def _ik_helper(self):
@@ -52,7 +49,4 @@ class RobotAction(SimulatorTaskAction):
         Returns the action prefix to go in front of sensor / action names if
         there are multiple agents.
         """
-
-        if "agent" in self._config and self._config.agent is not None:
-            return f"agent_{self._config.agent}_"
-        return ""
+        return f"agent_{self._config.agent_index}_"

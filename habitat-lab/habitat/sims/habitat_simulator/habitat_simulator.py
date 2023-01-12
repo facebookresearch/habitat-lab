@@ -580,7 +580,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             original pose and returns false.
         """
         agent = self.get_agent(agent_id)
-        new_state = self.get_agent_state(agent_id)
+        new_state = self.get_agent(agent_id).get_state()
         new_state.position = position
         new_state.rotation = rotation
 

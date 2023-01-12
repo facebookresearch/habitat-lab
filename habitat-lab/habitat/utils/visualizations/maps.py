@@ -414,13 +414,15 @@ def colorize_draw_agent_and_fit_to_height(
     top_down_map = colorize_topdown_map(
         top_down_map, topdown_map_info["fog_of_war_mask"]
     )
-    map_agent_pos = topdown_map_info["agent_map_coord"]
-    top_down_map = draw_agent(
-        image=top_down_map,
-        agent_center_coord=map_agent_pos,
-        agent_rotation=topdown_map_info["agent_angle"],
-        agent_radius_px=min(top_down_map.shape[0:2]) // 32,
-    )
+    for agent_idx in range(len(topdown_map_info["agent_map_coord"])):
+        map_agent_pos = topdown_map_info["agent_map_coord"][agent_idx]
+        map_agent_angle = topdown_map_info["agent_angle"][agent_idx]
+        top_down_map = draw_agent(
+            image=top_down_map,
+            agent_center_coord=map_agent_pos,
+            agent_rotation=map_agent_angle,
+            agent_radius_px=min(top_down_map.shape[0:2]) // 32,
+        )
 
     if top_down_map.shape[0] > top_down_map.shape[1]:
         top_down_map = np.rot90(top_down_map, 1)
