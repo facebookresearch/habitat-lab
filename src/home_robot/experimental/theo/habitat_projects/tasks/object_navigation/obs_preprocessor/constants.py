@@ -21,6 +21,12 @@ hm3d_to_mp3d = {row["category"]: row["mpcat40index"] for _, row in df.iterrows()
 
 
 class SemanticCategoryMapping(ABC):
+    """
+    This class contains a mapping from semantic and goal category IDs provided by
+    a Habitat environment to category IDs stored in the semantic map, as well as
+    the color palettes and legends to visualize these categories.
+    """
+
     def __init__(self):
         pass
 
@@ -108,6 +114,11 @@ mp3d_to_coco = {
 
 
 class HM3DtoCOCOIndoor(SemanticCategoryMapping):
+    """
+    Mapping from category IDs in HM3D ObjectNav scenes/episodes to COCO indoor
+    category IDs.
+    """
+
     def __init__(self):
         super().__init__()
         self.hm3d_goal_id_to_coco_goal_name = {
@@ -236,6 +247,12 @@ mukul_33categories_map_color_palette = [int(x * 255.0) for x in [
 
 
 class FloorplannertoMukulIndoor(SemanticCategoryMapping):
+    """
+    Mapping from category IDs in Floorplanner ObjectNav scenes/episodes to Mukul's 33
+    indoor category IDs (semantic categories currently supported by Floorplanner, likely
+    to evolve).
+    """
+    
     def __init__(self):
         super().__init__()
         self.floorplanner_goal_id_to_goal_name = mukul_33categories_indexes

@@ -82,6 +82,18 @@ def get_parser():
 
 def get_detic(config_file=None, vocabulary="coco", custom_vocabulary="",
               checkpoint_file=None, sem_gpu_id=0, visualize=True):
+    """Load trained Detic model for inference.
+
+    Arguments:
+        config_file: path to model config
+        vocabulary: currently one of "coco" for indoor coco categories or "custom"
+         for a custom set of categories
+        custom_vocabulary: if vocabulary="custom", this should be a comma-separated
+         list of classes (as a single string)
+        checkpoint_file: path to model checkpoint
+        sem_gpu_id: GPU ID to load the model on, -1 for CPU
+        visualize: if True, the model will return inference prediction visualizations
+    """
     assert vocabulary in ["coco", "custom"]
     if config_file is None:
         config_file = str(
@@ -95,7 +107,6 @@ def get_detic(config_file=None, vocabulary="coco", custom_vocabulary="",
         )
     print(f"Loading Detic with config={config_file} and checkpoint={checkpoint_file}")
 
-    # --custom_vocabulary {custom_vocabulary}
     string_args = f"""
         --config-file {config_file} --vocabulary {vocabulary}
         """
