@@ -632,15 +632,6 @@ class RearrangeSim(HabitatSim):
             quat_from_magnum(robot.sim_obj.rotation * rot_offset),
         )
 
-    def set_agent_state(
-        self,
-        position: List[float],
-        rotation: List[float],
-        agent_id: int = 0,
-        reset_sensors: bool = True,
-    ) -> bool:
-        raise NotImplementedError
-
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
