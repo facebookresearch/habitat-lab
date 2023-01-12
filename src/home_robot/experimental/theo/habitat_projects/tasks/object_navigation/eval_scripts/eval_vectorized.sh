@@ -12,4 +12,4 @@
 #SBATCH --gpus-per-task=8
 #SBATCH --constraint=volta32gb
 
-python eval/eval_vectorized.py "$@"
+python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eval_scripts/eval_vectorized.py "$@"

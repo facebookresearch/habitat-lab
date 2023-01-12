@@ -6,13 +6,16 @@ import numpy as np
 from PIL import Image
 
 from habitat import Config
+from habitat.core.env import Env
 from habitat.core.simulator import Observations
 
 import home_robot.agent.utils.pose_utils as pu
 from .constants import (
-    goal_id_to_goal_name,
-    goal_id_to_coco_id,
-    frame_color_palette,
+    HM3DtoCOCOIndoor,
+    FloorplannertoMukulIndoor,
+    HM3DtoLongTailIndoor,
+    long_tail_indoor_categories,
+    mukul_33categories_padded,
     MIN_DEPTH_REPLACEMENT_VALUE,
     MAX_DEPTH_REPLACEMENT_VALUE,
 )
@@ -27,38 +30,66 @@ class ObsPreprocessor:
     def __init__(self, config: Config, num_environments: int, device: torch.device):
         self.num_environments = num_environments
         self.device = device
-        self.num_sem_categories = config.ENVIRONMENT.num_sem_categories
         self.frame_height = config.ENVIRONMENT.frame_height
         self.frame_width = config.ENVIRONMENT.frame_width
         self.min_depth = config.ENVIRONMENT.min_depth
         self.max_depth = config.ENVIRONMENT.max_depth
         self.ground_truth_semantics = config.GROUND_TRUTH_SEMANTICS
 
+        self.episodes_data_path = config.TASK_CONFIG.DATASET.DATA_PATH
+        assert ("floorplanner" in self.episodes_data_path or "hm3d" in self.episodes_data_path)
+        if "hm3d" in self.episodes_data_path:
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.semantic_category_mapping = HM3DtoCOCOIndoor()
+            # elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+            #     self.semantic_category_mapping = HM3DtoLongTailIndoor()
+            else:
+                raise NotImplementedError
+        elif "floorplanner" in self.episodes_data_path:
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
+                self.semantic_category_mapping = FloorplannertoMukulIndoor()
+            else:
+                raise NotImplementedError
+
         if not self.ground_truth_semantics:
-            from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
-                COCOMaskRCNN,
-            )
+            # from home_robot.agent.perception.detection.coco_maskrcnn.coco_maskrcnn import (
+            #     COCOMaskRCNN,
+            # )
+            # self.segmentation = COCOMaskRCNN(
+            #     sem_pred_prob_thr=0.9,
+            #     sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
+            #     visualize=True,
+            # )
+            from home_robot.agent.perception.detection.detic.detic_loader import get_detic
+            if config.AGENT.SEMANTIC_MAP.semantic_categories == "coco_indoor":
+                self.segmentation = get_detic(
+                    vocabulary="coco",
+                    sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
+                )
+            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "longtail_indoor":
+                # self.segmentation = get_detic(
+                #     vocabulary="custom",
+                #     custom_vocabulary=",".join(long_tail_indoor_categories),
+                #     sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
+                # )
+                raise NotImplementedError
+            elif config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
+                self.segmentation = get_detic(
+                    vocabulary="custom",
+                    custom_vocabulary=",".join(mukul_33categories_padded),
+                    sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
+                )
 
-            self.segmentation = COCOMaskRCNN(
-                sem_pred_prob_thr=0.9,
-                sem_gpu_id=(-1 if device == torch.device("cpu") else device.index),
-                visualize=True,
-            )
-
-        self.one_hot_encoding = torch.eye(self.num_sem_categories, device=self.device)
-        self.color_palette = [int(x * 255.0) for x in frame_color_palette]
+        self.one_hot_encoding = torch.eye(self.semantic_category_mapping.num_sem_categories,
+                                          device=self.device)
 
         self.last_poses = None
         self.last_actions = None
-        self.instance_id_to_category_id = None
 
-    def reset(self):
+    def reset(self, env: Env):
         self.last_poses = [np.zeros(3)] * self.num_environments
         self.last_actions = [None] * self.num_environments
-        self.instance_id_to_category_id = None
-
-    def set_instance_id_to_category_id(self, instance_id_to_category_id):
-        self.instance_id_to_category_id = instance_id_to_category_id.to(self.device)
+        self.semantic_category_mapping.reset_instance_id_to_category_id(env)
 
     def preprocess(
         self,
@@ -129,16 +160,29 @@ class ObsPreprocessor:
 
     def preprocess_goal(self, obs: List[Observations]) -> Tuple[Tensor, List[str]]:
         if "objectgoal" in obs[0]:
-            goal = torch.tensor([goal_id_to_coco_id[ob["objectgoal"][0]] for ob in obs])
-            goal_name = [goal_id_to_goal_name[ob["objectgoal"][0]] for ob in obs]
+            goal_ids, goal_names = [], []
+            for ob in obs:
+                goal_id, goal_name = self.semantic_category_mapping.map_goal_id(ob["objectgoal"][0])
+                goal_ids.append(goal_id)
+                goal_names.append(goal_name)
+            goal_ids = torch.tensor(goal_ids)
         else:
-            goal, goal_name = None, None
-        return goal, goal_name
+            goal_ids, goal_names = None, None
+        return goal_ids, goal_names
 
     def preprocess_frame(self, obs: List[Observations]) -> Tuple[Tensor, np.ndarray]:
         """Preprocess frame information in the observation."""
 
         def preprocess_depth(depth):
+            # Attempt to deal with black holes in depth: set the holes with zero depth
+            # to the max depth value in the image row
+            zero_mask = depth == 0.
+            row_max = depth.max(axis=1, keepdims=True).values
+            depth += zero_mask * row_max
+            zero_mask = depth == 0.
+            col_max = depth.max(axis=2, keepdims=True).values
+            depth += zero_mask * col_max
+
             # Rescale depth from [0.0, 1.0] to [min_depth, max_depth]
             rescaled_depth = (
                 self.min_depth * 100.0
@@ -183,7 +227,7 @@ class ObsPreprocessor:
         if (
             self.ground_truth_semantics
             and "semantic" in obs[0]
-            and self.instance_id_to_category_id is not None
+            and self.semantic_category_mapping.instance_id_to_category_id is not None
         ):
             # Ground-truth semantic segmentation (useful for debugging)
             # TODO Allow multiple environments with ground-truth segmentation
@@ -191,20 +235,18 @@ class ObsPreprocessor:
             semantic = torch.from_numpy(
                 np.stack([ob["semantic"] for ob in obs]).squeeze(-1).astype(np.int64)
             ).to(self.device)
-            semantic = self.instance_id_to_category_id[semantic]
+            instance_id_to_category_id = self.semantic_category_mapping.instance_id_to_category_id.to(self.device)
+            semantic = instance_id_to_category_id[semantic]
             semantic = self.one_hot_encoding[semantic]
 
             # Also need depth filtering on ground-truth segmentation
-            for i in range(semantic.shape[-1]):
-                depth_ = depth[0, :, :, -1]
-                semantic_ = semantic[0, :, :, i]
-                depth_md = torch.median(depth_[semantic_ == 1])
-                if depth_md != 0:
-                    filter_mask = (depth_ >= depth_md + 50) | (depth_ <= depth_md - 50)
-                    # pixels = int(semantic_[filter_mask].sum().item())
-                    # if pixels > 0:
-                    #     print(f"Filtering out {pixels} pixels")
-                    semantic[0, :, :, i][filter_mask] = 0.0
+            # for i in range(semantic.shape[-1]):
+            #     depth_ = depth[0, :, :, -1]
+            #     semantic_ = semantic[0, :, :, i]
+            #     depth_md = torch.median(depth_[semantic_ == 1])
+            #     if depth_md != 0:
+            #         filter_mask = (depth_ >= depth_md + 50) | (depth_ <= depth_md - 50)
+            #         semantic[0, :, :, i][filter_mask] = 0.0
 
             semantic_vis = self._get_semantic_frame_vis(
                 rgb[0].cpu().numpy(), semantic[0].cpu().numpy()
@@ -231,14 +273,18 @@ class ObsPreprocessor:
         """Visualize first-person semantic segmentation frame."""
         width, height = semantics.shape[:2]
         vis_content = semantics
-        vis_content[:, :, -1] = 1e-5
+        vis_content[:, :, -1] += 1e-5  # Assumes the last category is "other"
         vis_content = vis_content.argmax(-1)
         vis = Image.new("P", (height, width))
-        vis.putpalette(self.color_palette)
+        vis.putpalette(self.semantic_category_mapping.frame_color_palette)
         vis.putdata(vis_content.flatten().astype(np.uint8))
+        mask = np.array(vis)
+        mask = (mask == self.semantic_category_mapping.num_sem_categories - 1).astype(np.uint8) * 255
+        mask = Image.fromarray(mask)
+        rgb_pil = Image.fromarray(rgb)
         vis = vis.convert("RGB")
+        vis.paste(rgb_pil, mask=mask)
         vis = np.array(vis)
-        vis = np.where(vis != 255, vis, rgb)
         vis = vis[:, :, ::-1]
         return vis
 

@@ -10,8 +10,8 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.core.dataset import EpisodeIterator
 
 from home_robot.agent.navigation_planner.discrete_planner import DiscretePlanner
-from home_robot.agent.visualization.object_navigation.objectnav_visualizer import (
-    ObjectNavVisualizer,
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.visualizer.visualizer import (
+    Visualizer,
 )
 from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
     ObsPreprocessor,
@@ -43,6 +43,7 @@ class EvalEnvWrapper(Env):
             else torch.device(f"cuda:{self.sim.gpu_device}")
         )
         self.max_steps = config.AGENT.max_steps
+        self.num_sem_categories = config.AGENT.SEMANTIC_MAP.num_sem_categories
         if config.AGENT.panorama_start:
             self.panorama_start_steps = int(360 / config.ENVIRONMENT.turn_angle)
         else:
@@ -112,15 +113,7 @@ class EvalEnvWrapper(Env):
             dump_location=config.DUMP_LOCATION,
             exp_name=config.EXP_NAME,
         )
-        self.visualizer = ObjectNavVisualizer(
-            num_sem_categories=config.ENVIRONMENT.num_sem_categories,
-            map_size_cm=config.AGENT.SEMANTIC_MAP.map_size_cm,
-            map_resolution=config.AGENT.SEMANTIC_MAP.map_resolution,
-            show_images=config.VISUALIZE,
-            print_images=config.PRINT_IMAGES,
-            dump_location=config.DUMP_LOCATION,
-            exp_name=config.EXP_NAME,
-        )
+        self.visualizer = Visualizer(config)
         self.obs_preprocessor = ObsPreprocessor(config, 1, self.device)
 
         self.scene_id = None
@@ -139,7 +132,7 @@ class EvalEnvWrapper(Env):
         self.episode_idx += 1
         self.episode_panorama_start_steps = self.panorama_start_steps
 
-        self.obs_preprocessor.reset()
+        self.obs_preprocessor.reset(self)
         self.planner.reset()
         self.visualizer.reset()
 

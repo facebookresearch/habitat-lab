@@ -17,12 +17,12 @@ examples/*.ipynb_checkpoints
 outputs/
 examples/outputs/
 theseus/extlib/*.so
-data/
 temp/
 scripts/
 docs_build/
 viz/
-
+datasets/
+datadump/
 # Data types
 *.h5
 *.hdf5

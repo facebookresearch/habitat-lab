@@ -1,9 +1,10 @@
 """
 This script is intended to run from the "src" root:
 python home_robot/experimental/theo/habitat_projects/tasks/object_navigation/eval_scripts/eval_vectorized.py \
-    --config_path home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/agent/hm3d_eval.yaml \
+    --config_path home_robot/experimental/theo/habitat_projects/tasks/object_navigation/configs/agent/floorplanner_eval.yaml \
     EVAL_VECTORIZED.simulator_gpu_ids "[0, 1]" \
-    NUM_ENVIRONMENTS 10
+    NUM_ENVIRONMENTS 10 \
+    EVAL_VECTORIZED.num_episodes_per_env 1
 """
 
 import time
@@ -196,6 +197,7 @@ class VectorizedEvaluator:
             for k in metrics:
                 aggregated_metrics[f"{k}/total"].append(v[k])
                 aggregated_metrics[f"{k}/{v['goal_name']}"].append(v[k])
+
         aggregated_metrics = dict(
             sorted(
                 {
@@ -311,6 +313,6 @@ if __name__ == "__main__":
     if config.EVAL_VECTORIZED.record_videos:
         evaluator.record_videos(
             source_dir=f"{config.DUMP_LOCATION}/images/{config.EXP_NAME}",
-            target_dir="data/videos",
+            target_dir=f"{config.DUMP_LOCATION}/videos/{config.EXP_NAME}",
             record_planner=config.EVAL_VECTORIZED.record_planner_videos,
         )

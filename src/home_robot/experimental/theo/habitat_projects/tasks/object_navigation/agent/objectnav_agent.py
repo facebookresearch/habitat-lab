@@ -1,10 +1,10 @@
 from typing import List, Tuple, Dict
 import torch
 from torch.nn import DataParallel
-import time
 
 import habitat
 from habitat import Config
+from habitat.core.env import Env
 from habitat.core.simulator import Observations
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
@@ -13,11 +13,11 @@ from home_robot.agent.mapping.dense.semantic.categorical_2d_semantic_map_state i
     Categorical2DSemanticMapState,
 )
 from home_robot.agent.navigation_planner.discrete_planner import DiscretePlanner
-from home_robot.agent.visualization.object_navigation.objectnav_visualizer import (
-    ObjectNavVisualizer,
-)
 from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.obs_preprocessor.obs_preprocessor import (
     ObsPreprocessor,
+)
+from home_robot.experimental.theo.habitat_projects.tasks.object_navigation.visualizer.visualizer import (
+    Visualizer,
 )
 
 
@@ -52,7 +52,7 @@ class ObjectNavAgent(habitat.Agent):
         self.semantic_map = Categorical2DSemanticMapState(
             device=self.device,
             num_environments=self.num_environments,
-            num_sem_categories=config.ENVIRONMENT.num_sem_categories,
+            num_sem_categories=config.AGENT.SEMANTIC_MAP.num_sem_categories,
             map_resolution=config.AGENT.SEMANTIC_MAP.map_resolution,
             map_size_cm=config.AGENT.SEMANTIC_MAP.map_size_cm,
             global_downscaling=config.AGENT.SEMANTIC_MAP.global_downscaling,
@@ -69,15 +69,7 @@ class ObjectNavAgent(habitat.Agent):
             dump_location=config.DUMP_LOCATION,
             exp_name=config.EXP_NAME,
         )
-        self.visualizer = ObjectNavVisualizer(
-            num_sem_categories=config.ENVIRONMENT.num_sem_categories,
-            map_size_cm=config.AGENT.SEMANTIC_MAP.map_size_cm,
-            map_resolution=config.AGENT.SEMANTIC_MAP.map_resolution,
-            show_images=config.VISUALIZE,
-            print_images=config.PRINT_IMAGES,
-            dump_location=config.DUMP_LOCATION,
-            exp_name=config.EXP_NAME,
-        )
+        self.visualizer = Visualizer(config)
 
         self.goal_update_steps = self._module.goal_update_steps
         self.timesteps = None
@@ -206,10 +198,10 @@ class ObjectNavAgent(habitat.Agent):
     # Inference methods to interact with a single un-vectorized environment
     # ------------------------------------------------------------------
 
-    def reset(self):
+    def reset(self, env: Env):
         """Initialize agent state."""
         self.reset_vectorized()
-        self.obs_preprocessor.reset()
+        self.obs_preprocessor.reset(env)
         self.planner.reset()
         self.visualizer.reset()
         self.episode_panorama_start_steps = self.panorama_start_steps
