@@ -14,10 +14,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional
 import numpy as np
 import torch
 import tqdm
-from gym import spaces
 from omegaconf import OmegaConf
-from torch import nn
-from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import VectorEnv, logger
 from habitat.config import read_write
@@ -36,12 +33,10 @@ from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_obs_space,
     get_active_obs_transforms,
 )
-from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.common.tensorboard_utils import (
     TensorboardWriter,
     get_writer,
 )
-from habitat_baselines.rl.ddppo.algo import DDPPO
 from habitat_baselines.rl.ddppo.ddp_utils import (
     EXIT,
     get_distrib_size,
@@ -59,12 +54,10 @@ from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
-from habitat_baselines.rl.ppo import PPO
-from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.multi_agent.agent_sampler import AgentData
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
-    get_num_actions,
     inference_mode,
     is_continuous_action_space,
 )
@@ -84,18 +77,14 @@ class PPOTrainer(BaseRLTrainer):
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
     _is_distributed: bool
     envs: VectorEnv
-    agent: PPO
-    actor_critic: NetPolicy
+    _cur_agents: Optional[List[AgentData]] = None
 
     def __init__(self, config=None):
         super().__init__(config)
-        self.actor_critic = None
-        self.agent = None
         self.envs = None
         self.obs_transforms = []
+        self._agent_sampler = None
 
-        self._static_encoder = False
-        self._encoder = None
         self._obs_space = None
 
         # Distributed if the world size would be
@@ -136,62 +125,26 @@ class PPOTrainer(BaseRLTrainer):
         """
         logger.add_filehandler(self.config.habitat_baselines.log_file)
 
-        policy = baseline_registry.get_policy(
-            self.config.habitat_baselines.rl.policy.name
-        )
         observation_space = self.obs_space
         self.obs_transforms = get_active_obs_transforms(self.config)
         observation_space = apply_obs_transforms_obs_space(
             observation_space, self.obs_transforms
         )
 
-        self.actor_critic = policy.from_config(
-            self.config,
-            observation_space,
-            self.policy_action_space,
-            orig_action_space=self.orig_policy_action_space,
-        )
         self.obs_space = observation_space
-        self.actor_critic.to(self.device)
-
-        if (
-            self.config.habitat_baselines.rl.ddppo.pretrained_encoder
-            or self.config.habitat_baselines.rl.ddppo.pretrained
-        ):
-            pretrained_state = torch.load(
-                self.config.habitat_baselines.rl.ddppo.pretrained_weights,
-                map_location="cpu",
-            )
-
-        if self.config.habitat_baselines.rl.ddppo.pretrained:
-            self.actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                }
-            )
-        elif self.config.habitat_baselines.rl.ddppo.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            self.actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
-                }
-            )
-
-        if not self.config.habitat_baselines.rl.ddppo.train_encoder:
-            self._static_encoder = True
-            for param in self.actor_critic.net.visual_encoder.parameters():
-                param.requires_grad_(False)
-
-        if self.config.habitat_baselines.rl.ddppo.reset_critic:
-            nn.init.orthogonal_(self.actor_critic.critic.fc.weight)
-            nn.init.constant_(self.actor_critic.critic.fc.bias, 0)
-
-        self.agent = (DDPPO if self._is_distributed else PPO).from_config(
-            self.actor_critic, ppo_cfg
+        agent_sampler_cfg = self.config.habitat_baselines.rl.agent_sampler
+        agent_sampler_cls = baseline_registry.get_agent_sampler(
+            agent_sampler_cfg.name
         )
+        self._agent_sampler = agent_sampler_cls.from_config(
+            self.config,
+            agent_sampler_cfg,
+            self.obs_space,
+            self.policy_action_space,
+            self.orig_policy_action_space,
+            self._is_distributed,
+        )
+        self._agent_sampler.to(self.device)
 
     def _init_envs(self, config=None, is_eval: bool = False):
         if config is None:
@@ -276,14 +229,6 @@ class PPOTrainer(BaseRLTrainer):
         action_space = self.envs.action_spaces[0]
         self.policy_action_space = action_space
         self.orig_policy_action_space = self.envs.orig_action_spaces[0]
-        if is_continuous_action_space(action_space):
-            # Assume ALL actions are NOT discrete
-            action_shape = (get_num_actions(action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
@@ -300,59 +245,24 @@ class PPOTrainer(BaseRLTrainer):
             os.makedirs(self.config.habitat_baselines.checkpoint_folder)
 
         self._setup_actor_critic_agent(ppo_cfg)
-        if resume_state is not None:
-            self.agent.load_state_dict(resume_state["state_dict"])
-            self.agent.optimizer.load_state_dict(resume_state["optim_state"])
-        if self._is_distributed:
-            self.agent.init_distributed(find_unused_params=False)  # type: ignore
-
-        logger.info(
-            "agent number of parameters: {}".format(
-                sum(param.numel() for param in self.agent.parameters())
-            )
+        self._agent_sampler.init(
+            resume_state, self.envs.num_envs, 1 - self.percent_done()
         )
-
-        obs_space = self.obs_space
-        if self._static_encoder:
-            self._encoder = self.actor_critic.net.visual_encoder
-            obs_space = spaces.Dict(
-                {
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
-                        low=np.finfo(np.float32).min,
-                        high=np.finfo(np.float32).max,
-                        shape=self._encoder.output_shape,
-                        dtype=np.float32,
-                    ),
-                    **obs_space.spaces,
-                }
-            )
+        self._sample_agents()
 
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
-
-        self.rollouts = RolloutStorage(
-            ppo_cfg.num_steps,
-            self.envs.num_envs,
-            obs_space,
-            self.policy_action_space,
-            ppo_cfg.hidden_size,
-            num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
-            is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-            action_shape=action_shape,
-            discrete_actions=discrete_actions,
-        )
-        self.rollouts.to(self.device)
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
+        for agent in self._cur_agents:
+            if agent.is_static_encoder:
+                with inference_mode():
+                    batch[
+                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                    ] = agent.encoder(batch)
 
-        if self._static_encoder:
-            with inference_mode():
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._encoder(batch)
-
-        self.rollouts.buffers["observations"][0] = batch  # type: ignore
+            agent.rollouts.buffers["observations"][0] = batch  # type: ignore
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(
@@ -381,11 +291,11 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
         checkpoint = {
-            "state_dict": self.agent.state_dict(),
+            **self._agent_sampler.get_save_state(),
             "config": self.config,
         }
         if extra_state is not None:
-            checkpoint["extra_state"] = extra_state
+            checkpoint["extra_state"] = extra_state  # type: ignore
 
         torch.save(
             checkpoint,
@@ -463,22 +373,25 @@ class PPOTrainer(BaseRLTrainer):
 
         # sample actions
         with inference_mode():
-            step_batch = self.rollouts.buffers[
-                self.rollouts.current_rollout_step_idxs[buffer_index],
-                env_slice,
-            ]
+            agent_outputs = []
+            for agent in self._cur_agents:
+                step_batch = agent.rollouts.buffers[
+                    agent.rollouts.current_rollout_step_idxs[buffer_index],
+                    env_slice,
+                ]
 
-            profiling_wrapper.range_push("compute actions")
-            (
-                values,
-                actions,
-                actions_log_probs,
-                recurrent_hidden_states,
-            ) = self.actor_critic.act(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
+                profiling_wrapper.range_push("compute actions")
+                agent_outputs.append(
+                    agent.actor_critic.act(
+                        step_batch["observations"],
+                        step_batch["recurrent_hidden_states"],
+                        step_batch["prev_actions"],
+                        step_batch["masks"],
+                    )
+                )
+            # Action is the 0th dimension element.
+            actions = torch.cat(
+                [agent_out[0] for agent_out in agent_outputs], dim=-1
             )
 
         self.pth_time += time.time() - t_sample_action
@@ -502,14 +415,22 @@ class PPOTrainer(BaseRLTrainer):
             self.envs.async_step_at(index_env, act)
 
         self.env_time += time.time() - t_step_env
+        for agent, (
+            recurrent_hidden_states,
+            actions,
+            actions_log_probs,
+            values,
+        ) in zip(self._cur_agents, agent_outputs):
+            agent.rollouts.insert(
+                next_recurrent_hidden_states=recurrent_hidden_states,
+                actions=actions,
+                action_log_probs=actions_log_probs,
+                value_preds=values,
+                buffer_index=buffer_index,
+            )
 
-        self.rollouts.insert(
-            next_recurrent_hidden_states=recurrent_hidden_states,
-            actions=actions,
-            action_log_probs=actions_log_probs,
-            value_preds=values,
-            buffer_index=buffer_index,
-        )
+    def _sample_agents(self):
+        self._cur_agents = self._agent_sampler.sample_agents()
 
     def _collect_environment_result(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
@@ -565,21 +486,21 @@ class PPOTrainer(BaseRLTrainer):
             self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
+        for agent in self._cur_agents:
+            if agent.is_static_encoder:
+                with inference_mode():
+                    batch[
+                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                    ] = agent.encoder(batch)
 
-        if self._static_encoder:
-            with inference_mode():
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._encoder(batch)
+            agent.rollouts.insert(
+                next_observations=batch,
+                rewards=rewards,
+                next_masks=not_done_masks,
+                buffer_index=buffer_index,
+            )
 
-        self.rollouts.insert(
-            next_observations=batch,
-            rewards=rewards,
-            next_masks=not_done_masks,
-            buffer_index=buffer_index,
-        )
-
-        self.rollouts.advance_rollout(buffer_index)
+            agent.rollouts.advance_rollout(buffer_index)
 
         self.pth_time += time.time() - t_update_stats
 
@@ -591,32 +512,40 @@ class PPOTrainer(BaseRLTrainer):
         return self._collect_environment_result()
 
     @profiling_wrapper.RangeContext("_update_agent")
-    def _update_agent(self):
+    def _update_agent(self) -> Dict[str, float]:
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         t_update_model = time.time()
-        with inference_mode():
-            step_batch = self.rollouts.buffers[
-                self.rollouts.current_rollout_step_idx
-            ]
+        all_losses: Dict[str, List[float]] = defaultdict(list)
+        for agent in self._cur_agents:
+            if not agent.should_update:
+                # The agent should not be updated.
+                continue
 
-            next_value = self.actor_critic.get_value(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
+            with inference_mode():
+                step_batch = agent.rollouts.buffers[
+                    agent.rollouts.current_rollout_step_idx
+                ]
+
+                next_value = agent.actor_critic.get_value(
+                    step_batch["observations"],
+                    step_batch["recurrent_hidden_states"],
+                    step_batch["prev_actions"],
+                    step_batch["masks"],
+                )
+
+            agent.rollouts.compute_returns(
+                next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
             )
 
-        self.rollouts.compute_returns(
-            next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
-        )
+            agent.updater.train()
 
-        self.agent.train()
+            losses = agent.updater.update(agent.rollouts)
+            for k, v in losses.items():
+                all_losses[k].append(v)
 
-        losses = self.agent.update(self.rollouts)
-
-        self.rollouts.after_update()
+            agent.rollouts.after_update()
         self.pth_time += time.time() - t_update_model
-        return losses
+        return {k: torch.mean(v) for k, v in all_losses.items()}
 
     def _coalesce_post_step(
         self, losses: Dict[str, float], count_steps_delta: int
@@ -750,19 +679,12 @@ class PPOTrainer(BaseRLTrainer):
         count_checkpoints = 0
         prev_time = 0
 
-        lr_scheduler = LambdaLR(
-            optimizer=self.agent.optimizer,
-            lr_lambda=lambda x: 1 - self.percent_done(),
-        )
-
         if self._is_distributed:
             torch.distributed.barrier()
 
         resume_run_id = None
         if resume_state is not None:
-            self.agent.load_state_dict(resume_state["state_dict"])
-            self.agent.optimizer.load_state_dict(resume_state["optim_state"])
-            lr_scheduler.load_state_dict(resume_state["lr_sched_state"])
+            self._agent_sampler.load_state_dict(resume_state["state_dict"])
 
             requeue_stats = resume_state["requeue_stats"]
             self.env_time = requeue_stats["env_time"]
@@ -797,10 +719,10 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
 
-                if ppo_cfg.use_linear_clip_decay:
-                    self.agent.clip_param = ppo_cfg.clip_param * (
-                        1 - self.percent_done()
-                    )
+                percent_done = self.percent_done()
+                for agent in self._cur_agents:
+                    if agent.updater is not None:
+                        agent.updater.pre_step(percent_done)
 
                 if rank0_only() and self._should_save_resume_state():
                     requeue_stats = dict(
@@ -818,9 +740,7 @@ class PPOTrainer(BaseRLTrainer):
 
                     save_resume_state(
                         dict(
-                            state_dict=self.agent.state_dict(),
-                            optim_state=self.agent.optimizer.state_dict(),
-                            lr_sched_state=lr_scheduler.state_dict(),
+                            **self._agent_sampler.get_resume_state(),
                             config=self.config,
                             requeue_stats=requeue_stats,
                         ),
@@ -836,7 +756,8 @@ class PPOTrainer(BaseRLTrainer):
 
                     return
 
-                self.agent.eval()
+                for agent in self._cur_agents:
+                    agent.actor_critic.eval()
                 count_steps_delta = 0
                 profiling_wrapper.range_push("rollouts loop")
 
@@ -875,9 +796,8 @@ class PPOTrainer(BaseRLTrainer):
                     self.num_rollouts_done_store.add("num_done", 1)
 
                 losses = self._update_agent()
-
-                if ppo_cfg.use_linear_lr_decay:
-                    lr_scheduler.step()  # type: ignore
+                for agent in self._cur_agents:
+                    agent.post_step()
 
                 self.num_updates_done += 1
                 losses = self._coalesce_post_step(
@@ -969,20 +889,10 @@ class PPOTrainer(BaseRLTrainer):
         action_space = self.envs.action_spaces[0]
         self.policy_action_space = action_space
         self.orig_policy_action_space = self.envs.orig_action_spaces[0]
-        if is_continuous_action_space(action_space):
-            # Assume NONE of the actions are discrete
-            action_shape = (get_num_actions(action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
+        self._agent_sampler.load_ckpt_state_dict(ckpt_dict)
+        self._sample_agents()
 
         self._setup_actor_critic_agent(ppo_cfg)
-
-        if self.agent.actor_critic.should_load_agent_state:
-            self.agent.load_state_dict(ckpt_dict["state_dict"])
-        self.actor_critic = self.agent.actor_critic
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
@@ -992,18 +902,23 @@ class PPOTrainer(BaseRLTrainer):
             self.envs.num_envs, 1, device="cpu"
         )
 
-        test_recurrent_hidden_states = torch.zeros(
-            self.config.habitat_baselines.num_environments,
-            self.actor_critic.num_recurrent_layers,
-            ppo_cfg.hidden_size,
-            device=self.device,
-        )
-        prev_actions = torch.zeros(
-            self.config.habitat_baselines.num_environments,
-            *action_shape,
-            device=self.device,
-            dtype=torch.long if discrete_actions else torch.float,
-        )
+        test_recurrent_hidden_states = []
+        prev_actions = []
+        for agent in self._cur_agents:
+            test_recurrent_hidden_states.append(
+                torch.zeros(
+                    self.config.habitat_baselines.num_environments,
+                    agent.actor_critic.num_recurrent_layers,
+                    ppo_cfg.hidden_size,
+                    device=self.device,
+                )
+            )
+            prev_actions = torch.zeros(
+                self.config.habitat_baselines.num_environments,
+                *agent.action_shape,
+                device=self.device,
+                dtype=torch.long if agent.discrete_actions else torch.float,
+            )
         not_done_masks = torch.zeros(
             self.config.habitat_baselines.num_environments,
             1,
@@ -1044,7 +959,8 @@ class PPOTrainer(BaseRLTrainer):
         ), "You must specify a number of evaluation episodes with test_episode_count"
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
-        self.actor_critic.eval()
+        for agent in self._cur_agents:
+            agent.actor_critic.eval()
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and self.envs.num_envs > 0
@@ -1052,20 +968,24 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes_info = self.envs.current_episodes()
 
             with inference_mode():
-                (
-                    _,
-                    actions,
-                    _,
-                    test_recurrent_hidden_states,
-                ) = self.actor_critic.act(
-                    batch,
-                    test_recurrent_hidden_states,
-                    prev_actions,
-                    not_done_masks,
-                    deterministic=False,
-                )
+                agent_actions = []
+                for agent_i, agent in enumerate(self._cur_agents):
+                    (
+                        _,
+                        actions,
+                        _,
+                        test_recurrent_hidden_states[agent_i],
+                    ) = agent.actor_critic.act(
+                        batch,
+                        test_recurrent_hidden_states[agent_i],
+                        prev_actions[agent_i],
+                        not_done_masks,
+                        deterministic=False,
+                    )
+                    agent_actions.append(actions)
 
-                prev_actions.copy_(actions)  # type: ignore
+                    prev_actions[agent_i].copy_(actions)  # type: ignore
+                actions = torch.cat(agent_actions, dim=-1)
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
@@ -1087,9 +1007,10 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            policy_info = self.actor_critic.get_policy_info(infos, dones)
-            for i in range(len(policy_info)):
-                infos[i].update(policy_info[i])
+            for agent in self._cur_agents:
+                policy_info = agent.actor_critic.get_policy_info(infos, dones)
+                for i in range(len(policy_info)):
+                    infos[i].update(policy_info[i])
             batch = batch_obs(  # type: ignore
                 observations,
                 device=self.device,

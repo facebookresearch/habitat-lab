@@ -34,7 +34,7 @@ class Policy(abc.ABC):
     action_distribution: nn.Module
 
     def __init__(self):
-        pass
+        self.net: Optional[nn.Module] = None
 
     @property
     def should_load_agent_state(self):
@@ -56,6 +56,12 @@ class Policy(abc.ABC):
         """
 
         return []
+
+    def eval(self):
+        pass
+
+    def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
+        pass
 
     def act(
         self,

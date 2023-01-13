@@ -61,6 +61,7 @@ class PPO(nn.Module):
         use_normalized_advantage: bool = True,
         entropy_target_factor: float = 0.0,
         use_adaptive_entropy_pen: bool = False,
+        use_linear_clip_decay: bool = False,
     ) -> None:
 
         super().__init__()
@@ -70,6 +71,7 @@ class PPO(nn.Module):
         self.clip_param = clip_param
         self.ppo_epoch = ppo_epoch
         self.num_mini_batch = num_mini_batch
+        self.use_linear_clip_decay = use_linear_clip_decay
 
         self.value_loss_coef = value_loss_coef
         self.entropy_coef = entropy_coef
@@ -145,6 +147,13 @@ class PPO(nn.Module):
         advantages -= mean
 
         return advantages.mul_(torch.rsqrt(var + EPS_PPO))
+
+    def pre_step(self, percent_done: float) -> None:
+        """
+        Called before the start of every rollout.
+        """
+        if self.use_linear_clip_decay:
+            self.clip_param = self.clip_param * (1 - percent_done)
 
     @staticmethod
     def _compute_var_mean(x):

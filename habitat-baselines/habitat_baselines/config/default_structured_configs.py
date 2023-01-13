@@ -6,7 +6,7 @@
 
 import math
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
@@ -316,9 +316,32 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class AgentInOutConfig(HabitatBaselinesBaseConfig):
+    """
+    If None, then all the input observations and action outputs are used.
+    Otherwise, this allows dividing up the observation space or action space between agents.
+    """
+
+    in_obs: Optional[List[str]] = None
+    out_obs: Optional[List[str]] = None
+
+
+@dataclass
+class AgentSamplerConfig(HabitatBaselinesBaseConfig):
+    """
+    Defines how agents are created (used in all training) and sampled (used in
+    multi-agent training setups).
+    """
+
+    name: str = "AgentSampler"
+    agents: Dict[str, AgentInOutConfig] = field(default_factory=dict)
+
+
+@dataclass
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
+    agent_sampler: AgentSamplerConfig = AgentSamplerConfig()
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()

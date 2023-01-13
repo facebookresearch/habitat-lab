@@ -136,5 +136,15 @@ class BaselineRegistry(Registry):
     def get_auxiliary_loss(cls, name: str):
         return cls._get_impl("aux_loss", name)
 
+    @classmethod
+    def register_agent_sampler(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
+        return cls._register_impl("agent_sampler", to_register, name)
+
+    @classmethod
+    def get_agent_sampler(cls, name: str):
+        return cls._get_impl("agent_sampler", name)
+
 
 baseline_registry = BaselineRegistry()
