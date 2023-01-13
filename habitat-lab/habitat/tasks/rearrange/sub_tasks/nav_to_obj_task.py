@@ -68,6 +68,7 @@ class DynNavRLEnv(RearrangeTask):
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None
     ):
+
         if start_hold_obj_idx is None:
             # Select an object at random and navigate to that object.
             all_pos = self._sim.get_target_objs_start()
@@ -120,7 +121,7 @@ class DynNavRLEnv(RearrangeTask):
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
             filter_func=filter_func
         )
-
+        self.start_position = robot_pos
         return NavToInfo(
             nav_goal_pos=nav_to_pos,
             robot_start_pos=robot_pos,
