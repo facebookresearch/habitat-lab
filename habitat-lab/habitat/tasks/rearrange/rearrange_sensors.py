@@ -339,6 +339,26 @@ class TargetGoalGpsCompassSensor(PositionGpsCompassSensor):
 
 
 @registry.register_sensor
+class RobotStartGpsCompassSensor(PositionGpsCompassSensor):
+    cls_uuid: str = "robot_start_gps_compass"
+
+    def _get_uuid(self, *args, **kwargs):
+        return RobotStartGpsCompassSensor.cls_uuid
+
+    def _get_positions(self) -> np.ndarray:
+        return np.expand_dims(self._task.start_position, 0)
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        self._polar_pos = np.zeros(2, dtype=np.float32)
+        return spaces.Box(
+            shape=(2,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+
+@registry.register_sensor
 class AbsTargetStartSensor(MultiObjSensor):
     """
     Relative position from end effector to target object

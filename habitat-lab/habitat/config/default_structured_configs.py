@@ -320,6 +320,11 @@ class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class RobotStartGpsCompassSensorConfig(LabSensorConfig):
+    type: str = "RobotStartGpsCompassSensor"
+
+
+@dataclass
 class NavToSkillSensorConfig(LabSensorConfig):
     type: str = "NavToSkillSensor"
     num_skills: int = 8
@@ -1454,6 +1459,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_goal_gps_compass_sensor",
     node=TargetGoalGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.robot_start_gps_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="robot_start_gps_compass_sensor",
+    node=RobotStartGpsCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.nav_to_skill_sensor",

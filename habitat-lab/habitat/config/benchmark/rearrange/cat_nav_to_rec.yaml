@@ -14,6 +14,7 @@ habitat:
       - robot_head_depth
       - robot_head_rgb
       - goal_receptacle
+      - robot_start_gps_compass
       - joint
   environment:
     max_episode_steps: 400
