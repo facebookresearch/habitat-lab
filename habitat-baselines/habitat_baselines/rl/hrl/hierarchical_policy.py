@@ -318,7 +318,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             # LL skills are not allowed to terminate the overall episode.
-            actions[batch_ids] = action_data.actions
+            actions[batch_ids] += action_data.actions
             # Add actions from apply_postcond
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
         actions[:, self._stop_action_idx] = 0.0
