@@ -212,7 +212,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             masks,
             self._cur_skills,
             log_info,
-        )
+        ).cpu()
         # Compute the actions from the current skills
         actions = torch.zeros(
             (self._num_envs, get_num_actions(self._action_space)),
@@ -239,9 +239,12 @@ class HierarchicalPolicy(nn.Module, Policy):
                 # Policy has not prediced a skill yet.
                 should_terminate[batch_ids] = 1.0
                 continue
+            # TODO: either change name of the function or assign actions somewhere
+            # else. Updating actions in should_terminate is counterintuitive 
             (
                 should_terminate[batch_ids],
                 bad_should_terminate[batch_ids],
+                actions[batch_ids]
             ) = self._skills[skill_id].should_terminate(
                 **dat,
                 batch_idx=batch_ids,
@@ -315,7 +318,8 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             # LL skills are not allowed to terminate the overall episode.
-            actions[batch_ids] = action_data.actions
+            actions[batch_ids] += action_data.actions
+            # Add actions from apply_postcond
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
         actions[:, self._stop_action_idx] = 0.0
 

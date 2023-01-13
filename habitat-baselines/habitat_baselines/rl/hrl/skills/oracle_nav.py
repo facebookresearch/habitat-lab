@@ -116,7 +116,7 @@ class OracleNavPolicy(NnSkillPolicy):
         masks,
         batch_idx,
     ) -> torch.BoolTensor:
-        ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
+        ret = torch.zeros(masks.shape[0], dtype=torch.bool)
 
         cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
 
