@@ -1,4 +1,4 @@
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
@@ -156,7 +156,7 @@ class AgentSampler:
                 }
             )
 
-    def sample_agents(self):
+    def sample_agents(self) -> List[AgentData]:
         return self._agents
 
     def _create_actor_critic(

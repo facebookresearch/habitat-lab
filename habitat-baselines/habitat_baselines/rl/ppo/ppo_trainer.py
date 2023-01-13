@@ -371,10 +371,11 @@ class PPOTrainer(BaseRLTrainer):
 
         t_sample_action = time.time()
 
-        # sample actions
+        # Sample actions
         with inference_mode():
             agent_outputs = []
             for agent in self._cur_agents:
+                # Sample actions from all agents.
                 step_batch = agent.rollouts.buffers[
                     agent.rollouts.current_rollout_step_idxs[buffer_index],
                     env_slice,
