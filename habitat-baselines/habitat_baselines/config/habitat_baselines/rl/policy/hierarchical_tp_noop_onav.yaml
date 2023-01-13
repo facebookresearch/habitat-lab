@@ -8,7 +8,7 @@ hierarchical_policy:
   high_level_policy:
     name: "FixedHighLevelPolicy"
     add_arm_rest: True
-  
+
   defined_skills:
     open_cab:
       skill_name: "NoopSkillPolicy"
@@ -42,11 +42,13 @@ hierarchical_policy:
       obs_skill_inputs: ["obj_goal_sensor"]
       max_skill_steps: 1
       apply_postconds: True
+      force_end_on_timeout: False
 
     nav_to_obj:
       skill_name: "OracleNavPolicy"
       obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
       max_skill_steps: 300
+      force_end_on_timeout: False
 
     wait_skill:
       skill_name: "WaitSkillPolicy"
