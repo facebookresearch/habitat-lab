@@ -38,7 +38,7 @@ habitat:
         robot_type: 'AmassHuman'
         amass_path: 'data/human_sim_data/amass_smpl_h/'
         body_model_path: 'data/human_sim_data/smplh/male/model.npz'
-        grab_path: 'data/human_sim_data/left_hand_smpl_hand.npz'
+        grab_path: 'data/human_sim_data/left_hand_smplh_hand.npz'
         human_type: "AmassHuman"
         sim_sensors:
           third_rgb_sensor:

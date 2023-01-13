@@ -212,7 +212,7 @@ def get_input_vel_ctlr(
             base_action_name = 'humanjoint_action'
             base_action = mn.Vector3([-0.01, 0.00, 0])
             human_controller.curr_trans += base_action
-            
+
             current_point = human_controller.translation_offset + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
@@ -233,7 +233,7 @@ def get_input_vel_ctlr(
             base_action_name = 'humanjoint_action'
             base_action = mn.Vector3([0.01, 0.00, 0])
             human_controller.curr_trans += base_action
-            
+
             current_point = human_controller.translation_offset + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
@@ -254,7 +254,7 @@ def get_input_vel_ctlr(
             base_action_name = 'humanjoint_action'
             base_action = mn.Vector3([0, 0.01, 0])
             human_controller.curr_trans += base_action
-            
+
             current_point = human_controller.translation_offset + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
@@ -283,7 +283,7 @@ def get_input_vel_ctlr(
             base_action = AmassHumanController.transformAction(new_pose, new_trans)
 
             human_controller.reach_pos = (human_controller.reach_pos - 1 + human_controller.num_pos) % human_controller.num_pos
-        
+
 
         elif keys[pygame.K_e]:
             # Left
@@ -446,7 +446,7 @@ def update_location_walk(curr_location, env, curr_ind_map, new_loc=None):
     # else:
     if 'cont' not in curr_ind_map:
         curr_ind_map['cont'] = 0
-    
+
     # TODO: for some reason this requires different indices ot update the path planner
     curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object("current_path_{}".format(curr_ind_map['cont']), path.points, colors=colors, radius=0.03)
     curr_ind_map['cont'] += 1
@@ -501,10 +501,10 @@ def play_env(env, args, config):
 
     link_ids = env._sim.robot.sim_obj.get_link_ids()
     human_controller = AmassHumanController(
-        urdf_path, amass_path, body_model_path, obj_translation, grab_path=grab_path, draw_fps=draw_fps)
+        urdf_path, amass_path, body_model_path, obj_translation=obj_translation, grab_path=grab_path, draw_fps=draw_fps)
 
     # TODO: remove
-    
+
     human_controller.reset(env._sim.robot.sim_obj.translation)
     # breakpoint()
     found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map)
@@ -535,19 +535,19 @@ def play_env(env, args, config):
 
         do_update = True
         dist = 0.05
-        
+
         agent_location = human_controller.translation_offset
         radius = np.linalg.norm((agent_location- goal_location) * (mn.Vector3.x_axis() + mn.Vector3.z_axis()))
-            
+
         if keys[pygame.K_w]:
             radius += 0.05
-            
-            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)]) 
-            
+
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)])
+
         elif keys[pygame.K_s]:
             radius -= 0.05
-            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)]) 
-            
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)])
+
         elif keys[pygame.K_a]:
             angle_pos -= (5./180.) * math.pi
             if angle_pos > (2 * math.pi):
@@ -561,7 +561,7 @@ def play_env(env, args, config):
                 angle_pos -= 2 * math.pi
             if angle_pos < 0:
                     angle_pos = 2 * math.pi - angle_pos
-            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)]) 
+            goal_location = agent_location* (mn.Vector3.x_axis() + mn.Vector3.z_axis()) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)])
             # goal_location = mn.Vector3([0, 0, -0.05])
         else:
             do_update = False
