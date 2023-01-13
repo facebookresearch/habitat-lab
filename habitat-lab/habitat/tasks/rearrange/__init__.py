@@ -20,6 +20,7 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.rearrange_task
     import habitat.tasks.rearrange.sub_tasks.articulated_object_sensors
     import habitat.tasks.rearrange.sub_tasks.articulated_object_task
+    import habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_task
     import habitat.tasks.rearrange.sub_tasks.pick_sensors

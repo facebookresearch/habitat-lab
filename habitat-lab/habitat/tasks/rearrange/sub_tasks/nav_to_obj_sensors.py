@@ -176,10 +176,14 @@ class DistToGoal(Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        return np.linalg.norm(
-            np.array(self._sim.robot.base_pos)[[0, 2]]
-            - task.nav_goal_pos[[0, 2]]
-        )
+        if len(task.nav_goal_pos.shape) == 2:
+            return np.linalg.norm(
+                np.expand_dims(self._sim.robot.base_pos, 0)
+                - task.nav_goal_pos,
+                axis=1,
+            ).min()
+        else:
+            return np.linalg.norm(self._sim.robot.base_pos - task.nav_goal_pos)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -208,7 +212,15 @@ class RotDistToGoal(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        targ = task.nav_goal_pos
+        if len(task.nav_goal_pos.shape) == 2:
+            closest_goal = np.linalg.norm(
+                np.expand_dims(self._sim.robot.base_pos, 0)
+                - task.nav_goal_pos,
+                axis=1,
+            ).argmin()
+            targ = task.nav_goal_pos[closest_goal]
+        else:
+            targ = task.nav_goal_pos
         robot = self._sim.robot
         T = robot.base_transformation
         angle = get_angle_to_pos(T.transform_vector(targ))

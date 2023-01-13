@@ -65,6 +65,23 @@ class DynNavRLEnv(RearrangeTask):
         target_idxs, _ = self._sim.get_targets()
         return self._sim.scene_obj_ids[target_idxs[0]]
 
+    def _generate_nav_to_pos(
+        self, episode, start_hold_obj_idx=None, force_idx=None
+    ):
+        if start_hold_obj_idx is None:
+            # Select an object at random and navigate to that object.
+            all_pos = self._sim.get_target_objs_start()
+            if force_idx is None:
+
+                nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
+            else:
+                nav_to_pos = all_pos[force_idx]
+        else:
+            # Select a goal at random and navigate to that goal.
+            _, all_pos = self._sim.get_targets()
+            nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
+        return nav_to_pos
+
     def _generate_nav_start_goal(self, episode, force_idx=None) -> NavToInfo:
         """
         Returns the starting information for a navigate to object task.
@@ -79,24 +96,26 @@ class DynNavRLEnv(RearrangeTask):
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
-        if start_hold_obj_idx is None:
-            # Select an object at random and navigate to that object.
-            all_pos = self._sim.get_target_objs_start()
-            if force_idx is None:
-
-                nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
-            else:
-                nav_to_pos = all_pos[force_idx]
-        else:
-            # Select a goal at random and navigate to that goal.
-            _, all_pos = self._sim.get_targets()
-            nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
+        nav_to_pos = self._generate_nav_to_pos(
+            episode, start_hold_obj_idx=start_hold_obj_idx, force_idx=force_idx
+        )
 
         def filter_func(start_pos, _):
-            return (
-                np.linalg.norm(start_pos - nav_to_pos)
-                > self._config.min_start_distance
-            )
+            if len(nav_to_pos.shape) == 2:
+                return (
+                    np.min(
+                        np.linalg.norm(
+                            np.expand_dims(start_pos, axis=0) - nav_to_pos,
+                            axis=1,
+                        )
+                    )
+                    > self._config.min_start_distance
+                )
+            else:
+                return (
+                    np.linalg.norm(start_pos - nav_to_pos)
+                    > self._config.min_start_distance
+                )
 
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
             filter_func=filter_func
