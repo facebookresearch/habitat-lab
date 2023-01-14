@@ -39,6 +39,8 @@ class SkillPolicy(Policy):
             None for _ in range(self._batch_size)
         ]
 
+        # TODO: for some reason this doesnt work with "pddl_apply_action" in action_space
+        # and needs to go through the keys argument
         if "pddl_apply_action" in list(action_space.keys()):
             self._pddl_ac_start, _ = find_action_range(
                 action_space, "pddl_apply_action"
@@ -186,7 +188,6 @@ class SkillPolicy(Policy):
                 bad_terminate = over_max_len.cpu()
             else:
                 is_skill_done = is_skill_done | over_max_len.cpu()
-
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._delay_term[env_i]:
@@ -210,7 +211,7 @@ class SkillPolicy(Policy):
                 f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
                 observations,
             )
-        return is_skill_done, bad_terminate, new_actions
+        return is_skill_done.cpu(), bad_terminate.cpu(), new_actions
 
     def on_enter(
         self,

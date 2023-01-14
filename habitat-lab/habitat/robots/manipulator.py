@@ -205,8 +205,7 @@ class Manipulator(RobotInterface):
         )
         return lower_lims, upper_lims
 
-    @property
-    def ee_link_id(self) -> int:
+    def ee_link_id(self, index=0) -> int:
         """Gets the Habitat Sim link id of the end-effector."""
         return self.params.ee_link
 
