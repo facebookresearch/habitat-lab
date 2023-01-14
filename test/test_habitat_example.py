@@ -7,6 +7,8 @@
 import pytest
 
 import habitat
+import examples
+print(examples)
 from examples import (
     new_actions,
     register_new_sensors_and_measures,

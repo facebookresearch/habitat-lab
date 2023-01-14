@@ -50,7 +50,7 @@ class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.get_robot_data(
+        robot_T = self._sim.get_agent_data(
             self.robot_id
         ).robot.base_transformation
 

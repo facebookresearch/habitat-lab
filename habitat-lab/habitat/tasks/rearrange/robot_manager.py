@@ -61,8 +61,8 @@ class RobotManager:
 
         for agent_name in cfg.agents_order:
             agent_cfg = cfg.agents[agent_name]
-            robot_cls = eval(agent_cfg.robot_type)
-            robot = robot_cls(agent_cfg.robot_urdf, sim)
+            robot_cls = eval(agent_cfg.agent_type)
+            robot = robot_cls(agent_cfg.agent_urdf, sim)
             grasp_mgr = RearrangeGraspManager(sim, cfg, robot)
 
             if len(cfg.agents) > 1:
@@ -162,7 +162,7 @@ class RobotManager:
                     robot_data.start_js,
                 )
 
-    def update_robots(self):
+    def update_agents(self):
         """
         Update all robot instance managers.
         """

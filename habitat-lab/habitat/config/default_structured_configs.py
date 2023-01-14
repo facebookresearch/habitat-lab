@@ -941,22 +941,24 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
-    robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-    robot_type: str = "FetchRobot"
+    agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+    agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 
 @dataclass
 class HumanAgentConfig(AgentConfig):
     amass_path: str = ""
     body_model_path: str = ""
-    human_type: str = "AmassHuman"
+    agent_type: str = "AmassHuman"
     draw_fps_human: int = 60
     grab_path: str = ""
+    grasp_managers: int = 2
 
 
 

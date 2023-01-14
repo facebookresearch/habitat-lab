@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.robots.robot_interface import RobotInterface
+from habitat.agents.robots.robot_interface import RobotInterface
 from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
 

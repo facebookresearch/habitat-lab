@@ -21,8 +21,8 @@ class RobotAction(SimulatorTaskAction):
         """
 
         if "agent" not in self._config or self._config.agent is None:
-            return self._sim.robots_mgr[0]
-        return self._sim.robots_mgr[self._config.agent]
+            return self._sim.agents_mgr[0]
+        return self._sim.agents_mgr[self._config.agent]
 
     @property
     def _ik_helper(self):

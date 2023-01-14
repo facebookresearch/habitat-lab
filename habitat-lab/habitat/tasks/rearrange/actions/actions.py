@@ -407,7 +407,7 @@ class ArmEEAction(RobotAction):
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.robot.arm_joint_pos)
+            np.array(self._sim.agent.arm_joint_pos)
         )
 
         self.ee_target = cur_ee
@@ -419,8 +419,8 @@ class ArmEEAction(RobotAction):
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
             self.ee_target,
-            self._sim.robot.params.ee_constraint[:, 0],
-            self._sim.robot.params.ee_constraint[:, 1],
+            self._sim.agent.params.ee_constraint[:, 0],
+            self._sim.agent.params.ee_constraint[:, 1],
         )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
@@ -428,14 +428,14 @@ class ArmEEAction(RobotAction):
 
         self.apply_ee_constraints()
 
-        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_pos = np.array(self._sim.agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
         des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
-        self._sim.robot.arm_motor_pos = des_joint_pos
+        self._sim.agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
@@ -443,7 +443,7 @@ class ArmEEAction(RobotAction):
         self.set_desired_ee_pos(ee_pos)
 
         if self._config.get("render_ee_target", False):
-            global_pos = self._sim.robot.base_transformation.transform_point(
+            global_pos = self._sim.agent.base_transformation.transform_point(
                 self.ee_target
             )
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
@@ -475,19 +475,19 @@ class GrabAction(HumanAction, PddlApplyAction):
         HumanAction.reset(self)
         PddlApplyAction.reset(self)
         # breakpoint()
-        # self._sim.robot.
-        link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
+        # self._sim.agent.
+        link_index = self._sim.agents_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
         if link_index == 0:
-            curr_link = self._sim.robot.params.ee_link_left
+            curr_link = self._sim.agent.params.ee_link_left
         else:
-            curr_link = self._sim.robot.params.ee_link_right
+            curr_link = self._sim.agent.params.ee_link_right
 
-        ef_link_transform = self._sim.robot.sim_obj.get_link_scene_node(
+        ef_link_transform = self._sim.agent.sim_obj.get_link_scene_node(
             curr_link
         ).transformation
         # self.ee_target = ef_link_transform.translation
         # cur_ee = self._ik_helper.calc_fk(
-        #     np.array(self._sim.robot.arm_joint_pos)
+        #     np.array(self._sim.agent.arm_joint_pos)
         # )
 
         # self.ee_target = cur_ee
@@ -504,8 +504,8 @@ class GrabAction(HumanAction, PddlApplyAction):
     # def apply_ee_constraints(self):
     #     self.ee_target = np.clip(
     #         self.ee_target,
-    #         self._sim.robot.params.ee_constraint[:, 0],
-    #         self._sim.robot.params.ee_constraint[:, 1],
+    #         self._sim.agent.params.ee_constraint[:, 0],
+    #         self._sim.agent.params.ee_constraint[:, 1],
     #     )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
@@ -514,7 +514,7 @@ class GrabAction(HumanAction, PddlApplyAction):
 
         # self.apply_ee_constraints()
 
-        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_pos = np.array(self._sim.agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         # print(self.ee_target)
@@ -536,8 +536,8 @@ class GrabAction(HumanAction, PddlApplyAction):
             Q = Rotation.from_euler('xyz', current_angle).as_quat()
             joints_pos += list(Q)
 
-        self._sim.robot.arm_joint_pos = joints_pos
-        # print(self._sim.robot.sim_obj.joint_positions)
+        self._sim.agent.arm_joint_pos = joints_pos
+        # print(self._sim.agent.sim_obj.joint_positions)
 
         # breakpoint()
 
@@ -560,7 +560,7 @@ class GrabAction(HumanAction, PddlApplyAction):
         if do_snap:
             snap_obj_id = self._task.pddl_problem.sim_info.sim.scene_obj_ids[obj_id]
 
-            grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
+            grasp_mgr = self._sim.agents_mgr[0].grasp_mgrs[self.grasp_manager_id]
             # snap_obj_id = self._sim.scene_obj_ids[object_id]
             grasp_mgr.snap_to_obj(snap_obj_id, should_open_gripper=False)
 
@@ -572,7 +572,7 @@ class GrabAction(HumanAction, PddlApplyAction):
 
         # if self._config.get("render_ee_target", False):
         # breakpoint()
-        # global_pos = self._sim.robot.sim_obj.transformation.transform_point(
+        # global_pos = self._sim.agent.sim_obj.transformation.transform_point(
         #     self.ee_target
         # )
         # # global_pos = self.ee_target
@@ -617,7 +617,7 @@ class HumanJointAction(HumanAction):
         if np.array(new_pos_transform).sum() != 0:
             vecs = [mn.Vector4(new_pos_transform[i*4:(i+1)*4]) for i in range(4)]
             new_transform = mn.Matrix4(*vecs)
-            self._sim.robot.set_joint_transform(new_pos, new_transform)
+            self._sim.agent.set_joint_transform(new_pos, new_transform)
         return self._sim.step(HabitatSimActions.changejoint_action)
 
 
@@ -653,14 +653,14 @@ class ReleaseAction(GrabAction):
 
         # return self._sim.step(HabitatSimActions.changejoint_action)
 
-        # self._sim.robot.
-        # link_index = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
+        # self._sim.agent.
+        # link_index = self._sim.agents_mgr[0].grasp_mgrs[self.grasp_manager_id].ee_index
         # if link_index == 0:
-        #     curr_link = self._sim.robot.params.ee_link_left
+        #     curr_link = self._sim.agent.params.ee_link_left
         # else:
-        #     curr_link = self._sim.robot.params.ee_link_right
+        #     curr_link = self._sim.agent.params.ee_link_right
 
-        # ef_link_transform = self._sim.robot.sim_obj.get_link_scene_node(
+        # ef_link_transform = self._sim.agent.sim_obj.get_link_scene_node(
         #     curr_link
         # ).transformation
 
@@ -679,7 +679,7 @@ class ReleaseAction(GrabAction):
 
         # should_desnap = bool(kwargs['desnap'])
 
-        # grasp_mgr = self._sim.robots_mgr[0].grasp_mgrs[self.grasp_manager_id]
+        # grasp_mgr = self._sim.agents_mgr[0].grasp_mgrs[self.grasp_manager_id]
         # # snap_obj_id = self._sim.scene_obj_ids[self.obj_id]
         # if should_desnap:
         #     breakpoint()

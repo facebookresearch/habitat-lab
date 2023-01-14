@@ -16,8 +16,8 @@ class HumanAction(SimulatorTaskAction):
         """
 
         if "agent" not in self._config or self._config.agent is None:
-            return self._sim.humans_mgr[0]
-        return self._sim.humans_mgr[self._config.agent]
+            return self._sim.agents_mgr[0]
+        return self._sim.agents_mgr[self._config.agent]
 
     @property
     def _ik_helper(self):
@@ -32,7 +32,7 @@ class HumanAction(SimulatorTaskAction):
         """
         The human instance for this action.
         """
-        return self._human_mgr.humanoid
+        return self._human_mgr.agent
 
     @property
     def cur_grasp_mgr(self):

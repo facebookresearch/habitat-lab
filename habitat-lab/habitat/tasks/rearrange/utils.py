@@ -95,10 +95,10 @@ def rearrange_collision(
     agent_idx: Optional[int] = None,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
-    robot_model = sim.get_robot_data(agent_idx).robot
-    grasp_mgr = sim.get_robot_data(agent_idx).grasp_mgr
+    robot_model = sim.get_agent_data(agent_idx).agent
+    grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
-    robot_id = robot_model.get_robot_sim_id()
+    robot_id = robot_model.get_agent_sim_id()
     added_objs = sim.scene_obj_ids
     snapped_obj_id = grasp_mgr.snap_idx
 
@@ -440,8 +440,8 @@ def get_robot_spawns(
         if target_distance > distance_threshold or not is_navigable:
             continue
 
-        sim.robot.base_pos = start_position
-        sim.robot.base_rot = start_rotation
+        sim.agent.base_pos = start_position
+        sim.agent.base_rot = start_rotation
 
         # Make sure the robot is not colliding with anything in this
         # position.

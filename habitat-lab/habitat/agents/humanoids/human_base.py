@@ -9,14 +9,14 @@ from typing import Dict, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.robots.manipulator import Manipulator
 
 from habitat_sim.simulator import Simulator
 
 import habitat_sim.physics as phy
 from habitat_sim.utils.common import orthonormalize_rotation_shear
+from habitat.agents import AgentInterface
 
-class Humanoid():
+class Humanoid(AgentInterface):
     """ Generic manipulator for the human """
 
     def __init__(
@@ -82,9 +82,6 @@ class Humanoid():
         # self._update_motor_settings_cache()
 
 
-    def get_robot_sim_id(self) -> int:
-        """Get the unique id for referencing the robot."""
-        return self.sim_obj.object_id
 
     def update(self) -> None:
         if self._cameras is not None:

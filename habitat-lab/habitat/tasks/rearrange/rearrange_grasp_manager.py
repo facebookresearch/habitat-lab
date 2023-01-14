@@ -30,7 +30,7 @@ class RearrangeGraspManager:
     Manages the agent grasping onto rigid objects and the links of articulated objects.
     """
 
-    def __init__(self, sim, config: "DictConfig", robot) -> None:
+    def __init__(self, sim, config: "DictConfig", robot, ee_index=0) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
         :param config: The task's "simulator" subconfig node. Defines grasping parameters.
@@ -43,7 +43,7 @@ class RearrangeGraspManager:
         self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
         self._managed_robot = robot
-        self.ee_index = 0
+        self.ee_index = ee_index
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
@@ -221,7 +221,7 @@ class RearrangeGraspManager:
         :return: The id of the newly created constraint or -1 if failed.
         """
         c = RigidConstraintSettings()
-        c.object_id_a = self._managed_robot.get_robot_sim_id()
+        c.object_id_a = self._managed_robot.get_agent_sim_id()
         c.link_id_a = self._managed_robot.ee_link_id(self.ee_index)
         c.object_id_b = obj_id_b
         if link_id_b is not None:

@@ -14,8 +14,8 @@ from habitat_sim.logging import LoggingContext, logger
 
 import habitat_sim.physics as phy
 
-from habitat.humanoids.human_base import Humanoid
-from habitat.robots.mobile_manipulator import (
+from habitat.agents.humanoids.human_base import Humanoid
+from habitat.agents.robots.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
     RobotCameraParams,
@@ -25,6 +25,7 @@ from habitat.robots.mobile_manipulator import (
 class HumanParams:
     arm_init_params_left: Optional[np.ndarray]
     arm_init_params_right: Optional[np.ndarray]
+    arm_init_params: Optional[np.ndarray]
     cameras: Dict
     gripper_init_params: Optional[np.ndarray]
     ee_link_left: int
@@ -61,6 +62,9 @@ class AmassHuman(Humanoid):
                     [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
                     dtype=np.float32),
                 arm_init_params_right=np.array(
+                    [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                    dtype=np.float32),
+                arm_init_params=np.array(
                     [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
                     dtype=np.float32),
                 ee_offset=mn.Vector3(),

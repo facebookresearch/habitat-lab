@@ -109,7 +109,7 @@ def get_input_vel_ctlr(
 
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
-    multi_agent = len(env._sim.robots_mgr) > 1
+    multi_agent = len(env._sim.agents_mgr) > 1
     # print(env.task.actions)
     arm_action_name = "arm_action"
     base_action_name = "empty"
@@ -486,13 +486,13 @@ def play_env(env, args, config):
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
-    is_multi_agent = len(env._sim.robots_mgr) > 1
+    is_multi_agent = len(env._sim.agents_mgr) > 1
     env._sim.robot.translation_offset = env._sim.robot.sim_obj.translation + mn.Vector3([0,0.9, 0])
     agent_location = env._sim.robot.translation_offset
     print(agent_location)
 
 
-    urdf_path = config.habitat.simulator.agents.main_agent.robot_urdf
+    urdf_path = config.habitat.simulator.agents.main_agent.agent_urdf
     amass_path = config.habitat.simulator.agents.main_agent.amass_path
     body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
     draw_fps = config.habitat.simulator.agents.main_agent.draw_fps_human
@@ -575,7 +575,7 @@ def play_env(env, args, config):
 
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
-            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            agent_to_control = agent_to_control % len(env._sim.agents_mgr)
             logger.info(
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )

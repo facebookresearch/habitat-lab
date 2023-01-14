@@ -33,13 +33,12 @@ habitat:
       main_agent:
         is_set_start_state: False
         radius: 0.3
-        robot_urdf: 'data/human_sim_data/amass_male.urdf'
+        agent_urdf: 'data/human_sim_data/amass_male.urdf'
         ik_arm_urdf: 'data/human_sim_data/amass_male.urdf'
-        robot_type: 'AmassHuman'
+        agent_type: 'AmassHuman'
         amass_path: 'data/human_sim_data/amass_smpl_h/'
         body_model_path: 'data/human_sim_data/smplh/male/model.npz'
         grab_path: 'data/human_sim_data/left_hand_smplh_hand.npz'
-        human_type: "AmassHuman"
         sim_sensors:
           third_rgb_sensor:
             height: 212

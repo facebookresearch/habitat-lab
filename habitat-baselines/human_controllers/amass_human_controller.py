@@ -34,7 +34,7 @@ class MotionData:
         motion_: motion.Motion,
     ) -> None:
         # logger.info("Loading Motion data...")
-        
+
         ROOT, FIRST, LAST = 0, 0, -1
         # primary
         self.motion = motion_
@@ -162,7 +162,7 @@ class MotionData:
                 )
             pose_data.append(T)
         return motion.Pose(skel, pose_data)
-        
+
 
 
 
@@ -181,15 +181,15 @@ class Motions:
         self.body_model_path = body_model_path
 
         # logger.info("Loading Motion data...")
-        
+
         # TODO: add more diversity here
         motion_files = {
             "walk": f"{self.amass_path}/CMU/10/10_04_poses.npz",  # [0] cycle walk
             "run": f"{self.amass_path}/CMU/09/09_01_poses.npz",  # [1] cycle run
         }
-        
+
         motion_data = {key: amass.load(value, bm_path=body_model_path) for key, value in motion_files.items()}
-        
+
         # motion_data = {
         #     "walk": motion_data[0],
         #     "run": motion_data[1]
@@ -220,13 +220,13 @@ class Motions:
 class AmassHumanController:
     def __init__(self, urdf_path, amass_path, body_model_path, grab_path=None, obj_translation=None, draw_fps=60):
         self.motions = Motions(amass_path, body_model_path)
-        
+
         self.last_pose = self.motions.standing_pose
         self.urdf_path = urdf_path
         self.amass_path = amass_path
 
         self.ROOT = 0
- 
+
         self.mocap_frame = 0
         self.curr_trans = mn.Vector3([0,0,0.3])
         self.rotation_offset: Optional[mn.Quaternion] = mn.Quaternion()
@@ -243,7 +243,7 @@ class AmassHumanController:
         # state variables
         self.time_since_stop = 0 # How many frames since we started stopping
         self.time_since_start = 0 # How many frames since we started walking
-        self.fully_started = False 
+        self.fully_started = False
         self.fully_stopped = False
         self.last_walk_pose = None
 
@@ -254,25 +254,25 @@ class AmassHumanController:
 
         # Option args
         self.use_ik_grab = True
-        
+
         if obj_translation is not None:
             self.translation_offset = obj_translation + mn.Vector3([0,0.90,0])
         self.pc_id = p.connect(p.DIRECT)
         self.human_bullet_id = p.loadURDF(urdf_path)
 
         self.link_ids = list(range(p.getNumJoints(self.human_bullet_id)))
-        
+
         # TODO: There is a mismatch between the indices we get here and ht eones from model.get_link_ids. Would be good to resolve it
         link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
 
         # Joint INFO
         # https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html#getjointinfo
-        
+
         self.joint_info = [p.getJointInfo(self.human_bullet_id, index) for index in link_indices]
 
         # Data used to grab
-        self.use_ik_grab = False
-        if grab_path is None:
+        # self.use_ik_grab = False
+        if grab_path is None or len(grab_path) == 0:
             self.use_ik_grab = False
         if self.use_ik_grab:
             graph_path_split = osp.splitext(grab_path)
@@ -280,7 +280,7 @@ class AmassHumanController:
             grab_data = np.load(grab_path)
             num_poses = grab_data['trans'].shape[0]
             self.num_pos = num_poses
-                
+
             # TODO: change this literal argument
             if not os.path.isfile(grab_poses):
                 self.grab_quaternions = np.zeros((num_poses, 68))
@@ -314,15 +314,15 @@ class AmassHumanController:
         self.last_pose = self.motions.standing_pose
 
     def stop(self, progress=None):
-        
+
         new_pose =  self.motions.standing_pose
         new_pose, new_root_trans, root_rotation = self.convert_CMUamass_single_pose(new_pose)
-        
+
         if progress is None:
             self.time_since_stop += 1
-            if self.fully_started: 
+            if self.fully_started:
                 progress = min(self.time_since_stop, self.frames_to_stop)
-            else: 
+            else:
                 # If we were just starting walking and are stopping again, the progress is
                 # just reduced by the steps we started to walk
                 progress = max(0, self.frames_to_stop - self.time_since_start)
@@ -344,38 +344,38 @@ class AmassHumanController:
 
         self.time_since_start = 0
 
-        return interp_pose, self.obj_transform        
+        return interp_pose, self.obj_transform
 
-        
 
-        
+
+
 
     def walk_path(self, path_keypoints: List[mn.Vector3], should_reset=False, stop_at_end=False):
         """ Walks along a path """
         if should_reset:
             self.reset_path_info()
-        
-        
+
+
         while self.path_ind < len(path_keypoints) - 1 and self.path_distance_walked > self.path_distance_covered_next_wp:
             i = self.path_ind
             j = i + 1
             self.path_ind += 1
-            
+
             progress: float = (mn.Vector3(path_keypoints[i] - path_keypoints[j])).length()
             self.path_distance_covered_next_wp += progress
-        
+
         is_last_keypoint = self.path_ind == (len(path_keypoints) - 1)
         next_relative_position = path_keypoints[self.path_ind] - self.translation_offset
         new_pos, new_transform = self.walk(next_relative_position)
-        
+
         if is_last_keypoint and stop_at_end:
             # Set a stopping pose if close to the end
             distance_to_goal = (path_keypoints[self.path_ind] - self.translation_offset).length()
             progress_stop = min(0, self.stop_distance - distance_to_goal) / self.stop_distance
             new_pos = self.stop(progress=progress_stop)
-                
+
         return new_pos, new_transform
-            
+
     def obtain_root_transform_at_frame(self, mocap_frame):
 
         curr_motion_data = self.motions.walk_to_walk
@@ -385,7 +385,7 @@ class AmassHumanController:
         full_transform = curr_motion_data.motion.poses[mocap_frame].get_transform(
             self.ROOT, local=True
         )
-        
+
         full_transform = mn.Matrix4(full_transform)
         full_transform.translation -= curr_motion_data.center_of_root_drift
         full_transform = (
@@ -402,7 +402,7 @@ class AmassHumanController:
         curr_motion_data = self.motions.walk_to_walk
 
         prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame]
-        new_pos = self.mocap_frame + step_size  
+        new_pos = self.mocap_frame + step_size
         if new_pos < len(curr_motion_data.map_of_total_displacement):
             distance_covered = curr_motion_data.map_of_total_displacement[new_pos]
         else:
@@ -420,7 +420,7 @@ class AmassHumanController:
             # TODO: make sure that this is not round
             index = int(value_norm * num_bins)
             return min(index, num_bins - 1)
-        
+
         relative_pos = position
         x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
         # breakpoint()
@@ -443,7 +443,7 @@ class AmassHumanController:
 
         # Make position relative to the root
         # position_relative = position - self.root_pos
-        
+
 
         if not self.use_ik_grab:
             raise KeyError(
@@ -467,22 +467,22 @@ class AmassHumanController:
         new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
         curr_motion_data = self.motions.walk_to_walk
         new_pose, new_root_trans, root_rotation = self.convert_CMUamass_single_pose(new_pose)
-                
+
         char_pos = self.translation_offset
-        
+
 
 
         forward_V = position
-        
-        
+
+
         # interpolate facing last margin dist with standing pose
         did_rotate = False
         if self.prev_orientation is not None:
-            action_order_facing = self.prev_orientation 
+            action_order_facing = self.prev_orientation
             curr_angle = np.arctan2(forward_V[0], forward_V[2]) * 180./np.pi
             prev_angle = np.arctan2(action_order_facing[0], action_order_facing[2]) * 180./np.pi
             forward_angle = curr_angle - prev_angle
-            if np.abs(forward_angle) > 1:                
+            if np.abs(forward_angle) > 1:
                 # t = forward_angle
                 actual_angle_move = 5
                 if abs(forward_angle) < actual_angle_move:
@@ -509,35 +509,35 @@ class AmassHumanController:
         # while transform is facing -Z, remove forward displacement
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         full_transform = look_at_path_T @ full_transform
-        
-        
+
+
         # if self.mocap_frame == 0:
         #     dist_diff = 0
         # else:
-            
+
         prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
         if (self.mocap_frame - step_size) < 0:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame] + curr_motion_data.map_of_total_displacement[-1]
         else:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
-        
+
         dist_diff = max(0, distance_covered - prev_distance)
         # breakpoint()
         # if did_rotate:
         #     dist_diff = 0
             #     self.distance_rot += dist_diff
-        
+
         # print("TRANSFORM WALK", full_transform.translation, dist_diff)
-        
+
         self.translation_offset = self.translation_offset + forward_V * dist_diff;
         self.prev_orientation = forward_V
-        
+
 
         self.time_since_start += 1
-        if self.fully_stopped: 
+        if self.fully_stopped:
             progress = min(self.time_since_start, self.frames_to_start)
-        else: 
-            # if it didn't fully stop it should take us to walk as many 
+        else:
+            # if it didn't fully stop it should take us to walk as many
             # frames as the time we spent stopping
             progress = max(0, self.frames_to_start - self.time_since_stop)
 
@@ -561,7 +561,7 @@ class AmassHumanController:
 
         self.obj_transform = full_transform
         return interp_pose, full_transform
-        
+
 
     def global_correction_quat(
         self, up_v: mn.Vector3, forward_v: mn.Vector3
@@ -636,11 +636,11 @@ class AmassHumanController:
                 )
 
             T = pose.get_transform(pose_joint_index, local=True)
-            
-            
+
+
             if joint_type == p.JOINT_SPHERICAL:
                 Q, _ = conversions.T2Qp(T)
-            
+
             new_pose += list(Q)
         # breakpoint()
         return new_pose, root_translation, root_rotation
@@ -652,8 +652,6 @@ class AmassHumanController:
         # breakpoint()
         return pose + list(np.asarray(transform.transposed()).flatten())
 
-    
+
     def open_gripper(self):
         pass
-
-

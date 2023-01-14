@@ -1,5 +1,5 @@
 # @package _global_
-# Pick and place are instantaneous skills, 
+# Pick and place are instantaneous skills,
 # where environment is set to final state.
 # Navigation is kinematically simulated.
 
@@ -40,7 +40,9 @@ habitat_baselines:
   distrib_updater_name: "HrlDDPPO"
   video_fps: 30
   eval_ckpt_path_dir: ""
-  num_environments: 3
+  num_environments: 1
+  video_render_views:
+    - "third_rgb_sensor"
   writer_type: 'tb'
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
