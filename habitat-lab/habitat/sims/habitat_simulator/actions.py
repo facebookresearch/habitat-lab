@@ -137,7 +137,7 @@ class HabitatSimV1ActionSpaceConfiguration(
 class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
         noisemodel_config = (
-            self.config.action_space_config_arguments.NOISE_MODEL
+            self.config.action_space_config_arguments.noise_model
         )
         return {
             HabitatSimActions.stop: habitat_sim.ActionSpec("stop"),
@@ -146,8 +146,8 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
                 habitat_sim.PyRobotNoisyActuationSpec(
                     amount=self.config.forward_step_size,
                     robot=noisemodel_config.robot,
-                    controller=noisemodel_config.CONTROLLER,
-                    noise_multiplier=noisemodel_config.NOISE_MULTIPLIER,
+                    controller=noisemodel_config.controller,
+                    noise_multiplier=noisemodel_config.noise_multiplier,
                 ),
             ),
             HabitatSimActions.turn_left: habitat_sim.ActionSpec(
@@ -155,8 +155,8 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
                 habitat_sim.PyRobotNoisyActuationSpec(
                     amount=self.config.turn_angle,
                     robot=noisemodel_config.robot,
-                    controller=noisemodel_config.CONTROLLER,
-                    noise_multiplier=noisemodel_config.NOISE_MULTIPLIER,
+                    controller=noisemodel_config.controller,
+                    noise_multiplier=noisemodel_config.noise_multiplier,
                 ),
             ),
             HabitatSimActions.turn_right: habitat_sim.ActionSpec(
@@ -164,8 +164,8 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
                 habitat_sim.PyRobotNoisyActuationSpec(
                     amount=self.config.turn_angle,
                     robot=noisemodel_config.robot,
-                    controller=noisemodel_config.CONTROLLER,
-                    noise_multiplier=noisemodel_config.NOISE_MULTIPLIER,
+                    controller=noisemodel_config.controller,
+                    noise_multiplier=noisemodel_config.noise_multiplier,
                 ),
             ),
             HabitatSimActions.look_up: habitat_sim.ActionSpec(
