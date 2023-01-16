@@ -10,164 +10,14 @@ import numpy as np
 import os
 from os import path as osp
 
-from fairmotion.core import motion
-from fairmotion.data import amass
 from fairmotion.ops import motion as motion_ops
-from fairmotion.ops import conversions
 
-
-
+from habitat.utils.fairmotion_utils import (
+    MotionData,
+    AmassHelper
+)
 
 import pybullet as p
-
-
-@dataclass
-class MotionData:
-    """
-    A class intended to handle precomputations of utilities of the motion we want to
-    load into the character.
-    """
-
-    # transitive motion is necessary for scenic motion build
-    def __init__(
-        self,
-        motion_: motion.Motion,
-    ) -> None:
-        # logger.info("Loading Motion data...")
-
-        ROOT, FIRST, LAST = 0, 0, -1
-        # primary
-        self.motion = motion_
-        self.poses = motion_.poses
-        self.fps = motion_.fps
-        self.num_of_frames: int = len(motion_.poses)
-        self.map_of_total_displacement: float = []
-        self.center_of_root_drift: mn.Vector3 = mn.Vector3()
-        self.time_length = self.num_of_frames * (1.0 / motion_.fps)
-
-        # intermediates
-        self.translation_drifts: List[mn.Vector3] = []
-        self.forward_displacements: List[mn.Vector3] = []
-        self.root_orientations: List[mn.Quaternion] = []
-
-        # first and last frame root position vectors
-        f = motion_.poses[0].get_transform(ROOT, local=False)[0:3, 3]
-        f = mn.Vector3(f)
-        l = motion_.poses[LAST].get_transform(ROOT, local=False)[0:3, 3]
-        l = mn.Vector3(l)
-
-        # axis that motion uses for up and forward
-        self.direction_up = mn.Vector3.z_axis()
-        forward_V = (l - f) * (mn.Vector3(1.0, 1.0, 1.0) - mn.Vector3.z_axis())
-        self.direction_forward = forward_V.normalized()
-
-        ### Fill derived data structures ###
-        # fill translation_drifts and forward_displacements
-        for i in range(self.num_of_frames):
-            j = i + 1
-            if j == self.num_of_frames:
-                # interpolate forward and drift from nth vectors and 1st vectors and push front
-                self.forward_displacements.insert(
-                    0,
-                    (
-                        (
-                            self.forward_displacements[LAST]
-                            + self.forward_displacements[0]
-                        )
-                        * 0.5
-                    ),
-                )
-                self.translation_drifts.insert(
-                    0,
-                    (
-                        (
-                            self.translation_drifts[LAST]
-                            + self.translation_drifts[0]
-                        )
-                        * 0.5
-                    ),
-                )
-                break
-
-            # root translation
-            curr_root_t = motion_.poses[i].get_transform(ROOT, local=False)[
-                0:3, 3
-            ]
-            next_root_t = motion_.poses[j].get_transform(ROOT, local=False)[
-                0:3, 3
-            ]
-
-            delta_P_vector = mn.Vector3(next_root_t - curr_root_t)
-            forward_vector = delta_P_vector.projected(self.direction_forward)
-            drift_vector = delta_P_vector - forward_vector
-
-            self.forward_displacements.append(forward_vector)
-            self.translation_drifts.append(drift_vector)
-
-        j, summ = 0, 0
-        # fill translation_drifts and forward_displacements
-        for i in range(self.num_of_frames):
-            curr_root_t = motion_.poses[i].get_transform(ROOT, local=False)[
-                0:3, 3
-            ]
-            prev_root_t = motion_.poses[j].get_transform(ROOT, local=False)[
-                0:3, 3
-            ]
-
-            # fill map_of_total_displacement
-            summ += (
-                mn.Vector3(curr_root_t - prev_root_t)
-                .projected(self.direction_forward)
-                .length()
-            )
-            self.map_of_total_displacement.append(summ)
-            j = i
-
-        # fill root_orientations
-        for pose in motion_.poses:
-            root_T = pose.get_transform(ROOT, local=False)
-            root_rotation = mn.Quaternion.from_matrix(
-                mn.Matrix3x3(root_T[0:3, 0:3])
-            )
-            self.root_orientations.append(root_rotation)
-
-        # get center of drift
-        summ = mn.Vector3()
-        for pose in motion_.poses:
-            root_T = mn.Matrix4(pose.get_transform(ROOT, local=False))
-            root_T.translation *= (
-                mn.Vector3(1.0, 1.0, 1.0) - self.direction_forward
-            )
-            summ += root_T.translation
-        self.center_of_root_drift = summ / self.num_of_frames
-
-    @classmethod
-    def obtain_pose(cls, skel: motion.Skeleton, body_info, index)-> motion.Pose:
-        pose_body = body_info['pose'][index]
-        root_orient = body_info['root_orient'][index]
-        root_trans = body_info['trans'][index]
-        num_joints = (pose_body.shape[0] // 3) + 1
-        # breakpoint()
-        pose_data = []
-        for j in range(num_joints):
-            if j == 0:
-                T = conversions.Rp2T(
-                    conversions.A2R(root_orient), root_trans
-                )
-            else:
-                T = conversions.R2T(
-                    conversions.A2R(
-                        pose_body[(j - 1) * 3 : (j - 1) * 3 + 3]
-                    )
-                )
-            pose_data.append(T)
-        return motion.Pose(skel, pose_data)
-
-
-
-
-
-
 
 
 class Motions:
@@ -188,12 +38,8 @@ class Motions:
             "run": f"{self.amass_path}/CMU/09/09_01_poses.npz",  # [1] cycle run
         }
 
-        motion_data = {key: amass.load(value, bm_path=body_model_path) for key, value in motion_files.items()}
+        motion_data = {key: AmassHelper.load_amass_file(value, bm_path=body_model_path) for key, value in motion_files.items()}
 
-        # motion_data = {
-        #     "walk": motion_data[0],
-        #     "run": motion_data[1]
-        # }
         ### TRANSITIVE ###
         # all motions must have same fps for this implementation, so use first motion to set global
         fps = motion_data['walk'].fps
@@ -207,13 +53,7 @@ class Motions:
         )
 
         # Run-to-run cycle
-        self.run_to_run = MotionData(motion_ops.cut(motion_data['run'], 3, 89)
-        )
-
-
-
-
-
+        self.run_to_run = MotionData(motion_ops.cut(motion_data['run'], 3, 89))
 
 
 
@@ -288,7 +128,7 @@ class AmassHumanController:
                 from tqdm import tqdm
                 for pose_index in tqdm(range(num_poses)):
                     current_pose = MotionData.obtain_pose(self.last_pose.skel, grab_data, pose_index)
-                    pose_quaternion, root_trans, root_rot = self.convert_CMUamass_single_pose(current_pose, raw=True)
+                    pose_quaternion, root_trans, root_rot = AmassHelper.convert_CMUamass_single_pose(current_pose, self.joint_info, raw=True)
                     transform_as_mat = np.array(mn.Matrix4.from_(root_rot.to_matrix(), root_trans)).reshape(-1)
                     self.grab_quaternions[pose_index, :] = pose_quaternion
                     self.grab_transform[pose_index, :] = transform_as_mat
@@ -316,7 +156,7 @@ class AmassHumanController:
     def stop(self, progress=None):
 
         new_pose =  self.motions.standing_pose
-        new_pose, new_root_trans, root_rotation = self.convert_CMUamass_single_pose(new_pose)
+        new_pose, new_root_trans, root_rotation = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
 
         if progress is None:
             self.time_since_stop += 1
@@ -379,7 +219,7 @@ class AmassHumanController:
     def obtain_root_transform_at_frame(self, mocap_frame):
 
         curr_motion_data = self.motions.walk_to_walk
-        global_neutral_correction = self.global_correction_quat(
+        global_neutral_correction = AmassHelper.global_correction_quat(
             mn.Vector3.z_axis(), curr_motion_data.direction_forward
         )
         full_transform = curr_motion_data.motion.poses[mocap_frame].get_transform(
@@ -466,7 +306,7 @@ class AmassHumanController:
         # curr_pos = self.motions.walk_to_walk[self.mocap_frame]
         new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
         curr_motion_data = self.motions.walk_to_walk
-        new_pose, new_root_trans, root_rotation = self.convert_CMUamass_single_pose(new_pose)
+        new_pose, new_root_trans, root_rotation = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
 
         char_pos = self.translation_offset
 
@@ -510,11 +350,6 @@ class AmassHumanController:
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         full_transform = look_at_path_T @ full_transform
 
-
-        # if self.mocap_frame == 0:
-        #     dist_diff = 0
-        # else:
-
         prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
         if (self.mocap_frame - step_size) < 0:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame] + curr_motion_data.map_of_total_displacement[-1]
@@ -522,13 +357,6 @@ class AmassHumanController:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
 
         dist_diff = max(0, distance_covered - prev_distance)
-        # breakpoint()
-        # if did_rotate:
-        #     dist_diff = 0
-            #     self.distance_rot += dist_diff
-
-        # print("TRANSFORM WALK", full_transform.translation, dist_diff)
-
         self.translation_offset = self.translation_offset + forward_V * dist_diff;
         self.prev_orientation = forward_V
 
@@ -541,18 +369,17 @@ class AmassHumanController:
             # frames as the time we spent stopping
             progress = max(0, self.frames_to_start - self.time_since_stop)
 
+        # Ensure a smooth transition from walking to standing
         progress_norm = progress * 1.0/self.frames_to_start
-
         if progress_norm < 1.0:
-            standing_pose, _, _ = self.convert_CMUamass_single_pose(self.motions.standing_pose)
-            # breakpoint()
+            # if it was standing before walking, interpolate between walking and standing pose
+            standing_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(self.motions.standing_pose, self.joint_info)
             interp_pose = (1-progress_norm) * np.array(standing_pose) + progress_norm * np.array(new_pose)
             interp_pose = list(interp_pose)
             self.fully_started = False
         else:
             interp_pose = new_pose
             self.fully_started = True
-            # breakpoint()
 
         if self.time_since_start >= self.frames_to_start:
             self.fully_started = True
@@ -563,93 +390,8 @@ class AmassHumanController:
         return interp_pose, full_transform
 
 
-    def global_correction_quat(
-        self, up_v: mn.Vector3, forward_v: mn.Vector3
-    ) -> mn.Quaternion:
-        """
-        Given the upward direction and the forward direction of a local space frame, this methd produces
-        the correction quaternion to convert the frame to global space (+Y up, -Z forward).
-        """
-        if up_v.normalized() != mn.Vector3.y_axis():
-            angle1 = mn.math.angle(up_v.normalized(), mn.Vector3.y_axis())
-            axis1 = mn.math.cross(up_v.normalized(), mn.Vector3.y_axis())
-            rotation1 = mn.Quaternion.rotation(angle1, axis1)
-            forward_v = rotation1.transform_vector(forward_v)
-        else:
-            rotation1 = mn.Quaternion()
-
-        forward_v = forward_v * (mn.Vector3(1.0, 1.0, 1.0) - mn.Vector3.y_axis())
-        angle2 = mn.math.angle(forward_v.normalized(), -1 * mn.Vector3.z_axis())
-        axis2 = mn.Vector3.y_axis()
-        rotation2 = mn.Quaternion.rotation(angle2, axis2)
-
-        return rotation2 * rotation1
-
-    def convert_CMUamass_single_pose(
-        self, pose, raw=False, apply_rot=False
-    ) -> Tuple[List[float], mn.Vector3, mn.Quaternion]:
-        """
-        This conversion is specific to the datasets from CMU
-        """
-        new_pose = []
-
-        # Root joint
-        root_T = pose.get_transform(self.ROOT, local=False)
-
-        final_rotation_correction = mn.Quaternion()
-
-        if not raw:
-            final_rotation_correction = (
-                self.global_correction_quat(mn.Vector3.z_axis(), mn.Vector3.x_axis())
-                * self.rotation_offset
-            )
-
-        root_rotation = final_rotation_correction * mn.Quaternion.from_matrix(
-            mn.Matrix3x3(root_T[0:3, 0:3])
-        )
-        root_translation = (
-            self.translation_offset
-            + final_rotation_correction.transform_vector(root_T[0:3, 3])
-        )
-
-        Q, _ = conversions.T2Qp(root_T)
-
-        # Other joints
-        # breakpoint()
-        for model_link_id in range(len(self.joint_info)):
-            joint_type = self.joint_info[model_link_id][2]
-            joint_name = self.joint_info[model_link_id][1].decode('UTF-8')
-            pose_joint_index = pose.skel.index_joint[joint_name]
-            # When the target joint do not have dof, we simply ignore it
-            if joint_type == p.JOINT_FIXED:
-                continue
-
-            # When there is no matching between the given pose and the simulated character,
-            # the character just tries to hold its initial pose
-            if pose_joint_index is None:
-                raise KeyError(
-                    "Error: pose data does not have a transform for that joint name"
-                )
-            if joint_type not in [p.JOINT_SPHERICAL]:
-                raise NotImplementedError(
-                    f"Error: {joint_type} is not a supported joint type"
-                )
-
-            T = pose.get_transform(pose_joint_index, local=True)
-
-
-            if joint_type == p.JOINT_SPHERICAL:
-                Q, _ = conversions.T2Qp(T)
-
-            new_pose += list(Q)
-        # breakpoint()
-        return new_pose, root_translation, root_rotation
-
     @classmethod
     def transformAction(cls, pose: List, transform: mn.Matrix4):
-        # breakpoint()
-        # list(np.asarray(transform).flatten())
-        # breakpoint()
         return pose + list(np.asarray(transform.transposed()).flatten())
 
 

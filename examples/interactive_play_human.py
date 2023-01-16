@@ -149,7 +149,7 @@ def get_input_vel_ctlr(
         #     breakpoint()
         if repeat_walk:
             displ = compute_displ(agent_path.points[path_ind], human_controller)
-            # displ = compute_displ(agent_path.points[path_ind], env._sim.robot)
+            # displ = compute_displ(agent_path.points[path_ind], env._sim.agent)
 
 
             displ2 = mn.Vector3([displ[0], 0, displ[1]])
@@ -248,7 +248,7 @@ def get_input_vel_ctlr(
 
         elif keys[pygame.K_y]:
             # Left
-            # ee_pos = env._sim.robot.ee_transform.translation
+            # ee_pos = env._sim.agent.ee_transform.translation
             # print(ee_pos)
             repeat_walk = False
             base_action_name = 'humanjoint_action'
@@ -287,7 +287,7 @@ def get_input_vel_ctlr(
 
         elif keys[pygame.K_e]:
             # Left
-            # ee_pos = env._sim.robot.ee_transform.translation
+            # ee_pos = env._sim.agent.ee_transform.translation
             # print(ee_pos)
             repeat_walk = False
             base_action_name = 'release_left_action'
@@ -304,22 +304,22 @@ def get_input_vel_ctlr(
             repeat_walk = False
             base_action_name = 'release_right_action'
             base_action = mn.Vector3([0, 0, -0.05])
-            env._sim.robot.curr_trans = base_action
+            env._sim.agent.curr_trans = base_action
             # print(base_action)
             # breakpoint()
 
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
-        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
-        rot = env._sim.robot.sim_obj.rotation
-        ee_pos = env._sim.robot.ee_transform.translation
+        pos = [float("%.3f" % x) for x in env._sim.agent.sim_obj.translation]
+        rot = env._sim.agent.sim_obj.rotation
+        ee_pos = env._sim.agent.ee_transform.translation
         logger.info(
             f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the robot, useful for debugging.
-        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
+        joint_state = [float("%.3f" % x) for x in env._sim.agent.arm_joint_pos]
         logger.info(f"Robot arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
@@ -487,8 +487,8 @@ def play_env(env, args, config):
         GfxReplayMeasure.cls_uuid, None
     )
     is_multi_agent = len(env._sim.agents_mgr) > 1
-    env._sim.robot.translation_offset = env._sim.robot.sim_obj.translation + mn.Vector3([0,0.9, 0])
-    agent_location = env._sim.robot.translation_offset
+    env._sim.agent.translation_offset = env._sim.agent.sim_obj.translation + mn.Vector3([0,0.9, 0])
+    agent_location = env._sim.agent.translation_offset
     print(agent_location)
 
 
@@ -496,16 +496,16 @@ def play_env(env, args, config):
     amass_path = config.habitat.simulator.agents.main_agent.amass_path
     body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
     draw_fps = config.habitat.simulator.agents.main_agent.draw_fps_human
-    obj_translation = env._sim.robot.sim_obj.translation
+    obj_translation = env._sim.agent.sim_obj.translation
     grab_path = config.habitat.simulator.agents.main_agent.grab_path
 
-    link_ids = env._sim.robot.sim_obj.get_link_ids()
+    link_ids = env._sim.agent.sim_obj.get_link_ids()
     human_controller = AmassHumanController(
         urdf_path, amass_path, body_model_path, obj_translation=obj_translation, grab_path=grab_path, draw_fps=draw_fps)
 
     # TODO: remove
 
-    human_controller.reset(env._sim.robot.sim_obj.translation)
+    human_controller.reset(env._sim.agent.sim_obj.translation)
     # breakpoint()
     found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map)
     path_ind = 1
@@ -569,7 +569,7 @@ def play_env(env, args, config):
         if do_update:
             repeat_walk = True
             agent_location = human_controller.translation_offset
-            # agent_location = env._sim.robot.translation_offset
+            # agent_location = env._sim.agent.translation_offset
             found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map, goal_location)
             path_ind = 1
 
@@ -581,7 +581,7 @@ def play_env(env, args, config):
             )
 
         delta_dist = 0.1
-        # dist = (path.points[path_ind] - env._sim.robot.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
+        # dist = (path.points[path_ind] - env._sim.agent.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
 
         # Get the thing below back
         dist = (path.points[path_ind] - human_controller.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
