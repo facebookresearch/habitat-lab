@@ -176,14 +176,21 @@ class DistToGoal(Measure):
         )
 
     def _get_cur_geo_dist(self, task):
-        if len(task.nav_goal_pos.shape) == 2:
-            return np.linalg.norm(
-                np.expand_dims(self._sim.robot.base_pos, 0)
-                - task.nav_goal_pos,
-                axis=1,
-            ).min()
+        if len(task.nav_goal_pos.shape) == 1:
+            goals = np.expand_dims(task.nav_goal_pos, axis=0)
         else:
-            return np.linalg.norm(self._sim.robot.base_pos - task.nav_goal_pos)
+            goals = task.nav_goal_pos
+        distance_to_target = np.min(
+            [
+                self._sim.geodesic_distance(self._sim.robot.base_pos, goal)
+                for goal in goals
+            ]
+        )
+        if distance_to_target == np.inf:
+            distance_to_target = self._prev_dist
+        if distance_to_target is None:
+            distance_to_target = 30
+        return distance_to_target
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
@@ -213,11 +220,13 @@ class RotDistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         if len(task.nav_goal_pos.shape) == 2:
-            closest_goal = np.linalg.norm(
-                np.expand_dims(self._sim.robot.base_pos, 0)
-                - task.nav_goal_pos,
-                axis=1,
-            ).argmin()
+            # RotDist to closest goal
+            closest_goal = np.argmin(
+                [
+                    self._sim.geodesic_distance(self._sim.robot.base_pos, goal)
+                    for goal in task.nav_goal_pos
+                ]
+            )
             targ = task.nav_goal_pos[closest_goal]
         else:
             targ = task.nav_goal_pos

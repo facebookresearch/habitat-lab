@@ -102,21 +102,20 @@ class DynNavRLEnv(RearrangeTask):
         )
 
         def filter_func(start_pos, _):
-            if len(nav_to_pos.shape) == 2:
-                return (
-                    np.min(
-                        np.linalg.norm(
-                            np.expand_dims(start_pos, axis=0) - nav_to_pos,
-                            axis=1,
-                        )
-                    )
-                    > self._config.min_start_distance
-                )
+            if len(nav_to_pos.shape) == 1:
+                goals = np.expand_dims(nav_to_pos, axis=0)
             else:
-                return (
-                    np.linalg.norm(start_pos - nav_to_pos)
-                    > self._config.min_start_distance
-                )
+                goals = nav_to_pos
+            distance = np.min(
+                [
+                    self._sim.geodesic_distance(start_pos, goal)
+                    for goal in goals
+                ]
+            )
+            return (
+                distance != np.inf
+                and distance > self._config.min_start_distance
+            )
 
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
             filter_func=filter_func
@@ -136,7 +135,6 @@ class DynNavRLEnv(RearrangeTask):
         self._nav_to_info = self._generate_nav_start_goal(
             episode, force_idx=self.force_obj_to_idx
         )
-
         sim.robot.base_pos = self._nav_to_info.robot_start_pos
         sim.robot.base_rot = self._nav_to_info.robot_start_angle
 
