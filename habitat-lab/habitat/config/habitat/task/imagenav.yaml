@@ -12,7 +12,7 @@ defaults:
       - distance_to_goal_reward
       - top_down_map
   - lab_sensors:
-      - imagegoal_sensor
+      - captiongoal_sensor
   - _self_
 
 type: Nav-v0
