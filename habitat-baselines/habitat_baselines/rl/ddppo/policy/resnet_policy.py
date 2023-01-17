@@ -8,7 +8,6 @@
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-# import clip
 import numpy as np
 import torch
 from gym import spaces
