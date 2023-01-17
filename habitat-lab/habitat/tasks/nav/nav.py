@@ -68,6 +68,7 @@ class NavigationGoal:
 
     position: List[float] = attr.ib(default=None, validator=not_none_validator)
     radius: Optional[float] = None
+    caption_goal: Optional[str] = None
 
 
 @attr.s(auto_attribs=True, kw_only=True)
@@ -1324,3 +1325,53 @@ class NavigationTask(EmbodiedTask):
 
     def _check_episode_is_active(self, *args: Any, **kwargs: Any) -> bool:
         return not getattr(self, "is_stop_called", False)
+
+## ADDED
+
+@registry.register_sensor(name="captiongoal_sensor")
+class CaptionGoalSensor(Sensor):
+    def __init__(
+        self,
+        sim,
+        config: "DictConfig",
+        dataset,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._sim = sim
+        self._dataset = dataset
+        super().__init__(config=config)
+
+    cls_uuid: str = "captiongoal"
+
+    def _get_uuid(self, *Args, **kwargs):
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.SEMANTIC
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+        sensor_shape = (512, )
+        return spaces.Box(low=np.finfo(np.float32).min, high=np.finfo(np.float32).max, shape=sensor_shape, dtype=np.float32)
+    
+    def _get_observation(
+        self,
+        observations,
+        episode,
+        **kwargs
+    ):
+        return np.array(episode.goals[0].caption_goal)
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        episode,
+        **kwargs: Any,
+    ) -> Optional[np.ndarray]:
+        if self.config.goal_spec == "CAPTION":
+            return self._get_observation(observations, episode)
+        else:
+            raise RuntimeError(
+                "Wrong goal_spec specified for CaptionGoalSensor."
+            )
