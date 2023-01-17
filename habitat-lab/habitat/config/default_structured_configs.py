@@ -195,6 +195,13 @@ class InstanceImageGoalSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalSensor"
 
 
+### ADDED
+@dataclass
+class CaptionGoalSensorConfig(LabSensorConfig):
+    type: str = "captiongoal_sensor"
+    goal_spec: str = "CAPTION"
+###
+
 @dataclass
 class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalHFOVSensor"
@@ -1666,6 +1673,14 @@ cs.store(
     node=RearrangeReachSuccessMeasurementConfig,
 )
 
+### ADDED
+cs.store(
+    package="habitat.task.lab_sensors.captiongoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="captiongoal_sensor",
+    node=CaptionGoalSensorConfig,
+)
+###
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins
