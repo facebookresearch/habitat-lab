@@ -8,6 +8,7 @@
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
+# import clip
 import numpy as np
 import torch
 from gym import spaces
@@ -24,7 +25,7 @@ from habitat.tasks.nav.nav import (
     PointGoalSensor,
     ProximitySensor,
 )
-from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
+from habitat.tasks.nav.nav import CaptionGoalSensor
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
@@ -279,7 +280,7 @@ class PointNavResNetNet(Net):
             # removing keys that correspond to goal sensors
             goal_sensor_keys = {
                 IntegratedPointGoalGPSAndCompassSensor.cls_uuid,
-                ObjectGoalSensor.cls_uuid,
+                CaptionGoalSensor.cls_uuid,
                 EpisodicGPSSensor.cls_uuid,
                 PointGoalSensor.cls_uuid,
                 HeadingSensor.cls_uuid,
@@ -311,17 +312,8 @@ class PointNavResNetNet(Net):
             self.tgt_embeding = nn.Linear(n_input_goal, 32)
             rnn_input_size += 32
 
-        if ObjectGoalSensor.cls_uuid in observation_space.spaces:
-            self._n_object_categories = (
-                int(
-                    observation_space.spaces[ObjectGoalSensor.cls_uuid].high[0]
-                )
-                + 1
-            )
-            self.obj_categories_embedding = nn.Embedding(
-                self._n_object_categories, 32
-            )
-            rnn_input_size += 32
+        if CaptionGoalSensor.cls_uuid in observation_space.spaces:
+            rnn_input_size += 512
 
         if EpisodicGPSSensor.cls_uuid in observation_space.spaces:
             input_gps_dim = observation_space.spaces[
@@ -532,9 +524,9 @@ class PointNavResNetNet(Net):
             )
             x.append(self.heading_embedding(sensor_observations))
 
-        if ObjectGoalSensor.cls_uuid in observations:
-            object_goal = observations[ObjectGoalSensor.cls_uuid].long()
-            x.append(self.obj_categories_embedding(object_goal).squeeze(dim=1))
+        if CaptionGoalSensor.cls_uuid in observations:
+            text_features = observations[CaptionGoalSensor.cls_uuid].float()
+            x.append(text_features)
 
         if EpisodicCompassSensor.cls_uuid in observations:
             compass_observations = torch.stack(
