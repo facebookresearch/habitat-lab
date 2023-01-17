@@ -216,6 +216,16 @@ class GPSSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class RobotStartCompassSensorConfig(CompassSensorConfig):
+    type: str = "RobotStartCompassSensor"
+
+
+@dataclass
+class RobotStartGPSSensorConfig(GPSSensorConfig):
+    type: str = "RobotStartGPSSensor"
+
+
+@dataclass
 class ProximitySensorConfig(LabSensorConfig):
     type: str = "ProximitySensor"
     max_detection_radius: float = 2.0
@@ -1345,6 +1355,18 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="compass_sensor",
     node=CompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.robot_start_gps_sensor",
+    group="habitat/task/lab_sensors",
+    name="robot_start_gps_sensor",
+    node=RobotStartGPSSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.robot_start_compass_sensor",
+    group="habitat/task/lab_sensors",
+    name="robot_start_compass_sensor",
+    node=RobotStartCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor",

@@ -120,7 +120,7 @@ class DynNavRLEnv(RearrangeTask):
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
             filter_func=filter_func
         )
-        self.start_position = robot_pos
+
         return NavToInfo(
             nav_goal_pos=nav_to_pos,
             robot_start_pos=robot_pos,
@@ -137,7 +137,16 @@ class DynNavRLEnv(RearrangeTask):
         )
         sim.robot.base_pos = self._nav_to_info.robot_start_pos
         sim.robot.base_rot = self._nav_to_info.robot_start_angle
-
+        self.start_position = sim.robot.sim_obj.translation
+        start_quat = sim.robot.sim_obj.rotation
+        self.start_rotation = np.array(
+            [
+                start_quat.vector.x,
+                start_quat.vector.y,
+                start_quat.vector.z,
+                start_quat.scalar,
+            ]
+        )
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
                 raise ValueError(

@@ -25,7 +25,8 @@ defaults:
     - start_receptacle_sensor
     - object_segmentation_sensor
     - object_embedding_sensor
-    - robot_start_gps_compass_sensor
+    - robot_start_gps_sensor
+    - robot_start_compass_sensor
   - _self_
 
 type: CatNavToObjTask-v0

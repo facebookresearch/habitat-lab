@@ -120,8 +120,6 @@ class RearrangePickTaskV1(RearrangeTask):
         sel_idx = self._sample_idx(sim)
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        self.start_position = start_pos
-
         sim.robot.base_pos = start_pos
         sim.robot.base_rot = start_rot
 

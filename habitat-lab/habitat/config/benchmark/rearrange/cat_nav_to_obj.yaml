@@ -15,7 +15,8 @@ habitat:
       - robot_head_rgb
       - object_embedding
       - start_receptacle
-      - robot_start_gps_compass
+      - robot_start_gps
+      - robot_start_compass
       - joint
   environment:
     max_episode_steps: 400

@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 from gym import spaces
 
@@ -11,12 +13,17 @@ import habitat_sim
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.nav.nav import EpisodicCompassSensor, EpisodicGPSSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
 from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import quaternion_from_coeff
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 BASE_ACTION_NAME = "base_velocity"
 
@@ -198,6 +205,53 @@ class DistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = self._get_cur_geo_dist(task)
+
+
+@registry.register_sensor(name="RobotStartGPSSensor")
+class RobotStartGPSSensor(EpisodicGPSSensor):
+    cls_uuid: str = "robot_start_gps"
+
+    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
+        super().__init__(sim=sim, config=config)
+
+    def get_agent_start_pose(self, episode, task):
+        return task.start_position, quaternion_from_coeff(task.start_rotation)
+
+    def get_agent_current_pose(self, sim):
+        curr_quat = sim.robot.sim_obj.rotation
+        curr_rotation = [
+            curr_quat.vector.x,
+            curr_quat.vector.y,
+            curr_quat.vector.z,
+            curr_quat.scalar,
+        ]
+
+        return sim.robot.sim_obj.translation, quaternion_from_coeff(
+            curr_rotation
+        )
+
+
+@registry.register_sensor(name="RobotStartCompassSensor")
+class RobotStartCompassSensor(EpisodicCompassSensor):
+    cls_uuid: str = "robot_start_compass"
+
+    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
+        super().__init__(sim=sim, config=config)
+
+    def get_agent_start_pose(self, episode, task):
+        return task.start_position, quaternion_from_coeff(task.start_rotation)
+
+    def get_agent_current_pose(self, sim):
+        curr_quat = sim.robot.sim_obj.rotation
+        curr_rotation = [
+            curr_quat.vector.x,
+            curr_quat.vector.y,
+            curr_quat.vector.z,
+            curr_quat.scalar,
+        ]
+        return sim.robot.sim_obj.translation, quaternion_from_coeff(
+            curr_rotation
+        )
 
 
 @registry.register_measure

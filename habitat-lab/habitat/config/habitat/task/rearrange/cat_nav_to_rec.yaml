@@ -22,7 +22,8 @@ defaults:
     - joint_sensor
     - joint_velocity_sensor
     - goal_receptacle_sensor
-    - robot_start_gps_compass_sensor
+    - robot_start_gps_sensor
+    - robot_start_compass_sensor
   - _self_
 
 type: CatNavToObjTask-v0
