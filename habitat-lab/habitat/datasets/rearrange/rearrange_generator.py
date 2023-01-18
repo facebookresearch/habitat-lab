@@ -319,6 +319,7 @@ class RearrangeEpisodeGenerator:
         self._ao_state_samplers: Dict[
             str, samplers.ArticulatedObjectStateSampler
         ] = {}
+        self.ao_states: Dict[str, Dict[int, float]] = {}
         for ao_info in self.cfg.ao_state_samplers:
             assert "name" in ao_info
             assert "type" in ao_info
@@ -422,6 +423,10 @@ class RearrangeEpisodeGenerator:
         failed_episodes = 0
         if verbose:
             pbar = tqdm(total=num_episodes)
+
+        rom = self.sim.get_rigid_object_manager()
+        self.existing_rigid_objects = set(rom.get_object_handles())
+
         while len(generated_episodes) < num_episodes:
             new_episode = self.generate_single_episode()
             if new_episode is None:
@@ -459,7 +464,10 @@ class RearrangeEpisodeGenerator:
         ep_scene_handle = self.generate_scene()
         scene_base_dir = osp.dirname(osp.dirname(ep_scene_handle))
 
-        scene_name = ep_scene_handle.split(".")[0]
+        rom = self.sim.get_rigid_object_manager()
+        self.existing_rigid_objects = set(rom.get_object_handles())
+
+        scene_name = osp.basename(ep_scene_handle).split(".")[0]
         navmesh_path = osp.join(
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
         )
@@ -776,15 +784,15 @@ class RearrangeEpisodeGenerator:
                 object_attr_mgr.load_configs(osp.abspath(object_path))
         else:
             if self.sim.config.sim_cfg.scene_id == scene_name:
-                # we need to force a reset, so reload the NONE scene
-                # TODO: we should fix this to provide an appropriate reset method
-                proxy_backend_cfg = habitat_sim.SimulatorConfiguration()
-                proxy_backend_cfg.scene_id = "NONE"
-                proxy_hab_cfg = habitat_sim.Configuration(
-                    proxy_backend_cfg, [agent_cfg]
-                )
-                self.sim.reconfigure(proxy_hab_cfg)
-            self.sim.reconfigure(hab_cfg)
+                rom = self.sim.get_rigid_object_manager()
+                for obj in rom.get_object_handles():
+                    if obj not in self.existing_rigid_objects:
+                        rom.remove_object_by_handle(obj)
+                aom = self.sim.get_articulated_object_manager()
+                for ao_handle in self.ao_states.keys():
+                    aom.get_object_by_handle(ao_handle).clear_joint_states()
+            else:
+                self.sim.reconfigure(hab_cfg)
 
         # setup the debug camera state to the center of the scene bounding box
         scene_bb = (
