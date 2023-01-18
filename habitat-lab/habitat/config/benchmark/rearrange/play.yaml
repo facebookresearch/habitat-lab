@@ -16,6 +16,8 @@ habitat:
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"
+      - "data/objects/amazon_berkeley/configs/"
+      - "data/objects/google_object_dataset/configs/"
     agents:
       main_agent:
         radius: 0.3
@@ -35,4 +37,4 @@ habitat:
     habitat_sim_v0:
       enable_physics: True
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    data_path: data/datasets/floorplanner/v1/{split}/rearrange.json.gz
