@@ -15,6 +15,7 @@ from fairmotion.data import amass
 from fairmotion.ops import motion as motion_ops
 from fairmotion.ops import conversions
 
+from human_body_prior.body_model.body_model import BodyModel
 
 import pybullet as p
 
@@ -166,6 +167,26 @@ class AmassHelper:
     """
     This class contains methods to load and convert AmassData into a format for Habitat
     """
+    def __init__(self, bm_path):
+        self.bm_path = bm_path
+        self.bm = BodyModel(
+            bm_fname=bm_path, 
+            num_betas=10, 
+            # model_type=model_type
+        )
+
+        # Get skeleton
+        bdata = np.load(bm_path)
+        betas = bdata["betas"][:10][np.newaxis]
+        num_joints = len(joint_names)
+        joint_names = amass.joint_names
+        
+        self.skeleton = amass.create_skeleton_from_amass_bodymodel(
+            self.bm, betas, num_joints, joint_names
+        )
+
+    def get_skeleton(self):
+        return self.skeleton
 
     @classmethod
     def load_amass_file(cls, filename, **kwargs):
