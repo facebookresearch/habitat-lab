@@ -72,7 +72,7 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_sim.utils import viz_utils as vut
-from human_controllers import AmassHumanController
+from human_controllers import SeqPoseHumanController, AmassHumanController
 
 
 try:
@@ -104,17 +104,19 @@ def compute_displ(next_point, agent_controller):
     return [diff_dist[0], diff_dist[2]]
 
 def get_input_vel_ctlr(
-    human_controller, skip_pygame, arm_action, env, not_block_input, agent_to_control, agent_path, path_ind, repeat_walk
+    human_controller, skip_pygame, arm_action, env, not_block_input, agent_to_control, agent_path, path_ind
 ):
-
+    not_block_input = True
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
-    multi_agent = len(env._sim.robots_mgr) > 1
+    multi_agent = len(env._sim.agents_mgr) > 1
     # print(env.task.actions)
-
+    new_pose, new_trans = human_controller.pose_per_frame()
+            
     base_action = AmassHumanController.transformAction(new_pose, new_trans)
     base_action_name = "humanjoint_action"
     base_key = "human_joints_trans"
+    
 
     end_ep = False
     magic_grasp = None
@@ -123,50 +125,78 @@ def get_input_vel_ctlr(
 
     if keys[pygame.K_ESCAPE]:
         return None, None, False
-    elif keys[pygame.K_m]:
-        end_ep = True
-    elif keys[pygame.K_n]:
-        env._sim.navmesh_visualization = not env._sim.navmesh_visualization
+    # elif keys[pygame.K_m]:
+    #     end_ep = True
+    # elif keys[pygame.K_n]:
+    #     env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
 
     if not_block_input:
 
-        if keys[pygame.K_e]:
+        if keys[pygame.K_c]:
             # Left
             # ee_pos = env._sim.robot.ee_transform.translation
             # print(ee_pos)
-            repeat_walk = False
-            base_action_name = 'release_left_action'
+            # base_action_name = 'next_frame'
             base_action = mn.Vector3([0, 0, 0.05])
             human_controller.next_frame()
 
 
             base_key = 'human_joints_trans'
-            new_pose, new_trans = human_controller.stop()
+            new_pose, new_trans = human_controller.pose_per_frame()
             base_action = AmassHumanController.transformAction(new_pose, new_trans)
 
-        elif keys[pygame.K_r]:
+        elif keys[pygame.K_v]:
             # Right
-            repeat_walk = False
-            base_action_name = 'release_right_action'
+            # base_action_name = 'prev_frame'
             base_action = mn.Vector3([0, 0, -0.05])
-            env._sim.robot.curr_trans = base_action
+            env._sim.agent.curr_trans = base_action
             human_controller.prev_frame()
+
+
+            base_key = 'human_joints_trans'
+            new_pose, new_trans = human_controller.pose_per_frame()
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
+        if keys[pygame.K_n]:
+            # Left
+            # ee_pos = env._sim.robot.ee_transform.translation
+            # print(ee_pos)
+            # base_action_name = 'next_frame'
+            base_action = mn.Vector3([0, 0, 0.05])
+            human_controller.prev_video()
+
+
+            base_key = 'human_joints_trans'
+            new_pose, new_trans = human_controller.pose_per_frame()
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
+
+        elif keys[pygame.K_m]:
+            # Right
+            # base_action_name = 'prev_frame'
+            base_action = mn.Vector3([0, 0, -0.05])
+            env._sim.agent.curr_trans = base_action
+            human_controller.next_video()
+
+
+            base_key = 'human_joints_trans'
+            new_pose, new_trans = human_controller.pose_per_frame()
+            base_action = AmassHumanController.transformAction(new_pose, new_trans)
             # print(base_action)
             # breakpoint()
 
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
-        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
-        rot = env._sim.robot.sim_obj.rotation
-        ee_pos = env._sim.robot.ee_transform.translation
+        pos = [float("%.3f" % x) for x in env._sim.agent.sim_obj.translation]
+        rot = env._sim.agent.sim_obj.rotation
+        ee_pos = env._sim.agent.ee_transform.translation
         logger.info(
             f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the robot, useful for debugging.
-        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
+        joint_state = [float("%.3f" % x) for x in env._sim.agent.arm_joint_pos]
         logger.info(f"Robot arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
@@ -191,7 +221,7 @@ def get_input_vel_ctlr(
     #     arm_action = [*arm_action, magic_grasp]
     # # breakpoint()
     arm_action = []
-    return step_env(env, name, args), arm_action, end_ep, repeat_walk
+    return step_env(env, name, args), arm_action, end_ep
 
 
 def get_wrapped_prop(venv, prop):
@@ -207,7 +237,7 @@ def get_wrapped_prop(venv, prop):
 
 class FreeCamHelper:
     def __init__(self):
-        self._is_free_cam_mode = False
+        self._is_free_cam_mode = True
         self._last_pressed = 0
         self._free_rpy = np.zeros(3)
         self._free_xyz = np.zeros(3)
@@ -302,30 +332,39 @@ def play_env(env, args, config):
     all_arm_actions: List[float] = []
     agent_to_control = 0
 
+    env._sim.agent.sim_obj.translation += mn.Vector3([-5.0, -1.0, 0])
+
     free_cam = FreeCamHelper()
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
-    is_multi_agent = len(env._sim.robots_mgr) > 1
-    env._sim.robot.translation_offset = env._sim.robot.sim_obj.translation + mn.Vector3([0,0.9, 0])
-    agent_location = env._sim.robot.translation_offset
-    print(agent_location)
+    is_multi_agent = len(env._sim.agents_mgr) > 1
+    env._sim.agent.translation_offset = env._sim.agent.sim_obj.translation + mn.Vector3([0,0.9, 0])
+    agent_location = env._sim.agent.translation_offset
+    # print(agent_location)
 
 
-    urdf_path = config.habitat.simulator.agents.main_agent.robot_urdf
+    urdf_path = config.habitat.simulator.agents.main_agent.agent_urdf
     amass_path = config.habitat.simulator.agents.main_agent.amass_path
     body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
     draw_fps = config.habitat.simulator.agents.main_agent.draw_fps_human
-    obj_translation = env._sim.robot.sim_obj.translation
+    obj_translation = env._sim.agent.sim_obj.translation
     grab_path = config.habitat.simulator.agents.main_agent.grab_path
 
-    link_ids = env._sim.robot.sim_obj.get_link_ids()
-    human_controller = AmassHumanController(
-        urdf_path, amass_path, body_model_path, obj_translation, grab_path=grab_path, draw_fps=draw_fps)
-
+    link_ids = env._sim.agent.sim_obj.get_link_ids()
+    # pose_path = '/Users/xavierpuig/sample00_rep00_smpl_params.npy'
+    pose_paths = [
+        '/Users/xavierpuig/res/sample01_rep02.npz',
+        '/Users/xavierpuig/res/sample03_rep01.npz',
+        '/Users/xavierpuig/res/sample04_rep01.npz'
+    ]
+    human_controller = SeqPoseHumanController(
+        urdf_path, body_model_path, pose_paths, 
+        obj_translation, draw_fps=draw_fps)
+    
     # TODO: remove
     
-    human_controller.reset(env._sim.robot.sim_obj.translation)
+    human_controller.reset(env._sim.agent.sim_obj.translation)
     # breakpoint()
     path_ind = 1
     while True:
@@ -352,7 +391,7 @@ def play_env(env, args, config):
 
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
-            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            agent_to_control = agent_to_control % len(env._sim.agents_mgr)
             logger.info(
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )
@@ -360,13 +399,8 @@ def play_env(env, args, config):
         delta_dist = 0.1
         # dist = (path.points[path_ind] - env._sim.robot.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
 
-        # Get the thing below back
-        dist = (path.points[path_ind] - human_controller.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
-        if np.linalg.norm(dist) < delta_dist:
-
-            path_ind = min(path_ind+1, len(path.points) - 1)
-
-        step_result, arm_action, end_ep, repeat_walk = get_input_vel_ctlr(
+        
+        step_result, arm_action, end_ep = get_input_vel_ctlr(
             human_controller,
             args.no_render,
             use_arm_actions[update_idx]
@@ -375,9 +409,8 @@ def play_env(env, args, config):
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
-            path,
-            path_ind,
-            repeat_walk
+            None,
+            0
         )
 
 
@@ -553,10 +586,6 @@ if __name__ == "__main__":
     config = habitat.get_config(args.cfg, args.opts)
     actions_valid = [
       'humanjoint_action',
-      'grab_right_action',
-      'grab_left_action',
-      'release_left_action',
-      'release_right_action'
     ]
 
     with habitat.config.read_write(config):

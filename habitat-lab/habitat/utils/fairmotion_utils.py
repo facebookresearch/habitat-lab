@@ -19,6 +19,8 @@ from human_body_prior.body_model.body_model import BodyModel
 
 import pybullet as p
 
+import torch
+
 
 @dataclass
 class MotionData:
@@ -160,6 +162,8 @@ class MotionData:
                     )
                 )
             pose_data.append(T)
+        # if len(pose_data) == 8:
+        # breakpoint()
         return motion.Pose(skel, pose_data)
 
 
@@ -176,10 +180,14 @@ class AmassHelper:
         )
 
         # Get skeleton
-        bdata = np.load(bm_path)
-        betas = bdata["betas"][:10][np.newaxis]
-        num_joints = len(joint_names)
+        # bdata = np.load(bm_path)
+        betas = np.array([-0.0312, -0.1780, -0.0597,  0.0200,  0.0168,  0.0530, -0.0313, -0.0084,
+         0.0375,  0.0034])
+        betas = torch.tensor(betas[np.newaxis]).float()
+        # betas = bdata["betas"][:10][np.newaxis]
         joint_names = amass.joint_names
+        
+        num_joints = len(joint_names)
         
         self.skeleton = amass.create_skeleton_from_amass_bodymodel(
             self.bm, betas, num_joints, joint_names

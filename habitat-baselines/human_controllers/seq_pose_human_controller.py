@@ -24,22 +24,26 @@ import pybullet as p
 
 
 class SeqPoseHumanController:
-    def __init__(self, urdf_path, bm_path, pose_path, obj_translation=None, draw_fps=60):
+    def __init__(self, urdf_path, bm_path, pose_paths, obj_translation=None, draw_fps=60):
         self.urdf_path = urdf_path
         self.curr_trans = mn.Vector3([0,0,0.3])
         self.rotation_offset: Optional[mn.Quaternion] = mn.Quaternion()
         self.translation_offset: Optional[mn.Vector3] = mn.Vector3([0, 0, 0])
-        self.obj_transform = self.obtain_root_transform_at_frame(0)
+        # self.obj_transform = self.obtain_root_transform_at_frame(0)
 
-        pose_path = f'{}/results.npy'
-        file_content = np.load(pose_path, allow_pickle=True)
-        self.pose_data = file_content[None][0]
-        self.num_vids = self.pose_data['num_samples'] * self.pose_data['num_repetitions'] 
+        # pose_path = f'{pose_path}/results.npy'
+        file_contents = []
+        for pose_path in pose_paths:
+            file_contents.append(np.load(pose_path, allow_pickle=True))
+        
+        self.pose_data = file_contents
+        self.num_vids = len(self.pose_data) # self.pose_data['num_samples'] * self.pose_data['num_repetitions'] 
 
         # state variables
         self.current_frame = 0
         self.current_video_index = 0
-        self.num_frames = self.pose_data['lengths'][self.current_video_index]
+        self.num_frames = self.pose_data[self.current_video_index]['trans'].shape[0]
+        # self.num_frames = 0 # self.pose_data['lengths'][self.current_video_index]
 
         if obj_translation is not None:
             self.translation_offset = obj_translation + mn.Vector3([0,0.90,0])
@@ -68,37 +72,39 @@ class SeqPoseHumanController:
         self.current_video_index += 1
         self.current_video_index = (self.current_video_index + self.num_vids) % self.num_vids
         self.current_frame = 0
-        self.num_frames = self.pose_data['lengths'][self.current_video_index]
+        self.num_frames = self.pose_data[self.current_video_index]['trans'].shape[0]
 
     def prev_video(self):
         self.current_video_index -= 1
         self.current_video_index = (self.current_video_index + self.num_vids) % self.num_vids
         self.current_frame = 0
-        self.num_frames = self.pose_data['lengths'][self.current_video_index]
+        self.num_frames = self.pose_data[self.current_video_index]['trans'].shape[0]
 
-    def next_pose(self):
+    def next_frame(self):
         self.current_frame += 1
         self.current_frame = (self.current_frame + self.num_frames) % self.num_frames
 
-    def prev_pose(self):
+    def prev_frame(self):
         self.current_frame -= 1
         self.current_frame = (self.current_frame + self.num_frames) % self.num_frames
 
     def pose_per_frame(self):
         # 22 x 3 pose
-        current_pose = self.pose_data['motion'][self.current_video_index, :, :, self.current_frame]
-        root_trans = current_pose[self.current_video_index, -1, :, self.current_frame]
-         # check why this is the case
-        # TODO: probably we can stop relying on this POSE structure
+        # breakpoint()
+        # current_pose = self.pose_data['motion'][self.current_video_index, :, :, self.current_frame]
+        root_trans = self.pose_data[self.current_video_index]['trans'] + self.translation_offset
+        root_orient = self.pose_data[self.current_video_index]['root_orient']
+        poses = self.pose_data[self.current_video_index]['pose_body']
+        self.num_frames = self.pose_data[self.current_video_index]['trans'].shape[0]
         pose_info = {
-            'pose': current_pose[1:, :][None, :]
-            'root_orient': current_pose[:1, :][None, :]
-            'root_trans': root_trans[None, :]
+            'pose': poses,
+            'root_orient': root_orient,
+            'trans': root_trans
         }
-        pose = MotionData.obtain_pose(self.amass_helper.skeleton, pose_info, 0)
-        pose, root_trans, root_rot = AmassHelper.convert_CMUamass_single_pose(pose, self.joint_info, raw=True)
+        pose = MotionData.obtain_pose(self.amass_helper.skeleton, pose_info, self.current_frame)
+        pose, root_trans, root_rot = AmassHelper.convert_CMUamass_single_pose(pose, self.joint_info, raw=False)
         full_transform = mn.Matrix4.from_(root_rot.to_matrix(), root_trans)
-        return new_pose, full_transform
+        return pose, full_transform
 
 
     @classmethod
