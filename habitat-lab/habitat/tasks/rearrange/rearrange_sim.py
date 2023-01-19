@@ -197,7 +197,7 @@ class RearrangeSim(HabitatSim):
         with read_write(config):
             config["scene"] = ep_info.scene_id
 
-        super().reconfigure(config, ep_info, should_close_on_new_scene=False)
+        super().reconfigure(config, should_close_on_new_scene=False)
 
         self.ref_handle_to_rigid_obj_id = {}
 

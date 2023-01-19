@@ -16,7 +16,8 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   # 26 environments will just barely be below 16gb.
-  num_environments: 26
+  # 20 environments will just barely be below 11gb.
+  num_environments: 20
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1.0e8

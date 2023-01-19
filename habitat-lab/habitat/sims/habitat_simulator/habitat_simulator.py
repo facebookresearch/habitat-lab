@@ -447,7 +447,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             self._current_scene = habitat_config.scene
             if should_close_on_new_scene:
                 self.close(destroy=False)
-            super().reconfigure(self.sim_config, ep_info)
+            super().reconfigure(self.sim_config)
 
         self._update_agents_state()
 
