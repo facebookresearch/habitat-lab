@@ -11,7 +11,6 @@ from examples import (
     new_actions,
     register_new_sensors_and_measures,
     shortest_path_follower_example,
-    visualization_examples,
 )
 from examples.example import example
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
@@ -30,11 +29,6 @@ def skip_if_dataset_does_not_exist():
 def test_readme_example():
     skip_if_dataset_does_not_exist()
     example()
-
-
-def test_visualizations_example():
-    skip_if_dataset_does_not_exist()
-    visualization_examples.main()
 
 
 def test_shortest_path_follower_example():

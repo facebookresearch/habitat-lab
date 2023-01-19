@@ -11,6 +11,7 @@ defaults:
     - arm_action
     - base_velocity
     - rearrange_stop
+  - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - _self_
 
 habitat:

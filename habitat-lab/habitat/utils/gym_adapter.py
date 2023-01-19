@@ -303,18 +303,15 @@ class HabGymWrapper(gym.Env):
 
     def render(self, mode: str = "human") -> np.ndarray:
         frame = None
+        last_infos = flatten_dict(self._env._env.get_metrics())
         if mode == "rgb_array":
-            frame = observations_to_image(
-                self._last_obs, self._env._env.get_metrics()
-            )
+            frame = observations_to_image(self._last_obs, last_infos)
         elif mode == "human":
             if pygame is None:
                 raise ValueError(
                     "Render mode human not supported without pygame."
                 )
-            frame = observations_to_image(
-                self._last_obs, self._env._env.get_metrics()
-            )
+            frame = observations_to_image(self._last_obs, last_infos)
             if self._screen is None:
                 pygame.init()
                 self._screen = pygame.display.set_mode(

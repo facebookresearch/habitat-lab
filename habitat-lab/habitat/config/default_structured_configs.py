@@ -40,6 +40,7 @@ class EnvironmentConfig(HabitatBaseConfig):
 @dataclass
 class ActionConfig(HabitatBaseConfig):
     type: str = MISSING
+    agent_index: int = 0
 
 
 @dataclass
@@ -1539,6 +1540,12 @@ cs.store(
     group="habitat/task/measurements",
     name="episode_info",
     node=EpisodeInfoMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.collisions",
+    group="habitat/task/measurements",
+    name="collisions",
+    node=CollisionsMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.robot_colls",

@@ -158,7 +158,10 @@ def test_collisions():
             _random_episode(env, config)
 
             env.reset()
-            assert env.get_metrics()["collisions"] is None
+            assert env.get_metrics()["collisions"] == {
+                "count": 0,
+                "is_collision": False,
+            }
 
             prev_collisions = 0
             prev_loc = env.sim.get_agent_state().position
