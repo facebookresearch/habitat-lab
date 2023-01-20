@@ -51,6 +51,7 @@ class AmassHuman(Humanoid):
         self.ROOT = 0
         self.arm_joint_pos_left = self.params.arm_init_params_left
         self.arm_joint_pos_right = self.params.arm_init_params_right
+        self.all_joints = None
 
 
     def _get_human_params(self):
@@ -192,6 +193,8 @@ class AmassHuman(Humanoid):
         return ef_link_transform
 
     def set_joint_transform(self, pos: List, transform: mn.Matrix4):
+        self.joint_rotation = pos
+        # TODO: sim_obj.joint_positions isnt in reality joint_Rotation?
         self.sim_obj.joint_positions = pos
         self.sim_obj.transformation = transform
         # breakpoint()

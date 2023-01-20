@@ -272,6 +272,14 @@ class JointSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class HumanJointSensorConfig(LabSensorConfig):
+    # TODO:(xavierpuig): can this ve modified in the config? Will be important for
+    # new humans/agents
+    type: str = "HumanJointSensor"
+    dimensionality: int = 19
+
+
+@dataclass
 class EEPositionSensorConfig(LabSensorConfig):
     type: str = "EEPositionSensor"
 
@@ -1453,6 +1461,14 @@ cs.store(
     name="joint_sensor",
     node=JointSensorConfig,
 )
+
+cs.store(
+    package="habitat.task.lab_sensors.humanjoint_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanjoint_sensor",
+    node=HumanJointSensorConfig,
+)
+
 cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
     group="habitat/task/lab_sensors",

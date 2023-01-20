@@ -19,6 +19,7 @@ from habitat.agents.robots import (
     StretchRobot,
 )
 
+from habitat.agents.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import RearrangeGraspManager
 
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed

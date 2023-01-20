@@ -215,6 +215,33 @@ class JointSensor(UsesRobotInterface, Sensor):
         ).agent.arm_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
+@registry.register_sensor
+class HumanJointSensor(UsesRobotInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        # TODO(xavierpuig): this should maybe aslo have a key joint. Can we handle that?
+        # Or change the joint key above to aovid confusion
+        return "human_joint"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(config.dimensionality,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        joints_pos = self._sim.get_agent_data(
+            self.robot_id
+        ).agent.joint_rot
+        return np.array(joints_pos, dtype=np.float32)
 
 @registry.register_sensor
 class JointVelocitySensor(UsesRobotInterface, Sensor):

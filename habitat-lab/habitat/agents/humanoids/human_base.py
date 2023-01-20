@@ -38,13 +38,14 @@ class Humanoid(AgentInterface):
         self._sim = sim
         self.sim_obj = sim_obj
 
-
+        
+        self.joint_rotation = None
         self.root_position = None
         self.root_orientation = None
 
         # Joint index to position
-        self.joint_position = {}
-        self.joint_orientation = {}
+        # self.joint_position = {}
+        # self.joint_orientation = {}
 
         self.joint_pos_indices = {}
 
@@ -172,14 +173,12 @@ class Humanoid(AgentInterface):
     def root_pos(self):
         return self.root_position
 
+    # TODO: repetitive here iwth base_rot
     @property
     def root_rot(self):
         return self.root_orientation
 
-    @property
-    def joint_pos(self):
-        return self.joint_pos
 
     @property
     def joint_rot(self):
-        return self.joint_rot
+        return self.joint_rotation
