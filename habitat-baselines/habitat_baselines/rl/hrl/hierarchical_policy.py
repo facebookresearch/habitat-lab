@@ -261,6 +261,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                     for i in batch_ids
                 ],
             )
+
         # Always call high-level if the episode is over.
         call_high_level = call_high_level | (~masks_cpu).view(-1)
 

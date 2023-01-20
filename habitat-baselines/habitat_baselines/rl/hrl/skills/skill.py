@@ -301,7 +301,9 @@ class SkillPolicy(Policy):
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         """
-        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        :returns: A (batch_size,) size tensor where 1 indicates the skill wants
+            to end and 0 if not where batch_size is potentially a subset of the
+            overall num_environments as specified by `batch_idx`.
         """
         return torch.zeros(observations.shape[0], dtype=torch.bool).to(
             masks.device

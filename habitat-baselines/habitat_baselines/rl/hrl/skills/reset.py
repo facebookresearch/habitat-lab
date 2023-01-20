@@ -24,6 +24,7 @@ class ResetArmSkill(SkillPolicy):
         self._target = np.array([float(x) for x in config.reset_joint_state])
 
         self._arm_ac_range = find_action_range(action_space, "arm_action")
+        self._arm_ac_range = (self._arm_ac_range[0], self._target.shape[0])
 
     def on_enter(
         self,
@@ -84,7 +85,7 @@ class ResetArmSkill(SkillPolicy):
         )
 
         action = torch.zeros_like(prev_actions)
-
+        # There is an extra grab action that we don't want to set.
         action[
             ..., self._arm_ac_range[0] : self._arm_ac_range[1]
         ] = torch.from_numpy(delta).to(
