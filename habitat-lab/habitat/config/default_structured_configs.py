@@ -1050,6 +1050,29 @@ class PyrobotConfig(HabitatBaseConfig):
 
 @dataclass
 class DatasetConfig(HabitatBaseConfig):
+    r"""
+    Configuration for the dataset of the task. A dataset consists of episodes
+    (a start configuration for a task within a scene) and a scene dataset
+    (with all the assets needed to instantiate the task)
+
+    Attributes:
+        type: The key for the dataset class that will be used. Examples
+        of such keys are `PointNav-v1`, `ObjectNav-v1`, `InstanceImageNav-v1`
+        or `RearrangeDataset-v0`. Different datasets have different properties
+        so you should use the dataset that fits your task.
+        scenes_dir: The path to the directory containing the scenes that
+        will be used. You should put all your scenes in the same folder
+        (example `data/scene_datasets`) to avoid having to change it.
+        data_path: The path to the episode dataset. Episodes need to be
+        compatible with the `type` argument (so they will load properly) and only
+        use scenes that are present in the `scenes_dir`.
+        split:  `data_path` can have a `split`
+        in the path. For example:
+        "data/datasets/pointnav/ habitat-test-scenes/v1/{split}/{split}.json.gz"
+        the value in "{split}" will be replaced by the value of the `split` argument.
+        This allows to easily swap between `train` and `eval` episodes by only changing
+        the split argument.
+    """
     type: str = "PointNav-v1"
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
