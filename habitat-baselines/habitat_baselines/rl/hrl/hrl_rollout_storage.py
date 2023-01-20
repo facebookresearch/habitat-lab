@@ -10,7 +10,7 @@ import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.common.tensor_dict import DictTree
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
@@ -142,7 +142,7 @@ class HrlRolloutStorage(RolloutStorage):
 
     def recurrent_generator(
         self, advantages, num_batches
-    ) -> Iterator[TensorDict]:
+    ) -> Iterator[DictTree]:
         num_environments = advantages.size(1)
         dones_cpu = (
             torch.logical_not(self.buffers["masks"])

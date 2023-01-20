@@ -361,7 +361,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             observations, rnn_hidden_states, prev_actions, masks
         )
 
-    def _get_policy_components(self) -> Tuple[nn.Module]:
+    def _get_policy_components(self) -> List[nn.Module]:
         return self._high_level_policy.get_policy_components()
 
     def evaluate_actions(

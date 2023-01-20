@@ -5,16 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 import abc
 from dataclasses import dataclass
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
 
 import torch
 from gym import spaces
@@ -87,8 +78,8 @@ class Policy(abc.ABC):
     ) -> spaces.Space:
         return env_action_space
 
-    def _get_policy_components(self) -> Tuple[nn.Module]:
-        return tuple()
+    def _get_policy_components(self) -> List[nn.Module]:
+        return []
 
     def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
         return {}
@@ -268,8 +259,8 @@ class NetPolicy(nn.Module, Policy):
             aux_loss_res,
         )
 
-    def _get_policy_components(self) -> Tuple[nn.Module]:
-        return (self.net, self.critic, self.action_distribution)
+    def _get_policy_components(self) -> List[nn.Module]:
+        return [self.net, self.critic, self.action_distribution]
 
     def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
         return {k: v.parameters() for k, v in self.aux_loss_modules.items()}

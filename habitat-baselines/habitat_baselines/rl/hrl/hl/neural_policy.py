@@ -1,5 +1,5 @@
 from itertools import chain
-from typing import Any, List, Tuple
+from typing import Any, List
 
 import gym.spaces as spaces
 import numpy as np
@@ -110,8 +110,8 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             self._critic.parameters(),
         )
 
-    def get_policy_components(self) -> Tuple[nn.Module]:
-        return (self,)
+    def get_policy_components(self) -> List[nn.Module]:
+        return [self]
 
     def forward(self, obs, rnn_hidden_states, masks, rnn_build_seq_info=None):
         hidden = []

@@ -93,8 +93,8 @@ class HighLevelPolicy(nn.Module):
     def apply_mask(self, mask: torch.Tensor) -> None:
         pass
 
-    def get_policy_components(self) -> Tuple[nn.Module]:
-        return tuple()
+    def get_policy_components(self) -> List[nn.Module]:
+        return []
 
     def get_termination(
         self,
