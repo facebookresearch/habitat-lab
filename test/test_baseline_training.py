@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import itertools
 import os
 import random
 
@@ -150,31 +151,35 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
 
 
 @pytest.mark.parametrize(
-    "config_path,mode,trainer_name",
-    [
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml",
-            "train",
-            "ppo",
-        ),
-        # (
-        #     "habitat-baselines/habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml",
-        #     "eval",
-        #     "ppo",
-        # ),
-        # (
-        #     "habitat-baselines/habitat_baselines/config/rearrange/tp_srl_oracle_nav.yaml",
-        #     "eval",
-        #     "ppo",
-        # ),
-        # (
-        #     "habitat-baselines/habitat_baselines/config/rearrange/tp_srl.yaml",
-        #     "eval",
-        #     "ppo",
-        # ),
-    ],
+    "config_path,policy_type,skill_type,mode",
+    list(
+        itertools.product(
+            [
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
+            ],
+            [
+                "hl_neural",
+                "hl_fixed",
+            ],
+            [
+                "nn_skills",
+                "noop_skills",
+            ],
+            [
+                "eval",
+                "train",
+            ],
+        )
+    ),
 )
-def test_hrl(config_path, mode, trainer_name):
+def test_hrl(config_path, policy_type, skill_type, mode):
+    if policy_type == "hl_neural" and skill_type == "nn_skills":
+        return
+    if policy_type == "hl_fixed" and mode == "train":
+        return
+    if skill_type == "noop_skills" and "oracle" not in config_path:
+        return
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
@@ -189,7 +194,8 @@ def test_hrl(config_path, mode, trainer_name):
             "habitat_baselines.total_num_steps=-1.0",
             "habitat_baselines.test_episode_count=1",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
-            f"habitat_baselines.trainer_name={trainer_name}",
+            f"habitat_baselines/rl/policy={policy_type}",
+            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills={skill_type}",
         ],
     )
     with read_write(config):

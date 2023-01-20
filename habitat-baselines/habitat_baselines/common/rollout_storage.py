@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional
 
 import numpy as np
 import torch
@@ -15,6 +15,10 @@ from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
+)
+from habitat_baselines.utils.common import (
+    get_num_actions,
+    is_continuous_action_space,
 )
 
 
@@ -30,10 +34,22 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
-        action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
-        discrete_actions: bool = True,
     ):
+
+        if is_continuous_action_space(action_space):
+            # Assume ALL actions are NOT discrete
+            action_shape = (
+                get_num_actions(
+                    action_space,
+                ),
+            )
+            discrete_actions = False
+        else:
+            # For discrete pointnav
+            action_shape = (1,)
+            discrete_actions = True
+
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()
 

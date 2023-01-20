@@ -154,8 +154,8 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = policy.from_config(
             self.config,
             observation_space,
-            self.policy_action_space,
-            orig_action_space=self.orig_policy_action_space,
+            self.env_action_space,
+            orig_action_space=self.orig_env_action_space,
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
@@ -205,6 +205,9 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         self.agent = agent_cls.from_config(self.actor_critic, ppo_cfg)
+        self.policy_action_space = self.actor_critic.get_policy_action_space(
+            self.envs.action_spaces[0]
+        )
 
     def _init_envs(self, config=None, is_eval: bool = False):
         if config is None:
@@ -215,6 +218,8 @@ class PPOTrainer(BaseRLTrainer):
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
         )
+        self.env_action_space = self.envs.action_spaces[0]
+        self.orig_env_action_space = self.envs.orig_action_spaces[0]
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -286,18 +291,6 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        action_space = self.envs.action_spaces[0]
-        self.policy_action_space = action_space
-        self.orig_policy_action_space = self.envs.orig_action_spaces[0]
-        if is_continuous_action_space(action_space):
-            # Assume ALL actions are NOT discrete
-            action_shape = (get_num_actions(action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
-
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
             self.device = torch.device(
@@ -353,8 +346,6 @@ class PPOTrainer(BaseRLTrainer):
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-            action_shape=action_shape,
-            discrete_actions=discrete_actions,
         )
         self.rollouts.to(self.device)
 
@@ -463,12 +454,12 @@ class PPOTrainer(BaseRLTrainer):
             range(env_slice.start, env_slice.stop),
             action_data.env_actions.cpu().unbind(0),
         ):
-            if is_continuous_action_space(self.policy_action_space):
+            if is_continuous_action_space(self.env_action_space):
                 # Clipping actions to the specified limits
                 act = np.clip(
                     act.numpy(),
-                    self.policy_action_space.low,
-                    self.policy_action_space.high,
+                    self.env_action_space.low,
+                    self.env_action_space.high,
                 )
             else:
                 act = act.item()
@@ -934,19 +925,15 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config, is_eval=True)
 
-        action_space = self.envs.action_spaces[0]
-        self.policy_action_space = action_space
-        self.orig_policy_action_space = self.envs.orig_action_spaces[0]
-        if is_continuous_action_space(action_space):
+        self._setup_actor_critic_agent(ppo_cfg)
+        if is_continuous_action_space(self.policy_action_space):
             # Assume NONE of the actions are discrete
-            action_shape = (get_num_actions(action_space),)
+            action_shape = (get_num_actions(self.policy_action_space),)
             discrete_actions = False
         else:
             # For discrete pointnav
             action_shape = (1,)
             discrete_actions = True
-
-        self._setup_actor_critic_agent(ppo_cfg)
 
         if self.agent.actor_critic.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])
@@ -1027,19 +1014,30 @@ class PPOTrainer(BaseRLTrainer):
                     not_done_masks,
                     deterministic=False,
                 )
-                test_recurrent_hidden_states = action_data.rnn_hidden_states
-
-                prev_actions.copy_(action_data.actions)  # type: ignore
+                if action_data.should_inserts is None:
+                    test_recurrent_hidden_states = (
+                        action_data.rnn_hidden_states
+                    )
+                    prev_actions.copy_(action_data.actions)  # type: ignore
+                else:
+                    for i, should_insert in enumerate(
+                        action_data.should_inserts
+                    ):
+                        if should_insert.item():
+                            test_recurrent_hidden_states[
+                                i
+                            ] = action_data.rnn_hidden_states[i]
+                            prev_actions[i].copy_(action_data.actions[i])  # type: ignore
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
-            if is_continuous_action_space(self.policy_action_space):
+            if is_continuous_action_space(self.env_action_space):
                 # Clipping actions to the specified limits
                 step_data = [
                     np.clip(
                         a.numpy(),
-                        self.policy_action_space.low,
-                        self.policy_action_space.high,
+                        self.env_action_space.low,
+                        self.env_action_space.high,
                     )
                     for a in action_data.env_actions.cpu()
                 ]

@@ -134,14 +134,16 @@ class NnSkillPolicy(SkillPolicy):
             masks,
             deterministic,
         )
-        full_action = torch.zeros(prev_actions.shape, device=masks.device)
+        full_action = torch.zeros(
+            (masks.shape[0], self._full_ac_size), device=masks.device
+        )
         full_action[
             :, self._ac_start : self._ac_start + self._ac_len
         ] = action_data.actions
         action_data.actions = full_action
 
         self._did_want_done[cur_batch_idx] = full_action[
-            cur_batch_idx, self._stop_action_idx
+            :, self._stop_action_idx
         ]
         return action_data
 
@@ -176,6 +178,10 @@ class NnSkillPolicy(SkillPolicy):
         )
 
         for k in config.obs_skill_inputs:
+            if k not in filtered_obs_space.spaces:
+                raise ValueError(
+                    f"Could not find {k} for skill {policy_cfg.habitat.gym.auto_name}"
+                )
             space = filtered_obs_space.spaces[k]
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)

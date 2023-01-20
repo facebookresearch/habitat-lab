@@ -37,6 +37,7 @@ class SkillPolicy(Policy):
         self._raw_skill_args: List[Optional[str]] = [
             None for _ in range(self._batch_size)
         ]
+        self._full_ac_size = get_num_actions(action_space)
 
         # TODO: for some reason this doesnt work with "pddl_apply_action" in action_space
         # and needs to go through the keys argument
@@ -155,13 +156,13 @@ class SkillPolicy(Policy):
         batch_idx: List[int],
         skill_name: List[str],
         log_info,
-    ) -> Tuple[torch.BoolTensor, torch.BoolTensor]:
+    ) -> Tuple[torch.BoolTensor, torch.BoolTensor, torch.Tensor]:
         """
         :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
         """
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
-        ).cpu()
+        )
         if is_skill_done.sum() > 0:
             self._internal_log(
                 f"Requested skill termination {is_skill_done}",
@@ -182,9 +183,9 @@ class SkillPolicy(Policy):
         if self._config.max_skill_steps > 0:
             over_max_len = cur_skill_step > self._config.max_skill_steps
             if self._config.force_end_on_timeout:
-                bad_terminate = over_max_len.cpu()
+                bad_terminate = over_max_len
             else:
-                is_skill_done = is_skill_done | over_max_len.cpu()
+                is_skill_done = is_skill_done | over_max_len
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._delay_term[env_i]:
@@ -200,15 +201,15 @@ class SkillPolicy(Policy):
                 )
                 self._delay_term[env_i] = True
                 is_skill_done[i] = 0.0
-        
-        is_skill_done |= hl_says_term.cpu()
+
+        is_skill_done |= hl_says_term
 
         if bad_terminate.sum() > 0:
             self._internal_log(
                 f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
                 observations,
             )
-        return is_skill_done.cpu(), bad_terminate.cpu(), new_actions
+        return is_skill_done, bad_terminate, new_actions
 
     def on_enter(
         self,

@@ -169,6 +169,9 @@ class OracleNavPolicy(NnSkillPolicy):
     def _get_multi_sensor_index(self, batch_idx):
         return [self._cur_skill_args[i].target_idx for i in batch_idx]
 
+    def requires_rnn_state(self):
+        return False
+
     def _internal_act(
         self,
         observations,
@@ -178,7 +181,9 @@ class OracleNavPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        full_action = torch.zeros(prev_actions.shape, device=masks.device)
+        full_action = torch.zeros(
+            (masks.shape[0], self._full_ac_size), device=masks.device
+        )
         action_idxs = torch.FloatTensor(
             [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
         )

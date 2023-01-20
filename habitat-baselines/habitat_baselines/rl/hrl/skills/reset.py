@@ -9,8 +9,8 @@ import numpy as np
 import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
+from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import PolicyAction
-from habitat_baselines.utils.common import get_num_actions
 
 
 class ResetArmSkill(SkillPolicy):
@@ -23,12 +23,7 @@ class ResetArmSkill(SkillPolicy):
         super().__init__(config, action_space, batch_size, True)
         self._target = np.array([float(x) for x in config.reset_joint_state])
 
-        self._ac_start = 0
-        for k, space in action_space.items():
-            if k != "arm_action":
-                self._ac_start += get_num_actions(space)
-            else:
-                break
+        self._arm_ac_range = find_action_range(action_space, "arm_action")
 
     def on_enter(
         self,
@@ -85,14 +80,16 @@ class ResetArmSkill(SkillPolicy):
         # always in [-1,1] and has the benefit of reducing the delta
         # amount was we converge to the target.
         delta = delta / np.maximum(
-            self._initial_delta.max(-1, keepdims=True), 1e-5
+            self._initial_delta[cur_batch_idx].max(-1, keepdims=True), 1e-5
         )
 
         action = torch.zeros_like(prev_actions)
 
-        action[..., self._ac_start : self._ac_start + 7] = torch.from_numpy(
-            delta
-        ).to(device=action.device, dtype=action.dtype)
+        action[
+            ..., self._arm_ac_range[0] : self._arm_ac_range[1]
+        ] = torch.from_numpy(delta).to(
+            device=action.device, dtype=action.dtype
+        )
 
         return PolicyAction(
             actions=action, rnn_hidden_states=rnn_hidden_states
