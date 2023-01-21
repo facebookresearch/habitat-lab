@@ -34,8 +34,6 @@ from habitat.core.simulator import (
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -950,7 +948,7 @@ class TopDownMap(Measure):
 
 
 @registry.register_measure
-class DistanceToGoal(UsesRobotInterface, Measure):
+class DistanceToGoal(Measure):
     """The measure calculates a distance towards the goal."""
 
     cls_uuid: str = "distance_to_goal"
@@ -970,6 +968,12 @@ class DistanceToGoal(UsesRobotInterface, Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
+    def get_base_position(self, sim):
+        return self._sim.get_agent_state().position
+
+    def get_end_effector_position(self, sim):
+        raise NotImplementedError
+
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
         self._metric = None
@@ -985,14 +989,9 @@ class DistanceToGoal(UsesRobotInterface, Measure):
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
         if self._config.distance_from == "END_EFFECTOR":
-            assert isinstance(
-                self._sim, RearrangeSim
-            ), f"DistanceToGoal (distance_from=END_EFFECTOR): Not implemented for simulator type {type(self._sim)}"
-            current_position = self._sim.get_robot_data(
-                self.robot_id
-            ).robot.ee_transform.translation
+            current_position = self.get_end_effector_position(self._sim)
         else:
-            current_position = self._sim.get_agent_state().position
+            current_position = self.get_base_position(self._sim)
 
         if self._previous_position is None or not np.allclose(
             self._previous_position, current_position, atol=1e-4
@@ -1051,15 +1050,19 @@ class DistanceToGoalReward(Measure):
         self._previous_distance: Optional[float] = None
         super().__init__()
 
+    @property
+    def distance_goal_cls(self):
+        return DistanceToGoal
+
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
-            self.uuid, [DistanceToGoal.cls_uuid]
+            self.uuid, [self.distance_goal_cls.cls_uuid]
         )
         self._previous_distance = task.measurements.measures[
-            DistanceToGoal.cls_uuid
+            self.distance_goal_cls.cls_uuid
         ].get_metric()
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
@@ -1067,7 +1070,7 @@ class DistanceToGoalReward(Measure):
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
-            DistanceToGoal.cls_uuid
+            self.distance_goal_cls.cls_uuid
         ].get_metric()
         self._metric = -(distance_to_target - self._previous_distance)
         self._previous_distance = distance_to_target

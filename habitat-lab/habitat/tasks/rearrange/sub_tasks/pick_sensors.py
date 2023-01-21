@@ -7,7 +7,7 @@
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav import DistanceToGoal
+from habitat.tasks.nav.nav import DistanceToGoal, DistanceToGoalReward
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
@@ -15,7 +15,32 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.rearrange.utils import rearrange_logger
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
+
+
+@registry.register_measure
+class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface):
+    cls_uuid: str = "pick_distance_to_goal"
+
+    def get_base_position(self, sim):
+        assert isinstance(self._sim, RearrangeSim)
+        return self._sim.robot.base_pos
+
+    def get_end_effector_position(self, sim):
+        assert isinstance(self._sim, RearrangeSim)
+        return self._sim.get_robot_data(
+            self.robot_id
+        ).robot.ee_transform.translation
+
+
+@registry.register_measure
+class PickDistanceToGoalReward(DistanceToGoalReward, UsesRobotInterface):
+    cls_uuid: str = "pick_distance_to_goal_reward"
+
+    @property
+    def distance_to_goal_cls(self):
+        return PickDistanceToGoal
 
 
 @registry.register_measure

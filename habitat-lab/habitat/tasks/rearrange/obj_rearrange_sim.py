@@ -11,13 +11,11 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 @registry.register_simulator(name="ObjectRearrangeSim-v0")
 class ObjectRearrangeSim(RearrangeSim):
-    def _setup_targets(self):
-        super()._setup_targets()
+    def _setup_targets(self, ep_info):
+        super()._setup_targets(ep_info)
         self.target_categories = {}
-        if "goal_recep_category" in self.ep_info:
-            self.target_categories["goal_recep"] = self.ep_info[
-                "goal_recep_category"
-            ]
-            self.target_categories["start_recep"] = self.ep_info[
-                "start_recep_category"
-            ]
+        if ep_info.goal_recep_category is not None:
+            self.target_categories["goal_recep"] = ep_info.goal_recep_category
+            self.target_categories[
+                "start_recep"
+            ] = ep_info.start_recep_category
