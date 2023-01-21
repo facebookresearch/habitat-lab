@@ -220,5 +220,5 @@ Habitat Sim Demo
 
         total_frames += 1
 
-.. image:: habitat-sim-demo.png
+.. image:: ../images/habitat-sim-demo-images/habitat-sim-demo.png
     :alt: Actions and sensors

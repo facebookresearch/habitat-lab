@@ -14,7 +14,10 @@ from gym.envs.registration import register, registry
 import habitat
 import habitat.utils.env_utils
 from habitat.config.default import _HABITAT_CFG_DIR
-from habitat.config.default_structured_configs import ThirdRGBSensorConfig
+from habitat.config.default_structured_configs import (
+    SimulatorSensorConfig,
+    ThirdRGBSensorConfig,
+)
 from habitat.core.environments import get_env_class
 
 if TYPE_CHECKING:
@@ -54,6 +57,23 @@ def make_gym_from_config(config: "DictConfig") -> gym.Env:
     )
 
 
+def add_sim_sensor_to_config(
+    config: "DictConfig", sensor: SimulatorSensorConfig
+):
+    with habitat.config.read_write(config):
+        sim_config = config.habitat.simulator
+        default_agent_name = sim_config.agents_order[
+            sim_config.default_agent_id
+        ]
+        default_agent = sim_config.agents[default_agent_name]
+        if len(sim_config.agents) == 1:
+            default_agent.sim_sensors.update({"third_rgb_sensor": sensor})
+        else:
+            default_agent.sim_sensors.update(
+                {"default_agent_third_rgb_sensor": sensor}
+            )
+
+
 def _make_habitat_gym_env(
     cfg_file_path: str,
     override_options: List[Any] = None,
@@ -64,24 +84,7 @@ def _make_habitat_gym_env(
 
     config = habitat.get_config(cfg_file_path, overrides=override_options)
     if use_render_mode:
-        with habitat.config.read_write(config):
-            sim_config = config.habitat.simulator
-            default_agent_name = sim_config.agents_order[
-                sim_config.default_agent_id
-            ]
-            default_agent = sim_config.agents[default_agent_name]
-            if len(sim_config.agents) == 1:
-                default_agent.sim_sensors.update(
-                    {"third_rgb_sensor": ThirdRGBSensorConfig()}
-                )
-            else:
-                default_agent.sim_sensors.update(
-                    {
-                        "default_agent_third_rgb_sensor": ThirdRGBSensorConfig(
-                            uuid="default_robot_third_rgb"
-                        )
-                    }
-                )
+        add_sim_sensor_to_config(config, ThirdRGBSensorConfig())
     env = make_gym_from_config(config)
     return env
 
