@@ -365,10 +365,19 @@ config = habitat.get_config("benchmark/nav/pointnav/pointnav_gibson.yaml")
 ```
 ### override the config
 #### via command line
+Override config values:
 ```bash
-python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
-habitat_baselines.total_num_steps=100 # overriding total_num_steps
+python -u habitat_baselines/run.py --exp-config pointnav/ddppo_pointnav.yaml --run-type train \
+habitat.environment.max_episode_steps=250 \
+habitat_baselines.total_num_steps=100
 ```
+
+Override the Config Group Option value:
+```bash
+python -u habitat_baselines/run.py --exp-config pointnav/ddppo_pointnav.yaml --run-type train \
+benchmark/nav/pointnav=pointnav_hm3d  # overriding benchmark config to be pointnav_hm3d
+```
+
 #### via yaml
 Yaml file definitions or overrides are defined after the Defaults List:
 ```yaml
