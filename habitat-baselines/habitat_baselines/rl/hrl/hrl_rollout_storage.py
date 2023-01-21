@@ -10,7 +10,11 @@ import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensor_dict import TensorDict
+from habitat_baselines.common.tensor_dict import DictTree
+from habitat_baselines.rl.models.rnn_state_encoder import (
+    build_pack_info_from_dones,
+    build_rnn_build_seq_info,
+)
 
 EPS_PPO = 1e-5
 
@@ -20,7 +24,6 @@ class HrlRolloutStorage(RolloutStorage):
     def __init__(self, numsteps, num_envs, *args, **kwargs):
         super().__init__(numsteps, num_envs, *args, **kwargs)
         self._num_envs = num_envs
-        self._numsteps = numsteps
         self._cur_step_idxs = torch.zeros(self._num_envs, dtype=torch.long)
         self._last_should_inserts = None
         if self.is_double_buffered:
@@ -40,6 +43,10 @@ class HrlRolloutStorage(RolloutStorage):
         buffer_index: int = 0,
         should_inserts=None,
     ):
+        if next_masks is not None:
+            next_masks = next_masks.to(self.device)
+        if rewards is not None:
+            rewards = rewards.to(self.device)
         next_step = dict(
             observations=next_observations,
             recurrent_hidden_states=next_recurrent_hidden_states,
@@ -69,9 +76,7 @@ class HrlRolloutStorage(RolloutStorage):
             reward_write_idxs = torch.maximum(
                 self._cur_step_idxs - 1, torch.zeros_like(self._cur_step_idxs)
             )
-            self.buffers["rewards"][reward_write_idxs, env_idxs] += rewards.to(
-                self.device
-            )
+            self.buffers["rewards"][reward_write_idxs, env_idxs] += rewards
 
         if len(next_step) > 0:
             self.buffers.set(
@@ -97,9 +102,9 @@ class HrlRolloutStorage(RolloutStorage):
     def advance_rollout(self, buffer_index: int = 0):
         self._cur_step_idxs += self._last_should_inserts.long()
 
-        is_past_buffer = self._cur_step_idxs >= self._numsteps
+        is_past_buffer = self._cur_step_idxs >= self.num_steps
         if is_past_buffer.sum() > 0:
-            self._cur_step_idxs[is_past_buffer] = self._numsteps - 1
+            self._cur_step_idxs[is_past_buffer] = self.num_steps - 1
             env_idxs = torch.arange(self._num_envs)
             self.buffers["rewards"][
                 self._cur_step_idxs[is_past_buffer], env_idxs[is_past_buffer]
@@ -137,16 +142,22 @@ class HrlRolloutStorage(RolloutStorage):
 
     def recurrent_generator(
         self, advantages, num_batches
-    ) -> Iterator[TensorDict]:
+    ) -> Iterator[DictTree]:
         num_environments = advantages.size(1)
+        dones_cpu = (
+            torch.logical_not(self.buffers["masks"])
+            .cpu()
+            .view(-1, self._num_envs)
+            .numpy()
+        )
         for inds in torch.randperm(num_environments).chunk(num_batches):
-            batch = self.buffers[0 : self._numsteps, inds]
-            batch["advantages"] = advantages[: self._numsteps, inds]
+            batch = self.buffers[0 : self.num_steps, inds]
+            batch["advantages"] = advantages[: self.num_steps, inds]
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
             ][0:1]
             batch["loss_mask"] = (
-                torch.arange(self._numsteps, device=advantages.device)
+                torch.arange(self.num_steps, device=advantages.device)
                 .view(-1, 1, 1)
                 .repeat(1, len(inds), 1)
             )
@@ -156,4 +167,14 @@ class HrlRolloutStorage(RolloutStorage):
                     batch["loss_mask"][:, i] < self._cur_step_idxs[env_i] - 1
                 )
 
-            yield batch.map(lambda v: v.flatten(0, 1))
+            batch.map_in_place(lambda v: v.flatten(0, 1))
+            batch["rnn_build_seq_info"] = build_rnn_build_seq_info(
+                device=self.device,
+                build_fn_result=build_pack_info_from_dones(
+                    dones_cpu[0 : self.num_steps, inds.numpy()].reshape(
+                        -1, len(inds)
+                    ),
+                ),
+            )
+
+            yield batch.to_tree()

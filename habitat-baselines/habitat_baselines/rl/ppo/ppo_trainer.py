@@ -22,7 +22,6 @@ from torch.optim.lr_scheduler import LambdaLR
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
-from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
@@ -69,6 +68,11 @@ from habitat_baselines.utils.common import (
     get_num_actions,
     inference_mode,
     is_continuous_action_space,
+)
+from habitat_baselines.utils.info_dict import (
+    NON_SCALAR_METRICS,
+    extract_scalars_from_info,
+    extract_scalars_from_infos,
 )
 
 if TYPE_CHECKING:
@@ -150,8 +154,8 @@ class PPOTrainer(BaseRLTrainer):
         self.actor_critic = policy.from_config(
             self.config,
             observation_space,
-            self.policy_action_space,
-            orig_action_space=self.orig_policy_action_space,
+            self.env_action_space,
+            orig_action_space=self.orig_env_action_space,
         )
         self.obs_space = observation_space
         self.actor_critic.to(self.device)
@@ -201,6 +205,9 @@ class PPOTrainer(BaseRLTrainer):
             )
 
         self.agent = agent_cls.from_config(self.actor_critic, ppo_cfg)
+        self.policy_action_space = self.actor_critic.get_policy_action_space(
+            self.envs.action_spaces[0]
+        )
 
     def _init_envs(self, config=None, is_eval: bool = False):
         if config is None:
@@ -211,6 +218,8 @@ class PPOTrainer(BaseRLTrainer):
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
         )
+        self.env_action_space = self.envs.action_spaces[0]
+        self.orig_env_action_space = self.envs.orig_action_spaces[0]
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -282,18 +291,6 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        action_space = self.envs.action_spaces[0]
-        self.policy_action_space = action_space
-        self.orig_policy_action_space = self.envs.orig_action_spaces[0]
-        if is_continuous_action_space(action_space):
-            # Assume ALL actions are NOT discrete
-            action_shape = (get_num_actions(action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
-
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
             self.device = torch.device(
@@ -349,8 +346,6 @@ class PPOTrainer(BaseRLTrainer):
             ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
             is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-            action_shape=action_shape,
-            discrete_actions=discrete_actions,
         )
         self.rollouts.to(self.device)
 
@@ -425,45 +420,6 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    @classmethod
-    def _extract_scalars_from_info(
-        cls, info: Dict[str, Any]
-    ) -> Dict[str, float]:
-        result = {}
-        for k, v in info.items():
-            if not isinstance(k, str) or k in NON_SCALAR_METRICS:
-                continue
-
-            if isinstance(v, dict):
-                result.update(
-                    {
-                        k + "." + subk: subv
-                        for subk, subv in cls._extract_scalars_from_info(
-                            v
-                        ).items()
-                        if isinstance(subk, str)
-                        and k + "." + subk not in NON_SCALAR_METRICS
-                    }
-                )
-            # Things that are scalar-like will have an np.size of 1.
-            # Strings also have an np.size of 1, so explicitly ban those
-            elif np.size(v) == 1 and not isinstance(v, str):
-                result[k] = float(v)
-
-        return result
-
-    @classmethod
-    def _extract_scalars_from_infos(
-        cls, infos: List[Dict[str, Any]]
-    ) -> Dict[str, List[float]]:
-
-        results = defaultdict(list)
-        for i in range(len(infos)):
-            for k, v in cls._extract_scalars_from_info(infos[i]).items():
-                results[k].append(v)
-
-        return results
-
     def _compute_actions_and_step_envs(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
         env_slice = slice(
@@ -498,12 +454,12 @@ class PPOTrainer(BaseRLTrainer):
             range(env_slice.start, env_slice.stop),
             action_data.env_actions.cpu().unbind(0),
         ):
-            if is_continuous_action_space(self.policy_action_space):
+            if is_continuous_action_space(self.env_action_space):
                 # Clipping actions to the specified limits
                 act = np.clip(
                     act.numpy(),
-                    self.policy_action_space.low,
-                    self.policy_action_space.high,
+                    self.env_action_space.low,
+                    self.env_action_space.high,
                 )
             else:
                 act = act.item()
@@ -561,7 +517,7 @@ class PPOTrainer(BaseRLTrainer):
         current_ep_reward = self.current_episode_reward[env_slice]
         self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
         self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-        for k, v_k in self._extract_scalars_from_infos(infos).items():
+        for k, v_k in extract_scalars_from_infos(infos).items():
             v = torch.tensor(
                 v_k,
                 dtype=torch.float,
@@ -950,25 +906,19 @@ class PPOTrainer(BaseRLTrainer):
         with read_write(config):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
-        if (
-            len(config.habitat_baselines.video_render_views) > 0
-            and len(self.config.habitat_baselines.eval.video_option) > 0
-        ):
+        if len(self.config.habitat_baselines.eval.video_option) > 0:
             agent_config = get_agent_config(config.habitat.simulator)
             agent_sensors = agent_config.sim_sensors
-            render_view_uuids = [
-                agent_sensors[render_view].uuid
-                for render_view in config.habitat_baselines.video_render_views
-                if render_view in agent_sensors
-            ]
-            assert len(render_view_uuids) > 0, (
-                f"Missing render sensors in agent config: "
-                f"{config.habitat_baselines.video_render_views}."
-            )
+            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+            with read_write(agent_sensors):
+                agent_sensors.update(extra_sensors)
             with read_write(config):
-                for render_view_uuid in render_view_uuids:
-                    if render_view_uuid not in config.habitat.gym.obs_keys:
-                        config.habitat.gym.obs_keys.append(render_view_uuid)
+                if config.habitat.gym.obs_keys is not None:
+                    for render_view in extra_sensors.values():
+                        if render_view.uuid not in config.habitat.gym.obs_keys:
+                            config.habitat.gym.obs_keys.append(
+                                render_view.uuid
+                            )
                 config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
@@ -976,19 +926,15 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config, is_eval=True)
 
-        action_space = self.envs.action_spaces[0]
-        self.policy_action_space = action_space
-        self.orig_policy_action_space = self.envs.orig_action_spaces[0]
-        if is_continuous_action_space(action_space):
+        self._setup_actor_critic_agent(ppo_cfg)
+        if is_continuous_action_space(self.policy_action_space):
             # Assume NONE of the actions are discrete
-            action_shape = (get_num_actions(action_space),)
+            action_shape = (get_num_actions(self.policy_action_space),)
             discrete_actions = False
         else:
             # For discrete pointnav
             action_shape = (1,)
             discrete_actions = True
-
-        self._setup_actor_critic_agent(ppo_cfg)
 
         if self.agent.actor_critic.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])
@@ -1025,9 +971,9 @@ class PPOTrainer(BaseRLTrainer):
         ] = {}  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
-        rgb_frames = [
+        rgb_frames: List[List[np.ndarray]] = [
             [] for _ in range(self.config.habitat_baselines.num_environments)
-        ]  # type: List[List[np.ndarray]]
+        ]
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
@@ -1069,19 +1015,30 @@ class PPOTrainer(BaseRLTrainer):
                     not_done_masks,
                     deterministic=False,
                 )
-                test_recurrent_hidden_states = action_data.rnn_hidden_states
-
-                prev_actions.copy_(action_data.actions)  # type: ignore
+                if action_data.should_inserts is None:
+                    test_recurrent_hidden_states = (
+                        action_data.rnn_hidden_states
+                    )
+                    prev_actions.copy_(action_data.actions)  # type: ignore
+                else:
+                    for i, should_insert in enumerate(
+                        action_data.should_inserts
+                    ):
+                        if should_insert.item():
+                            test_recurrent_hidden_states[
+                                i
+                            ] = action_data.rnn_hidden_states[i]
+                            prev_actions[i].copy_(action_data.actions[i])  # type: ignore
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
-            if is_continuous_action_space(self.policy_action_space):
+            if is_continuous_action_space(self.env_action_space):
                 # Clipping actions to the specified limits
                 step_data = [
                     np.clip(
                         a.numpy(),
-                        self.policy_action_space.low,
-                        self.policy_action_space.high,
+                        self.env_action_space.low,
+                        self.env_action_space.high,
                     )
                     for a in action_data.env_actions.cpu()
                 ]
@@ -1140,7 +1097,9 @@ class PPOTrainer(BaseRLTrainer):
                         frame = observations_to_image(
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
-                    frame = overlay_frame(frame, infos[i])
+                    frame = overlay_frame(
+                        frame, extract_scalars_from_info(infos[i])
+                    )
                     rgb_frames[i].append(frame)
 
                 # episode ended
@@ -1149,9 +1108,7 @@ class PPOTrainer(BaseRLTrainer):
                     episode_stats = {
                         "reward": current_episode_reward[i].item()
                     }
-                    episode_stats.update(
-                        self._extract_scalars_from_info(infos[i])
-                    )
+                    episode_stats.update(extract_scalars_from_info(infos[i]))
                     current_episode_reward[i] = 0
                     k = (
                         current_episodes_info[i].scene_id,
@@ -1171,7 +1128,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes_info[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metrics=self._extract_scalars_from_info(infos[i]),
+                            metrics=extract_scalars_from_info(infos[i]),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,

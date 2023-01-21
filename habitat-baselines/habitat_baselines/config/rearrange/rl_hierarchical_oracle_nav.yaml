@@ -1,14 +1,12 @@
 # @package _global_
-# Pick and place are instantaneous skills,
-# where environment is set to final state.
-# Navigation is kinematically simulated.
 
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy: hierarchical_srl_onav
+  - /habitat_baselines/rl/policy: hl_neural
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: noop_skills
   - /habitat/task/actions:
     - pddl_apply_action
     - oracle_nav_action
@@ -28,6 +26,7 @@ habitat:
       - obj_goal_gps_compass
       - joint
       - is_holding
+      - ee_pos
       - localization_sensor
 
 
@@ -40,9 +39,7 @@ habitat_baselines:
   distrib_updater_name: "HrlDDPPO"
   video_fps: 30
   eval_ckpt_path_dir: ""
-  num_environments: 1
-  video_render_views:
-    - "third_rgb_sensor"
+  num_environments: 3
   writer_type: 'tb'
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
@@ -59,6 +56,16 @@ habitat_baselines:
     video_option: ["disk"]
 
   rl:
+    policy:
+      hierarchical_policy:
+        use_skills:
+          nav: "oracle_nav"
+          nav_to_receptacle: "oracle_nav"
+        defined_skills:
+          oracle_nav:
+            skill_name: "OracleNavPolicy"
+            obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+            max_skill_steps: 300
     ppo:
       # ppo params
       clip_param: 0.2

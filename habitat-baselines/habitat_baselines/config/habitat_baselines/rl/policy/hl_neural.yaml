@@ -1,0 +1,29 @@
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    name: "NeuralHighLevelPolicy"
+    allow_other_place: False
+    hidden_dim: 512
+    use_rnn: True
+    rnn_type: 'LSTM'
+    backbone: resnet18
+    normalize_visual_inputs: False
+    num_rnn_layers: 2
+    policy_input_keys:
+      - "robot_head_depth"
+  use_skills:
+    open_cab: "open_cab"
+    open_fridge: "open_fridge"
+    close_cab: "open_cab"
+    close_fridge: "open_fridge"
+    pick: "pick"
+    place: "place"
+    nav: "nav_to_obj"
+    nav_to_receptacle: "nav_to_obj"
+    wait: "wait_skill"
+    reset_arm: "reset_arm_skill"
+  defined_skills: {}

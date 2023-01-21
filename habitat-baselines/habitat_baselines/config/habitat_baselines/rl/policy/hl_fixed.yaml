@@ -1,0 +1,21 @@
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    name: "FixedHighLevelPolicy"
+    add_arm_rest: True
+  use_skills:
+    open_cab: "open_cab"
+    open_fridge: "open_fridge"
+    close_cab: "close_cab"
+    close_fridge: "close_fridge"
+    pick: "pick"
+    place: "place"
+    nav: "nav_to_obj"
+    nav_to_receptacle: "nav_to_obj"
+    wait: "wait_skill"
+    reset_arm: "reset_arm_skill"
+  defined_skills: {}

@@ -8,6 +8,10 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 
 
 class HighLevelPolicy(nn.Module):
+    """
+    High level policy that selects from low-level skills.
+    """
+
     def __init__(
         self,
         config,
@@ -27,6 +31,21 @@ class HighLevelPolicy(nn.Module):
 
     def to(self, device):
         self._device = device
+        return super().to(device)
+
+    def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
+        raise NotImplementedError()
+
+    def evaluate_actions(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        action,
+        rnn_build_seq_info,
+    ):
+        raise NotImplementedError()
 
     @property
     def num_recurrent_layers(self):
@@ -34,6 +53,11 @@ class HighLevelPolicy(nn.Module):
 
     def parameters(self):
         return iter([nn.Parameter(torch.zeros((1,), device=self._device))])
+
+    def get_policy_action_space(
+        self, env_action_space: spaces.Space
+    ) -> spaces.Space:
+        return env_action_space
 
     def get_next_skill(
         self,
@@ -68,6 +92,9 @@ class HighLevelPolicy(nn.Module):
 
     def apply_mask(self, mask: torch.Tensor) -> None:
         pass
+
+    def get_policy_components(self) -> List[nn.Module]:
+        return []
 
     def get_termination(
         self,

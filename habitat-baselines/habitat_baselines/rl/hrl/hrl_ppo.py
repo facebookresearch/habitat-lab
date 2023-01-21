@@ -28,13 +28,7 @@ class HrlPPO(PPO):
 
         self._set_grads_to_none()
 
-        (
-            values,
-            action_log_probs,
-            dist_entropy,
-            _,
-            aux_loss_res,
-        ) = self._evaluate_actions(
+        (values, action_log_probs, dist_entropy, _,) = self._evaluate_actions(
             batch["observations"],
             batch["recurrent_hidden_states"],
             batch["prev_actions"],
@@ -87,8 +81,6 @@ class HrlPPO(PPO):
         else:
             all_losses.append(self.entropy_coef.lagrangian_loss(dist_entropy))
 
-        all_losses.extend(v["loss"] for v in aux_loss_res.values())
-
         total_loss = torch.stack(all_losses).sum()
 
         total_loss = self.before_backward(total_loss)
@@ -117,10 +109,6 @@ class HrlPPO(PPO):
                 learner_metrics["entropy_coef"].append(
                     self.entropy_coef().detach()
                 )
-
-            for name, res in aux_loss_res.items():
-                for k, v in res.items():
-                    learner_metrics[f"aux_{name}_{k}"].append(v.detach())
 
 
 @baseline_registry.register_updater

@@ -92,6 +92,11 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             ]
         return all_actions
 
+    def get_policy_action_space(
+        self, env_action_space: spaces.Space
+    ) -> spaces.Space:
+        return spaces.Discrete(self._n_actions)
+
     @property
     def num_recurrent_layers(self):
         return self._state_encoder.num_recurrent_layers
@@ -105,7 +110,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             self._critic.parameters(),
         )
 
-    def forward(self, obs, rnn_hidden_states, masks):
+    def get_policy_components(self) -> List[nn.Module]:
+        return [self]
+
+    def forward(self, obs, rnn_hidden_states, masks, rnn_build_seq_info=None):
         hidden = []
         if len(self._im_obs_space) > 0:
             im_obs = {k: obs[k] for k in self._im_obs_space.keys()}
@@ -117,7 +125,9 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             hidden.extend([obs[k] for k in self._state_obs_space.keys()])
         hidden = torch.cat(hidden, -1)
 
-        return self._state_encoder(hidden, rnn_hidden_states, masks)
+        return self._state_encoder(
+            hidden, rnn_hidden_states, masks, rnn_build_seq_info
+        )
 
     def to(self, device):
         self._device = device
@@ -126,6 +136,30 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         state, _ = self.forward(observations, rnn_hidden_states, masks)
         return self._critic(state)
+
+    def evaluate_actions(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        action,
+        rnn_build_seq_info,
+    ):
+        features, _ = self.forward(
+            observations, rnn_hidden_states, masks, rnn_build_seq_info
+        )
+        distribution = self._policy(features)
+        value = self._critic(features)
+        action_log_probs = distribution.log_probs(action)
+        distribution_entropy = distribution.entropy()
+
+        return (
+            value,
+            action_log_probs,
+            distribution_entropy,
+            rnn_hidden_states,
+        )
 
     def get_next_skill(
         self,

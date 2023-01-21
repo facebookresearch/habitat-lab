@@ -33,8 +33,12 @@ if TYPE_CHECKING:
 
 @dataclass
 class PolicyAction:
+    """
+    Information returned from the `Policy` class.
+    """
+
     rnn_hidden_states: torch.Tensor
-    actions: torch.Tensor
+    actions: Optional[torch.Tensor] = None
     values: Optional[torch.Tensor] = None
     action_log_probs: Optional[torch.Tensor] = None
     take_actions: Optional[torch.Tensor] = None
@@ -68,6 +72,26 @@ class Policy(abc.ABC):
 
     def forward(self, *x):
         raise NotImplementedError
+
+    def get_policy_action_space(
+        self, env_action_space: spaces.Space
+    ) -> spaces.Space:
+        return env_action_space
+
+    def _get_policy_components(self) -> List[nn.Module]:
+        return []
+
+    def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
+        return {}
+
+    def policy_parameters(self) -> Iterable[torch.Tensor]:
+        for c in self._get_policy_components():
+            yield from c.parameters()
+
+    def all_policy_tensors(self) -> Iterable[torch.Tensor]:
+        yield from self.policy_parameters()
+        for c in self._get_policy_components():
+            yield from c.buffers()
 
     def extract_policy_info(
         self, action_data: PolicyAction, infos, dones
@@ -235,18 +259,8 @@ class NetPolicy(nn.Module, Policy):
             aux_loss_res,
         )
 
-    @property
-    def policy_components(self):
-        return (self.net, self.critic, self.action_distribution)
-
-    def policy_parameters(self) -> Iterable[torch.Tensor]:
-        for c in self.policy_components:
-            yield from c.parameters()
-
-    def all_policy_tensors(self) -> Iterable[torch.Tensor]:
-        yield from self.policy_parameters()
-        for c in self.policy_components:
-            yield from c.buffers()
+    def _get_policy_components(self) -> List[nn.Module]:
+        return [self.net, self.critic, self.action_distribution]
 
     def aux_loss_parameters(self) -> Dict[str, Iterable[torch.Tensor]]:
         return {k: v.parameters() for k, v in self.aux_loss_modules.items()}

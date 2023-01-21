@@ -47,8 +47,8 @@ class NavSkillPolicy(NnSkillPolicy):
         ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
 
         if NavGoalPointGoalSensor.cls_uuid in ret_obs:
-            for i in cur_batch_idx:
-                if self._cur_skill_args[cur_batch_idx[i]].is_target:
+            for i, batch_i in enumerate(cur_batch_idx):
+                if self._cur_skill_args[batch_i].is_target:
                     replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
                 else:
                     replace_sensor = TargetStartGpsCompassSensor.cls_uuid

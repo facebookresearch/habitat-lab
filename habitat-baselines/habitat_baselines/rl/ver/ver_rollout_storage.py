@@ -144,9 +144,7 @@ class VERRolloutStorage(RolloutStorage):
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
-        action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
-        discrete_actions: bool = True,
     ):
         super().__init__(
             numsteps,
@@ -155,9 +153,7 @@ class VERRolloutStorage(RolloutStorage):
             action_space,
             recurrent_hidden_state_size,
             num_recurrent_layers,
-            action_shape,
             is_double_buffered,
-            discrete_actions,
         )
         self.use_is_coeffs = variable_experience
 
