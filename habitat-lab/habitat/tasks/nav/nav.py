@@ -968,10 +968,10 @@ class DistanceToGoal(Measure):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_base_position(self, sim):
+    def get_base_position(self):
         return self._sim.get_agent_state().position
 
-    def get_end_effector_position(self, sim):
+    def get_end_effector_position(self):
         raise NotImplementedError
 
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
@@ -989,9 +989,9 @@ class DistanceToGoal(Measure):
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
         if self._config.distance_from == "END_EFFECTOR":
-            current_position = self.get_end_effector_position(self._sim)
+            current_position = self.get_end_effector_position()
         else:
-            current_position = self.get_base_position(self._sim)
+            current_position = self.get_base_position()
 
         if self._previous_position is None or not np.allclose(
             self._previous_position, current_position, atol=1e-4

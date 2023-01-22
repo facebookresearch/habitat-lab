@@ -23,11 +23,11 @@ from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
 class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface):
     cls_uuid: str = "pick_distance_to_goal"
 
-    def get_base_position(self, sim):
+    def get_base_position(self):
         assert isinstance(self._sim, RearrangeSim)
         return self._sim.robot.base_pos
 
-    def get_end_effector_position(self, sim):
+    def get_end_effector_position(self):
         assert isinstance(self._sim, RearrangeSim)
         return self._sim.get_robot_data(
             self.robot_id
@@ -120,7 +120,7 @@ class RearrangePickReward(RearrangeReward):
         )
         if self._config.object_goal:
             task.measurements.check_measure_dependencies(
-                self.uuid, [DistanceToGoal.cls_uuid]
+                self.uuid, [PickDistanceToGoal.cls_uuid]
             )
         else:
             task.measurements.check_measure_dependencies(
@@ -148,7 +148,7 @@ class RearrangePickReward(RearrangeReward):
         )
         if self._config.object_goal:
             ee_to_object_distance = task.measurements.measures[
-                DistanceToGoal.cls_uuid
+                PickDistanceToGoal.cls_uuid
             ].get_metric()
         else:
             ee_to_object_distance = task.measurements.measures[
