@@ -100,8 +100,8 @@ class SuctionGraspAction(MagicGraspAction):
         match_coll = None
         contacts = self._sim.get_physics_contact_points()
 
-        robot_id = self._sim.robot.sim_obj.object_id
-        all_gripper_links = list(self._sim.robot.params.gripper_joints)
+        robot_id = self._sim.agent.sim_obj.object_id
+        all_gripper_links = list(self._sim.agent.params.gripper_joints)
         robot_contacts = [
             c
             for c in contacts

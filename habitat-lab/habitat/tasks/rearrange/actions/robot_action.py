@@ -19,7 +19,7 @@ class RobotAction(SimulatorTaskAction):
         """
         Underlying robot mananger for the robot instance the action is attached to.
         """
-        return self._sim.robots_mgr[self._config.agent_index]
+        return self._sim.agents_mgr[self._config.agent_index]
 
     @property
     def _ik_helper(self):
@@ -34,7 +34,7 @@ class RobotAction(SimulatorTaskAction):
         """
         The robot instance for this action.
         """
-        return self._robot_mgr.robot
+        return self._robot_mgr.agent
 
     @property
     def cur_grasp_mgr(self):

@@ -214,10 +214,10 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         call_high_level: torch.BoolTensor = torch.zeros(
             (self._num_envs,), dtype=torch.bool
-        )
+        ).to(masks.device)
         bad_should_terminate: torch.BoolTensor = torch.zeros(
             (self._num_envs,), dtype=torch.bool
-        )
+        ).to(masks.device)
 
         hl_says_term = self._high_level_policy.get_termination(
             observations,
@@ -226,7 +226,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             masks,
             self._cur_skills,
             log_info,
-        ).cpu()
+        )
         # Compute the actions from the current skills
         actions = torch.zeros(
             (self._num_envs, get_num_actions(self._action_space)),
@@ -270,7 +270,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
         # Always call high-level if the episode is over.
-        call_high_level = call_high_level | (~masks_cpu).view(-1)
+        call_high_level = call_high_level | ~masks.view(-1)
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
@@ -313,8 +313,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                     raise ValueError(
                         f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
                     )
-            self._cur_skills = ((~call_high_level) * self._cur_skills) + (
-                call_high_level * new_skills
+            self._cur_skills = ((~call_high_level) * self._cur_skills.to(masks.device)) + (
+                call_high_level * new_skills.to(masks.device)
             )
 
         grouped_skills = self._broadcast_skill_ids(
@@ -340,8 +340,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             # Add actions from apply_postcond
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
         actions[:, self._stop_action_idx] = 0.0
-
-        should_terminate = bad_should_terminate | hl_terminate
+        should_terminate = bad_should_terminate | hl_terminate.to(masks.device)
         if should_terminate.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate):

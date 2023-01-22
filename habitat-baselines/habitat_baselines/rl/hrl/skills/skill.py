@@ -188,7 +188,7 @@ class SkillPolicy(Policy):
             if self._config.force_end_on_timeout:
                 bad_terminate = over_max_len.cpu()
             else:
-                is_skill_done = is_skill_done | over_max_len
+                is_skill_done = is_skill_done | over_max_len.to(is_skill_done.device)
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._delay_term[env_i]:
@@ -212,7 +212,7 @@ class SkillPolicy(Policy):
                 f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
                 observations,
             )
-        return is_skill_done, bad_terminate, new_actions
+        return is_skill_done.to(new_actions.device), bad_terminate.to(new_actions.device), new_actions
 
     def on_enter(
         self,

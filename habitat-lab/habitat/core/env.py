@@ -132,7 +132,7 @@ class Env:
         self.action_space = self._task.action_space
 
 
-        if 'agent_type' in config.simulator.agents.main_agent:
+        if 'amass_path' in config.simulator.agents.main_agent:
             config_human = config.simulator.agents.main_agent
             human_controller = amass_human_controller.AmassHumanController(
                 urdf_path=config_human.agent_urdf,
