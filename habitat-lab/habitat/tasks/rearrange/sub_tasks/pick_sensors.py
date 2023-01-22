@@ -20,7 +20,7 @@ from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
 
 
 @registry.register_measure
-class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface):
+class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
     cls_uuid: str = "pick_distance_to_goal"
 
     def get_base_position(self):
@@ -35,7 +35,9 @@ class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface):
 
 
 @registry.register_measure
-class PickDistanceToGoalReward(DistanceToGoalReward, UsesRobotInterface):
+class PickDistanceToGoalReward(
+    DistanceToGoalReward, UsesRobotInterface, Measure
+):
     cls_uuid: str = "pick_distance_to_goal_reward"
 
     @property

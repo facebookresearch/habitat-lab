@@ -1051,7 +1051,7 @@ class DistanceToGoalReward(Measure):
         super().__init__()
 
     @property
-    def distance_goal_cls(self):
+    def distance_to_goal_cls(self):
         return DistanceToGoal
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -1059,10 +1059,10 @@ class DistanceToGoalReward(Measure):
 
     def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
         task.measurements.check_measure_dependencies(
-            self.uuid, [self.distance_goal_cls.cls_uuid]
+            self.uuid, [self.distance_to_goal_cls.cls_uuid]
         )
         self._previous_distance = task.measurements.measures[
-            self.distance_goal_cls.cls_uuid
+            self.distance_to_goal_cls.cls_uuid
         ].get_metric()
         self.update_metric(episode=episode, task=task, *args, **kwargs)  # type: ignore
 
@@ -1070,7 +1070,7 @@ class DistanceToGoalReward(Measure):
         self, episode, task: EmbodiedTask, *args: Any, **kwargs: Any
     ):
         distance_to_target = task.measurements.measures[
-            self.distance_goal_cls.cls_uuid
+            self.distance_to_goal_cls.cls_uuid
         ].get_metric()
         self._metric = -(distance_to_target - self._previous_distance)
         self._previous_distance = distance_to_target
