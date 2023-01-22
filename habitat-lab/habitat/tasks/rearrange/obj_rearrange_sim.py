@@ -14,8 +14,5 @@ class ObjectRearrangeSim(RearrangeSim):
     def _setup_targets(self, ep_info):
         super()._setup_targets(ep_info)
         self.target_categories = {}
-        if ep_info.goal_recep_category is not None:
-            self.target_categories["goal_recep"] = ep_info.goal_recep_category
-            self.target_categories[
-                "start_recep"
-            ] = ep_info.start_recep_category
+        self.target_categories["goal_recep"] = ep_info.goal_recep_category
+        self.target_categories["start_recep"] = ep_info.start_recep_category
