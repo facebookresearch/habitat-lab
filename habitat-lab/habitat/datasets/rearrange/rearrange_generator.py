@@ -194,7 +194,7 @@ class RearrangeEpisodeGenerator:
             assert (
                 obj_sampler_info["name"] not in self._obj_samplers
             ), f"Duplicate object sampler name '{obj_sampler_info['name']}' in config."
-            if obj_sampler_info["type"] == "uniform":
+            if obj_sampler_info["type"] in ["uniform", "category_balanced"]:
                 assert "object_sets" in obj_sampler_info["params"]
                 assert "receptacle_sets" in obj_sampler_info["params"]
                 assert "num_samples" in obj_sampler_info["params"]
@@ -205,6 +205,14 @@ class RearrangeEpisodeGenerator:
                     for y in obj_sampler_info["params"]["object_sets"]
                     for x in self._obj_sets[y]
                 ]
+                if obj_sampler_info["type"] == "category_balanced":
+                    object_set_sampler_probs = {
+                        x: 1 / len(self._obj_sets[y])
+                        for y in obj_sampler_info["params"]["object_sets"]
+                        for x in self._obj_sets[y]
+                    }
+                else:
+                    object_set_sampler_probs = None
                 object_handles = sorted(set(object_handles))
                 if len(object_handles) == 0:
                     raise ValueError(
@@ -225,6 +233,7 @@ class RearrangeEpisodeGenerator:
                     obj_sampler_info["params"].get(
                         "nav_to_min_distance", -1.0
                     ),
+                    object_set_sampler_probs,
                     obj_sampler_info["params"].get("sample_probs", None),
                 )
             else:
@@ -684,7 +693,12 @@ class RearrangeEpisodeGenerator:
         self.num_ep_generated += 1
 
         def extract_recep_info(recep):
-            return (recep.parent_object_handle, recep.parent_link)
+            return (
+                recep.parent_object_handle
+                if recep.parent_object_handle is not None
+                else recep.name,
+                recep.parent_link,
+            )
 
         save_target_receps = [
             extract_recep_info(x) for x in all_target_receptacles

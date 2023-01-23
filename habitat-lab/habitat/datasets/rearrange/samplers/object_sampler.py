@@ -38,6 +38,7 @@ class ObjectSampler:
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
+        object_set_sample_probs: Optional[Dict[str, float]] = None,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
     ) -> None:
         """
@@ -45,6 +46,7 @@ class ObjectSampler:
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
+        self._object_set_sample_probs = object_set_sample_probs
         self._recep_set_sample_probs = recep_set_sample_probs
 
         self.receptacle_instances: Optional[
@@ -199,7 +201,13 @@ class ObjectSampler:
         """
         Sample an object handle from the object_set and return it.
         """
-        return self.object_set[random.randrange(0, len(self.object_set))]
+        if self._object_set_sample_probs is not None:
+            sample_weights = [
+                self._object_set_sample_probs[k] for k in self.object_set
+            ]
+            return random.choices(self.object_set, weights=sample_weights)[0]
+        else:
+            return self.object_set[random.randrange(0, len(self.object_set))]
 
     def sample_placement(
         self,

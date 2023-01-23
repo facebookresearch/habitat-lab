@@ -919,8 +919,8 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
-class HeadSemanticSensorConfig(HabitatSimSemanticSensorConfig):
-    uuid: str = "robot_head_semantic"
+class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "robot_head_panoptic"
     width: int = 256
     height: int = 256
 
@@ -1043,6 +1043,8 @@ class SimulatorConfig(HabitatBaseConfig):
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
+    # instance ids are recorded in the panoptic sensor starting from `instance_ids_start`
+    instance_ids_start: Optional[int] = 50
 
 
 @dataclass
@@ -1319,8 +1321,8 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
-    name="head_semantic_sensor",
-    node=HeadSemanticSensorConfig,
+    name="head_panoptic_sensor",
+    node=HeadPanopticSensorConfig,
 )
 
 cs.store(

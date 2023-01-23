@@ -172,7 +172,7 @@ class RearrangePickReward(RearrangeReward):
         if did_pick:
             if self._config.object_goal:
                 permissible_obj_ids = [
-                    self._sim.scene_obj_ids[g.object_id]
+                    self._sim.scene_obj_ids[int(g.object_id)]
                     for g in episode.candidate_objects
                 ]
             else:
@@ -255,7 +255,7 @@ class RearrangePickSuccess(Measure):
 
         if self._config.object_goal:
             permissible_obj_ids = [
-                self._sim.scene_obj_ids[g.object_id]
+                self._sim.scene_obj_ids[int(g.object_id)]
                 for g in episode.candidate_objects
             ]
         else:
