@@ -212,6 +212,11 @@ class PPOTrainer(BaseRLTrainer):
             resume_state = load_resume_state(self.config)
 
         if resume_state is not None:
+            if not self.config.habitat_baselines.load_resume_state_config:
+                raise FileExistsError(
+                    f"The configuration provided has habitat_baselines.load_resume_state_config=False but a previous training run exists. You can either delete the checkpoint folder {self.config.habitat_baselines.checkpoint_folder}, or change the configuration key habitat_baselines.checkpoint_folder in your new run."
+                )
+
             self.config = self._get_resume_state_config_or_new_config(
                 resume_state["config"]
             )
@@ -886,8 +891,10 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             raise RuntimeError("Evaluation does not support distributed mode")
 
-        # Map location CPU is almost always better than mapping to a CUDA device.
+        # Some configurations require not to load the checkpoint, like when using
+        # a hierarchial policy
         if self.config.habitat_baselines.eval.should_load_ckpt:
+            # map_location="cpu" is almost always better than mapping to a CUDA device.
             ckpt_dict = self.load_checkpoint(
                 checkpoint_path, map_location="cpu"
             )
