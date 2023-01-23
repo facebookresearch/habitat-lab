@@ -371,7 +371,7 @@ class EmbodiedTask:
         :param sim_config: config for simulator.
         :param episode: current episode.
         """
-        raise NotImplementedError
+        return sim_config
 
     def _check_episode_is_active(
         self,

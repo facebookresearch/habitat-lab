@@ -110,15 +110,14 @@ class DynNavRLEnv(RearrangeTask):
         )
 
     def reset(self, episode: Episode):
-        sim = self._sim
         super().reset(episode, fetch_observations=False)
 
         self._nav_to_info = self._generate_nav_start_goal(
             episode, force_idx=self.force_obj_to_idx
         )
 
-        sim.robot.base_pos = self._nav_to_info.robot_start_pos
-        sim.robot.base_rot = self._nav_to_info.robot_start_angle
+        self._sim.robot.base_pos = self._nav_to_info.robot_start_pos
+        self._sim.robot.base_rot = self._nav_to_info.robot_start_angle
 
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
@@ -134,9 +133,9 @@ class DynNavRLEnv(RearrangeTask):
 
         if self._sim.habitat_config.debug_render:
             # Visualize the position the agent is navigating to.
-            sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
+            self._sim.viz_ids["nav_targ_pos"] = self._sim.visualize_position(
                 self._nav_to_info.nav_goal_pos,
-                sim.viz_ids["nav_targ_pos"],
+                self._sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
         self._sim.maybe_update_robot()
