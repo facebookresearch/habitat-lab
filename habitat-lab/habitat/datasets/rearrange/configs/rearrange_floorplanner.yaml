@@ -1,17 +1,16 @@
 ---
-dataset_path: "data/fp_mini_receptacles/fp_mini.scene_dataset_config.json"
+dataset_path: data/test_scene_dataset/floorplanner.scene_dataset_config.json
 additional_object_paths:
 - data/objects/ycb/configs/
 - data/objects/amazon_berkeley/configs/
 - data/objects/google_object_dataset/configs/
 scene_sets:
-  -
-    name: "any"
-    included_substrings:
-      - "102344049"
-    excluded_substrings:
-      - "NONE"
-
+- name: any
+  included_substrings:
+  - "102815859"
+  excluded_substrings:
+  - '105515541_173104641'
+  - 'NONE'
 object_sets:
 - name: seen_action_figure
   included_substrings:
