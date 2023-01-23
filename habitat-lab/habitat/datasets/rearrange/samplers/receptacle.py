@@ -230,7 +230,7 @@ class AABBReceptacle(Receptacle):
             return l2w4
 
         # base class implements getting transform from attached objects
-        return super().get_global_transform
+        return super().get_global_transform(sim)
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
