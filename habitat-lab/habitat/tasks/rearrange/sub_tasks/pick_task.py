@@ -121,7 +121,17 @@ class RearrangePickTaskV1(RearrangeTask):
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos
-        sim.robot.base_rot = start_rot
+        # If the robot is Stretch, we force the base to rotate torward the object
+        if "stretch" in self._sim.robot.urdf_path:
+            sim.robot.base_rot = start_rot + 1.57
+        else:
+            sim.robot.base_rot = start_rot
+
+        # If the robot is Stretch, we force its camera to point toward the object, and
+        # look down as well.
+        if "stretch" in self._sim.robot.urdf_path:
+            self._sim.robot.arm_motor_pos = np.array([0.0] * 8 + [-1.7375, -0.7125])
+            self._sim.robot.arm_joint_pos = np.array([0.0] * 8 + [-1.7375, -0.7125])
 
         self._targ_idx = sel_idx
 
