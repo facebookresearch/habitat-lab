@@ -29,6 +29,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     AABBReceptacle,
     find_receptacles,
 )
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -79,9 +80,9 @@ class RearrangeSim(HabitatSim):
         super().__init__(config)
 
         self.first_setup = True
-        self.ep_info: Optional["DictConfig"] = None
+        self.ep_info: Optional[RearrangeEpisode] = None
         self.prev_loaded_navmesh = None
-        self.prev_scene_id = None
+        self.prev_scene_id: Optional[str] = None
 
         # Number of physics updates per action
         self.ac_freq_ratio = self.habitat_config.ac_freq_ratio
@@ -172,10 +173,10 @@ class RearrangeSim(HabitatSim):
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
 
-    def add_markers(self, ep_info: "DictConfig"):
+    def add_markers(self, ep_info: RearrangeEpisode):
         self._markers = {}
         aom = self.get_articulated_object_manager()
-        for marker in ep_info["markers"]:
+        for marker in ep_info.markers:
             p = marker["params"]
             ao = aom.get_object_by_handle(p["object"])
             name_to_link = {}
@@ -209,13 +210,11 @@ class RearrangeSim(HabitatSim):
             self.reset_agent(i)
         return None
 
-    def reconfigure(self, config: "DictConfig"):
-        self.step_idx = 0
-        ep_info = config["ep_info"][0]
-        self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
+    def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
+        self.instance_handle_to_ref_handle = ep_info.info["object_labels"]
 
         with read_write(config):
-            config["scene"] = ep_info["scene_id"]
+            config["scene"] = ep_info.scene_id
 
         super().reconfigure(config, should_close_on_new_scene=False)
 
@@ -224,7 +223,7 @@ class RearrangeSim(HabitatSim):
         self.ep_info = ep_info
         self._try_acquire_context()
 
-        new_scene = self.prev_scene_id != ep_info["scene_id"]
+        new_scene = self.prev_scene_id != ep_info.scene_id
 
         if new_scene:
             self._prev_obj_names = None
@@ -232,13 +231,13 @@ class RearrangeSim(HabitatSim):
         self.robots_mgr.reconfigure(new_scene)
 
         # Only remove and re-add objects if we have a new set of objects.
-        obj_names = [x[0] for x in ep_info["rigid_objs"]]
+        obj_names = [x[0] for x in ep_info.rigid_objs]
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
 
-        self.prev_scene_id = ep_info["scene_id"]
+        self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
         self._viz_handle_to_template = {}
 
@@ -254,7 +253,7 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info, should_add_objects)
-        self._setup_targets()
+        self._setup_targets(ep_info)
 
         self.add_markers(ep_info)
 
@@ -263,7 +262,7 @@ class RearrangeSim(HabitatSim):
             self.sleep_all_objects()
 
         if new_scene:
-            self._load_navmesh()
+            self._load_navmesh(ep_info)
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
@@ -290,7 +289,9 @@ class RearrangeSim(HabitatSim):
         for i, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
-                node.semantic_id = obj.object_id
+                node.semantic_id = (
+                    obj.object_id + self.habitat_config.instance_ids_start
+                )
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -334,20 +335,20 @@ class RearrangeSim(HabitatSim):
                 break
         if attempt_i == max_attempts - 1:
             rearrange_logger.warning(
-                f"Could not find a collision free start for {self.ep_info['episode_id']}"
+                f"Could not find a collision free start for {self.ep_info.episode_id}"
             )
         return start_pos, start_rot
 
-    def _setup_targets(self):
+    def _setup_targets(self, ep_info):
         self._targets = {}
-        for target_handle, transform in self.ep_info["targets"].items():
+        for target_handle, transform in ep_info.targets.items():
             self._targets[target_handle] = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-    def _load_navmesh(self):
-        scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
-        base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
+    def _load_navmesh(self, ep_info):
+        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
+        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
         self.pathfinder.load_nav_mesh(navmesh_path)
@@ -386,13 +387,12 @@ class RearrangeSim(HabitatSim):
         # managed by the underlying sim.
         self.art_objs = []
 
-    def _set_ao_states_from_ep(self, ep_info: "DictConfig") -> None:
+    def _set_ao_states_from_ep(self, ep_info: RearrangeEpisode) -> None:
         """
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
         """
         aom = self.get_articulated_object_manager()
-        # NOTE: ep_info["ao_states"]: Dict[str, Dict[int, float]] : {instance_handle -> {link_ix, state}}
-        for aoi_handle, joint_states in ep_info["ao_states"].items():
+        for aoi_handle, joint_states in ep_info.ao_states.items():
             ao = aom.get_object_by_handle(aoi_handle)
             ao_pose = ao.joint_positions
             for link_ix, joint_state in joint_states.items():
@@ -438,25 +438,35 @@ class RearrangeSim(HabitatSim):
         return new_pos
 
     def _add_objs(
-        self, ep_info: "DictConfig", should_add_objects: bool
+        self, ep_info: RearrangeEpisode, should_add_objects: bool
     ) -> None:
         # Load clutter objects:
-        # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
         obj_counts: Dict[str, int] = defaultdict(int)
 
-        for i, (obj_handle, transform) in enumerate(ep_info["rigid_objs"]):
+        for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
                 obj_attr_mgr = self.get_object_template_manager()
                 matching_templates = (
                     obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
                 )
-                assert (
-                    len(matching_templates.values()) == 1
-                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
-                ro = rom.add_object_by_template_handle(
-                    list(matching_templates.keys())[0]
-                )
+                if len(matching_templates.values()) > 1:
+                    # handle collision in object handles. eg: 'Elephant.object_config.json', 'Sootheze_Cold_Therapy_Elephant.object_config.json'
+                    exactly_matching = list(
+                        filter(
+                            lambda x: obj_handle == osp.basename(x),
+                            matching_templates.keys(),
+                        )
+                    )
+                    if len(exactly_matching) == 1:
+                        matching_template = exactly_matching[0]
+                    else:
+                        raise Exception(
+                            f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. {len(exactly_matching)} templates exactly match the handle. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
+                        )
+                else:
+                    matching_template = list(matching_templates.keys())[0]
+                ro = rom.add_object_by_template_handle(matching_template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
 
@@ -498,7 +508,7 @@ class RearrangeSim(HabitatSim):
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
 
-    def _create_obj_viz(self, ep_info: "DictConfig"):
+    def _create_obj_viz(self):
         """
         Adds a visualization of the goal for each of the target objects in the
         scene. This is the same as the target object, but is a render only
@@ -693,7 +703,6 @@ class RearrangeSim(HabitatSim):
 
         if self.habitat_config.habitat_sim_v0.enable_gfx_replay_save:
             self.gfx_replay_manager.save_keyframe()
-        self.step_idx += 1
 
         if self.habitat_config.needs_markers:
             self._update_markers()
@@ -709,7 +718,7 @@ class RearrangeSim(HabitatSim):
                 )
 
             # Also render debug information
-            self._create_obj_viz(self.ep_info)
+            self._create_obj_viz()
 
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
@@ -788,7 +797,7 @@ class RearrangeSim(HabitatSim):
 
     def get_n_targets(self) -> int:
         """Get the number of rearrange targets."""
-        return len(self.ep_info["targets"])
+        return len(self.ep_info.targets)
 
     def get_target_objs_start(self) -> np.ndarray:
         """Get the initial positions of all objects targeted for rearrangement as a numpy array."""

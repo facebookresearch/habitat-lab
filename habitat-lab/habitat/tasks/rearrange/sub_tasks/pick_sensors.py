@@ -7,7 +7,7 @@
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
-from habitat.tasks.nav.nav import DistanceToGoal
+from habitat.tasks.nav.nav import DistanceToGoal, DistanceToGoalReward
 from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToObjectDistance,
     EndEffectorToRestDistance,
@@ -15,7 +15,34 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RearrangeReward,
     RobotForce,
 )
-from habitat.tasks.rearrange.utils import rearrange_logger
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
+
+
+@registry.register_measure
+class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
+    cls_uuid: str = "pick_distance_to_goal"
+
+    def get_base_position(self):
+        assert isinstance(self._sim, RearrangeSim)
+        return self._sim.robot.base_pos
+
+    def get_end_effector_position(self):
+        assert isinstance(self._sim, RearrangeSim)
+        return self._sim.get_robot_data(
+            self.robot_id
+        ).robot.ee_transform.translation
+
+
+@registry.register_measure
+class PickDistanceToGoalReward(
+    DistanceToGoalReward, UsesRobotInterface, Measure
+):
+    cls_uuid: str = "pick_distance_to_goal_reward"
+
+    @property
+    def distance_to_goal_cls(self):
+        return PickDistanceToGoal
 
 
 @registry.register_measure
@@ -95,7 +122,7 @@ class RearrangePickReward(RearrangeReward):
         )
         if self._config.object_goal:
             task.measurements.check_measure_dependencies(
-                self.uuid, [DistanceToGoal.cls_uuid]
+                self.uuid, [PickDistanceToGoal.cls_uuid]
             )
         else:
             task.measurements.check_measure_dependencies(
@@ -123,7 +150,7 @@ class RearrangePickReward(RearrangeReward):
         )
         if self._config.object_goal:
             ee_to_object_distance = task.measurements.measures[
-                DistanceToGoal.cls_uuid
+                PickDistanceToGoal.cls_uuid
             ].get_metric()
         else:
             ee_to_object_distance = task.measurements.measures[
@@ -145,7 +172,7 @@ class RearrangePickReward(RearrangeReward):
         if did_pick:
             if self._config.object_goal:
                 permissible_obj_ids = [
-                    self._sim.scene_obj_ids[g.object_id]
+                    self._sim.scene_obj_ids[int(g.object_id)]
                     for g in episode.candidate_objects
                 ]
             else:
@@ -228,7 +255,7 @@ class RearrangePickSuccess(Measure):
 
         if self._config.object_goal:
             permissible_obj_ids = [
-                self._sim.scene_obj_ids[g.object_id]
+                self._sim.scene_obj_ids[int(g.object_id)]
                 for g in episode.candidate_objects
             ]
         else:

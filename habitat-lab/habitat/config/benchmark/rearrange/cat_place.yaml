@@ -2,9 +2,9 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbds_head_rgb_third_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
   - /habitat/task/rearrange: cat_place
-  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/dataset/rearrangement: floorplanner
   - _self_
 
 habitat:
@@ -23,6 +23,8 @@ habitat:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
     - data/objects/ycb/configs/
+    - data/objects/amazon_berkeley/configs/
+    - data/objects/google_object_dataset/configs/
     needs_markers: False
     concur_render: True
     auto_sleep: True
@@ -48,5 +50,5 @@ habitat:
       allow_sliding: False
       enable_physics: True
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
+    data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
     type: ObjectRearrangeDataset-v0

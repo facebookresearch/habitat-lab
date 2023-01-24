@@ -6,6 +6,7 @@
 
 import math
 import random
+import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -37,6 +38,7 @@ class ObjectSampler:
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
+        object_set_sample_probs: Optional[Dict[str, float]] = None,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
     ) -> None:
         """
@@ -44,6 +46,7 @@ class ObjectSampler:
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
+        self._object_set_sample_probs = object_set_sample_probs
         self._recep_set_sample_probs = recep_set_sample_probs
 
         self.receptacle_instances: Optional[
@@ -198,7 +201,13 @@ class ObjectSampler:
         """
         Sample an object handle from the object_set and return it.
         """
-        return self.object_set[random.randrange(0, len(self.object_set))]
+        if self._object_set_sample_probs is not None:
+            sample_weights = [
+                self._object_set_sample_probs[k] for k in self.object_set
+            ]
+            return random.choices(self.object_set, weights=sample_weights)[0]
+        else:
+            return self.object_set[random.randrange(0, len(self.object_set))]
 
     def sample_placement(
         self,
@@ -388,6 +397,8 @@ class ObjectSampler:
             f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
         )
 
+        sampling_start_time = time.time()
+        pairing_start_time = sampling_start_time
         while (
             len(new_objects) < self.target_objects_number
             and num_pairing_tries < self.max_sample_attempts
@@ -415,7 +426,17 @@ class ObjectSampler:
                     self.receptacle_candidates = None
 
             if new_object is not None:
+                # when an object placement is successful, reset the try counter.
+                logger.info(
+                    f"    found obj|receptacle pairing ({len(new_objects)}/{self.target_objects_number}) in {num_pairing_tries} attempts ({time.time()-pairing_start_time}sec)."
+                )
+                num_pairing_tries = 0
+                pairing_start_time = time.time()
                 new_objects.append((new_object, receptacle))
+
+        logger.info(
+            f"    Sampling process completed in ({time.time()-sampling_start_time}sec)."
+        )
 
         if len(new_objects) >= self.num_objects[0]:
             return new_objects

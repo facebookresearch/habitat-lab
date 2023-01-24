@@ -12,8 +12,8 @@ defaults:
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
     - did_pick_object
-    - distance_to_goal
-    - distance_to_goal_reward
+    - pick_distance_to_goal
+    - pick_distance_to_goal_reward
     - pick_success
     - pick_reward
     - did_violate_hold_constraint
@@ -55,7 +55,7 @@ measurements:
   force_terminate:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
-  distance_to_goal:
+  pick_distance_to_goal:
     distance_to: EUCLIDEAN_POINT
     distance_from: END_EFFECTOR
     goals_attr: candidate_objects
