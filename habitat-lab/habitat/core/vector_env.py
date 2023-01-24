@@ -32,10 +32,10 @@ from gym import spaces
 
 import habitat
 from habitat.core.env import Env, RLEnv
-from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
-from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
+from habitat.gym.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
+from habitat.gym.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.utils import profiling_wrapper
 from habitat.utils.pickle5_multiprocessing import (
     CloudpickleWrapper,
@@ -569,7 +569,7 @@ class VectorEnv:
 
     def _warn_cuda_tensors(
         self,
-        action: Union[int, np.ndarray, Dict[str, Any]],
+        action: Union[int, np.ndarray, Dict[str, Any], torch.Tensor],
         prefix: Optional[str] = None,
     ):
         if torch is None:
