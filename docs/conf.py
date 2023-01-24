@@ -23,7 +23,7 @@ gym.Env.__annotations__["_np_random"] = typing.Optional[
 
 # Overrides the __all__ as that one pulls everything into the root module
 # and doesn't expose any submodules
-habitat.__all__ = ["config", "core", "Agent", "Benchmark"]
+habitat.__all__ = ["config", "core", "Agent", "Benchmark", "gym"]
 habitat.core.__all__ = [
     "env",
     "embodied_task",

@@ -17,9 +17,9 @@ import habitat
 from habitat.config.default import get_agent_config, get_config
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
+from habitat.gym.gym_definitions import make_gym_from_config
+from habitat.gym.gym_wrapper import HabGymWrapper
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
-from habitat.utils.gym_adapter import HabGymWrapper
-from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.test_utils import (
     sample_non_stop_action,
     sample_non_stop_action_gym,

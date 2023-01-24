@@ -231,7 +231,7 @@ class HabGymWrapper(gym.Env):
         if len(dict_space) > 1:
             self.observation_space = spaces.Dict(dict_space)
 
-        self._screen = None
+        self._screen: Optional[pygame.surface.Surface] = None
         self._env = env
 
     def step(self, action: Union[np.ndarray, int]):

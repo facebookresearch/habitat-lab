@@ -14,14 +14,14 @@ import mock
 import numpy as np
 import pytest
 
+import habitat.gym
 import habitat.utils.env_utils
-import habitat.utils.gym_definitions
 from habitat.core.environments import get_env_class
-from habitat.utils.gym_definitions import _get_env_name
+from habitat.gym.gym_definitions import _get_env_name
 
 # using mock for pygame to avoid having a pygame windows
 sys.modules["pygame"] = mock.MagicMock()
-importlib.reload(habitat.utils.gym_adapter)
+importlib.reload(habitat.gym.gym_wrapper)
 
 
 @pytest.mark.parametrize(
