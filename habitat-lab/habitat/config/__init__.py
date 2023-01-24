@@ -7,5 +7,3 @@
 
 from habitat.config.default import DictConfig, get_config
 from habitat.config.read_write import read_write
-
-__all__ = ["DictConfig", "get_config", "read_write"]
