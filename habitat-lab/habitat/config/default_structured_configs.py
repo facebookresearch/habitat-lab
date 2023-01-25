@@ -21,6 +21,12 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
+    "NumStepsMeasurementConfig",
+    "DistanceToGoalMeasurementConfig",
+    "SuccessMeasurementConfig",
+    "SPLMeasurementConfig",
+    "SoftSPLMeasurementConfig",
+    "DistanceToGoalRewardMeasurementConfig",
 ]
 
 
@@ -412,17 +418,38 @@ class MeasurementConfig(HabitatBaseConfig):
 
 @dataclass
 class SuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.
+    A success is defined as calling the `StopAction` when the `DistanceToGoal`
+    Measure is smaller than `success_distance`.
+
+    :data success_distance: The minimal distance the robot must be to the goal for a success.
+    """
     type: str = "Success"
     success_distance: float = 0.2
 
 
 @dataclass
 class SPLMeasurementConfig(MeasurementConfig):
+    r"""
+    For Navigation tasks only, Measures the SPL (Success weighted by Path Length)
+    ref: On Evaluation of Embodied Agents - Anderson et. al
+    https://arxiv.org/pdf/1807.06757.pdf
+    Measure is always 0 except at success where it will be
+    the ratio of the optimal distance from start to goal over the total distance
+    traveled by the agent. Maximum value is 1.
+    SPL = success * optimal_distance_to_goal / distance_traveled_so_far
+    """
     type: str = "SPL"
 
 
 @dataclass
 class SoftSPLMeasurementConfig(MeasurementConfig):
+    r"""
+    For Navigation tasks only, Similar to SPL, but instead of a boolean,
+    success is now calculated as 1 - (ratio of distance covered to target).
+    SoftSPL = max(0, 1 - distance_to_goal / optimal_distance_to_goal) * optimal_distance_to_goal / distance_traveled_so_far
+    """
     type: str = "SoftSPL"
 
 
@@ -605,6 +632,10 @@ class RearrangeReachSuccessMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class NumStepsMeasurementConfig(MeasurementConfig):
+    r"""
+    In both Navigation and Rearrangement tasks, counts the number of steps since
+    the start of the episode.
+    """
     type: str = "NumStepsMeasure"
 
 
@@ -721,12 +752,22 @@ class EpisodeInfoMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class DistanceToGoalMeasurementConfig(MeasurementConfig):
+    r"""
+    In Navigation tasks only, measures the geodesic distance to the goal.
+
+    :data distance_to: If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint.
+    """
     type: str = "DistanceToGoal"
     distance_to: str = "POINT"
 
 
 @dataclass
 class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    In Navigation tasks only, measures a reward based on the distance towards the goal.
+    The reward is `- (new_distance - previous_distance)` i.e. the
+    decrease of distance to the goal.
+    """
     type: str = "DistanceToGoalReward"
 
 
