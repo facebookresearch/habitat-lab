@@ -237,6 +237,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     hierarchical_policy: HierarchicalPolicy = MISSING
     ovrl: bool = False
     no_downscaling: bool = False
+    use_augmentations: bool = False
 
 
 @dataclass

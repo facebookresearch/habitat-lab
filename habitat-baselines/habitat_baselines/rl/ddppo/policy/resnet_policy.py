@@ -35,6 +35,7 @@ from habitat_baselines.rl.ddppo.policy import resnet, resnet_gn
 from habitat_baselines.rl.ddppo.policy.running_mean_and_var import (
     RunningMeanAndVar,
 )
+from habitat_baselines.rl.ddppo.transforms import ShiftAndJitterTransform
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
@@ -88,6 +89,7 @@ class PointNavResNetPolicy(NetPolicy):
                 no_downscaling=hasattr(policy_config, "no_downscaling")
                 and policy_config.no_downscaling,
                 ovrl=hasattr(policy_config, "ovrl") and policy_config.ovrl,
+                use_augmentations=policy_config.use_augmentations,
             ),
             action_space=action_space,
             policy_config=policy_config,
@@ -142,6 +144,7 @@ class ResNetEncoder(nn.Module):
         spatial_size: int = 128,
         make_backbone=None,
         no_downscaling=False,
+        use_augmentations=False,
     ):
         super().__init__()
         self.no_downscaling = no_downscaling
@@ -212,6 +215,13 @@ class ResNetEncoder(nn.Module):
                 final_spatial_h,
                 final_spatial_w,
             )
+            rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
+            rgb_size = [observation_space.spaces[k].shape[:2] for k in rgb_keys]
+            
+            self.visual_transform = None
+            if use_augmentations:
+                self.visual_transform = ShiftAndJitterTransform(size=rgb_size[0])
+                self.visual_transform.randomize_environments = False
 
     @property
     def is_blind(self):
@@ -239,6 +249,8 @@ class ResNetEncoder(nn.Module):
                 obs_k = (
                     obs_k.float() * self.key_needs_rescaling[k]
                 )  # normalize
+            if self.visual_transform is not None:
+                obs_k = self.visual_transform(obs_k)
             cnn_input.append(obs_k)
 
         x = torch.cat(cnn_input, dim=1)
@@ -273,6 +285,7 @@ class PointNavResNetNet(Net):
         discrete_actions: bool = True,
         no_downscaling: bool = False,
         ovrl: bool = False,
+        use_augmentations: bool = False,
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -444,6 +457,7 @@ class PointNavResNetNet(Net):
                         resnet_gn if ovrl else resnet, backbone
                     ),
                     no_downscaling=no_downscaling,
+                    use_augmentations=use_augmentations,
                 )
                 setattr(self, f"{uuid}_encoder", goal_visual_encoder)
 
@@ -477,6 +491,7 @@ class PointNavResNetNet(Net):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet_gn if ovrl else resnet, backbone),
             no_downscaling=no_downscaling,
+            use_augmentations=use_augmentations
         )
 
         if not self.visual_encoder.is_blind:
