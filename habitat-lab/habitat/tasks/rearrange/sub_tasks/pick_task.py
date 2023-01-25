@@ -121,7 +121,7 @@ class RearrangePickTaskV1(RearrangeTask):
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos
-        # If the robot is Stretch, we force the base to rotate torward the object
+        # If the robot is Stretch, we force the base to rotate towards the object
         if "stretch" in self._sim.robot.urdf_path:
             sim.robot.base_rot = start_rot + 1.57
         else:
