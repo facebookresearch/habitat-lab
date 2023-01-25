@@ -38,10 +38,10 @@ desired_resting_position: [0.119, -0.383, 0.657]
 actions:
   arm_action:
     type: "ArmAction"
-    arm_controller: "ArmRelPosKinematicReducedActionStretch"
+    arm_controller: "ArmRelPosReducedActionStretch"
     grip_controller: "MagicGraspAction"
-    arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
-    arm_joint_dimensionality: 10
+    arm_joint_mask: [1,0,0,0,1,1,1,1,0,0]
+    arm_joint_dimensionality: 5
     grasp_thresh_dist: 0.15
     disable_grip: False
     delta_pos_limit: 0.0125
