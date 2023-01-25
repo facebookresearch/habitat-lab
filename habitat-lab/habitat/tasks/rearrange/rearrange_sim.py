@@ -26,10 +26,7 @@ from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-from habitat.datasets.rearrange.samplers.receptacle import (
-    AABBReceptacle,
-    find_receptacles,
-)
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
