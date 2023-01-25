@@ -278,9 +278,6 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.instance_ids_start
                 )
-        receptacles = find_receptacles(self)
-
-        self.receptacles = {r.name: r for r in receptacles}
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
