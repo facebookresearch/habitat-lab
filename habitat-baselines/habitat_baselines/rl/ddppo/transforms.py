@@ -1,3 +1,4 @@
+import abc
 from typing import Optional
 
 import torch
@@ -6,13 +7,29 @@ import torch.nn.functional as F
 import torchvision.transforms.functional as TF
 from torchvision.transforms import ColorJitter, RandomApply
 
-
 class RandomShiftsAug(nn.Module):
+    """
+    Defines the Random Shifts Augmentation from the paper 
+    DrQ-v2: Mastering Visual Continuous Control: Improved Data-Augmented Reinforcement Learning
+    Paper Link: https://arxiv.org/abs/2107.09645
+    Code borrowed from here: https://github.com/facebookresearch/drqv2/blob/main/drqv2.py
+    """
     def __init__(self, pad):
+        """
+        Initialize the RandomShiftsAug object.
+        
+        :param pad: value to be used for padding
+        """
         super().__init__()
         self.pad = pad
 
     def forward(self, x):
+        """
+        Apply the Random Shifts Augmentation to the input tensor.
+        
+        :param x: input tensor to augment
+        :return: augmented tensor
+        """
         n, _, h, w = x.size()
         assert h == w
         padding = tuple([self.pad] * 4)
@@ -33,18 +50,32 @@ class RandomShiftsAug(nn.Module):
         grid = base_grid + shift
         return F.grid_sample(x, grid, padding_mode="zeros", align_corners=False)
 
-
-class Transform:
+class Transform(abc.ABC):
+    """
+    Abstract class for applying transformation to a tensor.
+    Subclasses should implement the apply method
+    """
     randomize_environments: bool = False
 
-    def apply(self, x: torch.Tensor):
-        raise NotImplementedError
+    @abc.abstractmethod
+    def apply(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Apply the transformation to the input tensor.
+        
+        :param x: input tensor to transform
+        :return: transformed tensor
+        """
+        pass
 
-    def __call__(
-        self,
-        x: torch.Tensor,
-        N: Optional[int] = None,
-    ):
+    def __call__(self, x: torch.Tensor, N: Optional[int] = None) -> torch.Tensor:
+        """
+        Apply the transformation to the input tensor, and if N is provided,
+        applies the same transformation to all the environments.
+        
+        :param x: input tensor to transform
+        :param N: number of environments
+        :return: transformed tensor
+        """
         if not self.randomize_environments or N is None:
             return self.apply(x)
 
@@ -70,35 +101,29 @@ class Transform:
 
         return x
 
-
-class ResizeTransform(Transform):
-    def __init__(self, size):
-        self.size = size
-
-    def apply(self, x):
-        x = x.permute(0, 3, 1, 2)
-        x = TF.resize(x, self.size)
-        x = TF.center_crop(x, output_size=self.size)
-        x = x.float() / 255.0
-        return x
-
-
 class ShiftAndJitterTransform(Transform):
-    def __init__(self, size):
+    """
+    Class for applying random color jitter and random shift transform to a tensor.
+    """
+    def __init__(self, size, jitter_value=0.3, pad_value=4):
+        """
+        Initialize the ShiftAndJitterTransform object.
+        
+        :param size: size of the output image
+        :param jitter_value: value to be used in color jitter
+        :param pad_value: value to be used in random shift
+        """
         self.size = size
+        self.jitter_value = jitter_value
+        self.pad_value = pad_value
 
-    def apply(self, x):
-        # x = x.permute(0, 3, 1, 2)
-        # x = TF.resize(x, self.size)
-        # x = TF.center_crop(x, output_size=self.size)
-        # x = x.float() / 255.0
-        x = RandomApply([ColorJitter(0.3, 0.3, 0.3, 0.3)], p=1.0)(x)
-        x = RandomShiftsAug(4)(x)
+    def apply(self, x) -> torch.Tensor:
+        """
+        Apply the random color jitter and random shift transform to the input tensor.
+        
+        :param x: input tensor to transform
+        :return: transformed tensor
+        """
+        x = RandomApply([ColorJitter(self.jitter_value, self.jitter_value, self.jitter_value, self.jitter_value)], p=1.0)(x)
+        x = RandomShiftsAug(self.pad_value)(x)
         return x
-
-
-def get_transform(name, size):
-    if name == "resize":
-        return ResizeTransform(size)
-    elif name == "shift+jitter":
-        return ShiftAndJitterTransform(size)
