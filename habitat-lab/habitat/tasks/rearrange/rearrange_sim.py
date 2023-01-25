@@ -25,11 +25,8 @@ import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
-from habitat.datasets.rearrange.samplers.receptacle import (
-    AABBReceptacle,
-    find_receptacles,
-)
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -112,22 +109,6 @@ class RearrangeSim(HabitatSim):
         self.ctrl_arm = True
 
         self.robots_mgr = RobotManager(self.habitat_config, self)
-
-        receptacles = find_receptacles(self)
-
-        # all sampling volumes in a receptacle object
-        self.recep_sampling_volumes = defaultdict(list)
-        self.recep_handle_to_category = defaultdict(str)
-        self.receptacles = {}
-        for r in receptacles:
-            if isinstance(r, AABBReceptacle):
-                self.recep_sampling_volumes[r.parent_object_handle].append(
-                    r.bounds
-                )
-                self.recep_handle_to_category[
-                    r.parent_object_handle
-                ] = r.category
-                self.receptacles[r.name] = r
 
     @property
     def robot(self):
@@ -263,7 +244,8 @@ class RearrangeSim(HabitatSim):
 
         if new_scene:
             self._load_navmesh(ep_info)
-
+            receptacles = find_receptacles(self)
+            self.receptacles = {r.name: r for r in receptacles}
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()

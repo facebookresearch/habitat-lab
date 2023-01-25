@@ -6,7 +6,6 @@
 
 import os
 import random
-import re
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from dataclasses import dataclass
@@ -14,6 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
+import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
@@ -34,7 +34,6 @@ class Receptacle(ABC):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
-        category: Optional[str] = None,
     ):
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -53,7 +52,6 @@ class Receptacle(ABC):
         self.up_axis = nonzero_indices[0]
         self.parent_object_handle = parent_object_handle
         self.parent_link = parent_link
-        self.category = category
 
     @property
     def is_parent_object_articulated(self):
@@ -91,6 +89,12 @@ class Receptacle(ABC):
                 self.parent_link
             ).absolute_transformation()
 
+    def get_local_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
+        """
+        Returns transformation that can be used for transforming from world space to receptacle's local space
+        """
+        return self.get_global_transform(sim).inverted()
+
     def get_surface_center(self, sim: habitat_sim.Simulator) -> mn.Vector3:
         """
         Returns the center of receptacle surface in world space
@@ -104,6 +108,17 @@ class Receptacle(ABC):
     ) -> mn.Vector3:
         """
         Returns the center of receptacle surface in local space
+        """
+
+    @abstractmethod
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        """
+        Check if point lies within a `threshold` distance of the receptacle's surface
         """
 
     def sample_uniform_global(
@@ -176,7 +191,6 @@ class AABBReceptacle(Receptacle):
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
         rotation: Optional[mn.Quaternion] = None,
-        category: Optional[str] = None,
     ) -> None:
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -186,7 +200,7 @@ class AABBReceptacle(Receptacle):
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
-        super().__init__(name, parent_object_handle, parent_link, up, category)
+        super().__init__(name, parent_object_handle, parent_link, up)
         self.bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
 
@@ -251,8 +265,36 @@ class AABBReceptacle(Receptacle):
         self, sim: habitat_sim.Simulator
     ) -> mn.Vector3:
         local_center = self.bounds.center()
-        local_center.y = self.bounds.y().min
+        local_center[self.up_axis] = self.bounds.min[self.up_axis]
         return local_center
+
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        """
+        Returns True if the point lies within the `threshold` distance of the lower bound along the "up" axis and within the bounds along other axes
+        """
+        local_point = self.get_local_transform(sim).transform_point(point)
+        bounds = self.bounds
+        on_surface = True
+        bounds_min = bounds.min
+        bounds_max = bounds.max
+        for i in range(3):
+            if i == self.up_axis:
+                on_surface = (
+                    on_surface
+                    and np.abs(bounds_min[i] - local_point[i]) < threshold
+                )
+            else:
+                on_surface = (
+                    on_surface
+                    and bounds_min[i] <= local_point[i]
+                    and local_point[i] <= bounds_max[i]
+                )
+        return on_surface
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
@@ -320,7 +362,6 @@ class TriangleMeshReceptacle(Receptacle):
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
-        category: Optional[str] = None,
     ) -> None:
         """
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
@@ -328,17 +369,19 @@ class TriangleMeshReceptacle(Receptacle):
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         """
-        super().__init__(name, parent_object_handle, parent_link, up, category)
+        super().__init__(name, parent_object_handle, parent_link, up)
         self.mesh_data = mesh_data
         self.area_weighted_accumulator = (
             []
         )  # normalized float weights for each triangle for sampling
         assert len(mesh_data[1]) % 3 == 0, "must be triangles"
         self.total_area = 0
+        triangles = []
         for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
+            triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * np.linalg.norm(np.cross(w1, w2))
             )
@@ -351,7 +394,9 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-        # print(self.area_weighted_accumulator)
+        self.trimesh = trimesh.Trimesh(
+            **trimesh.triangles.to_kwargs(triangles)
+        )
 
     def get_face_verts(self, f_ix):
         verts = []
@@ -381,6 +426,22 @@ class TriangleMeshReceptacle(Receptacle):
         sample_val = random.random()
         tri_index = find_ge(self.area_weighted_accumulator, sample_val)
         return tri_index
+
+    def get_local_surface_center(
+        self, sim: habitat_sim.Simulator
+    ) -> mn.Vector3:
+        return self.trimesh.centroid
+
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        return (
+            np.abs(trimesh.proximity.signed_distance(self.trimesh, [point]))
+            < threshold
+        )
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -521,10 +582,15 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
         line_index += num_verts
         for face_line in range(line_index, num_faces + line_index):
             assert (
-                int(lines[face_line][0]) == 3
-            ), f"Faces must be triangles. '{ply_file}'"
-            indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-            mesh_data[1].extend(indices)
+                int(lines[face_line][0]) <= 4
+            ), f"Faces must be triangles. '{ply_file}' {lines[face_line][0]}"
+            if int(lines[face_line][0]) == 4:
+                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
+                mesh_data[1].extend(indices[:-1])
+                mesh_data[1].extend(indices[1:])
+            else:
+                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
+                mesh_data[1].extend(indices)
 
     return mesh_data
 
@@ -555,7 +621,6 @@ def parse_receptacles_from_user_config(
     receptacle_prefix_string = "receptacle_"
     mesh_receptacle_id_string = "receptacle_mesh_"
     aabb_receptacle_id_string = "receptacle_aabb_"
-
     # search the generic user subconfig metadata looking for receptacles
     for sub_config_key in user_subconfig.get_subconfig_keys():
         if sub_config_key.startswith(receptacle_prefix_string):
@@ -610,18 +675,6 @@ def parse_receptacles_from_user_config(
             )
             receptacle_scale = ao_uniform_scaling * sub_config.get("scale")
 
-            category = None
-            if sub_config.has_value("category"):
-                category = sub_config.get("category")
-            elif parent_object_handle is not None:
-                category = re.sub(
-                    r"_[0-9]+",
-                    "",
-                    parent_object_handle.split(":")[0][:-1].replace(
-                        "frl_apartment_", ""
-                    ),
-                )
-
             if aabb_receptacle_id_string in sub_config_key:
                 receptacles.append(
                     AABBReceptacle(
@@ -634,7 +687,6 @@ def parse_receptacles_from_user_config(
                         up=up,
                         parent_object_handle=parent_object_handle,
                         parent_link=parent_link_ix,
-                        category=category,
                     )
                 )
             elif mesh_receptacle_id_string in sub_config_key:
@@ -654,14 +706,12 @@ def parse_receptacles_from_user_config(
                         up=up,
                         parent_object_handle=parent_object_handle,
                         parent_link=parent_link_ix,
-                        category=category,
                     )
                 )
             else:
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
                 )
-
     return receptacles
 
 

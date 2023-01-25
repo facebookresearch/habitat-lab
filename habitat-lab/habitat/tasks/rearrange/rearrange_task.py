@@ -64,7 +64,6 @@ class RearrangeTask(NavigationTask):
         self, *args, sim, dataset=None, should_place_robot=True, **kwargs
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
-
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: Union[RearrangeSim, ObjectRearrangeSim] = sim
