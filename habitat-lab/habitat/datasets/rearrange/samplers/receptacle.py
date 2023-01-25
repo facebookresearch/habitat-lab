@@ -110,6 +110,7 @@ class Receptacle(ABC):
         Returns the center of receptacle surface in local space
         """
 
+    @abstractmethod
     def check_if_point_on_surface(
         self,
         sim: habitat_sim.Simulator,
@@ -258,7 +259,7 @@ class AABBReceptacle(Receptacle):
             return l2w4
 
         # base class implements getting transform from attached objects
-        return super().get_global_transform
+        return super().get_global_transform(sim)
 
     def get_local_surface_center(
         self, sim: habitat_sim.Simulator

@@ -436,6 +436,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def reconfigure(
         self,
         habitat_config: DictConfig,
+        ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching

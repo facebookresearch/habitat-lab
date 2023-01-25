@@ -731,6 +731,16 @@ class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class PickDistanceToGoalMeasurementConfig(DistanceToGoalMeasurementConfig):
+    type: str = "PickDistanceToGoal"
+
+
+@dataclass
+class PickDistanceToGoalRewardMeasurementConfig(MeasurementConfig):
+    type: str = "PickDistanceToGoalReward"
+
+
+@dataclass
 class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
 
@@ -1570,6 +1580,18 @@ cs.store(
     group="habitat/task/measurements",
     name="end_effector_to_goal_distance",
     node=EndEffectorToGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_distance_to_goal",
+    group="habitat/task/measurements",
+    name="pick_distance_to_goal",
+    node=PickDistanceToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_distance_to_goal_reward",
+    group="habitat/task/measurements",
+    name="pick_distance_to_goal_reward",
+    node=PickDistanceToGoalRewardMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.did_pick_object",
