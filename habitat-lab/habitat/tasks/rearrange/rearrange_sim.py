@@ -248,7 +248,8 @@ class RearrangeSim(HabitatSim):
 
         if new_scene:
             self._load_navmesh()
-
+            receptacles = find_receptacles(self)
+            self.receptacles = {r.name: r for r in receptacles}
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()

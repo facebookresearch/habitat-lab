@@ -90,6 +90,9 @@ class Receptacle(ABC):
             ).absolute_transformation()
 
     def get_local_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
+        """
+        Returns transformation that can be used for transforming from world space to receptacle's local space
+        """
         return self.get_global_transform(sim).inverted()
 
     def get_surface_center(self, sim: habitat_sim.Simulator) -> mn.Vector3:
@@ -261,7 +264,7 @@ class AABBReceptacle(Receptacle):
         self, sim: habitat_sim.Simulator
     ) -> mn.Vector3:
         local_center = self.bounds.center()
-        local_center.y = self.bounds.y().min
+        local_center[self.up_axis] = self.bounds.min[self.up_axis]
         return local_center
 
     def check_if_point_on_surface(
@@ -270,13 +273,27 @@ class AABBReceptacle(Receptacle):
         point: mn.Vector3,
         threshold: float = 0.05,
     ) -> bool:
+        """
+        Returns True if the point lies within the `threshold` distance of the lower bound along the "up" axis and within the bounds along other axes
+        """
         local_point = self.get_local_transform(sim).transform_point(point)
         bounds = self.bounds
-        return (
-            bounds.x().contains(local_point.x)
-            and bounds.z().contains(local_point.z)
-            and np.abs(bounds.y().min - local_point.y) < threshold
-        )
+        on_surface = True
+        bounds_min = bounds.min
+        bounds_max = bounds.max
+        for i in range(3):
+            if i == self.up_axis:
+                on_surface = (
+                    on_surface
+                    and np.abs(bounds_min[i] - local_point[i]) < threshold
+                )
+            else:
+                on_surface = (
+                    on_surface
+                    and bounds_min[i] <= local_point[i]
+                    and local_point[i] <= bounds_max[i]
+                )
+        return on_surface
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
