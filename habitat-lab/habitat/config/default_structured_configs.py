@@ -12,7 +12,16 @@ from omegaconf import II, MISSING
 
 # __all__ is used for documentation. Only put in this list the configurations
 # that have proper documentation for.
-__all__ = ["DatasetConfig"]
+__all__ = [
+    "DatasetConfig",
+    "StopActionConfig",
+    "MoveForwardActionConfig",
+    "TurnLeftActionConfig",
+    "TurnLeftActionConfig",
+    "TurnRightActionConfig",
+    "LookUpActionConfig",
+    "LookDownActionConfig",
+]
 
 
 @dataclass
@@ -49,6 +58,14 @@ class ActionConfig(HabitatBaseConfig):
 
 @dataclass
 class StopActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the stop action is a discrete action. When called, the Agent
+    will request to stop the navigation task. Note that this action is needed to
+    succeed in a Navigation task since the Success is determined by the Agent calling
+    the stop action within range of the target.
+    Note that this is different from the RearrangeStopActionConfig that works for
+    Rearrangement tasks only instead of the Navigation tasks.
+    """
     type: str = "StopAction"
 
 
@@ -62,26 +79,46 @@ class EmptyActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 @dataclass
 class MoveForwardActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will move the robot forward by
+    a fixed amount determined by the SimulatorConfig.forward_step_size amount.
+    """
     type: str = "MoveForwardAction"
 
 
 @dataclass
 class TurnLeftActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the left
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
     type: str = "TurnLeftAction"
 
 
 @dataclass
 class TurnRightActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the right
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
     type: str = "TurnRightAction"
 
 
 @dataclass
 class LookUpActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot's camera up
+    by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
+    """
     type: str = "LookUpAction"
 
 
 @dataclass
 class LookDownActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot's camera down
+    by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
+    """
     type: str = "LookDownAction"
 
 
