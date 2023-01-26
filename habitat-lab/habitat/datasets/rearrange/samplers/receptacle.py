@@ -177,6 +177,27 @@ class OnTopOfReceptacle(Receptacle):
         """
         # TODO:
 
+    def check_if_point_on_surface(
+        self,
+        sim: habitat_sim.Simulator,
+        point: mn.Vector3,
+        threshold: float = 0.05,
+    ) -> bool:
+        """
+        Returns True if the point lies within the `threshold` distance of the lower bound along the "up" axis and within the bounds along other axes
+        """
+        # TODO:
+        raise NotImplementedError
+
+    def get_local_surface_center(
+        self, sim: habitat_sim.Simulator
+    ) -> mn.Vector3:
+        """
+        Returns the center of receptacle surface in local space
+        """
+        # TODO:
+        raise NotImplementedError
+
 
 class AABBReceptacle(Receptacle):
     """
