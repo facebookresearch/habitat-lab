@@ -543,6 +543,7 @@ class RearrangeEpisodeGenerator:
                     ao_states[sampled_instance.handle] = {}
                 for link_ix, joint_state in link_states.items():
                     ao_states[sampled_instance.handle][link_ix] = joint_state
+        self.ao_states = ao_states
 
         # visualize after setting AO states to correctly see scene state
         if self._render_debug_obs:
