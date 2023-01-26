@@ -482,12 +482,15 @@ class TriangleMeshReceptacle(Receptacle):
         if color is None:
             color = mn.Color4.magenta()
         dblr = sim.get_debug_line_render()
+        gt = self.get_global_transform(sim)
         assert len(self.mesh_data[1]) % 3 == 0, "must be triangles"
         for face in range(int(len(self.mesh_data[1]) / 3)):
             verts = self.get_face_verts(f_ix=face)
             for edge in range(3):
                 dblr.draw_transformed_line(
-                    verts[edge], verts[(edge + 1) % 3], color
+                    gt.transform_point(verts[edge]),
+                    gt.transform_point(verts[(edge + 1) % 3]),
+                    color,
                 )
 
 
