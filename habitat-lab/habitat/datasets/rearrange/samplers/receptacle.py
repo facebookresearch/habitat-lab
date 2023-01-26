@@ -552,49 +552,13 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     """
     Returns a Tuple of (verts,indices) from a ply mesh.
     NOTE: the input PLY must contain only triangles.
-    TODO: This could be replaced by a standard importer, but I didn't want to add additional dependencies for such as small feature.
     """
     mesh_data: Tuple[List[mn.Vector3], List[int]] = ([], [])
-    with open(ply_file) as f:
-        lines = [line.rstrip() for line in f]
-        assert lines[0] == "ply", f"Must be PLY format. '{ply_file}'"
-        assert "format ascii" in lines[1], f"Must be ascii PLY. '{ply_file}'"
-        # parse the header
-        line_index = 2
-        num_verts = 0
-        num_faces = 0
-        while line_index < len(lines):
-            if lines[line_index].startswith("element vertex"):
-                num_verts = int(lines[line_index][14:])
-                print(f"num_verts = {num_verts}")
-            elif lines[line_index].startswith("element face"):
-                num_faces = int(lines[line_index][12:])
-                print(f"num_faces = {num_faces}")
-            elif lines[line_index] == "end_header":
-                # done parsing header
-                line_index += 1
-                break
-            line_index += 1
-        assert (
-            len(lines) - line_index == num_verts + num_faces
-        ), f"Lines after header ({len(lines) - line_index}) should agree with forward declared content. {num_verts} verts and {num_faces} faces expected. '{ply_file}'"
-        # parse the verts
-        for vert_line in range(line_index, num_verts + line_index):
-            coords = [float(x) for x in lines[vert_line].split(" ")]
-            mesh_data[0].append(mn.Vector3(coords))
-        line_index += num_verts
-        for face_line in range(line_index, num_faces + line_index):
-            assert (
-                int(lines[face_line][0]) <= 4
-            ), f"Faces must be triangles. '{ply_file}' {lines[face_line][0]}"
-            if int(lines[face_line][0]) == 4:
-                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-                mesh_data[1].extend(indices[:-1])
-                mesh_data[1].extend(indices[1:])
-            else:
-                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-                mesh_data[1].extend(indices)
-
+    trimesh_data = trimesh.load(ply_file)
+    mesh_data[0].extend(mn.Vector3(vert) for vert in trimesh_data.vertices)
+    for face in trimesh_data.faces:
+        assert len(face) == 3, f"Faces must be triangles. '{ply_file}' {face}"
+        mesh_data[1].extend(map(int, face))
     return mesh_data
 
 
