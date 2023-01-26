@@ -261,6 +261,12 @@ class ObjectSampler:
                     new_object.rotation = (
                         habitat_sim.utils.common.random_quaternion()
                     )
+            new_object_height = (
+                new_object.root_scene_node.cumulative_bb.size()[1]
+            )
+            new_object.translation = new_object.translation + mn.Vector3(
+                0, new_object_height, 0
+            )
 
             if isinstance(receptacle, OnTopOfReceptacle):
                 snap_down = False
