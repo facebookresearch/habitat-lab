@@ -118,6 +118,12 @@ class HrlRolloutStorage(RolloutStorage):
         self._last_should_inserts = should_inserts
 
     def advance_rollout(self, buffer_index: int = 0):
+        """
+        This will advance to writing at the next step in the data buffer ONLY
+        if an element was written to that environment index in the previous
+        step.
+        """
+
         self._cur_step_idxs += self._last_should_inserts.long()
 
         is_past_buffer = self._cur_step_idxs >= self.num_steps
