@@ -164,7 +164,7 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
             ],
             [
                 "nn_skills",
-                "noop_skills",
+                "oracle_skills",
             ],
             [
                 "eval",
@@ -178,7 +178,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
         return
     if policy_type == "hl_fixed" and mode == "train":
         return
-    if skill_type == "noop_skills" and "oracle" not in config_path:
+    if skill_type == "oracle_skills" and "oracle" not in config_path:
         return
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):

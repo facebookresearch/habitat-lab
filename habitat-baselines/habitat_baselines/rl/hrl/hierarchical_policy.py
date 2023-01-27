@@ -70,16 +70,9 @@ class HierarchicalPolicy(nn.Module, Policy):
             config,
         )
 
-        for i, (skill_id, use_skill_name) in enumerate(
-            config.hierarchical_policy.use_skills.items()
+        for i, (skill_name, skill_config) in enumerate(
+            config.hierarchical_policy.defined_skills.items()
         ):
-            if use_skill_name == "":
-                # Skip loading this skill if no name is provided
-                continue
-            skill_config = config.hierarchical_policy.defined_skills[
-                use_skill_name
-            ]
-
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config,
@@ -90,8 +83,13 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
             skill_policy.set_pddl_problem(self._pddl_problem)
             self._skills[i] = skill_policy
-            self._name_to_idx[skill_id] = i
-            self._idx_to_name[i] = skill_id
+            if skill_config.pddl_action_names is None:
+                action_names = [skill_name]
+            else:
+                action_names = skill_config.pddl_action_names
+            for skill_id in action_names:
+                self._name_to_idx[skill_id] = i
+                self._idx_to_name[i] = skill_id
 
         self._cur_skills: torch.Tensor = torch.full(
             (self._num_envs,), -1, dtype=torch.long
@@ -248,6 +246,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 continue
             # TODO: either change name of the function or assign actions somewhere
             # else. Updating actions in should_terminate is counterintuitive
+
             (
                 call_high_level[batch_ids],
                 bad_should_terminate[batch_ids],

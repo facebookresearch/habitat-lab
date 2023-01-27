@@ -59,7 +59,6 @@ class ResetArmSkill(SkillPolicy):
         return (
             torch.as_tensor(
                 np.abs(current_joint_pos - self._target).max(-1),
-                device=rnn_hidden_states.device,
                 dtype=torch.float32,
             )
             < 5e-2

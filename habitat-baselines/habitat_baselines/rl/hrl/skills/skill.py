@@ -158,11 +158,15 @@ class SkillPolicy(Policy):
         log_info,
     ) -> Tuple[torch.BoolTensor, torch.BoolTensor, torch.Tensor]:
         """
-        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        :returns: Both of the BoolTensor's will be on the CPU.
+            - `is_skill_done`: Shape (batch_size,) size tensor where 1
+              indicates the skill to return control to HL policy.
+            - `bad_terminate`: Shape (batch_size,) size tensor where 1
+              indicates the skill should immediately end the episode.
         """
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
-        )
+        ).cpu()
         if is_skill_done.sum() > 0:
             self._internal_log(
                 f"Requested skill termination {is_skill_done}",
@@ -274,7 +278,7 @@ class SkillPolicy(Policy):
         return action_data
 
     def to(self, device):
-        self._cur_skill_step = self._cur_skill_step.to(device)
+        pass
 
     def _select_obs(self, obs, cur_batch_idx):
         """

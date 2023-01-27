@@ -15,15 +15,4 @@ hierarchical_policy:
     num_rnn_layers: 2
     policy_input_keys:
       - "robot_head_depth"
-  use_skills:
-    open_cab: "open_cab"
-    open_fridge: "open_fridge"
-    close_cab: "open_cab"
-    close_fridge: "open_fridge"
-    pick: "pick"
-    place: "place"
-    nav: "nav_to_obj"
-    nav_to_receptacle: "nav_to_obj"
-    wait: "wait_skill"
-    reset_arm: "reset_arm_skill"
   defined_skills: {}

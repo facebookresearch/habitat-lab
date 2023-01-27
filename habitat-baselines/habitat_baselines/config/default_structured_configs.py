@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
@@ -242,13 +242,13 @@ class HrlDefinedSkill(HabitatBaselinesBaseConfig):
     stop_thresh: float = 0.001
     # For the reset_arm_skill
     reset_joint_state: List[float] = MISSING
+    pddl_action_names: Optional[List[str]] = None
 
 
 @dataclass
 class HierarchicalPolicy(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
     defined_skills: Dict[str, HrlDefinedSkill] = field(default_factory=dict)
-    use_skills: Dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
