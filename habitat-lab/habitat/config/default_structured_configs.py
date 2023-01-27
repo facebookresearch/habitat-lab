@@ -13,7 +13,14 @@ from omegaconf import II, MISSING
 # __all__ is used for documentation. Only put in this list the configurations
 # that have proper documentation for.
 __all__ = [
+    # HABITAT
+    "HabitatConfig",
+    # DATASET
     "DatasetConfig",
+    # TASK
+    "TaskConfig",
+    # ENVIRONMENT
+    "EnvironmentConfig",
     # NAVIGATION ACTIONS
     "StopActionConfig",
     "MoveForwardActionConfig",
@@ -56,6 +63,10 @@ class IteratorOptionsConfig(HabitatBaseConfig):
 
 @dataclass
 class EnvironmentConfig(HabitatBaseConfig):
+    r"""
+    Some habitat environment configurations.
+    :data max_episode_steps: The maximum number of environment steps before the episode ends.
+    """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
     iterator_options: IteratorOptionsConfig = IteratorOptionsConfig()
@@ -812,6 +823,13 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class TaskConfig(HabitatBaseConfig):
+    r"""
+    The definition of the task in Habitat.
+    :data type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+    :data reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration.
+    :data success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
+    :data end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
+    """
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
     success_reward: float = 2.5
@@ -1198,6 +1216,12 @@ class GymConfig(HabitatBaseConfig):
 
 @dataclass
 class HabitatConfig(HabitatBaseConfig):
+    r"""
+    The entry point for the configuration of Habitat. It holds the environment, simulator, task and dataset configurations.
+    :data seed: The seed the environment will be initialized with.
+    :data env_task: Indicates wether the environment is a Habitat gym environment (`GymHabitatEnv`) or a generic gym environment (`GymRegistryEnv`).
+    :data env_task_gym_id: if `env_task` is `GymRegistryEnv`, env_task_gym_id is the identifier of the generic gym environment
+    """
     seed: int = 100
     # GymHabitatEnv works for all Habitat tasks, including Navigation and
     # Rearrange. To use a gym environment from the registry, use the
