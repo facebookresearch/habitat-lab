@@ -14,6 +14,7 @@ from omegaconf import II, MISSING
 # that have proper documentation for.
 __all__ = [
     "DatasetConfig",
+    # NAVIGATION ACTIONS
     "StopActionConfig",
     "MoveForwardActionConfig",
     "TurnLeftActionConfig",
@@ -21,12 +22,19 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
+    # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
     "SuccessMeasurementConfig",
     "SPLMeasurementConfig",
     "SoftSPLMeasurementConfig",
     "DistanceToGoalRewardMeasurementConfig",
+    # NAVIGATION LAB SENSORS
+    "ObjectGoalSensorConfig",
+    "InstanceImageGoalSensorConfig",
+    "InstanceImageGoalHFOVSensorConfig",
+    "CompassSensorConfig",
+    "GPSSensorConfig",
 ]
 
 
@@ -227,6 +235,12 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
 
 @dataclass
 class ObjectGoalSensorConfig(LabSensorConfig):
+    r"""
+    For Object Navigation tasks only. Generates a discrete observation containing
+    the id of the goal object for the episode.
+    :data goal_spec: A string that can take the value TASK_CATEGORY_ID or OBJECT_ID. If the value is TASK_CATEGORY_ID, then the observation will be the id of the `episode.object_category` attribute, if the value is OBJECT_ID, then the observation will be the id of the first goal object.
+    :data goal_spec_max_val: If the `goal_spec` is OBJECT_ID, then `goal_spec_max_val` is the total number of different objects that can be goals. Note that this value must be greater than the largest episode goal category id.
+    """
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
@@ -239,11 +253,20 @@ class ImageGoalSensorConfig(LabSensorConfig):
 
 @dataclass
 class InstanceImageGoalSensorConfig(LabSensorConfig):
+    r"""
+    Used only by the InstanceImageGoal Navigation task. The observation is a rendered
+    image of the goal object within the scene.
+    """
     type: str = "InstanceImageGoalSensor"
 
 
 @dataclass
 class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
+    r"""
+    Used only by the InstanceImageGoal Navigation task. The observation is a single
+    float value corresponding to the Horizontal field of view (HFOV) in degrees of
+    the image provided by the `InstanceImageGoalSensor`.
+    """
     type: str = "InstanceImageGoalHFOVSensor"
 
 
@@ -254,11 +277,22 @@ class HeadingSensorConfig(LabSensorConfig):
 
 @dataclass
 class CompassSensorConfig(LabSensorConfig):
+    r"""
+    For Navigation tasks only. The observation of the
+    `EpisodicCompassSensor` is a single float value corresponding to
+    the angle difference in radians between the current rotation of the robot and the
+    start rotation of the robot along the vertical axis.
+    """
     type: str = "CompassSensor"
 
 
 @dataclass
 class GPSSensorConfig(LabSensorConfig):
+    r"""
+    For Navigation tasks only. The observation of the EpisodicGPSSensor are two float values
+    corresponding to the vector difference in the horizontal plane between the current position
+    and the start position of the robot (in meters).
+    """
     type: str = "GPSSensor"
     dimensionality: int = 2
 
