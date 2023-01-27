@@ -32,10 +32,10 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
     def _parse_solution_actions(self, solution):
         solution_actions = []
-        for i, sol_step in enumerate(solution):
+        for i, hl_action in enumerate(solution):
             sol_action = (
-                sol_step.name,
-                [x.name for x in sol_step.param_values],
+                hl_action.name,
+                [x.name for x in hl_action.param_values],
             )
             solution_actions.append(sol_action)
 

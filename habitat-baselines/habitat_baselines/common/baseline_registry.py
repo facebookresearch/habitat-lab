@@ -23,6 +23,7 @@ Various decorators for registry different kind of classes with unique keys
 from typing import Optional
 
 from habitat.core.registry import Registry
+from habitat_baselines.common.rollout_storage import RolloutStorage
 
 
 class BaselineRegistry(Registry):
@@ -138,7 +139,9 @@ class BaselineRegistry(Registry):
 
     @classmethod
     def register_storage(cls, to_register=None, *, name: Optional[str] = None):
-        return cls._register_impl("storage", to_register, name)
+        return cls._register_impl(
+            "storage", to_register, name, assert_type=RolloutStorage
+        )
 
     @classmethod
     def get_storage(cls, name: str):

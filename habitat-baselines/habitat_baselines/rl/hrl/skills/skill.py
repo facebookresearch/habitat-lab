@@ -152,7 +152,7 @@ class SkillPolicy(Policy):
         prev_actions,
         masks,
         actions,
-        hl_says_term,
+        hl_policy_wants_termination,
         batch_idx: List[int],
         skill_name: List[str],
         log_info,
@@ -198,7 +198,7 @@ class SkillPolicy(Policy):
             elif (
                 self._config.apply_postconds
                 and is_skill_done[i] == 1.0
-                and hl_says_term[i] == 0.0
+                and hl_policy_wants_termination[i] == 0.0
             ):
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
@@ -206,7 +206,7 @@ class SkillPolicy(Policy):
                 self._delay_term[env_i] = True
                 is_skill_done[i] = 0.0
 
-        is_skill_done |= hl_says_term
+        is_skill_done |= hl_policy_wants_termination
 
         if bad_terminate.sum() > 0:
             self._internal_log(

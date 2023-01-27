@@ -224,7 +224,7 @@ cs.store(
 
 
 @dataclass
-class HrlDefinedSkill(HabitatBaselinesBaseConfig):
+class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     skill_name: str = MISSING
     name: str = "PointNavResNetPolicy"
     action_distribution_type: str = "gaussian"
@@ -246,9 +246,11 @@ class HrlDefinedSkill(HabitatBaselinesBaseConfig):
 
 
 @dataclass
-class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
-    defined_skills: Dict[str, HrlDefinedSkill] = field(default_factory=dict)
+    defined_skills: Dict[str, HrlDefinedSkillConfig] = field(
+        default_factory=dict
+    )
 
 
 @dataclass
@@ -259,7 +261,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
-    hierarchical_policy: HierarchicalPolicy = MISSING
+    hierarchical_policy: HierarchicalPolicyConfig = MISSING
 
 
 @dataclass

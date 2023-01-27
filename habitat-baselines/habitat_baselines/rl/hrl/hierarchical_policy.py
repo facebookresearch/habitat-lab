@@ -40,6 +40,15 @@ from habitat_baselines.utils.common import get_num_actions
 
 @baseline_registry.register_policy
 class HierarchicalPolicy(nn.Module, Policy):
+    """
+    :property _pddl_problem: Stores the PDDL domain information. This allows
+        accessing all the possible entities, actions, and predicates. Note that
+        this is not the grounded PDDL problem with truth values assigned to the
+        predicates basedon the current simulator state.
+    """
+
+    _pddl_problem: PddlProblem
+
     def __init__(
         self,
         config,
@@ -213,7 +222,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             (self._num_envs,), dtype=torch.bool
         )
 
-        hl_says_term = self._high_level_policy.get_termination(
+        hl_policy_wants_termination = self._high_level_policy.get_termination(
             observations,
             rnn_hidden_states,
             prev_actions,
@@ -221,7 +230,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._cur_skills,
             log_info,
         )
-        # Compute the actions from the current skills
+        # Initialize empty action set based on the overall action space.
         actions = torch.zeros(
             (self._num_envs, get_num_actions(self._action_space)),
             device=masks.device,
@@ -235,7 +244,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 "prev_actions": prev_actions,
                 "masks": masks,
                 "actions": actions,
-                "hl_says_term": hl_says_term,
+                "hl_policy_wants_termination": hl_policy_wants_termination,
             },
             # Only decide on skill termination if the episode is active.
             should_adds=masks,

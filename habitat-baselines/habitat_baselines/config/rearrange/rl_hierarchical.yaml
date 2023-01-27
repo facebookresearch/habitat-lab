@@ -1,5 +1,8 @@
 # @package _global_
 
+# Config for running hierarchical policies where a high-level (HL) policy selects from a set of low-level (LL) policies.
+# Supports different HL policy configurations and using a variety of LL policies.
+
 defaults:
   - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
