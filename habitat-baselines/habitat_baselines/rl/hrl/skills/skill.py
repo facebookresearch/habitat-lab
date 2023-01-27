@@ -112,10 +112,7 @@ class SkillPolicy(Policy):
         action = self._pddl_problem.actions[skill_name]
 
         entities = [self._pddl_problem.get_entity(x) for x in skill_args]
-        if self._pddl_ac_start is None:
-            raise ValueError(
-                "Apply post cond not supported when pddl action not in action space"
-            )
+        assert self._pddl_ac_start is not None,  "Apply post cond not supported when pddl action not in action space"
 
         ac_idx = self._pddl_ac_start
         found = False
