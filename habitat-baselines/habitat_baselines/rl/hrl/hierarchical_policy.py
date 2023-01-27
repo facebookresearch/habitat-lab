@@ -34,7 +34,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     WaitSkillPolicy,
 )
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import Policy, PolicyAction
+from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -128,6 +128,11 @@ class HierarchicalPolicy(nn.Module, Policy):
     def get_policy_action_space(
         self, env_action_space: spaces.Space
     ) -> spaces.Space:
+        """
+        Fetches the policy action space for learning. If we are learning the HL
+        policy, it will return its custom action space for learning.
+        """
+
         return self._high_level_policy.get_policy_action_space(
             env_action_space
         )
@@ -360,7 +365,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         }
         action_kwargs.update(hl_info)
 
-        return PolicyAction(
+        return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
             should_inserts=call_high_level,

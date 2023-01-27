@@ -225,20 +225,29 @@ cs.store(
 
 @dataclass
 class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
+    """
+    Defines a low-level skill to be used in the hierarchical policy.
+    """
+
     skill_name: str = MISSING
     name: str = "PointNavResNetPolicy"
     action_distribution_type: str = "gaussian"
     load_ckpt_file: str = ""
     max_skill_steps: int = 200
+    # If true, the stop action will be called if the skill times out.
     force_end_on_timeout: bool = True
+    # Overrides the config file of a neural network skill rather than loading
+    # the config file from the checkpoint file.
     force_config_file: str = ""
     at_resting_threshold: float = 0.15
+    # If true, this willapply the post-conditions of the skill after it
+    # terminates.
     apply_postconds: bool = False
     obs_skill_inputs: List[str] = field(default_factory=list)
     obs_skill_input_dim: int = 3
     start_zone_radius: float = 0.3
     # For the oracle navigation skill
-    nav_action_name: str = "base_velocity"
+    action_name: str = "base_velocity"
     stop_thresh: float = 0.001
     # For the reset_arm_skill
     reset_joint_state: List[float] = MISSING

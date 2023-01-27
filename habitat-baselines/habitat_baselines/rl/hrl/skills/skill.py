@@ -10,7 +10,7 @@ import torch
 from habitat.tasks.rearrange.rearrange_sensors import IsHoldingSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import Policy, PolicyAction
+from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -81,8 +81,8 @@ class SkillPolicy(Policy):
         return [self._cur_skill_args[i] for i in batch_idx]
 
     def _keep_holding_state(
-        self, action_data: PolicyAction, observations
-    ) -> PolicyAction:
+        self, action_data: PolicyActionData, observations
+    ) -> PolicyActionData:
         """
         Makes the action so it does not result in dropping or picking up an
         object. Used in navigation and other skills which are not supposed to
@@ -327,5 +327,5 @@ class SkillPolicy(Policy):
         masks,
         cur_batch_idx,
         deterministic=False,
-    ) -> PolicyAction:
+    ) -> PolicyActionData:
         raise NotImplementedError()

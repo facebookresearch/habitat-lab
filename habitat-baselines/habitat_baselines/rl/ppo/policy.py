@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class PolicyAction:
+class PolicyActionData:
     """
     Information returned from the `Policy` class.
     """
@@ -94,7 +94,7 @@ class Policy(abc.ABC):
             yield from c.buffers()
 
     def extract_policy_info(
-        self, action_data: PolicyAction, infos, dones
+        self, action_data: PolicyActionData, infos, dones
     ) -> List[Dict[str, float]]:
         """
         Gets the log information from the policy at the current time step.
@@ -112,7 +112,7 @@ class Policy(abc.ABC):
         prev_actions,
         masks,
         deterministic=False,
-    ) -> PolicyAction:
+    ) -> PolicyActionData:
         raise NotImplementedError
 
     @classmethod
@@ -203,7 +203,7 @@ class NetPolicy(nn.Module, Policy):
             action = distribution.sample()
 
         action_log_probs = distribution.log_probs(action)
-        return PolicyAction(
+        return PolicyActionData(
             values=value,
             actions=value,
             action_log_probs=action_log_probs,

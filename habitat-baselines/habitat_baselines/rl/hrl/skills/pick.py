@@ -9,7 +9,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
-from habitat_baselines.rl.ppo.policy import PolicyAction
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class PickSkillPolicy(NnSkillPolicy):
@@ -34,7 +34,9 @@ class PickSkillPolicy(NnSkillPolicy):
         self._internal_log(f"Parsing skill argument {skill_arg}")
         return int(skill_arg[0].split("|")[1])
 
-    def _mask_pick(self, action: PolicyAction, observations) -> PolicyAction:
+    def _mask_pick(
+        self, action: PolicyActionData, observations
+    ) -> PolicyActionData:
         # Mask out the release if the object is already held.
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         for i in torch.nonzero(is_holding):

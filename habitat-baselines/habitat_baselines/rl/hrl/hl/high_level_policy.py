@@ -86,7 +86,7 @@ class HighLevelPolicy(nn.Module):
             - skill_args_data: Arguments for the next skill.
             - immediate_end: Binary masks indicating which environment(s) should
                 end immediately.
-            - Information for PolicyAction
+            - Information for PolicyActionData
         """
         raise NotImplementedError()
 
