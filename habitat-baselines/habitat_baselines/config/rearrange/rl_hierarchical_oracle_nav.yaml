@@ -3,7 +3,8 @@
 # Extends the `rl_hierarchical` config to use an oracle navigation action.
 # Several things change to support the oracle navigation:
 # - Adding the oracle navigation action
-# -
+# - Add sliding.
+# - Use the oracle navigation skill.
 
 defaults:
   - rl_hierarchical
@@ -30,7 +31,6 @@ habitat:
       allow_sliding: True
 
 habitat_baselines:
-
   rl:
     policy:
       hierarchical_policy:

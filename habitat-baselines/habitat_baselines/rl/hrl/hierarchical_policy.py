@@ -70,9 +70,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             config,
         )
 
-        for i, (skill_name, skill_config) in enumerate(
-            config.hierarchical_policy.defined_skills.items()
-        ):
+        skill_i = 0
+        for (
+            skill_name,
+            skill_config,
+        ) in config.hierarchical_policy.defined_skills.items():
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config,
@@ -82,14 +84,15 @@ class HierarchicalPolicy(nn.Module, Policy):
                 full_config,
             )
             skill_policy.set_pddl_problem(self._pddl_problem)
-            self._skills[i] = skill_policy
             if skill_config.pddl_action_names is None:
                 action_names = [skill_name]
             else:
                 action_names = skill_config.pddl_action_names
             for skill_id in action_names:
-                self._name_to_idx[skill_id] = i
-                self._idx_to_name[i] = skill_id
+                self._name_to_idx[skill_id] = skill_i
+                self._idx_to_name[skill_i] = skill_id
+                self._skills[skill_i] = skill_policy
+                skill_i += 1
 
         self._cur_skills: torch.Tensor = torch.full(
             (self._num_envs,), -1, dtype=torch.long
