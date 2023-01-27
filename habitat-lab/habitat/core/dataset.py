@@ -57,12 +57,11 @@ class BaseEpisode:
 class Episode(BaseEpisode):
     r"""Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode.
-    :property start_position: list of length 3 for cartesian coordinates
-        :py:`(x, y, z)`.
+    :property start_position: list of length 3 for cartesian coordinates `(x, y, z)`
     :property start_rotation: list of length 4 for (x, y, z, w) elements
-        of unit quaternion (versor) representing 3D agent orientation
-        (https://en.wikipedia.org/wiki/Versor). The rotation specifying the
-        agent's orientation is relative to the world coordinate axes.
+    of unit quaternion (versor) representing 3D agent orientation
+    (https://en.wikipedia.org/wiki/Versor). The rotation specifying the
+    agent's orientation is relative to the world coordinate axes.
 
     This information is provided by a :ref:`Dataset` instance.
     """
