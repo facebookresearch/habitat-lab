@@ -143,11 +143,7 @@ class BaselineRegistry(Registry):
         trainer and then for fetching data batches for the updater.
         """
 
-        from habitat_baselines.common.rollout_storage import RolloutStorage
-
-        return cls._register_impl(
-            "storage", to_register, name, assert_type=RolloutStorage
-        )
+        return cls._register_impl("storage", to_register, name)
 
     @classmethod
     def get_storage(cls, name: str):
