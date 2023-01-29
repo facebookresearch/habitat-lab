@@ -1,0 +1,45 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbds_head_rgb_third_agent
+  - /habitat/task/rearrange: modular_cat_nav_to_obj
+  - /habitat/dataset/rearrangement: floorplanner
+  - _self_
+
+habitat:
+  env_task: MLEnv
+  gym:
+    auto_name: NavToObj
+    obs_keys:
+      - robot_head_depth
+      - robot_head_rgb
+      - start_receptacle
+      - robot_start_gps
+      - robot_start_compass
+      - joint
+      - object_segmentation
+      - object_category
+  environment:
+    max_episode_steps: 400
+  simulator:
+    type: ObjectRearrangeSim-v0
+    additional_object_paths:
+      - data/objects/ycb/configs/
+      - data/objects/amazon_berkeley/configs/
+      - data/objects/google_object_dataset/configs/
+    debug_render_goal: False
+    concur_render: True
+    auto_sleep: True
+    agents:
+      main_agent:
+        radius: 0.25
+        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        robot_type: "StretchRobot"
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+    needs_markers: false
+  dataset:
+    data_path: data/datasets/floorplanner/rearrange/v1/train/cat_rearrange_split_1.json.gz
+    type: ObjectRearrangeDataset-v0
