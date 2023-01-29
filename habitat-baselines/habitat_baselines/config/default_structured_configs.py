@@ -330,6 +330,13 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class MLConfig(HabitatBaselinesBaseConfig):
+    """Modular learning config"""
+
+    policy: PolicyConfig = PolicyConfig()
+
+
+@dataclass
 class ORBSLAMConfig(HabitatBaselinesBaseConfig):
     """ORB-SLAM config"""
 
@@ -431,6 +438,11 @@ class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
 
 
 @dataclass
+class HabitatBaselinesMLConfig(HabitatBaselinesConfig):
+    ml: MLConfig = MLConfig()
+
+
+@dataclass
 class HabitatBaselinesILConfig(HabitatBaselinesConfig):
     il: Dict[str, Any] = field(default_factory=dict)
 
@@ -450,6 +462,11 @@ cs.store(
     group="habitat_baselines",
     name="habitat_baselines_rl_config_base",
     node=HabitatBaselinesRLConfig(),
+)
+cs.store(
+    group="habitat_baselines",
+    name="habitat_baselines_ml_config_base",
+    node=HabitatBaselinesMLConfig(),
 )
 cs.store(
     group="habitat_baselines",

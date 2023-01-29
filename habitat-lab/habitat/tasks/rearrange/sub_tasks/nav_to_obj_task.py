@@ -166,5 +166,7 @@ class DynNavRLEnv(RearrangeTask):
                 sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
+        # TODO: ensuring agent looks straight ahead (neither up nor down)
+        self._sim.robot.arm_joint_pos[-2:] = [0.0, 0.0]
         self._sim.maybe_update_robot()
         return self._get_observations(episode)
