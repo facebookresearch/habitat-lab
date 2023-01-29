@@ -209,11 +209,12 @@ class RearrangeTask(NavigationTask):
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
-        action_args = action["action_args"]
-        if self._config.enable_safe_drop and self._is_violating_safe_drop(
-            action_args
-        ):
-            action_args["grip_action"] = None
+        # TODO: temporary hack to allow discrete actions
+        # action_args = action["action_args"]
+        # if self._config.enable_safe_drop and self._is_violating_safe_drop(
+        #     action_args
+        # ):
+        #     action_args["grip_action"] = None
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
