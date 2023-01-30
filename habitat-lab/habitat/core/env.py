@@ -335,14 +335,11 @@ class Env:
         self._task.seed(seed)
 
     def reconfigure(self, config: "DictConfig") -> None:
-        self._config = config
+        self._config = self._task.overwrite_sim_config(
+            config, self.current_episode
+        )
 
-        with read_write(self._config):
-            self._config.simulator = self._task.overwrite_sim_config(
-                self._config.simulator, self.current_episode
-            )
-
-        self._sim.reconfigure(self._config.simulator)
+        self._sim.reconfigure(self._config.simulator, self.current_episode)
 
     def render(self, mode="rgb") -> np.ndarray:
         return self._sim.render(mode)

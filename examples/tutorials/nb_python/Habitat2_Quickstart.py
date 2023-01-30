@@ -75,7 +75,7 @@ import numpy as np
 from hydra.core.config_store import ConfigStore
 
 import habitat
-import habitat.utils.gym_definitions
+import habitat.gym
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward

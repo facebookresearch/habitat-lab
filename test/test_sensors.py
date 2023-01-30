@@ -158,7 +158,10 @@ def test_collisions():
             _random_episode(env, config)
 
             env.reset()
-            assert env.get_metrics()["collisions"] is None
+            assert env.get_metrics()["collisions"] == {
+                "count": 0,
+                "is_collision": False,
+            }
 
             prev_collisions = 0
             prev_loc = env.sim.get_agent_state().position
@@ -581,7 +584,7 @@ def test_noise_models_rgbd():
     with habitat.config.read_write(config):
         agent_config = get_agent_config(config.habitat.simulator)
         agent_config.sim_sensors.rgb_sensor.noise_model = "GaussianNoiseModel"
-        agent_config.sim_sensors.rgb_sensor.noise_model_kwargs.INTENSITY_CONSTANT = (
+        agent_config.sim_sensors.rgb_sensor.noise_model_kwargs.intensity_constant = (
             0.5
         )
         agent_config.sim_sensors.depth_sensor.noise_model = (
@@ -590,10 +593,10 @@ def test_noise_models_rgbd():
 
         config.habitat.simulator.action_space_config = "pyrobotnoisy"
         config.habitat.simulator.action_space_config_arguments = {
-            "NOISE_MODEL": {
+            "noise_model": {
                 "robot": "LoCoBot",
-                "CONTROLLER": "Proportional",
-                "NOISE_MULTIPLIER": 0.5,
+                "controller": "Proportional",
+                "noise_multiplier": 0.5,
             }
         }
     with habitat.Env(config=config, dataset=None) as env:

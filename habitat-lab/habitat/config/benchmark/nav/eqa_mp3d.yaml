@@ -7,12 +7,9 @@ defaults:
   - /habitat/dataset/eqa: mp3d
   - _self_
 
-
 habitat:
-
   environment:
     max_episode_steps: 500
-
   simulator:
     agents:
       main_agent:

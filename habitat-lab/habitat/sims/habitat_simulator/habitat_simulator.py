@@ -436,6 +436,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def reconfigure(
         self,
         habitat_config: DictConfig,
+        ep_info: Optional[Episode] = None,
         should_close_on_new_scene: bool = True,
     ) -> None:
         # TODO(maksymets): Switch to Habitat-Sim more efficient caching
@@ -580,7 +581,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             original pose and returns false.
         """
         agent = self.get_agent(agent_id)
-        new_state = self.get_agent_state(agent_id)
+        new_state = self.get_agent(agent_id).get_state()
         new_state.position = position
         new_state.rotation = rotation
 

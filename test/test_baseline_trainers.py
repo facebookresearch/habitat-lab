@@ -39,7 +39,7 @@ from habitat.config.default_structured_configs import (
     HeadDepthSensorConfig,
     HeadRGBSensorConfig,
 )
-from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.gym import make_gym_from_config
 from habitat_baselines.config.default_structured_configs import (
     Cube2EqConfig,
     Cube2FishConfig,
@@ -298,7 +298,7 @@ def test_cubemap_stiching(
         # Extract input and output cubemap
         output_cube = batch_cube[cube2equirect.target_uuids[0]]
         input_cube = [orig_batch[key] for key in sensor_uuids]
-        input_cube = torch.stack(input_cube, axis=1)
+        input_cube = torch.stack(input_cube, dim=1)  # type: ignore[arg-type]
         input_cube = torch.flatten(input_cube, end_dim=1)
 
         # Apply blur to absorb difference (blur, etc.) caused by conversion

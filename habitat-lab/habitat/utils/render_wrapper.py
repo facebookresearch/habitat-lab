@@ -9,7 +9,7 @@ from typing import List
 import cv2
 import numpy as np
 
-from habitat.utils.gym_adapter import flatten_dict
+from habitat.gym.gym_wrapper import flatten_dict
 
 
 def append_text_to_image(

@@ -22,7 +22,6 @@ from torch.optim.lr_scheduler import LambdaLR
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
-from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
@@ -67,6 +66,11 @@ from habitat_baselines.utils.common import (
     get_num_actions,
     inference_mode,
     is_continuous_action_space,
+)
+from habitat_baselines.utils.info_dict import (
+    NON_SCALAR_METRICS,
+    extract_scalars_from_info,
+    extract_scalars_from_infos,
 )
 
 if TYPE_CHECKING:
@@ -208,6 +212,11 @@ class PPOTrainer(BaseRLTrainer):
             resume_state = load_resume_state(self.config)
 
         if resume_state is not None:
+            if not self.config.habitat_baselines.load_resume_state_config:
+                raise FileExistsError(
+                    f"The configuration provided has habitat_baselines.load_resume_state_config=False but a previous training run exists. You can either delete the checkpoint folder {self.config.habitat_baselines.checkpoint_folder}, or change the configuration key habitat_baselines.checkpoint_folder in your new run."
+                )
+
             self.config = self._get_resume_state_config_or_new_config(
                 resume_state["config"]
             )
@@ -413,45 +422,6 @@ class PPOTrainer(BaseRLTrainer):
         """
         return torch.load(checkpoint_path, *args, **kwargs)
 
-    @classmethod
-    def _extract_scalars_from_info(
-        cls, info: Dict[str, Any]
-    ) -> Dict[str, float]:
-        result = {}
-        for k, v in info.items():
-            if not isinstance(k, str) or k in NON_SCALAR_METRICS:
-                continue
-
-            if isinstance(v, dict):
-                result.update(
-                    {
-                        k + "." + subk: subv
-                        for subk, subv in cls._extract_scalars_from_info(
-                            v
-                        ).items()
-                        if isinstance(subk, str)
-                        and k + "." + subk not in NON_SCALAR_METRICS
-                    }
-                )
-            # Things that are scalar-like will have an np.size of 1.
-            # Strings also have an np.size of 1, so explicitly ban those
-            elif np.size(v) == 1 and not isinstance(v, str):
-                result[k] = float(v)
-
-        return result
-
-    @classmethod
-    def _extract_scalars_from_infos(
-        cls, infos: List[Dict[str, Any]]
-    ) -> Dict[str, List[float]]:
-
-        results = defaultdict(list)
-        for i in range(len(infos)):
-            for k, v in cls._extract_scalars_from_info(infos[i]).items():
-                results[k].append(v)
-
-        return results
-
     def _compute_actions_and_step_envs(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
         env_slice = slice(
@@ -552,7 +522,7 @@ class PPOTrainer(BaseRLTrainer):
         current_ep_reward = self.current_episode_reward[env_slice]
         self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
         self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-        for k, v_k in self._extract_scalars_from_infos(infos).items():
+        for k, v_k in extract_scalars_from_infos(infos).items():
             v = torch.tensor(
                 v_k,
                 dtype=torch.float,
@@ -921,8 +891,10 @@ class PPOTrainer(BaseRLTrainer):
         if self._is_distributed:
             raise RuntimeError("Evaluation does not support distributed mode")
 
-        # Map location CPU is almost always better than mapping to a CUDA device.
+        # Some configurations require not to load the checkpoint, like when using
+        # a hierarchial policy
         if self.config.habitat_baselines.eval.should_load_ckpt:
+            # map_location="cpu" is almost always better than mapping to a CUDA device.
             ckpt_dict = self.load_checkpoint(
                 checkpoint_path, map_location="cpu"
             )
@@ -940,25 +912,19 @@ class PPOTrainer(BaseRLTrainer):
         with read_write(config):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
-        if (
-            len(config.habitat_baselines.video_render_views) > 0
-            and len(self.config.habitat_baselines.eval.video_option) > 0
-        ):
+        if len(self.config.habitat_baselines.eval.video_option) > 0:
             agent_config = get_agent_config(config.habitat.simulator)
             agent_sensors = agent_config.sim_sensors
-            render_view_uuids = [
-                agent_sensors[render_view].uuid
-                for render_view in config.habitat_baselines.video_render_views
-                if render_view in agent_sensors
-            ]
-            assert len(render_view_uuids) > 0, (
-                f"Missing render sensors in agent config: "
-                f"{config.habitat_baselines.video_render_views}."
-            )
+            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+            with read_write(agent_sensors):
+                agent_sensors.update(extra_sensors)
             with read_write(config):
-                for render_view_uuid in render_view_uuids:
-                    if render_view_uuid not in config.habitat.gym.obs_keys:
-                        config.habitat.gym.obs_keys.append(render_view_uuid)
+                if config.habitat.gym.obs_keys is not None:
+                    for render_view in extra_sensors.values():
+                        if render_view.uuid not in config.habitat.gym.obs_keys:
+                            config.habitat.gym.obs_keys.append(
+                                render_view.uuid
+                            )
                 config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
@@ -1015,9 +981,9 @@ class PPOTrainer(BaseRLTrainer):
         ] = {}  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
-        rgb_frames = [
+        rgb_frames: List[List[np.ndarray]] = [
             [] for _ in range(self.config.habitat_baselines.num_environments)
-        ]  # type: List[List[np.ndarray]]
+        ]
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
@@ -1132,7 +1098,9 @@ class PPOTrainer(BaseRLTrainer):
                         frame = observations_to_image(
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
-                    frame = overlay_frame(frame, infos[i])
+                    frame = overlay_frame(
+                        frame, extract_scalars_from_info(infos[i])
+                    )
                     rgb_frames[i].append(frame)
 
                 # episode ended
@@ -1141,9 +1109,7 @@ class PPOTrainer(BaseRLTrainer):
                     episode_stats = {
                         "reward": current_episode_reward[i].item()
                     }
-                    episode_stats.update(
-                        self._extract_scalars_from_info(infos[i])
-                    )
+                    episode_stats.update(extract_scalars_from_info(infos[i]))
                     current_episode_reward[i] = 0
                     k = (
                         current_episodes_info[i].scene_id,
@@ -1163,7 +1129,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i],
                             episode_id=current_episodes_info[i].episode_id,
                             checkpoint_idx=checkpoint_index,
-                            metrics=self._extract_scalars_from_info(infos[i]),
+                            metrics=extract_scalars_from_info(infos[i]),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,

@@ -23,7 +23,7 @@ gym.Env.__annotations__["_np_random"] = typing.Optional[
 
 # Overrides the __all__ as that one pulls everything into the root module
 # and doesn't expose any submodules
-habitat.__all__ = ["config", "core", "Agent", "Benchmark"]
+habitat.__all__ = ["config", "core", "Agent", "Benchmark", "gym"]
 habitat.core.__all__ = [
     "env",
     "embodied_task",
@@ -32,8 +32,6 @@ habitat.core.__all__ = [
     "registry",
     "vector_env",
 ]
-# Hydra's DictConfig isn't ours, so don't document it
-habitat.config.__all__.remove("DictConfig")
 
 PROJECT_TITLE = "Habitat"
 PROJECT_SUBTITLE = "Lab Docs"
@@ -47,6 +45,7 @@ INPUT_PAGES = [
     "pages/quickstart.rst",
     "pages/habitat-sim-demo.rst",
     "pages/habitat-lab-demo.rst",
+    "pages/habitat-lab-tdmap-viz.rst",
     "pages/habitat2.rst",
     "pages/view-transform-warp.rst",
 ]
@@ -81,6 +80,7 @@ LINKS_NAVBAR1 = [
             ("Quickstart", "quickstart"),
             ("Habitat Sim Demo", "habitat-sim-demo"),
             ("Habitat Lab Demo", "habitat-lab-demo"),
+            ("Habitat Lab TopdownMap Visualization", "habitat-lab-tdmap-viz"),
             ("Habitat 2.0 Overview", "habitat2"),
             ("View, Transform and Warp", "view-transform-warp"),
         ],

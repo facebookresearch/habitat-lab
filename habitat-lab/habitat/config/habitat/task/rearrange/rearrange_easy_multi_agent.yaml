@@ -42,6 +42,11 @@ actions:
     grip_controller: MagicGraspAction
   agent_1_arm_action:
     grip_controller: MagicGraspAction
+    agent_index : 1
+  agent_1_base_velocity:
+    agent_index : 1
+  agent_1_rearrange_stop:
+    agent_index : 1
 measurements:
   force_terminate:
     max_accum_force: 100000.0

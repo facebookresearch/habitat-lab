@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, List, Type
 
 from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.config import read_write
-from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.gym import make_gym_from_config
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
