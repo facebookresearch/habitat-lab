@@ -14,7 +14,7 @@ from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
-from habitat_baselines.rl.ppo.policy import PolicyAction
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -75,6 +75,10 @@ class NnSkillPolicy(SkillPolicy):
             return []
 
     @property
+    def has_hidden_state(self):
+        return self.num_recurrent_layers != 0
+
+    @property
     def num_recurrent_layers(self):
         if self._wrap_policy is not None:
             return self._wrap_policy.net.num_recurrent_layers
@@ -120,7 +124,7 @@ class NnSkillPolicy(SkillPolicy):
         masks,
         cur_batch_idx,
         deterministic=False,
-    ) -> PolicyAction:
+    ) -> PolicyActionData:
         filtered_obs = self._get_filtered_obs(observations, cur_batch_idx)
 
         filtered_prev_actions = prev_actions[

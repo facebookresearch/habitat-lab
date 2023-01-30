@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Iterator
+from typing import Iterator, Optional
 
 import torch
 
@@ -21,15 +21,22 @@ EPS_PPO = 1e-5
 
 @baseline_registry.register_storage
 class HrlRolloutStorage(RolloutStorage):
+    """
+    Supports variable writes to the rollout buffer where data is not inserted
+    into the buffer on every step. When getting batches from the storage, these
+    batches will only contain samples that were written. This means that the
+    batches could be variable size and less than the maximum size of the
+    rollout buffer.
+    """
+
     def __init__(self, numsteps, num_envs, *args, **kwargs):
         super().__init__(numsteps, num_envs, *args, **kwargs)
         self._num_envs = num_envs
         self._cur_step_idxs = torch.zeros(self._num_envs, dtype=torch.long)
         self._last_should_inserts = None
-        if self.is_double_buffered:
-            raise ValueError(
-                "HRL storage does not support double buffered sampling"
-            )
+        assert (
+            not self.is_double_buffered
+        ), "HRL storage does not support double buffered sampling"
 
     def insert(
         self,
@@ -41,8 +48,19 @@ class HrlRolloutStorage(RolloutStorage):
         rewards=None,
         next_masks=None,
         buffer_index: int = 0,
-        should_inserts=None,
+        should_inserts: Optional[torch.BoolTensor] = None,
     ):
+        """
+        The only key different from the base `RolloutStorage` is
+        `should_inserts`. This is a bool tensor of shape [# environments,]. If
+        `should_insert[i] == True`, then this will the sample at enviroment
+        index `i` into the rollout buffer at environment index `i`, if not, it
+        will ignore the sample. If None, this defaults to the last insert
+        state.
+
+        Rewards are summed when `should_insert[i] == False`.
+        """
+
         if next_masks is not None:
             next_masks = next_masks.to(self.device)
         if rewards is not None:
@@ -100,6 +118,12 @@ class HrlRolloutStorage(RolloutStorage):
         self._last_should_inserts = should_inserts
 
     def advance_rollout(self, buffer_index: int = 0):
+        """
+        This will advance to writing at the next step in the data buffer ONLY
+        if an element was written to that environment index in the previous
+        step.
+        """
+
         self._cur_step_idxs += self._last_should_inserts.long()
 
         is_past_buffer = self._cur_step_idxs >= self.num_steps
@@ -143,6 +167,11 @@ class HrlRolloutStorage(RolloutStorage):
     def recurrent_generator(
         self, advantages, num_batches
     ) -> Iterator[DictTree]:
+        """
+        Generates data batches based on the data that has been written to the
+        rollout buffer.
+        """
+
         num_environments = advantages.size(1)
         dones_cpu = (
             torch.logical_not(self.buffers["masks"])

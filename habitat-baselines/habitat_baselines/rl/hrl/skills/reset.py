@@ -10,7 +10,7 @@ import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import PolicyAction
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class ResetArmSkill(SkillPolicy):
@@ -59,7 +59,6 @@ class ResetArmSkill(SkillPolicy):
         return (
             torch.as_tensor(
                 np.abs(current_joint_pos - self._target).max(-1),
-                device=rnn_hidden_states.device,
                 dtype=torch.float32,
             )
             < 5e-2
@@ -92,6 +91,6 @@ class ResetArmSkill(SkillPolicy):
             device=action.device, dtype=action.dtype
         )
 
-        return PolicyAction(
+        return PolicyActionData(
             actions=action, rnn_hidden_states=rnn_hidden_states
         )

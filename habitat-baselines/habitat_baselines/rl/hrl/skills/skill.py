@@ -2,15 +2,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
 
+from habitat.core.simulator import Observations
 from habitat.tasks.rearrange.rearrange_sensors import IsHoldingSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import Policy, PolicyAction
+from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -83,9 +84,17 @@ class SkillPolicy(Policy):
         """
         return [self._cur_skill_args[i] for i in batch_idx]
 
+    @property
+    def has_hidden_state(self):
+        """
+        Returns if the skill requires a hidden state.
+        """
+
+        return False
+
     def _keep_holding_state(
-        self, action_data: PolicyAction, observations
-    ) -> PolicyAction:
+        self, action_data: PolicyActionData, observations
+    ) -> PolicyActionData:
         """
         Makes the action so it does not result in dropping or picking up an
         object. Used in navigation and other skills which are not supposed to
@@ -116,10 +125,9 @@ class SkillPolicy(Policy):
         action = self._pddl_problem.actions[skill_name]
 
         entities = [self._pddl_problem.get_entity(x) for x in skill_args]
-        if self._pddl_ac_start is None:
-            raise ValueError(
-                "Apply post cond not supported when pddl action not in action space"
-            )
+        assert (
+            self._pddl_ac_start is not None
+        ), "Apply post cond not supported when pddl action not in action space"
 
         ac_idx = self._pddl_ac_start
         found = False
@@ -137,7 +145,7 @@ class SkillPolicy(Policy):
         ]
         if len(entity_idxs) != action.n_args:
             raise ValueError(
-                f"Inconsistent # of args {action.n_args} versus {entity_idxs} for {action} with {skill_args} and {entities}"
+                f"The skill was called with the wrong # of args {action.n_args} versus {entity_idxs} for {action} with {skill_args} and {entities}. Make sure the skill and PDDL definition match."
             )
 
         actions[idx, ac_idx : ac_idx + action.n_args] = torch.tensor(
@@ -150,18 +158,22 @@ class SkillPolicy(Policy):
 
     def should_terminate(
         self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        actions,
-        hl_says_term,
+        observations: Observations,
+        rnn_hidden_states: torch.Tensor,
+        prev_actions: torch.Tensor,
+        masks: torch.Tensor,
+        actions: torch.Tensor,
+        hl_policy_wants_termination: torch.BoolTensor,
         batch_idx: List[int],
         skill_name: List[str],
-        log_info,
+        log_info: List[Dict[str, Any]],
     ) -> Tuple[torch.BoolTensor, torch.BoolTensor, torch.Tensor]:
         """
-        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        :returns: Both of the BoolTensor's will be on the CPU.
+            - `is_skill_done`: Shape (batch_size,) size tensor where 1
+              indicates the skill to return control to HL policy.
+            - `bad_terminate`: Shape (batch_size,) size tensor where 1
+              indicates the skill should immediately end the episode.
         """
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
@@ -173,10 +185,6 @@ class SkillPolicy(Policy):
             )
 
         cur_skill_step = self._cur_skill_step[batch_idx]
-        bad_terminate = torch.zeros(
-            cur_skill_step.shape,
-            dtype=torch.bool,
-        )
 
         bad_terminate = torch.zeros(
             cur_skill_step.shape,
@@ -197,7 +205,7 @@ class SkillPolicy(Policy):
             elif (
                 self._config.apply_postconds
                 and is_skill_done[i] == 1.0
-                and hl_says_term[i] == 0.0
+                and hl_policy_wants_termination[i] == 0.0
             ):
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
@@ -205,7 +213,7 @@ class SkillPolicy(Policy):
                 self._delay_term[env_i] = True
                 is_skill_done[i] = 0.0
 
-        is_skill_done |= hl_says_term
+        is_skill_done |= hl_policy_wants_termination
 
         if bad_terminate.sum() > 0:
             self._internal_log(
@@ -277,7 +285,7 @@ class SkillPolicy(Policy):
         return action_data
 
     def to(self, device):
-        self._cur_skill_step = self._cur_skill_step.to(device)
+        pass
 
     def _select_obs(self, obs, cur_batch_idx):
         """
@@ -326,5 +334,5 @@ class SkillPolicy(Policy):
         masks,
         cur_batch_idx,
         deterministic=False,
-    ) -> PolicyAction:
+    ) -> PolicyActionData:
         raise NotImplementedError()

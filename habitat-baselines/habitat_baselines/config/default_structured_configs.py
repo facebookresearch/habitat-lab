@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
@@ -224,31 +224,42 @@ cs.store(
 
 
 @dataclass
-class HrlDefinedSkill(HabitatBaselinesBaseConfig):
+class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
+    """
+    Defines a low-level skill to be used in the hierarchical policy.
+    """
+
     skill_name: str = MISSING
     name: str = "PointNavResNetPolicy"
     action_distribution_type: str = "gaussian"
     load_ckpt_file: str = ""
     max_skill_steps: int = 200
+    # If true, the stop action will be called if the skill times out.
     force_end_on_timeout: bool = True
+    # Overrides the config file of a neural network skill rather than loading
+    # the config file from the checkpoint file.
     force_config_file: str = ""
     at_resting_threshold: float = 0.15
+    # If true, this willapply the post-conditions of the skill after it
+    # terminates.
     apply_postconds: bool = False
     obs_skill_inputs: List[str] = field(default_factory=list)
     obs_skill_input_dim: int = 3
     start_zone_radius: float = 0.3
     # For the oracle navigation skill
-    nav_action_name: str = "base_velocity"
+    action_name: str = "base_velocity"
     stop_thresh: float = 0.001
     # For the reset_arm_skill
     reset_joint_state: List[float] = MISSING
+    pddl_action_names: Optional[List[str]] = None
 
 
 @dataclass
-class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
-    defined_skills: Dict[str, HrlDefinedSkill] = field(default_factory=dict)
-    use_skills: Dict[str, str] = field(default_factory=dict)
+    defined_skills: Dict[str, HrlDefinedSkillConfig] = field(
+        default_factory=dict
+    )
 
 
 @dataclass
@@ -259,7 +270,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
-    hierarchical_policy: HierarchicalPolicy = MISSING
+    hierarchical_policy: HierarchicalPolicyConfig = MISSING
 
 
 @dataclass

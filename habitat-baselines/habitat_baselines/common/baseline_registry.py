@@ -138,6 +138,11 @@ class BaselineRegistry(Registry):
 
     @classmethod
     def register_storage(cls, to_register=None, *, name: Optional[str] = None):
+        """
+        Registers data storage for storing data in the policy rollout in the
+        trainer and then for fetching data batches for the updater.
+        """
+
         return cls._register_impl("storage", to_register, name)
 
     @classmethod
@@ -146,6 +151,10 @@ class BaselineRegistry(Registry):
 
     @classmethod
     def register_updater(cls, to_register=None, *, name: Optional[str] = None):
+        """
+        Registers a policy updater.
+        """
+
         return cls._register_impl("updater", to_register, name)
 
     @classmethod

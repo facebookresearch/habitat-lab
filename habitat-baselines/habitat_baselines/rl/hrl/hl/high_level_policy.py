@@ -86,7 +86,7 @@ class HighLevelPolicy(nn.Module):
             - skill_args_data: Arguments for the next skill.
             - immediate_end: Binary masks indicating which environment(s) should
                 end immediately.
-            - Information for PolicyAction
+            - Information for PolicyActionData
         """
         raise NotImplementedError()
 
@@ -107,9 +107,10 @@ class HighLevelPolicy(nn.Module):
     ) -> torch.BoolTensor:
         """
         Can force the currently executing skill to terminate.
+        In the base HighLevelPolicy, the skill always continues.
 
         Returns: A binary tensor where 1 indicates the current skill should
-        terminate and 0 indicates the skill can continue.
+            terminate and 0 indicates the skill can continue.
         """
 
         return torch.zeros(self._num_envs, dtype=torch.bool)

@@ -1,18 +1,16 @@
 # @package _global_
 
+# Extends the `rl_hierarchical` config to use an oracle navigation action.
+# Several things change to support the oracle navigation:
+# - Adding the oracle navigation action
+# - Add sliding.
+# - Use the oracle navigation skill.
+
 defaults:
-  - /benchmark/rearrange: rearrange_easy
-  - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy/obs_transforms:
-    - add_virtual_keys_base
-  - /habitat_baselines/rl/policy: hl_neural
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: noop_skills
+  - rl_hierarchical
   - /habitat/task/actions:
     - pddl_apply_action
     - oracle_nav_action
-    - arm_action
-    - base_velocity
-    - rearrange_stop
   - _self_
 
 habitat:
@@ -28,74 +26,17 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
-
+  simulator:
+    habitat_sim_v0:
+      allow_sliding: True
 
 habitat_baselines:
-  verbose: False
-  trainer_name: "ddppo"
-  torch_gpu_id: 0
-  rollout_storage: "HrlRolloutStorage"
-  updater_name: "HrlPPO"
-  distrib_updater_name: "HrlDDPPO"
-  video_fps: 30
-  eval_ckpt_path_dir: ""
-  num_environments: 3
-  writer_type: 'tb'
-  checkpoint_folder: "data/new_checkpoints"
-  num_updates: -1
-  total_num_steps: 1.0e8
-  log_interval: 10
-  num_checkpoints: 20
-  force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
-  load_resume_state_config: False
-
-  eval:
-    use_ckpt_config: False
-    should_load_ckpt: False
-    video_option: ["disk"]
-
   rl:
     policy:
       hierarchical_policy:
-        use_skills:
-          nav: "oracle_nav"
-          nav_to_receptacle: "oracle_nav"
+        # Override to use the oracle navigation skill.
         defined_skills:
-          oracle_nav:
+          nav_to_obj:
             skill_name: "OracleNavPolicy"
             obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
             max_skill_steps: 300
-    ppo:
-      # ppo params
-      clip_param: 0.2
-      ppo_epoch: 2
-      num_mini_batch: 2
-      value_loss_coef: 0.5
-      entropy_coef: 0.0001
-      lr: 2.5e-4
-      eps: 1e-5
-      max_grad_norm: 0.2
-      num_steps: 128
-      use_gae: True
-      gamma: 0.99
-      tau: 0.95
-
-    ddppo:
-      sync_frac: 0.6
-      # The PyTorch distributed backend to use
-      distrib_backend: NCCL
-      # Visual encoder backbone
-      pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
-      # Initialize with pretrained weights
-      pretrained: False
-      # Initialize just the visual encoder backbone with pretrained weights
-      pretrained_encoder: False
-      # Whether the visual encoder backbone will be trained.
-      train_encoder: True
-      # Whether to reset the critic linear layer
-      reset_critic: False
-      # Model parameters
-      backbone: resnet18
-      rnn_type: LSTM
-      num_recurrent_layers: 2

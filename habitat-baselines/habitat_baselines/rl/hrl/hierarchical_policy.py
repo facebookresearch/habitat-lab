@@ -42,12 +42,21 @@ from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
 )
 
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import Policy, PolicyAction
+from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
 @baseline_registry.register_policy
 class HierarchicalPolicy(nn.Module, Policy):
+    """
+    :property _pddl_problem: Stores the PDDL domain information. This allows
+        accessing all the possible entities, actions, and predicates. Note that
+        this is not the grounded PDDL problem with truth values assigned to the
+        predicates basedon the current simulator state.
+    """
+
+    _pddl_problem: PddlProblem
+
     def __init__(
         self,
         config,
@@ -77,16 +86,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             config,
         )
 
-        for i, (skill_id, use_skill_name) in enumerate(
-            config.hierarchical_policy.use_skills.items()
-        ):
-            if use_skill_name == "":
-                # Skip loading this skill if no name is provided
-                continue
-            skill_config = config.hierarchical_policy.defined_skills[
-                use_skill_name
-            ]
-
+        skill_i = 0
+        for (
+            skill_name,
+            skill_config,
+        ) in config.hierarchical_policy.defined_skills.items():
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config,
@@ -96,9 +100,15 @@ class HierarchicalPolicy(nn.Module, Policy):
                 full_config,
             )
             skill_policy.set_pddl_problem(self._pddl_problem)
-            self._skills[i] = skill_policy
-            self._name_to_idx[skill_id] = i
-            self._idx_to_name[i] = skill_id
+            if skill_config.pddl_action_names is None:
+                action_names = [skill_name]
+            else:
+                action_names = skill_config.pddl_action_names
+            for skill_id in action_names:
+                self._name_to_idx[skill_id] = skill_i
+                self._idx_to_name[skill_i] = skill_id
+                self._skills[skill_i] = skill_policy
+                skill_i += 1
 
         self._cur_skills: torch.Tensor = torch.full(
             (self._num_envs,), -1, dtype=torch.long
@@ -125,6 +135,11 @@ class HierarchicalPolicy(nn.Module, Policy):
     def get_policy_action_space(
         self, env_action_space: spaces.Space
     ) -> spaces.Space:
+        """
+        Fetches the policy action space for learning. If we are learning the HL
+        policy, it will return its custom action space for learning.
+        """
+
         return self._high_level_policy.get_policy_action_space(
             env_action_space
         )
@@ -219,7 +234,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             (self._num_envs,), dtype=torch.bool
         ).to(masks.device)
 
-        hl_says_term = self._high_level_policy.get_termination(
+        hl_policy_wants_termination = self._high_level_policy.get_termination(
             observations,
             rnn_hidden_states,
             prev_actions,
@@ -227,7 +242,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._cur_skills,
             log_info,
         )
-        # Compute the actions from the current skills
+        # Initialize empty action set based on the overall action space.
         actions = torch.zeros(
             (self._num_envs, get_num_actions(self._action_space)),
             device=masks.device,
@@ -241,7 +256,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 "prev_actions": prev_actions,
                 "masks": masks,
                 "actions": actions,
-                "hl_says_term": hl_says_term,
+                "hl_policy_wants_termination": hl_policy_wants_termination,
             },
             # Only decide on skill termination if the episode is active.
             should_adds=masks,
@@ -255,6 +270,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 continue
             # TODO: either change name of the function or assign actions somewhere
             # else. Updating actions in should_terminate is counterintuitive
+
             (
                 call_high_level[batch_ids],
                 bad_should_terminate[batch_ids],
@@ -309,7 +325,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 if "rnn_hidden_states" not in hl_info:
                     rnn_hidden_states[batch_ids] *= 0.0
                     prev_actions[batch_ids] *= 0
-                elif self._skills[skill_id].num_recurrent_layers != 0:
+                elif self._skills[skill_id].has_hidden_state:
                     raise ValueError(
                         f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
                     )
@@ -355,7 +371,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         }
         action_kwargs.update(hl_info)
 
-        return PolicyAction(
+        return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
             should_inserts=call_high_level,

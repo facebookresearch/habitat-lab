@@ -163,9 +163,6 @@ class OracleNavActionConfig(ActionConfig):
     forward_velocity: float = 1.0
     turn_thresh: float = 0.1
     dist_thresh: float = 0.2
-    stop_thresh: float = 0.001
-    spawn_max_dist_to_obj: float = 2.0
-    num_spawn_attempts: int = 200
     lin_speed: float = 10.0
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True

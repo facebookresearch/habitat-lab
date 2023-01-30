@@ -11,7 +11,7 @@ from habitat_baselines.utils.common import (
 
 
 @baseline_registry.register_updater
-class HrlPPO(PPO):
+class HRLPPO(PPO):
     def _update_from_batch(self, batch, epoch, rollouts, learner_metrics):
         n_samples = max(batch["loss_mask"].sum(), 1)
 
@@ -112,5 +112,5 @@ class HrlPPO(PPO):
 
 
 @baseline_registry.register_updater
-class HrlDDPPO(DecentralizedDistributedMixin, HrlPPO):
+class HrlDDPPO(DecentralizedDistributedMixin, HRLPPO):
     pass
