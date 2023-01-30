@@ -30,6 +30,10 @@ class DebugVisualizer:
         """
         Initialize the debugger provided a Simulator and the uuid of the debug sensor.
         NOTE: Expects the debug sensor attached to and coincident with agent 0's frame.
+
+        :param sim: Simulator instance must be provided for attachment.
+        :param output_path: Directory path for saving debug images and videos.
+        :param default_sensor_uuid: Which sensor uuid to use for debug image rendering.
         """
         self.sim = sim
         self.output_path = output_path
@@ -46,6 +50,11 @@ class DebugVisualizer:
     ) -> None:
         """
         Point the debug camera at a target.
+        Standard look_at function syntax.
+
+        :param look_at: 3D global position to point the camera towards.
+        :param look_from: 3D global position of the camera.
+        :param look_up: 3D global "up" vector for aligning the camera roll.
         """
         agent = self.sim.get_agent(0)
         camera_pos = (
@@ -76,6 +85,10 @@ class DebugVisualizer:
         Render a debug observation of the current state and cache it.
         Optionally configure the camera transform.
         Optionally provide an alternative observation cache.
+
+        :param look_at: 3D global position to point the camera towards.
+        :param look_from: 3D global position of the camera.
+        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self._debug_obs.
         """
         if look_at is not None:
             self.look_at(look_at, look_from)
@@ -94,8 +107,15 @@ class DebugVisualizer:
         show: bool = True,
     ) -> str:
         """
-        Get an observation and save it to file.
+        Render an observation and save it to file.
         Return the filepath.
+
+        :param output_path: Optional directory path for saving debug images and videos. Otherwise use self.output_path.
+        :param prefix: Optional prefix for output filename. Filename format: "<prefix>month_day_year_hourminutesecondmicrosecond.png"
+        :param look_at: 3D global position to point the camera towards.
+        :param look_from: 3D global position of the camera.
+        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self._debug_obs.
+        :param show: If True, open the image immediately.
         """
         obs_cache = []
         self.get_observation(look_at, look_from, obs_cache)
@@ -119,9 +139,11 @@ class DebugVisualizer:
     def render_debug_lines(
         self,
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
-    ):
+    ) -> None:
         """
         Draw a set of debug lines with accomanying colors.
+
+        :param debug_lines: A set of debug line strips with accompanying colors. Each list entry contains a list of points and a color.
         """
         # support None input to make useage easier elsewhere
         if debug_lines is not None:
@@ -146,8 +168,16 @@ class DebugVisualizer:
         show: bool = False,
     ) -> str:
         """
-        Specialization to peek a rigid object.
-        See _peek_object.
+        Helper function to generate image(s) of an object for contextual debugging purposes.
+        Specialization to peek a rigid object. See _peek_object.
+        Compute a camera placement to view an object. Show/save an observation. Return the filepath.
+
+        :param obj: The ManagedRigidObject to peek.
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
         """
 
         return self._peek_object(
@@ -170,8 +200,16 @@ class DebugVisualizer:
         show: bool = False,
     ) -> str:
         """
-        Specialization to peek an articulated object.
-        See _peek_object.
+        Helper function to generate image(s) of an object for contextual debugging purposes.
+        Specialization to peek an articulated object. See _peek_object.
+        Compute a camera placement to view an object. Show/save an observation. Return the filepath.
+
+        :param obj: The ManagedArticulatedObject to peek.
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
         """
         from habitat.sims.habitat_simulator.sim_utilities import (
             get_ao_global_bb,
@@ -203,10 +241,16 @@ class DebugVisualizer:
         show: bool = False,
     ) -> str:
         """
-        Compute a camera placement to view an object and show/save an observation.
-        Return the filepath.
-        If peek_all_axis, then create a merged 3x2 matrix of images looking at the object from all angles.
-        debug_lines: optionally provide a list of debug line render tuples, each with a sequence of points and a color. These will be displayed in all peek images.
+        Internal helper function to generate image(s) of an object for contextual debugging purposes.
+        Compute a camera placement to view an object. Show/save an observation. Return the filepath.
+
+        :param obj: The ManagedRigidObject or ManagedArticulatedObject to peek.
+        :param obj_bb: The object's bounding box (provided by consumer functions.)
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
         """
         obj_abs_transform = obj.root_scene_node.absolute_transformation()
         look_at = obj_abs_transform.translation
@@ -283,8 +327,14 @@ class DebugVisualizer:
         obs_cache: Optional[List[Any]] = None,
     ) -> None:
         """
-        Produce a video from a set of debug observations.
+        Produce and save a video from a set of debug observations.
+
+        :param output_path: Optional directory path for saving the video. Otherwise use self.output_path.
+        :param prefix: Optional prefix for output filename. Filename format: "<output_path><prefix><timestamp>"
+        :param fps: Framerate of the video. Defaults to 4FPS expecting disjoint still frames.
+        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self._debug_obs.
         """
+
         if output_path is None:
             output_path = self.output_path
 
