@@ -569,7 +569,7 @@ class VectorEnv:
 
     def _warn_cuda_tensors(
         self,
-        action: Union[int, np.ndarray, Dict[str, Any], torch.Tensor],
+        action: Union[int, np.ndarray, Dict[str, Any], "torch.Tensor"],
         prefix: Optional[str] = None,
     ):
         if torch is None:
