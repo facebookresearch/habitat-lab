@@ -921,8 +921,8 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "robot_head_panoptic"
-    width: int = 256
-    height: int = 256
+    width: int = 640
+    height: int = 480
 
 
 @dataclass
