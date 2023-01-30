@@ -1,0 +1,3 @@
+scikit-image
+scikit-fmm
+pandas

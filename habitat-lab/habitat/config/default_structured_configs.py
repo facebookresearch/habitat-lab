@@ -912,22 +912,22 @@ class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
 @dataclass
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_head_rgb"
-    width: int = 256
-    height: int = 256
+    width: int = 640 # debug
+    height: int = 480 # debug
 
 
 @dataclass
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_head_depth"
-    width: int = 256
-    height: int = 256
+    width: int = 640 # debug
+    height: int = 480 # debug
 
 
 @dataclass
 class HeadSemanticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "robot_head_semantic"
-    width: int = 256
-    height: int = 256
+    width: int = 640 # debug
+    height: int = 480 # debug
 
 
 @dataclass
