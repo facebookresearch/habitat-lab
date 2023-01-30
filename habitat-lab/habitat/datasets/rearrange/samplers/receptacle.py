@@ -108,11 +108,13 @@ class Receptacle(ABC):
         return []
 
     @abstractmethod
-    def debug_draw(self, sim, color=None) -> None:
+    def debug_draw(self, sim: habitat_sim.Simulator, color:Optional[mn.Color4]=None) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
-        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
+
+        :param sim: Simulator must be provided. 
+        :param color: Optionally provide wireframe color, otherwise magenta.
         """
 
 
@@ -136,11 +138,13 @@ class OnTopOfReceptacle(Receptacle):
 
         return mn.Matrix4([[targ_T[j][i] for j in range(4)] for i in range(4)])
 
-    def debug_draw(self, sim, color=None) -> None:
+    def debug_draw(self, sim: habitat_sim.Simulator, color:Optional[mn.Color4]=None) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
-        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
+
+        :param sim: Simulator must be provided. 
+        :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # TODO:
 
@@ -265,11 +269,13 @@ class AABBReceptacle(Receptacle):
             )
         return [box_obj]
 
-    def debug_draw(self, sim, color=None):
+    def debug_draw(self, sim: habitat_sim.Simulator, color:Optional[mn.Color4]=None)->None:
         """
         Render the AABBReceptacle with DebugLineRender utility at the current frame.
-        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
+
+        :param sim: Simulator must be provided. 
+        :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # draw the box
         if color is None:
@@ -296,10 +302,13 @@ class TriangleMeshReceptacle(Receptacle):
         up: Optional[mn.Vector3] = None,
     ) -> None:
         """
+        Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
+
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
+        :param mesh_data: The Receptacle's mesh data. A Tuple of two Lists, first vertex geometry (Vector3) and second topology (indicies of triangle corner verts(int) (len divisible by 3)).
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
+        :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
         self.mesh_data = mesh_data
@@ -307,6 +316,8 @@ class TriangleMeshReceptacle(Receptacle):
             []
         )  # normalized float weights for each triangle for sampling
         assert len(mesh_data[1]) % 3 == 0, "must be triangles"
+
+        #pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0
         for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
@@ -326,8 +337,13 @@ class TriangleMeshReceptacle(Receptacle):
                 ] += self.area_weighted_accumulator[f_ix - 1]
         # print(self.area_weighted_accumulator)
 
-    def get_face_verts(self, f_ix):
-        verts = []
+    def get_face_verts(self, f_ix: int) -> List[np.array]:
+        """
+        Get all three vertices of a mesh triangle given it's face index as a list of numpy arrays.
+
+        :param f_ix: The index of the mesh triangle.
+        """
+        verts: List[np.array] = []
         for ix in range(3):
             verts.append(
                 np.array(
@@ -336,12 +352,14 @@ class TriangleMeshReceptacle(Receptacle):
             )
         return verts
 
-    def sample_area_weighted_triangle(self):
+    def sample_area_weighted_triangle(self) -> int:
         """
         Isolates the area weighted triangle sampling code.
+
+        Returns a random triangle index sampled with area weighting.
         """
 
-        def find_ge(a, x):
+        def find_ge(a:List[Any], x)->Any:
             "Find leftmost item greater than or equal to x"
             from bisect import bisect_left
 
@@ -383,12 +401,14 @@ class TriangleMeshReceptacle(Receptacle):
 
         return rand_point
 
-    def debug_draw(self, sim, color=None):
+    def debug_draw(self, sim:habitat_sim.Simulator, color:Optional[mn.Color4]=None)->None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
         Draws the Receptacle mesh.
-        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
+
+        :param sim: Simulator must be provided. 
+        :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # draw all mesh triangles
         if color is None:
@@ -403,12 +423,14 @@ class TriangleMeshReceptacle(Receptacle):
                 )
 
 
-def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
+def get_all_scenedataset_receptacles(sim:habitat_sim.Simulator) -> Dict[str, Dict[str, List[str]]]:
     """
     Scrapes the active SceneDataset from a Simulator for all receptacle names defined in rigid/articulated object and stage templates for investigation and preview purposes.
     Note this will not include scene-specific overrides defined in scene_config.json files. Only receptacles defined in object_config.json, ao_config.json, and stage_config.json files or added programmatically to associated Attributes objects will be found.
 
     Returns a dict with keys {"stage", "rigid", "articulated"} mapping object template handles to lists of receptacle names.
+
+    :param sim: Simulator must be provided. 
     """
     # cache the rigid and articulated receptacles seperately
     receptacles: Dict[str, Dict[str, List[str]]] = {
@@ -460,8 +482,9 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
 def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     """
     Returns a Tuple of (verts,indices) from a ply mesh.
-    NOTE: the input PLY must contain only triangles.
     TODO: This could be replaced by a standard importer, but I didn't want to add additional dependencies for such as small feature.
+
+    :param ply_file: The input PLY mesh file. NOTE: must contain only triangles.
     """
     mesh_data: Tuple[List[mn.Vector3], List[int]] = ([], [])
     with open(ply_file) as f:
