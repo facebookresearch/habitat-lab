@@ -153,6 +153,8 @@ class OracleNavActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
 
 
 # -----------------------------------------------------------------------------
