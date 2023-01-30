@@ -869,6 +869,7 @@ class RearrangeEpisodeGenerator:
         # detailed receptacle stability report
         logger.info("  Detailed sampling stats:")
 
+        # compute number of unstable objects for each receptacle
         # receptacle: [num_objects, num_unstable_objects]
         rec_num_obj_vs_unstable: Dict[Receptacle, List[int]] = {}
         for obj_name, rec in self.object_to_containing_receptacle.items():
@@ -929,6 +930,7 @@ class RearrangeEpisodeGenerator:
 
         logger.info("----------------------------------------")
 
+        #generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
                 self.vdb.peek_rigid_object(obj, peek_all_axis=True)

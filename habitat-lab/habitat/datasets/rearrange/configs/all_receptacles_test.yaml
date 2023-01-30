@@ -1,8 +1,9 @@
 ---
-## All receptacles and objects are used.
+## This config is meant to test receptacle configurations and clutter generation for new datasets.
+## All receptacles used with a small batch of known YCB objects.
+
 # Define your own dataset path,
-#dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
-dataset_path: "/run/media/alexclegg/Extreme_SSD/datasets/floorplanner/fp_mini_rec_automation/fp_mini.scene_dataset_config.json"
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
 additional_object_paths:
   - "data/objects/ycb/configs/"
 correct_unstable_results: True
