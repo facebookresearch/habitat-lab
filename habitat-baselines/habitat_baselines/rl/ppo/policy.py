@@ -34,7 +34,12 @@ if TYPE_CHECKING:
 @dataclass
 class PolicyActionData:
     """
-    Information returned from the `Policy` class.
+    Information returned from the `Policy.act` method representing the
+    information from an agent's action.
+
+    :property should_inserts: Of shape [# envs, 1]. If False at environment
+        index `i`, then don't write this transition to the rollout buffer. If
+        `None`, then write all data.
     """
 
     rnn_hidden_states: torch.Tensor
@@ -43,7 +48,7 @@ class PolicyActionData:
     action_log_probs: Optional[torch.Tensor] = None
     take_actions: Optional[torch.Tensor] = None
     policy_info: Optional[List[Dict[str, Any]]] = None
-    should_inserts: Optional[torch.Tensor] = None
+    should_inserts: Optional[torch.BoolTensor] = None
 
     def write_action(self, write_idx, write_action):
         self.actions[:, write_idx] = write_action

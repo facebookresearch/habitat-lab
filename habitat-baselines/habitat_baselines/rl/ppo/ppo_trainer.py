@@ -206,7 +206,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.agent = agent_cls.from_config(self.actor_critic, ppo_cfg)
         self.policy_action_space = self.actor_critic.get_policy_action_space(
-            self.envs.action_spaces[0]
+            self.env_action_space
         )
 
     def _init_envs(self, config=None, is_eval: bool = False):
