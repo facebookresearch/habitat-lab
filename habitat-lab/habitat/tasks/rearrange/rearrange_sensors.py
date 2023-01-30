@@ -195,17 +195,17 @@ class ObjectSegmentationSensor(Sensor):
     def get_observation(self, observations, *args, episode, task, **kwargs):
         if np.random.random() < self._config.blank_out_prob:
             return np.zeros_like(
-                observations["robot_head_semantic"], dtype=np.uint8
+                observations["robot_head_panoptic"], dtype=np.uint8
             )
         else:
             segmentation_sensor = np.zeros_like(
-                observations["robot_head_semantic"], dtype=np.uint8
+                observations["robot_head_panoptic"], dtype=np.uint8
             )
             for g in episode.candidate_objects:
                 segmentation_sensor = segmentation_sensor | (
-                    observations["robot_head_semantic"]
+                    observations["robot_head_panoptic"]
                     == self._sim.scene_obj_ids[int(g.object_id)]
-                    + self._sim.habitat_config.obj_instance_id_start
+                    + self._sim.habitat_config.instance_ids_start
                 )
             return segmentation_sensor
 
@@ -336,26 +336,6 @@ class TargetGoalGpsCompassSensor(PositionGpsCompassSensor):
     def _get_positions(self) -> np.ndarray:
         _, pos = self._sim.get_targets()
         return pos
-
-
-@registry.register_sensor
-class RobotStartGpsCompassSensor(PositionGpsCompassSensor):
-    cls_uuid: str = "robot_start_gps_compass"
-
-    def _get_uuid(self, *args, **kwargs):
-        return RobotStartGpsCompassSensor.cls_uuid
-
-    def _get_positions(self) -> np.ndarray:
-        return np.expand_dims(self._task.start_position, 0)
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        self._polar_pos = np.zeros(2, dtype=np.float32)
-        return spaces.Box(
-            shape=(2,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
 
 
 @registry.register_sensor

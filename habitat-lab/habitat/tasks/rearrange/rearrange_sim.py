@@ -291,7 +291,7 @@ class RearrangeSim(HabitatSim):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
                 node.semantic_id = (
-                    obj.object_id + self.habitat_config.obj_instance_id_start
+                    obj.object_id + self.habitat_config.instance_ids_start
                 )
 
     def get_robot_data(self, agent_idx: Optional[int]):

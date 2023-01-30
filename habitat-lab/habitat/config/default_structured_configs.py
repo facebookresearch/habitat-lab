@@ -330,11 +330,6 @@ class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
 
 
 @dataclass
-class RobotStartGpsCompassSensorConfig(LabSensorConfig):
-    type: str = "RobotStartGpsCompassSensor"
-
-
-@dataclass
 class NavToSkillSensorConfig(LabSensorConfig):
     type: str = "NavToSkillSensor"
     num_skills: int = 8
@@ -924,10 +919,10 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
-class HeadSemanticSensorConfig(HabitatSimSemanticSensorConfig):
-    uuid: str = "robot_head_semantic"
-    width: int = 640 # debug
-    height: int = 480 # debug
+class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "robot_head_panoptic"
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
@@ -1048,8 +1043,8 @@ class SimulatorConfig(HabitatBaseConfig):
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
-    # instance ids are recorded in the semantic sensor by adding obj_instance_id_start. This is added to avoid collision with scene semantic categories.
-    obj_instance_id_start: Optional[int] = 50
+    # instance ids are recorded in the panoptic sensor starting from `instance_ids_start`
+    instance_ids_start: Optional[int] = 50
 
 
 @dataclass
@@ -1382,8 +1377,8 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
-    name="head_semantic_sensor",
-    node=HeadSemanticSensorConfig,
+    name="head_panoptic_sensor",
+    node=HeadPanopticSensorConfig,
 )
 
 cs.store(
@@ -1537,12 +1532,6 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_goal_gps_compass_sensor",
     node=TargetGoalGpsCompassSensorConfig,
-)
-cs.store(
-    package="habitat.task.lab_sensors.robot_start_gps_compass_sensor",
-    group="habitat/task/lab_sensors",
-    name="robot_start_gps_compass_sensor",
-    node=RobotStartGpsCompassSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.nav_to_skill_sensor",
