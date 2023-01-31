@@ -20,6 +20,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
     ReceptacleTracker,
+    TriangleMeshReceptacle,
     find_receptacles,
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
@@ -261,6 +262,13 @@ class ObjectSampler:
                     new_object.rotation = (
                         habitat_sim.utils.common.random_quaternion()
                     )
+            if isinstance(receptacle, TriangleMeshReceptacle):
+                new_object_height = (
+                    new_object.root_scene_node.cumulative_bb.size()[1]
+                )
+                new_object.translation = new_object.translation + mn.Vector3(
+                    0, new_object_height / 2, 0
+                )
 
             if isinstance(receptacle, OnTopOfReceptacle):
                 snap_down = False
@@ -298,6 +306,9 @@ class ObjectSampler:
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     if not self._is_accessible(sim, new_object):
+                        logger.warning(
+                            f"Failed to navigate to {object_handle} on {receptacle.name} in {num_placement_tries} tries."
+                        )
                         continue
                     return new_object
 
