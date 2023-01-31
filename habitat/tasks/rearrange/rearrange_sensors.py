@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
@@ -19,7 +20,6 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar, get_angle
-import magnum as mn
 
 
 def get_robot_local(robot):
@@ -922,6 +922,7 @@ class RearrangeReward(Measure):
             ),
         )
         return reward
+
 
 @registry.register_measure
 class GfxReplayMeasure(Measure):
