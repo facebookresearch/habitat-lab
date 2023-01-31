@@ -58,7 +58,7 @@ class HrlRolloutStorage(RolloutStorage):
         will ignore the sample. If None, this defaults to the last insert
         state.
 
-        Rewards are summed when `should_insert[i] == False`.
+        Rewards acquired of steps where `should_insert[i] == False` will be summed up and added to the next step where `should_insert[i] == True`
         """
 
         if next_masks is not None:

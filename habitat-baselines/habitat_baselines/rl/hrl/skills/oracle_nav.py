@@ -88,7 +88,7 @@ class OracleNavPolicy(NnSkillPolicy):
         cls, config, observation_space, action_space, batch_size, full_config
     ):
         filtered_action_space = ActionSpace(
-            {config.action_name: action_space[config.nav_action_name]}
+            {config.action_name: action_space[config.action_name]}
         )
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
