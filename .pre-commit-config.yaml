@@ -39,7 +39,7 @@ repos:
     # TODO: Add blanket type ignore check as well
 
 -   repo: https://github.com/timothycrosley/isort
-    rev: 5.10.1
+    rev: 5.11.5
     hooks:
     -   id: isort
         exclude: docs/|examples/tutorials/(colabs|nb_python)/(.*\.py|.*\.ipynb)$
