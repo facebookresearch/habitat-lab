@@ -73,7 +73,7 @@ def transform_camera_view_t(
     )
     XYZ = torch.matmul(
         XYZ.reshape(-1, 3),
-        torch.from_numpy(R).float().transpose(1, 0).to(device),
+        torch.from_numpy(R).transpose(1, 0).to(device=device, dtype=torch.float32),
     ).reshape(XYZ.shape)
     XYZ[..., 2] = XYZ[..., 2] + sensor_height
     return XYZ
