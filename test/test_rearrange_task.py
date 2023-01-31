@@ -12,6 +12,7 @@ import os.path as osp
 import time
 from glob import glob
 
+import magnum as mn
 import pytest
 import torch
 import yaml
@@ -19,9 +20,11 @@ from omegaconf import DictConfig, OmegaConf
 
 import habitat
 import habitat.datasets.rearrange.run_episode_generator as rr_gen
+import habitat.datasets.rearrange.samplers.receptacle as hab_receptacle
 import habitat.tasks.rearrange.rearrange_sim
 import habitat.tasks.rearrange.rearrange_task
 import habitat.utils.env_utils
+import habitat_sim
 from habitat.config.default import _HABITAT_CFG_DIR, get_config
 from habitat.core.embodied_task import Episode
 from habitat.core.environments import get_env_class
@@ -238,3 +241,69 @@ def test_tp_srl(test_cfg_path, mode):
     # Deinit processes group
     if torch.distributed.is_initialized():
         torch.distributed.destroy_process_group()
+
+
+@pytest.mark.skipif(
+    not osp.exists("data/test_assets/"),
+    reason="This test requires habitat-sim test assets.",
+)
+def test_receptacle_parsing():
+    ##########################
+    # Test Mesh Receptacles
+    ##########################
+    # 1. Load the parameterized scene
+    sim_settings = habitat_sim.utils.settings.default_sim_settings.copy()
+    # sim_settings["scene"] = "data/test_assets/scenes/simple_room.stage_config.json"
+    sim_settings[
+        "scene"
+    ] = "data/test_assets/scenes/simple_room.stage_config.json"
+    sim_settings["sensor_height"] = 0
+    sim_settings["enable_physics"] = True
+    cfg = habitat_sim.utils.settings.make_cfg(sim_settings)
+    with habitat_sim.Simulator(cfg) as sim:
+
+        # load test assets
+        sim.metadata_mediator.object_template_manager.load_configs(
+            "data/test_assets/objects/chair.object_config.json"
+        )
+        # TODO: add an AO w/ receptacles also
+
+        # test quick receptacle listing:
+        list_receptacles = hab_receptacle.get_all_scenedataset_receptacles(sim)
+        print(f"list_receptacles = {list_receptacles}")
+        # receptacles from stage configs:
+        assert "receptacle_aabb_simpleroom_test" in list_receptacles["stage"]['data/test_assets/scenes/simple_room.stage_config.json']
+        assert "receptacle_mesh_simpleroom_test" in list_receptacles["stage"]['data/test_assets/scenes/simple_room.stage_config.json']
+        # receptacles from rigid object configs:
+        assert "receptacle_aabb_chair_test" in list_receptacles["rigid"]['data/test_assets/objects/chair.object_config.json']
+        assert "receptacle_mesh_chair_test" in list_receptacles["rigid"]['data/test_assets/objects/chair.object_config.json']
+        # TODO: receptacles from articulated object configs:
+        # assert "" in list_receptacles["articulated"]
+
+        #add the chair to the scene
+        chair_template_handle = sim.metadata_mediator.object_template_manager.get_template_handles("chair")[0]
+        chair_obj = sim.get_rigid_object_manager().add_object_by_template_handle(chair_template_handle)
+
+        # parse the metadata into Receptacle objects
+        test_receptacles = hab_receptacle.find_receptacles(sim)
+
+        #test the Receptacle instances
+        num_test_samples = 10
+        for receptacle in test_receptacles:
+            if receptacle.name == "receptacle_aabb_chair_test":
+                assert type(receptacle) is hab_receptacle.AABBReceptacle
+            elif receptacle.name == "receptacle_mesh_chair_test":
+                assert type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+            elif receptacle.name == "receptacle_aabb_simpleroom_test":
+                assert type(receptacle) is hab_receptacle.AABBReceptacle
+            elif receptacle.name == "receptacle_mesh_simpleroom_test":
+                assert type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+            else:
+                raise AssertionError(
+                    f"Unknown Receptacle '{receptacle.name}' detected. Update unit test golden values if this is expected."
+                )
+
+        #   if type(receptacle) is hab_receptacle.AABBReceptacle:
+        #        for _six in range(num_test_samples):
+        #            sample_point = receptacle.sample_uniform_global(sim,sample_region_scale=1.0)
+                    
