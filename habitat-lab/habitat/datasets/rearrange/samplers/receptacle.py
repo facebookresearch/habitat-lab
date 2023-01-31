@@ -230,7 +230,7 @@ class AABBReceptacle(Receptacle):
             return l2w4
 
         # base class implements getting transform from attached objects
-        return super().get_global_transform
+        return super().get_global_transform(sim)
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
@@ -498,10 +498,8 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
         while line_index < len(lines):
             if lines[line_index].startswith("element vertex"):
                 num_verts = int(lines[line_index][14:])
-                print(f"num_verts = {num_verts}")
             elif lines[line_index].startswith("element face"):
                 num_faces = int(lines[line_index][12:])
-                print(f"num_faces = {num_faces}")
             elif lines[line_index] == "end_header":
                 # done parsing header
                 line_index += 1
@@ -649,9 +647,11 @@ def parse_receptacles_from_user_config(
 
 def find_receptacles(
     sim: habitat_sim.Simulator,
-) -> List[Union[Receptacle, AABBReceptacle]]:
+) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
+
+    :param sim: Simulator must be provided. 
     """
 
     obj_mgr = sim.get_rigid_object_manager()
