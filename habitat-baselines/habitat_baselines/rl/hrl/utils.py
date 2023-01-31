@@ -13,7 +13,7 @@ def find_action_range(
 ) -> Tuple[int, int]:
     """
     Returns the start and end indices of an action key in the action tensor. If
-    the key is not found. It returns None.
+    the key is not found, a Value error will be thrown.
     """
 
     start_idx = 0
