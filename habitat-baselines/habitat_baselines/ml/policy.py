@@ -202,7 +202,7 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
                 ],
             )
         ]
-        actions = torch.tensor(actions).to(self.device)
+        actions = torch.tensor(actions, device=self.device)
         return actions
 
     @classmethod
