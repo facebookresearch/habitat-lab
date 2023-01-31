@@ -20,6 +20,7 @@ def get_rec_category(rec_id, rec_category_mapping=None):
     """
     Retrieves the receptacle category from id
     """
+    rec_id = rec_id.rstrip("_")
     if rec_category_mapping is None:
         # for replicaCAD objects
         rec_id = rec_id.rstrip("_").replace("frl_apartment_", "")
@@ -103,8 +104,15 @@ def get_obj_rec_cat_in_eps(
 
 def read_obj_category_mapping(filename):
     df = pd.read_csv(filename)
-    df["category"] = df["clean_category"].apply(lambda x: x.replace(" ", "_"))
-    return dict(zip(df["name"], df["category"]))
+    name_key = "id" if "id" in df else "name"
+    category_key = "wnsynsetkey" if "wnsynsetkey" in df else "clean_category"
+
+    df["category"] = (
+        df[category_key]
+        .fillna("")
+        .apply(lambda x: x.replace(" ", "_").split(".")[0])
+    )
+    return dict(zip(df[name_key], df["category"]))
 
 
 def get_cats_list(
@@ -159,7 +167,8 @@ def collect_receptacle_goals(sim, rec_category_mapping=None):
                 "object_name": receptacle.name,
                 "object_id": str(object_id),
                 "object_category": get_rec_category(
-                    receptacle.name, rec_category_mapping=rec_category_mapping
+                    receptacle.parent_object_handle.split(":")[0],
+                    rec_category_mapping=rec_category_mapping,
                 ),
                 "view_points": [],
             }
@@ -218,6 +227,7 @@ def get_candidate_starts(
     obj_rearrange_easy=True,
     obj_category_mapping=None,
     rec_category_mapping=None,
+    rec_to_parent_obj=None,
 ):
     obj_goals = []
     for i, (obj, pos) in enumerate(objects):
@@ -238,7 +248,9 @@ def get_candidate_starts(
                 obj_goals.append(obj_goal)
             else:
                 recep_cat = get_rec_category(
-                    name_to_receptacle[obj_idx_to_name[i]],
+                    rec_to_parent_obj[
+                        name_to_receptacle[obj_idx_to_name[i]]
+                    ].split(":")[0],
                     rec_category_mapping=rec_category_mapping,
                 )
                 if recep_cat == start_rec_cat:
@@ -313,6 +325,8 @@ def add_cat_fields_to_episodes(
             episode["scene_dataset_config"],
             episode["additional_obj_config_paths"],
         )
+        rec = find_receptacles(sim)
+        rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
         obj_idx_to_name = load_objects(sim, episode["rigid_objs"])
         all_rec_goals = collect_receptacle_goals(
             sim, rec_category_mapping=rec_category_mapping
@@ -334,6 +348,7 @@ def add_cat_fields_to_episodes(
             obj_rearrange_easy=obj_rearrange_easy,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
+            rec_to_parent_obj=rec_to_parent_obj,
         )
         episode["candidate_start_receps"] = get_candidate_receptacles(
             all_rec_goals, start_rec_cat
@@ -417,6 +432,7 @@ if __name__ == "__main__":
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
         )
+
         episodes_json = DatasetFloatJSONEncoder().encode(episodes)
         os.makedirs(osp.join(target_data_dir, split), exist_ok=True)
         target_episodes_file = osp.join(
