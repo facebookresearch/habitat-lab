@@ -73,7 +73,9 @@ def transform_camera_view_t(
     )
     XYZ = torch.matmul(
         XYZ.reshape(-1, 3),
-        torch.from_numpy(R).transpose(1, 0).to(device=device, dtype=torch.float32),
+        torch.from_numpy(R)
+        .transpose(1, 0)
+        .to(device=device, dtype=torch.float32),
     ).reshape(XYZ.shape)
     XYZ[..., 2] = XYZ[..., 2] + sensor_height
     return XYZ
@@ -92,7 +94,9 @@ def transform_pose_t(XYZ, current_pose, device):
     R = ru.get_r_matrix([0.0, 0.0, 1.0], angle=current_pose[2] - np.pi / 2.0)
     XYZ = torch.matmul(
         XYZ.reshape(-1, 3),
-        torch.from_numpy(R).float().transpose(1, 0).to(device),
+        torch.from_numpy(R)
+        .transpose(1, 0)
+        .to(device=device, dtype=torch.float32),
     ).reshape(XYZ.shape)
     XYZ[..., 0] += current_pose[0]
     XYZ[..., 1] += current_pose[1]

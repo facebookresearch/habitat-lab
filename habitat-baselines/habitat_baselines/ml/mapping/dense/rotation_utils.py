@@ -66,7 +66,7 @@ def get_grid(pose, grid_size, precision):
     Input:
         `pose` FloatTensor(bs, 3)
         `grid_size` 4-tuple (bs, _, grid_h, grid_w)
-        `device` torch.device (cpu or gpu)
+        `precison` e.g. torch.float32
 
     Output:
         `rot_grid` FloatTensor(bs, grid_h, grid_w, 2)
