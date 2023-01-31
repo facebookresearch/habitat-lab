@@ -414,6 +414,7 @@ class TriangleMeshReceptacle(Receptacle):
         if color is None:
             color = mn.Color4.magenta()
         dblr = sim.get_debug_line_render()
+        dblr.push_transform(self.get_global_transform(sim))
         assert len(self.mesh_data[1]) % 3 == 0, "must be triangles"
         for face in range(int(len(self.mesh_data[1]) / 3)):
             verts = self.get_face_verts(f_ix=face)
@@ -421,6 +422,7 @@ class TriangleMeshReceptacle(Receptacle):
                 dblr.draw_transformed_line(
                     verts[edge], verts[(edge + 1) % 3], color
                 )
+        dblr.pop_transform()
 
 
 def get_all_scenedataset_receptacles(sim:habitat_sim.Simulator) -> Dict[str, Dict[str, List[str]]]:
