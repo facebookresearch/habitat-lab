@@ -121,6 +121,7 @@ class TargetStartSensor(MultiObjSensor):
 class PositionGpsCompassSensor(Sensor):
     def __init__(self, *args, sim, task, config, **kwargs):
         self._task = task
+        self._config = config
         self._sim = sim
         self._config = config
         super().__init__(*args, config=config, task=task, **kwargs)

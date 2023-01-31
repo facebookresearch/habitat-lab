@@ -57,6 +57,8 @@ TASK:
         TYPE: EEPositionSensor
     IS_HOLDING_SENSOR:
         TYPE: IsHoldingSensor
+    STEPS_REMAINING_SENSOR:
+        TYPE: StepCountSensor
     SENSORS:
     - TARGET_START_SENSOR
     - GOAL_SENSOR
@@ -65,6 +67,7 @@ TASK:
     - END_EFFECTOR_SENSOR
     - TARGET_START_GPS_COMPASS_SENSOR
     - TARGET_GOAL_GPS_COMPASS_SENSOR
+    - STEPS_REMAINING_SENSOR
     FORCE_TERMINATE:
         TYPE: ForceTerminate
         MAX_ACCUM_FORCE: -1.0
@@ -125,8 +128,12 @@ TASK:
         FORCE_END_PEN: 10.0
     TARGET_START_GPS_COMPASS_SENSOR:
         TYPE: TargetStartGpsCompassSensor
+        INCLUDE_Z: True
+        CARTESIAN: True
     TARGET_GOAL_GPS_COMPASS_SENSOR:
         TYPE: TargetGoalGpsCompassSensor
+        INCLUDE_Z: True
+        CARTESIAN: True
     REARRANGE_NAV_TO_OBJ_SUCCESS:
         TYPE: NavToObjSuccess
         SUCCESS_ANGLE_DIST: 0.7

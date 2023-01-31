@@ -977,8 +977,36 @@ class PPOTrainer(BaseRLTrainer):
         ppo_cfg = config.RL.PPO
 
         #################################
+<<<<<<< HEAD
         # Gala specific options. Map gala config options to H2.0 config.
         self._convert_gala_cfg(config, raw_cfg)
+=======
+        # Gala specific options
+        if config.EVAL.SPLIT == "val":
+            config.EVAL.SPLIT = "eval"
+        config.RL.POLICY.name = raw_cfg.RL.POLICY.name
+
+        self.config.defrost()
+        fuse_keys = []
+        map_sensors = {
+            "ROBOT_TARGET_RELATIVE": "obj_start_gps_compass",
+            "ROBOT_GOAL_RELATIVE": "obj_goal_gps_compass",
+            "EE_TARGET_RELATIVE": "obj_start_sensor",
+            "EE_GOAL_RELATIVE": "obj_goal_sensor",
+            "ROBOT_EE_RELATIVE": "ee_pos",
+            "IS_HOLDING_SENSOR": "is_holding",
+            "JOINT_SENSOR": "joint",
+            "STEP_COUNT_SENSOR": "step_count_remaining",
+        }
+        for sensor in raw_cfg.SENSORS:
+            if sensor in ["DEPTH_SENSOR", "RGB_SENSOR"]:
+                continue
+            fuse_keys.append(map_sensors[sensor])
+
+        self.config.RL.POLICY.fuse_keys = fuse_keys
+        self.config.freeze()
+
+>>>>>>> 1a687ff2 (Submission state)
         #################################
         config.TASK_CONFIG.DATASET.SPLIT = config.EVAL.SPLIT
         config.freeze()
