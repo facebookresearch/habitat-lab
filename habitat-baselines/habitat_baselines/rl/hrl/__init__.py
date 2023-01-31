@@ -8,6 +8,6 @@ from habitat_baselines.rl.hrl.hrl_ppo import HRLPPO
 from habitat_baselines.rl.hrl.hrl_rollout_storage import HrlRolloutStorage
 
 __all__ = [
-    "HrlPPO",
+    "HRLPPO",
     "HrlRolloutStorage",
 ]
