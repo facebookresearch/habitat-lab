@@ -576,7 +576,7 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     """
     mesh_data: Tuple[List[mn.Vector3], List[int]] = ([], [])
     trimesh_data = trimesh.load(ply_file)
-    mesh_data[0].extend(mn.Vector3(vert) for vert in trimesh_data.vertices)
+    mesh_data[0].extend(map(mn.Vector3, trimesh_data.vertices))
     for face in trimesh_data.faces:
         assert len(face) == 3, f"Faces must be triangles. '{ply_file}' {face}"
         mesh_data[1].extend(map(int, face))
