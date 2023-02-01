@@ -32,6 +32,7 @@ from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
+from habitat.utils.geometry_utils import point_in_triangle_test
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
@@ -313,76 +314,6 @@ def test_receptacle_parsing():
             chair_obj.translation = np.random.random(3)
             chair_obj.rotation = habitat_sim.utils.common.random_quaternion()
             # TODO: also randomize AO state here
-
-        def point_in_triangle_test(p, v0, v1, v2):
-            """
-            Return True if the point is in the triangle.
-            Algorithm: https://math.stackexchange.com/questions/51326/determining-if-an-arbitrary-point-lies-inside-a-triangle-defined-by-three-points
-            """
-            # 1. move the triangle such that point is the origin
-            a = v0 - p
-            b = v1 - p
-            c = v2 - p
-
-            # check that the origin is planar
-            tri_norm = mn.math.cross(c - a, b - a)
-            if abs(mn.math.dot(a, tri_norm)) > 1e-7:
-                # print("ORIGIN is non-planar")
-                return False
-
-            # 2. create 3 triangles with origin + pairs of vertices and compute the normals
-            u = mn.math.cross(b, c)
-            v = mn.math.cross(c, a)
-            w = mn.math.cross(a, b)
-
-            # 3. check that all new triangle normals are aligned
-            if mn.math.dot(u, v) < 0.0:
-                return False
-            if mn.math.dot(u, w) < 0.0:
-                return False
-            if mn.math.dot(v, w) < 0.0:
-                return False
-            return True
-
-        # contrived triangle test
-        test_tri = (
-            mn.Vector3(0.0, 0.0, 1.0),
-            mn.Vector3(0.0, 1.0, 0.0),
-            mn.Vector3(0.0, 0.0, 0.0),
-        )
-        test_pairs = [
-            # corners
-            (mn.Vector3(0.0, 0.0, 1.0), True),
-            (mn.Vector3(0.0, 0.99, 0.0), True),
-            (mn.Vector3(0, 0, 0), True),
-            # inside planar
-            (mn.Vector3(0, 0.49, 0.49), True),
-            (mn.Vector3(0.0, 0.2, 0.2), True),
-            (mn.Vector3(0.0, 0.2, 0.4), True),
-            (mn.Vector3(0.0, 0.15, 0.3), True),
-            # outside but planar
-            (mn.Vector3(0, 0, 1.01), False),
-            (mn.Vector3(0, 0, -0.01), False),
-            (mn.Vector3(0, 0.51, 0.51), False),
-            (mn.Vector3(0, -0.01, 0.51), False),
-            (mn.Vector3(0, -0.01, -0.01), False),
-            # inside non-planar
-            (mn.Vector3(0.01, 0, 0), False),
-            (mn.Vector3(0.2, -0.01, 0.51), False),
-            (mn.Vector3(-0.2, -0.01, -0.01), False),
-            (mn.Vector3(0.1, 0.2, 0.2), False),
-            (mn.Vector3(-0.01, 0.2, 0.2), False),
-            # test epsilon padding around normal
-            (mn.Vector3(1e-6, 0, 0), False),
-            (mn.Vector3(1e-30, 0, 0), True),
-        ]
-        for test_pair in test_pairs:
-            assert (
-                point_in_triangle_test(
-                    test_pair[0], test_tri[0], test_tri[1], test_tri[2]
-                )
-                == test_pair[1]
-            )
 
         # parse the metadata into Receptacle objects
         test_receptacles = hab_receptacle.find_receptacles(sim)

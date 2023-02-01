@@ -17,6 +17,7 @@ import numpy as np
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
+from habitat.utils.geometry_utils import random_triangle_point
 
 
 class Receptacle(ABC):
@@ -396,14 +397,8 @@ class TriangleMeshReceptacle(Receptacle):
         tri_index = self.sample_area_weighted_triangle()
 
         # then sample a random point in the triangle
-        # https://math.stackexchange.com/questions/538458/how-to-sample-points-on-a-triangle-surface-in-3d
-        coef1 = random.random()
-        coef2 = random.random()
-        if coef1 + coef2 >= 1:
-            coef1 = 1 - coef1
-            coef2 = 1 - coef2
         v = self.get_face_verts(f_ix=tri_index)
-        rand_point = v[0] + coef1 * (v[1] - v[0]) + coef2 * (v[2] - v[0])
+        rand_point = random_triangle_point(v[0], v[1], v[2])
 
         return rand_point
 
