@@ -13,7 +13,7 @@ A dataset consists of episodes
 |habtat.dataset.data_path | The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.|
 |habitat.dataset.split | `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between `train` and `eval` episodes by only changing the split argument.|
 
-# Task
+## Task
 The definition of the task in Habitat.
 
 | Key | Description |
@@ -22,3 +22,60 @@ The definition of the task in Habitat.
 |habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. |
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success. |
 |habitat.task. end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
+
+## Environment
+Some habitat environment configurations.
+| Key | Description |
+| --- | --- |
+|max_episode_steps| The maximum number of environment steps before the episode ends.|
+|max_episode_seconds| The maximum number of seconds steps before the episode ends.|
+
+## Navigation Actions
+The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+```
+defaults:
+  - /habitat/task/actions:
+    - move_forward
+    - turn_left
+```
+
+| Key | Description |
+| --- | --- |
+| habitat.task.actions.stop |     In Navigation tasks only, the stop action is a discrete action. When called, the Agent will request to stop the navigation task. Note that this action is needed to succeed in a Navigation task since the Success is determined by the Agent calling the stop action within range of the target. Note that this is different from the RearrangeStopActionConfig that works for Rearrangement tasks only instead of the Navigation tasks.|
+| habitat.task.actions.move_forward |     In Navigation tasks only, this discrete action will move the robot forward by a fixed amount determined by the `habitat.simulator.forward_step_size` amount. |
+| habitat.task.actions.turn_left |     In Navigation tasks only, this discrete action will rotate the robot to the left  by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
+| habitat.task.actions.turn_right |     In Navigation tasks only, this discrete action will rotate the robot to the right by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
+| habitat.task.actions.look_up |      In Navigation tasks only, this discrete action will rotate the robot's camera up by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
+| habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
+
+## Navigation Measures
+The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+```
+defaults:
+  - /habitat/task/measurements:
+    - robot_force
+    - force_terminate
+```
+
+| Key | Description |
+| --- | --- |
+| habitat.task.measurements.num_steps| In both Navigation and Rearrangement tasks, counts the number of steps since  the start of the episode.|
+| habitat.task.measurements.distance_to_goal | In Navigation tasks only, measures the geodesic distance to the goal.|
+|habitat.task.measurements.distance_to_goal.distance_to | If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint. |
+|habitat.task.measurements.success |     For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.  A success is defined as calling the `habitat.task.actions.stop` when the `habitat.task.measurements.distance_to_goal` Measure is smaller than `success_distance`.|
+|habitat.task.measurements.success.success_distance| The minimal distance the robot must be to the goal for a success.|
+|habitat.task.measurements.spl|    For Navigation tasks only, Measures the SPL (Success weighted by Path Length) ref: [On Evaluation of Embodied Agents - Anderson et. al](https://arxiv.org/pdf/1807.06757.pdf)  Measure is always 0 except at success where it will be  the ratio of the optimal distance from start to goal over the total distance  traveled by the agent. Maximum value is 1. `SPL = success * optimal_distance_to_goal / distance_traveled_so_far`
+|habitat.task.measurements.soft_spl |     For Navigation tasks only, Similar to SPL, but instead of a boolean, success is now calculated as 1 - (ratio of distance covered to target).   `SoftSPL = max(0, 1 - distance_to_goal / optimal_distance_to_goal) * optimal_distance_to_goal / distance_traveled_so_far`
+|habitat.task.measurements.distance_to_goal_reward    |    In Navigation tasks only, measures a reward based on the distance towards the goal. The reward is `- (new_distance - previous_distance)` i.e. the decrease of distance to the goal.
+
+## Navigation Lab Sensors
+Lab sensors are any non-rendered sensor observation. Like geometric goal information. The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+```
+defaults:
+  - /habitat/task/lab_sensors:
+    - objectgoal_sensor
+    - compass_sensor
+```
+
+| Key | Description |
+| --- | --- |
