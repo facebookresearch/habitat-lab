@@ -14,3 +14,5 @@ imageio>=2.2.0
 imageio-ffmpeg>=0.2.0
 scipy>=1.0.0
 tqdm>=4.0.0
+# dataset generation dependencies
+trimesh>=3.18.1
