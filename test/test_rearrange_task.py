@@ -259,7 +259,6 @@ def test_receptacle_parsing():
     sim_settings["enable_physics"] = True
     cfg = habitat_sim.utils.settings.make_cfg(sim_settings)
     with habitat_sim.Simulator(cfg) as sim:
-
         # load test assets
         sim.metadata_mediator.object_template_manager.load_configs(
             "data/test_assets/objects/chair.object_config.json"
