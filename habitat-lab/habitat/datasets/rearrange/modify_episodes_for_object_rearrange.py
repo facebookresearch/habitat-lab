@@ -161,13 +161,18 @@ def collect_receptacle_goals(sim, rec_category_mapping=None):
         else:
             object_id = -1
         pos = receptacle.get_surface_center(sim)
+        rec_name = receptacle.parent_object_handle
+        # if the handle name is None, try extracting category from receptacle name
+        rec_name = (
+            receptacle.name if rec_name is None else rec_name.split(":")[0]
+        )
         recep_goals.append(
             {
                 "position": [pos.x, pos.y, pos.z],
                 "object_name": receptacle.name,
                 "object_id": str(object_id),
                 "object_category": get_rec_category(
-                    receptacle.parent_object_handle.split(":")[0],
+                    rec_name,
                     rec_category_mapping=rec_category_mapping,
                 ),
                 "view_points": [],
@@ -247,10 +252,15 @@ def get_candidate_starts(
             if not obj_rearrange_easy:
                 obj_goals.append(obj_goal)
             else:
+                # use parent object name if it exists
+                rec_name = rec_to_parent_obj[
+                    name_to_receptacle[obj_idx_to_name[i]]
+                ]
+                # otherwise use receptacle name
+                if rec_name is None:
+                    rec_name = name_to_receptacle[obj_idx_to_name[i]]
                 recep_cat = get_rec_category(
-                    rec_to_parent_obj[
-                        name_to_receptacle[obj_idx_to_name[i]]
-                    ].split(":")[0],
+                    rec_name.split(":")[0],
                     rec_category_mapping=rec_category_mapping,
                 )
                 if recep_cat == start_rec_cat:
