@@ -66,6 +66,7 @@ class EnvironmentConfig(HabitatBaseConfig):
     r"""
     Some habitat environment configurations.
     :data max_episode_steps: The maximum number of environment steps before the episode ends.
+    :data max_episode_seconds: The maximum number of seconds steps before the episode ends.
     """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
