@@ -249,9 +249,6 @@ def test_tp_srl(test_cfg_path, mode):
     reason="This test requires habitat-sim test assets.",
 )
 def test_receptacle_parsing():
-    ##########################
-    # Test Mesh Receptacles
-    ##########################
     # 1. Load the parameterized scene
     sim_settings = habitat_sim.utils.settings.default_sim_settings.copy()
     sim_settings[
