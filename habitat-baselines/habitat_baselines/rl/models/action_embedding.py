@@ -24,6 +24,7 @@ class BoxActionEmbedding(nn.Module):
     x = (a - low) / (high - low). This assumes that the bounds
     in the action space are tight
     """
+
     # NeRF style sinusoidal embedding for continuous actions
     def __init__(self, action_space: gym.spaces.Box, dim_per_action: int = 32):
         super().__init__()
@@ -113,7 +114,6 @@ class ActionEmbedding(nn.Module):
             )
             self.embedding_slices.append(slice(0, 1))
         else:
-
             ptr = 0
             for space in iterate_action_space_recursively(action_space):
                 if isinstance(space, gym.spaces.Box):
