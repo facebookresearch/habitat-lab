@@ -343,13 +343,13 @@ class TriangleMeshReceptacle(Receptacle):
                 ] += self.area_weighted_accumulator[f_ix - 1]
         # print(self.area_weighted_accumulator)
 
-    def get_face_verts(self, f_ix: int) -> List[np.array]:
+    def get_face_verts(self, f_ix: int) -> List[np.ndarray]:
         """
         Get all three vertices of a mesh triangle given it's face index as a list of numpy arrays.
 
         :param f_ix: The index of the mesh triangle.
         """
-        verts: List[np.array] = []
+        verts: List[np.ndarray] = []
         for ix in range(3):
             verts.append(
                 np.array(
