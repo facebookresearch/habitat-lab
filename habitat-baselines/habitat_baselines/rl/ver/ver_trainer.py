@@ -383,7 +383,6 @@ class VERTrainer(PPOTrainer):
         ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         with self.timer.avg_time("learn"):
-
             t_compute_returns = time.perf_counter()
 
             with self.timer.avg_time("compute returns"), inference_mode():
