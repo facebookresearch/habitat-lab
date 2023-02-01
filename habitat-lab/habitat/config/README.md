@@ -2,6 +2,8 @@ Habitat-Lab Configuration System
 ================================
 ![Habitat with Hydra](/res/img/habitat_with_hydra.png)
 
+For a description of some of the most important configuration keys of the habitat benchmarks, refer to [this file](CONFIG_KEYS.md).
+
 Habitat-Lab's configuration system has been changed from [YACS](https://github.com/rbgirshick/yacs)
 to [Hydra](https://hydra.cc).
 

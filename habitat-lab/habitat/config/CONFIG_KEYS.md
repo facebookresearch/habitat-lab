@@ -27,8 +27,8 @@ The definition of the task in Habitat.
 Some habitat environment configurations.
 | Key | Description |
 | --- | --- |
-|max_episode_steps| The maximum number of environment steps before the episode ends.|
-|max_episode_seconds| The maximum number of seconds steps before the episode ends.|
+|habitat.environment.max_episode_steps| The maximum number of environment steps before the episode ends.|
+|habitat.environment.max_episode_seconds| The maximum number of seconds steps before the episode ends.|
 
 ## Navigation Actions
 The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
