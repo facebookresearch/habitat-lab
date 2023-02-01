@@ -754,7 +754,7 @@ class RearrangeSim(HabitatSim):
 
         # optionally step physics and update the robot for benchmarking purposes
         if self.habitat_config.step_physics:
-            self.step_world(dt)
+            self.step_world((1 / 120.0))
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
