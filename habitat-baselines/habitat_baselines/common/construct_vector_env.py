@@ -75,7 +75,6 @@ def construct_envs(
     for i in range(num_environments):
         proc_config = config.copy()
         with read_write(proc_config):
-
             task_config = proc_config.habitat
             task_config.seed = task_config.seed + i
             if len(scenes) > 0:

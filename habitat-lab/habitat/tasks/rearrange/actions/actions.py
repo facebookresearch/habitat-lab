@@ -329,7 +329,6 @@ class BaseVelAction(RobotAction):
         self.cur_robot.sim_obj.joint_forces = set_dat["pos"]
 
     def update_base(self):
-
         ctrl_freq = self._sim.ctrl_freq
 
         before_trans_state = self._capture_robot_state()

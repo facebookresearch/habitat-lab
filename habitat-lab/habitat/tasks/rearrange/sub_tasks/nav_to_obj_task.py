@@ -83,7 +83,6 @@ class DynNavRLEnv(RearrangeTask):
             # Select an object at random and navigate to that object.
             all_pos = self._sim.get_target_objs_start()
             if force_idx is None:
-
                 nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
             else:
                 nav_to_pos = all_pos[force_idx]

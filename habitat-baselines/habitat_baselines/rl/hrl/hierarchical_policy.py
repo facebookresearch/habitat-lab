@@ -172,7 +172,6 @@ class HierarchicalPolicy(Policy):
         masks,
         deterministic=False,
     ):
-
         self._high_level_policy.apply_mask(masks)  # type: ignore[attr-defined]
 
         should_terminate: torch.BoolTensor = torch.zeros(
