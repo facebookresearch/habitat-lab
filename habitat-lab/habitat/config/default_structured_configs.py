@@ -12,7 +12,37 @@ from omegaconf import II, MISSING
 
 # __all__ is used for documentation. Only put in this list the configurations
 # that have proper documentation for.
-__all__ = ["DatasetConfig"]
+__all__ = [
+    # HABITAT
+    "HabitatConfig",
+    # DATASET
+    "DatasetConfig",
+    # TASK
+    "TaskConfig",
+    # ENVIRONMENT
+    "EnvironmentConfig",
+    # NAVIGATION ACTIONS
+    "StopActionConfig",
+    "MoveForwardActionConfig",
+    "TurnLeftActionConfig",
+    "TurnLeftActionConfig",
+    "TurnRightActionConfig",
+    "LookUpActionConfig",
+    "LookDownActionConfig",
+    # NAVIGATION MEASURES
+    "NumStepsMeasurementConfig",
+    "DistanceToGoalMeasurementConfig",
+    "SuccessMeasurementConfig",
+    "SPLMeasurementConfig",
+    "SoftSPLMeasurementConfig",
+    "DistanceToGoalRewardMeasurementConfig",
+    # NAVIGATION LAB SENSORS
+    "ObjectGoalSensorConfig",
+    "InstanceImageGoalSensorConfig",
+    "InstanceImageGoalHFOVSensorConfig",
+    "CompassSensorConfig",
+    "GPSSensorConfig",
+]
 
 
 @dataclass
@@ -33,6 +63,10 @@ class IteratorOptionsConfig(HabitatBaseConfig):
 
 @dataclass
 class EnvironmentConfig(HabitatBaseConfig):
+    r"""
+    Some habitat environment configurations.
+    :data max_episode_steps: The maximum number of environment steps before the episode ends.
+    """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
     iterator_options: IteratorOptionsConfig = IteratorOptionsConfig()
@@ -49,6 +83,14 @@ class ActionConfig(HabitatBaseConfig):
 
 @dataclass
 class StopActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the stop action is a discrete action. When called, the Agent
+    will request to stop the navigation task. Note that this action is needed to
+    succeed in a Navigation task since the Success is determined by the Agent calling
+    the stop action within range of the target.
+    Note that this is different from the RearrangeStopActionConfig that works for
+    Rearrangement tasks only instead of the Navigation tasks.
+    """
     type: str = "StopAction"
 
 
@@ -62,26 +104,46 @@ class EmptyActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 @dataclass
 class MoveForwardActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will move the robot forward by
+    a fixed amount determined by the SimulatorConfig.forward_step_size amount.
+    """
     type: str = "MoveForwardAction"
 
 
 @dataclass
 class TurnLeftActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the left
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
     type: str = "TurnLeftAction"
 
 
 @dataclass
 class TurnRightActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the right
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
     type: str = "TurnRightAction"
 
 
 @dataclass
 class LookUpActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot's camera up
+    by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
+    """
     type: str = "LookUpAction"
 
 
 @dataclass
 class LookDownActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot's camera down
+    by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
+    """
     type: str = "LookDownAction"
 
 
@@ -184,6 +246,12 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
 
 @dataclass
 class ObjectGoalSensorConfig(LabSensorConfig):
+    r"""
+    For Object Navigation tasks only. Generates a discrete observation containing
+    the id of the goal object for the episode.
+    :data goal_spec: A string that can take the value TASK_CATEGORY_ID or OBJECT_ID. If the value is TASK_CATEGORY_ID, then the observation will be the id of the `episode.object_category` attribute, if the value is OBJECT_ID, then the observation will be the id of the first goal object.
+    :data goal_spec_max_val: If the `goal_spec` is OBJECT_ID, then `goal_spec_max_val` is the total number of different objects that can be goals. Note that this value must be greater than the largest episode goal category id.
+    """
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
@@ -196,11 +264,20 @@ class ImageGoalSensorConfig(LabSensorConfig):
 
 @dataclass
 class InstanceImageGoalSensorConfig(LabSensorConfig):
+    r"""
+    Used only by the InstanceImageGoal Navigation task. The observation is a rendered
+    image of the goal object within the scene.
+    """
     type: str = "InstanceImageGoalSensor"
 
 
 @dataclass
 class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
+    r"""
+    Used only by the InstanceImageGoal Navigation task. The observation is a single
+    float value corresponding to the Horizontal field of view (HFOV) in degrees of
+    the image provided by the `InstanceImageGoalSensor`.
+    """
     type: str = "InstanceImageGoalHFOVSensor"
 
 
@@ -211,11 +288,22 @@ class HeadingSensorConfig(LabSensorConfig):
 
 @dataclass
 class CompassSensorConfig(LabSensorConfig):
+    r"""
+    For Navigation tasks only. The observation of the
+    `EpisodicCompassSensor` is a single float value corresponding to
+    the angle difference in radians between the current rotation of the robot and the
+    start rotation of the robot along the vertical axis.
+    """
     type: str = "CompassSensor"
 
 
 @dataclass
 class GPSSensorConfig(LabSensorConfig):
+    r"""
+    For Navigation tasks only. The observation of the EpisodicGPSSensor are two float values
+    corresponding to the vector difference in the horizontal plane between the current position
+    and the start position of the robot (in meters).
+    """
     type: str = "GPSSensor"
     dimensionality: int = 2
 
@@ -375,17 +463,38 @@ class MeasurementConfig(HabitatBaseConfig):
 
 @dataclass
 class SuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.
+    A success is defined as calling the `StopAction` when the `DistanceToGoal`
+    Measure is smaller than `success_distance`.
+
+    :data success_distance: The minimal distance the robot must be to the goal for a success.
+    """
     type: str = "Success"
     success_distance: float = 0.2
 
 
 @dataclass
 class SPLMeasurementConfig(MeasurementConfig):
+    r"""
+    For Navigation tasks only, Measures the SPL (Success weighted by Path Length)
+    ref: On Evaluation of Embodied Agents - Anderson et. al
+    https://arxiv.org/pdf/1807.06757.pdf
+    Measure is always 0 except at success where it will be
+    the ratio of the optimal distance from start to goal over the total distance
+    traveled by the agent. Maximum value is 1.
+    SPL = success * optimal_distance_to_goal / distance_traveled_so_far
+    """
     type: str = "SPL"
 
 
 @dataclass
 class SoftSPLMeasurementConfig(MeasurementConfig):
+    r"""
+    For Navigation tasks only, Similar to SPL, but instead of a boolean,
+    success is now calculated as 1 - (ratio of distance covered to target).
+    SoftSPL = max(0, 1 - distance_to_goal / optimal_distance_to_goal) * optimal_distance_to_goal / distance_traveled_so_far
+    """
     type: str = "SoftSPL"
 
 
@@ -568,6 +677,10 @@ class RearrangeReachSuccessMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class NumStepsMeasurementConfig(MeasurementConfig):
+    r"""
+    In both Navigation and Rearrangement tasks, counts the number of steps since
+    the start of the episode.
+    """
     type: str = "NumStepsMeasure"
 
 
@@ -684,12 +797,22 @@ class EpisodeInfoMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class DistanceToGoalMeasurementConfig(MeasurementConfig):
+    r"""
+    In Navigation tasks only, measures the geodesic distance to the goal.
+
+    :data distance_to: If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint.
+    """
     type: str = "DistanceToGoal"
     distance_to: str = "POINT"
 
 
 @dataclass
 class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    In Navigation tasks only, measures a reward based on the distance towards the goal.
+    The reward is `- (new_distance - previous_distance)` i.e. the
+    decrease of distance to the goal.
+    """
     type: str = "DistanceToGoalReward"
 
 
@@ -700,6 +823,13 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class TaskConfig(HabitatBaseConfig):
+    r"""
+    The definition of the task in Habitat.
+    :data type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+    :data reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration.
+    :data success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
+    :data end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
+    """
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
     success_reward: float = 2.5
@@ -1086,6 +1216,12 @@ class GymConfig(HabitatBaseConfig):
 
 @dataclass
 class HabitatConfig(HabitatBaseConfig):
+    r"""
+    The entry point for the configuration of Habitat. It holds the environment, simulator, task and dataset configurations.
+    :data seed: The seed the environment will be initialized with.
+    :data env_task: Indicates wether the environment is a Habitat gym environment (`GymHabitatEnv`) or a generic gym environment (`GymRegistryEnv`).
+    :data env_task_gym_id: if `env_task` is `GymRegistryEnv`, env_task_gym_id is the identifier of the generic gym environment
+    """
     seed: int = 100
     # GymHabitatEnv works for all Habitat tasks, including Navigation and
     # Rearrange. To use a gym environment from the registry, use the
