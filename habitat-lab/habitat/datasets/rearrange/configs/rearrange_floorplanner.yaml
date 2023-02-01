@@ -1,5 +1,5 @@
 ---
-dataset_path: "data/fp_mini_receptacles/fp_mini.scene_dataset_config.json"
+dataset_path: "data/fphab-v0.2.0/hab-fp.scene_dataset_config.json"
 additional_object_paths:
 - data/objects/ycb/configs/
 - data/objects/amazon_berkeley/configs/
@@ -385,8 +385,8 @@ object_samplers:
     receptacle_sets:
     - hab2
     num_samples:
-    - 20
-    - 20
+    - 60
+    - 80
     orientation_sampling: up
     nav_to_min_distance: 1.5
 #- name: test_set
