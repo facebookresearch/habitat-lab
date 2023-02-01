@@ -108,12 +108,14 @@ class Receptacle(ABC):
         return []
 
     @abstractmethod
-    def debug_draw(self, sim: habitat_sim.Simulator, color:Optional[mn.Color4]=None) -> None:
+    def debug_draw(
+        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
+    ) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
         Must be called after each frame is rendered, before querying the image data.
 
-        :param sim: Simulator must be provided. 
+        :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
 
@@ -138,12 +140,14 @@ class OnTopOfReceptacle(Receptacle):
 
         return mn.Matrix4([[targ_T[j][i] for j in range(4)] for i in range(4)])
 
-    def debug_draw(self, sim: habitat_sim.Simulator, color:Optional[mn.Color4]=None) -> None:
+    def debug_draw(
+        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
+    ) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
         Must be called after each frame is rendered, before querying the image data.
 
-        :param sim: Simulator must be provided. 
+        :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # TODO:
@@ -269,12 +273,14 @@ class AABBReceptacle(Receptacle):
             )
         return [box_obj]
 
-    def debug_draw(self, sim: habitat_sim.Simulator, color:Optional[mn.Color4]=None)->None:
+    def debug_draw(
+        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
+    ) -> None:
         """
         Render the AABBReceptacle with DebugLineRender utility at the current frame.
         Must be called after each frame is rendered, before querying the image data.
 
-        :param sim: Simulator must be provided. 
+        :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # draw the box
@@ -317,7 +323,7 @@ class TriangleMeshReceptacle(Receptacle):
         )  # normalized float weights for each triangle for sampling
         assert len(mesh_data[1]) % 3 == 0, "must be triangles"
 
-        #pre-compute the normalized cumulative area of all triangle faces for later sampling
+        # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0
         for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
@@ -359,7 +365,7 @@ class TriangleMeshReceptacle(Receptacle):
         Returns a random triangle index sampled with area weighting.
         """
 
-        def find_ge(a:List[Any], x)->Any:
+        def find_ge(a: List[Any], x) -> Any:
             "Find leftmost item greater than or equal to x"
             from bisect import bisect_left
 
@@ -401,13 +407,15 @@ class TriangleMeshReceptacle(Receptacle):
 
         return rand_point
 
-    def debug_draw(self, sim:habitat_sim.Simulator, color:Optional[mn.Color4]=None)->None:
+    def debug_draw(
+        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
+    ) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
         Draws the Receptacle mesh.
         Must be called after each frame is rendered, before querying the image data.
 
-        :param sim: Simulator must be provided. 
+        :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # draw all mesh triangles
@@ -425,14 +433,16 @@ class TriangleMeshReceptacle(Receptacle):
         dblr.pop_transform()
 
 
-def get_all_scenedataset_receptacles(sim:habitat_sim.Simulator) -> Dict[str, Dict[str, List[str]]]:
+def get_all_scenedataset_receptacles(
+    sim: habitat_sim.Simulator,
+) -> Dict[str, Dict[str, List[str]]]:
     """
     Scrapes the active SceneDataset from a Simulator for all receptacle names defined in rigid/articulated object and stage templates for investigation and preview purposes.
     Note this will not include scene-specific overrides defined in scene_config.json files. Only receptacles defined in object_config.json, ao_config.json, and stage_config.json files or added programmatically to associated Attributes objects will be found.
 
     Returns a dict with keys {"stage", "rigid", "articulated"} mapping object template handles to lists of receptacle names.
 
-    :param sim: Simulator must be provided. 
+    :param sim: Simulator must be provided.
     """
     # cache the rigid and articulated receptacles seperately
     receptacles: Dict[str, Dict[str, List[str]]] = {
@@ -653,7 +663,7 @@ def find_receptacles(
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
 
-    :param sim: Simulator must be provided. 
+    :param sim: Simulator must be provided.
     """
 
     obj_mgr = sim.get_rigid_object_manager()

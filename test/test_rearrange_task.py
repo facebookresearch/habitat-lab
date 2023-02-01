@@ -269,150 +269,225 @@ def test_receptacle_parsing():
         list_receptacles = hab_receptacle.get_all_scenedataset_receptacles(sim)
         print(f"list_receptacles = {list_receptacles}")
         # receptacles from stage configs:
-        assert "receptacle_aabb_simpleroom_test" in list_receptacles["stage"]['data/test_assets/scenes/simple_room.stage_config.json']
-        assert "receptacle_mesh_simpleroom_test" in list_receptacles["stage"]['data/test_assets/scenes/simple_room.stage_config.json']
+        assert (
+            "receptacle_aabb_simpleroom_test"
+            in list_receptacles["stage"][
+                "data/test_assets/scenes/simple_room.stage_config.json"
+            ]
+        )
+        assert (
+            "receptacle_mesh_simpleroom_test"
+            in list_receptacles["stage"][
+                "data/test_assets/scenes/simple_room.stage_config.json"
+            ]
+        )
         # receptacles from rigid object configs:
-        assert "receptacle_aabb_chair_test" in list_receptacles["rigid"]['data/test_assets/objects/chair.object_config.json']
-        assert "receptacle_mesh_chair_test" in list_receptacles["rigid"]['data/test_assets/objects/chair.object_config.json']
+        assert (
+            "receptacle_aabb_chair_test"
+            in list_receptacles["rigid"][
+                "data/test_assets/objects/chair.object_config.json"
+            ]
+        )
+        assert (
+            "receptacle_mesh_chair_test"
+            in list_receptacles["rigid"][
+                "data/test_assets/objects/chair.object_config.json"
+            ]
+        )
         # TODO: receptacles from articulated object configs:
         # assert "" in list_receptacles["articulated"]
 
-        #add the chair to the scene
-        chair_template_handle = sim.metadata_mediator.object_template_manager.get_template_handles("chair")[0]
-        chair_obj = sim.get_rigid_object_manager().add_object_by_template_handle(chair_template_handle)
-        
+        # add the chair to the scene
+        chair_template_handle = (
+            sim.metadata_mediator.object_template_manager.get_template_handles(
+                "chair"
+            )[0]
+        )
+        chair_obj = (
+            sim.get_rigid_object_manager().add_object_by_template_handle(
+                chair_template_handle
+            )
+        )
+
         def randomize_obj_state():
             chair_obj.translation = np.random.random(3)
             chair_obj.rotation = habitat_sim.utils.common.random_quaternion()
-            #TODO: also randomize AO state here
+            # TODO: also randomize AO state here
 
-        def point_in_triangle_test(p,v0,v1,v2):
+        def point_in_triangle_test(p, v0, v1, v2):
             """
             Return True if the point is in the triangle.
             Algorithm: https://math.stackexchange.com/questions/51326/determining-if-an-arbitrary-point-lies-inside-a-triangle-defined-by-three-points
             """
-            #1. move the triangle such that point is the origin
-            a = v0-p
-            b = v1-p
-            c = v2-p
+            # 1. move the triangle such that point is the origin
+            a = v0 - p
+            b = v1 - p
+            c = v2 - p
 
-            #check that the origin is planar
-            tri_norm = mn.math.cross(c-a, b-a)
+            # check that the origin is planar
+            tri_norm = mn.math.cross(c - a, b - a)
             if abs(mn.math.dot(a, tri_norm)) > 1e-7:
-                #print("ORIGIN is non-planar")
+                # print("ORIGIN is non-planar")
                 return False
 
-            #2. create 3 triangles with origin + pairs of vertices and compute the normals
-            u = mn.math.cross(b,c)
-            v = mn.math.cross(c,a)
-            w = mn.math.cross(a,b)
+            # 2. create 3 triangles with origin + pairs of vertices and compute the normals
+            u = mn.math.cross(b, c)
+            v = mn.math.cross(c, a)
+            w = mn.math.cross(a, b)
 
-            #3. check that all new triangle normals are aligned
-            if mn.math.dot(u,v) < 0.0:
+            # 3. check that all new triangle normals are aligned
+            if mn.math.dot(u, v) < 0.0:
                 return False
-            if mn.math.dot(u,w) < 0.0:
+            if mn.math.dot(u, w) < 0.0:
                 return False
-            if mn.math.dot(v,w) < 0.0:
+            if mn.math.dot(v, w) < 0.0:
                 return False
             return True
 
-        #contrived triangle test
+        # contrived triangle test
         test_tri = (
-            mn.Vector3(0.0,0.0,1.0), 
-            mn.Vector3(0.0,1.0,0.0), 
-            mn.Vector3(0.0,0.0,0.0))
+            mn.Vector3(0.0, 0.0, 1.0),
+            mn.Vector3(0.0, 1.0, 0.0),
+            mn.Vector3(0.0, 0.0, 0.0),
+        )
         test_pairs = [
-            #corners
-            (mn.Vector3(0.0,0.0,1.0), True),
-            (mn.Vector3(0.0,0.99,0.0), True),
-            (mn.Vector3(0,0,0), True),
-            #inside planar
-            (mn.Vector3(0,0.49,0.49), True),
-            (mn.Vector3(0.0,0.2,0.2), True),
-            (mn.Vector3(0.0,0.2,0.4), True),
-            (mn.Vector3(0.0,0.15,0.3), True),
-            #outside but planar
-            (mn.Vector3(0,0,1.01), False),
-            (mn.Vector3(0,0,-0.01), False),
-            (mn.Vector3(0,0.51,0.51), False),
-            (mn.Vector3(0,-0.01,0.51), False),
-            (mn.Vector3(0,-0.01,-0.01), False),
-            #inside non-planar
-            (mn.Vector3(0.01,0,0), False),
-            (mn.Vector3(0.2,-0.01,0.51), False),
-            (mn.Vector3(-0.2,-0.01,-0.01), False),
-            (mn.Vector3(0.1,0.2,0.2), False),
-            (mn.Vector3(-0.01,0.2,0.2), False),
-            #test epsilon padding around normal
-            (mn.Vector3(1e-6,0,0), False),
-            (mn.Vector3(1e-30,0,0), True),
+            # corners
+            (mn.Vector3(0.0, 0.0, 1.0), True),
+            (mn.Vector3(0.0, 0.99, 0.0), True),
+            (mn.Vector3(0, 0, 0), True),
+            # inside planar
+            (mn.Vector3(0, 0.49, 0.49), True),
+            (mn.Vector3(0.0, 0.2, 0.2), True),
+            (mn.Vector3(0.0, 0.2, 0.4), True),
+            (mn.Vector3(0.0, 0.15, 0.3), True),
+            # outside but planar
+            (mn.Vector3(0, 0, 1.01), False),
+            (mn.Vector3(0, 0, -0.01), False),
+            (mn.Vector3(0, 0.51, 0.51), False),
+            (mn.Vector3(0, -0.01, 0.51), False),
+            (mn.Vector3(0, -0.01, -0.01), False),
+            # inside non-planar
+            (mn.Vector3(0.01, 0, 0), False),
+            (mn.Vector3(0.2, -0.01, 0.51), False),
+            (mn.Vector3(-0.2, -0.01, -0.01), False),
+            (mn.Vector3(0.1, 0.2, 0.2), False),
+            (mn.Vector3(-0.01, 0.2, 0.2), False),
+            # test epsilon padding around normal
+            (mn.Vector3(1e-6, 0, 0), False),
+            (mn.Vector3(1e-30, 0, 0), True),
         ]
         for test_pair in test_pairs:
-            assert point_in_triangle_test(test_pair[0], test_tri[0], test_tri[1], test_tri[2]) == test_pair[1]
+            assert (
+                point_in_triangle_test(
+                    test_pair[0], test_tri[0], test_tri[1], test_tri[2]
+                )
+                == test_pair[1]
+            )
 
         # parse the metadata into Receptacle objects
         test_receptacles = hab_receptacle.find_receptacles(sim)
 
-        #test the Receptacle instances
+        # test the Receptacle instances
         num_test_samples = 10
         for receptacle in test_receptacles:
-            #check for contents and correct type parsing
+            # check for contents and correct type parsing
             if receptacle.name == "receptacle_aabb_chair_test":
                 assert type(receptacle) is hab_receptacle.AABBReceptacle
             elif receptacle.name == "receptacle_mesh_chair_test":
-                assert type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+                assert (
+                    type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+                )
             elif receptacle.name == "receptacle_aabb_simpleroom_test":
                 assert type(receptacle) is hab_receptacle.AABBReceptacle
             elif receptacle.name == "receptacle_mesh_simpleroom_test":
-                assert type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+                assert (
+                    type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+                )
             else:
-                #TODO: add AO receptacles
+                # TODO: add AO receptacles
                 raise AssertionError(
                     f"Unknown Receptacle '{receptacle.name}' detected. Update unit test golden values if this is expected."
                 )
 
             for _six in range(num_test_samples):
                 randomize_obj_state()
-                #check that parenting and global transforms are as expected:
+                # check that parenting and global transforms are as expected:
                 parent_object = None
                 expected_global_transform = mn.Matrix4.identity_init()
                 global_transform = receptacle.get_global_transform(sim)
                 if receptacle.parent_object_handle is not None:
                     parent_object = None
                     if receptacle.parent_link is not None:
-                        #articulated object
+                        # articulated object
                         assert receptacle.is_parent_object_articulated
-                        parent_object = sim.get_articulated_object_manager().get_object_by_handle(receptacle.parent_object_handle)
-                        expected_global_transform = parent_object.get_link_scene_node(receptacle.parent_link).absolute_transformation()
+                        parent_object = sim.get_articulated_object_manager().get_object_by_handle(
+                            receptacle.parent_object_handle
+                        )
+                        expected_global_transform = (
+                            parent_object.get_link_scene_node(
+                                receptacle.parent_link
+                            ).absolute_transformation()
+                        )
                     else:
-                        #rigid object
+                        # rigid object
                         assert not receptacle.is_parent_object_articulated
-                        parent_object = sim.get_rigid_object_manager().get_object_by_handle(receptacle.parent_object_handle)
+                        parent_object = sim.get_rigid_object_manager().get_object_by_handle(
+                            receptacle.parent_object_handle
+                        )
                         # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
-                        expected_global_transform = parent_object.visual_scene_nodes[1].absolute_transformation()
+                        expected_global_transform = (
+                            parent_object.visual_scene_nodes[
+                                1
+                            ].absolute_transformation()
+                        )
                     assert parent_object is not None
-                    assert np.allclose(global_transform, expected_global_transform, atol=1e-06)
+                    assert np.allclose(
+                        global_transform, expected_global_transform, atol=1e-06
+                    )
                 else:
-                    #this is a stage Receptacle (global transform)
+                    # this is a stage Receptacle (global transform)
                     if type(receptacle) is not hab_receptacle.AABBReceptacle:
-                        assert np.allclose(global_transform, expected_global_transform, atol=1e-06)
+                        assert np.allclose(
+                            global_transform,
+                            expected_global_transform,
+                            atol=1e-06,
+                        )
                     else:
-                        #NOTE: global AABB Receptacles have special handling here which is not explicitly tested. See AABBReceptacle.get_global_transform()
+                        # NOTE: global AABB Receptacles have special handling here which is not explicitly tested. See AABBReceptacle.get_global_transform()
                         expected_global_transform = global_transform
-                        pass
 
                 for _six2 in range(num_test_samples):
-                    sample_point = receptacle.sample_uniform_global(sim,sample_region_scale=1.0)
-                    expected_local_sample_point = expected_global_transform.inverted().transform_point(sample_point)
+                    sample_point = receptacle.sample_uniform_global(
+                        sim, sample_region_scale=1.0
+                    )
+                    expected_local_sample_point = (
+                        expected_global_transform.inverted().transform_point(
+                            sample_point
+                        )
+                    )
                     if type(receptacle) is hab_receptacle.AABBReceptacle:
-                        #check that the world->local sample point is contained in the local AABB
-                        assert receptacle.bounds.contains(expected_local_sample_point)
-                    elif type(receptacle) is hab_receptacle.TriangleMeshReceptacle:
-                        #check that the local point is within a mesh triangle
+                        # check that the world->local sample point is contained in the local AABB
+                        assert receptacle.bounds.contains(
+                            expected_local_sample_point
+                        )
+                    elif (
+                        type(receptacle)
+                        is hab_receptacle.TriangleMeshReceptacle
+                    ):
+                        # check that the local point is within a mesh triangle
                         in_mesh = False
-                        for f_ix in range(int(len(receptacle.mesh_data[1]) / 3)):
+                        for f_ix in range(
+                            int(len(receptacle.mesh_data[1]) / 3)
+                        ):
                             verts = receptacle.get_face_verts(f_ix)
-                            if point_in_triangle_test(expected_local_sample_point, verts[0], verts[1], verts[2]):
+                            if point_in_triangle_test(
+                                expected_local_sample_point,
+                                verts[0],
+                                verts[1],
+                                verts[2],
+                            ):
                                 in_mesh = True
                                 break
-                        assert in_mesh, "The point must belong to a triangle of the local mesh to be valid."
+                        assert (
+                            in_mesh
+                        ), "The point must belong to a triangle of the local mesh to be valid."

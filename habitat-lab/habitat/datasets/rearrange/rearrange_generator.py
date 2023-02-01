@@ -930,7 +930,7 @@ class RearrangeEpisodeGenerator:
 
         logger.info("----------------------------------------")
 
-        #generate debug images of all final object placements
+        # generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
                 self.vdb.peek_rigid_object(obj, peek_all_axis=True)
