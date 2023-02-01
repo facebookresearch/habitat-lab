@@ -159,6 +159,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             action_log_probs,
             distribution_entropy,
             rnn_hidden_states,
+            {},
         )
 
     def get_next_skill(

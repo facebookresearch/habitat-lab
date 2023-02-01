@@ -28,6 +28,7 @@ habitat_baselines:
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
   load_resume_state_config: False
+  rollout_storage: "HrlRolloutStorage"
 
   eval:
     use_ckpt_config: False

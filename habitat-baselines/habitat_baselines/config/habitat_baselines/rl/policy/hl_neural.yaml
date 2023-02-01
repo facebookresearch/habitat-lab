@@ -15,4 +15,4 @@ hierarchical_policy:
     num_rnn_layers: 2
     policy_input_keys:
       - "robot_head_depth"
-  defined_skills: MISSING
+  defined_skills: {}
