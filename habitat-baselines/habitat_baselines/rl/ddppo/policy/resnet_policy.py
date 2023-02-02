@@ -51,6 +51,7 @@ class PointNavResNetPolicy(NetPolicy):
         rnn_type: str = "GRU",
         resnet_baseplanes: int = 32,
         backbone: str = "resnet18",
+        normalize_visual_inputs: bool = False,
         force_blind_policy: bool = False,
         policy_config: "DictConfig" = None,
         aux_loss_config: Optional["DictConfig"] = None,
@@ -77,6 +78,7 @@ class PointNavResNetPolicy(NetPolicy):
                 rnn_type=rnn_type,
                 backbone=backbone,
                 resnet_baseplanes=resnet_baseplanes,
+                normalize_visual_inputs=normalize_visual_inputs,
                 fuse_keys=fuse_keys,
                 force_blind_policy=force_blind_policy,
                 discrete_actions=discrete_actions,
@@ -115,6 +117,7 @@ class PointNavResNetPolicy(NetPolicy):
             rnn_type=config.habitat_baselines.rl.ddppo.rnn_type,
             num_recurrent_layers=config.habitat_baselines.rl.ddppo.num_recurrent_layers,
             backbone=config.habitat_baselines.rl.ddppo.backbone,
+            normalize_visual_inputs="rgb" in observation_space.spaces,
             force_blind_policy=config.habitat_baselines.force_blind_policy,
             policy_config=config.habitat_baselines.rl.policy,
             aux_loss_config=config.habitat_baselines.rl.auxiliary_losses,
@@ -130,6 +133,7 @@ class ResNetEncoder(nn.Module):
         ngroups: int = 32,
         spatial_size: int = 128,
         make_backbone=None,
+        normalize_visual_inputs: bool = False,
     ):
         super().__init__()
 
@@ -149,7 +153,7 @@ class ResNetEncoder(nn.Module):
             observation_space.spaces[k].shape[2] for k in self.visual_keys
         )
 
-        if self._n_input_channels > 0:
+        if normalize_visual_inputs:
             self.running_mean_and_var: nn.Module = RunningMeanAndVar(
                 self._n_input_channels
             )
@@ -252,6 +256,7 @@ class PointNavResNetNet(Net):
         rnn_type: str,
         backbone,
         resnet_baseplanes,
+        normalize_visual_inputs: bool,
         fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
@@ -376,6 +381,7 @@ class PointNavResNetNet(Net):
                     baseplanes=resnet_baseplanes,
                     ngroups=resnet_baseplanes // 2,
                     make_backbone=getattr(resnet, backbone),
+                    normalize_visual_inputs=normalize_visual_inputs,
                 )
                 setattr(self, f"{uuid}_encoder", goal_visual_encoder)
 
@@ -408,6 +414,7 @@ class PointNavResNetNet(Net):
             baseplanes=resnet_baseplanes,
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet, backbone),
+            normalize_visual_inputs=normalize_visual_inputs,
         )
 
         if not self.visual_encoder.is_blind:
