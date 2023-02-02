@@ -723,7 +723,6 @@ class TaskConfig(HabitatBaseConfig):
     force_regenerate: bool = False
     # Saves the generated starts to a cache if they are not already generated
     should_save_to_cache: bool = False
-    must_look_at_targ: bool = True
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
     gfx_replay_dir = "data/replays"
@@ -746,9 +745,6 @@ class TaskConfig(HabitatBaseConfig):
     cache_robot_init: bool = False
     success_state: float = 0.0
     # Measurements for composite tasks.
-    # If true, does not care about navigability or collisions
-    # with objects when spawning robot
-    easy_init: bool = False
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
     task_spec_base_path: str = "habitat/task/rearrange/pddl/"
