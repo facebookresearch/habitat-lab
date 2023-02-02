@@ -391,19 +391,22 @@ class Controller:
         A controller that takes the input of the waypoints and
         produces the velocity command.
     """
-    def __init__(self, v_max_default, w_max_default, track_yaw=True):
+    def __init__(self, v_max, w_max, lin_gain=5, ang_gain=5, \
+            lin_error_tol=0.05, ang_error_tol=0.05, max_heading_ang=np.pi/10, track_yaw=True):
         # If we want track yaw or not
         self.track_yaw = track_yaw
 
         # Parameter of the controller
-        self.v_max = v_max_default
-        self.w_max = w_max_default
+        self.v_max = v_max
+        self.w_max = w_max
 
-        self.lin_error_tol = self.v_max / 120
-        self.ang_error_tol = self.w_max / 120
+        self.lin_error_tol = lin_error_tol
+        self.ang_error_tol = ang_error_tol
 
-        self.acc_lin = 2.4
-        self.acc_ang = 2.4
+        self.acc_lin = lin_gain
+        self.acc_ang = ang_gain
+
+        self.max_heading_ang = max_heading_ang
 
         # Initialize the parameters
         self.base_pose_goal = np.zeros(3)
@@ -421,6 +424,7 @@ class Controller:
         """
         Updates error based on robot localization
         """
+        # We compute the base pose error and the function return list of integer
         base_pose_err = self._transform_global_to_base(self.base_pose_goal, base_pose, sim)
 
         if not self.track_yaw:
@@ -441,7 +445,7 @@ class Controller:
         return v * np.sign(base_pose_err)
 
     @staticmethod
-    def _turn_rate_limit(lin_err, heading_diff, w_max, tol=0.0):
+    def _turn_rate_limit(lin_err, heading_diff, w_max, max_heading_ang, tol=0.0):
         """
         Compute velocity limit that prevents path from overshooting goal
 
@@ -455,7 +459,6 @@ class Controller:
         assert lin_err >= 0.0
         assert heading_diff >= 0.0
 
-        max_heading_ang = np.pi / 10
         if heading_diff > max_heading_ang:
             return 0.0
         else:
@@ -469,7 +472,7 @@ class Controller:
                 )
             )
 
-    def _feedback_simple(self, base_pose_err):
+    def _feedback_controller(self, base_pose_err):
         """
         Feedback controllers
         """
@@ -491,13 +494,16 @@ class Controller:
             v_raw = self._velocity_feedback_control(
                 np.sign(base_pose_err[0])*lin_err_abs, self.acc_lin, self.v_max
             )
+
             v_limit = self._turn_rate_limit(
                 lin_err_abs,
                 heading_err_abs,
                 self.w_max / 2.0,
+                max_heading_ang = self.max_heading_ang,
                 tol=self.lin_error_tol,
             )
-            # Allow the agent to move backward
+
+            # Clip the speed
             v_cmd = np.clip(v_raw, -v_limit, v_limit)
 
             # Compute angular velocity
@@ -531,6 +537,7 @@ class Controller:
         )
 
         error_t = base_pose[2] - current_pose[2]
+        error_t = (error_t + np.pi) % (2.0*np.pi) - np.pi
         error_x = goal_pos[0]
         error_y = goal_pos[1]
 
@@ -541,7 +548,7 @@ class Controller:
         Generate the velocity command
         """
         base_pose_err = self._compute_error_pose(base_pose, sim)
-        return self._feedback_simple(base_pose_err)
+        return self._feedback_controller(base_pose_err)
 
 
 @registry.register_task_action
@@ -560,7 +567,21 @@ class BaseWaypointVelAction(RobotAction):
         self.base_vel_ctrl.lin_vel_is_local = True
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
-        self.controller = Controller(self._config.lin_speed, self._config.ang_speed)
+        # Initialize the controller
+        max_lin_speed = 0.4 # real Stretch max linear velocity
+        max_ang_speed = 0.3 # real Stretch max angular velocity
+        lin_speed_gain = 10.0 # the linear gain
+        ang_speed_gain = 10.0 # the angular gain
+        lin_tol = 0.05 # 5cm linear error tol
+        ang_tol = 0.05 # 5cm angular error tol
+        max_heading_ang = np.pi/10.0
+        self.controller = Controller(v_max=max_lin_speed, \
+            w_max=max_ang_speed, \
+            lin_gain=lin_speed_gain, \
+            ang_gain=ang_speed_gain,\
+            lin_error_tol=lin_tol,\
+            ang_error_tol=ang_tol,
+            max_heading_ang=max_heading_ang)
 
     @property
     def action_space(self):
@@ -603,6 +624,7 @@ class BaseWaypointVelAction(RobotAction):
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
 
+
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
         )
@@ -633,20 +655,25 @@ class BaseWaypointVelAction(RobotAction):
             self.cur_grasp_mgr.update_object_to_grasp()
 
     def step(self, *args, is_last_action, **kwargs):
-        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
-        lin_vel = np.clip(lin_vel, -1, 1) * self._config.lin_speed
-        ang_vel = np.clip(ang_vel, -1, 1) * self._config.ang_speed
+        lin_pos, ang_pos = kwargs[self._action_arg_prefix + "base_vel"]
+        # Scale the target waypoints and the rotation of the robot
+        lin_pos = np.clip(lin_pos, -1, 1) * self._config.lin_speed
+        ang_pos = np.clip(ang_pos, -1, 1) * self._config.ang_speed
         if not self._config.allow_back:
-            lin_vel = np.maximum(lin_vel, 0)
+            lin_pos = np.maximum(lin_pos, 0)
 
+        # Get the transformation of the robot
         trans = self._sim.robot.base_transformation
-        global_pos = trans.transform_point(np.array([lin_vel, 0, 0]))
+        # Get the global pos from the local target waypoints
+        global_pos = trans.transform_point(np.array([lin_pos, 0, 0]))
+        # Get the target rotation
+        target_theta = float(self._sim.robot.base_rot)+ang_pos
 
         # Set the goal
         base_pose_goal = [
             global_pos[0],
             global_pos[2],
-            float(self._sim.robot.base_rot)+ang_vel,
+            target_theta,
         ]
         self.controller.set_goal(base_pose_goal)
 
@@ -656,12 +683,14 @@ class BaseWaypointVelAction(RobotAction):
             self._sim.robot.base_pos[2],
             float(self._sim.robot.base_rot),
         ]
+        # Get the velocity cmd
         base_action = self.controller.forward(base_pose, self._sim)
 
+        # Feed them into habitat's velocity controller
         self.base_vel_ctrl.linear_velocity = mn.Vector3(base_action[0], 0, 0)
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, base_action[1], 0)
 
-        if lin_vel != 0.0 or ang_vel != 0.0:
+        if lin_pos != 0.0 or ang_pos != 0.0:
             self.update_base()
 
         if is_last_action:
