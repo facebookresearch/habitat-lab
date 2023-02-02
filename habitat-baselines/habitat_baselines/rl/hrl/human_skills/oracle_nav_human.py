@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import PolicyAction
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class OracleNavHumanPolicy(NnSkillPolicy):
@@ -184,6 +184,6 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         )
 
         full_action[:, self._oracle_nav_ac_idx] = action_idxs
-        return PolicyAction(
+        return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )

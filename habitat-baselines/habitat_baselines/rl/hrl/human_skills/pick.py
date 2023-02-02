@@ -14,7 +14,7 @@ from habitat_baselines.common.logging import baselines_logger
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.core.spaces import ActionSpace
 from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
-from habitat_baselines.rl.ppo.policy import PolicyAction
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 class HumanPickSkillPolicy(NnSkillPolicy):
     def __init__(
@@ -130,7 +130,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         # action = self._mask_pick(action, observations)
         # action[:, self._hand_ac_idx] = 1.0
         # breakpoint()
-        return PolicyAction(
+        return PolicyActionData(
             actions=action, rnn_hidden_states=rnn_hidden_states
         )
         

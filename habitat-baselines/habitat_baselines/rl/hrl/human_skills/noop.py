@@ -4,7 +4,7 @@ import gym.spaces as spaces
 import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
-from habitat_baselines.rl.ppo.policy import PolicyAction
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class NoopHumanSkillPolicy(SkillPolicy):
@@ -34,6 +34,6 @@ class NoopHumanSkillPolicy(SkillPolicy):
         full_action,
         deterministic=False,
     ):
-        return PolicyAction(
+        return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )

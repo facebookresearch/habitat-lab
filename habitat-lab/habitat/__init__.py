@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+from habitat import config
 from habitat.config import get_config
 from habitat.core.agent import Agent
 from habitat.core.benchmark import Benchmark
