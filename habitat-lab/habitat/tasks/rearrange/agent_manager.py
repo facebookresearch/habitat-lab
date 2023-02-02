@@ -116,6 +116,7 @@ class AgentManager:
         for agent_data in self._all_agent_data:
             agent_data.agent.params.arm_init_params = (
                 agent_data.start_js
+                + agent_data.cfg.joint_start_noise
                 * np.random.randn(len(agent_data.start_js))
             )
             agent_data.agent.reset()
