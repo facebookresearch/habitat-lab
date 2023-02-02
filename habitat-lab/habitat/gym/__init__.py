@@ -4,4 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-__all__ = ["visualizations", "env_utils", "common"]
+
+from habitat.gym.gym_definitions import make_gym_from_config
+
+__all__ = ["make_gym_from_config"]

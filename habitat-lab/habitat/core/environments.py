@@ -18,7 +18,7 @@ import numpy as np
 
 import habitat
 from habitat import Dataset
-from habitat.utils.gym_adapter import HabGymWrapper
+from habitat.gym.gym_wrapper import HabGymWrapper
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
