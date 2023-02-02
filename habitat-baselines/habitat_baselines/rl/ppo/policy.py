@@ -230,7 +230,7 @@ class NetPolicy(nn.Module, Policy):
         action_log_probs = distribution.log_probs(action)
         return PolicyActionData(
             values=value,
-            actions=value,
+            actions=action,
             action_log_probs=action_log_probs,
             rnn_hidden_states=rnn_hidden_states,
         )

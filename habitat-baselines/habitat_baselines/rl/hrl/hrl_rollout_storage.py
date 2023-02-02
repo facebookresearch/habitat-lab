@@ -10,7 +10,7 @@ import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
-from habitat_baselines.common.tensor_dict import DictTree
+from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
@@ -78,8 +78,12 @@ class HrlRolloutStorage(RolloutStorage):
             value_preds=value_preds,
         )
 
-        next_step = {k: v for k, v in next_step.items() if v is not None}
-        current_step = {k: v for k, v in current_step.items() if v is not None}
+        next_step = TensorDict(
+            {k: v for k, v in next_step.items() if v is not None}
+        )
+        current_step = TensorDict(
+            {k: v for k, v in current_step.items() if v is not None}
+        )
 
         if should_inserts is None:
             should_inserts = self._last_should_inserts
@@ -102,7 +106,7 @@ class HrlRolloutStorage(RolloutStorage):
                     self._cur_step_idxs[should_inserts] + 1,
                     env_idxs[should_inserts],
                 ),
-                next_step,
+                next_step[should_inserts],
                 strict=False,
             )
 
@@ -112,7 +116,7 @@ class HrlRolloutStorage(RolloutStorage):
                     self._cur_step_idxs[should_inserts],
                     env_idxs[should_inserts],
                 ),
-                current_step,
+                current_step[should_inserts],
                 strict=False,
             )
         self._last_should_inserts = should_inserts

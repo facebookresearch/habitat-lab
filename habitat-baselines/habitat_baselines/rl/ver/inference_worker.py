@@ -385,7 +385,7 @@ class InferenceWorkerProcess(ProcessBase):
                     masks=to_batch["masks"],
                     observations=obs,
                     actions=action_data.actions,
-                    action_log_probs=action_data.actions_log_probs,
+                    action_log_probs=action_data.action_log_probs,
                     recurrent_hidden_states=recurrent_hidden_states,
                     prev_actions=prev_actions,
                     policy_version=self.rollouts.current_policy_version.expand(

@@ -112,5 +112,5 @@ class HRLPPO(PPO):
 
 
 @baseline_registry.register_updater
-class HrlDDPPO(DecentralizedDistributedMixin, HRLPPO):
+class HRLDDPPO(DecentralizedDistributedMixin, HRLPPO):
     pass
