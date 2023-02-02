@@ -28,7 +28,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         return [
             r
             for r, rec in sim.receptacles.items()
-            if episode.goal_recep_category == rec.category
+            if r in sim.valid_goal_rec_names
         ]
 
     def reset(self, episode: Episode):

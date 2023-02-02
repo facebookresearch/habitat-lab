@@ -12,6 +12,7 @@ from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
+import habitat.robots.stretch_robot as robot_class
 
 
 @registry.register_task(name="RearrangePickTask-v0")
@@ -66,9 +67,7 @@ class RearrangePickTaskV1(RearrangeTask):
         else:
             snap_pos = np.array(
                 [
-                    r.get_global_transform(sim).transform_point(
-                        r.bounds.center()
-                    )
+                    r.get_surface_center(sim)
                     for r in self._get_spawn_recs(sim, episode)
                 ]
             )
@@ -121,7 +120,13 @@ class RearrangePickTaskV1(RearrangeTask):
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos
-        sim.robot.base_rot = start_rot
+        if isinstance(self._sim.robot, robot_class.StretchRobot):
+            sim.robot.base_rot = start_rot + np.pi/2
+        else:
+            sim.robot.base_rot = start_rot
+        if isinstance(self._sim.robot, robot_class.StretchRobot):
+            self._sim.robot.arm_motor_pos = np.array([0.0] * 8 + [-1.7375, -0.7125])
+            self._sim.robot.arm_joint_pos = np.array([0.0] * 8 + [-1.7375, -0.7125])
 
         self._targ_idx = sel_idx
 

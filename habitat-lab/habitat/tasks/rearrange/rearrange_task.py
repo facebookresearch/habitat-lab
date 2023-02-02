@@ -37,10 +37,6 @@ class RearrangeTask(NavigationTask):
     _cur_episode_step: int
     _robot_pos_start: Dict[str, Tuple[np.ndarray, float]]
 
-    def overwrite_sim_config(self, sim_config, episode):
-        sim_config.ep_info = [episode.__dict__]
-        return sim_config
-
     def _duplicate_sensor_suite(self, sensor_suite: SensorSuite) -> None:
         """
         Modifies the sensor suite in place to duplicate robot specific sensors
@@ -68,7 +64,6 @@ class RearrangeTask(NavigationTask):
         self, *args, sim, dataset=None, should_place_robot=True, **kwargs
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
-
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: Union[RearrangeSim, ObjectRearrangeSim] = sim

@@ -42,40 +42,37 @@ class ObjAnywhereOnGoal(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        rom = self._sim.get_rigid_object_manager()
-        aom = self._sim.get_articulated_object_manager()
+
         self._sim.perform_discrete_collision_detection()
         cps = self._sim.get_physics_contact_points()
-        relevant_cps = []
 
-        idxs, _ = self._sim.get_targets()
         abs_obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
         for cp in cps:
             if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
 
-                relevant_cps.append(cp)
                 if cp.contact_distance < -0.01:
                     self._metric = False
                 else:
                     other_obj_id = cp.object_id_a + cp.object_id_b - abs_obj_id
-
-                    if aom.get_library_has_id(other_obj_id):
-                        handle = aom.get_object_handle_by_id(other_obj_id)
-                    elif rom.get_library_has_id(other_obj_id):
-                        handle = rom.get_object_handle_by_id(other_obj_id)
-                    else:
-                        self._metric = False
-                        return
-
-                    if (
-                        handle in self._sim.recep_handle_to_category
-                        and self._sim.recep_handle_to_category[handle]
-                        == self._sim.target_categories["goal_recep"]
-                    ):
-                        self._metric = True
-                    else:
-                        self._metric = False
-                    return
+                    # Check if the other object has an id that is acceptable
+                    self._metric = (
+                        other_obj_id in self._sim.valid_goal_rec_obj_ids
+                    )
+                    # Additional check for receptacles that are not on a separate object
+                    if self._metric and other_obj_id == -1:
+                        contact_point = (
+                            cp.position_on_a_in_ws
+                            if other_obj_id == cp.object_id_a
+                            else cp.position_on_b_in_ws
+                        )
+                        for n, r in self._sim.receptacles.items():
+                            if r.check_if_point_on_surface(
+                                self._sim, contact_point
+                            ):
+                                self._metric = (
+                                    n in self._sim.valid_goal_rec_names
+                                )
+                                break
 
         self._metric = False
 
