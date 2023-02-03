@@ -96,6 +96,9 @@ class RearrangeTask(NavigationTask):
             # Duplicate sensors that handle robots. One for each robot.
             self._duplicate_sensor_suite(self.sensor_suite)
 
+    def overwrite_sim_config(self, config: Any, episode: Episode) -> Any:
+        return config
+
     @property
     def targ_idx(self):
         return self._targ_idx
