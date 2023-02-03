@@ -1397,6 +1397,7 @@ class SimulatorConfig(HabitatBaseConfig):
     requires_textures: bool = True
     # Sleep options
     auto_sleep: bool = False
+    sleep_dist: float = 3.0
     step_physics: bool = True
     concur_render: bool = False
     # If markers should be updated at every step:

@@ -228,7 +228,23 @@ class RearrangeSim(HabitatSim):
         if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
 
-    def _sleep_all_objects(self):
+    def _auto_sleep(self):
+        all_robo_pos = [
+            robot.base_pos for robot in self.robots_mgr.robots_iter
+        ]
+        rom = self.get_rigid_object_manager()
+        for handle, ro in rom.get_objects_by_handle_substring().items():
+            is_far = any(
+                (robo_pos - ro.translation).length()
+                > self.habitat_config.sleep_dist
+                for robo_pos in all_robo_pos
+            )
+            if is_far:
+                ro.motion_type = habitat_sim.physics.MotionType.STATIC
+            else:
+                ro.motion_type = self._obj_orig_motion_types[handle]
+
+    def sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
         """
@@ -343,6 +359,12 @@ class RearrangeSim(HabitatSim):
         # auto-sleep rigid objects as optimization
         if self.habitat_config.auto_sleep:
             self._sleep_all_objects()
+
+        rom = self.get_rigid_object_manager()
+        self._obj_orig_motion_types = {
+            handle: ro.motion_type
+            for handle, ro in rom.get_objects_by_handle_substring().items()
+        }
 
         rom = self.get_rigid_object_manager()
         self._obj_orig_motion_types = {
@@ -825,7 +847,9 @@ class RearrangeSim(HabitatSim):
                 add_back_viz_objs[name] = (before_pos, r)
             self.viz_ids = defaultdict(lambda: None)
 
-        self.maybe_update_articulated_agent()
+        self.maybe_update_robot()
+        if self.habitat_config.sleep_dist > 0.0:
+            self._auto_sleep()
 
         if self._batch_render:
             for _ in range(self.ac_freq_ratio):
@@ -930,8 +954,8 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
-        # Optionally step physics and update the articulated_agent for benchmarking purposes
-        if self._step_physics:
+        # optionally step physics and update the robot for benchmarking purposes
+        if self.habitat_config.step_physics:
             self.step_world(dt)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
