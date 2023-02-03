@@ -1,8 +1,3 @@
-# Copyright (c) Meta Platforms, Inc. and its affiliates.
-# This source code is licensed under the MIT license found in the
-# LICENSE file in the root directory of this source tree.
-
-
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
@@ -14,12 +9,21 @@ class RobotAction(SimulatorTaskAction):
 
     _sim: RearrangeSim
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+        if "agent" not in self._config or self._config.agent is None:
+            self._agent_index = 0
+            self._multi_agent = False
+        else:
+            self._agent_index = self._config.agent
+            self._multi_agent = True
+
     @property
     def _robot_mgr(self):
         """
         Underlying robot mananger for the robot instance the action is attached to.
         """
-        return self._sim.robots_mgr[self._config.agent_index]
+        return self._sim.robots_mgr[self._agent_index]
 
     @property
     def _ik_helper(self):
@@ -49,4 +53,6 @@ class RobotAction(SimulatorTaskAction):
         Returns the action prefix to go in front of sensor / action names if
         there are multiple agents.
         """
-        return f"agent_{self._config.agent_index}_"
+        if not self._multi_agent:
+            return ""
+        return f"agent_{self._agent_index}_"
