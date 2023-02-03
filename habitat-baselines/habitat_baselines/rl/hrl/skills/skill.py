@@ -48,6 +48,9 @@ class SkillPolicy(Policy):
             )
         else:
             self._pddl_ac_start = None
+        if self._config.apply_postconds and self._pddl_ac_start is None:
+            raise ValueError(f"Could not find PDDL action in skill {self}")
+
         self._delay_term: List[Optional[bool]] = [
             None for _ in range(self._batch_size)
         ]
