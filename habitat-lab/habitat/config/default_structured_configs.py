@@ -781,13 +781,6 @@ class CompositeSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
-class CompositeRewardMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeReward"
-    must_call_stop: bool = True
-    success_reward: float = 10.0
-
-
-@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     type: str = "DoesWantTerminate"
 
@@ -1074,7 +1067,7 @@ class SimulatorConfig(HabitatBaseConfig):
     create_renderer: bool = False
     requires_textures: bool = True
     auto_sleep: bool = False
-    sleep_dist: float = 3.0
+    sleep_dist: float = -1.0
     step_physics: bool = True
     concur_render: bool = False
     # If markers should be updated at every step:
