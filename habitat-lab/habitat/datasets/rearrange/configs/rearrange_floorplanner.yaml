@@ -8,7 +8,7 @@ scene_sets:
   -
     name: "any"
     included_substrings:
-      - "102344049"
+      - ""
     excluded_substrings:
       - "NONE"
 

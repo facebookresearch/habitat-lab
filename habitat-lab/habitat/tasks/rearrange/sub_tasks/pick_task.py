@@ -66,9 +66,7 @@ class RearrangePickTaskV1(RearrangeTask):
         else:
             snap_pos = np.array(
                 [
-                    r.get_global_transform(sim).transform_point(
-                        r.bounds.center()
-                    )
+                    r.get_surface_center(sim)
                     for r in self._get_spawn_recs(sim, episode)
                 ]
             )

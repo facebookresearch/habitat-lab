@@ -161,9 +161,9 @@ class DynNavRLEnv(RearrangeTask):
 
         if self._sim.habitat_config.debug_render:
             # Visualize the position the agent is navigating to.
-            sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
+            self._sim.viz_ids["nav_targ_pos"] = self._sim.visualize_position(
                 self._nav_to_info.nav_goal_pos,
-                sim.viz_ids["nav_targ_pos"],
+                self._sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
         self._sim.maybe_update_robot()
