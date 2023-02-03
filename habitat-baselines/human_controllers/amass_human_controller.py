@@ -323,15 +323,13 @@ class AmassHumanController:
             prev_angle = np.arctan2(action_order_facing[0], action_order_facing[2]) * 180./np.pi
             forward_angle = curr_angle - prev_angle
             if np.abs(forward_angle) > 1:
-                # t = forward_angle
-                actual_angle_move = 5
+                actual_angle_move = 10
                 if abs(forward_angle) < actual_angle_move:
                     actual_angle_move = abs(forward_angle)
                 new_angle = (prev_angle + actual_angle_move * np.sign(forward_angle)) * np.pi / 180
                 did_rotate = True
             else:
                 new_angle = curr_angle * np.pi / 180
-
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
@@ -357,6 +355,8 @@ class AmassHumanController:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
 
         dist_diff = max(0, distance_covered - prev_distance)
+        # if did_rotate:
+        #     dist_diff = 0
         self.translation_offset = self.translation_offset + forward_V * dist_diff;
         self.prev_orientation = forward_V
 

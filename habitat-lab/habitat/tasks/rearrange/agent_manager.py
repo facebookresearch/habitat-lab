@@ -176,6 +176,7 @@ class AgentManager:
         """
 
         for agent_data in self._all_agent_data:
+            agent_data.grasp_mgr.update()
             agent_data.agent.update()
 
     def update_debug(self):
