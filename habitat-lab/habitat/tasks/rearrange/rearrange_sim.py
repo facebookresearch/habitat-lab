@@ -110,7 +110,6 @@ class RearrangeSim(HabitatSim):
         self._viz_objs: Dict[str, Any] = {}
         self._draw_bb_objs: List[int] = []
 
-        self._sim_step = 0
         self._obj_orig_motion_types: Dict[str, MotionType] = {}
 
         # Disables arm control. Useful if you are hiding the arm to perform
@@ -366,7 +365,6 @@ class RearrangeSim(HabitatSim):
         # auto-sleep rigid objects as optimization
         if self.habitat_config.auto_sleep:
             self.sleep_all_objects()
-        self._sim_step = 0
 
         rom = self.get_rigid_object_manager()
         self._obj_orig_motion_types = {
@@ -820,7 +818,6 @@ class RearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
-        self._sim_step += 1
 
         if self._debug_render:
             if self._debug_render_articulated_agent:
