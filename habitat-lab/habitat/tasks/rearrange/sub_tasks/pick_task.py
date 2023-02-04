@@ -7,12 +7,12 @@
 
 import numpy as np
 
+import habitat.robots.stretch_robot as robot_class
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
-import habitat.robots.stretch_robot as robot_class
 
 
 @registry.register_task(name="RearrangePickTask-v0")
@@ -121,12 +121,18 @@ class RearrangePickTaskV1(RearrangeTask):
 
         sim.robot.base_pos = start_pos
         if isinstance(self._sim.robot, robot_class.StretchRobot):
-            sim.robot.base_rot = start_rot + np.pi/2
+            sim.robot.base_rot = start_rot + np.pi / 2
         else:
             sim.robot.base_rot = start_rot
+        # If the robot is Stretch, we force its camera to point toward the object, and
+        # look down as well. The arm starts at a raised height with the gripper down.
         if isinstance(self._sim.robot, robot_class.StretchRobot):
-            self._sim.robot.arm_motor_pos = np.array([0.0] * 8 + [-1.7375, -0.7125])
-            self._sim.robot.arm_joint_pos = np.array([0.0] * 8 + [-1.7375, -0.7125])
+            self._sim.robot.arm_motor_pos = np.array(
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+            )
+            self._sim.robot.arm_joint_pos = np.array(
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+            )
 
         self._targ_idx = sel_idx
 
