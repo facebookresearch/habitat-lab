@@ -8,11 +8,7 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.actions.oracle_nav_action import (
-    get_possible_nav_to_actions,
-)
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import RIGID_OBJ_TYPE
 from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
@@ -23,9 +19,11 @@ from habitat_baselines.rl.ppo.policy import PolicyActionData
 class OracleNavPolicy(NnSkillPolicy):
     @dataclass
     class OracleNavActionArgs:
+        """
+        :property action_idx: The index of the oracle action we want to execute
+        """
+
         action_idx: int
-        is_target_obj: bool
-        target_idx: int
 
     def __init__(
         self,
@@ -53,7 +51,7 @@ class OracleNavPolicy(NnSkillPolicy):
             pddl_task_path,
             task_config,
         )
-        self._poss_actions = get_possible_nav_to_actions(self._pddl_problem)
+        self._all_entities = self._pddl_problem.get_ordered_entities_list()
         self._oracle_nav_ac_idx, _ = find_action_range(
             action_space, "oracle_nav_action"
         )
@@ -130,47 +128,23 @@ class OracleNavPolicy(NnSkillPolicy):
         return ret
 
     def _parse_skill_arg(self, skill_arg):
-        marker = None
         if len(skill_arg) == 2:
-            targ_obj, _ = skill_arg
+            search_target, _ = skill_arg
         elif len(skill_arg) == 3:
-            marker, targ_obj, _ = skill_arg
+            _, search_target, _ = skill_arg
         else:
             raise ValueError(
                 f"Unexpected number of skill arguments in {skill_arg}"
             )
 
-        targ_obj_idx = int(targ_obj.split("|")[-1])
+        target = self._pddl_problem.get_entity(search_target)
+        if target is None:
+            raise ValueError(
+                f"Cannot find matching entity for {search_target}"
+            )
+        match_i = self._all_entities.index(target)
 
-        targ_obj = self._pddl_problem.get_entity(targ_obj)
-        if marker is not None:
-            marker = self._pddl_problem.get_entity(marker)
-
-        match_i = None
-        for i, action in enumerate(self._poss_actions):
-            match_obj = action.get_arg_value("obj")
-            if marker is not None:
-                match_marker = action.get_arg_value("marker")
-                if match_marker != marker:
-                    continue
-            if match_obj != targ_obj:
-                continue
-            match_i = i
-            break
-        if match_i is None:
-            raise ValueError(f"Cannot find matching action for {skill_arg}")
-        is_target_obj = targ_obj.expr_type.is_subtype_of(
-            self._pddl_problem.expr_types[RIGID_OBJ_TYPE]
-        )
-        return OracleNavPolicy.OracleNavActionArgs(
-            match_i, is_target_obj, targ_obj_idx
-        )
-
-    def _get_multi_sensor_index(self, batch_idx):
-        return [self._cur_skill_args[i].target_idx for i in batch_idx]
-
-    def requires_rnn_state(self):
-        return False
+        return OracleNavPolicy.OracleNavActionArgs(match_i)
 
     def _internal_act(
         self,

@@ -174,6 +174,7 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     ),
 )
 def test_hrl(config_path, policy_type, skill_type, mode):
+
     if policy_type == "hl_neural" and skill_type == "nn_skills":
         return
     if policy_type == "hl_fixed" and mode == "train":
