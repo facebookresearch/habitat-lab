@@ -193,7 +193,6 @@ class PddlAction:
         should_reset: bool = True,
         add_task_kwargs: Optional[Dict[str, Any]] = None,
     ) -> RearrangeTask:
-
         rearrange_logger.debug(
             f"Loading task {self._task_info.task} with definition {self._task_info.task_def}"
         )
