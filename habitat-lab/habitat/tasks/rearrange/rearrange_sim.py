@@ -110,7 +110,13 @@ class RearrangeSim(HabitatSim):
         self._viz_objs: Dict[str, Any] = {}
         self._draw_bb_objs: List[int] = []
 
-        self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
+        self._sim_step = 0
+        self._obj_orig_motion_types: Dict[str, MotionType] = {}
+
+        # Disables arm control. Useful if you are hiding the arm to perform
+        # some scene sensing (used in the sense phase of the sense-plan act
+        # architecture).
+        self.ctrl_arm = True
 
         self.robots_mgr = RobotManager(self.habitat_config, self)
 
@@ -234,14 +240,15 @@ class RearrangeSim(HabitatSim):
         ]
         rom = self.get_rigid_object_manager()
         for handle, ro in rom.get_objects_by_handle_substring().items():
-            is_far = any(
+            is_far = all(
                 (robo_pos - ro.translation).length()
                 > self.habitat_config.sleep_dist
                 for robo_pos in all_robo_pos
             )
-            if is_far:
+            if is_far and ro.motion_type != MotionType.STATIC:
+                self._obj_orig_motion_types[handle] = ro.motion_type
                 ro.motion_type = habitat_sim.physics.MotionType.STATIC
-            else:
+            elif not is_far:
                 ro.motion_type = self._obj_orig_motion_types[handle]
 
     def sleep_all_objects(self):
@@ -358,13 +365,8 @@ class RearrangeSim(HabitatSim):
 
         # auto-sleep rigid objects as optimization
         if self.habitat_config.auto_sleep:
-            self._sleep_all_objects()
-
-        rom = self.get_rigid_object_manager()
-        self._obj_orig_motion_types = {
-            handle: ro.motion_type
-            for handle, ro in rom.get_objects_by_handle_substring().items()
-        }
+            self.sleep_all_objects()
+        self._sim_step = 0
 
         rom = self.get_rigid_object_manager()
         self._obj_orig_motion_types = {
@@ -818,6 +820,7 @@ class RearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
+        self._sim_step += 1
 
         if self._debug_render:
             if self._debug_render_articulated_agent:
