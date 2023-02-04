@@ -1103,9 +1103,7 @@ class PPOTrainer(BaseRLTrainer):
                         frame = observations_to_image(
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
-                    frame = overlay_frame(
-                        frame, extract_scalars_from_info(infos[i])
-                    )
+                    frame = overlay_frame(frame, infos[i])
                     rgb_frames[i].append(frame)
 
                 # episode ended
