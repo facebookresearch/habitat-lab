@@ -310,3 +310,107 @@ actions:
       config_args:
         task.base_angle_noise: 0.0
         task.spawn_region_scale: 0.0
+
+  #########################################################
+  # Receptacle name only based variants of the receptacle skills. This does not
+  # require any information about knowing which objects the receptacle
+  # contains.
+  - name: nav_to_receptacle_by_name
+    parameters:
+      - name: marker
+        expr_type: art_obj_type
+      - name: robot
+        expr_type: robot_type
+    precondition: null
+    postcondition:
+      - robot_at(marker, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: open_fridge_by_name
+    parameters:
+      - name: fridge_id
+        expr_type: fridge_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(fridge_id, robot)
+        - closed_fridge(fridge_id)
+    postcondition:
+      - opened_fridge(fridge_id)
+    task_info:
+      task_def: "open_fridge"
+      task: RearrangeOpenFridgeTask-v0
+      add_task_args:
+        marker: fridge_id
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
+
+  - name: close_fridge_by_name
+    parameters:
+      - name: fridge_id
+        expr_type: fridge_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(fridge_id, robot)
+        - opened_fridge(fridge_id)
+    postcondition:
+      - closed_fridge(fridge_id)
+    task_info:
+      task_def: "close_fridge"
+      task: RearrangeCloseFridgeTask-v0
+      add_task_args:
+        marker: fridge_id
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
+
+  - name: open_cab_by_name
+    parameters:
+      - name: marker
+        expr_type: cab_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(marker, robot)
+        - closed_cab(marker)
+    postcondition:
+      - opened_cab(marker)
+    task_info:
+      task_def: "open_cab"
+      task: RearrangeOpenDrawerTask-v0
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0
+
+  - name: close_cab_by_name
+    parameters:
+      - name: marker
+        expr_type: cab_type
+      - name: robot
+        expr_type: robot_type
+    precondition:
+      expr_type: AND
+      sub_exprs:
+        - robot_at(marker, robot)
+        - opened_cab(marker)
+    postcondition:
+      - closed_cab(marker)
+    task_info:
+      task_def: "close_cab"
+      task: RearrangeCloseDrawerTask-v0
+      config_args:
+        task.base_angle_noise: 0.0
+        task.spawn_region_scale: 0.0

@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
@@ -71,7 +72,7 @@ class SkillPolicy(Policy):
             action_space, "rearrange_stop"
         )
 
-    def _internal_log(self, s, observations=None):
+    def _internal_log(self, s):
         baselines_logger.debug(
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
         )
@@ -181,7 +182,6 @@ class SkillPolicy(Policy):
         if is_skill_done.sum() > 0:
             self._internal_log(
                 f"Requested skill termination {is_skill_done}",
-                observations,
             )
 
         cur_skill_step = self._cur_skill_step[batch_idx]
@@ -192,33 +192,35 @@ class SkillPolicy(Policy):
             dtype=torch.bool,
         )
         if self._config.max_skill_steps > 0:
-            over_max_len = cur_skill_step > self._config.max_skill_steps
+            over_max_len = cur_skill_step >= self._config.max_skill_steps
             if self._config.force_end_on_timeout:
                 bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len
+
+        is_skill_done |= hl_policy_wants_termination
+
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._delay_term[env_i]:
+                self._internal_log(
+                    "Terminating skill due to delayed termination."
+                )
                 self._delay_term[env_i] = False
-                is_skill_done[i] = 1.0
-            elif (
-                self._config.apply_postconds
-                and is_skill_done[i] == 1.0
-                and hl_policy_wants_termination[i] == 0.0
-            ):
+                is_skill_done[i] = True
+            elif self._config.apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
                 self._delay_term[env_i] = True
-                is_skill_done[i] = 0.0
-
-        is_skill_done |= hl_policy_wants_termination
+                is_skill_done[i] = False
+                self._internal_log(
+                    "Applying PDDL action and terminating on the next step."
+                )
 
         if bad_terminate.sum() > 0:
             self._internal_log(
                 f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
-                observations,
             )
         return is_skill_done, bad_terminate, new_actions
 
@@ -238,6 +240,10 @@ class SkillPolicy(Policy):
         self._cur_skill_step[batch_idxs] = 0
         for i, batch_idx in enumerate(batch_idxs):
             self._raw_skill_args[batch_idx] = skill_arg[i]
+            if baselines_logger.level >= logging.DEBUG:
+                baselines_logger.debug(
+                    f"Entering skill {self} with arguments {skill_arg[i]}"
+                )
             self._cur_skill_args[batch_idx] = self._parse_skill_arg(
                 skill_arg[i]
             )

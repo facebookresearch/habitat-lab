@@ -143,22 +143,6 @@ class RearrangeSim(HabitatSim):
         if self.habitat_config.concur_render:
             self.renderer.acquire_gl_context()
 
-    def _auto_sleep(self):
-        all_robo_pos = [
-            robot.base_pos for robot in self.robots_mgr.robots_iter
-        ]
-        rom = self.get_rigid_object_manager()
-        for handle, ro in rom.get_objects_by_handle_substring().items():
-            is_far = any(
-                (robo_pos - ro.translation).length()
-                > self.habitat_config.sleep_dist
-                for robo_pos in all_robo_pos
-            )
-            if is_far:
-                ro.motion_type = habitat_sim.physics.MotionType.STATIC
-            else:
-                ro.motion_type = self._obj_orig_motion_types[handle]
-
     def sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
@@ -685,8 +669,6 @@ class RearrangeSim(HabitatSim):
             self.viz_ids = defaultdict(lambda: None)
 
         self.maybe_update_robot()
-        if self.habitat_config.sleep_dist > 0.0:
-            self._auto_sleep()
 
         if self.habitat_config.concur_render:
             self._prev_sim_obs = self.start_async_render()
