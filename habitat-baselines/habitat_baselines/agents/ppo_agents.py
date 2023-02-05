@@ -126,23 +126,19 @@ class PPOAgent(Agent):
     def act(self, observations: Observations) -> Dict[str, int]:
         batch = batch_obs([observations], device=self.device)
         with torch.no_grad():
-            (
-                _,
-                actions,
-                _,
-                self.test_recurrent_hidden_states,
-            ) = self.actor_critic.act(
+            action_data = self.actor_critic.act(
                 batch,
                 self.test_recurrent_hidden_states,
                 self.prev_actions,
                 self.not_done_masks,
                 deterministic=False,
             )
+            self.test_recurrent_hidden_states = action_data.rnn_hidden_states
             #  Make masks not done till reset (end of episode) will be called
             self.not_done_masks.fill_(True)
-            self.prev_actions.copy_(actions)  # type: ignore
+            self.prev_actions.copy_(action_data.actions)  # type: ignore
 
-        return {"action": actions[0][0].item()}
+        return {"action": action_data.env_actions[0][0].item()}
 
 
 def main():
