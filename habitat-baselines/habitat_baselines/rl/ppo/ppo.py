@@ -296,7 +296,6 @@ class PPO(nn.Module):
         self,
         rollouts: RolloutStorage,
     ) -> Dict[str, float]:
-
         advantages = self.get_advantages(rollouts)
 
         learner_metrics: Dict[str, List[Any]] = collections.defaultdict(list)

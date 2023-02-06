@@ -36,7 +36,6 @@ class RolloutStorage:
         num_recurrent_layers=1,
         is_double_buffered: bool = False,
     ):
-
         if is_continuous_action_space(action_space):
             # Assume ALL actions are NOT discrete
             action_shape = (
