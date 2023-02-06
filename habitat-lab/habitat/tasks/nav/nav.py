@@ -1317,7 +1317,9 @@ class NavigationTask(EmbodiedTask):
             ):
                 agent_config = get_agent_config(config.simulator)
                 agent_config.start_position = episode.start_position
-                agent_config.start_rotation = episode.start_rotation
+                agent_config.start_rotation = [
+                    float(k) for k in episode.start_rotation
+                ]
                 agent_config.is_set_start_state = True
         return config
 
