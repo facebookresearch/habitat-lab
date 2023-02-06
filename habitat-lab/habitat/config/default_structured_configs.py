@@ -423,7 +423,9 @@ class FogOfWarConfig:
 @attr.s(auto_attribs=True, slots=True)
 class TopDownMapMeasurementConfig(MeasurementConfig):
     type: str = "TopDownMap"
-    max_episode_steps: int = II("habitat.environment.max_episode_steps")
+    max_episode_steps: int = (
+        EnvironmentConfig().max_episode_steps
+    )  # TODO : Use OmegaConf II()
     map_padding: int = 3
     map_resolution: int = 1024
     draw_source: bool = True
@@ -824,7 +826,7 @@ class SimulatorCameraSensorConfig(SimulatorSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class SimulatorDepthSensorConfig(SimulatorCameraSensorConfig):
+class SimulatorDepthSensorConfig(SimulatorSensorConfig):
     min_depth: float = 0.0
     max_depth: float = 10.0
     normalize_depth: bool = True
@@ -836,8 +838,11 @@ class HabitatSimRGBSensorConfig(SimulatorCameraSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class HabitatSimDepthSensorConfig(SimulatorDepthSensorConfig):
+class HabitatSimDepthSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimDepthSensor"
+    min_depth: float = 0.0
+    max_depth: float = 10.0
+    normalize_depth: bool = True
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -863,7 +868,7 @@ class HabitatSimEquirectangularSemanticSensorConfig(SimulatorSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimFisheyeSensor"
-    height: int = SimulatorSensorConfig.width
+    height: int = SimulatorSensorConfig().width
     # The default value (alpha, xi) is set to match the lens  "GoPro" found in
     # Table 3 of this paper: Vladyslav Usenko, Nikolaus Demmel and
     # Daniel Cremers: The Double Sphere Camera Model,
@@ -888,9 +893,9 @@ class HabitatSimFisheyeRGBSensorConfig(SimulatorFisheyeSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorFisheyeDepthSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeDepthSensor"
-    min_depth: float = SimulatorDepthSensorConfig.min_depth
-    max_depth: float = SimulatorDepthSensorConfig.max_depth
-    normalize_depth: bool = SimulatorDepthSensorConfig.normalize_depth
+    min_depth: float = SimulatorDepthSensorConfig().min_depth
+    max_depth: float = SimulatorDepthSensorConfig().max_depth
+    normalize_depth: bool = SimulatorDepthSensorConfig().normalize_depth
 
 
 @attr.s(auto_attribs=True, slots=True)
