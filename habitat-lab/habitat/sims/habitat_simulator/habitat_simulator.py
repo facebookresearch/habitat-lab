@@ -173,7 +173,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
                 obs, axis=2
             )  # make depth observation a 3D array
         else:
-            obs = obs.clamp(self.cmin_depth_value, self.max_depth_value)  # type: ignore[attr-defined, unreachable]
+            obs = obs.clamp(self.min_depth_value, self.max_depth_value)  # type: ignore[attr-defined, unreachable]
 
             obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
 
