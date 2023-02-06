@@ -131,6 +131,10 @@ class ArmRelPosAction(RobotAction):
     action
     """
 
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+
     @property
     def action_space(self):
         return spaces.Box(
@@ -143,7 +147,7 @@ class ArmRelPosAction(RobotAction):
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._config.delta_pos_limit
+        delta_pos *= self._delta_pos_limit
         # The actual joint positions
         self._sim: RearrangeSim
         self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
@@ -156,6 +160,11 @@ class ArmRelPosKinematicAction(RobotAction):
     action
     """
 
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._should_clip = self._config.get("should_clip", True)
+
     @property
     def action_space(self):
         return spaces.Box(
@@ -166,10 +175,10 @@ class ArmRelPosKinematicAction(RobotAction):
         )
 
     def step(self, delta_pos, *args, **kwargs):
-        if self._config.get("should_clip", True):
+        if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._config.delta_pos_limit
+        delta_pos *= self._delta_pos_limit
         self._sim: RearrangeSim
 
         set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos
@@ -233,6 +242,9 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self.last_arm_action = None
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._should_clip = self._config.get("should_clip", True)
+        self._arm_joint_mask = self._config.arm_joint_mask
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
@@ -249,17 +261,17 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
         )
 
     def step(self, delta_pos, *args, **kwargs):
-        if self._config.get("SHOULD_CLIP", True):
+        if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._config.delta_pos_limit
+        delta_pos *= self._delta_pos_limit
         self._sim: RearrangeSim
 
         # Expand delta_pos based on mask
-        expanded_delta_pos = np.zeros(len(self._config.arm_joint_mask))
+        expanded_delta_pos = np.zeros(len(self._arm_joint_mask))
         src_idx = 0
         tgt_idx = 0
-        for mask in self._config.arm_joint_mask:
+        for mask in self._arm_joint_mask:
             if mask == 0:
                 tgt_idx += 1
                 src_idx += 1
@@ -303,6 +315,9 @@ class BaseVelAction(RobotAction):
         self.base_vel_ctrl.lin_vel_is_local = True
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
+        self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
+        self._lin_speed = self._config.lin_speed
+        self._allow_back = self._config.allow_back
 
     @property
     def action_space(self):
@@ -350,7 +365,7 @@ class BaseVelAction(RobotAction):
         )
         self.cur_robot.sim_obj.transformation = target_trans
 
-        if not self._config.get("allow_dyn_slide", True):
+        if not self._allow_dyn_slide:
             # Check if in the new robot state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
@@ -369,9 +384,9 @@ class BaseVelAction(RobotAction):
 
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
-        lin_vel = np.clip(lin_vel, -1, 1) * self._config.lin_speed
-        ang_vel = np.clip(ang_vel, -1, 1) * self._config.ang_speed
-        if not self._config.allow_back:
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._lin_speed
+        if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
@@ -394,6 +409,8 @@ class ArmEEAction(RobotAction):
         self.ee_target: Optional[np.ndarray] = None
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
+        self._render_ee_target = self._config.get("render_ee_target", False)
+        self._ee_ctrl_lim = self._config.ee_ctrl_lim
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -430,10 +447,10 @@ class ArmEEAction(RobotAction):
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
-        ee_pos *= self._config.ee_ctrl_lim
+        ee_pos *= self._ee_ctrl_lim
         self.set_desired_ee_pos(ee_pos)
 
-        if self._config.get("render_ee_target", False):
+        if self._render_ee_target:
             global_pos = self._sim.robot.base_transformation.transform_point(
                 self.ee_target
             )
