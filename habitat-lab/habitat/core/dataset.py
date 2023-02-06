@@ -194,7 +194,6 @@ class Dataset(Generic[T]):
         return EpisodeIterator(self.episodes, *args, **kwargs)
 
     def to_json(self) -> str:
-
         result = DatasetJSONEncoder().encode(self)
         return result
 

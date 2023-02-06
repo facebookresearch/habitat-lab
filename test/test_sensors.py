@@ -198,7 +198,6 @@ def test_pointgoal_sensor():
             )
         }
     with habitat.Env(config=config, dataset=None) as env:
-
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
@@ -299,7 +298,6 @@ def test_imagegoal_sensor():
         agent_config = get_agent_config(config.habitat.simulator)
         agent_config.sim_sensors = {"rgb_sensor": HabitatSimRGBSensorConfig()}
     with habitat.Env(config=config, dataset=None) as env:
-
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         pointgoal = [0.1, 0.2, 0.3]
@@ -364,7 +362,6 @@ def test_get_observations_at():
             "depth_sensor": HabitatSimDepthSensorConfig(),
         }
     with habitat.Env(config=config, dataset=None) as env:
-
         # start position is checked for validity for the specific test scene
         valid_start_position = [-1.3731, 0.08431, 8.60692]
         expected_pointgoal = [0.1, 0.2, 0.3]
@@ -442,7 +439,6 @@ def smoke_test_sensor(config, N_STEPS=100):
     )
 
     with habitat.Env(config=config, dataset=None) as env:
-
         env.episode_iterator = iter([test_episode])
         no_noise_obs = env.reset()
         assert no_noise_obs is not None
@@ -569,7 +565,6 @@ def test_noise_models_rgbd():
 
     print(f"{test_episode}")
     with habitat.Env(config=config, dataset=None) as env:
-
         env.episode_iterator = iter([test_episode])
         no_noise_obs = [env.reset()]
         no_noise_states = [env.sim.get_agent_state()]
@@ -600,7 +595,6 @@ def test_noise_models_rgbd():
             }
         }
     with habitat.Env(config=config, dataset=None) as env:
-
         env.episode_iterator = iter([test_episode])
 
         obs = env.reset()

@@ -98,6 +98,7 @@ class DecentralizedDistributedMixin:
                                    forward pass, otherwise the gradient reduction
                                    will not work correctly.
         """
+
         # NB: Used to hide the hooks from the nn.Module,
         # so they don't show up in the state_dict
         class Guard:  # noqa: SIM119

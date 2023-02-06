@@ -280,7 +280,6 @@ class NavDataset(wds.Dataset):
         0 - NULL; 1 - START; 2 - FWD; 3 - LEFT; 4 - RIGHT; 5 - STOP;
         """
         for ep in self.episodes:
-
             ep.actions = [x.action + 2 for x in ep.shortest_paths[0]]
             ep.action_length = len(ep.actions)
             (

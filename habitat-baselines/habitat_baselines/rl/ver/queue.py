@@ -50,7 +50,6 @@ else:
             return msgs
 
         def put_many(self, xs, block=True, timeout=10.0):
-
             t_start = time.perf_counter()
             n_put = 0
             for x in xs:

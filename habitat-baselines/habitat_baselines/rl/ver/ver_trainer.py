@@ -363,7 +363,6 @@ class VERTrainer(PPOTrainer):
                 ews_to_wait = []
 
         [a.wait_sync() for a in ews_to_wait]
-        ews_to_wait = []
 
         if self._is_distributed:
             torch.distributed.barrier()
@@ -383,7 +382,6 @@ class VERTrainer(PPOTrainer):
         ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         with self.timer.avg_time("learn"):
-
             t_compute_returns = time.perf_counter()
 
             with self.timer.avg_time("compute returns"), inference_mode():

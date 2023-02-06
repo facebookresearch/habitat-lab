@@ -152,6 +152,7 @@ class MobileManipulator(Manipulator, RobotBase):
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
-        NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
+        NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes.
+        """
         Manipulator.reset(self)
         RobotBase.reset(self)
