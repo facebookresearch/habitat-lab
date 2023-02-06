@@ -323,7 +323,11 @@ class AmassHumanController:
             prev_angle = np.arctan2(action_order_facing[0], action_order_facing[2]) * 180./np.pi
             forward_angle = curr_angle - prev_angle
             if np.abs(forward_angle) > 1:
-                actual_angle_move = 10
+                actual_angle_move = 20
+                # if  np.abs(forward_angle) < 120:  
+                #     actual_angle_move = 20
+                # else:
+                #     actual_angle_move = np.abs(forward_angle)
                 if abs(forward_angle) < actual_angle_move:
                     actual_angle_move = abs(forward_angle)
                 new_angle = (prev_angle + actual_angle_move * np.sign(forward_angle)) * np.pi / 180
@@ -345,9 +349,11 @@ class AmassHumanController:
 
         full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
         # while transform is facing -Z, remove forward displacement
+        
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         full_transform = look_at_path_T @ full_transform
 
+        # How much distance we should have covered in the last step
         prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
         if (self.mocap_frame - step_size) < 0:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame] + curr_motion_data.map_of_total_displacement[-1]
@@ -355,8 +361,9 @@ class AmassHumanController:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
 
         dist_diff = max(0, distance_covered - prev_distance)
-        # if did_rotate:
-        #     dist_diff = 0
+        if did_rotate:
+            if np.abs(forward_angle) > 120:
+                dist_diff *= 0
         self.translation_offset = self.translation_offset + forward_V * dist_diff;
         self.prev_orientation = forward_V
 
@@ -388,6 +395,98 @@ class AmassHumanController:
 
         self.obj_transform = full_transform
         return interp_pose, full_transform
+
+
+    def compute_turn(self, rel_pos):
+        """ Turns a certain angle otwards a direction """
+        
+        assert(self.prev_orientation is not None)
+        step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
+        # breakpoint()
+        self.mocap_frame = (self.mocap_frame +  step_size) % self.motions.walk_to_walk.motion.num_frames()
+        if self.mocap_frame == 0:
+            self.distance_rot = 0
+        # curr_pos = self.motions.walk_to_walk[self.mocap_frame]
+        new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
+        # curr_motion_data = self.motions.walk_to_walk
+        
+        # new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(self.motions.standing_pose, self.joint_info)
+        new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
+
+        char_pos = self.translation_offset
+
+
+        forward_V = np.array([rel_pos[0], 0, rel_pos[1]])
+        desired_forward = forward_V
+        # interpolate facing last margin dist with standing pose
+        action_order_facing = self.prev_orientation
+
+        curr_angle = np.arctan2(forward_V[0], forward_V[2]) * 180./np.pi
+        prev_angle = np.arctan2(action_order_facing[0], action_order_facing[2]) * 180./np.pi
+        forward_angle = curr_angle - prev_angle
+        
+        # print("angle", forward_angle)
+        # breakpoint()
+
+
+        actual_angle_move = 10
+        if abs(forward_angle) < actual_angle_move:
+            actual_angle_move = abs(forward_angle)
+        new_angle = (prev_angle + actual_angle_move * np.sign(forward_angle))
+        # breakpoint()
+        new_angle = new_angle * np.pi / 180.0 
+        forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
+
+
+
+        forward_V[1] = 0.
+        forward_V = mn.Vector3(forward_V)
+        forward_V = forward_V.normalized()
+        # breakpoint()
+        look_at_path_T = mn.Matrix4.look_at(
+                    char_pos, char_pos + forward_V.normalized(), mn.Vector3.y_axis()
+                )
+
+        full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
+        # while transform is facing -Z, remove forward displacement
+        # full_transform.translation *= 0
+        full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+       
+        full_transform = look_at_path_T @ full_transform
+
+        self.prev_orientation = forward_V
+
+
+        # self.time_since_start += 1
+        # if self.fully_stopped:
+        #     progress = min(self.time_since_start, self.frames_to_start)
+        # else:
+        #     # if it didn't fully stop it should take us to walk as many
+        #     # frames as the time we spent stopping
+        #     progress = max(0, self.frames_to_start - self.time_since_stop)
+
+        # # Ensure a smooth transition from walking to standing
+        # progress_norm = progress * 1.0/self.frames_to_start
+        # if progress_norm < 1.0:
+        #     # if it was standing before walking, interpolate between walking and standing pose
+        #     standing_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(self.motions.standing_pose, self.joint_info)
+        #     interp_pose = (1-progress_norm) * np.array(standing_pose) + progress_norm * np.array(new_pose)
+        #     interp_pose = list(interp_pose)
+        #     self.fully_started = False
+        # else:
+        #     interp_pose = new_pose
+        #     self.fully_started = True
+
+        # if self.time_since_start >= self.frames_to_start:
+        #     self.fully_started = True
+        # self.time_since_stop = 0
+        # self.last_walk_pose = new_pose
+
+        interp_pose = new_pose
+        full_transform.translation = self.obj_transform.translation
+        self.obj_transform = full_transform
+        return interp_pose, full_transform
+
 
 
     @classmethod

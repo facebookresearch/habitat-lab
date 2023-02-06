@@ -43,6 +43,7 @@ class HumanNavAction(HumanJointAction):
         self._prev_ep_id = None
         self._targets = {}
         self.gen = 0
+        self.curr_ind_map = {'cont': 0}
 
     @property
     def action_space(self):
@@ -72,12 +73,21 @@ class HumanNavAction(HumanJointAction):
                 nav_to_obj
             )
             # start_pos = self._sim.robot.base_pos
+            # start_pos, _, _ = get_robot_spawns(
+            #     np.array(obj_pos),
+            #     0.0,
+            #     10,
+            #     self._sim,
+            #     20,
+            #     1,
+            # )
+
             start_pos, _, _ = get_robot_spawns(
                 np.array(obj_pos),
                 0.0,
-                10,
+                self._config.spawn_max_dist_to_obj,
                 self._sim,
-                20,
+                self._config.num_spawn_attempts,
                 1,
             )
             # TODO: not sure if it is clean to access this here
@@ -96,11 +106,11 @@ class HumanNavAction(HumanJointAction):
         # colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
         # self._sim.add_gradient_trajectory_object(
         #     "current_path_{}".format(self.gen), path.points, colors=colors, radius=0.03)
-        # breakpoint()
-        self.gen += 1
+        # # breakpoint()
+        # self.gen += 1
         if not found_path:
-            breakpoint()
-            return [agent_pos, point]
+            # breakpoint()
+            return None # [agent_pos, point]
         return path.points
 
     def step(self, *args, is_last_action, **kwargs):
@@ -121,47 +131,72 @@ class HumanNavAction(HumanJointAction):
         )
         curr_path_points = self._path_to_point(final_nav_targ)
 
-        index = 0
-        distance = 0
-
-        robot_pos = np.array(self.cur_human.base_pos)
-        AGENT_DIST = self.human_controller.step_distance * 5
-        while index < (len(curr_path_points) - 1) and distance < AGENT_DIST:
-            index += 1
-            distance = np.linalg.norm(curr_path_points[index] - robot_pos)
-
-        cur_nav_targ = curr_path_points[index]
-        # breakpoint()
-        # base_T = self.cur_human.base_transformation
-        # forward = np.array([1.0, 0, 0])
-        # robot_forward = np.array(base_T.transform_vector(forward))
-
-        # Compute relative target.
-        rel_targ = cur_nav_targ - robot_pos
-        # Compute heading angle (2D calculation)
-        # robot_forward = robot_forward[[0, 2]]
-        # rel_targ = rel_targ[[0, 2]]
-        # rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-
-        # angle_to_target = get_angle(robot_forward, rel_targ)
-        # angle_to_obj = get_angle(robot_forward, rel_pos)
-
-        dist_to_final_nav_targ = np.linalg.norm(
-            (final_nav_targ - robot_pos)[[0, 2]]
-        )
-        dist_to_curr_nav_targ = np.linalg.norm(
-            (cur_nav_targ - robot_pos)[[0, 2]]
-        )
+        sim = self._sim
         
-        at_goal = (
-            dist_to_final_nav_targ < self._config.dist_thresh
-        )
-        if not at_goal:
-            new_pos, new_trans = self.human_controller.walk(rel_targ)
-        else:
+        colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
+        if curr_path_points is not None:
+            self.curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object("current_path_{}".format(self.curr_ind_map['cont']), 
+                                                                                curr_path_points, colors=colors, radius=0.03)
+            self.curr_ind_map['cont'] += 1
+
+
+        if curr_path_points is None:
+            # path not found
             new_pos, new_trans = self.human_controller.stop()
-        # breakpoint()
-        # print("DISTANCE AND MOTION", dist_to_final_nav_targ, rel_targ, new_trans.translation, 'offset', self.human_controller.translation_offset)
+        else:
+            index = 0
+            distance = 0
+
+            robot_pos = np.array(self.cur_human.base_pos)
+            AGENT_DIST = self.human_controller.step_distance * 5
+            while index < (len(curr_path_points) - 1) and distance < AGENT_DIST:
+                index += 1
+                distance = np.linalg.norm(curr_path_points[index] - robot_pos)
+
+            cur_nav_targ = curr_path_points[index]
+            # breakpoint()
+            base_T = self.cur_human.base_transformation
+            # TODO: change this so that front is aligned with x, not z
+            forward = np.array([0, 0, 1.00])
+            robot_forward = np.array(base_T.transform_vector(forward))
+            
+            p1 = robot_pos
+            p2 = robot_pos + robot_forward
+            robot_forward = robot_forward[[0, 2]]
+            
+            # colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
+            # self.curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object(
+            #     "current_path_{}".format(self.curr_ind_map['cont']), 
+            #     [p1, p2], colors=colors, radius=0.03)
+            # self.curr_ind_map['cont'] += 1
+            rel_targ = cur_nav_targ - robot_pos
+
+            rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+
+
+            dist_to_final_nav_targ = np.linalg.norm(
+                (final_nav_targ - robot_pos)[[0, 2]]
+            )
+            
+            angle_to_obj = get_angle(robot_forward, rel_pos)
+            at_goal = (
+                dist_to_final_nav_targ < self._config.dist_thresh
+                and angle_to_obj < self._config.turn_thresh
+            )
+            if not at_goal:
+                if dist_to_final_nav_targ < self._config.dist_thresh:
+
+                    new_pos, new_trans = self.human_controller.compute_turn(
+                        rel_pos
+                    )
+
+
+                else:
+                    new_pos, new_trans = self.human_controller.walk(rel_targ)
+            else:
+                new_pos, new_trans = self.human_controller.stop()
+            # breakpoint()
+            # print("DISTANCE AND MOTION", dist_to_final_nav_targ, rel_targ, new_trans.translation, 'offset', self.human_controller.translation_offset)
         base_action = amass_human_controller.AmassHumanController.transformAction(new_pos, new_trans)
         # print(new_trans, robot_pos)
         kwargs[f"{self._action_arg_prefix}human_joints_trans"] = base_action
