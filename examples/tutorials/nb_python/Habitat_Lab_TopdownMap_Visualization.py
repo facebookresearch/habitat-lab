@@ -86,6 +86,7 @@ if not os.path.exists(output_path):
     os.makedirs(output_path)
 # [/setup]
 
+
 # %%
 # [example_1]
 def example_pointnav_draw_target_birdseye_view():
