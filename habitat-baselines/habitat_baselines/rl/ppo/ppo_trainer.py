@@ -84,6 +84,11 @@ if TYPE_CHECKING:
 class PPOTrainer(BaseRLTrainer):
     r"""Trainer class for PPO algorithm
     Paper: https://arxiv.org/abs/1707.06347.
+
+    :property env_action_space: The action space required by the environment.
+    :property policy_action_space: The action space the policy acts in. This
+        can be different from the environment action space for hierarchical
+        policies.
     """
     supported_tasks = ["Nav-v0"]
 

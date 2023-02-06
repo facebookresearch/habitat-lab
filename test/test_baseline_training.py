@@ -174,6 +174,7 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     ),
 )
 def test_hrl(config_path, policy_type, skill_type, mode):
+    TRAIN_LOG_FILE = "data/test_train.log"
 
     if policy_type == "hl_neural" and skill_type == "nn_skills":
         return
@@ -184,6 +185,8 @@ def test_hrl(config_path, policy_type, skill_type, mode):
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
+    if os.path.exists(TRAIN_LOG_FILE):
+        os.remove(TRAIN_LOG_FILE)
 
     # Setup the training
     config = get_config(
@@ -195,6 +198,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             "habitat_baselines.total_num_steps=-1.0",
             "habitat_baselines.test_episode_count=1",
             "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.log_file={TRAIN_LOG_FILE}",
             f"habitat_baselines/rl/policy={policy_type}",
             f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills={skill_type}",
         ],

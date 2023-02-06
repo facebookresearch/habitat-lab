@@ -164,7 +164,7 @@ class SkillPolicy(Policy):
         prev_actions: torch.Tensor,
         masks: torch.Tensor,
         actions: torch.Tensor,
-        hl_policy_wants_termination: torch.BoolTensor,
+        hl_wants_skill_term: torch.BoolTensor,
         batch_idx: List[int],
         skill_name: List[str],
         log_info: List[Dict[str, Any]],
@@ -198,7 +198,7 @@ class SkillPolicy(Policy):
             else:
                 is_skill_done = is_skill_done | over_max_len
 
-        is_skill_done |= hl_policy_wants_termination
+        is_skill_done |= hl_wants_skill_term
 
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):

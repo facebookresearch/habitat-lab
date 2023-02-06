@@ -227,7 +227,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             (self._num_envs,), dtype=torch.bool
         )
 
-        hl_policy_wants_termination = self._high_level_policy.get_termination(
+        hl_wants_skill_term = self._high_level_policy.get_termination(
             observations,
             rnn_hidden_states,
             prev_actions,
@@ -249,7 +249,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 "prev_actions": prev_actions,
                 "masks": masks,
                 "actions": actions,
-                "hl_policy_wants_termination": hl_policy_wants_termination,
+                "hl_wants_skill_term": hl_wants_skill_term,
             },
             # Only decide on skill termination if the episode is active.
             should_adds=masks,

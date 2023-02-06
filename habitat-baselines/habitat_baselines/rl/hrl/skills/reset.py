@@ -21,10 +21,12 @@ class ResetArmSkill(SkillPolicy):
         batch_size,
     ):
         super().__init__(config, action_space, batch_size, True)
-        self._target = np.array([float(x) for x in config.reset_joint_state])
+        self._rest_state = np.array(
+            [float(x) for x in config.reset_joint_state]
+        )
 
         self._arm_ac_range = find_action_range(action_space, "arm_action")
-        self._arm_ac_range = (self._arm_ac_range[0], self._target.shape[0])
+        self._arm_ac_range = (self._arm_ac_range[0], self._rest_state.shape[0])
 
     def on_enter(
         self,
@@ -43,7 +45,7 @@ class ResetArmSkill(SkillPolicy):
         )
 
         self._initial_delta = (
-            self._target - observations["joint"].cpu().numpy()
+            self._rest_state - observations["joint"].cpu().numpy()
         )
 
         return ret
@@ -58,7 +60,7 @@ class ResetArmSkill(SkillPolicy):
 
         return (
             torch.as_tensor(
-                np.abs(current_joint_pos - self._target).max(-1),
+                np.abs(current_joint_pos - self._rest_state).max(-1),
                 dtype=torch.float32,
             )
             < 5e-2
@@ -74,7 +76,7 @@ class ResetArmSkill(SkillPolicy):
         deterministic=False,
     ):
         current_joint_pos = observations["joint"].cpu().numpy()
-        delta = self._target - current_joint_pos
+        delta = self._rest_state - current_joint_pos
 
         # Dividing by max initial delta means that the action will
         # always in [-1,1] and has the benefit of reducing the delta
