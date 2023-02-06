@@ -4,9 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple
 
+import attr
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
@@ -15,12 +15,12 @@ from habitat.config.default_structured_configs import SimulatorSensorConfig
 cs = ConfigStore.instance()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesBaseConfig:
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class WBConfig(HabitatBaselinesBaseConfig):
     """Weights and Biases config"""
 
@@ -35,7 +35,7 @@ class WBConfig(HabitatBaselinesBaseConfig):
     run_name: str = ""
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class EvalConfig(HabitatBaselinesBaseConfig):
     # The split to evaluate on
     split: str = "val"
@@ -44,16 +44,13 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     # The number of time to run each episode through evaluation.
     # Only works when evaluating on all episodes.
     evals_per_ep: int = 1
-    video_option: List[str] = field(
-        # available options are "disk" and "tensorboard"
-        default_factory=list
-    )
-    extra_sim_sensors: Dict[str, SimulatorSensorConfig] = field(
-        default_factory=dict
-    )
+    video_option: List[
+        str
+    ] = []  # available options are "disk" and "tensorboard"
+    extra_sim_sensors: Dict[str, SimulatorSensorConfig] = dict()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class PreemptionConfig(HabitatBaselinesBaseConfig):
     # Append the slurm job ID to the resume state filename if running
     # a slurm job. This is useful when you want to have things from a different
@@ -66,7 +63,7 @@ class PreemptionConfig(HabitatBaselinesBaseConfig):
     save_state_batch_only: bool = False
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class ActionDistributionConfig(HabitatBaselinesBaseConfig):
     use_log_std: bool = True
     use_softplus: bool = False
@@ -85,12 +82,12 @@ class ActionDistributionConfig(HabitatBaselinesBaseConfig):
     scheduled_std: bool = False
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class ObsTransformConfig(HabitatBaselinesBaseConfig):
     type: str = MISSING
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class CenterCropperConfig(ObsTransformConfig):
     type: str = "CenterCropper"
     height: int = 256
@@ -111,7 +108,7 @@ cs.store(
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class ResizeShortestEdgeConfig(ObsTransformConfig):
     type: str = "ResizeShortestEdge"
     size: int = 256
@@ -132,21 +129,19 @@ cs.store(
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class Cube2EqConfig(ObsTransformConfig):
     type: str = "CubeMap2Equirect"
     height: int = 256
     width: int = 512
-    sensor_uuids: List[str] = field(
-        default_factory=lambda: [
-            "BACK",
-            "DOWN",
-            "FRONT",
-            "LEFT",
-            "RIGHT",
-            "UP",
-        ]
-    )
+    sensor_uuids: List[str] = [
+        "BACK",
+        "DOWN",
+        "FRONT",
+        "LEFT",
+        "RIGHT",
+        "UP",
+    ]
 
 
 cs.store(
@@ -157,23 +152,21 @@ cs.store(
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class Cube2FishConfig(ObsTransformConfig):
     type: str = "CubeMap2Fisheye"
     height: int = 256
     width: int = 256
     fov: int = 180
     params: Tuple[float, ...] = (0.2, 0.2, 0.2)
-    sensor_uuids: List[str] = field(
-        default_factory=lambda: [
-            "BACK",
-            "DOWN",
-            "FRONT",
-            "LEFT",
-            "RIGHT",
-            "UP",
-        ]
-    )
+    sensor_uuids: List[str] = [
+        "BACK",
+        "DOWN",
+        "FRONT",
+        "LEFT",
+        "RIGHT",
+        "UP",
+    ]
 
 
 cs.store(
@@ -184,10 +177,10 @@ cs.store(
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class AddVirtualKeysConfig(ObsTransformConfig):
     type: str = "AddVirtualKeys"
-    virtual_keys: Dict[str, int] = field(default_factory=dict)
+    virtual_keys: Dict[str, int] = dict()
 
 
 cs.store(
@@ -198,21 +191,19 @@ cs.store(
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class Eq2CubeConfig(ObsTransformConfig):
     type: str = "Equirect2CubeMap"
     height: int = 256
     width: int = 256
-    sensor_uuids: List[str] = field(
-        default_factory=lambda: [
-            "BACK",
-            "DOWN",
-            "FRONT",
-            "LEFT",
-            "RIGHT",
-            "UP",
-        ]
-    )
+    sensor_uuids: List[str] = [
+        "BACK",
+        "DOWN",
+        "FRONT",
+        "LEFT",
+        "RIGHT",
+        "UP",
+    ]
 
 
 cs.store(
@@ -223,25 +214,25 @@ cs.store(
 )
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HierarchicalPolicy(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
-    defined_skills: Dict[str, Any] = field(default_factory=dict)
-    use_skills: Dict[str, str] = field(default_factory=dict)
+    defined_skills: Dict[str, Any] = dict()
+    use_skills: Dict[str, str] = dict()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class PolicyConfig(HabitatBaselinesBaseConfig):
     name: str = "PointNavResNetPolicy"
     action_distribution_type: str = "categorical"  # or 'gaussian'
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
-    obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
+    obs_transforms: Dict[str, ObsTransformConfig] = dict()
     hierarchical_policy: HierarchicalPolicy = MISSING
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class PPOConfig(HabitatBaselinesBaseConfig):
     """Proximal policy optimization config"""
 
@@ -272,7 +263,7 @@ class PPOConfig(HabitatBaselinesBaseConfig):
     use_double_buffered_sampler: bool = False
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class VERConfig(HabitatBaselinesBaseConfig):
     """Variable experience rollout config"""
 
@@ -281,12 +272,12 @@ class VERConfig(HabitatBaselinesBaseConfig):
     overlap_rollouts_and_learn: bool = False
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class AuxLossConfig(HabitatBaselinesBaseConfig):
     pass
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class CPCALossConfig(AuxLossConfig):
     """Action-conditional contrastive predictive coding loss"""
 
@@ -296,7 +287,7 @@ class CPCALossConfig(AuxLossConfig):
     loss_scale: float = 0.1
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class DDPPOConfig(HabitatBaselinesBaseConfig):
     """Decentralized distributed proximal policy optimization config"""
 
@@ -319,7 +310,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     force_distributed: bool = False
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
@@ -328,22 +319,18 @@ class RLConfig(HabitatBaselinesBaseConfig):
     ppo: PPOConfig = PPOConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()
-    auxiliary_losses: Dict[str, AuxLossConfig] = field(default_factory=dict)
+    auxiliary_losses: Dict[str, AuxLossConfig] = dict()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class ProfilingConfig(HabitatBaselinesBaseConfig):
     capture_start_step: int = -1
     num_steps_to_capture: int = -1
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
-    # base_task_config_path: str = (
-    #     "habitat-lab/habitat/config/task/pointnav.yaml"
-    # )
-    # cmd_trailing_opts: List[str] = field(default_factory=list)
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
     tensorboard_dir: str = "tb"
@@ -365,7 +352,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     log_file: str = "train.log"
     force_blind_policy: bool = False
     verbose: bool = True
-    eval_keys_to_include_in_name: List[str] = field(default_factory=list)
+    eval_keys_to_include_in_name: List[str] = []
     # For our use case, the CPU side things are mainly memory copies
     # and nothing of substantive compute. PyTorch has been making
     # more and more memory copies parallel, but that just ends up
@@ -384,17 +371,17 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     profiling: ProfilingConfig = ProfilingConfig()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
     rl: RLConfig = RLConfig()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesILConfig(HabitatBaselinesConfig):
-    il: Dict[str, Any] = field(default_factory=dict)
+    il: Dict[str, Any] = dict()
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesSPAConfig(HabitatBaselinesConfig):
     sense_plan_act: Any = MISSING
 
