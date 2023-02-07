@@ -340,7 +340,7 @@ python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
 python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
 hydra/launcher=submitit_slurm --multirun
 ```
-- Making the config key required xby setting its value to `MISSING`. For example, we require the user to explicitly
+- Making the config key required by setting its value to `MISSING`. For example, we require the user to explicitly
   set the `task` and the `dataset` in every Habitat-Lab benchmark config (see `HabitatConfig` Structured Config
  in the [habitat-lab/habitat/config/default.py](default.py)):
 ```python
