@@ -7,7 +7,6 @@ defaults:
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
-# Config for empty task to explore the scene.
 habitat:
   environment:
     max_episode_steps: 0
