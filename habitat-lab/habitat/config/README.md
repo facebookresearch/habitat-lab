@@ -338,7 +338,7 @@ python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
   and `submitit_slurm` launcher specified in the command line `hydra/launcher=submitit_slurm`:
 ```bash
 python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
-hydra/launcher=submitit_slurm
+hydra/launcher=submitit_slurm -m
 ```
 - Making the config key required by setting its value to `MISSING`. For example, we require the user to explicitly
   set the `task` and the `dataset` in every Habitat-Lab benchmark config (see `HabitatConfig` Structured Config
