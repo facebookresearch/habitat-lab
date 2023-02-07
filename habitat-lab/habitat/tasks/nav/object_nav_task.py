@@ -152,7 +152,6 @@ class ObjectGoalSensor(Sensor):
         episode: ObjectGoalNavEpisode,
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
-
         if len(episode.goals) == 0:
             logger.error(
                 f"No goal specified for episode {episode.episode_id}."

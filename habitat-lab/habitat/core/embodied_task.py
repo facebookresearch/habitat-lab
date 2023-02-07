@@ -261,7 +261,6 @@ class EmbodiedTask:
         self._is_episode_active = False
 
     def _init_entities(self, entities_configs, register_func) -> OrderedDict:
-
         entities = OrderedDict()
         for entity_name, entity_cfg in entities_configs.items():
             entity_cfg = OmegaConf.create(entity_cfg)

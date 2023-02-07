@@ -47,7 +47,6 @@ class PlaceSkillPolicy(PickSkillPolicy):
         if is_done.sum() > 0:
             self._internal_log(
                 f"Terminating with {rel_resting_pos} and {is_holding}",
-                observations,
             )
         return is_done
 

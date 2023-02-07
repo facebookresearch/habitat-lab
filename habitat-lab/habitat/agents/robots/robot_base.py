@@ -226,7 +226,6 @@ class RobotBase(RobotInterface):
         )
 
     def update_base(self, rigid_state, target_rigid_state):
-
         end_pos = self._sim.step_filter(
             rigid_state.translation, target_rigid_state.translation
         )

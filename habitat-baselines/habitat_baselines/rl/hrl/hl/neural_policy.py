@@ -1,3 +1,4 @@
+import logging
 from itertools import chain
 from typing import Any, List
 
@@ -7,6 +8,7 @@ import torch
 import torch.nn as nn
 
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
+from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
@@ -81,6 +83,9 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
 
     def _setup_actions(self) -> List[PddlAction]:
         all_actions = self._pddl_prob.get_possible_actions()
+        all_actions = [
+            ac for ac in all_actions if ac.name in self._config.allowed_actions
+        ]
         if not self._config.allow_other_place:
             all_actions = [
                 ac
@@ -191,6 +196,8 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             if should_plan != 1.0:
                 continue
             use_ac = self._all_actions[skill_sel[batch_idx]]
+            if baselines_logger.level >= logging.DEBUG:
+                baselines_logger.debug(f"HL Policy selected skill {use_ac}")
             next_skill[batch_idx] = self._skill_name_to_idx[use_ac.name]
             skill_args_data[batch_idx] = [
                 entity.name for entity in use_ac.param_values

@@ -9,7 +9,7 @@ from typing import List
 import cv2
 import numpy as np
 
-from habitat.utils.gym_adapter import flatten_dict
+from habitat.gym.gym_wrapper import flatten_dict
 
 
 def append_text_to_image(
@@ -66,6 +66,10 @@ def append_text_to_image(
 
 
 def overlay_frame(frame, info, additional=None):
+    """
+    Renders text from the `info` dictionary to the `frame` image.
+    """
+
     lines = []
     flattened_info = flatten_dict(info)
     for k, v in flattened_info.items():

@@ -93,13 +93,13 @@ def step_env(env, action_name, action_args):
 def reached_dest(agent_controller, path):
     final_point = path.points[-1]
 
-    distance = np.linalg.norm((agent_controller.translation_offset - final_point) * (mn.Vector3.x_axis() + mn.Vector3.z_axis()))
+    distance = np.linalg.norm((agent_controller.base_pos - final_point) * (mn.Vector3.x_axis() + mn.Vector3.z_axis()))
     if distance < 0.1:
         return True
     return False
 
 def compute_displ(next_point, agent_controller):
-    diff_dist = next_point - agent_controller.translation_offset
+    diff_dist = next_point - agent_controller.base_pos
 
     return [diff_dist[0], diff_dist[2]]
 
@@ -213,7 +213,7 @@ def get_input_vel_ctlr(
             base_action = mn.Vector3([-0.01, 0.00, 0])
             human_controller.curr_trans += base_action
 
-            current_point = human_controller.translation_offset + human_controller.curr_trans
+            current_point = human_controller.base_pos + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
             )
@@ -234,7 +234,7 @@ def get_input_vel_ctlr(
             base_action = mn.Vector3([0.01, 0.00, 0])
             human_controller.curr_trans += base_action
 
-            current_point = human_controller.translation_offset + human_controller.curr_trans
+            current_point = human_controller.base_pos + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
             )
@@ -255,7 +255,7 @@ def get_input_vel_ctlr(
             base_action = mn.Vector3([0, 0.01, 0])
             human_controller.curr_trans += base_action
 
-            current_point = human_controller.translation_offset + human_controller.curr_trans
+            current_point = human_controller.base_pos + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
             )
@@ -272,7 +272,7 @@ def get_input_vel_ctlr(
             base_action_name = 'humanjoint_action'
             base_action = mn.Vector3([0, -0.01, 0])
             human_controller.curr_trans += base_action
-            current_point = human_controller.translation_offset + human_controller.curr_trans
+            current_point = human_controller.base_pos + human_controller.curr_trans
             env._sim.viz_ids['target_ee'] = env._sim.visualize_position(
                 current_point, env._sim.viz_ids['target_ee']
             )
@@ -327,7 +327,7 @@ def get_input_vel_ctlr(
         name = base_action_name
         args = {base_key: base_action}
     else:
-        breakpoint()
+        # breakpoint()
         name = arm_action_name
         if given_arm_action:
             # The grip is also contained in the provided action
@@ -487,8 +487,9 @@ def play_env(env, args, config):
         GfxReplayMeasure.cls_uuid, None
     )
     is_multi_agent = len(env._sim.agents_mgr) > 1
-    env._sim.agent.translation_offset = env._sim.agent.sim_obj.translation + mn.Vector3([0,0.9, 0])
-    agent_location = env._sim.agent.translation_offset
+    # breakpoint()
+    env._sim.agent.base_pos = env._sim.agent.sim_obj.translation - mn.Vector3(0, 1.1 ,0)
+    agent_location = env._sim.agent.base_pos
     print(agent_location)
 
 
@@ -496,20 +497,22 @@ def play_env(env, args, config):
     amass_path = config.habitat.simulator.agents.main_agent.amass_path
     body_model_path = config.habitat.simulator.agents.main_agent.body_model_path
     draw_fps = config.habitat.simulator.agents.main_agent.draw_fps_human
-    obj_translation = env._sim.agent.sim_obj.translation
+    base_pos = env._sim.agent.base_pos
     grab_path = config.habitat.simulator.agents.main_agent.grab_path
 
+    # breakpoint()
     link_ids = env._sim.agent.sim_obj.get_link_ids()
     human_controller = AmassHumanController(
-        urdf_path, amass_path, body_model_path, obj_translation=obj_translation, grab_path=grab_path, draw_fps=draw_fps)
+        urdf_path, amass_path, body_model_path, obj_translation=base_pos, grab_path=grab_path, draw_fps=draw_fps)
 
     # TODO: remove
+    
+    human_controller.reset(env._sim.agent.base_pos)
 
-    human_controller.reset(env._sim.agent.sim_obj.translation)
+    # breakpoint()
     # breakpoint()
     found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map)
     path_ind = 1
-    # breakpoint()
     repeat_walk = True
     for path_i in range(path_ind, len(path.points)):
         env.sim.viz_ids[f'next_loc_{path_i}'] = env.sim.visualize_position(
@@ -536,7 +539,7 @@ def play_env(env, args, config):
         do_update = True
         dist = 0.05
 
-        agent_location = human_controller.translation_offset
+        agent_location = human_controller.base_pos
         radius = np.linalg.norm((agent_location- goal_location) * (mn.Vector3.x_axis() + mn.Vector3.z_axis()))
 
         if keys[pygame.K_w]:
@@ -568,7 +571,7 @@ def play_env(env, args, config):
 
         if do_update:
             repeat_walk = True
-            agent_location = human_controller.translation_offset
+            agent_location = human_controller.base_pos
             # agent_location = env._sim.agent.translation_offset
             found_path, goal_location, path = update_location_walk(agent_location, env, curr_ind_map, goal_location)
             path_ind = 1
@@ -584,7 +587,7 @@ def play_env(env, args, config):
         # dist = (path.points[path_ind] - env._sim.agent.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
 
         # Get the thing below back
-        dist = (path.points[path_ind] - human_controller.translation_offset) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
+        dist = (path.points[path_ind] - human_controller.base_pos) * (mn.Vector3.x_axis() + mn.Vector3.z_axis())
         if np.linalg.norm(dist) < delta_dist:
 
             path_ind = min(path_ind+1, len(path.points) - 1)

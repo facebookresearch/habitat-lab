@@ -374,7 +374,7 @@ class HeadingSensor(Sensor):
 
 @registry.register_sensor(name="CompassSensor")
 class EpisodicCompassSensor(HeadingSensor):
-    r"""The agents heading in the coordinate frame defined by the epiosde,
+    r"""The agents heading in the coordinate frame defined by the episode,
     theta=0 is defined by the agents state at t=0
     """
     cls_uuid: str = "compass"
@@ -752,7 +752,6 @@ class TopDownMap(Measure):
 
     def _draw_goals_positions(self, episode):
         if self._config.draw_goal_positions:
-
             for goal in episode.goals:
                 if self._is_on_same_floor(goal.position[1]):
                     try:

@@ -57,7 +57,7 @@ class AmassHuman(Humanoid):
     def _get_human_params(self):
         return HumanParams(
                 gripper_joints=[0,0],
-                base_offset=mn.Vector3([0, 1.2, 0]),
+                base_offset=mn.Vector3([0, 1.1, 0]),
                 gripper_init_params=np.array([0.00, 0.00], dtype=np.float32),
                 arm_init_params_left=np.array(
                     [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],

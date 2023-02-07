@@ -60,6 +60,8 @@ class Motions:
 class AmassHumanController:
     def __init__(self, urdf_path, amass_path, body_model_path, grab_path=None, obj_translation=None, draw_fps=60):
         self.motions = Motions(amass_path, body_model_path)
+        self.base_offset = mn.Vector3([0,1.1,0])
+        # self.feet_offset = mn.Vector3([0,-1.1,0])
 
         self.last_pose = self.motions.standing_pose
         self.urdf_path = urdf_path
@@ -70,7 +72,8 @@ class AmassHumanController:
         self.mocap_frame = 0
         self.curr_trans = mn.Vector3([0,0,0.3])
         self.rotation_offset: Optional[mn.Quaternion] = mn.Quaternion()
-        self.translation_offset: Optional[mn.Vector3] = mn.Vector3([0, 0, 0])
+        
+        
         self.obj_transform = self.obtain_root_transform_at_frame(0)
 
         self.prev_orientation = None
@@ -96,7 +99,8 @@ class AmassHumanController:
         self.use_ik_grab = True
 
         if obj_translation is not None:
-            self.translation_offset = obj_translation + mn.Vector3([0,0.90,0])
+            self.base_pos = obj_translation
+
         self.pc_id = p.connect(p.DIRECT)
         self.human_bullet_id = p.loadURDF(urdf_path)
 
@@ -146,11 +150,25 @@ class AmassHumanController:
             }
         self.reach_pos = 0
         # breakpoint()
+    
+    @property
+    def base_pos(self):
+        return self.obj_transform.translation - self.obj_transform.transform_vector(
+            self.base_offset
+        )
+
+    @base_pos.setter
+    def base_pos(self, position: mn.Vector3):
+        
+        self.obj_transform.translation = position + self.obj_transform.transform_vector(
+            self.base_offset
+        )
+
 
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)
         """
-        self.translation_offset = position
+        self.base_pos = position
         self.last_pose = self.motions.standing_pose
 
     def stop(self, progress=None):
@@ -187,34 +205,6 @@ class AmassHumanController:
         return interp_pose, self.obj_transform
 
 
-
-
-
-    def walk_path(self, path_keypoints: List[mn.Vector3], should_reset=False, stop_at_end=False):
-        """ Walks along a path """
-        if should_reset:
-            self.reset_path_info()
-
-
-        while self.path_ind < len(path_keypoints) - 1 and self.path_distance_walked > self.path_distance_covered_next_wp:
-            i = self.path_ind
-            j = i + 1
-            self.path_ind += 1
-
-            progress: float = (mn.Vector3(path_keypoints[i] - path_keypoints[j])).length()
-            self.path_distance_covered_next_wp += progress
-
-        is_last_keypoint = self.path_ind == (len(path_keypoints) - 1)
-        next_relative_position = path_keypoints[self.path_ind] - self.translation_offset
-        new_pos, new_transform = self.walk(next_relative_position)
-
-        if is_last_keypoint and stop_at_end:
-            # Set a stopping pose if close to the end
-            distance_to_goal = (path_keypoints[self.path_ind] - self.translation_offset).length()
-            progress_stop = min(0, self.stop_distance - distance_to_goal) / self.stop_distance
-            new_pos = self.stop(progress=progress_stop)
-
-        return new_pos, new_transform
 
     def obtain_root_transform_at_frame(self, mocap_frame):
 
@@ -297,23 +287,11 @@ class AmassHumanController:
         return curr_pose, curr_transform
 
     def walk(self, position: mn.Vector3):
+        # breakpoint()
         """ Walks to the desired position. Rotates the character if facing in a different direction """
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
-        # breakpoint()
-        self.mocap_frame = (self.mocap_frame +  step_size) % self.motions.walk_to_walk.motion.num_frames()
-        if self.mocap_frame == 0:
-            self.distance_rot = 0
-        # curr_pos = self.motions.walk_to_walk[self.mocap_frame]
-        new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
-        curr_motion_data = self.motions.walk_to_walk
-        new_pose, new_root_trans, root_rotation = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
-
-        char_pos = self.translation_offset
-
-
-
         forward_V = position
-
+        forward_V[1] = 0.
 
         # interpolate facing last margin dist with standing pose
         did_rotate = False
@@ -321,37 +299,39 @@ class AmassHumanController:
             action_order_facing = self.prev_orientation
             curr_angle = np.arctan2(forward_V[0], forward_V[2]) * 180./np.pi
             prev_angle = np.arctan2(action_order_facing[0], action_order_facing[2]) * 180./np.pi
+            
             forward_angle = curr_angle - prev_angle
-            if np.abs(forward_angle) > 1:
+            if np.abs(forward_angle) >= 1:
                 actual_angle_move = 20
-                # if  np.abs(forward_angle) < 120:  
-                #     actual_angle_move = 20
-                # else:
-                #     actual_angle_move = np.abs(forward_angle)
                 if abs(forward_angle) < actual_angle_move:
                     actual_angle_move = abs(forward_angle)
-                new_angle = (prev_angle + actual_angle_move * np.sign(forward_angle)) * np.pi / 180
+                new_angle = (prev_angle + actual_angle_move * np.sign(forward_angle))
+                new_angle *= np.pi / 180
                 did_rotate = True
             else:
                 new_angle = curr_angle * np.pi / 180
-
+                forward_V2 = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
+                # breakpoint()
+                # print(mn.Vector3(forward_V).normalized(), forward_V2.normalized())
+                # breakpoint()
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
-
-
-        forward_V[1] = 0.
         forward_V = mn.Vector3(forward_V)
+        
+        # How much distance should we walk to reach the goal
+        distance_to_walk = forward_V.length() 
         forward_V = forward_V.normalized()
 
-        look_at_path_T = mn.Matrix4.look_at(
-                    char_pos, char_pos + forward_V.normalized(), mn.Vector3.y_axis()
-                )
 
-        full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
-        # while transform is facing -Z, remove forward displacement
+
+        self.mocap_frame = (self.mocap_frame +  step_size) % self.motions.walk_to_walk.motion.num_frames()
+        if self.mocap_frame == 0:
+            self.distance_rot = 0
+
+        new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]    
+        curr_motion_data = self.motions.walk_to_walk
+        new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
         
-        full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
-        full_transform = look_at_path_T @ full_transform
 
         # How much distance we should have covered in the last step
         prev_distance = curr_motion_data.map_of_total_displacement[self.mocap_frame - step_size]
@@ -360,14 +340,39 @@ class AmassHumanController:
         else:
             distance_covered = curr_motion_data.map_of_total_displacement[self.mocap_frame];
 
-        dist_diff = max(0, distance_covered - prev_distance)
+        dist_diff = min(distance_to_walk, max(0, distance_covered - prev_distance))
+        
         if did_rotate:
+            dist_diff *= 0
             if np.abs(forward_angle) > 120:
                 dist_diff *= 0
-        self.translation_offset = self.translation_offset + forward_V * dist_diff;
+        
         self.prev_orientation = forward_V
 
+        
+        full_transform = self.obtain_root_transform_at_frame(0) # self.mocap_frame)
+        full_transform.translation *= 0
+        #print(full_transform.translation)
+        # breakpoint()
+        look_at_path_T = mn.Matrix4.look_at(
+            self.obj_transform.translation, 
+            self.obj_transform.translation + forward_V.normalized(), mn.Vector3.y_axis()
+        )
 
+        # Remove the forward component, we will set it later ouselves
+        # breakpoint()
+        full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+        full_transform = look_at_path_T @ full_transform
+
+
+        # Remove the forward component, we will set it later ouselves
+        #diff_trans = full_transform.translation - self.obj_transform.translation
+        #breakpoint()
+        
+        #diff_trans.projected(forward_V)
+        full_transform.translation += forward_V * dist_diff;
+        
+        
         self.time_since_start += 1
         if self.fully_stopped:
             progress = min(self.time_since_start, self.frames_to_start)
@@ -393,13 +398,16 @@ class AmassHumanController:
         self.time_since_stop = 0
         self.last_walk_pose = new_pose
 
+        # breakpoint()
         self.obj_transform = full_transform
+
+
+
         return interp_pose, full_transform
 
 
     def compute_turn(self, rel_pos):
         """ Turns a certain angle otwards a direction """
-        
         assert(self.prev_orientation is not None)
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
         # breakpoint()
@@ -413,7 +421,7 @@ class AmassHumanController:
         # new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(self.motions.standing_pose, self.joint_info)
         new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
 
-        char_pos = self.translation_offset
+        char_pos = self.base_pos
 
 
         forward_V = np.array([rel_pos[0], 0, rel_pos[1]])
@@ -429,7 +437,7 @@ class AmassHumanController:
         # breakpoint()
 
 
-        actual_angle_move = 10
+        actual_angle_move = 5
         if abs(forward_angle) < actual_angle_move:
             actual_angle_move = abs(forward_angle)
         new_angle = (prev_angle + actual_angle_move * np.sign(forward_angle))
@@ -449,7 +457,7 @@ class AmassHumanController:
 
         full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
         # while transform is facing -Z, remove forward displacement
-        # full_transform.translation *= 0
+        full_transform.translation *= 0
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
        
         full_transform = look_at_path_T @ full_transform

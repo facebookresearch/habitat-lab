@@ -16,29 +16,25 @@ from habitat.tasks.utils import get_angle
 import magnum as mn
 import human_controllers.amass_human_controller as amass_human_controller
 
-def compute_turn(rel, turn_vel, robot_forward):
-    is_left = np.cross(robot_forward, rel) > 0
-    if is_left:
-        vel = [0, -turn_vel]
-    else:
-        vel = [0, turn_vel]
-    return vel
 
-
-def get_possible_nav_to_actions(pddl_problem):
-    return pddl_problem.get_possible_actions(
-        allowed_action_names=["nav", "nav_to_receptacle"],
-        true_preds=None,
-    )
 
 
 @registry.register_task_action
 class HumanNavAction(HumanJointAction):
+    """
+    An action that will convert the index of an entity (in the sense of
+    `PddlEntity`) to navigate to and convert this to base control to move the
+    robot to the closest navigable position to that entity. The entity index is
+    the index into the list of all available entities in the current scene.
+    """
+     
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task
         self.human_controller = None
-        self._poss_actions = get_possible_nav_to_actions(task.pddl_problem)
+        self._poss_entities = (
+            self._task.pddl_problem.get_ordered_entities_list()
+        )
 
         self._prev_ep_id = None
         self._targets = {}
@@ -67,21 +63,10 @@ class HumanNavAction(HumanJointAction):
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         if nav_to_target_idx not in self._targets:
-            action = self._poss_actions[nav_to_target_idx]
-            nav_to_obj = action.get_arg_value("obj")
+            nav_to_obj = self._poss_entities[nav_to_target_idx]
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            # start_pos = self._sim.robot.base_pos
-            # start_pos, _, _ = get_robot_spawns(
-            #     np.array(obj_pos),
-            #     0.0,
-            #     10,
-            #     self._sim,
-            #     20,
-            #     1,
-            # )
-
             start_pos, _, _ = get_robot_spawns(
                 np.array(obj_pos),
                 0.0,
@@ -91,7 +76,9 @@ class HumanNavAction(HumanJointAction):
                 1,
             )
             # TODO: not sure if it is clean to access this here
-            self.human_controller.reset(self.cur_human.sim_obj.translation)
+            # breakpoint()
+            self.human_controller.reset(self.cur_human.base_pos)
+            # breakpoint()
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
@@ -118,7 +105,7 @@ class HumanNavAction(HumanJointAction):
             self._action_arg_prefix + "human_nav_action"
         ]
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
-            self._poss_actions
+            self._poss_entities
         ):
             if is_last_action:
                 return self._sim.step(HabitatSimActions.base_velocity)
@@ -135,11 +122,17 @@ class HumanNavAction(HumanJointAction):
         
         colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
         if curr_path_points is not None:
+            # pass
             self.curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object("current_path_{}".format(self.curr_ind_map['cont']), 
                                                                                 curr_path_points, colors=colors, radius=0.03)
             self.curr_ind_map['cont'] += 1
+        # sim.viz_ids['basepos'] = sim.visualize_position(
+        #     self.human_controller.base_pos, sim.viz_ids['basepos'], r=0.10
+        # )
 
+        
 
+        # print(self.human_controller.base_pos, self.cur_human.base_pos)
         if curr_path_points is None:
             # path not found
             new_pos, new_trans = self.human_controller.stop()
@@ -149,12 +142,21 @@ class HumanNavAction(HumanJointAction):
 
             robot_pos = np.array(self.cur_human.base_pos)
             AGENT_DIST = self.human_controller.step_distance * 5
+            # for ind in range(len(curr_path_points)):
+
+            # index = 1
             while index < (len(curr_path_points) - 1) and distance < AGENT_DIST:
                 index += 1
                 distance = np.linalg.norm(curr_path_points[index] - robot_pos)
 
+            # def convert_num(x, mark=False):
+            #     if mark:
+            #         return "(*) {:.2f},{:.2f},{:.2f}".format(x[0],x[1],x[2])
+            #     else:
+            #         return "{:.2f},{:.2f},{:.2f}".format(x[0],x[1],x[2])
+            # print(" --> ".join([convert_num(x, ind==index) for ind, x in enumerate(curr_path_points)]))
+            
             cur_nav_targ = curr_path_points[index]
-            # breakpoint()
             base_T = self.cur_human.base_transformation
             # TODO: change this so that front is aligned with x, not z
             forward = np.array([0, 0, 1.00])
@@ -164,6 +166,12 @@ class HumanNavAction(HumanJointAction):
             p2 = robot_pos + robot_forward
             robot_forward = robot_forward[[0, 2]]
             
+            # sim.viz_ids['basepos'] = sim.visualize_position(
+            #     robot_pos, sim.viz_ids['basepos'], r=0.05
+            # )
+            # sim.viz_ids['basepos_3'] = sim.visualize_position(
+            #     p2, sim.viz_ids['basepos_3'], r=0.05
+            # )
             # colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
             # self.curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object(
             #     "current_path_{}".format(self.curr_ind_map['cont']), 
@@ -189,8 +197,6 @@ class HumanNavAction(HumanJointAction):
                     new_pos, new_trans = self.human_controller.compute_turn(
                         rel_pos
                     )
-
-
                 else:
                     new_pos, new_trans = self.human_controller.walk(rel_targ)
             else:

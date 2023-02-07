@@ -251,6 +251,9 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     stop_thresh: float = 0.001
     # For the reset_arm_skill
     reset_joint_state: List[float] = MISSING
+    # The set of PDDL action names (as defined in the PDDL domain file) that
+    # map to this skill. If not specified,the name of the skill must match the
+    # PDDL action name.
     pddl_action_names: Optional[List[str]] = None
 
 

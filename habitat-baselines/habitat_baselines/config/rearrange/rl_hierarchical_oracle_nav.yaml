@@ -9,7 +9,6 @@
 defaults:
   - rl_hierarchical
   - /habitat/task/actions:
-    - pddl_apply_action
     - oracle_nav_action
   - _self_
 

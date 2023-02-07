@@ -36,7 +36,6 @@ class RolloutStorage:
         num_recurrent_layers=1,
         is_double_buffered: bool = False,
     ):
-
         if is_continuous_action_space(action_space):
             # Assume ALL actions are NOT discrete
             action_shape = (
@@ -90,7 +89,6 @@ class RolloutStorage:
             numsteps + 1, num_envs, *action_shape
         )
         if discrete_actions:
-
             assert isinstance(self.buffers["actions"], torch.Tensor)
             assert isinstance(self.buffers["prev_actions"], torch.Tensor)
             self.buffers["actions"] = self.buffers["actions"].long()

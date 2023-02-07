@@ -64,7 +64,6 @@ class PPO(nn.Module):
         entropy_target_factor: float = 0.0,
         use_adaptive_entropy_pen: bool = False,
     ) -> None:
-
         super().__init__()
 
         self.actor_critic = actor_critic
@@ -299,7 +298,6 @@ class PPO(nn.Module):
         self,
         rollouts: RolloutStorage,
     ) -> Dict[str, float]:
-
         advantages = self.get_advantages(rollouts)
 
         learner_metrics: Dict[str, List[Any]] = collections.defaultdict(list)

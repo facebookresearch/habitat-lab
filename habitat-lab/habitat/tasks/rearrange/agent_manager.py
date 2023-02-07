@@ -123,7 +123,7 @@ class AgentManager:
 
             # consume a fixed position from SIMUALTOR.agent_0 if configured
             if agent_data.cfg.is_set_start_state:
-                agent_data.agent.translation_offset = mn.Vector3(
+                agent_data.agent.base_pos = mn.Vector3(
                     agent_data.cfg.start_position
                 )
                 agent_rot = agent_data.cfg.start_rotation

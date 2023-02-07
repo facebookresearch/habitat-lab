@@ -62,17 +62,18 @@ To run the following examples, you need the [ReplicaCAD dataset](https://github.
 To train a high-level policy, while using pre-learned low-level skills (SRL baseline from [Habitat2.0](https://arxiv.org/abs/2106.14405)), you can run:
 
 ```bash
-python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml \
+python -u habitat-baselines/habitat_baselines/run.py \
+  --exp-config habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml \
   --run-type train
 ```
-To run a rearrangement episode with oracle in both low- and high-level, you can run:
+To run a rearrangement episode with oracle low-level skills and a fixed task planner, run:
 
 ```bash
-python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/rearrange/rl_hl_srl_onav.yaml \
+python -u habitat-baselines/habitat_baselines/run.py \
+  --exp-config habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml \
   --run-type eval \
-  habitat_baselines/rl/policy=hierarchical_tp_noop_onav
+  habitat_baselines/rl/policy=hl_fixed \
+  habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills
 ```
 
 To change the task (like set table) that you train your skills on, you can change the line `/habitat/task/rearrange: rearrange_easy` to `/habitat/task/rearrange: set_table` in the defaults of your config.

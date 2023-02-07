@@ -44,7 +44,6 @@ class ShortestPathFollower:
         return_one_hot: bool = True,
         stop_on_error: bool = True,
     ):
-
         self._return_one_hot = return_one_hot
         self._sim = sim
         self._goal_radius = goal_radius
