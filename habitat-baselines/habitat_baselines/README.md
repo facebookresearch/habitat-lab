@@ -78,13 +78,6 @@ python -u habitat-baselines/habitat_baselines/run.py \
 
 To change the task (like set table) that you train your skills on, you can change the line `/habitat/task/rearrange: rearrange_easy` to `/habitat/task/rearrange: set_table` in the defaults of your config.
 
-
-### Classic
-
-**SLAM based**
-
-- [Handcrafted agent baseline](slambased/README.md) adopted from the paper
-"Benchmarking Classic and Learned Navigation in Complex 3D Environments".
 ### Additional Utilities
 
 **Episode iterator options**:
