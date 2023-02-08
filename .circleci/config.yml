@@ -20,7 +20,7 @@ jobs:
       - run:
           name: setup
           command: |
-              pip install black --progress-bar off
+              pip install black==23.1.0 --progress-bar off
               pip install "isort[pyproject]" numpy --progress-bar off
               pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
               pip install -r habitat-lab/requirements.txt --progress-bar off

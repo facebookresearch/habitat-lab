@@ -349,7 +349,6 @@ class VERTrainer(PPOTrainer):
                 ews_to_wait = []
 
         [a.wait_sync() for a in ews_to_wait]
-        ews_to_wait = []
 
         if self._is_distributed:
             torch.distributed.barrier()
