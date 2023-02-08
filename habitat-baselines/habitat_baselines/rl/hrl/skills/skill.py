@@ -29,6 +29,9 @@ class SkillPolicy(Policy):
         """
         self._config = config
         self._batch_size = batch_size
+        self._apply_postcond = self._config.apply_postconds
+        self._force_end_on_timeout = self._config.force_end_on_timeout
+        self._max_skill_steps = self._config.max_skill_steps
 
         self._cur_skill_step = torch.zeros(self._batch_size)
         self._should_keep_hold_state = should_keep_hold_state
@@ -49,7 +52,7 @@ class SkillPolicy(Policy):
             )
         else:
             self._pddl_ac_start = None
-        if self._config.apply_postconds and self._pddl_ac_start is None:
+        if self._apply_postconds and self._pddl_ac_start is None:
             raise ValueError(f"Could not find PDDL action in skill {self}")
 
         self._delay_term: List[Optional[bool]] = [
@@ -191,9 +194,9 @@ class SkillPolicy(Policy):
             device=cur_skill_step.device,
             dtype=torch.bool,
         )
-        if self._config.max_skill_steps > 0:
-            over_max_len = cur_skill_step >= self._config.max_skill_steps
-            if self._config.force_end_on_timeout:
+        if self._max_skill_steps > 0:
+            over_max_len = cur_skill_step >= self._max_skill_steps
+            if self._force_end_on_timeout:
                 bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len
@@ -208,7 +211,7 @@ class SkillPolicy(Policy):
                 )
                 self._delay_term[env_i] = False
                 is_skill_done[i] = True
-            elif self._config.apply_postconds and is_skill_done[i]:
+            elif self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )

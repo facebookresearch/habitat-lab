@@ -65,6 +65,7 @@ from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
+    get_action_space_info,
     get_num_actions,
     inference_mode,
     is_continuous_action_space,
@@ -346,7 +347,7 @@ class PPOTrainer(BaseRLTrainer):
         self._nbuffers = 2 if ppo_cfg.use_double_buffered_sampler else 1
 
         rollouts_cls = baseline_registry.get_storage(
-            self.config.habitat_baselines.rollout_storage
+            self.config.habitat_baselines.rollout_storage_name
         )
         self.rollouts = rollouts_cls(
             ppo_cfg.num_steps,
@@ -938,14 +939,9 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config, is_eval=True)
 
         self._setup_actor_critic_agent(ppo_cfg)
-        if is_continuous_action_space(self.policy_action_space):
-            # Assume NONE of the actions are discrete
-            action_shape = (get_num_actions(self.policy_action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
+        discrete_actions, action_shape = get_action_space_info(
+            self.policy_action_space
+        )
 
         if self.agent.actor_critic.should_load_agent_state:
             self.agent.load_state_dict(ckpt_dict["state_dict"])
