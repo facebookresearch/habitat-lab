@@ -16,10 +16,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
 )
-from habitat_baselines.utils.common import (
-    get_action_space_info,
-    get_num_actions,
-)
+from habitat_baselines.utils.common import get_action_space_info
 
 
 @baseline_registry.register_storage

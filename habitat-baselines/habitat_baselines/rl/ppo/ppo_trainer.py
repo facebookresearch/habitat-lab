@@ -66,7 +66,6 @@ from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
     get_action_space_info,
-    get_num_actions,
     inference_mode,
     is_continuous_action_space,
 )

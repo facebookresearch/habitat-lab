@@ -701,8 +701,10 @@ def get_action_space_info(ac_space: spaces.Space) -> Tuple[Tuple[int], bool]:
     if is_continuous_action_space(ac_space):
         # Assume NONE of the actions are discrete
         return (
-            get_num_actions(
-                ac_space,
+            (
+                get_num_actions(
+                    ac_space,
+                ),
             ),
             False,
         )

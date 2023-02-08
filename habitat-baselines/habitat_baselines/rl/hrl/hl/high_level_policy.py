@@ -95,8 +95,6 @@ class HighLevelPolicy(nn.Module):
         Called before every step with the mask information at the current step.
         """
 
-        pass
-
     def get_policy_components(self) -> List[nn.Module]:
         """
         Gets the torch modules that are in the HL policy architecture.

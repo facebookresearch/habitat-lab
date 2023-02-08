@@ -29,7 +29,7 @@ class SkillPolicy(Policy):
         """
         self._config = config
         self._batch_size = batch_size
-        self._apply_postcond = self._config.apply_postconds
+        self._apply_postconds = self._config.apply_postconds
         self._force_end_on_timeout = self._config.force_end_on_timeout
         self._max_skill_steps = self._config.max_skill_steps
 

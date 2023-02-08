@@ -306,6 +306,7 @@ if __name__ == "__main__":
 # %% [markdown]
 # ## Create a new Sensor
 
+
 # %%
 @registry.register_sensor(name="agent_position_sensor")
 class AgentPositionSensor(habitat.Sensor):
