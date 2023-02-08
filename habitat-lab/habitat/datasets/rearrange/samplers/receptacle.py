@@ -66,7 +66,6 @@ class Receptacle(ABC):
     ) -> mn.Vector3:
         """
         Sample a uniform random point within Receptacle in local space.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
 
@@ -126,7 +125,6 @@ class Receptacle(ABC):
     ) -> mn.Vector3:
         """
         Sample a uniform random point in the local Receptacle volume and then transform it into global space.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center.
         """
         local_sample = self.sample_uniform_local(sample_region_scale)
@@ -209,7 +207,6 @@ class AABBReceptacle(Receptacle):
     ) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
         scaled_region = mn.Range3D.from_center(
@@ -295,13 +292,6 @@ class AABBReceptacle(Receptacle):
                     and local_point[i] <= bounds_max[i]
                 )
         return on_surface
-
-    def get_local_surface_center(
-        self, sim: habitat_sim.Simulator
-    ) -> mn.Vector3:
-        local_center = self.bounds.center()
-        local_center.y = self.bounds.y().min
-        return local_center
 
     def add_receptacle_visualization(
         self, sim: habitat_sim.Simulator
@@ -455,7 +445,6 @@ class TriangleMeshReceptacle(Receptacle):
     ) -> mn.Vector3:
         """
         Sample a uniform random point from the mesh.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
 
@@ -489,12 +478,15 @@ class TriangleMeshReceptacle(Receptacle):
         if color is None:
             color = mn.Color4.magenta()
         dblr = sim.get_debug_line_render()
+        gt = self.get_global_transform(sim)
         assert len(self.mesh_data[1]) % 3 == 0, "must be triangles"
         for face in range(int(len(self.mesh_data[1]) / 3)):
             verts = self.get_face_verts(f_ix=face)
             for edge in range(3):
                 dblr.draw_transformed_line(
-                    verts[edge], verts[(edge + 1) % 3], color
+                    gt.transform_point(verts[edge]),
+                    gt.transform_point(verts[(edge + 1) % 3]),
+                    color,
                 )
 
 
@@ -502,7 +494,6 @@ def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     """
     Scrapes the active SceneDataset from a Simulator for all receptacle names defined in rigid/articulated object and stage templates for investigation and preview purposes.
     Note this will not include scene-specific overrides defined in scene_config.json files. Only receptacles defined in object_config.json, ao_config.json, and stage_config.json files or added programmatically to associated Attributes objects will be found.
-
     Returns a dict with keys {"stage", "rigid", "articulated"} mapping object template handles to lists of receptacle names.
     """
     # cache the rigid and articulated receptacles seperately
@@ -556,49 +547,13 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     """
     Returns a Tuple of (verts,indices) from a ply mesh.
     NOTE: the input PLY must contain only triangles.
-    TODO: This could be replaced by a standard importer, but I didn't want to add additional dependencies for such as small feature.
     """
     mesh_data: Tuple[List[mn.Vector3], List[int]] = ([], [])
-    with open(ply_file) as f:
-        lines = [line.rstrip() for line in f]
-        assert lines[0] == "ply", f"Must be PLY format. '{ply_file}'"
-        assert "format ascii" in lines[1], f"Must be ascii PLY. '{ply_file}'"
-        # parse the header
-        line_index = 2
-        num_verts = 0
-        num_faces = 0
-        while line_index < len(lines):
-            if lines[line_index].startswith("element vertex"):
-                num_verts = int(lines[line_index][14:])
-                print(f"num_verts = {num_verts}")
-            elif lines[line_index].startswith("element face"):
-                num_faces = int(lines[line_index][12:])
-                print(f"num_faces = {num_faces}")
-            elif lines[line_index] == "end_header":
-                # done parsing header
-                line_index += 1
-                break
-            line_index += 1
-        assert (
-            len(lines) - line_index == num_verts + num_faces
-        ), f"Lines after header ({len(lines) - line_index}) should agree with forward declared content. {num_verts} verts and {num_faces} faces expected. '{ply_file}'"
-        # parse the verts
-        for vert_line in range(line_index, num_verts + line_index):
-            coords = [float(x) for x in lines[vert_line].split(" ")]
-            mesh_data[0].append(mn.Vector3(coords))
-        line_index += num_verts
-        for face_line in range(line_index, num_faces + line_index):
-            assert (
-                int(lines[face_line][0]) <= 4
-            ), f"Faces must be triangles. '{ply_file}' {lines[face_line][0]}"
-            if int(lines[face_line][0]) == 4:
-                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-                mesh_data[1].extend(indices[:-1])
-                mesh_data[1].extend(indices[1:])
-            else:
-                indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-                mesh_data[1].extend(indices)
-
+    trimesh_data = trimesh.load(ply_file)
+    mesh_data[0].extend(mn.Vector3(vert) for vert in trimesh_data.vertices)
+    for face in trimesh_data.faces:
+        assert len(face) == 3, f"Faces must be triangles. '{ply_file}' {face}"
+        mesh_data[1].extend(map(int, face))
     return mesh_data
 
 
@@ -611,13 +566,11 @@ def parse_receptacles_from_user_config(
 ) -> List[Union[Receptacle, AABBReceptacle]]:
     """
     Parse receptacle metadata from the provided user subconfig object.
-
     :param user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
     :param parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
     :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
     :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
     :param ao_uniform_scaling: Uniform scaling applied to the parent AO is applied directly to the Receptacle.
-
     Construct and return a list of Receptacle objects. Multiple Receptacles can be defined in a single user subconfig.
     """
     receptacles: List[
