@@ -938,7 +938,7 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config, is_eval=True)
 
         self._setup_actor_critic_agent(ppo_cfg)
-        discrete_actions, action_shape = get_action_space_info(
+        action_shape, discrete_actions = get_action_space_info(
             self.policy_action_space
         )
 

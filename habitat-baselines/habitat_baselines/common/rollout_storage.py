@@ -33,7 +33,7 @@ class RolloutStorage:
         num_recurrent_layers=1,
         is_double_buffered: bool = False,
     ):
-        discrete_actions, action_shape = get_action_space_info(action_space)
+        action_shape, discrete_actions = get_action_space_info(action_space)
 
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()
