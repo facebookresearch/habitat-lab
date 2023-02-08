@@ -28,7 +28,13 @@ class HRLPPO(PPO):
 
         self._set_grads_to_none()
 
-        (values, action_log_probs, dist_entropy, _,) = self._evaluate_actions(
+        (
+            values,
+            action_log_probs,
+            dist_entropy,
+            _,
+            _,
+        ) = self._evaluate_actions(
             batch["observations"],
             batch["recurrent_hidden_states"],
             batch["prev_actions"],
