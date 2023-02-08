@@ -53,12 +53,6 @@ To use them download pre-trained pytorch models from [link](https://dl.fbaipubli
 The `habitat_baselines/config/pointnav/ppo_pointnav.yaml` config has better hyperparameters for large scale training and loads the [Gibson PointGoal Navigation Dataset](/README.md#datasets) instead of the test scenes.
 Change the `/benchmark/nav/pointnav: pointnav_gibson` in `habitat_baselines/config/pointnav/ppo_pointnav.yaml` to `/benchmark/nav/pointnav: pointnav_mp3d` in the defaults list for training on [MatterPort3D PointGoal Navigation Dataset](/README.md#datasets).
 
-### Classic
-
-**SLAM based**
-
-- [Handcrafted agent baseline](slambased/README.md) adopted from the paper
-"Benchmarking Classic and Learned Navigation in Complex 3D Environments".
 ### Additional Utilities
 
 **Episode iterator options**:
