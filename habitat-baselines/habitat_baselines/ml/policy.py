@@ -111,7 +111,7 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
         self.timesteps_before_goal_update[e] = 0
         self.semantic_map.init_map_and_pose_for_env(e)
 
-    def prepare_planner_inputs(self, obs, pose_delta, goal_category):
+    def prepare_planner_inputs(self, obs, pose_delta, object_goal_category=None, recep_goal_category=None):
         dones = torch.tensor([False] * self.num_environments)
         update_global = torch.tensor(
             [
@@ -120,6 +120,10 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
             ]
         )
 
+        if object_goal_category is not None:
+            object_goal_category =  object_goal_category.unsqueeze(1)
+        if recep_goal_category is not None:
+            recep_goal_category = recep_goal_category.unsqueeze(1)
         (
             goal_map,
             found_goal,
@@ -132,7 +136,6 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
         ) = self.module(
             obs.unsqueeze(1),
             pose_delta.unsqueeze(1),
-            goal_category.unsqueeze(1),
             dones.unsqueeze(1),
             update_global.unsqueeze(1),
             self.semantic_map.local_map,
@@ -141,6 +144,8 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
             self.semantic_map.global_pose,
             self.semantic_map.lmb,
             self.semantic_map.origins,
+            seq_object_goal_category=object_goal_category,
+            seq_recep_goal_category=recep_goal_category
         )
 
         self.semantic_map.local_pose = seq_local_pose[:, -1]
@@ -178,6 +183,7 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
             {
                 "explored_map": self.semantic_map.get_explored_map(e),
                 "semantic_map": self.semantic_map.get_semantic_map(e),
+                "been_close_map": self.semantic_map.get_been_close_map(e),
                 "timestep": self.timesteps[e],
             }
             for e in range(self.num_environments)
@@ -188,10 +194,15 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
     def act(self, observations, infos, envs):
         obs = torch.cat([ob.to(self.device) for ob in observations])
         pose_delta = torch.cat([info["pose_delta"] for info in infos])
-        goal_category = torch.cat([info["goal_category"] for info in infos])
+        object_goal_category =  None
+        if infos[0]["object_goal_category"] is not None:
+            object_goal_category = torch.cat([info["object_goal_category"] for info in infos])
+        recep_goal_category =  None
+        if infos[0]["recep_goal_category"] is not None:
+            recep_goal_category = torch.cat([info["recep_goal_category"] for info in infos])
 
         planner_inputs, vis_inputs = self.prepare_planner_inputs(
-            obs, pose_delta, goal_category
+            obs, pose_delta, object_goal_category=object_goal_category, recep_goal_category=recep_goal_category
         )
         actions = [
             *envs.call(
@@ -202,8 +213,11 @@ class ModularFrontierExplorationBaselinePolicy(Policy):
                 ],
             )
         ]
-        actions = torch.tensor(actions, device=self.device)
-        return actions
+        # Map the discrete actions to continuous actions
+        action_map  = {HabitatSimActions.turn_right:[0, 0, -1, -1], HabitatSimActions.move_forward:[0, 1, 0, -1], HabitatSimActions.turn_left:[0, 0, 1, -1], HabitatSimActions.stop:[0, 0, 0, 1]}
+        waypoints = [action_map[action] for action in actions]
+
+        return np.array(waypoints, dtype=np.float32)
 
     @classmethod
     def from_config(cls, config: "DictConfig", envs, device):

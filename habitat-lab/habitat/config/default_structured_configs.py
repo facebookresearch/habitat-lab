@@ -382,6 +382,15 @@ class ObjectSegmentationSensorConfig(LabSensorConfig):
     blank_out_prob: float = 0.0
     dimensionality: int = 256
 
+@dataclass
+class StartRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
+    type: str = "StartRecepSegmentationSensor"
+
+@dataclass
+class GoalRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
+    type: str = "GoalRecepSegmentationSensor"
+
+
 
 @dataclass
 class LocalizationSensorConfig(LabSensorConfig):
@@ -817,7 +826,7 @@ class TaskConfig(HabitatBaseConfig):
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = field(default_factory=list)
     actions: Dict[str, ActionConfig] = MISSING
-
+    goal_type: str = "object_on_recep"
 
 @dataclass
 class SimulatorSensorConfig(HabitatBaseConfig):
@@ -1144,9 +1153,9 @@ class GymConfig(HabitatBaseConfig):
 class MLEnvConfig(HabitatBaseConfig):
     """Modular learning env config"""
 
-    num_sem_categories: int = 3
+    num_sem_categories: int = 5
 
-    min_depth: float = 0.0  # minimum depth for depth sensor (in metres)
+    min_depth: float = 0.0  # minimum depth forw depth sensor (in metres)
     max_depth: float = 10.0  # maximum depth for depth sensor (in metres)
     min_depth_replacement_value: int = 10000
     max_depth_replacement_value: int = 10001
@@ -1584,6 +1593,18 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="object_segmentation_sensor",
     node=ObjectSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.start_recep_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="start_recep_segmentation_sensor",
+    node=StartRecepSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.goal_recep_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="goal_recep_segmentation_sensor",
+    node=GoalRecepSegmentationSensorConfig,
 )
 
 # Task Measurements

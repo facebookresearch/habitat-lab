@@ -116,9 +116,9 @@ class MLTrainer(PPOTrainer):
         ), "You must specify a number of evaluation episodes with test_episode_count"
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
-
+        stats_episodes = []
         while (
-            # len(stats_episodes) < (number_of_eval_episodes * evals_per_ep) and
+            len(stats_episodes) < (number_of_eval_episodes * evals_per_ep) and
             self.envs.num_envs
             > 0
         ):
@@ -130,9 +130,8 @@ class MLTrainer(PPOTrainer):
                 )
             )
             actions = self.policy.act(obs, infos, self.envs)
-            step_data = [a.item() for a in actions.cpu()]
+            step_data = actions
             outputs = self.envs.step(step_data)
-
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
@@ -141,3 +140,4 @@ class MLTrainer(PPOTrainer):
                 if done:
                     self.policy.reset_vectorized_for_env(e)
                     print(infos[e])
+                    stats_episodes.append(infos[e])

@@ -123,7 +123,8 @@ class MLEnv(GymHabitatEnv):
             semantic_frame,
             third_person_rgb_frame,
             pose_delta,
-            goal_category,
+            object_goal_category,
+            recep_goal_category,
             goal_name,
         ) = self.obs_preprocessor.preprocess([obs])
 
@@ -131,7 +132,7 @@ class MLEnv(GymHabitatEnv):
         self.last_goal_name = goal_name[0]
         self.last_third_person_rgb_frame = third_person_rgb_frame[0]
 
-        info = {"pose_delta": pose_delta, "goal_category": goal_category}
+        info = {"pose_delta": pose_delta, "object_goal_category": object_goal_category,  "recep_goal_category": recep_goal_category}
 
         return obs_preprocessed, info
 

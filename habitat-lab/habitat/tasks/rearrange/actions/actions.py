@@ -568,12 +568,12 @@ class BaseWaypointVelAction(RobotAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
         # Initialize the controller
-        max_lin_speed = 0.4 # real Stretch max linear velocity
-        max_ang_speed = 0.3 # real Stretch max angular velocity
-        lin_speed_gain = 10.0 # the linear gain
-        ang_speed_gain = 10.0 # the angular gain
-        lin_tol = 0.05 # 5cm linear error tol
-        ang_tol = 0.05 # 5cm angular error tol
+        max_lin_speed = 30 # real Stretch max linear velocity
+        max_ang_speed = 20.94 # real Stretch max angular velocity
+        lin_speed_gain = 10000.0 # the linear gain
+        ang_speed_gain = 10000.0 # the angular gain
+        lin_tol = 0.001 # 5cm linear error tol
+        ang_tol = 0.001 # 5cm angular error tol
         max_heading_ang = np.pi/10.0
         self.controller = Controller(v_max=max_lin_speed, \
             w_max=max_ang_speed, \

@@ -41,7 +41,6 @@ class ObjectNavAgentModule(nn.Module):
         self,
         seq_obs,
         seq_pose_delta,
-        seq_goal_category,
         seq_dones,
         seq_update_global,
         init_local_map,
@@ -50,6 +49,8 @@ class ObjectNavAgentModule(nn.Module):
         init_global_pose,
         init_lmb,
         init_origins,
+        seq_object_goal_category=None,
+        seq_recep_goal_category=None
     ):
         """Update maps and poses with a sequence of observations, and predict
         high-level goals from map features.
@@ -126,8 +127,11 @@ class ObjectNavAgentModule(nn.Module):
         # Predict high-level goals from map features
         # batched across sequence length x num environments
         map_features = seq_map_features.flatten(0, 1)
-        goal_category = seq_goal_category.flatten(0, 1)
-        goal_map, found_goal = self.policy(map_features, goal_category)
+        if seq_object_goal_category is not None:
+            seq_object_goal_category = seq_object_goal_category.flatten(0, 1)
+        if seq_recep_goal_category is not None:
+            seq_recep_goal_category = seq_recep_goal_category.flatten(0, 1)
+        goal_map, found_goal = self.policy(map_features, seq_object_goal_category, seq_recep_goal_category)
         seq_goal_map = goal_map.view(
             batch_size, sequence_length, *goal_map.shape[-2:]
         )

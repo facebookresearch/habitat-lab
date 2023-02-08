@@ -24,6 +24,7 @@ class ObsPreprocessor:
     ):
         self.num_environments = num_environments
         self.device = device
+        self.config = config
         self.frame_height = (
             config.simulator.agents.main_agent.sim_sensors.head_rgb_sensor.height
         )
@@ -57,6 +58,12 @@ class ObsPreprocessor:
         # elif "floorplanner" in self.episodes_data_path:
         # if config.AGENT.SEMANTIC_MAP.semantic_categories == "mukul_indoor":
         self.semantic_category_mapping = GoalObjectMapping()
+        # TODO: Hardcoded for now, read from episodes
+        self._obj_name_to_id_mapping = {'action_figure': 0, 'cup': 1, 'dishtowel': 2, 'hat': 3, 'sponge': 4, 'stuffed_toy': 5, 'tape': 6, 'vase': 7}
+        self._rec_name_to_id_mapping =  {'armchair': 0, 'armoire': 1, 'bar_stool': 2, 'coffee_table': 3, 'desk': 4, 'dining_table': 5, 'kitchen_island': 6, 'sofa': 7, 'stool': 8}
+        self._obj_id_to_name_mapping = {k:v for  v, k in self._obj_name_to_id_mapping.items()}
+        self._rec_id_to_name_mapping = {k:v for  v, k in self._rec_name_to_id_mapping.items()}
+
         # else:
         #     raise NotImplementedError
 
@@ -104,7 +111,7 @@ class ObsPreprocessor:
 
     def preprocess(
         self,
-        obs: List[Observations],
+        obs: List[Observations]
     ) -> Tuple[Tensor, np.ndarray, Tensor, Tensor, List[str]]:
         """
         Preprocess observations of a single timestep batched across
@@ -133,13 +140,15 @@ class ObsPreprocessor:
             obs, self.last_poses
         )
 
-        goal, goal_name = self.preprocess_goal(obs)
+        object_goal, recep_goal,  goal_name = self.preprocess_goal(obs, self.config.task.goal_type)
+
         return (
             obs_preprocessed,
             semantic_frame,
             third_person_rgb_frame,
             pose_delta,
-            goal,
+            object_goal,
+            recep_goal,
             goal_name,
         )
 
@@ -177,31 +186,46 @@ class ObsPreprocessor:
                 [seq_obs[t]], self.last_poses
             )
 
-        goal, goal_name = self.preprocess_goal([seq_obs[0]])
+        object_goal, recep_goal, goal_name = self.preprocess_goal([seq_obs[0]])
         goal_name = goal_name[0] if goal_name is not None else goal_name
         return (
             seq_obs_preprocessed,
             seq_semantic_frame,
             seq_pose_delta,
-            goal,
+            object_goal,
+            recep_goal,
             goal_name,
         )
 
     def preprocess_goal(
-        self, obs: List[Observations]
+        self, obs: List[Observations],
+        goal_type
     ) -> Tuple[Tensor, List[str]]:
         assert "object_category" in obs[0]
-        goal_ids, goal_names = [], []
-        for ob in obs:
-            _, goal_name = self.semantic_category_mapping.map_goal_id(
-                ob["object_category"][0]
-            )
-            goal_id = 1  # semantic sensor returns binary mask for goal object
-            goal_ids.append(goal_id)
-            goal_names.append(goal_name)
-        goal_ids = torch.tensor(goal_ids)
+        object_goal_ids, rec_goal_ids, goal_names = [], [], []
 
-        return goal_ids, goal_names
+        for ob in obs:
+            if goal_type in ['object', 'object_on_recep']:
+                goal_name = self._obj_id_to_name_mapping[ob["object_category"][0]]
+                obj_goal_id = 1  # semantic sensor returns binary mask for goal object
+                object_goal_ids.append(obj_goal_id)
+            if goal_type ==  'object_on_recep':
+                goal_name =  self._obj_id_to_name_mapping[ob["object_category"][0]] + " on " +  self._rec_id_to_name_mapping[ob["start_receptacle"][0]]
+                rec_goal_id = 2
+                rec_goal_ids.append(rec_goal_id)
+            if goal_type == 'recep':
+                goal_name = self._rec_id_to_name_mapping[ob['goal_receptacle'][0]]
+                rec_goal_id = 3
+                object_goal_ids = None
+                rec_goal_ids.append(rec_goal_id)
+            goal_names.append(goal_name)
+        if goal_type  == 'object':
+            rec_goal_ids = None
+        if object_goal_ids is not None:
+            object_goal_ids = torch.tensor(object_goal_ids)
+        if rec_goal_ids is not None:
+            rec_goal_ids = torch.tensor(rec_goal_ids)
+        return object_goal_ids, rec_goal_ids, goal_names
 
     def preprocess_frame(
         self, obs: List[Observations]
@@ -266,14 +290,26 @@ class ObsPreprocessor:
         if (
             self.ground_truth_semantics
             and "object_segmentation" in obs[0]
+            and "goal_recep_segmentation" in obs[0]
+            and "start_recep_segmentation" in obs[0]
             and self.semantic_category_mapping.instance_id_to_category_id
             is not None
         ):
             # Ground-truth semantic segmentation (useful for debugging)
             # TODO Allow multiple environments with ground-truth segmentation
-            assert "object_segmentation" in obs[0]
             semantic = torch.from_numpy(
                 np.stack([ob["object_segmentation"] for ob in obs])
+                .squeeze(-1)
+                .astype(np.int64)
+            ).to(self.device)
+            start_recep_seg = torch.from_numpy(
+                np.stack([ob["start_recep_segmentation"] for ob in obs])
+                .squeeze(-1)
+                .astype(np.int64)
+            ).to(self.device)
+
+            goal_recep_seg = torch.from_numpy(
+                np.stack([ob["goal_recep_segmentation"] for ob in obs])
                 .squeeze(-1)
                 .astype(np.int64)
             ).to(self.device)
@@ -282,6 +318,8 @@ class ObsPreprocessor:
                     self.device
                 )
             )
+            # Assign semantic id of 1 for object_category, 2 for start_receptacle, 3 for goal_receptacle
+            semantic  = semantic  + start_recep_seg * 2 + goal_recep_seg * 3
             semantic = instance_id_to_category_id[semantic]
             semantic = self.one_hot_encoding[semantic]
 

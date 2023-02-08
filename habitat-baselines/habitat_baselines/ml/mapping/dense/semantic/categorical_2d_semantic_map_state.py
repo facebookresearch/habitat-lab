@@ -59,8 +59,9 @@ class Categorical2DSemanticMapState:
         # 1: Explored Area
         # 2: Current Agent Location
         # 3: Past Agent Locations
-        # 4, 5, 6, .., num_sem_categories + 3: Semantic Categories
-        num_channels = self.num_sem_categories + 4
+        # 4: Regions agent has been close to
+        # 5, 6, 7, .., num_sem_categories + 4: Semantic Categories
+        num_channels = self.num_sem_categories + 5
 
         self.global_map = torch.zeros(
             self.num_environments,
@@ -146,14 +147,18 @@ class Categorical2DSemanticMapState:
         """Get local visited map for an environment."""
         return np.copy(self.local_map[e, 3, :, :].cpu().float().numpy())
 
+    def get_been_close_map(self, e) -> np.ndarray:
+        """Get map showing regions the agent has been close to"""
+        return np.copy(self.local_map[e, 4, :, :].cpu().float().numpy())
+
     def get_semantic_map(self, e) -> np.ndarray:
         """Get local map of semantic categories for an environment."""
         semantic_map = np.copy(self.local_map[e].cpu().float().numpy())
         semantic_map[
-            3 + self.num_sem_categories, :, :
+            4 + self.num_sem_categories, :, :
         ] = 1e-5  # Last category is unlabeled
         semantic_map = semantic_map[
-            4 : 4 + self.num_sem_categories, :, :
+            5 : 5 + self.num_sem_categories, :, :
         ].argmax(0)
         return semantic_map
 

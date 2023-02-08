@@ -271,14 +271,14 @@ class FloorplannertoSriramObjects(SemanticCategoryMapping):
 # (Single) Goal category mapping
 # ----------------------------------------------------
 
-goal_category_index = {1: "goal"}
+goal_category_index = {1: "object_category", 2:"start_recep_category",  3:"goal_recep_category"}
 
 goal_category_index_padded = (
     ["."] + [goal_category_index[i] for i in range(1, 2)] + ["other"]
 )
 
 goal_category_color_palette = [255, 255, 255] + list(
-    d3_40_colors_rgb[1:3].flatten()
+    d3_40_colors_rgb[1:4].flatten()
 )
 goal_category_frame_color_palette = goal_category_color_palette + [
     255,
@@ -350,7 +350,7 @@ class GoalObjectMapping(SemanticCategoryMapping):
 
     @property
     def num_sem_categories(self):
-        return 3
+        return 5
 
 
 # ----------------------------------------------------

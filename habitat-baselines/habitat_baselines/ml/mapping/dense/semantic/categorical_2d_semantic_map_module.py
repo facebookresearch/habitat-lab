@@ -132,9 +132,9 @@ class Categorical2DSemanticMapModule(nn.Module):
             seq_update_global: sequence of (batch_size, sequence_length) binary
              flags that indicate whether to update the global map and pose
             init_local_map: initial local map before any updates of shape
-             (batch_size, 4 + num_sem_categories, M, M)
+             (batch_size, 5 + num_sem_categories, M, M)
             init_global_map: initial global map before any updates of shape
-             (batch_size, 4 + num_sem_categories, M * ds, M * ds)
+             (batch_size, 5 + num_sem_categories, M * ds, M * ds)
             init_local_pose: initial local pose before any updates of shape
              (batch_size, 3)
             init_global_pose: initial global pose before any updates of shape
@@ -144,11 +144,11 @@ class Categorical2DSemanticMapModule(nn.Module):
 
         Returns:
             seq_map_features: sequence of semantic map features of shape
-             (batch_size, sequence_length, 8 + num_sem_categories, M, M)
+             (batch_size, sequence_length, 10 + num_sem_categories, M, M)
             final_local_map: final local map after all updates of shape
-             (batch_size, 4 + num_sem_categories, M, M)
+             (batch_size, 5 + num_sem_categories, M, M)
             final_global_map: final global map after all updates of shape
-             (batch_size, 4 + num_sem_categories, M * ds, M * ds)
+             (batch_size, 5 + num_sem_categories, M * ds, M * ds)
             seq_local_pose: sequence of local poses of shape
              (batch_size, sequence_length, 3)
             seq_global_pose: sequence of global poses of shape
@@ -161,7 +161,7 @@ class Categorical2DSemanticMapModule(nn.Module):
         batch_size, sequence_length = seq_obs.shape[:2]
         device, dtype = seq_obs.device, seq_obs.dtype
 
-        map_features_channels = 8 + self.num_sem_categories
+        map_features_channels = 10 + self.num_sem_categories
         seq_map_features = torch.zeros(
             batch_size,
             sequence_length,
@@ -255,14 +255,16 @@ class Categorical2DSemanticMapModule(nn.Module):
              (batch_size, 3 + 1 + num_sem_categories, frame_height, frame_width)
             pose_delta: delta in pose since last frame of shape (batch_size, 3)
             prev_map: previous local map of shape
-             (batch_size, 4 + num_sem_categories, M, M)
+             (batch_size, 5 + num_sem_categories, M, M)
             prev_pose: previous pose of shape (batch_size, 3)
 
         Returns:
             current_map: current local map updated with current observation
-             and location of shape (batch_size, 4 + num_sem_categories, M, M)
+             and location of shape (batch_size, 5 + num_sem_categories, M, M)
             current_pose: current pose updated with pose delta of shape (batch_size, 3)
         """
+        agent_camera_tilt = -0.7125
+
         batch_size, obs_channels, h, w = obs.size()
         device, dtype = obs.device, obs.dtype
 
@@ -272,7 +274,7 @@ class Categorical2DSemanticMapModule(nn.Module):
         )
 
         agent_view_t = du.transform_camera_view_t(
-            point_cloud_t, self.agent_height, 0, device
+            point_cloud_t, self.agent_height, np.rad2deg(agent_camera_tilt), device
         )
 
         agent_view_centered_t = du.transform_pose_t(
@@ -340,7 +342,7 @@ class Categorical2DSemanticMapModule(nn.Module):
 
         agent_view = torch.zeros(
             batch_size,
-            obs_channels,
+            5 + self.num_sem_categories,
             self.local_map_size_cm // self.xy_resolution,
             self.local_map_size_cm // self.xy_resolution,
             device=device,
@@ -356,7 +358,7 @@ class Categorical2DSemanticMapModule(nn.Module):
         y2 = y1 + self.vision_range
         agent_view[:, 0:1, y1:y2, x1:x2] = fp_map_pred
         agent_view[:, 1:2, y1:y2, x1:x2] = fp_exp_pred
-        agent_view[:, 4 : 4 + self.num_sem_categories, y1:y2, x1:x2] = (
+        agent_view[:, 5 : 5 + self.num_sem_categories, y1:y2, x1:x2] = (
             all_height_proj[:, 1 : 1 + self.num_sem_categories]
             / self.cat_pred_threshold
         )
@@ -382,13 +384,14 @@ class Categorical2DSemanticMapModule(nn.Module):
 
         maps = torch.cat((prev_map.unsqueeze(1), translated.unsqueeze(1)), 1)
         current_map, _ = torch.max(
-            maps[:, :, : 4 + self.num_sem_categories], 1
+            maps[:, :, : 5 + self.num_sem_categories], 1
         )
 
         # Reset current location
         current_map[:, 2, :, :].fill_(0.0)
         curr_loc = current_pose[:, :2]
         curr_loc = (curr_loc * 100.0 / self.xy_resolution).int()
+
         for e in range(batch_size):
             x, y = curr_loc[e]
             current_map[e, 2:4, y - 2 : y + 3, x - 2 : x + 3].fill_(1.0)
@@ -405,9 +408,19 @@ class Categorical2DSemanticMapModule(nn.Module):
                     y - radius : y + radius + 1,
                     x - radius : x + radius + 1,
                 ][explored_disk == 1] = 1
+                # Record the region the agent has been close to using a disc of 1m centered at the agent
+                radius = 100 // self.resolution
+                been_close_disk = torch.from_numpy(
+                    skimage.morphology.disk(radius)
+                )
+                current_map[
+                    e,
+                    4,
+                    y - radius : y + radius + 1,
+                    x - radius : x + radius + 1,
+                ][been_close_disk == 1] = 1
             except IndexError:
                 pass
-
         return current_map, current_pose
 
     def _update_global_map_and_pose_for_env(
@@ -445,15 +458,15 @@ class Categorical2DSemanticMapModule(nn.Module):
 
         Arguments:
             local_map: local map of shape
-             (batch_size, 4 + num_sem_categories, M, M)
+             (batch_size, 5 + num_sem_categories, M, M)
             global_map: global map of shape
-             (batch_size, 4 + num_sem_categories, M * ds, M * ds)
+             (batch_size, 5 + num_sem_categories, M * ds, M * ds)
 
         Returns:
             map_features: semantic map features of shape
-             (batch_size, 8 + num_sem_categories, M, M)
+             (batch_size, 10 + num_sem_categories, M, M)
         """
-        map_features_channels = 8 + self.num_sem_categories
+        map_features_channels = 10 + self.num_sem_categories
 
         map_features = torch.zeros(
             local_map.size(0),
@@ -465,12 +478,12 @@ class Categorical2DSemanticMapModule(nn.Module):
         )
 
         # Local obstacles, explored area, and current and past position
-        map_features[:, 0:4, :, :] = local_map[:, 0:4, :, :]
+        map_features[:, 0:5, :, :] = local_map[:, 0:5, :, :]
         # Global obstacles, explored area, and current and past position
-        map_features[:, 4:8, :, :] = nn.MaxPool2d(self.global_downscaling)(
-            global_map[:, 0:4, :, :]
+        map_features[:, 5:10, :, :] = nn.MaxPool2d(self.global_downscaling)(
+            global_map[:, 0:5, :, :]
         )
         # Local semantic categories
-        map_features[:, 8:, :, :] = local_map[:, 4:, :, :]
+        map_features[:, 10:, :, :] = local_map[:, 5:, :, :]
 
         return map_features.detach()

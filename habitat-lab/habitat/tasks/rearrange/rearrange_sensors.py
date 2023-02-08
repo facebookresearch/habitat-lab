@@ -209,6 +209,43 @@ class ObjectSegmentationSensor(Sensor):
                 )
             return segmentation_sensor
 
+@registry.register_sensor
+class RecepSegmentationSensor(ObjectSegmentationSensor):
+    cls_uuid: str = "recep_segmentation"
+
+    def _get_recep_goals(self, episode):
+        raise NotImplementedError
+
+    def get_observation(self, observations, *args, episode, task, **kwargs):
+        recep_goals = self._get_recep_goals(episode)
+        if np.random.random() < self._config.blank_out_prob:
+            return np.zeros_like(
+                observations["robot_head_panoptic"], dtype=np.uint8
+            )
+        else:
+            segmentation_sensor = np.zeros_like(
+                observations["robot_head_panoptic"], dtype=np.uint8
+            )
+            for g in recep_goals:
+                segmentation_sensor = segmentation_sensor | (
+                    observations["robot_head_panoptic"]
+                    == int(g.object_id)
+                    + self._sim.habitat_config.instance_ids_start
+                )
+            return segmentation_sensor
+
+@registry.register_sensor
+class StartRecepSegmentationSensor(RecepSegmentationSensor):
+    cls_uuid: str = "start_recep_segmentation"
+    def _get_recep_goals(self, episode):
+        return episode.candidate_start_receps
+
+@registry.register_sensor
+class GoalRecepSegmentationSensor(RecepSegmentationSensor):
+    cls_uuid: str = "goal_recep_segmentation"
+    def _get_recep_goals(self, episode):
+        return episode.candidate_goal_receps
+
 
 class MultiObjSensor(PointGoalSensor):
     """
