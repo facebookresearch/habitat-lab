@@ -15,13 +15,35 @@ A dataset consists of episodes
 
 ## Task
 The definition of the task in Habitat.
+There are many different Tasks determined by the `habitat.task.type` config:
+ - Point navigation : `Nav-0`
+ - Image navigation : `Nav-0`
+ - Instance image navigation:`InstanceImageNav-v1`
+ - Object navigation : `ObjectNav-v1`
+ - Rearrangement close drawer: `RearrangeCloseDrawerTask-v0`
+ - Rearrangement open drawer: `RearrangeOpenDrawerTask-v0`
+ - Rearrangement close fridge : `RearrangeCloseFridgeTask-v0`
+ - Rearrangement open fridge : `RearrangeOpenFridgeTask-v0`
+ - Rearrangement navigate to object : `NavToObjTask-v0`
+ - Rearrangement pick : `RearrangePickTask-v0`
+ - Rearrangement place : `RearrangePlaceTask-v0`
+ - Rearrangement do nothing : `RearrangeEmptyTask-v0`
+ - Rearrangement reach : `RearrangeReachTask-v0`
+ - Rearrangement composite tasks : `RearrangeCompositeTask-v0`
+
 
 | Key | Description |
 | --- | --- |
-|habitat.task.type | The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+|habitat.task.type | The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`.
 |habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. |
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success. |
-|habitat.task. end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
+|habitat.task.end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
+|habitat.task.task_spec |  When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.|
+|habitat.task.task_spec_base_path |  When doing the `RearrangeCompositeTask-v0` only, the relative path where the task_spec file will be searched.|
+|habitat.task.spawn_max_dists_to_obj| For `RearrangePickTask-v0` task only. Controls the maximum distance the robot can be spawned from the target object. |
+| habitat.task.base_angle_noise| For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.|
+| habitat.task.base_angle| For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.|
+
 
 ## Environment
 Some habitat environment configurations.
@@ -42,6 +64,7 @@ defaults:
 | Key | Description |
 | --- | --- |
 | habitat.task.actions.stop |     In Navigation tasks only, the stop action is a discrete action. When called, the Agent will request to stop the navigation task. Note that this action is needed to succeed in a Navigation task since the Success is determined by the Agent calling the stop action within range of the target. Note that this is different from the RearrangeStopActionConfig that works for Rearrangement tasks only instead of the Navigation tasks.|
+| habitat.task.actions.empty | In Navigation tasks only, the pass action. The robot will do nothing.|
 | habitat.task.actions.move_forward |     In Navigation tasks only, this discrete action will move the robot forward by a fixed amount determined by the `habitat.simulator.forward_step_size` amount. |
 | habitat.task.actions.turn_left |     In Navigation tasks only, this discrete action will rotate the robot to the left  by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
 | habitat.task.actions.turn_right |     In Navigation tasks only, this discrete action will rotate the robot to the right by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
@@ -86,3 +109,14 @@ defaults:
 |  habitat.task.lab_sensors. instance_imagegoal_hfov_sensor |     Used only by the InstanceImageGoal Navigation task. The observation is a single float value corresponding to the Horizontal field of view (HFOV) in degrees of  the image provided by the `habitat.task.lab_sensors.instance_imagegoal_sensor `.|
 |  habitat.task.lab_sensors.compass_sensor |     For Navigation tasks only. The observation of the `EpisodicCompassSensor` is a single float value corresponding to the angle difference in radians between the current rotation of the robot and the start rotation of the robot along the vertical axis. |
 |  habitat.task.lab_sensors.gps_sensor |     For Navigation tasks only. The observation of the EpisodicGPSSensor are two float values corresponding to the vector difference in the horizontal plane between the current position and the start position of the robot (in meters). |
+
+
+## Rearrangement Action
+
+| Key | Description |
+| --- | --- |
+|habitat.task.actions.arm_action |In Rearrangement tasks only, the action that will move the robot arm around. |
+|habitat.task.actions.arm_action.grasp_thresh_dist| The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.|
+|habitat.task.actions.arm_action.grip_controller| Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector. |
+|habitat.task.actions.base_velocity |     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+|habitat.task.actions.rearrange_stop     | In rearrangement tasks only, if the robot calls this action, the task will end.|

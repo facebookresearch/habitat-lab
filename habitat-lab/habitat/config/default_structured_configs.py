@@ -97,6 +97,9 @@ class StopActionConfig(ActionConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class EmptyActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the pass action. The robot will do nothing.
+    """
     type: str = "EmptyAction"
 
 
@@ -170,6 +173,11 @@ class VelocityControlActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 @attr.s(auto_attribs=True, slots=True)
 class ArmActionConfig(ActionConfig):
+    r"""
+    In Rearrangement tasks only, the action that will move the robot arm around.
+    :data grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
+    :data grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
     grip_controller: Optional[str] = None
@@ -185,6 +193,9 @@ class ArmActionConfig(ActionConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class BaseVelocityActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
     type: str = "BaseVelAction"
     lin_speed: float = 10.0
     ang_speed: float = 10.0
@@ -194,6 +205,9 @@ class BaseVelocityActionConfig(ActionConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RearrangeStopActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
     type: str = "RearrangeStopAction"
 
 
@@ -826,10 +840,30 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
+    There are many different Tasks determined by the `habitat.task.type` config:
+        - Point navigation : `Nav-0`
+        - Image navigation : `Nav-0`
+        - Instance image navigation:`InstanceImageNav-v1`
+        - Object navigation : `ObjectNav-v1`
+        - Rearrangement close drawer: `RearrangeCloseDrawerTask-v0`
+        - Rearrangement open drawer: `RearrangeOpenDrawerTask-v0`
+        - Rearrangement close fridge : `RearrangeCloseFridgeTask-v0`
+        - Rearrangement open fridge : `RearrangeOpenFridgeTask-v0`
+        - Rearrangement navigate to object : `NavToObjTask-v0`
+        - Rearrangement pick : `RearrangePickTask-v0`
+        - Rearrangement place : `RearrangePlaceTask-v0`
+        - Rearrangement do nothing : `RearrangeEmptyTask-v0`
+        - Rearrangement reach : `RearrangeReachTask-v0`
+        - Rearrangement composite tasks : `RearrangeCompositeTask-v0`
     :data type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
     :data reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration.
     :data success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :data end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
+    :data task_spec: When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.
+    :data task_spec_base_path:  When doing the `RearrangeCompositeTask-v0` only, the relative path where the task_spec file will be searched.
+    :data spawn_max_dists_to_obj: For `RearrangePickTask-v0` task only. Controls the maximum distance the robot can be spawned from the target object.
+    :data base_angle_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.
+    :data base_angle: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.
     """
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
