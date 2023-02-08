@@ -149,6 +149,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
         else:
             self.min_depth_value = config.min_depth
             self.max_depth_value = config.max_depth
+        self.normalize_depth = config.normalize_depth
 
         super().__init__(config=config)
 
@@ -166,20 +167,20 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
         obs = cast(Optional[VisualObservation], sim_obs.get(self.uuid, None))
         check_sim_obs(obs, self)
         if isinstance(obs, np.ndarray):
-            obs = np.clip(obs, self.config.min_depth, self.config.max_depth)
+            obs = np.clip(obs, self.min_depth_value, self.max_depth_value)
 
             obs = np.expand_dims(
                 obs, axis=2
             )  # make depth observation a 3D array
         else:
-            obs = obs.clamp(self.config.min_depth, self.config.max_depth)  # type: ignore[attr-defined, unreachable]
+            obs = obs.clamp(self.min_depth_value, self.max_depth_value)  # type: ignore[attr-defined, unreachable]
 
             obs = obs.unsqueeze(-1)  # type: ignore[attr-defined]
 
-        if self.config.normalize_depth:
+        if self.normalize_depth:
             # normalize depth observation to [0, 1]
-            obs = (obs - self.config.min_depth) / (
-                self.config.max_depth - self.config.min_depth
+            obs = (obs - self.min_depth_value) / (
+                self.max_depth_value - self.min_depth_value
             )
 
         return obs

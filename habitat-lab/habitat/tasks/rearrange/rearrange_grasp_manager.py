@@ -42,6 +42,8 @@ class RearrangeGraspManager:
         self._config = config
         self._managed_robot = robot
 
+        self._kinematic_mode = self._sim.habitat_config.kinematic_mode
+
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
         Called from _sim.reconfigure().
@@ -101,10 +103,7 @@ class RearrangeGraspManager:
             if dist >= self._leave_info[1]:
                 rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._leave_info = None
-        if (
-            self._sim.habitat_config.kinematic_mode
-            and self._snapped_obj_id is not None
-        ):
+        if self._kinematic_mode and self._snapped_obj_id is not None:
             self.update_object_to_grasp()
 
     def desnap(self, force=False) -> None:
@@ -186,7 +185,7 @@ class RearrangeGraspManager:
         marker = self._sim.get_marker(marker_name)
         self._snapped_marker_id = marker_name
         self._managed_robot.open_gripper()
-        if self._sim.habitat_config.kinematic_mode:
+        if self._kinematic_mode:
             return
 
         self._snap_constraints = [
@@ -311,7 +310,7 @@ class RearrangeGraspManager:
 
         self._managed_robot.open_gripper()
 
-        if self._sim.habitat_config.kinematic_mode:
+        if self._kinematic_mode:
             return
 
         # Set collision group to GraspedObject so that it doesn't collide
