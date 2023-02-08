@@ -200,6 +200,7 @@ class RearrangeStopActionConfig(ActionConfig):
 class PddlApplyActionConfig(ActionConfig):
     type: str = "PddlApplyAction"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class OracleNavActionConfig(ActionConfig):
     """
