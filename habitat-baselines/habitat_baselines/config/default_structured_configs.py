@@ -214,6 +214,7 @@ cs.store(
     node=Eq2CubeConfig,
 )
 
+
 @attr.s(auto_attribs=True, slots=True)
 class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     """
@@ -249,7 +250,7 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
     defined_skills: Dict[str, HrlDefinedSkillConfig] = dict()
     use_skills: Dict[str, str] = dict()
