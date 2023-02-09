@@ -48,8 +48,15 @@ __all__ = [
     "BaseVelocityActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
-    # REARRANGEMENT SENSORS
+    # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
+    "IsHoldingSensorConfig",
+    "EEPositionSensorConfig",
+    "JointSensorConfig",
+    "TargetStartSensorConfig",
+    "GoalSensorConfig",
+    "TargetStartGpsCompassSensorConfig",
+    "TargetGoalGpsCompassSensorConfig",
 ]
 
 
@@ -339,24 +346,33 @@ class ProximitySensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class JointSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
     type: str = "JointSensor"
     dimensionality: int = 7
 
 
 @attr.s(auto_attribs=True, slots=True)
 class EEPositionSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. the cartesian coordinates (3 floats) of the arm's end effector in the frame of reference of the robot's base.
+    """
     type: str = "EEPositionSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class IsHoldingSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. A single float sensor with value 1.0 if the robot is grasping any object and 0.0 otherwise.
+    """
     type: str = "IsHoldingSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class RelativeRestingPositionSensorConfig(LabSensorConfig):
-    """
-    Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position.
+    r"""
+    Rearrangement only. Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position.
     The three values correspond to the cartesian coordinates of the resting position in the frame of reference of the end effector.
     The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.
     """
@@ -402,6 +418,9 @@ class MarkerRelPosSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class TargetStartSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the relative position from end effector to a target object that needs to be picked up.
+    """
     type: str = "TargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
@@ -416,6 +435,10 @@ class TargetCurrentSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class GoalSensorConfig(LabSensorConfig):
+    """
+    Rearrangement only. Returns the relative position from end effector to a goal position in which the agent needs to place an object.
+    """
+
     type: str = "GoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
@@ -433,11 +456,17 @@ class GlobalPredicatesSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class TargetStartGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
+    """
     type: str = "TargetStartGpsCompassSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the desired goal position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
+    """
     type: str = "TargetGoalGpsCompassSensor"
 
 

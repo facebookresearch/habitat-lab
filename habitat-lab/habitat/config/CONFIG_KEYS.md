@@ -137,3 +137,18 @@ defaults:
 |habitat.task.actions.base_velocity |     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
 |habitat.task.actions.rearrange_stop     | In rearrangement tasks only, if the robot calls this action, the task will end.|
 |habitat.task.actions.oracle_nav_action| Rearrangement Only, Oracle navigation action. This action takes as input a discrete ID which refers to an object in the PDDL domain. The oracle navigation controller then computes the actions to navigate to that desired object.|
+
+
+## Rearrangement Sensors
+
+
+| Key | Description |
+| --- | --- |
+|habitat.task.lab_sensors.relative_resting_pos_sensor     | Rearrangement only. Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position. The three values correspond to the cartesian coordinates of the resting position in the frame of reference of the end effector. The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.|
+| habitat.task.lab_sensors.is_holding_sensor | Rearrangement only. A single float sensor with value 1.0 if the robot is grasping any object and 0.0 otherwise.|
+|habitat.task.lab_sensors.end_effector_sensor | Rearrangement only. the cartesian coordinates (3 floats) of the arm's end effector in the frame of reference of the robot's base.|
+|habitat.task.lab_sensors.joint_sensor| Rearrangement only. Returns the joint positions of the robot.|
+| habitat.task.lab_sensors.goal_sensor |     Rearrangement only. Returns the relative position from end effector to a goal position in which the agent needs to place an object. |
+| habitat.task.lab_sensors.target_start_gps_compass_sensor |     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates. |
+| habitat.task.lab_sensors.target_goal_gps_compass_sensor |    Rearrangement only. Returns the desired goal position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
+ |
