@@ -26,8 +26,7 @@ For training on sample data please follow steps in the repository README. You sh
 **train**:
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type train
+  --config-name=pointnav/ppo_pointnav_example.yaml
 ```
 
 You can reduce training time by changing the trainer from the default implement to [VER](rl/ver/README.md) by
@@ -35,16 +34,15 @@ setting `trainer_name` to `"ver"` in either the config or via the command line.
 
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type train \
+  --config-name=pointnav/ppo_pointnav_example.yaml \
   habitat_baselines.trainer_name=ver
 ```
 
 **test**:
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type eval
+  --config-name=pointnav/ppo_pointnav_example.yaml \
+  habitat_baselines.evaluate=True
 ```
 
 We also provide trained RGB, RGBD, and Depth PPO  models for MatterPort3D and Gibson.

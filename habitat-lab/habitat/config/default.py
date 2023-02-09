@@ -76,6 +76,33 @@ def get_agent_config(
 lock = threading.Lock()
 
 
+def patch_config(cfg: DictConfig) -> DictConfig:
+    """
+    Internal method only. Modifies a configuration by inferring some missing keys
+    and makes sure some keys are present and compatible with each other.
+    """
+    # In the single-agent setup use the agent's key from `habitat.simulator.agents`.
+    sim_config = cfg.habitat.simulator
+    if len(sim_config.agents) == 1:
+        with read_write(sim_config):
+            sim_config.agents_order = list(sim_config.agents.keys())
+
+    # Check if the `habitat.simulator.agents_order`
+    # is set and matches the agents' keys in `habitat.simulator.agents`.
+    assert len(sim_config.agents_order) == len(sim_config.agents) and set(
+        sim_config.agents_order
+    ) == set(sim_config.agents.keys()), (
+        "habitat.simulator.agents_order should be set explicitly "
+        "and match the agents' keys in habitat.simulator.agents.\n"
+        f"habitat.simulator.agents_order: {sim_config.agents_order}\n"
+        f"habitat.simulator.agents: {list(sim_config.agents.keys())}"
+    )
+
+    OmegaConf.set_readonly(cfg, True)
+
+    return cfg
+
+
 def get_config(
     config_path: str,
     overrides: Optional[List[str]] = None,
@@ -102,23 +129,4 @@ def get_config(
             overrides=overrides if overrides is not None else [],
         )
 
-    # In the single-agent setup use the agent's key from `habitat.simulator.agents`.
-    sim_config = cfg.habitat.simulator
-    if len(sim_config.agents) == 1:
-        with read_write(sim_config):
-            sim_config.agents_order = list(sim_config.agents.keys())
-
-    # Check if the `habitat.simulator.agents_order`
-    # is set and matches the agents' keys in `habitat.simulator.agents`.
-    assert len(sim_config.agents_order) == len(sim_config.agents) and set(
-        sim_config.agents_order
-    ) == set(sim_config.agents.keys()), (
-        "habitat.simulator.agents_order should be set explicitly "
-        "and match the agents' keys in habitat.simulator.agents.\n"
-        f"habitat.simulator.agents_order: {sim_config.agents_order}\n"
-        f"habitat.simulator.agents: {list(sim_config.agents.keys())}"
-    )
-
-    OmegaConf.set_readonly(cfg, True)
-
-    return cfg
+    return patch_config(cfg)
