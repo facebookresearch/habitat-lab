@@ -331,6 +331,9 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
+    # If habitat_baselines.evaluate is true, the run will be in evaluation mode
+    # replaces --run-type eval when true
+    evaluate: bool = False
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
     tensorboard_dir: str = "tb"
