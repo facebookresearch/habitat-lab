@@ -26,7 +26,7 @@ For training on sample data please follow steps in the repository README. You sh
 **train**:
 ```bash
 python -u habitat_baselines/run.py \
-  --config-name=pointnav/ppo_pointnav_example.yaml 
+  --config-name=pointnav/ppo_pointnav_example.yaml
 ```
 
 You can reduce training time by changing the trainer from the default implement to [VER](rl/ver/README.md) by
