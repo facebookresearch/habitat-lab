@@ -47,7 +47,7 @@ MINIMUM_PERFORMANCE_16_PROCESS = {
 }
 
 
-class RegressionError(Exception):
+class RegressionError(AssertionError):
     pass
 
 
@@ -80,19 +80,23 @@ def check_benchmark_sps(name_map, minimum_performance_map, base_name):
     return failed_runs
 
 
-failed_runs = []
+if __name__ == "__main__":
+    failed_runs = []
 
+    failed_runs.extend(
+        check_benchmark_sps(
+            NAME_MAP, MINIMUM_PERFORMANCE_1_PROCESS, "1_200_-1_"
+        )
+    )
+    failed_runs.extend(
+        check_benchmark_sps(
+            NAME_MAP, MINIMUM_PERFORMANCE_16_PROCESS, "16_200_-1_"
+        )
+    )
 
-failed_runs.extend(
-    check_benchmark_sps(NAME_MAP, MINIMUM_PERFORMANCE_1_PROCESS, "1_200_-1_")
-)
-failed_runs.extend(
-    check_benchmark_sps(NAME_MAP, MINIMUM_PERFORMANCE_16_PROCESS, "16_200_-1_")
-)
+    print(failed_runs)
 
-print(failed_runs)
-
-if len(failed_runs) == 0:
-    print("No regression detected")
-else:
-    raise RegressionError("\n" + "\n\n".join(failed_runs))
+    if len(failed_runs) == 0:
+        print("No regression detected")
+    else:
+        raise RegressionError("\n" + "\n\n".join(failed_runs))
