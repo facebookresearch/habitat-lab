@@ -30,7 +30,7 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
-from habitat_baselines.run import run_exp
+from habitat_baselines.run import execute_exp
 
 CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
@@ -224,13 +224,14 @@ def test_tp_srl(test_cfg_path, mode):
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
 
-    run_exp(
+    baseline_config = baselines_get_config(
         test_cfg_path.replace(
             "habitat-baselines/habitat_baselines/config/", ""
         ),
-        mode,
         ["habitat_baselines.eval.split=train"],
     )
+
+    execute_exp(baseline_config, mode)
 
     # Needed to destroy the trainer
     gc.collect()
