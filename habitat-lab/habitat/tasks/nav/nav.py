@@ -40,6 +40,7 @@ from habitat.utils.geometry_utils import (
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
+from habitat.utils.common import continous_controller
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -1170,6 +1171,7 @@ class VelocityAction(SimulatorTaskAction):
         self.min_abs_ang_speed = config.min_abs_ang_speed
         self.time_step = config.time_step
         self._allow_sliding = self._sim.config.sim_cfg.allow_sliding  # type: ignore
+        self._enable_scale_convert = config.enable_scale_convert
 
     @property
     def action_space(self):
@@ -1195,8 +1197,8 @@ class VelocityAction(SimulatorTaskAction):
         self,
         *args: Any,
         task: EmbodiedTask,
-        linear_velocity: float,
-        angular_velocity: float,
+        linear_velocity: float = None,
+        angular_velocity: float = None,
         time_step: Optional[float] = None,
         allow_sliding: Optional[bool] = None,
         **kwargs: Any,
@@ -1217,17 +1219,63 @@ class VelocityAction(SimulatorTaskAction):
         if time_step is None:
             time_step = self.time_step
 
-        # Convert from [-1, 1] to [0, 1] range
-        linear_velocity = (linear_velocity + 1.0) / 2.0
-        angular_velocity = (angular_velocity + 1.0) / 2.0
+        if "base_vel" in kwargs:  # Velocity control mode
+            linear_velocity = max(0.0, kwargs["base_vel"][0])
+            angular_velocity = kwargs["base_vel"][1]
+        elif "base_dis" in kwargs: # Discrete control mode
+            move = kwargs["base_dis"][0]
+            turn = kwargs["base_dis"][1]
+            if move > 0:
+                linear_velocity = 0.15 * (1/self.time_step)
+            else:
+                linear_velocity = 0
+            if turn > 0:
+                angular_velocity = np.pi * 30.0/180.0 * (1/self.time_step)
+            elif turn < 0:
+                angular_velocity = -np.pi * 30.0/180.0 * (1/self.time_step)
+            else:
+                angular_velocity = 0
+        elif "base_pt" in kwargs: # Waypoint control mode
+            # init the controllers
+            w2v_controller = continous_controller()
+            # Get the transformation of the agent
+            trans = self._sim.agents[0].scene_node.transformation
+            # Define the global position
+            target_x = max(0.0, kwargs["base_pt"][0]*1.0)
+            global_pos = trans.transform_point(np.array([target_x, 0.0, 0.0]))
+            # Set the target rotation angle
+            target_theta = kwargs["base_pt"][1]
+            target_theta = float(self._sim.agents[0].state.rotation.angle()) + target_theta
+            # Set the goal
+            xyt_goal = [
+                global_pos[0],
+                global_pos[2],
+                target_theta,
+            ]
+            w2v_controller.set_goal(xyt_goal)
+            # Get the current location of the agent
+            xyt = [
+                self._sim.agents[0].state.position[0],
+                self._sim.agents[0].state.position[2],
+                float(self._sim.agents[0].state.rotation.angle()),
+            ]
+            # Get the velocity action
+            vel_action = w2v_controller.forward(xyt, trans)
+            linear_velocity = vel_action[0]
+            angular_velocity =  vel_action[1]
 
-        # Scale actions
-        linear_velocity = self.min_lin_vel + linear_velocity * (
-            self.max_lin_vel - self.min_lin_vel
-        )
-        angular_velocity = self.min_ang_vel + angular_velocity * (
-            self.max_ang_vel - self.min_ang_vel
-        )
+        if self._enable_scale_convert:
+            # Convert from [-1, 1] to [0, 1] range
+            linear_velocity = (linear_velocity + 1.0) / 2.0
+            angular_velocity = (angular_velocity + 1.0) / 2.0
+
+            # Scale actions
+            linear_velocity = self.min_lin_vel + linear_velocity * (
+                self.max_lin_vel - self.min_lin_vel
+            )
+            angular_velocity = self.min_ang_vel + angular_velocity * (
+                self.max_ang_vel - self.min_ang_vel
+            )
 
         # Stop is called if both linear/angular speed are below their threshold
         if (

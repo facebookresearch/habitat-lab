@@ -162,6 +162,7 @@ class VelocityControlActionConfig(ActionConfig):
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 1.0  # seconds
+    enable_scale_convert: bool = True
 
 
 # -----------------------------------------------------------------------------
@@ -1299,6 +1300,12 @@ cs.store(
     group="habitat/task/actions",
     name="arm_action",
     node=ArmActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.velocity_control",
+    group="habitat/task/actions",
+    name="velocity_control",
+    node=VelocityControlActionConfig,
 )
 cs.store(
     package="habitat.task.actions.base_velocity",
