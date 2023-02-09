@@ -27,16 +27,6 @@ if TYPE_CHECKING:
     config_name="pointnav/ppo_pointnav_example",
 )
 def main(cfg: "DictConfig"):
-    if "--exp-config" in sys.argv or "--run-type" in sys.argv:
-        raise ValueError(
-            "The API of run.py has changed to be compatible with hydra."
-            "--exp-config is now --config-name and is a config path inside habitat-baselines/habitat_baselines/config/"
-            "--run-type train is replaced with habitat_baselines.evaluate=False (default) and --run-type eval is replaced with habitat_baselines.evaluate=True"
-            "instead of calling"
-            "python habitat-baselines/habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/<path-to-config> --run-type <type>"
-            "You need to do"
-            "python habitat-baselines/habitat_baselines/run.py --config-name=<path-to-config> habitat_baselines.evaluate=True"
-        )
     cfg = patch_config(cfg)
     execute_exp(cfg, "eval" if cfg.habitat_baselines.evaluate else "train")
 
@@ -74,4 +64,14 @@ def execute_exp(config: "DictConfig", run_type: str) -> None:
 
 if __name__ == "__main__":
     register_hydra_plugin(HabitatBaselinesConfigPlugin)
+    if "--exp-config" in sys.argv or "--run-type" in sys.argv:
+        raise ValueError(
+            "The API of run.py has changed to be compatible with hydra.\n"
+            "--exp-config is now --config-name and is a config path inside habitat-baselines/habitat_baselines/config/. \n"
+            "--run-type train is replaced with habitat_baselines.evaluate=False (default) and --run-type eval is replaced with habitat_baselines.evaluate=True.\n"
+            "instead of calling:\n\n"
+            "python habitat-baselines/habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/<path-to-config> --run-type train/eval\n\n"
+            "You now need to do:\n\n"
+            "python habitat-baselines/habitat_baselines/run.py --config-name=<path-to-config> habitat_baselines.evaluate=False/True\n"
+        )
     main()
