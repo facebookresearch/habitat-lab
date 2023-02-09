@@ -42,6 +42,14 @@ __all__ = [
     "InstanceImageGoalHFOVSensorConfig",
     "CompassSensorConfig",
     "GPSSensorConfig",
+    # REARRANGEMENT ACTIONS
+    "EmptyActionConfig",
+    "ArmActionConfig",
+    "BaseVelocityActionConfig",
+    "RearrangeStopActionConfig",
+    "OracleNavActionConfig",
+    # REARRANGEMENT SENSORS
+    "RelativeRestingPositionSensorConfig",
 ]
 
 
@@ -214,7 +222,7 @@ class RearrangeStopActionConfig(ActionConfig):
 @attr.s(auto_attribs=True, slots=True)
 class OracleNavActionConfig(ActionConfig):
     """
-    Oracle navigation action.
+    Rearrangement Only, Oracle navigation action.
     This action takes as input a discrete ID which refers to an object in the
     PDDL domain. The oracle navigation controller then computes the actions to
     navigate to that desired object.
@@ -347,6 +355,12 @@ class IsHoldingSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RelativeRestingPositionSensorConfig(LabSensorConfig):
+    """
+    Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position.
+    The three values correspond to the cartesian coordinates of the resting position in the frame of reference of the end effector.
+    The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.
+    """
+
     type: str = "RelativeRestingPositionSensor"
 
 

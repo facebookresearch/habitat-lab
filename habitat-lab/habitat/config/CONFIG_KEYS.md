@@ -44,6 +44,22 @@ There are many different Tasks determined by the `habitat.task.type` config:
 | habitat.task.base_angle_noise| For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.|
 | habitat.task.base_angle| For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.|
 
+## Visual Agents
+You can inherit a default agent in your configuration.
+The some sample agents are defined [here](./habitat/simulator/agents/) and are reused in many of our benchmarks. To use one of these agents, add
+```
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: <the key of the agent>
+```
+to your defaults list. All agents have a camera resolution of 256 by 256.
+| Key | Description |
+| --- | --- |
+|depth_head_agent| An Agent with a single depth camera attached to its head.|
+|rgb_head_agent| An Agent with a single RGB camera attached to its head.|
+|rgbd_head_rgbd_arm_agent| An Agent with both a RGB and depth camera attached to its head and arm.|
+|depth_head_agent_vis| An Agent with a depth camera attached to its head and a third person RGB camera on top of the robot.|
+
+
+
 
 ## Environment
 Some habitat environment configurations.
@@ -120,3 +136,4 @@ defaults:
 |habitat.task.actions.arm_action.grip_controller| Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector. |
 |habitat.task.actions.base_velocity |     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
 |habitat.task.actions.rearrange_stop     | In rearrangement tasks only, if the robot calls this action, the task will end.|
+|habitat.task.actions.oracle_nav_action| Rearrangement Only, Oracle navigation action. This action takes as input a discrete ID which refers to an object in the PDDL domain. The oracle navigation controller then computes the actions to navigate to that desired object.|
