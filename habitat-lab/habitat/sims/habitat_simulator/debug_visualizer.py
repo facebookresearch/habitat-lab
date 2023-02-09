@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Union
+import os
+from typing import Any, List, Optional, Tuple, Union
 
 import magnum as mn
 import numpy as np
@@ -109,17 +110,40 @@ class DebugVisualizer:
 
         # filename format "prefixmonth_day_year_hourminutesecondmicrosecond.png"
         date_time = datetime.now().strftime("%m_%d_%Y_%H%M%S%f")
-        file_path = output_path + prefix + date_time + ".png"
+        file_path = os.path.join(output_path, prefix + date_time + ".png")
         image.save(file_path)
         if show:
             image.show()
         return file_path
+
+    def render_debug_lines(
+        self,
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+    ):
+        """
+        Draw a set of debug lines with accomanying colors.
+        """
+        # support None input to make useage easier elsewhere
+        if debug_lines is not None:
+            for points, color in debug_lines:
+                for p_ix, point in enumerate(points):
+                    if p_ix == 0:
+                        continue
+                    prev_point = points[p_ix - 1]
+                    self.debug_line_render.draw_transformed_line(
+                        prev_point,
+                        point,
+                        color,
+                    )
 
     def peek_rigid_object(
         self,
         obj: habitat_sim.physics.ManagedRigidObject,
         cam_local_pos: Optional[mn.Vector3] = None,
         peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        show: bool = False,
     ) -> str:
         """
         Specialization to peek a rigid object.
@@ -131,6 +155,9 @@ class DebugVisualizer:
             obj.root_scene_node.cumulative_bb,
             cam_local_pos,
             peek_all_axis,
+            additional_savefile_prefix,
+            debug_lines,
+            show,
         )
 
     def peek_articulated_object(
@@ -138,6 +165,9 @@ class DebugVisualizer:
         obj: habitat_sim.physics.ManagedArticulatedObject,
         cam_local_pos: Optional[mn.Vector3] = None,
         peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        show: bool = False,
     ) -> str:
         """
         Specialization to peek an articulated object.
@@ -149,7 +179,15 @@ class DebugVisualizer:
 
         obj_bb = get_ao_global_bb(obj)
 
-        return self._peek_object(obj, obj_bb, cam_local_pos, peek_all_axis)
+        return self._peek_object(
+            obj,
+            obj_bb,
+            cam_local_pos,
+            peek_all_axis,
+            additional_savefile_prefix,
+            debug_lines,
+            show,
+        )
 
     def _peek_object(
         self,
@@ -160,11 +198,15 @@ class DebugVisualizer:
         obj_bb: mn.Range3D,
         cam_local_pos: Optional[mn.Vector3] = None,
         peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        show: bool = False,
     ) -> str:
         """
-        Compute a camera placement to view an ArticulatedObject and show/save an observation.
+        Compute a camera placement to view an object and show/save an observation.
         Return the filepath.
         If peek_all_axis, then create a merged 3x2 matrix of images looking at the object from all angles.
+        debug_lines: optionally provide a list of debug line render tuples, each with a sequence of points and a color. These will be displayed in all peek images.
         """
         obj_abs_transform = obj.root_scene_node.absolute_transformation()
         look_at = obj_abs_transform.translation
@@ -187,42 +229,51 @@ class DebugVisualizer:
                 * distance
                 + look_at
             )
+            self.render_debug_lines(debug_lines)
             return self.save_observation(
-                prefix="peek_" + obj.handle,
+                prefix=additional_savefile_prefix + "peek_" + obj.handle,
                 look_at=look_at,
                 look_from=look_from,
+                show=show,
             )
-        else:
-            # collect axis observations
-            axis_obs: List[Any] = []
-            for axis in range(6):
-                axis_vec = mn.Vector3()
-                axis_vec[axis % 3] = 1 if axis // 3 == 0 else -1
-                look_from = (
-                    obj_abs_transform.transform_vector(axis_vec).normalized()
-                    * distance
-                    + look_at
-                )
-                self.get_observation(look_at, look_from, axis_obs)
-            # stitch images together
-            stitched_image = None
-            from PIL import Image
 
-            from habitat_sim.utils import viz_utils as vut
+        # collect axis observations
+        axis_obs: List[Any] = []
+        for axis in range(6):
+            axis_vec = mn.Vector3()
+            axis_vec[axis % 3] = 1 if axis // 3 == 0 else -1
+            look_from = (
+                obj_abs_transform.transform_vector(axis_vec).normalized()
+                * distance
+                + look_at
+            )
+            self.render_debug_lines(debug_lines)
+            self.get_observation(look_at, look_from, axis_obs)
+        # stitch images together
+        stitched_image = None
+        from PIL import Image
 
-            for ix, obs in enumerate(axis_obs):
-                image = vut.observation_to_image(obs["rgb"], "color")
-                if stitched_image is None:
-                    stitched_image = Image.new(
-                        image.mode, (image.size[0] * 3, image.size[1] * 2)
-                    )
-                location = (
-                    image.size[0] * (ix % 3),
-                    image.size[1] * (0 if ix // 3 == 0 else 1),
+        from habitat_sim.utils import viz_utils as vut
+
+        for ix, obs in enumerate(axis_obs):
+            image = vut.observation_to_image(obs["rgb"], "color")
+            if stitched_image is None:
+                stitched_image = Image.new(
+                    image.mode, (image.size[0] * 3, image.size[1] * 2)
                 )
-                stitched_image.paste(image, location)
+            location = (
+                image.size[0] * (ix % 3),
+                image.size[1] * (0 if ix // 3 == 0 else 1),
+            )
+            stitched_image.paste(image, location)
+        if show:
             stitched_image.show()
-        return ""
+        save_path = os.path.join(
+            self.output_path,
+            additional_savefile_prefix + "peek_6x_" + obj.handle + ".png",
+        )
+        stitched_image.save(save_path)
+        return save_path
 
     def make_debug_video(
         self,
@@ -249,7 +300,7 @@ class DebugVisualizer:
 
         from habitat_sim.utils import viz_utils as vut
 
-        file_path = output_path + prefix + date_time
+        file_path = os.path.join(output_path, prefix + date_time)
         logger.info(f"DebugVisualizer: Saving debug video to {file_path}")
         vut.make_video(
             obs_cache, self.default_sensor_uuid, "color", file_path, fps=fps

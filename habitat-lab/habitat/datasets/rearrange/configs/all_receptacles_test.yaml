@@ -1,0 +1,52 @@
+---
+## All receptacles and objects are used.
+# Define your own dataset path,
+dataset_path: "data/replica_cad/replicaCAD.scene_dataset_config.json"
+additional_object_paths:
+  - "data/objects/ycb/configs/"
+correct_unstable_results: True
+scene_sets:
+  -
+    name: "all_scenes"
+    included_substrings:
+      - ""
+    excluded_substrings: ["NONE"]
+
+object_sets:
+  -
+    name: "simple_objects"
+    included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "024_bowl"
+    excluded_substrings: []
+receptacle_sets:
+  -
+    name: "all_receptacles"
+    included_object_substrings:
+      - ""
+    excluded_object_substrings: []
+    included_receptacle_substrings:
+      - ""
+    excluded_receptacle_substrings: []
+
+scene_sampler:
+  type: "subset"
+  params:
+    scene_sets: ["all_scenes"]
+
+object_samplers:
+  -
+    name: "simple_objects_sample"
+    type: "uniform"
+    params:
+      object_sets: ["simple_objects"]
+      receptacle_sets: ["all_receptacles"]
+      num_samples: [10, 20]
+      orientation_sampling: "up"
