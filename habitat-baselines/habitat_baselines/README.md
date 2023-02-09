@@ -61,15 +61,14 @@ To train a high-level policy, while using pre-learned low-level skills (SRL base
 
 ```bash
 python -u habitat-baselines/habitat_baselines/run.py \
-  --exp-config habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml \
-  --run-type train
+  --config-name=rearrange/rl_hierarchical.yaml
 ```
 To run a rearrangement episode with oracle low-level skills and a fixed task planner, run:
 
 ```bash
 python -u habitat-baselines/habitat_baselines/run.py \
-  --exp-config habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml \
-  --run-type eval \
+  --config-name=rearrange/rl_hierarchical.yaml \
+  habitat_baselines.evaluate=True \
   habitat_baselines/rl/policy=hl_fixed \
   habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills
 ```
