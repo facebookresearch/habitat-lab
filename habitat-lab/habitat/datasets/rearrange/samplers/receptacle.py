@@ -342,7 +342,6 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-        # print(self.area_weighted_accumulator)
 
     def get_face_verts(self, f_ix: int) -> List[np.ndarray]:
         """
@@ -452,7 +451,7 @@ def get_all_scenedataset_receptacles(
         stage_template = stm.get_template_by_handle(template_handle)
         for item in stage_template.get_user_config().get_subconfig_keys():
             if item.startswith("receptacle_"):
-                print(
+                logger.info(
                     f"template file_directory = {stage_template.file_directory}"
                 )
                 if template_handle not in receptacles["stage"]:
@@ -465,7 +464,7 @@ def get_all_scenedataset_receptacles(
         obj_template = rotm.get_template_by_handle(template_handle)
         for item in obj_template.get_user_config().get_subconfig_keys():
             if item.startswith("receptacle_"):
-                print(
+                logger.info(
                     f"template file_directory = {obj_template.file_directory}"
                 )
                 if template_handle not in receptacles["rigid"]:
@@ -488,44 +487,30 @@ def get_all_scenedataset_receptacles(
 
 def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     """
-    Returns a Tuple of (verts,indices) from a ply mesh.
-    TODO: This could be replaced by a standard importer, but I didn't want to add additional dependencies for such as small feature.
+    Returns a Tuple of (verts,indices) from a ply mesh using magnum trade importer.
 
     :param ply_file: The input PLY mesh file. NOTE: must contain only triangles.
     """
-    mesh_data: Tuple[List[mn.Vector3], List[int]] = ([], [])
-    with open(ply_file) as f:
-        lines = [line.rstrip() for line in f]
-        assert lines[0] == "ply", f"Must be PLY format. '{ply_file}'"
-        assert "format ascii" in lines[1], f"Must be ascii PLY. '{ply_file}'"
-        # parse the header
-        line_index = 2
-        num_verts = 0
-        num_faces = 0
-        while line_index < len(lines):
-            if lines[line_index].startswith("element vertex"):
-                num_verts = int(lines[line_index][14:])
-            elif lines[line_index].startswith("element face"):
-                num_faces = int(lines[line_index][12:])
-            elif lines[line_index] == "end_header":
-                # done parsing header
-                line_index += 1
-                break
-            line_index += 1
-        assert (
-            len(lines) - line_index == num_verts + num_faces
-        ), f"Lines after header ({len(lines) - line_index}) should agree with forward declared content. {num_verts} verts and {num_faces} faces expected. '{ply_file}'"
-        # parse the verts
-        for vert_line in range(line_index, num_verts + line_index):
-            coords = [float(x) for x in lines[vert_line].split(" ")]
-            mesh_data[0].append(mn.Vector3(coords))
-        line_index += num_verts
-        for face_line in range(line_index, num_faces + line_index):
-            assert (
-                int(lines[face_line][0]) == 3
-            ), f"Faces must be triangles. '{ply_file}'"
-            indices = [int(x) for x in lines[face_line].split(" ")[1:]]
-            mesh_data[1].extend(indices)
+    manager = mn.trade.ImporterManager()
+    # TODO: replace AssimpImporter once a better importer can handle binary PLY or we use another format
+    importer = manager.load_and_instantiate("AssimpImporter")
+    importer.open_file(ply_file)
+
+    # NOTE: We don't support mesh merging or multi-mesh parsing currently
+    if importer.mesh_count > 1:
+        raise NotImplementedError("TODO: multi-mesh receptacle support.")
+
+    mesh_ix = 0
+    mesh = importer.mesh(mesh_ix)
+    assert (
+        mesh.primitive == mn.MeshPrimitive.TRIANGLES
+    ), "Must be a triangle mesh."
+
+    # zero-copy reference to importer datastructures
+    mesh_data: Tuple[List[mn.Vector3], List[int]] = (
+        mesh.attribute(mn.trade.MeshAttribute.POSITION),
+        mesh.indices,
+    )
 
     return mesh_data
 
