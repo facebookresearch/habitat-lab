@@ -5,7 +5,7 @@ import json
 import os
 import os.path as osp
 import re
-from typing import List
+from typing import List, Set
 
 import magnum as mn
 import numpy as np
@@ -195,6 +195,7 @@ def collect_receptacle_goals(sim, rec_category_mapping=None):
 
 def initialize_sim(
     sim,
+    existing_rigid_objects: Set,
     scene_name: str,
     dataset_path: str,
     additional_obj_config_paths: List[str],
@@ -246,14 +247,12 @@ def initialize_sim(
             object_attr_mgr.load_configs(osp.abspath(object_path))
     else:
         if sim.config.sim_cfg.scene_id == scene_name:
-            proxy_backend_cfg = habitat_sim.SimulatorConfiguration()
-            proxy_backend_cfg.scene_id = "NONE"
-            proxy_backend_cfg.create_renderer = False
-            proxy_hab_cfg = habitat_sim.Configuration(
-                proxy_backend_cfg, [agent_cfg]
-            )
-            sim.reconfigure(proxy_hab_cfg)
-        sim.reconfigure(hab_cfg)
+            rom = sim.get_rigid_object_manager()
+            for obj in rom.get_object_handles():
+                if obj not in existing_rigid_objects:
+                    rom.remove_object_by_handle(obj)
+        else:
+            sim.reconfigure(hab_cfg)
 
     return sim
 
@@ -497,9 +496,9 @@ def add_viewpoints(sim, episode, obj_idx_to_name):
         obj_handle = obj_idx_to_name[int(obj["object_id"])]
         sim_obj = rom.get_object_by_handle(obj_handle)
         obj["view_points"] = generate_viewpoints(sim, sim_obj)
-        assert (
-            len(obj["view_points"]) > 0
-        ), "Need at least 1 view point for object"
+        if len(obj["view_points"]) == 0:
+            print("Need at least 1 view point for object")
+            return False
 
     for rec in episode["candidate_goal_receps"]:
         rec_id = int(rec["object_id"])
@@ -509,9 +508,11 @@ def add_viewpoints(sim, episode, obj_idx_to_name):
             obj_mgr = rom
         sim_rec = obj_mgr.get_object_by_id(rec_id)
         rec["view_points"] = generate_viewpoints(sim, sim_rec)
-        assert (
-            len(rec["view_points"]) > 0
-        ), "Need at least 1 view point for receptacle"
+        if len(rec["view_points"]) == 0:
+            print("Need at least 1 view point for receptacle")
+            return False
+
+    return True
 
 
 def populate_semantic_graph(sim):
@@ -522,6 +523,20 @@ def populate_semantic_graph(sim):
             node.semantic_id = obj.object_id + 1
 
 
+def load_navmesh(sim, scene):
+    scene_base_dir = osp.dirname(osp.dirname(scene))
+    scene_name = osp.basename(scene).split(".")[0]
+    navmesh_path = osp.join(
+        scene_base_dir, "navmeshes", scene_name + ".navmesh"
+    )
+    if osp.exists(navmesh_path):
+        sim.pathfinder.load_nav_mesh(navmesh_path)
+    else:
+        raise RuntimeError(
+            f"No navmesh found for scene {scene}, please generate one."
+        )
+
+
 def add_cat_fields_to_episodes(
     episodes_file,
     obj_to_id,
@@ -529,7 +544,7 @@ def add_cat_fields_to_episodes(
     obj_rearrange_easy=True,
     obj_category_mapping=None,
     rec_category_mapping=None,
-    add_viewpoints=False,
+    enable_add_viewpoints=False,
 ):
     """
     Adds category fields to episodes
@@ -541,17 +556,31 @@ def add_cat_fields_to_episodes(
     sim = None
     sim = initialize_sim(
         sim,
-        "NONE",
+        set(),
+        episodes["episodes"][0]["scene_id"],
         episodes["episodes"][0]["scene_dataset_config"],
         episodes["episodes"][0]["additional_obj_config_paths"],
     )
+
+    rom = sim.get_rigid_object_manager()
+    existing_rigid_objects = set(rom.get_object_handles())
+
+    new_episodes = {k: v for k, v in episodes.items()}
+    new_episodes["episodes"] = []
+
     for episode in tqdm(episodes["episodes"]):
         sim = initialize_sim(
             sim,
+            existing_rigid_objects,
             episode["scene_id"],
             episode["scene_dataset_config"],
             episode["additional_obj_config_paths"],
         )
+        load_navmesh(sim, episode["scene_id"])
+
+        rom = sim.get_rigid_object_manager()
+        existing_rigid_objects = set(rom.get_object_handles())
+
         rec = find_receptacles(sim)
         rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
         obj_idx_to_name = load_objects(sim, episode["rigid_objs"])
@@ -584,14 +613,17 @@ def add_cat_fields_to_episodes(
         episode["candidate_goal_receps"] = get_candidate_receptacles(
             all_rec_goals, goal_rec_cat
         )
-        if add_viewpoints:
-            add_viewpoints(sim, episode, obj_idx_to_name)
+        if enable_add_viewpoints and not add_viewpoints(
+            sim, episode, obj_idx_to_name
+        ):
+            continue
         assert (
             len(episode["candidate_objects"]) > 0
             and len(episode["candidate_start_receps"]) > 0
             and len(episode["candidate_goal_receps"]) > 0
         )
-    return episodes
+        new_episodes["episodes"].append(episode)
+    return new_episodes
 
 
 if __name__ == "__main__":
@@ -662,7 +694,7 @@ if __name__ == "__main__":
             obj_rearrange_easy=args.obj_rearrange_easy,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
-            add_viewpoints=args.add_viewpoints,
+            enable_add_viewpoints=args.add_viewpoints,
         )
 
         episodes_json = DatasetFloatJSONEncoder().encode(episodes)
