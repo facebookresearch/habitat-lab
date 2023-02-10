@@ -492,8 +492,7 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     :param ply_file: The input PLY mesh file. NOTE: must contain only triangles.
     """
     manager = mn.trade.ImporterManager()
-    # TODO: replace AssimpImporter once a better importer can handle binary PLY or we use another format
-    importer = manager.load_and_instantiate("AssimpImporter")
+    importer = manager.load_and_instantiate("AnySceneImporter")
     importer.open_file(ply_file)
 
     # NOTE: We don't support mesh merging or multi-mesh parsing currently
