@@ -57,6 +57,13 @@ __all__ = [
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
     "TargetGoalGpsCompassSensorConfig",
+    # REARRANGEMENT MEASUREMENTS
+    "EndEffectorToRestDistanceMeasurementConfig",
+    "RobotForceMeasurementConfig",
+    "DoesWantTerminateMeasurementConfig",
+    "ForceTerminateMeasurementConfig",
+    "ObjectToGoalDistanceMeasurementConfig",
+    "ObjAtGoalMeasurementConfig",
 ]
 
 
@@ -588,12 +595,21 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RobotForceMeasurementConfig(MeasurementConfig):
+    r"""
+    The amount of force in newton's applied by the robot. It computes both the instant and accumulated.
+    """
     type: str = "RobotForce"
     min_force: float = 20.0
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ForceTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
+    Note that if the measure is 1.0, the task will end as a result.
+    :data max_accum_force: The threshold for the accumulated force. -1 is no threshold.
+    :data max_instant_force: The threshold for the current, instant force. -1 is no threshold.
+    """
     type: str = "ForceTerminate"
     max_accum_force: float = -1.0
     max_instant_force: float = -1.0
@@ -606,6 +622,9 @@ class RobotCollisionsMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
+    r"""
+    In rearrangement only. The distance between the target object and the goal position for the object.
+    """
     type: str = "ObjectToGoalDistance"
 
 
@@ -616,6 +635,12 @@ class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
+    """
+    Rearrangement only. Distance between current end effector position
+    and the resting position of the end effector. Requires that the
+    RelativeRestingPositionSensor is attached to the agent.
+    """
+
     type: str = "EndEffectorToRestDistance"
 
 
@@ -789,6 +814,10 @@ class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ObjAtGoalMeasurementConfig(MeasurementConfig):
+    r"""
+    The measure is a dictionary of target indexes to float. The values are 1 if the object is within succ_thresh of the goal position for that object.
+    :data succ_thresh: The threshold distance below which an object is considered at the goal location.
+    """
     type: str = "ObjAtGoal"
     succ_thresh: float = 0.15
 
@@ -840,6 +869,9 @@ class CompositeRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
+    """
     type: str = "DoesWantTerminate"
 
 
