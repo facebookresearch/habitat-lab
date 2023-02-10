@@ -481,7 +481,7 @@ class RearrangeEpisodeGenerator:
         else:
             self.sim.navmesh_settings = NavMeshSettings()
             self.sim.navmesh_settings.set_defaults()
-            self.sim.navmesh_settings.agent_radius = 0.25
+            self.sim.navmesh_settings.agent_radius = 0.3
             self.sim.navmesh_settings.agent_height = 1.41
             self.sim.navmesh_settings.agent_max_climb = 0.01
             self.sim.recompute_navmesh(
