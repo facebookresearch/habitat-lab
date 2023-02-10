@@ -757,6 +757,12 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToObjRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The reward for rearrangement navigation.
+    :data dist_reward: At each step, the measure adds dist_reward times the distance the robot's base moved towards the goal position.
+    :data should_reward_turn: If true, the robot receives a reward for turning towards the target position.
+    :data angle_dist_reward: The reward multiplier for the robot turning towards the goal position.
+    """
     type: str = "NavToObjReward"
     # reward the agent for facing the object?
     should_reward_turn: bool = True
@@ -925,6 +931,10 @@ class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class CompositeSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+    :data must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    """
     type: str = "CompositeSuccess"
     must_call_stop: bool = True
 

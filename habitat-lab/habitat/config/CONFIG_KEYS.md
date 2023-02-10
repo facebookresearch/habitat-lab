@@ -173,7 +173,8 @@ defaults:
 
 You can change the success and reward measures of a task by changing the `habitat.task.success_measure`  and the `habitat.task.reward_measure` keys respectively.
 
-| Key | Description |
-| --- | --- |
-|habitat.task.measurements. |     |
-|habitat.task.measurements. |     |
+For Rearrangement Pick : `pick_success` | `place_reward`
+For Rearrangement Place : `place_success` | `place_reward`
+For Rearrangement Open / Close Articulated Object : `art_obj_success` | `art_obj_reward`
+For Rearrangement Navigation : `nav_to_obj_success` | `nav_to_obj_reward`
+For Composite Rearrangement using a PDDL plan : `composite_success` | ` move_objects_reward`
