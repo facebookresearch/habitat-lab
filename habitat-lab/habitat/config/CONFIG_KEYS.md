@@ -161,3 +161,19 @@ defaults:
 |habitat.task.measurements.force_terminate |    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.   Note that if the measure is 1.0, the task will end as a result. |
 |habitat.task.measurements.force_terminate.max_accum_force |  The threshold for the accumulated force. -1 is no threshold.   |
 |habitat.task.measurements.force_terminate.max_instant_force |  The threshold for the current, instant force. -1 is no threshold.   |
+|habitat.task.measurements.object_to_goal_distance |  In rearrangement only. The distance between the target object and the goal position for the object. |
+|habitat.task.measurements.obj_at_goal |  The measure is a dictionary of target indexes to float. The values are 1 if the object is within succ_thresh of the goal position for that object.   |
+|habitat.task.measurements.obj_at_goal.succ_thresh | The threshold distance below which an object is considered at the goal location.    |
+|habitat.task.measurements.art_obj_at_desired_state |   Rearrangement open/close container tasks only. Whether the articulated object (fridge or cabinet door) towards a desired state (open or closed) as defined by the task. |
+|habitat.task.measurements.rot_dist_to_goal |  Rearrangement Navigation task only. The angle between the forward direction of the agent and the direction to the goal location.   |
+|habitat.task.measurements.composite_stage_goals |       Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.  |
+|habitat.task.measurements.nav_to_pos_succ |     Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position. |
+
+### Task defining rearrangement measures
+
+You can change the success and reward measures of a task by changing the `habitat.task.success_measure`  and the `habitat.task.reward_measure` keys respectively.
+
+| Key | Description |
+| --- | --- |
+|habitat.task.measurements. |     |
+|habitat.task.measurements. |     |

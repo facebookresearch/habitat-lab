@@ -67,6 +67,7 @@ __all__ = [
     "ArtObjAtDesiredStateMeasurementConfig",
     "RotDistToGoalMeasurementConfig",
     "CompositeStageGoalsMeasurementConfig",
+    "NavToPosSuccMeasurementConfig",
     # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
     "RearrangePickSuccessMeasurementConfig",
     "RearrangePickRewardMeasurementConfig",
@@ -747,6 +748,9 @@ class BadCalledTerminateMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position.
+    """
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
 
@@ -769,6 +773,12 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToObjSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
+    :data must_look_at_targ: If true, the robot must be facing the correct object in addition to being close to it.
+    :data must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    :data success_angle_dist: When the robot must look at the target, this is the maximum angle in radians the robot can have when facing the object.
+    """
     type: str = "NavToObjSuccess"
     must_look_at_targ: bool = True
     must_call_stop: bool = True
