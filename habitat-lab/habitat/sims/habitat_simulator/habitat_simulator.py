@@ -391,8 +391,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             agent_cfg = self.habitat_config.agents[agent_name]
             if agent_cfg.is_set_start_state:
                 self.set_agent_state(
-                    agent_cfg.start_position,
-                    agent_cfg.start_rotation,
+                    [float(k) for k in agent_cfg.start_position],
+                    [float(k) for k in agent_cfg.start_rotation],
                     agent_id,
                 )
                 is_updated = True

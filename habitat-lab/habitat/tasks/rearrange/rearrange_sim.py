@@ -161,6 +161,7 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         for _, ro in rom.get_objects_by_handle_substring().items():
             ro.awake = False
+
         aom = self.get_articulated_object_manager()
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
@@ -252,6 +253,12 @@ class RearrangeSim(HabitatSim):
         # auto-sleep rigid objects as optimization
         if self.habitat_config.auto_sleep:
             self.sleep_all_objects()
+
+        rom = self.get_rigid_object_manager()
+        self._obj_orig_motion_types = {
+            handle: ro.motion_type
+            for handle, ro in rom.get_objects_by_handle_substring().items()
+        }
 
         if new_scene:
             self._load_navmesh(ep_info)
@@ -762,7 +769,6 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the robot.
         """
-
         # optionally step physics and update the robot for benchmarking purposes
         if self._step_physics:
             self.step_world(dt)

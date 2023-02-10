@@ -197,6 +197,11 @@ class RearrangeStopActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class PddlApplyActionConfig(ActionConfig):
+    type: str = "PddlApplyAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class OracleNavActionConfig(ActionConfig):
     """
     Oracle navigation action.
@@ -214,6 +219,8 @@ class OracleNavActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
 
 
 # -----------------------------------------------------------------------------
@@ -850,7 +857,6 @@ class TaskConfig(HabitatBaseConfig):
     force_regenerate: bool = False
     # Saves the generated starts to a cache if they are not already generated
     should_save_to_cache: bool = False
-    must_look_at_targ: bool = True
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
     gfx_replay_dir = "data/replays"
@@ -858,7 +864,7 @@ class TaskConfig(HabitatBaseConfig):
     # Spawn parameters
     physics_stability_steps: int = 1
     num_spawn_attempts: int = 200
-    spawn_max_dists_to_obj: float = 2.0
+    spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
     # EE sample parameters
     ee_sample_factor: float = 0.2
@@ -871,9 +877,6 @@ class TaskConfig(HabitatBaseConfig):
     cache_robot_init: bool = False
     success_state: float = 0.0
     # Measurements for composite tasks.
-    # If true, does not care about navigability or collisions
-    # with objects when spawning robot
-    easy_init: bool = False
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
     task_spec_base_path: str = "habitat/task/rearrange/pddl/"
@@ -1330,6 +1333,12 @@ cs.store(
     name="oracle_nav_action",
     node=OracleNavActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.pddl_apply_action",
+    group="habitat/task/actions",
+    name="pddl_apply_action",
+    node=PddlApplyActionConfig,
+)
 
 # Dataset Config Schema
 cs.store(
@@ -1456,6 +1465,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="instance_imagegoal_hfov_sensor",
     node=InstanceImageGoalHFOVSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.localization_sensor",
+    group="habitat/task/lab_sensors",
+    name="localization_sensor",
+    node=LocalizationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_sensor",

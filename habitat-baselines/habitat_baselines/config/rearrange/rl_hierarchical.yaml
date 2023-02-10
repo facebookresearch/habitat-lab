@@ -1,69 +1,57 @@
 # @package _global_
 
+# Config for running hierarchical policies where a high-level (HL) policy selects from a set of low-level (LL) policies.
+# Supports different HL policy configurations and using a variety of LL policies.
+
 defaults:
-  - /benchmark/rearrange: pick
+  - /benchmark/rearrange: rearrange_easy
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy: monolithic
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy: hl_fixed
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: nn_skills
   - _self_
 
 habitat_baselines:
   verbose: False
-  trainer_name: "ver"
+  trainer_name: "ddppo"
+  updater_name: "HRLPPO"
+  distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
-  tensorboard_dir: "tb"
-  video_dir: "video_dir"
   video_fps: 30
-  test_episode_count: -1
-  eval_ckpt_path_dir: "data/new_checkpoints"
-  # 26 environments will just barely be below 16gb.
-  # num_environments: 26
-  # 18 environments will just barely be below 11gb.
-  num_environments: 18
+  eval_ckpt_path_dir: ""
+  num_environments: 4
+  writer_type: 'tb'
   num_updates: -1
-  total_num_steps: 1.0e8
+  total_num_steps: 5.0e7
   log_interval: 10
-  num_checkpoints: 20
-  # Force PyTorch to be single threaded as
-  # this improves performance considerably
+  num_checkpoints: 10
   force_torch_single_threaded: True
-  eval_keys_to_include_in_name: ["reward", "force", "success"]
+  eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
+  load_resume_state_config: False
+  rollout_storage_name: "HrlRolloutStorage"
 
   eval:
+    use_ckpt_config: False
+    should_load_ckpt: False
     video_option: ["disk"]
 
   rl:
-    policy:
-        action_dist:
-           clamp_std: True
-           std_init: -1.0
-           use_std_param: True
     ppo:
       # ppo params
       clip_param: 0.2
       ppo_epoch: 2
       num_mini_batch: 2
       value_loss_coef: 0.5
-      entropy_coef: 0.001
-      lr: 3e-4
+      entropy_coef: 0.0001
+      lr: 2.5e-4
       eps: 1e-5
       max_grad_norm: 0.2
       num_steps: 128
       use_gae: True
       gamma: 0.99
       tau: 0.95
-      use_linear_clip_decay: False
-      use_linear_lr_decay: False
-      reward_window_size: 50
-
-      use_normalized_advantage: False
-
-      hidden_size: 512
-
-      # Use double buffered sampling, typically helps
-      # when environment time is similar or larger than
-      # policy inference time during rollout generation
-      use_double_buffered_sampler: False
 
     ddppo:
       sync_frac: 0.6
@@ -78,8 +66,7 @@ habitat_baselines:
       # Whether the visual encoder backbone will be trained.
       train_encoder: True
       # Whether to reset the critic linear layer
-      reset_critic: True
-
+      reset_critic: False
       # Model parameters
       backbone: resnet18
       rnn_type: LSTM

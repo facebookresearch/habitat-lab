@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 from hydra.core.config_store import ConfigStore
@@ -215,9 +215,43 @@ cs.store(
 
 
 @attr.s(auto_attribs=True, slots=True)
-class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
+    """
+    Defines a low-level skill to be used in the hierarchical policy.
+    """
+
+    skill_name: str = MISSING
+    name: str = "PointNavResNetPolicy"
+    action_distribution_type: str = "gaussian"
+    load_ckpt_file: str = ""
+    max_skill_steps: int = 200
+    # If true, the stop action will be called if the skill times out.
+    force_end_on_timeout: bool = True
+    # Overrides the config file of a neural network skill rather than loading
+    # the config file from the checkpoint file.
+    force_config_file: str = ""
+    at_resting_threshold: float = 0.15
+    # If true, this willapply the post-conditions of the skill after it
+    # terminates.
+    apply_postconds: bool = False
+    obs_skill_inputs: List[str] = list()
+    obs_skill_input_dim: int = 3
+    start_zone_radius: float = 0.3
+    # For the oracle navigation skill
+    action_name: str = "base_velocity"
+    stop_thresh: float = 0.001
+    # For the reset_arm_skill
+    reset_joint_state: List[float] = MISSING
+    # The set of PDDL action names (as defined in the PDDL domain file) that
+    # map to this skill. If not specified,the name of the skill must match the
+    # PDDL action name.
+    pddl_action_names: Optional[List[str]] = None
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
-    defined_skills: Dict[str, Any] = dict()
+    defined_skills: Dict[str, HrlDefinedSkillConfig] = dict()
     use_skills: Dict[str, str] = dict()
 
 
@@ -229,7 +263,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
     obs_transforms: Dict[str, ObsTransformConfig] = dict()
-    hierarchical_policy: HierarchicalPolicy = MISSING
+    hierarchical_policy: HierarchicalPolicyConfig = MISSING
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -335,6 +369,8 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # replaces --run-type eval when true
     evaluate: bool = False
     trainer_name: str = "ppo"
+    updater_name: str = "PPO"
+    distrib_updater_name: str = "DDPPO"
     torch_gpu_id: int = 0
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
@@ -345,6 +381,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
+    rollout_storage_name: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10

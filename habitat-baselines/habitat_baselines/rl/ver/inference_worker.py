@@ -318,12 +318,7 @@ class InferenceWorkerProcess(ProcessBase):
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
                 ] = self.visual_encoder(obs)
 
-            (
-                values,
-                actions,
-                actions_log_probs,
-                next_recurrent_hidden_states,
-            ) = self.actor_critic.act(
+            action_data = self.actor_critic.act(
                 obs,
                 recurrent_hidden_states,
                 prev_actions,
@@ -332,10 +327,12 @@ class InferenceWorkerProcess(ProcessBase):
 
             if not final_batch:
                 self.rollouts.next_hidden_states.index_copy_(
-                    0, environment_ids, next_recurrent_hidden_states
+                    0,
+                    environment_ids,
+                    action_data.rnn_hidden_states,
                 )
                 self.rollouts.next_prev_actions.index_copy_(
-                    0, environment_ids, actions
+                    0, environment_ids, action_data.actions
                 )
 
             if self._variable_experience:
@@ -347,7 +344,7 @@ class InferenceWorkerProcess(ProcessBase):
                     dtype=np.int64,
                 )
 
-            cpu_actions = actions.to(device="cpu")
+            cpu_actions = action_data.env_actions.to(device="cpu")
             self.transfer_buffers["actions"][
                 self.new_reqs
             ] = cpu_actions.numpy()
@@ -387,8 +384,8 @@ class InferenceWorkerProcess(ProcessBase):
                 dict(
                     masks=to_batch["masks"],
                     observations=obs,
-                    actions=actions,
-                    action_log_probs=actions_log_probs,
+                    actions=action_data.actions,
+                    action_log_probs=action_data.action_log_probs,
                     recurrent_hidden_states=recurrent_hidden_states,
                     prev_actions=prev_actions,
                     policy_version=self.rollouts.current_policy_version.expand(
@@ -397,7 +394,7 @@ class InferenceWorkerProcess(ProcessBase):
                     episode_ids=to_batch["episode_ids"],
                     environment_ids=to_batch["environment_ids"],
                     step_ids=to_batch["step_ids"],
-                    value_preds=values,
+                    value_preds=action_data.values,
                     returns=torch.full(
                         (),
                         float("nan"),

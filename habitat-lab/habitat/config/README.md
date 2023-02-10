@@ -241,7 +241,6 @@ habitat:
     constraint_violation_drops_object: false
     force_regenerate: false
     should_save_to_cache: true
-    must_look_at_targ: true
     object_in_hand_sample_prob: 0.167
     render_target: true
     ee_sample_factor: 0.2
