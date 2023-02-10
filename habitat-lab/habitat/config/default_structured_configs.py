@@ -122,6 +122,17 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    max_lin_speed: float = 0.4 # real Stretch max linear velocity
+    max_ang_speed: float = 0.3 # real Stretch max angular velocity
+    lin_speed_gain: float = 10.0 # the linear gain
+    ang_speed_gain: float = 10.0 # the angular gain
+    lin_tol: float = 0.05 # linear error tol
+    ang_tol: float = 0.05  # angular error tol
+    max_heading_ang_err: float = 0.31
+    controlling_lin_vel: bool = True
+    lin_vel_is_local: bool = True
+    controlling_ang_vel: bool = True
+    ang_vel_is_local: bool = True
 
 
 @dataclass

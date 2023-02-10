@@ -392,7 +392,7 @@ class Controller:
         produces the velocity command.
     """
     def __init__(self, v_max, w_max, lin_gain=5, ang_gain=5, \
-            lin_error_tol=0.05, ang_error_tol=0.05, max_heading_ang=np.pi/10, track_yaw=True):
+            lin_error_tol=0.05, ang_error_tol=0.05, max_heading_ang_err=np.pi/10, track_yaw=True):
         # If we want track yaw or not
         self.track_yaw = track_yaw
 
@@ -406,7 +406,7 @@ class Controller:
         self.acc_lin = lin_gain
         self.acc_ang = ang_gain
 
-        self.max_heading_ang = max_heading_ang
+        self.max_heading_ang_err = max_heading_ang_err
 
         # Initialize the parameters
         self.base_pose_goal = np.zeros(3)
@@ -445,7 +445,7 @@ class Controller:
         return v * np.sign(base_pose_err)
 
     @staticmethod
-    def _turn_rate_limit(lin_err, heading_diff, w_max, max_heading_ang, tol=0.0):
+    def _turn_rate_limit(lin_err, heading_diff, w_max, max_heading_ang_err, tol=0.0):
         """
         Compute velocity limit that prevents path from overshooting goal
 
@@ -459,7 +459,7 @@ class Controller:
         assert lin_err >= 0.0
         assert heading_diff >= 0.0
 
-        if heading_diff > max_heading_ang:
+        if heading_diff > max_heading_ang_err:
             return 0.0
         else:
             return (
@@ -499,7 +499,7 @@ class Controller:
                 lin_err_abs,
                 heading_err_abs,
                 self.w_max / 2.0,
-                max_heading_ang = self.max_heading_ang,
+                max_heading_ang_err = self.max_heading_ang_err,
                 tol=self.lin_error_tol,
             )
 
@@ -547,6 +547,7 @@ class Controller:
         """
         Generate the velocity command
         """
+        # Compute the base pose error, the return type here is list
         base_pose_err = self._compute_error_pose(base_pose, sim)
         return self._feedback_controller(base_pose_err)
 
@@ -563,25 +564,25 @@ class BaseWaypointVelAction(RobotAction):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
-        self.base_vel_ctrl.controlling_lin_vel = True
-        self.base_vel_ctrl.lin_vel_is_local = True
-        self.base_vel_ctrl.controlling_ang_vel = True
-        self.base_vel_ctrl.ang_vel_is_local = True
+        self.base_vel_ctrl.controlling_lin_vel = self._config.controlling_lin_vel
+        self.base_vel_ctrl.lin_vel_is_local = self._config.lin_vel_is_local
+        self.base_vel_ctrl.controlling_ang_vel = self._config.controlling_ang_vel
+        self.base_vel_ctrl.ang_vel_is_local = self._config.ang_vel_is_local
         # Initialize the controller
-        max_lin_speed = 0.4 # real Stretch max linear velocity
-        max_ang_speed = 0.3 # real Stretch max angular velocity
-        lin_speed_gain = 10.0 # the linear gain
-        ang_speed_gain = 10.0 # the angular gain
-        lin_tol = 0.05 # 5cm linear error tol
-        ang_tol = 0.05 # 5cm angular error tol
-        max_heading_ang = np.pi/10.0
+        max_lin_speed = self._config.max_lin_speed
+        max_ang_speed = self._config.max_ang_speed
+        lin_speed_gain = self._config.lin_speed_gain
+        ang_speed_gain = self._config.ang_speed_gain
+        lin_tol = self._config.lin_tol
+        ang_tol = self._config.ang_tol
+        max_heading_ang_err = self._config.max_heading_ang_err
         self.controller = Controller(v_max=max_lin_speed, \
             w_max=max_ang_speed, \
             lin_gain=lin_speed_gain, \
             ang_gain=ang_speed_gain,\
             lin_error_tol=lin_tol,\
             ang_error_tol=ang_tol,
-            max_heading_ang=max_heading_ang)
+            max_heading_ang_err=max_heading_ang_err)
 
     @property
     def action_space(self):
