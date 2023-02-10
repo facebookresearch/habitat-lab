@@ -5,6 +5,7 @@ import numpy as np
 
 import habitat_sim
 
+
 def is_accessible(sim, point, nav_to_min_distance) -> bool:
     """
     Return True if the point is within a threshold distance of the nearest
@@ -19,17 +20,16 @@ def is_accessible(sim, point, nav_to_min_distance) -> bool:
         return True
     snapped = sim.pathfinder.snap_point(point)
     island_idx: int = sim.pathfinder.get_island(snapped)
-    dist = float(
-        np.linalg.norm(
-            np.array((snapped - point))[[0, 2]]
-        )
-    )
+    dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
     return (
         dist < nav_to_min_distance
         and island_idx == sim.navmesh_classification_results["active_island"]
     )
 
-def compute_navmesh_island_classifications(sim: habitat_sim.Simulator, active_indoor_threshold=0.85):
+
+def compute_navmesh_island_classifications(
+    sim: habitat_sim.Simulator, active_indoor_threshold=0.85, debug=False
+):
     """
     Classify navmeshes as outdoor or indoor and find the largest indoor island.
     active_indoor_threshold is acceptacle indoor|outdoor ration for an active island (for example to allow some islands with a small porch or skylight)
@@ -56,7 +56,9 @@ def compute_navmesh_island_classifications(sim: habitat_sim.Simulator, active_in
             "indoor"
         ] = island_indoor_metric(sim=sim, island_ix=island_ix)
         if (
-            sim.navmesh_classification_results["island_info"][island_ix]["indoor"]
+            sim.navmesh_classification_results["island_info"][island_ix][
+                "indoor"
+            ]
             > active_indoor_threshold
         ):
             number_of_indoor += 1
@@ -71,21 +73,30 @@ def compute_navmesh_island_classifications(sim: habitat_sim.Simulator, active_in
         ):
             active_island_size = island_size
             sim.navmesh_classification_results["active_island"] = island_ix
-    # print(
-    #     f"Found active island {sim.navmesh_classification_results['active_island']} with area {active_island_size}."
-    # )
-    # print(
-    #     f"     Found {number_of_indoor} indoor islands out of {sim.pathfinder.num_islands} total."
-    # )
+    if debug:
+        print(
+            f"Found active island {sim.navmesh_classification_results['active_island']} with area {active_island_size}."
+        )
+        print(
+            f"     Found {number_of_indoor} indoor islands out of {sim.pathfinder.num_islands} total."
+        )
     for island_ix in range(sim.pathfinder.num_islands):
-        island_info = sim.navmesh_classification_results["island_info"][island_ix]
+        island_info = sim.navmesh_classification_results["island_info"][
+            island_ix
+        ]
         info_str = f"    {island_ix}: indoor ratio = {island_info['indoor']}, area = {sim.pathfinder.island_area(island_ix)}"
         if sim.navmesh_classification_results["active_island"] == island_ix:
             info_str += "  -- active--"
-        # print(info_str)
+    if debug:
+        print(info_str)
+
 
 def island_indoor_metric(
-    sim: habitat_sim.Simulator, island_ix: int, num_samples=100, jitter_dist=0.1, max_tries=1000
+    sim: habitat_sim.Simulator,
+    island_ix: int,
+    num_samples=100,
+    jitter_dist=0.1,
+    max_tries=1000,
 ) -> float:
     """
     Compute a heuristic for ratio of an island inside vs. outside based on checking whether there is a roof over a set of sampled navmesh points.
