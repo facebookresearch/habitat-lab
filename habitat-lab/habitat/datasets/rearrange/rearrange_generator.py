@@ -4,9 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import time
 from collections import defaultdict
+import itertools
 
 try:
     from collections import Sequence
@@ -25,15 +27,18 @@ import habitat_sim
 from habitat.config import DictConfig
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
+from habitat.datasets.rearrange.navmesh_utils import compute_navmesh_island_classifications
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
     ReceptacleSet,
     ReceptacleTracker,
     find_receptacles,
+    get_navigable_receptacles,
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
+from habitat_sim.nav import NavMeshSettings
 
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
@@ -471,7 +476,23 @@ class RearrangeEpisodeGenerator:
         navmesh_path = osp.join(
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
         )
-        self.sim.pathfinder.load_nav_mesh(navmesh_path)
+        if osp.exists(navmesh_path):
+            self.sim.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            self.sim.navmesh_settings = NavMeshSettings()
+            self.sim.navmesh_settings.set_defaults()
+            self.sim.navmesh_settings.agent_radius = 0.3
+            self.sim.navmesh_settings.agent_height = 1.41
+            self.sim.navmesh_settings.agent_max_climb = 0.01
+            self.sim.recompute_navmesh(
+                self.sim.pathfinder,
+                self.sim.navmesh_settings,
+                include_static_objects=True,
+            )
+            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+            self.sim.pathfinder.save_nav_mesh(navmesh_path)
+
+        compute_navmesh_island_classifications(self.sim)
 
         self._get_object_target_samplers()
         target_numbers = {
@@ -484,6 +505,18 @@ class RearrangeEpisodeGenerator:
             targ_sampler_name_to_obj_sampler_names[
                 sampler_name
             ] = targ_sampler_cfg["params"]["object_samplers"]
+
+        receptacles = find_receptacles(self.sim)
+        navigable_receptacles = {}
+        for sampler in itertools.chain(self._obj_samplers.values(), self._target_samplers.values()):
+            nav_to_min_dist = sampler.nav_to_min_distance
+            if nav_to_min_dist not in navigable_receptacles:
+                navigable_receptacles[nav_to_min_dist] = get_navigable_receptacles(
+                    self.sim,
+                    receptacles,
+                    nav_to_min_dist,
+                )
+            sampler.receptacle_instances = navigable_receptacles[nav_to_min_dist]
 
         target_receptacles = defaultdict(list)
         all_target_receptacles = []

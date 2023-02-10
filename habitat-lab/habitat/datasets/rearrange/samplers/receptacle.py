@@ -18,6 +18,8 @@ import trimesh
 import habitat_sim
 from habitat.core.logging import logger
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
+from habitat.tasks.rearrange.utils import get_aabb
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 
 
 class Receptacle(ABC):
@@ -59,6 +61,13 @@ class Receptacle(ABC):
         Convenience query for articulated vs. rigid object check.
         """
         return self.parent_link is not None
+
+    @property
+    @abstractmethod
+    def total_area(self) -> float:
+        """
+        Get total area of receptacle surface
+        """
 
     @abstractmethod
     def sample_uniform_local(
@@ -154,6 +163,10 @@ class OnTopOfReceptacle(Receptacle):
         super().__init__(name)
         self._places = places
 
+    @property
+    def total_area(self) -> float:
+        raise NotImplementedError
+
     def set_episode_data(self, episode_data):
         self.episode_data = episode_data
 
@@ -224,6 +237,10 @@ class AABBReceptacle(Receptacle):
         super().__init__(name, parent_object_handle, parent_link, up)
         self.bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
+
+    @property
+    def total_area(self) -> float:
+        return self.bounds.size_x() * self.bounds.size_z()
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -396,7 +413,7 @@ class TriangleMeshReceptacle(Receptacle):
             []
         )  # normalized float weights for each triangle for sampling
         assert len(mesh_data[1]) % 3 == 0, "must be triangles"
-        self.total_area = 0
+        self._total_area = 0
         triangles = []
         for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
@@ -406,10 +423,10 @@ class TriangleMeshReceptacle(Receptacle):
             self.area_weighted_accumulator.append(
                 0.5 * np.linalg.norm(np.cross(w1, w2))
             )
-            self.total_area += self.area_weighted_accumulator[-1]
+            self._total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
             self.area_weighted_accumulator[f_ix] = (
-                self.area_weighted_accumulator[f_ix] / self.total_area
+                self.area_weighted_accumulator[f_ix] / self._total_area
             )
             if f_ix > 0:
                 self.area_weighted_accumulator[
@@ -418,6 +435,10 @@ class TriangleMeshReceptacle(Receptacle):
         self.trimesh = trimesh.Trimesh(
             **trimesh.triangles.to_kwargs(triangles)
         )
+
+    @property
+    def total_area(self) -> float:
+        return self._total_area
 
     def get_face_verts(self, f_ix):
         verts = []
@@ -701,6 +722,36 @@ def parse_receptacles_from_user_config(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
                 )
     return receptacles
+
+
+def get_navigable_receptacles(
+    sim: habitat_sim.Simulator,
+    receptacles: List[Receptacle],
+    nav_to_min_distance: float,
+) -> List[Receptacle]:
+    """Given a list of receptacles, return the ones that are navigable from the given navmesh island"""
+    navigable_receptacles: List[Receptacle] = []
+    for receptacle in receptacles:
+        if receptacle.is_parent_object_articulated:
+            obj_mgr = sim.get_articulated_object_manager()
+        else:
+            obj_mgr = sim.get_rigid_object_manager()
+        receptacle_obj = obj_mgr.get_object_by_handle(receptacle.parent_object_handle)
+        receptacle_bb = get_aabb(receptacle_obj.object_id, sim, transformed=True)
+        recep_points = [
+            receptacle_bb.back_bottom_left,
+            receptacle_bb.back_bottom_right,
+            receptacle_bb.front_bottom_left,
+            receptacle_bb.front_bottom_right
+        ]
+        for point in recep_points:
+            if is_accessible(sim, point, nav_to_min_distance):
+                navigable_receptacles.append(receptacle)
+                logger.info(f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is navigable.")
+                break
+
+    logger.info(f"Found {len(navigable_receptacles)}/{len(receptacles)} navigable receptacles.")
+    return navigable_receptacles
 
 
 def find_receptacles(
