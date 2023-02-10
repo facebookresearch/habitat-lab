@@ -64,6 +64,20 @@ __all__ = [
     "ForceTerminateMeasurementConfig",
     "ObjectToGoalDistanceMeasurementConfig",
     "ObjAtGoalMeasurementConfig",
+    "ArtObjAtDesiredStateMeasurementConfig",
+    "RotDistToGoalMeasurementConfig",
+    "CompositeStageGoalsMeasurementConfig",
+    # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
+    "RearrangePickSuccessMeasurementConfig",
+    "RearrangePickRewardMeasurementConfig",
+    "PlaceSuccessMeasurementConfig",
+    "PlaceRewardMeasurementConfig",
+    "ArtObjSuccessMeasurementConfig",
+    "ArtObjRewardMeasurementConfig",
+    "NavToObjSuccessMeasurementConfig",
+    "NavToObjRewardMeasurementConfig",
+    "CompositeSuccessMeasurementConfig",
+    "CompositeRewardMeasurementConfig",
 ]
 
 
@@ -651,6 +665,9 @@ class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement open/close container tasks only. Whether the articulated object (fridge or cabinet door) towards a desired state (open or closed) as defined by the task.
+    """
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
@@ -673,6 +690,9 @@ class ArtObjStateMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ArtObjSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement open/close container tasks only. Requires art_obj_at_desired_state. Is 1.0 if the articulated object is in desired state and the end effector is within rest_dist_threshold of the resting position. If must_call_stop is True, the robot must also call the rearrange_stop action.
+    """
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
     must_call_stop: bool = True
@@ -680,6 +700,15 @@ class ArtObjSuccessMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ArtObjRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement open/close container tasks only. Requires art_obj_at_desired_state.
+    :data dist_reward: At each step, the measure adds dist_reward times the distance the end effector moved towards the articulated object.
+    :data wrong_grasp_end: If true, the task will end if the robot picks the wrong articulated object.
+    :data wrong_grasp_pen: The penalty for picking the wrong articulated object.
+    :data art_dist_reward: At each step, increments the reward by the amount the articulated moved in the correct direction.
+    :data art_at_desired_state_reward: The reward for putting the articulated object in the right state.
+    :data grasp_reward: The reward for grasping the correct articulated object.
+    """
     type: str = "ArtObjReward"
     dist_reward: float = 1.0
     wrong_grasp_end: bool = False
@@ -698,6 +727,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RotDistToGoalMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The angle between the forward direction of the agent and the direction to the goal location.
+    """
     type: str = "RotDistToGoal"
 
 
@@ -792,6 +824,16 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RearrangePickRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the pick task.
+    :data dist_reward: At each step, the measure adds dist_reward times the distance the end effector moved towards the target.
+    :data pick_reward: If the robot picks the target object, it receives pick_reward reward.
+    :data drop_pen: The penalty for dropping the object.
+    :data wrong_pick_pen: The penalty for picking the wrong object.
+    :data force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
+    :data drop_obj_should_end: If true, the task will end if the robot drops the object.
+    :data wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
     pick_reward: float = 2.0
@@ -808,6 +850,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
+    """
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
 
@@ -824,6 +869,14 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the place task.
+    :data dist_reward: At each step, the measure adds dist_reward times the distance the end effector moved towards the target.
+    :data place_reward: If the robot placed the target object correctly, it receives place_reward reward.
+    :data drop_pen: The penalty for dropping the object.
+    :data force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
+    :data wrong_drop_should_end: If true, the task will end if the robot drops the object.
+    """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
     place_reward: float = 5.0
@@ -840,6 +893,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot placed the target object on the goal position and has its end effector within ee_resting_success_threshold of its resting position.
+    """
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
 
@@ -851,6 +907,9 @@ class CompositeNodeIdxMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.
+    """
     type: str = "CompositeStageGoals"
 
 
