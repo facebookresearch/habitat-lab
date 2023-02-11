@@ -650,7 +650,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
-    object_goal: bool = True
+    object_goal: bool = False
 
 
 @dataclass
