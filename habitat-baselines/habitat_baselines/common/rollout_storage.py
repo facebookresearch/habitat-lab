@@ -258,3 +258,6 @@ class RolloutStorage:
 
     def __setstate__(self, state: Dict[str, Any]):
         self.__dict__.update(state)
+
+    def insert_first(self, batch):
+        self._agent.rollouts.buffers["observations"][0] = batch  # type: ignore
