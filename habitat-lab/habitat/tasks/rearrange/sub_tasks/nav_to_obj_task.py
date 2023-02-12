@@ -49,6 +49,8 @@ class DynNavRLEnv(RearrangeTask):
         self.force_recep_to_name = None
 
         self._nav_to_info = None
+        self.robot_start_position = None
+        self.robot_start_rotation = None
 
     @property
     def nav_goal_pos(self):
@@ -106,12 +108,7 @@ class DynNavRLEnv(RearrangeTask):
                 goals = np.expand_dims(nav_to_pos, axis=0)
             else:
                 goals = nav_to_pos
-            distance = np.min(
-                [
-                    self._sim.geodesic_distance(start_pos, goal)
-                    for goal in goals
-                ]
-            )
+            distance = self._sim.geodesic_distance(start_pos, goals, episode)
             return (
                 distance != np.inf
                 and distance > self._config.min_start_distance
@@ -137,9 +134,9 @@ class DynNavRLEnv(RearrangeTask):
         )
         sim.robot.base_pos = self._nav_to_info.robot_start_pos
         sim.robot.base_rot = self._nav_to_info.robot_start_angle
-        self.start_position = sim.robot.sim_obj.translation
+        self.robot_start_position = sim.robot.sim_obj.translation
         start_quat = sim.robot.sim_obj.rotation
-        self.start_rotation = np.array(
+        self.robot_start_rotation = np.array(
             [
                 start_quat.vector.x,
                 start_quat.vector.y,

@@ -173,7 +173,7 @@ class DistToGoal(Measure):
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self._prev_dist = self._get_cur_geo_dist(task)
+        self._prev_dist = self._get_cur_geo_dist(task, episode)
         self.update_metric(
             *args,
             episode=episode,
@@ -182,16 +182,13 @@ class DistToGoal(Measure):
             **kwargs,
         )
 
-    def _get_cur_geo_dist(self, task):
+    def _get_cur_geo_dist(self, task, episode):
         if len(task.nav_goal_pos.shape) == 1:
             goals = np.expand_dims(task.nav_goal_pos, axis=0)
         else:
             goals = task.nav_goal_pos
-        distance_to_target = np.min(
-            [
-                self._sim.geodesic_distance(self._sim.robot.base_pos, goal)
-                for goal in goals
-            ]
+        distance_to_target = self._sim.geodesic_distance(
+            self._sim.robot.base_pos, goals, episode
         )
         if distance_to_target == np.inf:
             distance_to_target = self._prev_dist
@@ -204,7 +201,7 @@ class DistToGoal(Measure):
         return DistToGoal.cls_uuid
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = self._get_cur_geo_dist(task)
+        self._metric = self._get_cur_geo_dist(task, episode)
 
 
 @registry.register_sensor(name="RobotStartGPSSensor")
@@ -215,7 +212,9 @@ class RobotStartGPSSensor(EpisodicGPSSensor):
         super().__init__(sim=sim, config=config)
 
     def get_agent_start_pose(self, episode, task):
-        return task.start_position, quaternion_from_coeff(task.start_rotation)
+        return task.robot_start_position, quaternion_from_coeff(
+            task.robot_start_rotation
+        )
 
     def get_agent_current_pose(self, sim):
         curr_quat = sim.robot.sim_obj.rotation
@@ -239,7 +238,9 @@ class RobotStartCompassSensor(EpisodicCompassSensor):
         super().__init__(sim=sim, config=config)
 
     def get_agent_start_pose(self, episode, task):
-        return task.start_position, quaternion_from_coeff(task.start_rotation)
+        return task.start_position, quaternion_from_coeff(
+            task.robot_start_rotation
+        )
 
     def get_agent_current_pose(self, sim):
         curr_quat = sim.robot.sim_obj.rotation
