@@ -385,9 +385,9 @@ class VERTrainer(PPOTrainer):
 
             t_update_model = time.perf_counter()
             with self.timer.avg_time("update agent"):
-                self.agent.train()
+                self._agent.updater.train()
 
-                losses = self.agent.update(self.learning_rollouts)
+                losses = self._agent.updater.update(self.learning_rollouts)
 
             with self.timer.avg_time("after update"), inference_mode():
                 for t_src, t_dst in zip(
