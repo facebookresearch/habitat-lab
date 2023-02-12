@@ -107,7 +107,19 @@ class RearrangeSim(HabitatSim):
         # architecture).
         self.ctrl_arm = True
         self.agents_mgr = AgentManager(self.habitat_config, self)
-        
+
+        self._debug_render_robot = self.habitat_config.debug_render_robot
+        self._debug_render_goal = self.habitat_config.debug_render_goal
+        self._debug_render = self.habitat_config.debug_render
+        self._concur_render = self.habitat_config.concur_render
+        self._enable_gfx_replay_save = (
+            self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
+        )
+        self._needs_markers = self.habitat_config.needs_markers
+        self._update_robot = self.habitat_config.update_robot
+        self._step_physics = self.habitat_config.step_physics
+
+
     @property
     def agent(self):
         if len(self.agents_mgr) > 1:
@@ -138,7 +150,7 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self.habitat_config.concur_render:
+        if self._concur_render:
             self.renderer.acquire_gl_context()
 
     def sleep_all_objects(self):
@@ -493,7 +505,7 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
         for target_handle, transform in self._targets.items():
             # Visualize the goal of the object
-            if self.habitat_config.debug_render_goal:
+            if self._debug_render_goal:
                 new_target_handle = (
                     target_handle.split("_:")[0] + ".object_config.json"
                 )
@@ -637,8 +649,8 @@ class RearrangeSim(HabitatSim):
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
-        if self.habitat_config.debug_render:
-            if self.habitat_config.debug_render_robot:
+        if self._debug_render:
+            if self._debug_render_robot:
                 self.agents_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
@@ -668,7 +680,7 @@ class RearrangeSim(HabitatSim):
 
         self.maybe_update_robot()
 
-        if self.habitat_config.concur_render:
+        if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -682,14 +694,14 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
-        if self.habitat_config.habitat_sim_v0.enable_gfx_replay_save:
+        if self._enable_gfx_replay_save:
             self.gfx_replay_manager.save_keyframe()
 
-        if self.habitat_config.needs_markers:
+        if self._needs_markers:
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs and self.habitat_config.debug_render:
+        if "robot_third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -713,39 +725,8 @@ class RearrangeSim(HabitatSim):
         things, this will set the robot's sensors' positions to their new
         positions.
         """
-        if self.habitat_config.update_robot:
+        if self._update_robot:
             self.agents_mgr.update_agents()
-
-    def visualize_path(
-        self,
-        path: List,
-        viz_id: Optional[int] = None,
-        r: float = 0.05,
-    ) -> int:
-        """Adds the sphere object to the specified position for visualization purpose."""
-
-        template_mgr = self.get_object_template_manager()
-        rom = self.get_rigid_object_manager()
-        viz_obj = None
-        if viz_id is None:
-            if r not in self._viz_templates:
-                template = template_mgr.get_template_by_handle(
-                    template_mgr.get_template_handles("sphere")[0]
-                )
-                template.scale = mn.Vector3(r, r, r)
-                self._viz_templates[str(r)] = template_mgr.register_template(
-                    template, "ball_new_viz_" + str(r)
-                )
-            viz_obj = rom.add_object_by_template_id(
-                self._viz_templates[str(r)]
-            )
-            make_render_only(viz_obj, self)
-            self._viz_handle_to_template[viz_obj.object_id] = r
-        else:
-            viz_obj = rom.get_object_by_id(viz_id)
-
-        viz_obj.translation = mn.Vector3(*position)
-        return viz_obj.object_id
 
     def visualize_position(
         self,
@@ -788,7 +769,7 @@ class RearrangeSim(HabitatSim):
         Never call sim.step_world directly or miss updating the robot.
         """
         # optionally step physics and update the robot for benchmarking purposes
-        if self.habitat_config.step_physics:
+        if self._step_physics:
             self.step_world(dt)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:

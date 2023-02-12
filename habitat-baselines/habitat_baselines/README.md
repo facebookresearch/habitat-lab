@@ -26,8 +26,7 @@ For training on sample data please follow steps in the repository README. You sh
 **train**:
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type train
+  --config-name=pointnav/ppo_pointnav_example.yaml
 ```
 
 You can reduce training time by changing the trainer from the default implement to [VER](rl/ver/README.md) by
@@ -35,16 +34,15 @@ setting `trainer_name` to `"ver"` in either the config or via the command line.
 
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type train \
+  --config-name=pointnav/ppo_pointnav_example.yaml \
   habitat_baselines.trainer_name=ver
 ```
 
 **test**:
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type eval
+  --config-name=pointnav/ppo_pointnav_example.yaml \
+  habitat_baselines.evaluate=True
 ```
 
 We also provide trained RGB, RGBD, and Depth PPO  models for MatterPort3D and Gibson.
@@ -63,28 +61,20 @@ To train a high-level policy, while using pre-learned low-level skills (SRL base
 
 ```bash
 python -u habitat-baselines/habitat_baselines/run.py \
-  --exp-config habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml \
-  --run-type train
+  --config-name=rearrange/rl_hierarchical.yaml
 ```
 To run a rearrangement episode with oracle low-level skills and a fixed task planner, run:
 
 ```bash
 python -u habitat-baselines/habitat_baselines/run.py \
-  --exp-config habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml \
-  --run-type eval \
+  --config-name=rearrange/rl_hierarchical.yaml \
+  habitat_baselines.evaluate=True \
   habitat_baselines/rl/policy=hl_fixed \
   habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills
 ```
 
 To change the task (like set table) that you train your skills on, you can change the line `/habitat/task/rearrange: rearrange_easy` to `/habitat/task/rearrange: set_table` in the defaults of your config.
 
-
-### Classic
-
-**SLAM based**
-
-- [Handcrafted agent baseline](slambased/README.md) adopted from the paper
-"Benchmarking Classic and Learned Navigation in Complex 3D Environments".
 ### Additional Utilities
 
 **Episode iterator options**:

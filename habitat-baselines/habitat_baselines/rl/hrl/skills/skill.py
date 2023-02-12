@@ -30,6 +30,9 @@ class SkillPolicy(Policy):
         """
         self._config = config
         self._batch_size = batch_size
+        self._apply_postconds = self._config.apply_postconds
+        self._force_end_on_timeout = self._config.force_end_on_timeout
+        self._max_skill_steps = self._config.max_skill_steps
 
         self._cur_skill_step = torch.zeros(self._batch_size)
         self._should_keep_hold_state = should_keep_hold_state
@@ -49,9 +52,8 @@ class SkillPolicy(Policy):
                 action_space, "pddl_apply_action"
             )
         else:
-            
             self._pddl_ac_start = None
-        if self._config.apply_postconds and self._pddl_ac_start is None:
+        if self._apply_postconds and self._pddl_ac_start is None:
             raise ValueError(f"Could not find PDDL action in skill {self}")
 
         self._delay_term: List[Optional[bool]] = [
@@ -108,10 +110,9 @@ class SkillPolicy(Policy):
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         # If it is not holding (0) want to keep releasing -> output -1.
         # If it is holding (1) want to keep grasping -> output +1.
-        if not self.ignore_grip:
-            action_data.write_action(
-                self._grip_ac_idx, is_holding + (is_holding - 1.0)
-            )
+        action_data.write_action(
+            self._grip_ac_idx, is_holding + (is_holding - 1.0)
+        )
         return action_data
 
     def _apply_postcond(
@@ -194,10 +195,10 @@ class SkillPolicy(Policy):
             device=cur_skill_step.device,
             dtype=torch.bool,
         )
-        if self._config.max_skill_steps > 0:
-            over_max_len = cur_skill_step >= self._config.max_skill_steps
-            if self._config.force_end_on_timeout:
-                bad_terminate = over_max_len.cpu()
+        if self._max_skill_steps > 0:
+            over_max_len = cur_skill_step >= self._max_skill_steps
+            if self._force_end_on_timeout:
+                bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len
 
@@ -211,7 +212,7 @@ class SkillPolicy(Policy):
                 )
                 self._delay_term[env_i] = False
                 is_skill_done[i] = True
-            elif self._config.apply_postconds and is_skill_done[i]:
+            elif self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
@@ -225,7 +226,7 @@ class SkillPolicy(Policy):
             self._internal_log(
                 f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
             )
-        return is_skill_done.to(new_actions.device), bad_terminate.to(new_actions.device), new_actions
+        return is_skill_done, bad_terminate, new_actions
 
     def on_enter(
         self,

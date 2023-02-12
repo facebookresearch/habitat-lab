@@ -95,9 +95,7 @@ class HrlRolloutStorage(RolloutStorage):
         env_idxs = torch.arange(self._num_envs)
         if rewards is not None:
             # Accumulate rewards between updates.
-            reward_write_idxs = torch.maximum(
-                self._cur_step_idxs - 1, torch.zeros_like(self._cur_step_idxs)
-            )
+            reward_write_idxs = torch.clamp(self._cur_step_idxs - 1, min=0)
             self.buffers["rewards"][reward_write_idxs, env_idxs] += rewards
 
         if len(next_step) > 0:

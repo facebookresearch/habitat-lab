@@ -66,6 +66,8 @@ class PolicyActionData:
     def write_action(self, write_idx: int, write_action: torch.Tensor) -> None:
         """
         Used to override an action across all environments.
+        :param write_idx: The index in the action dimension to write the new action.
+        :param write_action: The action to write at `write_idx`.
         """
         self.actions[:, write_idx] = write_action
 
