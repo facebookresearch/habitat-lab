@@ -143,7 +143,11 @@ class Env:
             )
             if 'human_nav_action' in self.task.actions:
                 self.task.actions['human_nav_action'].human_controller = human_controller
-
+            if 'human_pick_action' in self.task.actions:
+                self.task.actions['human_pick_action'].human_controller = human_controller
+            if 'human_place_action' in self.task.actions:
+                self.task.actions['human_place_action'].human_controller = human_controller
+            
         self._max_episode_seconds = (
             self._config.environment.max_episode_seconds
         )

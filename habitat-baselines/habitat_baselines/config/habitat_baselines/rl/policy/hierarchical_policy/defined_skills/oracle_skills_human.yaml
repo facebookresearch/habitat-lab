@@ -1,18 +1,25 @@
 # Oracle skills that will teleport to the skill post-condition. When automatically setting predicates you may want to run the simulation in kinematic mode:
 # To run in kinematic mode, add: `habitat.simulator.kinematic_mode=True habitat.simulator.ac_freq_ratio=1`
 
+# pick:
+#   skill_name: "NoopHumanSkillPolicy"
+#   obs_skill_inputs: ["obj_start_sensor"]
+#   max_skill_steps: 1
+#   apply_postconds: True
+#   force_end_on_timeout: False
+
 pick:
-  skill_name: "NoopHumanSkillPolicy"
+  skill_name: "HumanPickSkillPolicy"
   obs_skill_inputs: ["obj_start_sensor"]
-  max_skill_steps: 1
+  max_skill_steps: 20
   apply_postconds: True
   force_end_on_timeout: False
 
 
 place:
-  skill_name: "NoopHumanSkillPolicy"
+  skill_name: "HumanPlaceSkillPolicy"
   obs_skill_inputs: ["obj_start_sensor"]
-  max_skill_steps: 1
+  max_skill_steps: 20
   apply_postconds: True
   force_end_on_timeout: False
 
@@ -20,6 +27,12 @@ wait:
   skill_name: "HumanWaitSkillPolicy"
   max_skill_steps: -1
   force_end_on_timeout: False
+
+# reset_arm:
+#   skill_name: "ResetArmHumanSkill"
+#   obs_skill_inputs: ["obj_start_sensor"]
+#   max_skill_steps: 10
+#   force_end_on_timeout: False
 
 
 reset_arm:

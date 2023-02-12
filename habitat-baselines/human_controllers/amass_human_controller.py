@@ -58,10 +58,13 @@ class Motions:
 
 
 class AmassHumanController:
+    """
+    Human Controller, converts high level actions such as walk, or reach into joints that control
+    to control a URDF object.
+    """
     def __init__(self, urdf_path, amass_path, body_model_path, grab_path=None, obj_translation=None, draw_fps=60):
         self.motions = Motions(amass_path, body_model_path)
         self.base_offset = mn.Vector3([0,1.1,0])
-        # self.feet_offset = mn.Vector3([0,-1.1,0])
 
         self.last_pose = self.motions.standing_pose
         self.urdf_path = urdf_path
@@ -103,15 +106,39 @@ class AmassHumanController:
 
         self.pc_id = p.connect(p.DIRECT)
         self.human_bullet_id = p.loadURDF(urdf_path)
-
+        
         self.link_ids = list(range(p.getNumJoints(self.human_bullet_id)))
 
         # TODO: There is a mismatch between the indices we get here and ht eones from model.get_link_ids. Would be good to resolve it
+        # link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
         link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
-
+        # 0 b'm_avg_L_Hip'
+        # 1 b'm_avg_L_Knee'
+        # 2 b'm_avg_L_Ankle'
+        # 3 b'm_avg_R_Hip'
+        # 4 b'm_avg_R_Knee'
+        # 5 b'm_avg_R_Ankle'
+        # 6 b'm_avg_Spine1'
+        # 7 b'm_avg_Spine2'
+        # 8 b'm_avg_Spine3'
+        # 9 b'm_avg_Neck'
+        # 10 b'm_avg_Head'
+        # 11 b'm_avg_L_Collar'
+        # 12 b'm_avg_L_Shoulder'
+        # 13 b'm_avg_L_Elbow'
+        # 14 b'm_avg_L_Wrist'
+        # 15 b'm_avg_R_Collar'
+        # 16 b'm_avg_R_Shoulder'
+        # 17 b'm_avg_R_Elbow'
+        # 18 b'm_avg_R_Wrist'
         # Joint INFO
+        link_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 13, 10, 9, 15, 16, 17, 18]
+        
         # https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html#getjointinfo
-
+        # link_indices = sorted(link_indices)
+        # for index in range(20):
+        #     print(index, p.getJointInfo(self.human_bullet_id, index)[1])
+        # breakpoint()
         self.joint_info = [p.getJointInfo(self.human_bullet_id, index) for index in link_indices]
 
         # Data used to grab
@@ -150,9 +177,26 @@ class AmassHumanController:
             }
         self.reach_pos = 0
         # breakpoint()
+
+    @property
+    def root_pos(self):
+        """
+        Position of the root (pelvis)
+        """
+        return self.obj_transform.translation
     
     @property
+    def root_rot(self):
+        """
+        Position of the root (pelvis)
+        """
+        return self.obj_transform.rotation()
+        
+    @property
     def base_pos(self):
+        """
+        Position of the base, which is the pelvis projected to the floor
+        """
         return self.obj_transform.translation - self.obj_transform.transform_vector(
             self.base_offset
         )
@@ -172,7 +216,8 @@ class AmassHumanController:
         self.last_pose = self.motions.standing_pose
 
     def stop(self, progress=None):
-
+        """Sets the human into a standing pose. If progress != None, it interpolates between the previous and stopping pose
+        """
         new_pose =  self.motions.standing_pose
         new_pose, new_root_trans, root_rotation = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
 
@@ -253,27 +298,19 @@ class AmassHumanController:
 
         relative_pos = position
         x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
-        # breakpoint()
+        
         coord_data = [
             (self.vpose['min'][0], self.vpose['max'][0], self.vpose['bins'][0], x_diff),
             (self.vpose['min'][1], self.vpose['max'][1], self.vpose['bins'][1], y_diff),
             (self.vpose['min'][2], self.vpose['max'][2], self.vpose['bins'][2], z_diff),
         ]
-        # print(x_diff, y_diff, z_diff)
-        # breakpoint()
         x_ind, y_ind, z_ind = [find_index_quant(*data) for data in coord_data]
-        # print(x_ind, y_ind, z_ind)
         index = y_ind * self.vpose['bins'][0] * self.vpose['bins'][2] + x_ind * self.vpose['bins'][2] + z_ind
-        # print(self.coords_grab[index])
-        # breakpoint()
+
         return index
 
     def reach(self, position: mn.Vector3):
-        # Move the X hand towards that position
-
-        # Make position relative to the root
-        # position_relative = position - self.root_pos
-
+        """ Changes the character joints so that it reaches a certain position with the hand"""
 
         if not self.use_ik_grab:
             raise KeyError(
@@ -283,11 +320,10 @@ class AmassHumanController:
         curr_pose = list(self.grab_quaternions[reach_pos])
         curr_transform = mn.Matrix4(self.grab_transform[reach_pos].reshape(4,4))
         curr_transform.translation = self.obj_transform.translation
-        # breakpoint()
+        
         return curr_pose, curr_transform
 
     def walk(self, position: mn.Vector3):
-        # breakpoint()
         """ Walks to the desired position. Rotates the character if facing in a different direction """
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
         forward_V = position
@@ -311,9 +347,7 @@ class AmassHumanController:
             else:
                 new_angle = curr_angle * np.pi / 180
                 forward_V2 = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
-                # breakpoint()
-                # print(mn.Vector3(forward_V).normalized(), forward_V2.normalized())
-                # breakpoint()
+
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
         forward_V = mn.Vector3(forward_V)
@@ -407,7 +441,7 @@ class AmassHumanController:
 
 
     def compute_turn(self, rel_pos):
-        """ Turns a certain angle otwards a direction """
+        """ Turns a certain angle towards a direction """
         assert(self.prev_orientation is not None)
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
         # breakpoint()
@@ -464,31 +498,6 @@ class AmassHumanController:
 
         self.prev_orientation = forward_V
 
-
-        # self.time_since_start += 1
-        # if self.fully_stopped:
-        #     progress = min(self.time_since_start, self.frames_to_start)
-        # else:
-        #     # if it didn't fully stop it should take us to walk as many
-        #     # frames as the time we spent stopping
-        #     progress = max(0, self.frames_to_start - self.time_since_stop)
-
-        # # Ensure a smooth transition from walking to standing
-        # progress_norm = progress * 1.0/self.frames_to_start
-        # if progress_norm < 1.0:
-        #     # if it was standing before walking, interpolate between walking and standing pose
-        #     standing_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(self.motions.standing_pose, self.joint_info)
-        #     interp_pose = (1-progress_norm) * np.array(standing_pose) + progress_norm * np.array(new_pose)
-        #     interp_pose = list(interp_pose)
-        #     self.fully_started = False
-        # else:
-        #     interp_pose = new_pose
-        #     self.fully_started = True
-
-        # if self.time_since_start >= self.frames_to_start:
-        #     self.fully_started = True
-        # self.time_since_stop = 0
-        # self.last_walk_pose = new_pose
 
         interp_pose = new_pose
         full_transform.translation = self.obj_transform.translation

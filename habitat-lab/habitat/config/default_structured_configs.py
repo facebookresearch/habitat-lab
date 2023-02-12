@@ -196,16 +196,6 @@ class HumanJointActionConfig(ActionConfig):
 
 
 @dataclass
-class HumanPickActionConfig(ActionConfig):
-    type: str = "HumanPickAction"
-
-@dataclass
-class HumanPlaceActionConfig(ActionConfig):
-    type: str = "HumanPlaceAction"
-
-
-
-@dataclass
 class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
 
@@ -256,6 +246,32 @@ class HumanNavActionConfig(ActionConfig):
     # ang_speed: float = 10.0
     # allow_dyn_slide: bool = True
     # allow_back: bool = True
+
+@dataclass
+class HumanPickActionConfig(ActionConfig):
+    """
+    Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "HumanPickAction"
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+
+@dataclass
+class HumanPlaceActionConfig(ActionConfig):
+    """
+    Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "HumanPlaceAction"
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
 
 # -----------------------------------------------------------------------------
 # # EQA actions
@@ -1413,26 +1429,28 @@ cs.store(
 )
 
 cs.store(
+    package="habitat.task.actions.human_place_action",
+    group="habitat/task/actions",
+    name="human_place_action",
+    node=HumanPlaceActionConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.human_pick_action",
+    group="habitat/task/actions",
+    name="human_pick_action",
+    node=HumanPickActionConfig,
+)
+
+cs.store(
     package="habitat.task.actions.humanjoint_action",
     group="habitat/task/actions",
     name="humanjoint_action",
     node=HumanJointActionConfig,
 )
 
-cs.store(
-    package="habitat.task.actions.humanpick_action",
-    group="habitat/task/actions",
-    name="humanpick_action",
-    node=HumanPickActionConfig,
-)
 
 
-cs.store(
-    package="habitat.task.actions.humanplace_action",
-    group="habitat/task/actions",
-    name="humanplace_action",
-    node=HumanPlaceActionConfig,
-)
 
 # Dataset Config Schema
 cs.store(

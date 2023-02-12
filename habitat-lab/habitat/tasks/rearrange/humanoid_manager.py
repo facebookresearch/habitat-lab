@@ -75,8 +75,8 @@ class HumanoidManager:
             human = human_cls(agent_cfg.agent_urdf, sim)
 
 
-            grasp_mgr_left = HumanRearrangeGraspManager(sim, cfg, human, 0)
-            grasp_mgr_right = HumanRearrangeGraspManager(sim, cfg, human, 1)
+            grasp_mgr_left = HumanRearrangeGraspManager(sim, cfg, human, 1)
+            grasp_mgr_right = HumanRearrangeGraspManager(sim, cfg, human, 0)
             self._all_human_data.append(
                 HumanData(
                     humanoid=human,

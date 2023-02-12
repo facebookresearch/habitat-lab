@@ -38,7 +38,8 @@ from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
     HumanPickSkillPolicy,
     HumanPlaceSkillPolicy,
     OracleNavHumanPolicy,
-    NoopHumanSkillPolicy
+    NoopHumanSkillPolicy,
+    ResetArmHumanSkill,
 )
 
 from habitat_baselines.rl.hrl.utils import find_action_range

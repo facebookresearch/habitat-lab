@@ -123,7 +123,7 @@ class HumanNavAction(HumanJointAction):
         colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
         if curr_path_points is not None:
             # pass
-            self.curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object("current_path_{}".format(self.curr_ind_map['cont']), 
+            sim.add_gradient_trajectory_object("current_path_{}".format(self.curr_ind_map['cont']), 
                                                                                 curr_path_points, colors=colors, radius=0.03)
             self.curr_ind_map['cont'] += 1
         # sim.viz_ids['basepos'] = sim.visualize_position(
@@ -149,13 +149,6 @@ class HumanNavAction(HumanJointAction):
                 index += 1
                 distance = np.linalg.norm(curr_path_points[index] - robot_pos)
 
-            # def convert_num(x, mark=False):
-            #     if mark:
-            #         return "(*) {:.2f},{:.2f},{:.2f}".format(x[0],x[1],x[2])
-            #     else:
-            #         return "{:.2f},{:.2f},{:.2f}".format(x[0],x[1],x[2])
-            # print(" --> ".join([convert_num(x, ind==index) for ind, x in enumerate(curr_path_points)]))
-            
             cur_nav_targ = curr_path_points[index]
             base_T = self.cur_human.base_transformation
             # TODO: change this so that front is aligned with x, not z
@@ -166,17 +159,6 @@ class HumanNavAction(HumanJointAction):
             p2 = robot_pos + robot_forward
             robot_forward = robot_forward[[0, 2]]
             
-            # sim.viz_ids['basepos'] = sim.visualize_position(
-            #     robot_pos, sim.viz_ids['basepos'], r=0.05
-            # )
-            # sim.viz_ids['basepos_3'] = sim.visualize_position(
-            #     p2, sim.viz_ids['basepos_3'], r=0.05
-            # )
-            # colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
-            # self.curr_ind_map['trajectory'] = sim.add_gradient_trajectory_object(
-            #     "current_path_{}".format(self.curr_ind_map['cont']), 
-            #     [p1, p2], colors=colors, radius=0.03)
-            # self.curr_ind_map['cont'] += 1
             rel_targ = cur_nav_targ - robot_pos
 
             rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]

@@ -178,9 +178,9 @@ class AmassHuman(Humanoid):
         from the end-effector link location.
         """
         # breakpoint()
-        ee_link = self.params.ee_link_right
+        ee_link = self.params.ee_link_left
         if hand == 1:
-            ee_link = self.params.ee_link_left
+            ee_link = self.params.ee_link_right
         ef_link_transform = self.sim_obj.get_link_scene_node(
             ee_link
         ).transformation

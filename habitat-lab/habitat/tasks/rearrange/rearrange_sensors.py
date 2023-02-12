@@ -217,14 +217,16 @@ class JointSensor(UsesRobotInterface, Sensor):
 
 @registry.register_sensor
 class HumanJointSensor(UsesRobotInterface, Sensor):
+    cls_uuid: str = "human_joint"
+    
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
     def _get_uuid(self, *args, **kwargs):
         # TODO(xavierpuig): this should maybe aslo have a key joint. Can we handle that?
-        # Or change the joint key above to aovid confusion
-        return "human_joint"
+        # Or change the joint key above to avoid confusion
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR

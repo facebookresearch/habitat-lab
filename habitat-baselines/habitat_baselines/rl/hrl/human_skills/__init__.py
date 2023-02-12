@@ -7,11 +7,13 @@ from habitat_baselines.rl.hrl.human_skills.pick import HumanPickSkillPolicy
 from habitat_baselines.rl.hrl.human_skills.place import HumanPlaceSkillPolicy
 from habitat_baselines.rl.hrl.human_skills.wait import HumanWaitSkillPolicy
 from habitat_baselines.rl.hrl.human_skills.noop import NoopHumanSkillPolicy
+from habitat_baselines.rl.hrl.human_skills.reset import ResetArmHumanSkill
 
 __all__ = [
     "HumanPickSkillPolicy",
     "HumanPlaceSkillPolicy",
     "HumanWaitSkillPolicy",
+    "ResetArmHumanSkill",
     "OracleNavHumanPolicy",
     "NoopHumanSkillPolicy"
 ]
