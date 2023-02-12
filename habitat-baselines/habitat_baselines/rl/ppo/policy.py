@@ -120,7 +120,7 @@ class Policy(abc.ABC):
         for c in self._get_policy_components():
             yield from c.buffers()
 
-    def extract_policy_info(
+    def get_extra(
         self, action_data: PolicyActionData, infos, dones
     ) -> List[Dict[str, float]]:
         """

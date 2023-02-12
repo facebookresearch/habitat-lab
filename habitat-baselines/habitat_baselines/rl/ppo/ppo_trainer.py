@@ -29,6 +29,7 @@ from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.construct_vector_env import construct_envs
+from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
     apply_obs_transforms_obs_space,
@@ -49,7 +50,6 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
-from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.trainer_agent import TrainerAgent
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -73,11 +73,6 @@ if TYPE_CHECKING:
 class PPOTrainer(BaseRLTrainer):
     r"""Trainer class for PPO algorithm
     Paper: https://arxiv.org/abs/1707.06347.
-
-    :property env_action_space: The action space required by the environment.
-    :property policy_action_space: The action space the policy acts in. This
-        can be different from the environment action space for hierarchical
-        policies.
     """
     supported_tasks = ["Nav-v0"]
 
@@ -91,21 +86,9 @@ class PPOTrainer(BaseRLTrainer):
         self.envs = None
         self.obs_transforms = []
 
-        self._obs_space = None
-
         # Distributed if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
-
-    @property
-    def obs_space(self):
-        if self._obs_space is None and self.envs is not None:
-            self._obs_space = self.envs.observation_spaces[0]
-        return self._obs_space
-
-    @obs_space.setter
-    def obs_space(self, new_obs_space):
-        self._obs_space = new_obs_space
 
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
@@ -129,8 +112,11 @@ class PPOTrainer(BaseRLTrainer):
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
         )
-        self.env_action_space = self.envs.action_spaces[0]
-        self.orig_env_action_space = self.envs.orig_action_spaces[0]
+        self._env_spec = EnvironmentSpec(
+            observation_space=self.envs.observation_spaces[0],
+            action_space=self.envs.action_spaces[0],
+            orig_action_space=self.envs.orig_action_spaces[0],
+        )
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -223,32 +209,27 @@ class PPOTrainer(BaseRLTrainer):
 
         logger.add_filehandler(self.config.habitat_baselines.log_file)
 
-        observation_space = self.obs_space
         self.obs_transforms = get_active_obs_transforms(self.config)
-        observation_space = apply_obs_transforms_obs_space(
-            observation_space, self.obs_transforms
+        self._env_spec.observation_space = apply_obs_transforms_obs_space(
+            self._env_spec.observation_space, self.obs_transforms
         )
-        self._agent = TrainerAgent(
+
+        agent_cls = baseline_registry.get_agent(
+            self.config.habitat_baselines.rl.agent.name
+        )
+        self._agent = agent_cls.from_config(
             self.config,
-            observation_space,
-            self.env_action_space,
-            self.orig_env_action_space,
+            self._env_spec,
             self._is_distributed,
             self.device,
-        )
-        self._agent.initialize(
-            resume_state, self.envs.num_envs, self.percent_done()
+            resume_state,
+            self.envs.num_envs,
+            self.percent_done(),
         )
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-
-        if self._agent.is_static_encoder:
-            with inference_mode():
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._agent.encoder(batch)
 
         self._agent.insert_first(batch)
 
@@ -279,7 +260,7 @@ class PPOTrainer(BaseRLTrainer):
             None
         """
         checkpoint = {
-            **self._agent.get_save_state()
+            **self._agent.get_save_state(),
             "config": self.config,
         }
         if extra_state is not None:
@@ -320,15 +301,16 @@ class PPOTrainer(BaseRLTrainer):
 
         t_sample_action = time.time()
 
-        # sample actions
+        # Sample actions
         with inference_mode():
-            step_batch = self.rollouts.buffers[
-                self.rollouts.current_rollout_step_idxs[buffer_index],
+            # TODO: Refactor this in the next multi-agent PR to maintain the current observation in the trainer rather than indexing into rollouts.
+            step_batch = self._agent.rollouts.buffers[
+                self._agent.rollouts.current_rollout_step_idxs[buffer_index],
                 env_slice,
             ]
 
             profiling_wrapper.range_push("compute actions")
-            action_data = self._agent.actor_critic.act(
+            action_data = self._agent.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
@@ -345,12 +327,12 @@ class PPOTrainer(BaseRLTrainer):
             range(env_slice.start, env_slice.stop),
             action_data.env_actions.cpu().unbind(0),
         ):
-            if is_continuous_action_space(self.env_action_space):
+            if is_continuous_action_space(self._env_spec.action_space):
                 # Clipping actions to the specified limits
                 act = np.clip(
                     act.numpy(),
-                    self.env_action_space.low,
-                    self.env_action_space.high,
+                    self._env_spec.action_space.low,
+                    self._env_spec.action_space.high,
                 )
             else:
                 act = act.item()
@@ -358,7 +340,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.env_time += time.time() - t_step_env
 
-        self.rollouts.insert(
+        self._agent.insert(
             next_recurrent_hidden_states=action_data.rnn_hidden_states,
             actions=action_data.actions,
             action_log_probs=action_data.action_log_probs,
@@ -370,8 +352,8 @@ class PPOTrainer(BaseRLTrainer):
     def _collect_environment_result(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
         env_slice = slice(
-            int(buffer_index * num_envs / self._nbuffers),
-            int((buffer_index + 1) * num_envs / self._nbuffers),
+            int(buffer_index * num_envs / self._agent.nbuffers),
+            int((buffer_index + 1) * num_envs / self._agent.nbuffers),
         )
 
         t_step_env = time.time()
@@ -422,20 +404,14 @@ class PPOTrainer(BaseRLTrainer):
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
 
-        if self._static_encoder:
-            with inference_mode():
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._encoder(batch)
-
-        self.rollouts.insert(
+        self._agent.insert(
             next_observations=batch,
             rewards=rewards,
             next_masks=not_done_masks,
             buffer_index=buffer_index,
         )
 
-        self.rollouts.advance_rollout(buffer_index)
+        self._agent.rollouts.advance_rollout(buffer_index)
 
         self.pth_time += time.time() - t_update_stats
 
@@ -448,29 +424,9 @@ class PPOTrainer(BaseRLTrainer):
 
     @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self):
-        ppo_cfg = self.config.habitat_baselines.rl.ppo
         t_update_model = time.time()
-        with inference_mode():
-            step_batch = self.rollouts.buffers[
-                self.rollouts.current_rollout_step_idx
-            ]
+        losses = self._agent.update()
 
-            next_value = self._agent.actor_critic.get_value(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
-            )
-
-        self.rollouts.compute_returns(
-            next_value, ppo_cfg.use_gae, ppo_cfg.gamma, ppo_cfg.tau
-        )
-
-        self._agent.train()
-
-        losses = self._agent.updater.update(self._agent.rollouts)
-
-        self._agent.rollouts.after_update()
         self.pth_time += time.time() - t_update_model
         return losses
 
@@ -662,7 +618,7 @@ class PPOTrainer(BaseRLTrainer):
 
                     save_resume_state(
                         dict(
-                            **self._agent.get_resume_state()
+                            **self._agent.get_resume_state(),
                             config=self.config,
                             requeue_stats=requeue_stats,
                         ),
@@ -683,7 +639,7 @@ class PPOTrainer(BaseRLTrainer):
                 profiling_wrapper.range_push("rollouts loop")
 
                 profiling_wrapper.range_push("_collect_rollout_step")
-                for buffer_index in range(self._nbuffers):
+                for buffer_index in range(self._agent.nbuffers):
                     self._compute_actions_and_step_envs(buffer_index)
 
                 for step in range(ppo_cfg.num_steps):
@@ -692,16 +648,16 @@ class PPOTrainer(BaseRLTrainer):
                         or (step + 1) == ppo_cfg.num_steps
                     )
 
-                    for buffer_index in range(self._nbuffers):
+                    for buffer_index in range(self._agent.nbuffers):
                         count_steps_delta += self._collect_environment_result(
                             buffer_index
                         )
 
-                        if (buffer_index + 1) == self._nbuffers:
+                        if (buffer_index + 1) == self._agent.nbuffers:
                             profiling_wrapper.range_pop()  # _collect_rollout_step
 
                         if not is_last_step:
-                            if (buffer_index + 1) == self._nbuffers:
+                            if (buffer_index + 1) == self._agent.nbuffers:
                                 profiling_wrapper.range_push(
                                     "_collect_rollout_step"
                                 )
@@ -717,7 +673,6 @@ class PPOTrainer(BaseRLTrainer):
                     self.num_rollouts_done_store.add("num_done", 1)
 
                 losses = self._update_agent()
-                self._agent.post_step()
 
                 self.num_updates_done += 1
                 losses = self._coalesce_post_step(
@@ -803,7 +758,7 @@ class PPOTrainer(BaseRLTrainer):
         self._init_envs(config, is_eval=True)
 
         action_shape, discrete_actions = get_action_space_info(
-            self.policy_action_space
+            self._agent.policy_action_space
         )
 
         self._agent.load_state_dict(ckpt_dict["state_dict"])
@@ -817,9 +772,10 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            self.config.habitat_baselines.num_environments,
-            self._agent.actor_critic.num_recurrent_layers,
-            ppo_cfg.hidden_size,
+            shape=(
+                self.config.habitat_baselines.num_environments,
+                *self._agent.hidden_state_shape,
+            ),
             device=self.device,
         )
         prev_actions = torch.zeros(
@@ -876,7 +832,7 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes_info = self.envs.current_episodes()
 
             with inference_mode():
-                action_data = self._agent.actor_critic.act(
+                action_data = self._agent.act(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
@@ -900,13 +856,13 @@ class PPOTrainer(BaseRLTrainer):
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
-            if is_continuous_action_space(self.env_action_space):
+            if is_continuous_action_space(self._env_spec.action_space):
                 # Clipping actions to the specified limits
                 step_data = [
                     np.clip(
                         a.numpy(),
-                        self.env_action_space.low,
-                        self.env_action_space.high,
+                        self._env_spec.action_space.low,
+                        self._env_spec.action_space.high,
                     )
                     for a in action_data.env_actions.cpu()
                 ]
@@ -918,9 +874,7 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            policy_infos = self._agent.actor_critic.extract_policy_info(
-                action_data, infos, dones
-            )
+            policy_infos = self._agent.get_extra(action_data, infos, dones)
             for i in range(len(policy_infos)):
                 infos[i].update(policy_infos[i])
             batch = batch_obs(  # type: ignore

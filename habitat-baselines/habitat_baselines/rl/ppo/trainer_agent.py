@@ -1,12 +1,14 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import logger
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.rollout_storage import (  # noqa: F401.
     RolloutStorage,
 )
@@ -18,46 +20,46 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo import PPO  # noqa: F401.
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
+from habitat_baselines.utils.common import inference_mode
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
+@baseline_registry.register_agent
 class TrainerAgent:
+    """
+    An agent consists of:
+    - Policy: How actions are selected from observations.
+    - Data Storage: How data collected from the environment is stored.
+    - Updater: How the Policy is updated.
+    """
+
     def __init__(
         self,
         config: "DictConfig",
-        obs_space: spaces.Space,
-        action_space: spaces.Space,
-        orig_action_space: spaces.Space,
+        env_spec: EnvironmentSpec,
         is_distrib: bool,
         device,
-    ):
-        self._is_distributed = is_distrib
-        self._is_static_encoder = (
-            not config.habitat_baselines.rl.ddppo.train_encoder
-        )
-        self._actor_critic = self._create_actor()
-        self._actor_critic.to(device)
-        self._device = device
-        self._policy_action_space = self._actor_critic.get_policy_action_space(
-            action_space
-        )
-        self._updater = self._create_updater()
-        self.config = config
-        self._ppo_cfg = self.config.habitat_baselines.rl.ppo
-
-        self._rollouts: Optional[RolloutStorage] = None
-        self._lr_scheduler: Optional[LambdaLR] = None
-        self.action_shape: Optional[Tuple[int]] = None
-
-    def initialize(
-        self,
         resume_state: Optional[Dict[str, Any]],
         num_envs: int,
         percent_done: float,
     ):
+        self._env_spec = env_spec
+        self._config = config
+        self._ppo_cfg = self._config.habitat_baselines.rl.ppo
+        self._is_distributed = is_distrib
+        self._is_static_encoder = (
+            not config.habitat_baselines.rl.ddppo.train_encoder
+        )
+        self._actor_critic = self._create_policy()
+        self._actor_critic.to(device)
+        self._policy_action_space = self._actor_critic.get_policy_action_space(
+            env_spec.action_space
+        )
+        self._updater = self._create_updater(self._actor_critic)
+
         if resume_state is not None:
             self._updater.load_state_dict(resume_state["state_dict"])
             self._updater.optimizer.load_state_dict(
@@ -71,7 +73,25 @@ class TrainerAgent:
                 sum(param.numel() for param in self._updater.parameters())
             )
         )
+        self.nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
+        self._rollouts = self._create_rollouts(num_envs)
+        self._rollouts.to(device)
 
+        self._lr_sched = LambdaLR(
+            optimizer=self._updater.optimizer,
+            lr_lambda=lambda x: 1 - percent_done,
+        )
+        if self._ppo_cfg.use_linear_clip_decay:
+            self._updater.clip_param = self._ppo_cfg.clip_param * (
+                1 - percent_done
+            )
+
+    def _create_rollouts(self, num_envs: int) -> RolloutStorage:
+        """
+        Setup and initialize the rollout storage.
+        """
+
+        obs_space = self._env_spec.observation_space
         if self._is_static_encoder:
             obs_space = spaces.Dict(
                 {
@@ -85,73 +105,71 @@ class TrainerAgent:
                 }
             )
 
-        self.nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
         rollouts_cls = baseline_registry.get_storage(
-            self.config.habitat_baselines.rollout_storage_name
+            self._config.habitat_baselines.rollout_storage_name
         )
-        self.rollouts = rollouts_cls(
+        return rollouts_cls(
             self._ppo_cfg.num_steps,
-            self.envs.num_envs,
+            num_envs,
             obs_space,
             self.policy_action_space,
             self._ppo_cfg.hidden_size,
             num_recurrent_layers=self.actor_critic.num_recurrent_layers,
             is_double_buffered=self._ppo_cfg.use_double_buffered_sampler,
         )
-        self.rollouts.to(self.device)
 
-        self._lr_sched = None
-        self._lr_sched = LambdaLR(
-            optimizer=self._updater.optimizer,
-            lr_lambda=lambda x: 1 - percent_done,
-        )
-        if self._ppo_cfg.use_linear_clip_decay:
-            self._pudater.clip_param = self._ppo_cfg.clip_param * (
-                1 - percent_done
-            )
-
-    def _create_updater(self, config, actor_critic):
+    def _create_updater(self, actor_critic):
+        """
+        Setup and initialize the policy updater.
+        """
         if self._is_distributed:
             updater_cls = baseline_registry.get_updater(
-                config.habitat_baselines.distrib_updater_name
+                self._config.habitat_baselines.distrib_updater_name
             )
         else:
             updater_cls = baseline_registry.get_updater(
-                config.habitat_baselines.updater_name
+                self._config.habitat_baselines.updater_name
             )
-        return updater_cls.from_config(
-            actor_critic, config.habitat_baselines.rl.ppo
-        )
+        return updater_cls.from_config(actor_critic, self._ppo_cfg)
 
-    def _create_actor(
-        self, config, obs_space, action_space, orig_action_space
-    ) -> Policy:
+    @property
+    def policy_action_space(self):
+        """
+        The action space the policy acts in. This can be different from the environment action space for hierarchical policies.
+        """
+        return self._policy_action_space
+
+    def _create_policy(self) -> Policy:
+        """
+        Creates and initializes the policy. This should also load any model weights from checkpoints.
+        """
+
         policy = baseline_registry.get_policy(
-            config.habitat_baselines.rl.policy.name
+            self._config.habitat_baselines.rl.policy.name
         )
         actor_critic = policy.from_config(
-            config,
-            obs_space,
-            action_space,
-            orig_action_space=orig_action_space,
+            self._config,
+            self._env_spec.observation_space,
+            self._env_spec.action_space,
+            orig_action_space=self._env_spec.orig_action_space,
         )
         if (
-            config.habitat_baselines.rl.ddppo.pretrained_encoder
-            or config.habitat_baselines.rl.ddppo.pretrained
+            self._config.habitat_baselines.rl.ddppo.pretrained_encoder
+            or self._config.habitat_baselines.rl.ddppo.pretrained
         ):
             pretrained_state = torch.load(
-                config.habitat_baselines.rl.ddppo.pretrained_weights,
+                self._config.habitat_baselines.rl.ddppo.pretrained_weights,
                 map_location="cpu",
             )
 
-        if config.habitat_baselines.rl.ddppo.pretrained:
+        if self._config.habitat_baselines.rl.ddppo.pretrained:
             actor_critic.load_state_dict(
                 {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }
             )
-        elif config.habitat_baselines.rl.ddppo.pretrained_encoder:
+        elif self._config.habitat_baselines.rl.ddppo.pretrained_encoder:
             prefix = "actor_critic.net.visual_encoder."
             actor_critic.net.visual_encoder.load_state_dict(
                 {
@@ -161,22 +179,22 @@ class TrainerAgent:
                 }
             )
         if (
-            config.habitat_baselines.rl.ddppo.pretrained_encoder
-            or config.habitat_baselines.rl.ddppo.pretrained
+            self._config.habitat_baselines.rl.ddppo.pretrained_encoder
+            or self._config.habitat_baselines.rl.ddppo.pretrained
         ):
             pretrained_state = torch.load(
-                config.habitat_baselines.rl.ddppo.pretrained_weights,
+                self._config.habitat_baselines.rl.ddppo.pretrained_weights,
                 map_location="cpu",
             )
 
-        if config.habitat_baselines.rl.ddppo.pretrained:
+        if self._config.habitat_baselines.rl.ddppo.pretrained:
             actor_critic.load_state_dict(
                 {  # type: ignore
                     k[len("actor_critic.") :]: v
                     for k, v in pretrained_state["state_dict"].items()
                 }
             )
-        elif config.habitat_baselines.rl.ddppo.pretrained_encoder:
+        elif self._config.habitat_baselines.rl.ddppo.pretrained_encoder:
             prefix = "actor_critic.net.visual_encoder."
             actor_critic.net.visual_encoder.load_state_dict(
                 {
@@ -192,60 +210,34 @@ class TrainerAgent:
         return actor_critic
 
     @property
-    def encoder(self):
-        return self.actor_critic.net.visual_encoder
-
-    @property
     def rollouts(self) -> RolloutStorage:
-        if self._rollouts is not None:
-            raise ValueError("Rollout storage is not set.")
+        """
+        TODO: In the next PR accessing rollouts directly will be depricated.
+        Right now it is still used to track the current observation, however,
+        in the future, the trainer should be responsible for tracking the
+        current step.
+        """
         return self._rollouts
 
-    @property
-    def actor_critic(self) -> Policy:
-        return self._actor_critic
-
-    @property
-    def lr_scheduler(self) -> LambdaLR:
-        return self._lr_scheduler
-
-    @property
-    def should_update(self) -> bool:
-        return self._updater is not None
-
-    @property
-    def is_static_encoder(self) -> bool:
-        return self._is_static_encoder
-
-    @property
-    def updater(self) -> Optional[PPO]:
-        """
-        The updater to update this policy. If None, then the policy should not
-        be updated.
-        """
-
-        return self._updater
-
-    def post_step(self):
-        if self.should_update and self._ppo_cfg.use_linear_lr_decay:
-            self._lr_scheduler.step()  # type: ignore
-
+    @classmethod
     def from_config(
-        self,
-        config,
-        agent_sampler_cfg,
-        obs_space,
-        action_space,
-        orig_action_space,
-        is_distrib,
+        cls,
+        config: "DictConfig",
+        env_spec: EnvironmentSpec,
+        is_distrib: bool,
+        device,
+        resume_state: Optional[Dict[str, Any]],
+        num_envs: int,
+        percent_done: float,
     ):
-        return TrainerAgent(
+        return cls(
             config,
-            agent_sampler_cfg,
-            obs_space,
-            action_space,
-            orig_action_space,
+            env_spec,
             is_distrib,
+            device,
+            resume_state,
+            num_envs,
+            percent_done,
         )
 
     def get_resume_state(self) -> Dict[str, Any]:
@@ -281,3 +273,116 @@ class TrainerAgent:
                 self._actor_critic.load_state_dict(state["optim_state"])
             if "lr_sched_state" in state:
                 self._actor_critic.load_state_dict(state["lr_sched_state"])
+
+    def insert_first(self, batch) -> None:
+        """
+        Insert the first observation from the environment at the start of training into the rollout storage.
+        """
+        if self._is_static_encoder:
+            self._add_visual_features(batch)
+
+        self.rollouts.buffers["observations"][0] = batch  # type: ignore
+
+    def insert(
+        self,
+        next_observations=None,
+        next_recurrent_hidden_states=None,
+        actions=None,
+        action_log_probs=None,
+        value_preds=None,
+        rewards=None,
+        next_masks=None,
+        buffer_index: int = 0,
+        **kwargs,
+    ):
+        """
+        Insert data into the rollout storage. By default this passes through to the insert operation from the `RolloutStorage`.
+        """
+        if next_observations is not None and self._is_static_encoder:
+            self._add_visual_features(next_observations)
+
+        self.rollouts.insert(
+            next_observations=next_observations,
+            next_recurrent_hidden_states=next_recurrent_hidden_states,
+            actions=actions,
+            action_log_probs=action_log_probs,
+            value_preds=value_preds,
+            rewards=rewards,
+            next_masks=next_masks,
+            buffer_index=buffer_index,
+            **kwargs,
+        )
+
+    def update(self) -> Dict[str, float]:
+        """
+        Update the policy.
+        """
+
+        with inference_mode():
+            step_batch = self._rollouts.buffers[
+                self.rollouts.current_rollout_step_idx
+            ]
+
+            next_value = self._actor_critic.get_value(
+                step_batch["observations"],
+                step_batch["recurrent_hidden_states"],
+                step_batch["prev_actions"],
+                step_batch["masks"],
+            )
+
+        self.rollouts.compute_returns(
+            next_value,
+            self._ppo_cfg.use_gae,
+            self._ppo_cfg.gamma,
+            self._ppo_cfg.tau,
+        )
+
+        self._agent.train()
+
+        losses = self._agent.updater.update(self._agent.rollouts)
+        self.rollouts.after_update()
+
+        if self._ppo_cfg.use_linear_lr_decay:
+            self._lr_scheduler.step()  # type: ignore
+        return losses
+
+    def act(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        deterministic=False,
+    ) -> PolicyActionData:
+        return self._actor_critic.act(
+            observations, rnn_hidden_states, prev_actions, masks, deterministic
+        )
+
+    @property
+    def hidden_state_shape(self):
+        """
+        The shape of the tensor to track the hidden state, such as the RNN hidden state.
+        """
+
+        return (
+            self._agent.actor_critic.num_recurrent_layers,
+            self._ppo_cfg.hidden_size,
+        )
+
+    def get_extra(
+        self, action_data: PolicyActionData, infos, dones
+    ) -> List[Dict[str, float]]:
+        """
+        Gets any extra information for logging from the policy.
+        """
+
+        return self._actor_critic.get_extra(action_data, infos, dones)
+
+    def _add_visual_features(self, batch) -> None:
+        """
+        Modifies the observation batch to include the visual features in-place.
+        """
+        with inference_mode():
+            batch[
+                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+            ] = self._encoder(batch)
