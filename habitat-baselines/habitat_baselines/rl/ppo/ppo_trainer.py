@@ -9,14 +9,12 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 import torch
 import tqdm
-from gym import spaces
 from omegaconf import OmegaConf
-from torch import nn
 
 from habitat import VectorEnv, logger
 from habitat.config import read_write
@@ -64,9 +62,6 @@ from habitat_baselines.utils.info_dict import (
     extract_scalars_from_info,
     extract_scalars_from_infos,
 )
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -252,11 +247,11 @@ class PPOTrainer(BaseRLTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         if self._is_static_encoder:
-            self._encoder = self.actor_critic.net.visual_encoder
+            self._encoder = self._agent.actor_critic.net.visual_encoder
             with inference_mode():
                 batch[
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._agent.encoder(batch)
+                ] = self._encoder(batch)
 
         self._agent.rollouts.insert_first(batch)
 
@@ -291,7 +286,7 @@ class PPOTrainer(BaseRLTrainer):
             "config": self.config,
         }
         if extra_state is not None:
-            checkpoint["extra_state"] = extra_state
+            checkpoint["extra_state"] = extra_state  # type: ignore
 
         torch.save(
             checkpoint,

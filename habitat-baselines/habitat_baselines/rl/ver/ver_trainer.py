@@ -12,7 +12,6 @@ from typing import List
 
 import numpy as np
 import torch
-from gym import spaces
 
 from habitat import logger
 from habitat.config import read_write
@@ -457,7 +456,6 @@ class VERTrainer(PPOTrainer):
             ]
             count_checkpoints = requeue_stats["count_checkpoints"]
 
-        ppo_cfg = self.config.habitat_baselines.rl.ppo
         if self.ver_config.overlap_rollouts_and_learn:
             self.preemption_decider.start_rollout()
 

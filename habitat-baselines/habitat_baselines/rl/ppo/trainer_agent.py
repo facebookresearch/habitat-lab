@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import gym.spaces as spaces
 import numpy as np
 import torch
-import torch.nn as nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import logger
@@ -20,8 +19,7 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
 from habitat_baselines.rl.ppo import PPO  # noqa: F401.
-from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
-from habitat_baselines.utils.common import inference_mode
+from habitat_baselines.rl.ppo.policy import NetPolicy
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -134,7 +132,7 @@ class TrainerAgent:
         """
         return self._policy_action_space
 
-    def _create_policy(self) -> Policy:
+    def _create_policy(self) -> NetPolicy:
         """
         Creates and initializes the policy. This should also load any model weights from checkpoints.
         """
@@ -209,7 +207,7 @@ class TrainerAgent:
         return self._rollouts
 
     @property
-    def actor_critic(self) -> Policy:
+    def actor_critic(self) -> NetPolicy:
         return self._actor_critic
 
     @property
@@ -256,7 +254,7 @@ class TrainerAgent:
         """
 
         return (
-            self._agent.actor_critic.num_recurrent_layers,
+            self.actor_critic.num_recurrent_layers,
             self._ppo_cfg.hidden_size,
         )
 
@@ -303,7 +301,7 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
 def default_create_rollouts(
     num_envs: int,
     env_spec: EnvironmentSpec,
-    actor_critic: Policy,
+    actor_critic: NetPolicy,
     policy_action_space: spaces.Space,
     config: "DictConfig",
     device,
@@ -316,7 +314,7 @@ def default_create_rollouts(
         env_spec.observation_space, actor_critic, config
     )
     ppo_cfg = config.habitat_baselines.rl.ppo
-    return baseline_registry.get_storage(
+    rollouts = baseline_registry.get_storage(
         config.habitat_baselines.rollout_storage_name
     )(
         ppo_cfg.num_steps,
@@ -327,6 +325,8 @@ def default_create_rollouts(
         num_recurrent_layers=actor_critic.num_recurrent_layers,
         is_double_buffered=ppo_cfg.use_double_buffered_sampler,
     )
+    rollouts.to(device)
+    return rollouts
 
 
 def linear_lr_schedule(percent_done: float) -> float:
