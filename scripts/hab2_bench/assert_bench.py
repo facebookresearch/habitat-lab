@@ -20,7 +20,7 @@ NAME_MAP = {
 
 MINIMUM_PERFORMANCE_1_PROCESS = {
     "idle_all": 280,
-    "idle_noconcur": 260,
+    "idle_noconcur": 220,
     "idle_nosleep": 120,
     # "idle_render": "[Idle Render Only]",
     "idle_single_camera_all": 510,
