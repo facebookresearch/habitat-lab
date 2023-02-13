@@ -190,7 +190,8 @@ class BaseVelocityActionConfig(ActionConfig):
     allow_dyn_slide: bool = True
     allow_back: bool = True
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class HumanJointActionConfig(ActionConfig):
     type: str = "HumanJointAction"
 
@@ -226,7 +227,8 @@ class OracleNavActionConfig(ActionConfig):
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class HumanNavActionConfig(ActionConfig):
     """
     Oracle navigation action.
@@ -240,14 +242,15 @@ class HumanNavActionConfig(ActionConfig):
     # forward_velocity: float = 1.0
     turn_thresh: float = 0.1
     dist_thresh: float = 0.2
-    spawn_max_dist_to_obj: float = 1.8
+    spawn_max_dist_to_obj: float = 1.5
     num_spawn_attempts: int = 200
     # lin_speed: float = 10.0
     # ang_speed: float = 10.0
     # allow_dyn_slide: bool = True
     # allow_back: bool = True
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class HumanPickActionConfig(ActionConfig):
     """
     Oracle navigation action.
@@ -260,7 +263,8 @@ class HumanPickActionConfig(ActionConfig):
     turn_thresh: float = 0.1
     dist_thresh: float = 0.2
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class HumanPlaceActionConfig(ActionConfig):
     """
     Oracle navigation action.
@@ -364,7 +368,8 @@ class GPSSensorConfig(LabSensorConfig):
     type: str = "GPSSensor"
     dimensionality: int = 2
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class LocalizarionSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
@@ -381,7 +386,8 @@ class JointSensorConfig(LabSensorConfig):
     dimensionality: int = 7
 
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class HumanJointSensorConfig(LabSensorConfig):
     # TODO:(xavierpuig): can this ve modified in the config? Will be important for
     # new humans/agents
@@ -389,7 +395,8 @@ class HumanJointSensorConfig(LabSensorConfig):
     dimensionality: int = 19
 
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class EEPositionSensorConfig(LabSensorConfig):
     type: str = "EEPositionSensor"
 
@@ -1104,7 +1111,8 @@ class AgentConfig(HabitatBaseConfig):
     agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 
-@dataclass
+
+@attr.s(auto_attribs=True, slots=True)
 class HumanAgentConfig(AgentConfig):
     amass_path: str = ""
     body_model_path: str = ""

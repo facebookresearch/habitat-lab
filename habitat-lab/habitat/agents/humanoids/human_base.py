@@ -63,8 +63,7 @@ class Humanoid(AgentInterface):
         """Instantiates the humanoid in the scene. Loads the URDF, sets initial state of parameters, joints, etc..."""
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
-            # TODO: is fixed_base here needed
-            # breakpoint()
+            # TODO: is fixed_base here neededs
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
                 self.urdf_path, fixed_base=False
             )
@@ -145,16 +144,13 @@ class Humanoid(AgentInterface):
 
     @property
     def base_pos(self):
-        return self.sim_obj.translation - self.sim_obj.transformation.transform_vector(
-            self.params.base_offset
-        )
+        return self.sim_obj.translation - self.params.base_offset
+        
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
         
-        self.sim_obj.translation = position + self.sim_obj.transformation.transform_vector(
-            self.params.base_offset
-        )
+        self.sim_obj.translation = position + self.params.base_offset
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
         # raise NotImplementedError("The base type is not implemented.")
 

@@ -78,7 +78,6 @@ class AmassHumanController:
         
         
         self.obj_transform = self.obtain_root_transform_at_frame(0)
-
         self.prev_orientation = None
 
         # smoothing_params
@@ -98,6 +97,10 @@ class AmassHumanController:
         self.path_distance_covered_next_wp = 0 # The distance we will have to cover in the next WP
         self.path_distance_walked = 0
 
+        # How many many meters in one step
+        map_displacement = self.motions.walk_to_walk.map_of_total_displacement
+        self.dist_per_step_size = map_displacement[-1] * 1.0/len(map_displacement)
+
         # Option args
         self.use_ik_grab = True
 
@@ -110,35 +113,10 @@ class AmassHumanController:
         self.link_ids = list(range(p.getNumJoints(self.human_bullet_id)))
 
         # TODO: There is a mismatch between the indices we get here and ht eones from model.get_link_ids. Would be good to resolve it
-        # link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
         link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
-        # 0 b'm_avg_L_Hip'
-        # 1 b'm_avg_L_Knee'
-        # 2 b'm_avg_L_Ankle'
-        # 3 b'm_avg_R_Hip'
-        # 4 b'm_avg_R_Knee'
-        # 5 b'm_avg_R_Ankle'
-        # 6 b'm_avg_Spine1'
-        # 7 b'm_avg_Spine2'
-        # 8 b'm_avg_Spine3'
-        # 9 b'm_avg_Neck'
-        # 10 b'm_avg_Head'
-        # 11 b'm_avg_L_Collar'
-        # 12 b'm_avg_L_Shoulder'
-        # 13 b'm_avg_L_Elbow'
-        # 14 b'm_avg_L_Wrist'
-        # 15 b'm_avg_R_Collar'
-        # 16 b'm_avg_R_Shoulder'
-        # 17 b'm_avg_R_Elbow'
-        # 18 b'm_avg_R_Wrist'
-        # Joint INFO
-        link_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 13, 10, 9, 15, 16, 17, 18]
+        # link_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 13, 10, 9, 15, 16, 17, 18]
         
         # https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html#getjointinfo
-        # link_indices = sorted(link_indices)
-        # for index in range(20):
-        #     print(index, p.getJointInfo(self.human_bullet_id, index)[1])
-        # breakpoint()
         self.joint_info = [p.getJointInfo(self.human_bullet_id, index) for index in link_indices]
 
         # Data used to grab
@@ -197,16 +175,14 @@ class AmassHumanController:
         """
         Position of the base, which is the pelvis projected to the floor
         """
-        return self.obj_transform.translation - self.obj_transform.transform_vector(
-            self.base_offset
-        )
+        return self.obj_transform.translation - self.base_offset
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
+        if self.mocap_frame == 108:
+            breakpoint()
+        self.obj_transform.translation = position + self.base_offset
         
-        self.obj_transform.translation = position + self.obj_transform.transform_vector(
-            self.base_offset
-        )
 
 
     def reset(self, position) -> None:
@@ -288,6 +264,12 @@ class AmassHumanController:
         return distance_covered - prev_distance
 
     def _select_index(self, position: mn.Vector3):
+        """
+        Given a matrix indexed with 3D coordinates, finds the index of the matrix
+        whose key is closest to position. The matrix is indexed such that index i stores coordinate
+        (x_{min} + (x_{max}-x_{min}) * xb, y_{min} + (y_{max}-y_{min})*yb, z_{min} + (z_{max}-z_{min}) * zb)
+        with yb = N // (bins_x * bins_z), xb = (N // bins_z) % bin_x, zb = N % (bins_x * bins_z) 
+        """
         def find_index_quant(minv, maxv, num_bins, value):
             # Find the quantization bin
             value = max(min(value, maxv), minv)
@@ -326,8 +308,12 @@ class AmassHumanController:
     def walk(self, position: mn.Vector3):
         """ Walks to the desired position. Rotates the character if facing in a different direction """
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
+
         forward_V = position
+
         forward_V[1] = 0.
+        distance_to_walk = np.linalg.norm(forward_V)
+
 
         # interpolate facing last margin dist with standing pose
         did_rotate = False
@@ -349,15 +335,16 @@ class AmassHumanController:
                 forward_V2 = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
-
         forward_V = mn.Vector3(forward_V)
-        
-        # How much distance should we walk to reach the goal
-        distance_to_walk = forward_V.length() 
         forward_V = forward_V.normalized()
 
+        if did_rotate:
+            # print(self.base_pos, forward_V, position)
+            distance_to_walk = self.dist_per_step_size * 2
+            if np.abs(forward_angle) > 120:
+                distance_to_walk *= 0
 
-
+        step_size =max(1, min(step_size, int(distance_to_walk / self.dist_per_step_size)))
         self.mocap_frame = (self.mocap_frame +  step_size) % self.motions.walk_to_walk.motion.num_frames()
         if self.mocap_frame == 0:
             self.distance_rot = 0
@@ -376,18 +363,13 @@ class AmassHumanController:
 
         dist_diff = min(distance_to_walk, max(0, distance_covered - prev_distance))
         
-        if did_rotate:
-            dist_diff *= 0
-            if np.abs(forward_angle) > 120:
-                dist_diff *= 0
+
         
         self.prev_orientation = forward_V
 
         
-        full_transform = self.obtain_root_transform_at_frame(0) # self.mocap_frame)
+        full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
         full_transform.translation *= 0
-        #print(full_transform.translation)
-        # breakpoint()
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform.translation, 
             self.obj_transform.translation + forward_V.normalized(), mn.Vector3.y_axis()
@@ -399,11 +381,7 @@ class AmassHumanController:
         full_transform = look_at_path_T @ full_transform
 
 
-        # Remove the forward component, we will set it later ouselves
-        #diff_trans = full_transform.translation - self.obj_transform.translation
-        #breakpoint()
-        
-        #diff_trans.projected(forward_V)
+
         full_transform.translation += forward_V * dist_diff;
         
         
@@ -433,10 +411,9 @@ class AmassHumanController:
         self.last_walk_pose = new_pose
 
         # breakpoint()
+
         self.obj_transform = full_transform
-
-
-
+        
         return interp_pose, full_transform
 
 

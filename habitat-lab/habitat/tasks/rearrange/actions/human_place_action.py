@@ -100,11 +100,13 @@ class HumanPlaceAction(HumanJointAction):
             sim = self._sim
             # breakpoint()
             curr_path_points = np.array(self.init_root_pos)[None, :] + np.linspace(0.2, 1, 10)[:, None] * np.array(self.motion_vec)
-            sim.add_gradient_trajectory_object("current_place", curr_path_points, colors=colors, radius=0.03) 
+            # sim.add_gradient_trajectory_object("current_place", curr_path_points, colors=colors, radius=0.03) 
             euler_angle = quaternion.as_euler_angles(quaternion.from_rotation_matrix(self.human_controller.root_rot))
             new_euler_angle = euler_angle.copy()
-            new_euler_angle[:2] = 0
-            new_euler_angle[-1] = -new_euler_angle[-1]
+            new_euler_angle[1] = 0
+            new_euler_angle[2] = 0
+            new_euler_angle[0] = -new_euler_angle[1]
+
             self.new_matrix_transform = quaternion.as_rotation_matrix(quaternion.from_euler_angles(new_euler_angle))
             self.inv_matrix_transform = quaternion.as_rotation_matrix(quaternion.from_euler_angles(-new_euler_angle))
             
@@ -129,7 +131,12 @@ class HumanPlaceAction(HumanJointAction):
         # print(self.human_controller.base_pos, self.cur_human.base_pos)
         pos_rel = curr_pos - self.human_controller.root_pos
         new_pos, new_trans = self.human_controller.reach(mn.Vector3(pos_rel))
-        new_trans.rotation = new_trans.rotation @ self.inv_matrix_transform
+        # breakpoint()
+        
+        new_trans = np.array(new_trans)
+        new_trans_1 = new_trans[:3, :3] @ self.new_matrix_transform
+        new_trans[:3, :3] = new_trans_1
+        new_trans = mn.Matrix4(new_trans)
         
         # breakpoint()
         # print("DISTANCE AND MOTION", dist_to_final_nav_targ, rel_targ, new_trans.translation, 'offset', self.human_controller.translation_offset)

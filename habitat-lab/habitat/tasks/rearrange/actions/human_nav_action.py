@@ -84,20 +84,14 @@ class HumanNavAction(HumanJointAction):
 
     def _path_to_point(self, point):
         agent_pos = self.cur_human.base_pos
-
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
         path.requested_end = point
         found_path = self._sim.pathfinder.find_path(path)
 
-        # colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
-        # self._sim.add_gradient_trajectory_object(
-        #     "current_path_{}".format(self.gen), path.points, colors=colors, radius=0.03)
-        # # breakpoint()
-        # self.gen += 1
+        
         if not found_path:
-            # breakpoint()
-            return None # [agent_pos, point]
+            return None
         return path.points
 
     def step(self, *args, is_last_action, **kwargs):
@@ -119,20 +113,7 @@ class HumanNavAction(HumanJointAction):
         curr_path_points = self._path_to_point(final_nav_targ)
 
         sim = self._sim
-        
-        colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
-        if curr_path_points is not None:
-            # pass
-            sim.add_gradient_trajectory_object("current_path_{}".format(self.curr_ind_map['cont']), 
-                                                                                curr_path_points, colors=colors, radius=0.03)
-            self.curr_ind_map['cont'] += 1
-        # sim.viz_ids['basepos'] = sim.visualize_position(
-        #     self.human_controller.base_pos, sim.viz_ids['basepos'], r=0.10
-        # )
 
-        
-
-        # print(self.human_controller.base_pos, self.cur_human.base_pos)
         if curr_path_points is None:
             # path not found
             new_pos, new_trans = self.human_controller.stop()
@@ -141,13 +122,7 @@ class HumanNavAction(HumanJointAction):
             distance = 0
 
             robot_pos = np.array(self.cur_human.base_pos)
-            AGENT_DIST = self.human_controller.step_distance * 5
-            # for ind in range(len(curr_path_points)):
-
-            # index = 1
-            while index < (len(curr_path_points) - 1) and distance < AGENT_DIST:
-                index += 1
-                distance = np.linalg.norm(curr_path_points[index] - robot_pos)
+            index = 1
 
             cur_nav_targ = curr_path_points[index]
             base_T = self.cur_human.base_transformation
