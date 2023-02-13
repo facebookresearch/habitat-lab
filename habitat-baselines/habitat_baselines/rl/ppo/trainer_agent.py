@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import numpy as np
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 @baseline_registry.register_agent
 class TrainerAgent:
     """
-    An agent consists of:
+    A `TrainerAgent` consists of:
     - Policy: How actions are selected from observations.
     - Data Storage: How data collected from the environment is stored.
     - Updater: How the Policy is updated.
@@ -44,29 +44,38 @@ class TrainerAgent:
         device,
         resume_state: Optional[Dict[str, Any]],
         num_envs: int,
-        percent_done: float,
+        percent_done_fn: Callable[[], float],
+        lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
+        """
+        :param percent_done_fn: Function that will return the percent of the
+            way through training.
+        :param lr_schedule_fn: For a learning rate schedule. ONLY used if
+            specified in the config. Takes as input the current progress in
+            training and returns the learning rate multiplier. The default behavior
+            is to use `linear_lr_schedule`.
+        """
+
         self._env_spec = env_spec
         self._config = config
+        self._num_envs = num_envs
+        self._device = device
         self._ppo_cfg = self._config.habitat_baselines.rl.ppo
         self._is_distributed = is_distrib
         self._is_static_encoder = (
             not config.habitat_baselines.rl.ddppo.train_encoder
         )
         self._actor_critic = self._create_policy()
-        self._actor_critic.to(device)
+        self._actor_critic.to(self._device)
         self._policy_action_space = self._actor_critic.get_policy_action_space(
             env_spec.action_space
         )
         self._updater = self._create_updater(self._actor_critic)
-
         if resume_state is not None:
             self._updater.load_state_dict(resume_state["state_dict"])
             self._updater.optimizer.load_state_dict(
                 resume_state["optim_state"]
             )
-        if self._is_distributed:
-            self._updater.init_distributed(find_unused_params=False)  # type: ignore
 
         logger.info(
             "agent number of parameters: {}".format(
@@ -74,48 +83,34 @@ class TrainerAgent:
             )
         )
         self.nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
-        self._rollouts = self._create_rollouts(num_envs)
-        self._rollouts.to(device)
+        if lr_schedule_fn is not None:
+            lr_schedule_fn = linear_lr_schedule
+        self._percent_done_fn = percent_done_fn
 
-        self._lr_sched = LambdaLR(
+        self._lr_scheduler = LambdaLR(
             optimizer=self._updater.optimizer,
-            lr_lambda=lambda x: 1 - percent_done,
+            lr_lambda=lambda x: linear_lr_schedule(
+                percent_done=percent_done_fn()
+            ),
         )
-        if self._ppo_cfg.use_linear_clip_decay:
-            self._updater.clip_param = self._ppo_cfg.clip_param * (
-                1 - percent_done
-            )
 
-    def _create_rollouts(self, num_envs: int) -> RolloutStorage:
+    def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
         """
-        Setup and initialize the rollout storage.
+        Called after the constructor. Sets up the rollout storage.
+
+        :param create_rollouts_fn: Override behavior for creating the
+            rollout storage. Default behavior for this and the call signature is
+            `default_create_rollouts`.
         """
-
-        obs_space = self._env_spec.observation_space
-        if self._is_static_encoder:
-            obs_space = spaces.Dict(
-                {
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
-                        low=np.finfo(np.float32).min,
-                        high=np.finfo(np.float32).max,
-                        shape=self.encoder.output_shape,
-                        dtype=np.float32,
-                    ),
-                    **obs_space.spaces,
-                }
-            )
-
-        rollouts_cls = baseline_registry.get_storage(
-            self._config.habitat_baselines.rollout_storage_name
-        )
-        return rollouts_cls(
-            self._ppo_cfg.num_steps,
-            num_envs,
-            obs_space,
-            self.policy_action_space,
-            self._ppo_cfg.hidden_size,
-            num_recurrent_layers=self.actor_critic.num_recurrent_layers,
-            is_double_buffered=self._ppo_cfg.use_double_buffered_sampler,
+        if create_rollouts_fn is None:
+            create_rollouts_fn = default_create_rollouts
+        self._rollouts = create_rollouts_fn(
+            num_envs=self._num_envs,
+            env_spec=self._env_spec,
+            actor_critic=self.actor_critic,
+            policy_action_space=self.policy_action_space,
+            config=self._config,
+            device=self._device,
         )
 
     def _create_updater(self, actor_critic):
@@ -211,34 +206,15 @@ class TrainerAgent:
 
     @property
     def rollouts(self) -> RolloutStorage:
-        """
-        TODO: In the next PR accessing rollouts directly will be depricated.
-        Right now it is still used to track the current observation, however,
-        in the future, the trainer should be responsible for tracking the
-        current step.
-        """
         return self._rollouts
 
-    @classmethod
-    def from_config(
-        cls,
-        config: "DictConfig",
-        env_spec: EnvironmentSpec,
-        is_distrib: bool,
-        device,
-        resume_state: Optional[Dict[str, Any]],
-        num_envs: int,
-        percent_done: float,
-    ):
-        return cls(
-            config,
-            env_spec,
-            is_distrib,
-            device,
-            resume_state,
-            num_envs,
-            percent_done,
-        )
+    @property
+    def actor_critic(self) -> Policy:
+        return self._actor_critic
+
+    @property
+    def updater(self) -> PPO:
+        return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
         return dict(
@@ -255,8 +231,7 @@ class TrainerAgent:
 
     def train(self):
         self.actor_critic.train()
-        if self.updater is not None:
-            self.updater.train()
+        self.updater.train()
 
     def load_ckpt_state_dict(self, ckpt: Dict) -> None:
         """
@@ -274,90 +249,6 @@ class TrainerAgent:
             if "lr_sched_state" in state:
                 self._actor_critic.load_state_dict(state["lr_sched_state"])
 
-    def insert_first(self, batch) -> None:
-        """
-        Insert the first observation from the environment at the start of training into the rollout storage.
-        """
-        if self._is_static_encoder:
-            self._add_visual_features(batch)
-
-        self.rollouts.buffers["observations"][0] = batch  # type: ignore
-
-    def insert(
-        self,
-        next_observations=None,
-        next_recurrent_hidden_states=None,
-        actions=None,
-        action_log_probs=None,
-        value_preds=None,
-        rewards=None,
-        next_masks=None,
-        buffer_index: int = 0,
-        **kwargs,
-    ):
-        """
-        Insert data into the rollout storage. By default this passes through to the insert operation from the `RolloutStorage`.
-        """
-        if next_observations is not None and self._is_static_encoder:
-            self._add_visual_features(next_observations)
-
-        self.rollouts.insert(
-            next_observations=next_observations,
-            next_recurrent_hidden_states=next_recurrent_hidden_states,
-            actions=actions,
-            action_log_probs=action_log_probs,
-            value_preds=value_preds,
-            rewards=rewards,
-            next_masks=next_masks,
-            buffer_index=buffer_index,
-            **kwargs,
-        )
-
-    def update(self) -> Dict[str, float]:
-        """
-        Update the policy.
-        """
-
-        with inference_mode():
-            step_batch = self._rollouts.buffers[
-                self.rollouts.current_rollout_step_idx
-            ]
-
-            next_value = self._actor_critic.get_value(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
-            )
-
-        self.rollouts.compute_returns(
-            next_value,
-            self._ppo_cfg.use_gae,
-            self._ppo_cfg.gamma,
-            self._ppo_cfg.tau,
-        )
-
-        self._agent.train()
-
-        losses = self._agent.updater.update(self._agent.rollouts)
-        self.rollouts.after_update()
-
-        if self._ppo_cfg.use_linear_lr_decay:
-            self._lr_scheduler.step()  # type: ignore
-        return losses
-
-    def act(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        deterministic=False,
-    ) -> PolicyActionData:
-        return self._actor_critic.act(
-            observations, rnn_hidden_states, prev_actions, masks, deterministic
-        )
-
     @property
     def hidden_state_shape(self):
         """
@@ -369,20 +260,74 @@ class TrainerAgent:
             self._ppo_cfg.hidden_size,
         )
 
-    def get_extra(
-        self, action_data: PolicyActionData, infos, dones
-    ) -> List[Dict[str, float]]:
+    def after_update(self):
         """
-        Gets any extra information for logging from the policy.
+        Called after the updater has called `update` and the rollout `after_update` is called.
         """
 
-        return self._actor_critic.get_extra(action_data, infos, dones)
+        if self._ppo_cfg.use_linear_lr_decay:
+            self._lr_scheduler.step()  # type: ignore
 
-    def _add_visual_features(self, batch) -> None:
+    def pre_rollout(self):
         """
-        Modifies the observation batch to include the visual features in-place.
+        Called before a rollout is collected.
         """
-        with inference_mode():
-            batch[
-                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-            ] = self._encoder(batch)
+        if self._ppo_cfg.use_linear_clip_decay:
+            self._updater.clip_param = self._ppo_cfg.clip_param * (
+                1 - self._percent_done_fn()
+            )
+
+
+def get_rollout_obs_space(obs_space, actor_critic, config):
+    """
+    Helper to get the observation space for the rollout storage when using a
+    frozen visual encoder.
+    """
+
+    if not config.habitat_baselines.rl.ddppo.train_encoder:
+        encoder = actor_critic.net.visual_encoder
+        obs_space = spaces.Dict(
+            {
+                PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    shape=encoder.output_shape,
+                    dtype=np.float32,
+                ),
+                **obs_space.spaces,
+            }
+        )
+    return obs_space
+
+
+def default_create_rollouts(
+    num_envs: int,
+    env_spec: EnvironmentSpec,
+    actor_critic: Policy,
+    policy_action_space: spaces.Space,
+    config: "DictConfig",
+    device,
+) -> RolloutStorage:
+    """
+    Default behavior for setting up and initializing the rollout storage.
+    """
+
+    obs_space = get_rollout_obs_space(
+        env_spec.observation_space, actor_critic, config
+    )
+    ppo_cfg = config.habitat_baselines.rl.ppo
+    return baseline_registry.get_storage(
+        config.habitat_baselines.rollout_storage_name
+    )(
+        ppo_cfg.num_steps,
+        num_envs,
+        obs_space,
+        policy_action_space,
+        ppo_cfg.hidden_size,
+        num_recurrent_layers=actor_critic.num_recurrent_layers,
+        is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+    )
+
+
+def linear_lr_schedule(percent_done: float) -> float:
+    return 1 - percent_done

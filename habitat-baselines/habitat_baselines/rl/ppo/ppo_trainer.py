@@ -50,6 +50,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     requeue_job,
     save_resume_state,
 )
+from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.trainer_agent import TrainerAgent
 from habitat_baselines.utils.common import (
     batch_obs,
@@ -79,12 +80,16 @@ class PPOTrainer(BaseRLTrainer):
     SHORT_ROLLOUT_THRESHOLD: float = 0.25
     _is_distributed: bool
     envs: VectorEnv
+    _env_spec: Optional[EnvironmentSpec]
 
     def __init__(self, config=None):
         super().__init__(config)
         self._agent = None
         self.envs = None
         self.obs_transforms = []
+        self._is_static_encoder = False
+        self._encoder = None
+        self._env_spec = None
 
         # Distributed if the world size would be
         # greater than 1
@@ -102,6 +107,25 @@ class PPOTrainer(BaseRLTrainer):
         torch.distributed.all_reduce(t)
 
         return t.to(device=orig_device)
+
+    def _create_agent(self, resume_state, **kwargs) -> TrainerAgent:
+        """
+        Sets up the TrainerAgent. You still must call `agent.post_init` after
+        this call. This only constructs the object.
+        """
+
+        return baseline_registry.get_agent(
+            self.config.habitat_baselines.rl.agent.name
+        )(
+            self.config,
+            self._env_spec,
+            self._is_distributed,
+            self.device,
+            resume_state,
+            self.envs.num_envs,
+            self.percent_done,
+            **kwargs,
+        )
 
     def _init_envs(self, config=None, is_eval: bool = False):
         if config is None:
@@ -193,7 +217,6 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs()
 
-        ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
             self.device = torch.device(
                 "cuda", self.config.habitat_baselines.torch_gpu_id
@@ -214,24 +237,28 @@ class PPOTrainer(BaseRLTrainer):
             self._env_spec.observation_space, self.obs_transforms
         )
 
-        agent_cls = baseline_registry.get_agent(
-            self.config.habitat_baselines.rl.agent.name
+        self._agent = self._create_agent(resume_state)
+        if self._is_distributed:
+            self._agent.updater.init_distributed(find_unused_params=False)  # type: ignore
+        self._agent.post_init()
+
+        self._is_static_encoder = (
+            not self.config.habitat_baselines.rl.ddppo.train_encoder
         )
-        self._agent = agent_cls.from_config(
-            self.config,
-            self._env_spec,
-            self._is_distributed,
-            self.device,
-            resume_state,
-            self.envs.num_envs,
-            self.percent_done(),
-        )
+        self._ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
-        self._agent.insert_first(batch)
+        if self._is_static_encoder:
+            self._encoder = self.actor_critic.net.visual_encoder
+            with inference_mode():
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._agent.encoder(batch)
+
+        self._agent.rollouts.insert_first(batch)
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(
@@ -239,7 +266,7 @@ class PPOTrainer(BaseRLTrainer):
             reward=torch.zeros(self.envs.num_envs, 1),
         )
         self.window_episode_stats = defaultdict(
-            lambda: deque(maxlen=ppo_cfg.reward_window_size)
+            lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
 
         self.env_time = 0.0
@@ -310,7 +337,7 @@ class PPOTrainer(BaseRLTrainer):
             ]
 
             profiling_wrapper.range_push("compute actions")
-            action_data = self._agent.act(
+            action_data = self._agent.actor_critic.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
@@ -340,7 +367,7 @@ class PPOTrainer(BaseRLTrainer):
 
         self.env_time += time.time() - t_step_env
 
-        self._agent.insert(
+        self._agent.rollouts.insert(
             next_recurrent_hidden_states=action_data.rnn_hidden_states,
             actions=action_data.actions,
             action_log_probs=action_data.action_log_probs,
@@ -404,7 +431,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
 
-        self._agent.insert(
+        if self._is_static_encoder:
+            with inference_mode():
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
+
+        self._agent.rollouts.insert(
             next_observations=batch,
             rewards=rewards,
             next_masks=not_done_masks,
@@ -425,7 +458,32 @@ class PPOTrainer(BaseRLTrainer):
     @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self):
         t_update_model = time.time()
-        losses = self._agent.update()
+
+        with inference_mode():
+            step_batch = self._agent.rollouts.buffers[
+                self._agent.rollouts.current_rollout_step_idx
+            ]
+
+            next_value = self._agent.actor_critic.get_value(
+                step_batch["observations"],
+                step_batch["recurrent_hidden_states"],
+                step_batch["prev_actions"],
+                step_batch["masks"],
+            )
+
+        self._agent.rollouts.compute_returns(
+            next_value,
+            self._ppo_cfg.use_gae,
+            self._ppo_cfg.gamma,
+            self._ppo_cfg.tau,
+        )
+
+        self._agent.train()
+
+        losses = self._agent.updater.update(self._agent.rollouts)
+        self._agent.rollouts.after_update()
+
+        self._agent.after_update()
 
         self.pth_time += time.time() - t_update_model
         return losses
@@ -586,8 +644,6 @@ class PPOTrainer(BaseRLTrainer):
             )
             resume_run_id = requeue_stats.get("run_id", None)
 
-        ppo_cfg = self.config.habitat_baselines.rl.ppo
-
         with (
             get_writer(
                 self.config,
@@ -601,6 +657,8 @@ class PPOTrainer(BaseRLTrainer):
             while not self.is_done():
                 profiling_wrapper.on_start_step()
                 profiling_wrapper.range_push("train update")
+
+                self._agent.pre_rollout()
 
                 if rank0_only() and self._should_save_resume_state():
                     requeue_stats = dict(
@@ -642,10 +700,10 @@ class PPOTrainer(BaseRLTrainer):
                 for buffer_index in range(self._agent.nbuffers):
                     self._compute_actions_and_step_envs(buffer_index)
 
-                for step in range(ppo_cfg.num_steps):
+                for step in range(self._ppo_cfg.num_steps):
                     is_last_step = (
                         self.should_end_early(step + 1)
-                        or (step + 1) == ppo_cfg.num_steps
+                        or (step + 1) == self._ppo_cfg.num_steps
                     )
 
                     for buffer_index in range(self._agent.nbuffers):
@@ -731,8 +789,6 @@ class PPOTrainer(BaseRLTrainer):
         config = self._get_resume_state_config_or_new_config(
             ckpt_dict["config"]
         )
-
-        ppo_cfg = config.habitat_baselines.rl.ppo
 
         with read_write(config):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
@@ -832,7 +888,7 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes_info = self.envs.current_episodes()
 
             with inference_mode():
-                action_data = self._agent.act(
+                action_data = self._agent.actor_critic.act(
                     batch,
                     test_recurrent_hidden_states,
                     prev_actions,
@@ -874,7 +930,9 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
-            policy_infos = self._agent.get_extra(action_data, infos, dones)
+            policy_infos = self._agent.actor_critic.get_extra(
+                action_data, infos, dones
+            )
             for i in range(len(policy_infos)):
                 infos[i].update(policy_infos[i])
             batch = batch_obs(  # type: ignore
