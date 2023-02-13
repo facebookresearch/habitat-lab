@@ -49,7 +49,7 @@ defaults:
 | habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
 
 ## Navigation Measures
-The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+The way one would add a measure to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
   - /habitat/task/measurements:
@@ -64,12 +64,12 @@ defaults:
 |habitat.task.measurements.distance_to_goal.distance_to | If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint. |
 |habitat.task.measurements.success |     For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.  A success is defined as calling the `habitat.task.actions.stop` when the `habitat.task.measurements.distance_to_goal` Measure is smaller than `success_distance`.|
 |habitat.task.measurements.success.success_distance| The minimal distance the robot must be to the goal for a success.|
-|habitat.task.measurements.spl|    For Navigation tasks only, Measures the SPL (Success weighted by Path Length) ref: [On Evaluation of Embodied Agents - Anderson et. al](https://arxiv.org/pdf/1807.06757.pdf)  Measure is always 0 except at success where it will be  the ratio of the optimal distance from start to goal over the total distance  traveled by the agent. Maximum value is 1. `SPL = success * optimal_distance_to_goal / distance_traveled_so_far`
+|habitat.task.measurements.spl|    For Navigation tasks only, Measures the SPL (Success weighted by Path Length) ref: [On Evaluation of Embodied Agents - Anderson et. al](https://arxiv.org/pdf/1807.06757.pdf).  Measure is always 0 except at success where it will be  the ratio of the optimal distance from start to goal over the total distance  traveled by the agent. Maximum value is 1. `SPL = success * optimal_distance_to_goal / distance_traveled_so_far`
 |habitat.task.measurements.soft_spl |     For Navigation tasks only, Similar to SPL, but instead of a boolean, success is now calculated as 1 - (ratio of distance covered to target).   `SoftSPL = max(0, 1 - distance_to_goal / optimal_distance_to_goal) * optimal_distance_to_goal / distance_traveled_so_far`
 |habitat.task.measurements.distance_to_goal_reward    |    In Navigation tasks only, measures a reward based on the distance towards the goal. The reward is `- (new_distance - previous_distance)` i.e. the decrease of distance to the goal.
 
 ## Navigation Lab Sensors
-Lab sensors are any non-rendered sensor observation. Like geometric goal information. The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+Lab sensors are any non-rendered sensor observation. Like geometric goal information. The way one would add a sensor to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
   - /habitat/task/lab_sensors:
