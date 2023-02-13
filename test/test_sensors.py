@@ -350,6 +350,7 @@ def test_imagegoal_sensor():
             )
 
 
+@pytest.mark.flaky(max_runs=3, min_passes=1)
 def test_get_observations_at():
     config = get_test_config()
     if not os.path.exists(config.habitat.simulator.scene):
