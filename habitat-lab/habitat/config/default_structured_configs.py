@@ -42,6 +42,7 @@ __all__ = [
     "InstanceImageGoalHFOVSensorConfig",
     "CompassSensorConfig",
     "GPSSensorConfig",
+    "PointGoalWithGPSCompassSensorConfig",
 ]
 
 
@@ -242,6 +243,10 @@ class PointGoalSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
+    """
+    Indicates the position of the point goal in the frame of reference of the robot.
+    """
+
     type: str = "PointGoalWithGPSCompassSensor"
 
 
