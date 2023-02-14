@@ -47,7 +47,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 
 ## Visual Agents
 You can inherit a default agent in your configuration.
-The some sample agents are defined [here](./habitat/simulator/agents/) and are reused in many of our benchmarks. To use one of these agents, add
+Some sample agents are defined [here](./habitat/simulator/agents/) and are reused in many of our benchmarks. To use one of these agents, add
 ```
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: <the key of the agent>
 ```
