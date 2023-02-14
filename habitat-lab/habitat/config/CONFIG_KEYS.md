@@ -30,7 +30,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
  - Rearrangement place : `RearrangePlaceTask-v0` The agent must place a held object to a geometric set of coordinates.
  - Rearrangement do nothing : `RearrangeEmptyTask-v0` The agent does not have to do anything. Useful for debugging.
  - Rearrangement reach : `RearrangeReachTask-v0` The agent must place its end effector into a specific location defined by geometric coordinates.
- - Rearrangement composite tasks : `RearrangeCompositeTask-v0` The agent must perform a sequence of tasks in succession defined by a PDDL plan.
+ - Rearrangement composite tasks : `RearrangeCompositeTask-v0` The agent must perform a sequence of sub-tasks in succession defined by a PDDL plan.
 
 
 | Key | Description |
@@ -39,7 +39,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 |habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements`, see below for a list of available measurements). For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.|
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements`, see below for a list of available measurements). If the measurement has a non-zero value, the episode is considered a success. |
 |habitat.task.end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
-|habitat.task.task_spec |  When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.|
+|habitat.task.task_spec |  When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of sub-tasks that need to be completed. The format of the pddl plans files is undocumented.|
 |habitat.task.task_spec_base_path |  When doing the `RearrangeCompositeTask-v0` only, the relative path where the task_spec file will be searched.|
 |habitat.task.spawn_max_dists_to_obj| For `RearrangePickTask-v0` task only. Controls the maximum distance the robot can be spawned from the target object. |
 | habitat.task.base_angle_noise| For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.|
