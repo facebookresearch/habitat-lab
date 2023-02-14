@@ -2,7 +2,6 @@ from omegaconf import OmegaConf
 
 import numpy as np
 
-from home_robot.utils.geometry import xyt2sophus
 from home_robot.control.goto_controller import GotoVelocityController
 
 class ContinuousController:
@@ -28,12 +27,16 @@ class ContinuousController:
         self.controller.set_yaw_tracking(track_yaw)
 
     def set_goal(self, goal: np.ndarray, vel_goal=None):
-        """Update controller goal"""
-        self.controller.update_goal(xyt2sophus(goal))
+        """Update controller goal
+        goal: Desired robot base SE2 pose in global frame
+        """
+        self.controller.update_goal(goal)
 
-    def forward(self, xyt, trans):
-        """Query controller to compute velocity command"""
+    def forward(self, xyt, *args, **kwargs):
+        """Query controller to compute velocity command
+        xyt: Robot base current SE2 pose in global frame
+        """
         # Update state feedback
-        self.controller.update_pose_feedback(xyt2sophus(xyt))
+        self.controller.update_pose_feedback(xyt)
         # Compute velocity control
         return self.controller.compute_control()
