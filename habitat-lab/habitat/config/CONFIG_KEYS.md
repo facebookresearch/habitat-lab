@@ -17,20 +17,20 @@ For a list of all the available datasets, see [this page](../../../DATASETS.md).
 ## Task
 The definition of the task in Habitat.
 There are many different Tasks determined by the `habitat.task.type` config:
- - Point navigation : `Nav-0`
- - Image navigation : `Nav-0`
- - Instance image navigation:`InstanceImageNav-v1`
- - Object navigation : `ObjectNav-v1`
- - Rearrangement close drawer: `RearrangeCloseDrawerTask-v0`
- - Rearrangement open drawer: `RearrangeOpenDrawerTask-v0`
- - Rearrangement close fridge : `RearrangeCloseFridgeTask-v0`
- - Rearrangement open fridge : `RearrangeOpenFridgeTask-v0`
- - Rearrangement navigate to object : `NavToObjTask-v0`
- - Rearrangement pick : `RearrangePickTask-v0`
- - Rearrangement place : `RearrangePlaceTask-v0`
- - Rearrangement do nothing : `RearrangeEmptyTask-v0`
- - Rearrangement reach : `RearrangeReachTask-v0`
- - Rearrangement composite tasks : `RearrangeCompositeTask-v0`
+ - Point navigation : `Nav-0` The agent needs to navigate to a geometric goal position.
+ - Image navigation : `Nav-0` The agent needs to navigate to an object matching the type of a goal image.
+ - Instance image navigation:`InstanceImageNav-v1` The agent needs to navigate to an object matching the type of a goal image that is sampled from the current scene.
+ - Object navigation : `ObjectNav-v1` The agent needs to navigate to a specific type of object in the scene indicated by a categorical value.
+ - Rearrangement close drawer: `RearrangeCloseDrawerTask-v0` The agent must close the kitchen drawer in the scene.
+ - Rearrangement open drawer: `RearrangeOpenDrawerTask-v0` The agent must open the kitchen drawer in the scene.
+ - Rearrangement close fridge : `RearrangeCloseFridgeTask-v0` The agent must close the kitchen fridge in the scene.
+ - Rearrangement open fridge : `RearrangeOpenFridgeTask-v0` The agent must open the kitchen fridge in the scene.
+ - Rearrangement navigate to object : `NavToObjTask-v0` The agent must navigate to a geometric position in the scene.
+ - Rearrangement pick : `RearrangePickTask-v0` The agent must pick up a specific object in the scene from its geometric coordinates.
+ - Rearrangement place : `RearrangePlaceTask-v0` The agent must place a held object to a geometric set of coordinates.
+ - Rearrangement do nothing : `RearrangeEmptyTask-v0` The agent does not have to do anything. Useful for debugging.
+ - Rearrangement reach : `RearrangeReachTask-v0` The agent must place its end effector into a specific location defined by geometric coordinates.
+ - Rearrangement composite tasks : `RearrangeCompositeTask-v0` The agent must perform a sequence of tasks in succession defined by a PDDL plan.
 
 
 | Key | Description |
