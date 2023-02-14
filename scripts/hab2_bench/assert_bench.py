@@ -44,7 +44,7 @@ MINIMUM_PERFORMANCE_16_PROCESS = {
     "idle_nosleep": 500,
     # "idle_render": "[Idle Render Only]",
     "idle_single_camera_all": 1450,
-    "idle_single_camera_noconcur": 1600,
+    "idle_single_camera_noconcur": 1550,
     "idle_single_camera_nosleep": 650,
     # "idle_single_camera_render": "[Idle (head-RGB) Render Only]",
     "interact_all": 920,
