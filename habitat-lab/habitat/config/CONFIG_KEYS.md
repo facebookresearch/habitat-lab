@@ -36,7 +36,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 | Key | Description |
 | --- | --- |
 |habitat.task.type | The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`.
-|habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.|
+|habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements` see below for a list of available measurements). For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.|
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success. |
 |habitat.task.end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
 |habitat.task.task_spec |  When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.|
@@ -88,6 +88,7 @@ defaults:
 | habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
 
 ## Navigation Measures
+A measure is a way to collect data about the environment at each step that is not sensor information. Measures can contain privileged information for the user (like a top down map) or for training (like rewards).
 The way one would add a measure to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
