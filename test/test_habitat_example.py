@@ -6,8 +6,9 @@
 
 import pytest
 
-import habitat
 import examples
+import habitat
+
 print(examples)
 from examples import (
     new_actions,
