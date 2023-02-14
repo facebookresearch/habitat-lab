@@ -354,9 +354,9 @@ def play_env(env, args, config):
     link_ids = env._sim.agent.sim_obj.get_link_ids()
     # pose_path = '/Users/xavierpuig/sample00_rep00_smpl_params.npy'
     pose_paths = [
-        '/Users/xavierpuig/res/sample01_rep02.npz',
-        '/Users/xavierpuig/res/sample03_rep01.npz',
-        '/Users/xavierpuig/res/sample04_rep01.npz'
+        'data/text_motion/sample01_rep02.npz',
+        'data/text_motion/sample03_rep01.npz',
+        'data/text_motion/sample04_rep01.npz'
     ]
     human_controller = SeqPoseHumanController(
         urdf_path, body_model_path, pose_paths, 
