@@ -5,18 +5,21 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import Any, Dict, Iterator, Optional, Tuple
+from typing import Any, Dict, Iterator, Optional
 
 import numpy as np
 import torch
 
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
 )
+from habitat_baselines.utils.common import get_action_space_info
 
 
+@baseline_registry.register_storage
 class RolloutStorage:
     r"""Class for storing rollout information for RL trainers."""
 
@@ -28,10 +31,10 @@ class RolloutStorage:
         action_space,
         recurrent_hidden_state_size,
         num_recurrent_layers=1,
-        action_shape: Optional[Tuple[int]] = None,
         is_double_buffered: bool = False,
-        discrete_actions: bool = True,
     ):
+        action_shape, discrete_actions = get_action_space_info(action_space)
+
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()
 
@@ -115,6 +118,7 @@ class RolloutStorage:
         rewards=None,
         next_masks=None,
         buffer_index: int = 0,
+        **kwargs,
     ):
         if not self.is_double_buffered:
             assert buffer_index == 0

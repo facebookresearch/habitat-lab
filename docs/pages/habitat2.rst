@@ -31,8 +31,7 @@ Habitat includes an implementation of DD-PPO. As an example, start training a pi
 .. code:: sh
 
     python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/rl_skill.yaml  \
-        --run-type train
+        --config-name=rearrange/rl_skill.yaml
 
 This trains the Pick skill by default. To train the other skills, specify: :code:`benchmark/rearrange=skill_name` where :code:`skill_name` can be :code:`close_cab`, :code:`close_fridge`, :code:`open_fridge`, :code:`pick`, :code:`place`, or :code:`nav_to_obj`. See `here <https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines#baselines>`__  for more information on how to run with Habitat Baselines.
 
@@ -45,8 +44,7 @@ Here we will detail how to run the Task-Planning with Skills trained via reinfor
 .. code:: sh
 
     python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/rl_skill.yaml \
-        --run-type train \
+        --config-name=rearrange/rl_skill.yaml \
         checkpoint_folder=./place_checkpoints/ \
         benchmark/rearrange=place
 
@@ -59,8 +57,8 @@ Here we will detail how to run the Task-Planning with Skills trained via reinfor
 .. code:: sh
 
     python -u habitat_baselines/run.py \
-        --exp-config habitat_baselines/config/rearrange/tp_srl.yaml \
-        --run-type eval \
+        --config-name=rearrange/tp_srl.yaml \
+        habitat_baselines.evaluate=True \
         benchmark/rearrange=tidy_house
 
 Evaluate on different HAB tasks by overriding the :code:`benchmark/rearrange`. The TP-SRL baseline only runs in evaluation mode.

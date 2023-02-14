@@ -36,10 +36,6 @@ base_angle_noise: 0.15
 base_noise: 0.05
 force_regenerate: False
 
-# If true, does not care about navigability or collisions with objects when spawning
-# robot
-easy_init: False
-
 actions:
   arm_action:
     arm_controller: "ArmAbsPosKinematicAction"

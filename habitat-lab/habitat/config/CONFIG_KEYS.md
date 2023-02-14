@@ -11,7 +11,7 @@ A dataset consists of episodes
 | habitat.dataset.type |  The key for the dataset class that will be used. Examples of such keys are `PointNav-v1`, `ObjectNav-v1`, `InstanceImageNav-v1` or `RearrangeDataset-v0`. Different datasets have different properties so you should use the dataset that fits your task. |
 | habitat.dataset.scene_dir | The path to the directory containing the scenes that will be used. You should put all your scenes in the same folder (example `data/scene_datasets`) to avoid having to change it. |
 |habitat.dataset.data_path | The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.|
-|habitat.dataset.split | `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between `train` and `eval` episodes by only changing the split argument.|
+|habitat.dataset.split | `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between training, validation and test episodes by only changing the split argument. |
 
 ## Task
 The definition of the task in Habitat.
@@ -35,7 +35,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 | Key | Description |
 | --- | --- |
 |habitat.task.type | The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`.
-|habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. |
+|habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.|
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success. |
 |habitat.task.end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|
 |habitat.task.task_spec |  When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.|
@@ -57,7 +57,6 @@ to your defaults list. All agents have a camera resolution of 256 by 256.
 |rgb_head_agent| An Agent with a single RGB camera attached to its head.|
 |rgbd_head_rgbd_arm_agent| An Agent with both a RGB and depth camera attached to its head and arm.|
 |depth_head_agent_vis| An Agent with a depth camera attached to its head and a third person RGB camera on top of the robot.|
-
 
 
 
@@ -88,7 +87,7 @@ defaults:
 | habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
 
 ## Navigation Measures
-The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+The way one would add a measure to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
   - /habitat/task/measurements:
@@ -103,12 +102,12 @@ defaults:
 |habitat.task.measurements.distance_to_goal.distance_to | If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint. |
 |habitat.task.measurements.success |     For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.  A success is defined as calling the `habitat.task.actions.stop` when the `habitat.task.measurements.distance_to_goal` Measure is smaller than `success_distance`.|
 |habitat.task.measurements.success.success_distance| The minimal distance the robot must be to the goal for a success.|
-|habitat.task.measurements.spl|    For Navigation tasks only, Measures the SPL (Success weighted by Path Length) ref: [On Evaluation of Embodied Agents - Anderson et. al](https://arxiv.org/pdf/1807.06757.pdf)  Measure is always 0 except at success where it will be  the ratio of the optimal distance from start to goal over the total distance  traveled by the agent. Maximum value is 1. `SPL = success * optimal_distance_to_goal / distance_traveled_so_far`
+|habitat.task.measurements.spl|    For Navigation tasks only, Measures the SPL (Success weighted by Path Length) ref: [On Evaluation of Embodied Agents - Anderson et. al](https://arxiv.org/pdf/1807.06757.pdf).  Measure is always 0 except at success where it will be  the ratio of the optimal distance from start to goal over the total distance  traveled by the agent. Maximum value is 1. `SPL = success * optimal_distance_to_goal / distance_traveled_so_far`
 |habitat.task.measurements.soft_spl |     For Navigation tasks only, Similar to SPL, but instead of a boolean, success is now calculated as 1 - (ratio of distance covered to target).   `SoftSPL = max(0, 1 - distance_to_goal / optimal_distance_to_goal) * optimal_distance_to_goal / distance_traveled_so_far`
 |habitat.task.measurements.distance_to_goal_reward    |    In Navigation tasks only, measures a reward based on the distance towards the goal. The reward is `- (new_distance - previous_distance)` i.e. the decrease of distance to the goal.
 
 ## Navigation Lab Sensors
-Lab sensors are any non-rendered sensor observation. Like geometric goal information. The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+Lab sensors are any non-rendered sensor observation. Like geometric goal information. The way one would add a sensor to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
   - /habitat/task/lab_sensors:
@@ -125,6 +124,7 @@ defaults:
 |  habitat.task.lab_sensors. instance_imagegoal_hfov_sensor |     Used only by the InstanceImageGoal Navigation task. The observation is a single float value corresponding to the Horizontal field of view (HFOV) in degrees of  the image provided by the `habitat.task.lab_sensors.instance_imagegoal_sensor `.|
 |  habitat.task.lab_sensors.compass_sensor |     For Navigation tasks only. The observation of the `EpisodicCompassSensor` is a single float value corresponding to the angle difference in radians between the current rotation of the robot and the start rotation of the robot along the vertical axis. |
 |  habitat.task.lab_sensors.gps_sensor |     For Navigation tasks only. The observation of the EpisodicGPSSensor are two float values corresponding to the vector difference in the horizontal plane between the current position and the start position of the robot (in meters). |
+| habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor | Indicates the position of the point goal in the frame of reference of the robot. |
 
 
 ## Rearrangement Action

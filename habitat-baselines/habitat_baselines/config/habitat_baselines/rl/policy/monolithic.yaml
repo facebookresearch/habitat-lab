@@ -1,0 +1,4 @@
+name: "PointNavResNetPolicy"
+action_distribution_type: "gaussian"
+action_dist:
+  use_log_std: True

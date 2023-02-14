@@ -52,12 +52,7 @@ from habitat_baselines.rl.ver.worker_common import (
     WorkerBase,
     WorkerQueues,
 )
-from habitat_baselines.utils.common import (
-    cosine_decay,
-    get_num_actions,
-    inference_mode,
-    is_continuous_action_space,
-)
+from habitat_baselines.utils.common import cosine_decay, inference_mode
 
 try:
     torch.backends.cudnn.allow_tf32 = True
@@ -186,7 +181,8 @@ class VERTrainer(PPOTrainer):
         action_space = init_reports[0]["act_space"]
 
         self.policy_action_space = action_space
-        self.orig_policy_action_space = None
+        self.env_action_space = action_space
+        self.orig_env_action_space = None
 
         [
             ew.set_action_plugin(
@@ -196,14 +192,6 @@ class VERTrainer(PPOTrainer):
             )
             for ew in self.environment_workers
         ]
-        if is_continuous_action_space(action_space):
-            # Assume ALL actions are NOT discrete
-            action_shape = (get_num_actions(action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
@@ -253,8 +241,6 @@ class VERTrainer(PPOTrainer):
                 action_space=self.policy_action_space,
                 recurrent_hidden_state_size=ppo_cfg.hidden_size,
                 num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
-                action_shape=action_shape,
-                discrete_actions=discrete_actions,
                 observation_space=rollouts_obs_space,
             )
             self.rollouts = VERRolloutStorage(**storage_kwargs)

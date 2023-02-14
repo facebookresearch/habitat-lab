@@ -19,6 +19,7 @@ habitat:
       - obj_goal_gps_compass
       - joint
       - is_holding
+      - ee_pos
   environment:
     max_episode_steps: 1500
   simulator:

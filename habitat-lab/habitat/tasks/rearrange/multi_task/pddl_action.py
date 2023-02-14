@@ -162,7 +162,7 @@ class PddlAction:
             p.set_state(sim_info)
 
     @property
-    def param_values(self):
+    def param_values(self) -> Optional[List[PddlEntity]]:
         if self._param_values is None:
             raise ValueError(
                 "Accessing action param values before they are set."

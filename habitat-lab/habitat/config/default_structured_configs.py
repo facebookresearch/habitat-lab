@@ -42,6 +42,7 @@ __all__ = [
     "InstanceImageGoalHFOVSensorConfig",
     "CompassSensorConfig",
     "GPSSensorConfig",
+    "PointGoalWithGPSCompassSensorConfig",
     # REARRANGEMENT ACTIONS
     "EmptyActionConfig",
     "ArmActionConfig",
@@ -251,6 +252,11 @@ class RearrangeStopActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class PddlApplyActionConfig(ActionConfig):
+    type: str = "PddlApplyAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class OracleNavActionConfig(ActionConfig):
     """
     Rearrangement Only, Oracle navigation action.
@@ -268,6 +274,8 @@ class OracleNavActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
 
 
 # -----------------------------------------------------------------------------
@@ -295,6 +303,10 @@ class PointGoalSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
+    """
+    Indicates the position of the point goal in the frame of reference of the robot.
+    """
+
     type: str = "PointGoalWithGPSCompassSensor"
 
 
@@ -1007,7 +1019,7 @@ class TaskConfig(HabitatBaseConfig):
     The definition of the task in Habitat.
 
     :property type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
-    :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration.
+    :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
     :property success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :property end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
     :property task_spec: When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.
@@ -1053,7 +1065,6 @@ class TaskConfig(HabitatBaseConfig):
     force_regenerate: bool = False
     # Saves the generated starts to a cache if they are not already generated
     should_save_to_cache: bool = False
-    must_look_at_targ: bool = True
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
     gfx_replay_dir = "data/replays"
@@ -1061,7 +1072,7 @@ class TaskConfig(HabitatBaseConfig):
     # Spawn parameters
     physics_stability_steps: int = 1
     num_spawn_attempts: int = 200
-    spawn_max_dists_to_obj: float = 2.0
+    spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
     # EE sample parameters
     ee_sample_factor: float = 0.2
@@ -1074,9 +1085,6 @@ class TaskConfig(HabitatBaseConfig):
     cache_robot_init: bool = False
     success_state: float = 0.0
     # Measurements for composite tasks.
-    # If true, does not care about navigability or collisions
-    # with objects when spawning robot
-    easy_init: bool = False
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
     task_spec_base_path: str = "habitat/task/rearrange/pddl/"
@@ -1384,7 +1392,7 @@ class DatasetConfig(HabitatBaseConfig):
     :property type: The key for the dataset class that will be used. Examples of such keys are `PointNav-v1`, `ObjectNav-v1`, `InstanceImageNav-v1` or `RearrangeDataset-v0`. Different datasets have different properties so you should use the dataset that fits your task.
     :property scenes_dir: The path to the directory containing the scenes that will be used. You should put all your scenes in the same folder (example `data/scene_datasets`) to avoid having to change it.
     :property data_path: The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.
-    :property split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between `train` and `eval` episodes by only changing the split argument.
+    :property split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between training, validation and test episodes by only changing the split argument.
 
     A dataset consists of episodes
     (a start configuration for a task within a scene) and a scene dataset
@@ -1534,6 +1542,12 @@ cs.store(
     name="oracle_nav_action",
     node=OracleNavActionConfig,
 )
+cs.store(
+    package="habitat.task.actions.pddl_apply_action",
+    group="habitat/task/actions",
+    name="pddl_apply_action",
+    node=PddlApplyActionConfig,
+)
 
 # Dataset Config Schema
 cs.store(
@@ -1660,6 +1674,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="instance_imagegoal_hfov_sensor",
     node=InstanceImageGoalHFOVSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.localization_sensor",
+    group="habitat/task/lab_sensors",
+    name="localization_sensor",
+    node=LocalizationSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_sensor",
