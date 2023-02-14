@@ -1053,7 +1053,7 @@ class PPOTrainer(BaseRLTrainer):
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
 
             outputs = self.envs.step(step_data)
-            
+
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]

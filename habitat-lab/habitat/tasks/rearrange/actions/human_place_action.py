@@ -3,21 +3,21 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import human_controllers.amass_human_controller as amass_human_controller
+import magnum as mn
 import numpy as np
+import quaternion
 from gym import spaces
 
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.actions.actions import BaseVelAction, HumanJointAction
+from habitat.tasks.rearrange.actions.actions import (
+    BaseVelAction,
+    HumanJointAction,
+)
 from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
-
-import quaternion
-import magnum as mn
-import human_controllers.amass_human_controller as amass_human_controller
-
-
 
 
 @registry.register_task_action
@@ -28,7 +28,7 @@ class HumanPlaceAction(HumanJointAction):
     robot to the closest navigable position to that entity. The entity index is
     the index into the list of all available entities in the current scene.
     """
-     
+
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task
@@ -40,7 +40,7 @@ class HumanPlaceAction(HumanJointAction):
         self._prev_ep_id = None
         self._targets = {}
         self.gen = 0
-        self.curr_ind_map = {'cont': 0}
+        self.curr_ind_map = {"cont": 0}
         self.counter = 0
 
     @property
@@ -77,52 +77,54 @@ class HumanPlaceAction(HumanJointAction):
         pick_target_idx = kwargs[
             self._action_arg_prefix + "human_place_action"
         ]
-        if pick_target_idx <= 0 or pick_target_idx > len(
-            self._poss_entities
-        ):
+        if pick_target_idx <= 0 or pick_target_idx > len(self._poss_entities):
             if is_last_action:
                 return self._sim.step(HabitatSimActions.base_velocity)
             else:
                 return {}
-        
+
         pick_target_idx = int(pick_target_idx[0]) - 1
 
-        obj_targ_pos = self._get_target_for_idx(
-            pick_target_idx
-        )
-        
+        obj_targ_pos = self._get_target_for_idx(pick_target_idx)
+
         if self.counter == 0:
             self.init_root_pos = self.human_controller.root_pos
             self.motion_vec = obj_targ_pos - self.human_controller.root_pos
             # breakpoint()
             colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
-            
+
             sim = self._sim
             # breakpoint()
-            curr_path_points = np.array(self.init_root_pos)[None, :] + np.linspace(0.2, 1, 10)[:, None] * np.array(self.motion_vec)
-            # sim.add_gradient_trajectory_object("current_place", curr_path_points, colors=colors, radius=0.03) 
-            euler_angle = quaternion.as_euler_angles(quaternion.from_rotation_matrix(self.human_controller.root_rot))
+            curr_path_points = np.array(self.init_root_pos)[
+                None, :
+            ] + np.linspace(0.2, 1, 10)[:, None] * np.array(self.motion_vec)
+            # sim.add_gradient_trajectory_object("current_place", curr_path_points, colors=colors, radius=0.03)
+            euler_angle = quaternion.as_euler_angles(
+                quaternion.from_rotation_matrix(self.human_controller.root_rot)
+            )
             new_euler_angle = euler_angle.copy()
             new_euler_angle[1] = 0
             new_euler_angle[2] = 0
             new_euler_angle[0] = -new_euler_angle[1]
 
-            self.new_matrix_transform = quaternion.as_rotation_matrix(quaternion.from_euler_angles(new_euler_angle))
-            self.inv_matrix_transform = quaternion.as_rotation_matrix(quaternion.from_euler_angles(-new_euler_angle))
-            
-            
+            self.new_matrix_transform = quaternion.as_rotation_matrix(
+                quaternion.from_euler_angles(new_euler_angle)
+            )
+            self.inv_matrix_transform = quaternion.as_rotation_matrix(
+                quaternion.from_euler_angles(-new_euler_angle)
+            )
 
         motion_amount = np.linspace(0.2, 1, 10)[self.counter]
-        curr_pos = self.init_root_pos + motion_amount * (self.motion_vec @ self.new_matrix_transform) 
+        curr_pos = self.init_root_pos + motion_amount * (
+            self.motion_vec @ self.new_matrix_transform
+        )
         # breakpoint()
         sim = self._sim
-        if 'next_pick' not in sim.viz_ids:
-            sim.viz_ids[f'next_pick'] = sim.visualize_position(
-                curr_pos
-            )
+        if "next_pick" not in sim.viz_ids:
+            sim.viz_ids[f"next_pick"] = sim.visualize_position(curr_pos)
         else:
-            sim.viz_ids[f'next_pick'] = sim.visualize_position(
-                curr_pos, sim.viz_ids[f'next_pick']
+            sim.viz_ids[f"next_pick"] = sim.visualize_position(
+                curr_pos, sim.viz_ids[f"next_pick"]
             )
 
         self.counter += 1
@@ -132,15 +134,19 @@ class HumanPlaceAction(HumanJointAction):
         pos_rel = curr_pos - self.human_controller.root_pos
         new_pos, new_trans = self.human_controller.reach(mn.Vector3(pos_rel))
         # breakpoint()
-        
+
         new_trans = np.array(new_trans)
         new_trans_1 = new_trans[:3, :3] @ self.new_matrix_transform
         new_trans[:3, :3] = new_trans_1
         new_trans = mn.Matrix4(new_trans)
-        
+
         # breakpoint()
         # print("DISTANCE AND MOTION", dist_to_final_nav_targ, rel_targ, new_trans.translation, 'offset', self.human_controller.translation_offset)
-        base_action = amass_human_controller.AmassHumanController.transformAction(new_pos, new_trans)
+        base_action = (
+            amass_human_controller.AmassHumanController.transformAction(
+                new_pos, new_trans
+            )
+        )
         # print(new_trans, robot_pos)
         # breakpoint()
         kwargs[f"{self._action_arg_prefix}human_joints_trans"] = base_action

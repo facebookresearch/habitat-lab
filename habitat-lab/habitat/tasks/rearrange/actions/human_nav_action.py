@@ -3,20 +3,20 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import human_controllers.amass_human_controller as amass_human_controller
+import magnum as mn
 import numpy as np
 from gym import spaces
 
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.actions.actions import BaseVelAction, HumanJointAction
+from habitat.tasks.rearrange.actions.actions import (
+    BaseVelAction,
+    HumanJointAction,
+)
 from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
-
-import magnum as mn
-import human_controllers.amass_human_controller as amass_human_controller
-
-
 
 
 @registry.register_task_action
@@ -27,7 +27,7 @@ class HumanNavAction(HumanJointAction):
     robot to the closest navigable position to that entity. The entity index is
     the index into the list of all available entities in the current scene.
     """
-     
+
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task
@@ -39,7 +39,7 @@ class HumanNavAction(HumanJointAction):
         self._prev_ep_id = None
         self._targets = {}
         self.gen = 0
-        self.curr_ind_map = {'cont': 0}
+        self.curr_ind_map = {"cont": 0}
 
     @property
     def action_space(self):
@@ -89,7 +89,6 @@ class HumanNavAction(HumanJointAction):
         path.requested_end = point
         found_path = self._sim.pathfinder.find_path(path)
 
-        
         if not found_path:
             return None
         return path.points
@@ -129,20 +128,17 @@ class HumanNavAction(HumanJointAction):
             # TODO: change this so that front is aligned with x, not z
             forward = np.array([0, 0, 1.00])
             robot_forward = np.array(base_T.transform_vector(forward))
-            
-            p1 = robot_pos
-            p2 = robot_pos + robot_forward
+
             robot_forward = robot_forward[[0, 2]]
-            
+
             rel_targ = cur_nav_targ - robot_pos
 
             rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
 
-
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
-            
+
             angle_to_obj = get_angle(robot_forward, rel_pos)
             at_goal = (
                 dist_to_final_nav_targ < self._config.dist_thresh
@@ -150,7 +146,6 @@ class HumanNavAction(HumanJointAction):
             )
             if not at_goal:
                 if dist_to_final_nav_targ < self._config.dist_thresh:
-
                     new_pos, new_trans = self.human_controller.compute_turn(
                         rel_pos
                     )
@@ -158,9 +153,12 @@ class HumanNavAction(HumanJointAction):
                     new_pos, new_trans = self.human_controller.walk(rel_targ)
             else:
                 new_pos, new_trans = self.human_controller.stop()
-            # breakpoint()
-            # print("DISTANCE AND MOTION", dist_to_final_nav_targ, rel_targ, new_trans.translation, 'offset', self.human_controller.translation_offset)
-        base_action = amass_human_controller.AmassHumanController.transformAction(new_pos, new_trans)
+
+        base_action = (
+            amass_human_controller.AmassHumanController.transformAction(
+                new_pos, new_trans
+            )
+        )
         # print(new_trans, robot_pos)
         kwargs[f"{self._action_arg_prefix}human_joints_trans"] = base_action
         return super().step(*args, is_last_action=is_last_action, **kwargs)

@@ -23,8 +23,6 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-
-
 class RearrangeGraspManager:
     """
     Manages the agent grasping onto rigid objects and the links of articulated objects.
@@ -100,7 +98,9 @@ class RearrangeGraspManager:
         Used to wait for a dropped object to clear the end effector's proximity before re-activating collisions between them.
         """
         if self._leave_info is not None:
-            ee_pos = self._managed_robot.ee_transform(self.ee_index).translation
+            ee_pos = self._managed_robot.ee_transform(
+                self.ee_index
+            ).translation
             rigid_obj = self._leave_info[0]
             dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
@@ -344,7 +344,6 @@ class RearrangeGraspManager:
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")
-
 
 
 class HumanRearrangeGraspManager(RearrangeGraspManager):

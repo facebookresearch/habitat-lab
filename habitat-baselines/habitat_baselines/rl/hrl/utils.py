@@ -29,13 +29,10 @@ def find_action_range(
     return start_idx, end_idx
 
 
-
-def find_action_range_pddl(
-    pddl_space, action_name: str
-) -> Tuple[int, int]:
+def find_action_range_pddl(pddl_space, action_name: str) -> Tuple[int, int]:
     index = 0
     for action in pddl_space:
         if action.name == action_name:
-         return index, index+action.n_args
+            return index, index + action.n_args
         else:
             index += action.n_args

@@ -29,11 +29,11 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 # flake8: noqa
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+from habitat.tasks.rearrange.agent_manager import AgentManager
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
-from habitat.tasks.rearrange.agent_manager import AgentManager
 from habitat.tasks.rearrange.utils import (
     get_aabb,
     make_render_only,
@@ -118,7 +118,6 @@ class RearrangeSim(HabitatSim):
         self._needs_markers = self.habitat_config.needs_markers
         self._update_robot = self.habitat_config.update_robot
         self._step_physics = self.habitat_config.step_physics
-
 
     @property
     def agent(self):
@@ -221,7 +220,7 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         self.agents_mgr.reconfigure(new_scene)
-        
+
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
         should_add_objects = self._prev_obj_names != obj_names

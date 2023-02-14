@@ -8,9 +8,8 @@ from typing import Optional
 
 import magnum as mn
 import numpy as np
-from gym import spaces
-
 import quaternion
+from gym import spaces
 from scipy.spatial.transform import Rotation
 
 import habitat_sim
@@ -26,12 +25,13 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     MagicGraspAction,
     SuctionGraspAction,
 )
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
+
 # TODO: HumanAction is very similar to RobotAction, can it be merged?
 from habitat.tasks.rearrange.actions.human_action import HumanAction
+from habitat.tasks.rearrange.actions.pddl_actions import PddlApplyAction
+from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
-from habitat.tasks.rearrange.actions.pddl_actions import PddlApplyAction
 
 
 @registry.register_task_action
@@ -408,8 +408,6 @@ class BaseVelAction(RobotAction):
             return {}
 
 
-
-
 @registry.register_task_action
 class ArmEEAction(RobotAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the robot's arm."""
@@ -470,7 +468,6 @@ class ArmEEAction(RobotAction):
 
 @registry.register_task_action
 class HumanJointAction(HumanAction):
-
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
         super().__init__(*args, sim=sim, **kwargs)
@@ -479,26 +476,27 @@ class HumanJointAction(HumanAction):
     def reset(self, *args, **kwargs):
         super().reset()
 
-
     @property
     def action_space(self):
         num_joints = 19
 
-        return spaces.Dict({
-                'human_joints_trans': spaces.Box(shape=(num_joints+16,), low=-1, high=1, dtype=np.float32)
+        return spaces.Dict(
+            {
+                "human_joints_trans": spaces.Box(
+                    shape=(num_joints + 16,), low=-1, high=1, dtype=np.float32
+                )
             }
         )
 
-
     def step(self, **kwargs):
-        new_pos_transform = kwargs['human_joints_trans']
+        new_pos_transform = kwargs["human_joints_trans"]
         new_pos = new_pos_transform[:-16]
         new_pos_transform = new_pos_transform[-16:]
         if np.array(new_pos_transform).sum() != 0:
-            vecs = [mn.Vector4(new_pos_transform[i*4:(i+1)*4]) for i in range(4)]
+            vecs = [
+                mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
+                for i in range(4)
+            ]
             new_transform = mn.Matrix4(*vecs)
             self._sim.agent.set_joint_transform(new_pos, new_transform)
         return self._sim.step(HabitatSimActions.changejoint_action)
-
-
-

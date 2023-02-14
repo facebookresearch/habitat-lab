@@ -13,7 +13,6 @@ from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
-
 class ResetArmHumanSkill(SkillPolicy):
     def __init__(
         self,
@@ -26,7 +25,9 @@ class ResetArmHumanSkill(SkillPolicy):
             [float(x) for x in config.reset_joint_state]
         )
 
-        self._arm_ac_range = find_action_range(action_space, "human_pick_action")
+        self._arm_ac_range = find_action_range(
+            action_space, "human_pick_action"
+        )
         self._arm_ac_range = (self._arm_ac_range[0], self._rest_state.shape[0])
 
     def on_enter(
@@ -76,7 +77,6 @@ class ResetArmHumanSkill(SkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        
         filtered_obs = self._get_filtered_obs(observations, cur_batch_idx)
         filtered_obs = self._select_obs(filtered_obs, cur_batch_idx)
 

@@ -1,21 +1,26 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from dataclasses import dataclass
-import torch
 import os.path as osp
+from dataclasses import dataclass
+
+import torch
+
+from habitat.core.spaces import ActionSpace
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_sensors import (
+    HumanJointSensor,
     IsHoldingSensor,
     RelativeRestingPositionSensor,
-    HumanJointSensor
 )
-from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.common.logging import baselines_logger
-
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.core.spaces import ActionSpace
-from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
+from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
+from habitat_baselines.rl.hrl.utils import (
+    find_action_range,
+    find_action_range_pddl,
+)
 from habitat_baselines.rl.ppo.policy import PolicyActionData
+
 
 class HumanPickSkillPolicy(NnSkillPolicy):
     @dataclass
@@ -36,8 +41,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         batch_size,
         pddl_domain_path,
         pddl_task_path,
-        task_config
-
+        task_config,
     ):
         super().__init__(
             wrap_policy,
@@ -46,7 +50,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
             filtered_obs_space,
             filtered_action_space,
             batch_size,
-            ignore_grip=True
+            ignore_grip=True,
         )
         self._pddl_problem = PddlProblem(
             pddl_domain_path,
@@ -61,8 +65,6 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         self._targ_obj_idx = None
         self._prev_joint = [None for _ in range(self._batch_size)]
         self.count_action = 0
-
-
 
     def on_enter(
         self,
@@ -109,12 +111,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         )
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        batch_idx
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
@@ -146,7 +143,6 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         match_i = self._all_entities.index(target)
         return HumanPickSkillPolicy.HumanPickActionArgs(match_i)
 
-
     def _internal_act(
         self,
         observations,
@@ -156,7 +152,6 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        
         full_action = torch.zeros(prev_actions.shape, device=masks.device)
         action_idxs = torch.FloatTensor(
             [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
@@ -166,4 +161,3 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
-        

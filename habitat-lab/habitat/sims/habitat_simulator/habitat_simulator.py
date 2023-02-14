@@ -336,7 +336,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "body_model_path",
                 "agent_type",
                 "draw_fps_human",
-                "grab_path"
+                "grab_path",
             },
         )
 

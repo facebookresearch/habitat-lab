@@ -11,8 +11,11 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RelativeRestingPositionSensor,
 )
 from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
+from habitat_baselines.rl.hrl.utils import (
+    find_action_range,
+    find_action_range_pddl,
+)
 
-from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
 
 class PlaceSkillPolicy(PickSkillPolicy):
     @dataclass(frozen=True)
@@ -54,4 +57,3 @@ class PlaceSkillPolicy(PickSkillPolicy):
         obj = int(skill_arg[0].split("|")[1])
         targ = int(skill_arg[1].split("|")[1])
         return PlaceSkillPolicy.PlaceSkillArgs(obj=obj, targ=targ)
-

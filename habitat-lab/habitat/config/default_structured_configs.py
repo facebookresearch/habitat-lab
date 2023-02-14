@@ -277,6 +277,7 @@ class HumanPlaceActionConfig(ActionConfig):
     turn_thresh: float = 0.1
     dist_thresh: float = 0.2
 
+
 # -----------------------------------------------------------------------------
 # # EQA actions
 # -----------------------------------------------------------------------------
@@ -386,14 +387,12 @@ class JointSensorConfig(LabSensorConfig):
     dimensionality: int = 7
 
 
-
 @attr.s(auto_attribs=True, slots=True)
 class HumanJointSensorConfig(LabSensorConfig):
     # TODO:(xavierpuig): can this ve modified in the config? Will be important for
     # new humans/agents
     type: str = "HumanJointSensor"
     dimensionality: int = 19
-
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1122,7 +1121,6 @@ class HumanAgentConfig(AgentConfig):
     grasp_managers: int = 2
 
 
-
 @attr.s(auto_attribs=True, slots=True)
 class HabitatSimV0Config(HabitatBaseConfig):
     gpu_device_id: int = 0
@@ -1453,8 +1451,6 @@ cs.store(
     name="humanjoint_action",
     node=HumanJointActionConfig,
 )
-
-
 
 
 # Dataset Config Schema

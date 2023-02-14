@@ -277,7 +277,7 @@ def is_pb_installed():
 class IkHelper:
     def __init__(self, only_arm_urdf, arm_start):
         self._arm_start = arm_start
-        
+
         self.pc_id = p.connect(p.DIRECT)
 
         self.robo_id = p.loadURDF(
@@ -361,7 +361,7 @@ class IkHelper:
         #!p.calculateInverseKinematics(self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id)
         # print(js)
         # breakpoint()
-        return js#[: self._arm_len]
+        return js  # [: self._arm_len]
 
 
 class UsesRobotInterface:

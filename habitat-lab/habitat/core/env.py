@@ -19,6 +19,7 @@ from typing import (
 )
 
 import gym
+import human_controllers.amass_human_controller as amass_human_controller
 import numba
 import numpy as np
 from gym import spaces
@@ -31,8 +32,6 @@ from habitat.datasets import make_dataset
 from habitat.sims import make_sim
 from habitat.tasks.registration import make_task
 from habitat.utils import profiling_wrapper
-import human_controllers.amass_human_controller as amass_human_controller
-
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -131,23 +130,28 @@ class Env:
         )
         self.action_space = self._task.action_space
 
-
-        if 'amass_path' in config.simulator.agents.main_agent:
+        if "amass_path" in config.simulator.agents.main_agent:
             config_human = config.simulator.agents.main_agent
             human_controller = amass_human_controller.AmassHumanController(
                 urdf_path=config_human.agent_urdf,
                 amass_path=config_human.amass_path,
                 body_model_path=config_human.body_model_path,
                 grab_path=config_human.grab_path,
-                draw_fps=config_human.draw_fps_human
+                draw_fps=config_human.draw_fps_human,
             )
-            if 'human_nav_action' in self.task.actions:
-                self.task.actions['human_nav_action'].human_controller = human_controller
-            if 'human_pick_action' in self.task.actions:
-                self.task.actions['human_pick_action'].human_controller = human_controller
-            if 'human_place_action' in self.task.actions:
-                self.task.actions['human_place_action'].human_controller = human_controller
-            
+            if "human_nav_action" in self.task.actions:
+                self.task.actions[
+                    "human_nav_action"
+                ].human_controller = human_controller
+            if "human_pick_action" in self.task.actions:
+                self.task.actions[
+                    "human_pick_action"
+                ].human_controller = human_controller
+            if "human_place_action" in self.task.actions:
+                self.task.actions[
+                    "human_place_action"
+                ].human_controller = human_controller
+
         self._max_episode_seconds = (
             self._config.environment.max_episode_seconds
         )

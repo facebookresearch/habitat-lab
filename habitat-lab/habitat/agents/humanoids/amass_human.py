@@ -2,24 +2,21 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
+from typing import Dict, List, Optional, Set
 
 import magnum as mn
 import numpy as np
 
-
-
-from habitat_sim.logging import LoggingContext, logger
-
 import habitat_sim.physics as phy
-
 from habitat.agents.humanoids.human_base import Humanoid
 from habitat.agents.robots.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
     RobotCameraParams,
 )
+from habitat_sim.logging import LoggingContext, logger
+
 
 @dataclass
 class HumanParams:
@@ -38,8 +35,6 @@ class HumanParams:
     base_offset: mn.Vector3
 
 
-
-
 class AmassHuman(Humanoid):
     def __init__(self, urdf_path, sim):
         self.params = self._get_human_params()
@@ -53,28 +48,29 @@ class AmassHuman(Humanoid):
         self.arm_joint_pos_right = self.params.arm_init_params_right
         self.all_joints = None
 
-
     def _get_human_params(self):
         return HumanParams(
-                gripper_joints=[0,0],
-                base_offset=mn.Vector3([0, 1.1, 0]),
-                gripper_init_params=np.array([0.00, 0.00], dtype=np.float32),
-                arm_init_params_left=np.array(
-                    [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
-                    dtype=np.float32),
-                arm_init_params_right=np.array(
-                    [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
-                    dtype=np.float32),
-                arm_init_params=np.array(
-                    [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
-                    dtype=np.float32),
-                ee_offset=mn.Vector3(),
-                ee_link_right=15,
-                ee_link_left=9,
-                arm_joints_right=[11, 12, 13],
-                arm_joints_left=[15, 16, 17],
-
-                cameras={
+            gripper_joints=[0, 0],
+            base_offset=mn.Vector3([0, 1.1, 0]),
+            gripper_init_params=np.array([0.00, 0.00], dtype=np.float32),
+            arm_init_params_left=np.array(
+                [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                dtype=np.float32,
+            ),
+            arm_init_params_right=np.array(
+                [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                dtype=np.float32,
+            ),
+            arm_init_params=np.array(
+                [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                dtype=np.float32,
+            ),
+            ee_offset=mn.Vector3(),
+            ee_link_right=15,
+            ee_link_left=9,
+            arm_joints_right=[11, 12, 13],
+            arm_joints_left=[15, 16, 17],
+            cameras={
                 "robot_arm": RobotCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
                     cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
@@ -88,14 +84,12 @@ class AmassHuman(Humanoid):
                     attached_link_id=-1,
                 ),
                 "robot_third": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(-1.2, 2., -1.2),
+                    cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,
-                )
-                },
-                base_link_names={
-                    "base_link"
-                }
+                ),
+            },
+            base_link_names={"base_link"},
         )
 
     def reset_path_info(self):
@@ -106,15 +100,13 @@ class AmassHuman(Humanoid):
     def close_gripper(self):
         pass
 
-
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF (TODO: complete descr)"""
-        #Manipulator.reconfigure(self)
-        #RobotBase.reconfigure(self)
+        # Manipulator.reconfigure(self)
+        # RobotBase.reconfigure(self)
         super().reconfigure()
         self.sim_obj.motion_type = phy.MotionType.KINEMATIC
         # self.translation_offset = self.sim_obj.translation + mn.Vector3([0,0.90,0])
-
 
     @property
     def arm_joint_pos(self):
@@ -145,12 +137,19 @@ class AmassHuman(Humanoid):
         # breakpoint()
         self.sim_obj.joint_positions = np.array(ctrl)
         for joint_id in range(len(self.joint_motors)):
-            ctrl_quat_id = joint_id*4
-            quat = ctrl[ctrl_quat_id:(ctrl_quat_id+4)]
+            ctrl_quat_id = joint_id * 4
+            quat = ctrl[ctrl_quat_id : (ctrl_quat_id + 4)]
             # breakpoint()
             if joint_id in self.joint_motors:
-                self.joint_motors[joint_id][1].spherical_position_target = mn.Quaternion(mn.Vector3(quat[:3]), quat[-1])
-                self.sim_obj.update_joint_motor(self.joint_motors[joint_id][0], self.joint_motors[joint_id][1])
+                self.joint_motors[joint_id][
+                    1
+                ].spherical_position_target = mn.Quaternion(
+                    mn.Vector3(quat[:3]), quat[-1]
+                )
+                self.sim_obj.update_joint_motor(
+                    self.joint_motors[joint_id][0],
+                    self.joint_motors[joint_id][1],
+                )
             # breakpoint()
 
     # Probably move somewhere else, maybe make manipualtor an attribute instead?
@@ -172,7 +171,6 @@ class AmassHuman(Humanoid):
     def ee_transform(self) -> mn.Matrix4:
         return self.ee_transform_hand(0)
 
-
     def ee_transform_hand(self, hand=0) -> mn.Matrix4:
         """Gets the transformation of the end-effector location. This is offset
         from the end-effector link location.
@@ -184,7 +182,6 @@ class AmassHuman(Humanoid):
         ef_link_transform = self.sim_obj.get_link_scene_node(
             ee_link
         ).transformation
-
 
         ef_link_transform.translation = ef_link_transform.transform_point(
             self.ee_local_offset

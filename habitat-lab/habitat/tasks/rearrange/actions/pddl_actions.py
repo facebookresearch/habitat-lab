@@ -2,8 +2,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import numpy as np
-import copy
 from gym import spaces
 
 from habitat.core.registry import registry
@@ -37,7 +37,6 @@ class PddlApplyAction(RobotAction):
         # TODO: it seems like the space here indicates which action type to call
         # as per the step function. Why is is between -1 and 1
         return spaces.Dict(
-
             {
                 self._action_arg_prefix
                 + "pddl_action": spaces.Box(

@@ -215,10 +215,11 @@ class JointSensor(UsesRobotInterface, Sensor):
         ).agent.arm_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
+
 @registry.register_sensor
 class HumanJointSensor(UsesRobotInterface, Sensor):
     cls_uuid: str = "human_joint"
-    
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
@@ -240,10 +241,9 @@ class HumanJointSensor(UsesRobotInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.robot_id
-        ).agent.joint_rot
+        joints_pos = self._sim.get_agent_data(self.robot_id).agent.joint_rot
         return np.array(joints_pos, dtype=np.float32)
+
 
 @registry.register_sensor
 class JointVelocitySensor(UsesRobotInterface, Sensor):

@@ -22,6 +22,14 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     HighLevelPolicy,
     NeuralHighLevelPolicy,
 )
+from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
+    HumanPickSkillPolicy,
+    HumanPlaceSkillPolicy,
+    HumanWaitSkillPolicy,
+    NoopHumanSkillPolicy,
+    OracleNavHumanPolicy,
+    ResetArmHumanSkill,
+)
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
     NavSkillPolicy,
@@ -33,15 +41,6 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     SkillPolicy,
     WaitSkillPolicy,
 )
-from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
-    HumanWaitSkillPolicy,
-    HumanPickSkillPolicy,
-    HumanPlaceSkillPolicy,
-    OracleNavHumanPolicy,
-    NoopHumanSkillPolicy,
-    ResetArmHumanSkill,
-)
-
 from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
@@ -322,7 +321,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 deterministic,
                 log_info,
             )
-            
+
             sel_grouped_skills = self._broadcast_skill_ids(
                 new_skills,
                 sel_dat={},
