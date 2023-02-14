@@ -40,7 +40,7 @@ from habitat.utils.geometry_utils import (
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
-from habitat.utils.common import continous_controller
+from habitat.utils.controller_wrapper import ContinuousController
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -1237,7 +1237,7 @@ class VelocityAction(SimulatorTaskAction):
                 angular_velocity = 0
         elif "base_pt" in kwargs: # Waypoint control mode
             # init the controllers
-            w2v_controller = continous_controller()
+            w2v_controller = ContinuousController()
             # Get the transformation of the agent
             trans = self._sim.agents[0].scene_node.transformation
             # Define the global position
