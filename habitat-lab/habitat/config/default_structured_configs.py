@@ -42,6 +42,7 @@ __all__ = [
     "InstanceImageGoalHFOVSensorConfig",
     "CompassSensorConfig",
     "GPSSensorConfig",
+    "PointGoalWithGPSCompassSensorConfig",
 ]
 
 
@@ -66,6 +67,7 @@ class EnvironmentConfig(HabitatBaseConfig):
     r"""
     Some habitat environment configurations.
     :data max_episode_steps: The maximum number of environment steps before the episode ends.
+    :data max_episode_seconds: The maximum number of seconds steps before the episode ends.
     """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
@@ -248,6 +250,10 @@ class PointGoalSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
+    """
+    Indicates the position of the point goal in the frame of reference of the robot.
+    """
+
     type: str = "PointGoalWithGPSCompassSensor"
 
 
@@ -833,7 +839,7 @@ class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
     :data type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
-    :data reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration.
+    :data reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
     :data success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :data end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
     """
@@ -1184,7 +1190,7 @@ class DatasetConfig(HabitatBaseConfig):
     :data type: The key for the dataset class that will be used. Examples of such keys are `PointNav-v1`, `ObjectNav-v1`, `InstanceImageNav-v1` or `RearrangeDataset-v0`. Different datasets have different properties so you should use the dataset that fits your task.
     :data scenes_dir: The path to the directory containing the scenes that will be used. You should put all your scenes in the same folder (example `data/scene_datasets`) to avoid having to change it.
     :data data_path: The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.
-    :data split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between `train` and `eval` episodes by only changing the split argument.
+    :data split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between training, validation and test episodes by only changing the split argument.
 
     A dataset consists of episodes
     (a start configuration for a task within a scene) and a scene dataset
