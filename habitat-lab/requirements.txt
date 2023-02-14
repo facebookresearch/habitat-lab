@@ -14,3 +14,4 @@ imageio>=2.2.0
 imageio-ffmpeg>=0.2.0
 scipy>=1.0.0
 tqdm>=4.0.0
+home_robot @ git+ssh://git@github.com/facebookresearch/home-robot@main#egg=home-robot&subdirectory=src/home_robot
