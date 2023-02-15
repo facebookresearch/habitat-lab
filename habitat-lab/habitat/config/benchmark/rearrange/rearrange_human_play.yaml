@@ -33,8 +33,8 @@ habitat:
       main_agent:
         is_set_start_state: False
         radius: 0.3
-        agent_urdf: 'data/human_sim_data/amass_male_new.urdf'
-        ik_arm_urdf: 'data/human_sim_data/amass_male_new.urdf'
+        agent_urdf: 'data/human_sim_data/amass_male.urdf'
+        ik_arm_urdf: 'data/human_sim_data/amass_male.urdf'
         agent_type: 'AmassHuman'
         amass_path: 'data/human_sim_data/amass_smpl_h/'
         body_model_path: 'data/human_sim_data/smplh/male/model.npz'
