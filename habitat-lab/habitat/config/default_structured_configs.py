@@ -159,16 +159,21 @@ class VelocityControlActionConfig(ActionConfig):
     lin_vel_range: List[float] = [0.0, 0.25]
     # deg/sec
     ang_vel_range: List[float] = [-10.0, 10.0]
-    min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 0.2  # seconds
     enable_scale_convert: bool = True
 
 
 @attr.s(auto_attribs=True, slots=True)
 class WaypointControlActionConfig(VelocityControlActionConfig):
+    r"""
+    In Navigation tasks only, this action will utilize a velocity controller to 
+    move the robot to the desired waypoint.
+    The waypoint is specified in the frame of the robot.
+    """
     type: str = "WaypointAction"
-    time_step: float = 1.0  # seconds
+    action_duration: float = 1.0  # seconds
+    min_abs_lin_speed: float = 0.025  # meters/sec
+    min_abs_ang_speed: float = 1.0  # # deg/sec
     waypoint_lin_range: float = 0.25 # meters
     waypoint_ang_range: float = 180 # degrees
 
@@ -180,7 +185,7 @@ class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
     """
     type: str = "MoveForwardWaypointAction"
-    time_step: float = 2.0  # seconds
+    action_duration: float = 3.0  # seconds
     forward_step_size: float = 0.25 # meters
 
 
@@ -191,7 +196,7 @@ class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnLeftWaypointAction"
-    time_step: float = 2.0  # seconds
+    action_duration: float = 3.0  # seconds
     turn_angle: int = 30 # degrees
 
 
@@ -202,7 +207,7 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnRightWaypointAction"
-    time_step: float = 2.0  # seconds
+    action_duration: float = 3.0  # seconds
     turn_angle: int = 30 # degrees
 
 

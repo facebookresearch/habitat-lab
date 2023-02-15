@@ -26,11 +26,11 @@ class ContinuousController:
         self.controller = GotoVelocityController(cfg)
         self.controller.set_yaw_tracking(track_yaw)
 
-    def set_goal(self, goal: np.ndarray, vel_goal=None):
+    def set_goal(self, goal: np.ndarray, relative: np.bool = False):
         """Update controller goal
         goal: Desired robot base SE2 pose in global frame
         """
-        self.controller.update_goal(goal)
+        self.controller.update_goal(goal, relative=relative)
 
     def forward(self, xyt, *args, **kwargs):
         """Query controller to compute velocity command
