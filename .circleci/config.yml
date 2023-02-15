@@ -272,12 +272,20 @@ jobs:
           name: Run api tests
           no_output_timeout: 120m
           command: |
+
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
               pip install -e habitat-lab
               pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+
+              pip freeze
+              pip show importlib_metadata
+              pip show importlib
+
+              python -c "import importlib_metadata as metadata;import gym;print(metadata.entry_points(group='gym.envs'))"
+
               python -m pytest --cov-report=xml --cov-report term  --cov=./
       - codecov/upload
       - run:
