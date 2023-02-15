@@ -1166,27 +1166,18 @@ class VelocityAction(SimulatorTaskAction):
         self.vel_control.lin_vel_is_local = True
         self.vel_control.ang_vel_is_local = True
 
-        # Parse config
-        self.min_lin_vel, self.max_lin_vel = self._config.lin_vel_range
-        self.min_ang_vel, self.max_ang_vel = self._config.ang_vel_range
-        self.min_abs_lin_speed = self._config.min_abs_lin_speed
-        self.min_abs_ang_speed = self._config.min_abs_ang_speed
-        self.time_step = self._config.time_step
-        self._allow_sliding = self._sim.self._config.sim_cfg.allow_sliding  # type: ignore
-        self._enable_scale_convert = self._config.enable_scale_convert
-
     @property
     def action_space(self):
         return ActionSpace(
             {
                 "linear_velocity": spaces.Box(
-                    low=np.array([self.min_lin_vel]),
-                    high=np.array([self.max_lin_vel]),
+                    low=np.array([self._config.min_lin_vel]),
+                    high=np.array([self._config.max_lin_vel]),
                     dtype=np.float32,
                 ),
                 "angular_velocity": spaces.Box(
-                    low=np.array([self.min_ang_vel]),
-                    high=np.array([self.max_ang_vel]),
+                    low=np.array([self._config.min_ang_vel]),
+                    high=np.array([self._config.max_ang_vel]),
                     dtype=np.float32,
                 ),
             }
@@ -1198,7 +1189,6 @@ class VelocityAction(SimulatorTaskAction):
     def step(
         self,
         *args: Any,
-        base_vel: List[float],
         linear_velocity: float = None,
         angular_velocity: float = None,
         time_step: Optional[float] = None,
@@ -1218,34 +1208,54 @@ class VelocityAction(SimulatorTaskAction):
         """
         # Preprocess velocity input
         if self._config.enable_scale_convert:
-            linear_velocity = self._scale_inputs(linear_velocity, [-1, 1], [self.min_lin_vel, self.max_lin_vel])
-            angular_velocity = self._scale_inputs(angular_velocity, [-1, 1], [self.min_ang_vel, self.max_ang_vel])
+            linear_velocity = self._scale_inputs(
+                linear_velocity, 
+                [-1, 1], 
+                [self._config.min_lin_vel, self._config.max_lin_vel]
+            )
+            angular_velocity = self._scale_inputs(
+                angular_velocity, 
+                [-1, 1], 
+                [self._config.min_ang_vel, self._config.max_ang_vel]
+            )
 
-        linear_velocity_clamped = np.clip(linear_velocity, self._config.lin_vel_range[0], self._config.lin_vel_range[1])
-        angular_velocity_clamped = np.clip(angular_velocity, self._config.ang_vel_range[0], self._config.ang_vel_range[1])
+        linear_velocity_clamped = np.clip(
+            linear_velocity, 
+            self._config.lin_vel_range[0], 
+            self._config.lin_vel_range[1]
+        )
+        angular_velocity_clamped = np.clip(
+            angular_velocity, 
+            self._config.ang_vel_range[0], 
+            self._config.ang_vel_range[1]
+        )
 
         # Apply action and get next observation
-        self._apply_velocity_action(linear_velocity_clamped, angular_velocity_clamped)
-        return self._get_agent_observation()
+        agent_state_result = self._apply_velocity_action(
+            linear_velocity_clamped, 
+            angular_velocity_clamped, 
+            time_step=time_step, 
+            allow_sliding=allow_sliding,
+        )
+        return self._get_agent_observation(agent_state_result)
 
-    def _get_agent_xyt(self):
-        agent_state = self._sim.agents[0].state
+    @staticmethod
+    def _agent_state_to_xyt(agent_state):
         return np.array([
             agent_state.position[0],
             agent_state.position[2],
             float(agent_state.rotation.angle()),
         ])
 
-    def _get_agent_observation(self):
-        agent_state = self._sim.agents[0].state
-        agent_position = agent_state.position
-        agent_rotation = [
+    def _get_agent_observation(self, agent_state):
+        position = agent_state.position
+        rotation = [
             *agent_state.rotation.vector,
             agent_state.rotation.scalar,
         ]
         return self._sim.get_observations_at(
-            position=agent_position,
-            rotation=agent_rotation,
+            position=position,
+            rotation=rotation,
             keep_agent_at_new_pose=True,
         )
 
@@ -1298,10 +1308,7 @@ class VelocityAction(SimulatorTaskAction):
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
         )
-        final_rotation = [
-            *goal_rigid_state.rotation.vector,
-            goal_rigid_state.rotation.scalar,
-        ]
+
         # Check if a collision occured
         dist_moved_before_filter = (
             goal_rigid_state.translation - agent_state.position
@@ -1316,16 +1323,14 @@ class VelocityAction(SimulatorTaskAction):
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
 
-        agent_observations = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
-        )
-
         # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
-        return agent_state
+        final_agent_state = self._sim.get_agent_state()
+        final_agent_state.position = final_position
+        final_agent_state.position = goal_rigid_state.rotation
+
+        return final_agent_state
 
     @staticmethod
     def _scale_inputs(input_val: float, input_range: List[float], output_range: List[float]) -> float:
@@ -1334,9 +1339,9 @@ class VelocityAction(SimulatorTaskAction):
         (ex: from normalized input in range [-1, 1] to [y_min, y_max])
         TODO: This function should go into utils of some sort
         """
-        input_bandwidth = input_range[1] - input_range[0]
-        output_bandwidth = output_range[1] - output_range[0]
-        return output_range[0] * output_bandwidth * (input_val - input_range) / input_bandwidth
+        w_input = input_range[1] - input_range[0]
+        w_output = output_range[1] - output_range[0]
+        return output_range[0] * w_output * (input_val - input_range) / w_input
 
 
 @registry.register_task_action
@@ -1350,28 +1355,34 @@ class WaypointAction(VelocityAction):
 
     def _step_rel_waypoint(self, xyt_waypoint, duration, *args, **kwargs):
         """Use the waypoint-to-velocity controller to navigate to the waypoint"""
-        self.w2v_controller.set_goal(xyt_waypoint, relative=True)
 
-        # Get the current location of the agent
+        # Initialize control loop
         xyt_init = self._get_agent_xyt()
+        self.w2v_controller.set_goal(xyt_waypoint, start=xyt_init, relative=True)
 
-        # Forward simulate
         xyt = xyt_init.copy()
         dt = self._config.time_step
+
+        # Forward simulate
         for t in np.arange(0.0, duration / dt) * dt:
             # Query velocity controller for control input
             linear_velocity, angular_velocity = self.w2v_controller.forward(xyt)
 
             # Stop is called early if commanded speed is low
             if (
-                abs(linear_velocity) < self.min_abs_lin_speed
-                and abs(angular_velocity) < self.min_abs_ang_speed
+                abs(linear_velocity) < self._config.min_abs_lin_speed
+                and abs(angular_velocity) < self._config.min_abs_ang_speed
             ):
                 task.is_stop_called = True  # type: ignore
                 break
 
             # Apply action and step simulation
-            self._apply_velocity_action(linear_velocity, angular_velocity, time_step=dt)
+            next_agent_state = self._apply_velocity_action(
+                linear_velocity, 
+                angular_velocity, 
+                time_step=dt
+            )
+            xyt = self._agent_state_to_xyt(next_agent_state)
 
         return self._get_agent_observation()
 
