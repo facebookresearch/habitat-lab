@@ -46,7 +46,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 | habitat.task.base_noise| For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.|
 
 ## Visual Agents
-You can inherit a default agent in your configuration.
+We define the visual agents as a bundle of sim sensors. They are a quick way to specify the visual observation space you need in your environment. You can inherit a default agent in your configuration.
 Some sample agents are defined [here](./habitat/simulator/agents/) and are reused in many of our benchmarks. To use one of these agents, add
 ```
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: <the key of the agent>
@@ -66,10 +66,10 @@ Some habitat environment configurations.
 | Key | Description |
 | --- | --- |
 |habitat.environment.max_episode_steps| The maximum number of environment steps before the episode ends.|
-|habitat.environment.max_episode_seconds| The maximum number of seconds steps before the episode ends.|
+|habitat.environment.max_episode_seconds| The maximum number of wall-clock seconds before the episode ends.|
 
-## Navigation Actions
-The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
+## Discrete Navigation Actions
+Actions are the means through an agent affects the environment. They are defined in the dictionary `habitat.task.actions`. All actions in this dictionary will be available for the agent to perform. Note that Navigation action space is discrete while the Rearrangement action space is continuous. The way one would add an action to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
   - /habitat/task/actions:
@@ -109,7 +109,7 @@ defaults:
 |habitat.task.measurements.distance_to_goal_reward    |    In Navigation tasks only, measures a reward based on the distance towards the goal. The reward is `- (new_distance - previous_distance)` i.e. the decrease of distance to the goal.
 
 ## Navigation Lab Sensors
-Lab sensors are any non-rendered sensor observation. Like geometric goal information. The way one would add a sensor to a configuration file would be by adding to the `defaults` list. For example:
+Lab sensors are any non-rendered sensor observation, like geometric goal information. The way one would add a sensor to a configuration file would be by adding to the `defaults` list. For example:
 ```
 defaults:
   - /habitat/task/lab_sensors:
@@ -129,7 +129,7 @@ defaults:
 | habitat.task.lab_sensors.pointgoal_with_gps_compass_sensor | Indicates the position of the point goal in the frame of reference of the robot. |
 
 
-## Rearrangement Action
+## Continuous Rearrangement Actions
 
 | Key | Description |
 | --- | --- |
@@ -146,27 +146,27 @@ defaults:
 
 | Key | Description |
 | --- | --- |
-|habitat.task.lab_sensors.relative_resting_pos_sensor     | Rearrangement only. Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position. The three values correspond to the cartesian coordinates of the resting position in the frame of reference of the end effector. The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.|
+|habitat.task.lab_sensors.relative_resting_pos_sensor     | Rearrangement only. Sensor for the desired relative position of the end-effector's resting position, relative to the end-effector's current position. The three values correspond to the cartesian coordinates of the desired resting position in the frame of reference of the end effector. The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.|
 | habitat.task.lab_sensors.is_holding_sensor | Rearrangement only. A single float sensor with value 1.0 if the robot is grasping any object and 0.0 otherwise.|
 |habitat.task.lab_sensors.end_effector_sensor | Rearrangement only. the cartesian coordinates (3 floats) of the arm's end effector in the frame of reference of the robot's base.|
 |habitat.task.lab_sensors.joint_sensor| Rearrangement only. Returns the joint positions of the robot.|
 | habitat.task.lab_sensors.goal_sensor |     Rearrangement only. Returns the relative position from end effector to a goal position in which the agent needs to place an object. |
-| habitat.task.lab_sensors.target_start_gps_compass_sensor |     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates. |
-| habitat.task.lab_sensors.target_goal_gps_compass_sensor |    Rearrangement only. Returns the desired goal position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates. |
+| habitat.task.lab_sensors.target_start_gps_compass_sensor |     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks relative to the robot's start position, in 2D polar coordinates (distance and angle in the horizontal plane). |
+| habitat.task.lab_sensors.target_goal_gps_compass_sensor |    Rearrangement only. Returns the desired goal position of every object that needs to be rearranged in composite tasks relative to the robot's start position, in 2D polar coordinates (distance and angle in the horizontal plane). |
 
 ## Rearrangement Measures
 | Key | Description |
 | --- | --- |
 |habitat.task.measurements.end_effector_to_rest_distance | Rearrangement only. Distance between current end effector position  and the resting position of the end effector. Requires that the   RelativeRestingPositionSensor is attached to the agent. |
-|habitat.task.measurements.robot_force |      The amount of force in newton's applied by the robot. It computes both the instant and accumulated. |
+|habitat.task.measurements.robot_force |      The amount of force in newton's applied by the robot. It computes both the instantaneous and accumulated force during the episode. |
 |habitat.task.measurements.does_want_terminate | Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.    |
 |habitat.task.measurements.force_terminate |    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.   Note that if the measure is 1.0, the task will end as a result. |
-|habitat.task.measurements.force_terminate.max_accum_force |  The threshold for the accumulated force. -1 is no threshold.   |
-|habitat.task.measurements.force_terminate.max_instant_force |  The threshold for the current, instant force. -1 is no threshold.   |
+|habitat.task.measurements.force_terminate.max_accum_force |  The threshold for the accumulated force before calling termination. -1 is no threshold, i.e., force-based termination is never called.   |
+|habitat.task.measurements.force_terminate.max_instant_force |  The threshold for the current, instantaneous force before calling termination. -1 is no threshold, i.e., force-based termination is never called.   |
 |habitat.task.measurements.object_to_goal_distance |  In rearrangement only. The distance between the target object and the goal position for the object. |
 |habitat.task.measurements.obj_at_goal |  The measure is a dictionary of target indexes to float. The values are 1 if the object is within succ_thresh of the goal position for that object.   |
 |habitat.task.measurements.obj_at_goal.succ_thresh | The threshold distance below which an object is considered at the goal location.    |
-|habitat.task.measurements.art_obj_at_desired_state |   Rearrangement open/close container tasks only. Whether the articulated object (fridge or cabinet door) towards a desired state (open or closed) as defined by the task. |
+|habitat.task.measurements.art_obj_at_desired_state |   Rearrangement open/close container tasks only. Whether the articulated object (fridge or cabinet door) is in a desired joint state (open or closed) as defined by the task. |
 |habitat.task.measurements.rot_dist_to_goal |  Rearrangement Navigation task only. The angle between the forward direction of the agent and the direction to the goal location.   |
 |habitat.task.measurements.composite_stage_goals |       Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.  |
 |habitat.task.measurements.nav_to_pos_succ |     Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position. |

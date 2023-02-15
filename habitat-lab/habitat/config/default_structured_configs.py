@@ -105,7 +105,7 @@ class EnvironmentConfig(HabitatBaseConfig):
     Some habitat environment configurations.
 
     :property max_episode_steps: The maximum number of environment steps before the episode ends.
-    :property max_episode_seconds: The maximum number of seconds steps before the episode ends.
+    :property max_episode_seconds: The maximum number of wall-clock seconds before the episode ends.
     """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
@@ -1026,7 +1026,7 @@ class TaskConfig(HabitatBaseConfig):
     :property task_spec_base_path:  When doing the `RearrangeCompositeTask-v0` only, the relative path where the task_spec file will be searched.
     :property spawn_max_dists_to_obj: For `RearrangePickTask-v0` task only. Controls the maximum distance the robot can be spawned from the target object.
     :property base_angle_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.
-    :property base_angle: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.
+    :property base_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.
 
     There are many different Tasks determined by the `habitat.task.type` config:
 
