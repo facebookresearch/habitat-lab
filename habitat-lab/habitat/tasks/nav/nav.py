@@ -25,6 +25,7 @@ from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
+    Observations,
     RGBSensor,
     Sensor,
     SensorTypes,
@@ -1214,11 +1215,6 @@ class VelocityAction(SimulatorTaskAction):
             time_step: amount of time to move the agent for
             allow_sliding: whether the agent will slide on collision
         """
-        if allow_sliding is None:
-            allow_sliding = self._allow_sliding
-        if time_step is None:
-            time_step = self.time_step
-
         if "base_vel" in kwargs:  # Velocity control mode
             linear_velocity = max(0.0, kwargs["base_vel"][0])
             angular_velocity = kwargs["base_vel"][1]
@@ -1264,18 +1260,39 @@ class VelocityAction(SimulatorTaskAction):
             linear_velocity = vel_action[0]
             angular_velocity =  vel_action[1]
 
-        if self._enable_scale_convert:
-            # Convert from [-1, 1] to [0, 1] range
-            linear_velocity = (linear_velocity + 1.0) / 2.0
-            angular_velocity = (angular_velocity + 1.0) / 2.0
+            agent_observations = self._step_sim_with_vel_cmd(linear_velocity, angular_velocity)
 
-            # Scale actions
-            linear_velocity = self.min_lin_vel + linear_velocity * (
-                self.max_lin_vel - self.min_lin_vel
-            )
-            angular_velocity = self.min_ang_vel + angular_velocity * (
-                self.max_ang_vel - self.min_ang_vel
-            )
+        return agent_observations
+
+    @staticmethod
+    def _scale_inputs(input_val: float, input_range: List[float], output_range: List[float]) -> float:
+        """
+        Transform input from input range to output range 
+        (ex: from normalized input in range [-1, 1] to [y_min, y_max])
+        """
+        input_bandwidth = input_range[1] - input_range[0]
+        output_bandwidth = output_range[1] - output_range[0]
+        return output_range[0] * output_bandwidth * (input_val - input_range) / input_bandwidth
+
+    def _step_sim_with_vel_cmd(
+        self, 
+        linear_velocity: float, 
+        angular_velocity: float, 
+        time_step: Optional[float] = None,
+        allow_sliding: Optional[bool] = None,
+    ) -> Observations:
+        """
+        Apply velocity command to simulation, step simulation, and return agent observation
+        """
+        # Parse inputs
+        if time_step is None:
+            time_step = self.time_step
+        if allow_sliding is None:
+            allow_sliding = self._allow_sliding
+
+        if self._enable_scale_convert:
+            linear_velocity = self._scale_inputs(linear_velocity, [-1, 1], [self.min_lin_vel, self.max_lin_vel])
+            angular_velocity = self._scale_inputs(angular_velocity, [-1, 1], [self.min_ang_vel, self.max_ang_vel])
 
         # Stop is called if both linear/angular speed are below their threshold
         if (
@@ -1285,7 +1302,7 @@ class VelocityAction(SimulatorTaskAction):
             task.is_stop_called = True  # type: ignore
             return self._sim.get_observations_at(position=None, rotation=None)
 
-        angular_velocity = np.deg2rad(angular_velocity)
+        # Map velocity actions
         self.vel_control.linear_velocity = np.array(
             [0.0, 0.0, -linear_velocity]
         )
@@ -1322,7 +1339,6 @@ class VelocityAction(SimulatorTaskAction):
             *goal_rigid_state.rotation.vector,
             goal_rigid_state.rotation.scalar,
         ]
-
         # Check if a collision occured
         dist_moved_before_filter = (
             goal_rigid_state.translation - agent_state.position
@@ -1347,6 +1363,44 @@ class VelocityAction(SimulatorTaskAction):
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
         return agent_observations
+
+
+@registry.register_task_action
+class WaypointVelocityAction(VelocityAction):
+    name: str = "waypoint_vel_control"
+    pass
+
+@registry.register_task_action
+class MoveForwardVelocityAction(WaypointVelocityAction):
+    name: str = "move_forward_vel_control"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(HabitatSimActions.move_forward)
+
+
+@registry.register_task_action
+class TurnLeftVelocityAction(WaypointVelocityAction):
+    name: str = "turn_left_vel_control"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(HabitatSimActions.turn_left)
+
+
+@registry.register_task_action
+class TurnRightVelocityAction(WaypointVelocityAction):
+    name: str = "turn_right_vel_control"
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        return self._sim.step(HabitatSimActions.turn_right)
 
 
 @registry.register_task(name="Nav-v0")
