@@ -283,7 +283,10 @@ jobs:
               pip freeze
               pip show importlib_metadata
 
-              python -c "import importlib_metadata as metadata;import gym;print(metadata.entry_points(group='gym.envs'))"
+              python -c "import importlib_metadata as metadata;print(metadata.entry_points(group='gym.envs'))"
+
+              python -c "import gym"
+
 
               python -m pytest --cov-report=xml --cov-report term  --cov=./
       - codecov/upload
