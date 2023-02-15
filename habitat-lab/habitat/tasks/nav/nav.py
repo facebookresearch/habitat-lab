@@ -1214,6 +1214,8 @@ class VelocityAction(SimulatorTaskAction):
                              config.ang_vel_range
             time_step: amount of time to move the agent for
             allow_sliding: whether the agent will slide on collision
+
+        TODO: Remove waypoint & discrete stuff
         """
         if "base_vel" in kwargs:  # Velocity control mode
             linear_velocity = max(0.0, kwargs["base_vel"][0])
@@ -1283,6 +1285,8 @@ class VelocityAction(SimulatorTaskAction):
     ) -> Observations:
         """
         Apply velocity command to simulation, step simulation, and return agent observation
+        TODO: Have separate function to parse pure velocity command
+        TODO: Allow position & timestep input
         """
         # Parse inputs
         if time_step is None:
@@ -1369,11 +1373,15 @@ class VelocityAction(SimulatorTaskAction):
 class WaypointVelocityAction(VelocityAction):
     name: str = "waypoint_vel_control"
 
+    def _xyt_world_to_bas_frame(self, xyt):
+        pass #TODO
+
     def _step_rel_waypoint(self, xyt_target, *args, **kwargs):
-        pass
+        pass #TODO: implement velocity control integration and produce position output
 
     def step(self, xyt_target, *args, **kwargs):
-        return self._step_rel_waypoint(xyt_target, *args, **kwargs)
+        xyt_base2target = self._xyt_world_to_base_frame(xyt_target)
+        return self._step_rel_waypoint(xyt_base2target, *args, **kwargs)
 
 @registry.register_task_action
 class MoveForwardVelocityAction(WaypointVelocityAction):
