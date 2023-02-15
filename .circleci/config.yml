@@ -282,7 +282,6 @@ jobs:
 
               pip freeze
               pip show importlib_metadata
-              pip show importlib
 
               python -c "import importlib_metadata as metadata;import gym;print(metadata.entry_points(group='gym.envs'))"
 
