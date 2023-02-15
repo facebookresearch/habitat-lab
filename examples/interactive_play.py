@@ -43,14 +43,10 @@ import os
 import os.path as osp
 import time
 from abc import ABC, abstractmethod
-from collections import defaultdict
-from typing import Any, Dict, List
 
 import gym.spaces as spaces
-import magnum as mn
 import numpy as np
 import torch
-from omegaconf import OmegaConf
 
 import habitat
 import habitat.gym.gym_wrapper as gym_wrapper
@@ -65,7 +61,7 @@ from habitat.config.default_structured_configs import (
 from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
-from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
+from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations.utils import observations_to_image
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -232,8 +228,6 @@ class HumanController(Controller):
             base_action = np.zeros(base_action_space.shape[0])
         else:
             base_action = None
-
-        end_ep = False
 
         keys = pygame.key.get_pressed()
         should_end = False
@@ -458,7 +452,12 @@ def play_env(env, args, config):
             ac_start = pddl_action.get_pddl_action_start(action_sel)
             ac[ac_start : ac_start + len(entity_sel)] = entity_sel
 
-            step_env(env, "PDDL_APPLY_ACTION", {"pddl_action": ac})
+            env.step(
+                {
+                    "action": "PDDL_APPLY_ACTION",
+                    "action_args": {"pddl_action": ac},
+                }
+            )
 
         if not args.no_render and keys[pygame.K_g]:
             pred_list = env.task.sensor_suite.sensors[
