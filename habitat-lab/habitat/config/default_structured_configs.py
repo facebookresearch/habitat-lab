@@ -161,7 +161,6 @@ class VelocityControlActionConfig(ActionConfig):
     ang_vel_range: List[float] = [-10.0, 10.0]
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # # deg/sec
-    #time_step: float = 1.0  # seconds
     time_step: float = 0.2  # seconds
     enable_scale_convert: bool = True
 
@@ -170,6 +169,8 @@ class VelocityControlActionConfig(ActionConfig):
 class WaypointVelocityControlActionConfig(VelocityControlActionConfig):
     type: str = "WaypointVelocityControlAction"
     time_step: float = 1.0  # seconds
+    waypoint_lin_range: float = 0.25 # meters
+    waypoint_ang_range: float = 180 # degrees
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -179,7 +180,8 @@ class MoveForwardVelocityControlActionConfig(WaypointVelocityControlActionConfig
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
     """
     type: str = "MoveForwardVelocityControlAction"
-    time_step: float = 1.0  # seconds
+    time_step: float = 2.0  # seconds
+    forward_step_size: float = 0.25 # meters
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -189,7 +191,8 @@ class TurnLeftVelocityControlActionConfig(WaypointVelocityControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnLeftVelocityControlAction"
-    time_step: float = 1.0  # seconds
+    time_step: float = 2.0  # seconds
+    turn_angle: int = 30 # degrees
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -199,7 +202,8 @@ class TurnRightVelocityControlActionConfig(WaypointVelocityControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnRightVelocityControlAction"
-    time_step: float = 1.0  # seconds
+    time_step: float = 2.0  # seconds
+    turn_angle: int = 30 # degrees
 
 
 # -----------------------------------------------------------------------------

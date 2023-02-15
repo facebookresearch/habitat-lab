@@ -1368,7 +1368,12 @@ class VelocityAction(SimulatorTaskAction):
 @registry.register_task_action
 class WaypointVelocityAction(VelocityAction):
     name: str = "waypoint_vel_control"
-    pass
+
+    def _step_rel_waypoint(self, xyt_target, *args, **kwargs):
+        pass
+
+    def step(self, xyt_target, *args, **kwargs):
+        return self._step_rel_waypoint(xyt_target, *args, **kwargs)
 
 @registry.register_task_action
 class MoveForwardVelocityAction(WaypointVelocityAction):
@@ -1378,7 +1383,8 @@ class MoveForwardVelocityAction(WaypointVelocityAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.move_forward)
+        xyt_base2target = [self.config.forward_step_size, 0.0, 0.0]
+        return self._step_rel_waypoint(xyt_base2target, *args, **kwargs)
 
 
 @registry.register_task_action
@@ -1389,7 +1395,8 @@ class TurnLeftVelocityAction(WaypointVelocityAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.turn_left)
+        xyt_base2target = [0.0, 0.0, np.deg2rad(self.config.turn_angle)]
+        return self._step_rel_waypoint(xyt_base2target, *args, **kwargs)
 
 
 @registry.register_task_action
@@ -1400,7 +1407,8 @@ class TurnRightVelocityAction(WaypointVelocityAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.turn_right)
+        xyt_base2target = [0.0, 0.0, -np.deg2rad(self.config.turn_angle)]
+        return self._step_rel_waypoint(xyt_base2target, *args, **kwargs)
 
 
 @registry.register_task(name="Nav-v0")
