@@ -1425,7 +1425,9 @@ class WaypointAction(VelocityAction):
         ]
 
         # Execute waypoint
-        return self._step_rel_waypoint(xyt_waypoint_clamped, *args, **kwargs)
+        return self._step_rel_waypoint(
+            xyt_waypoint_clamped, self._config.action_duration, *args, **kwargs
+        )
 
 @registry.register_task_action
 class MoveForwardWaypointAction(WaypointAction):
@@ -1436,7 +1438,9 @@ class MoveForwardWaypointAction(WaypointAction):
         ``step``.
         """
         xyt_waypoint = [self.config.forward_step_size, 0.0, 0.0]
-        return self._step_rel_waypoint(xyt_waypoint, *args, **kwargs)
+        return self._step_rel_waypoint(
+           xyt_waypoint, self._config.action_duration, *args, **kwargs
+        )
 
 
 @registry.register_task_action
@@ -1448,7 +1452,9 @@ class TurnLeftWaypointAction(WaypointAction):
         ``step``.
         """
         xyt_waypoint = [0.0, 0.0, np.deg2rad(self.config.turn_angle)]
-        return self._step_rel_waypoint(xyt_waypoint, *args, **kwargs)
+        return self._step_rel_waypoint(
+            xyt_waypoint, self._config.action_duration, *args, **kwargs
+        )
 
 
 @registry.register_task_action
