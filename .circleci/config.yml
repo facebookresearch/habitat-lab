@@ -281,10 +281,13 @@ jobs:
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
 
               pip freeze
+              echo "pip show importlib_metadata"
               pip show importlib_metadata
-
+              echo "path of importlib_metadata"
+              python -c "import importlib_metadata as metadata;print(metadata.__file__)"
+              echo "Importing importlib_metadata"
               python -c "import importlib_metadata as metadata;print(metadata.entry_points(group='gym.envs'))"
-
+              echo "Importing gym"
               python -c "import gym"
 
 
