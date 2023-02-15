@@ -1370,8 +1370,8 @@ class VelocityAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class WaypointVelocityAction(VelocityAction):
-    name: str = "waypoint_vel_control"
+class WaypointAction(VelocityAction):
+    name: str = "waypoint_control"
 
     def _xyt_world_to_bas_frame(self, xyt):
         pass #TODO
@@ -1384,8 +1384,8 @@ class WaypointVelocityAction(VelocityAction):
         return self._step_rel_waypoint(xyt_base2target, *args, **kwargs)
 
 @registry.register_task_action
-class MoveForwardVelocityAction(WaypointVelocityAction):
-    name: str = "move_forward_vel_control"
+class MoveForwardWaypointAction(WaypointAction):
+    name: str = "move_forward_waypoint"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -1396,8 +1396,8 @@ class MoveForwardVelocityAction(WaypointVelocityAction):
 
 
 @registry.register_task_action
-class TurnLeftVelocityAction(WaypointVelocityAction):
-    name: str = "turn_left_vel_control"
+class TurnLeftWaypointAction(WaypointAction):
+    name: str = "turn_left_waypoint"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -1408,8 +1408,8 @@ class TurnLeftVelocityAction(WaypointVelocityAction):
 
 
 @registry.register_task_action
-class TurnRightVelocityAction(WaypointVelocityAction):
-    name: str = "turn_right_vel_control"
+class TurnRightWaypointAction(WaypointAction):
+    name: str = "turn_right_waypoint"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each

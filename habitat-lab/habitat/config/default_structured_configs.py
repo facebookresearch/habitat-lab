@@ -166,42 +166,42 @@ class VelocityControlActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class WaypointVelocityControlActionConfig(VelocityControlActionConfig):
-    type: str = "WaypointVelocityControlAction"
+class WaypointControlActionConfig(VelocityControlActionConfig):
+    type: str = "WaypointAction"
     time_step: float = 1.0  # seconds
     waypoint_lin_range: float = 0.25 # meters
     waypoint_ang_range: float = 180 # degrees
 
 
 @attr.s(auto_attribs=True, slots=True)
-class MoveForwardVelocityControlActionConfig(WaypointVelocityControlActionConfig):
+class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will move the robot forward by
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
     """
-    type: str = "MoveForwardVelocityControlAction"
+    type: str = "MoveForwardWaypointAction"
     time_step: float = 2.0  # seconds
     forward_step_size: float = 0.25 # meters
 
 
 @attr.s(auto_attribs=True, slots=True)
-class TurnLeftVelocityControlActionConfig(WaypointVelocityControlActionConfig):
+class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
-    type: str = "TurnLeftVelocityControlAction"
+    type: str = "TurnLeftWaypointAction"
     time_step: float = 2.0  # seconds
     turn_angle: int = 30 # degrees
 
 
 @attr.s(auto_attribs=True, slots=True)
-class TurnRightVelocityControlActionConfig(WaypointVelocityControlActionConfig):
+class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
-    type: str = "TurnRightVelocityControlAction"
+    type: str = "TurnRightWaypointAction"
     time_step: float = 2.0  # seconds
     turn_angle: int = 30 # degrees
 
