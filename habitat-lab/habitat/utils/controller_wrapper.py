@@ -1,15 +1,22 @@
+import numpy as np
+from home_robot.control.goto_controller import GotoVelocityController
 from omegaconf import OmegaConf
 
-import numpy as np
-
-from home_robot.control.goto_controller import GotoVelocityController
 
 class ContinuousController:
     """Wrapper around the velocity controller in home_robot"""
-    def __init__(self, v_max=1.0, w_max=1.0, acc_lin=2.4, acc_ang=2.4, \
-        max_heading_ang=np.pi / 10, \
-        lin_error_tol=0.001, ang_error_tol=0.001,\
-        track_yaw=True):
+
+    def __init__(
+        self,
+        v_max=1.0,
+        w_max=1.0,
+        acc_lin=2.4,
+        acc_ang=2.4,
+        max_heading_ang=np.pi / 10,
+        lin_error_tol=0.001,
+        ang_error_tol=0.001,
+        track_yaw=True,
+    ):
         # Generate config
         cfg_dict = {
             "v_max": v_max,
