@@ -1,16 +1,24 @@
 from typing import Optional
 
 import numpy as np
+from home_robot.control.goto_controller import GotoVelocityController
 from omegaconf import OmegaConf
 
-from home_robot.control.goto_controller import GotoVelocityController
 
 class ContinuousController:
     """Wrapper around the velocity controller in home_robot"""
-    def __init__(self, v_max=1.0, w_max=1.0, acc_lin=2.4, acc_ang=2.4, \
-        max_heading_ang=np.pi / 10, \
-        lin_error_tol=0.001, ang_error_tol=0.001,\
-        track_yaw=True):
+
+    def __init__(
+        self,
+        v_max=1.0,
+        w_max=1.0,
+        acc_lin=2.4,
+        acc_ang=2.4,
+        max_heading_ang=np.pi / 10,
+        lin_error_tol=0.001,
+        ang_error_tol=0.001,
+        track_yaw=True,
+    ):
         # Generate config
         cfg_dict = {
             "v_max": v_max,
@@ -27,12 +35,19 @@ class ContinuousController:
         self.controller = GotoVelocityController(cfg)
         self.controller.set_yaw_tracking(track_yaw)
 
-    def set_goal(self, goal: np.ndarray, start: Optional[np.ndarray] = None, relative: np.bool = False):
+    def set_goal(
+        self,
+        goal: np.ndarray,
+        start: Optional[np.ndarray] = None,
+        relative: bool = False,
+    ):
         """Update controller goal
         goal: Desired robot base SE2 pose in global frame
         """
         if relative:
-            assert start is not None, "Start pose required if goal is relative."
+            assert (
+                start is not None
+            ), "Start pose required if goal is relative."
             self.controller.update_pose_feedback(start)
         self.controller.update_goal(goal, relative=relative)
 
