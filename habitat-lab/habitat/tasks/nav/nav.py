@@ -1417,7 +1417,7 @@ class WaypointAction(VelocityAction):
             theta_clamped,
         ]
 
-        return xyt_waypoint_clamped
+        return np.array(xyt_waypoint_clamped)
 
     def _step_rel_waypoint(
         self, xyt_waypoint, duration, task, *args, **kwargs
@@ -1475,7 +1475,7 @@ class MoveForwardWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = [self._config.forward_step_size, 0.0, 0.0]
+        xyt_waypoint = np.array([self._config.forward_step_size, 0.0, 0.0])
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.action_duration, *args, **kwargs
         )
@@ -1489,7 +1489,9 @@ class TurnLeftWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
+        xyt_waypoint = np.array(
+            [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
+        )
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.action_duration, *args, **kwargs
         )
@@ -1503,7 +1505,9 @@ class TurnRightWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
+        xyt_waypoint = np.array(
+            [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
+        )
         return self._step_rel_waypoint(xyt_waypoint, *args, **kwargs)
 
 
