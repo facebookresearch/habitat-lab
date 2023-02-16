@@ -1109,6 +1109,7 @@ class AgentConfig(HabitatBaseConfig):
     agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    grasp_managers: int = 1
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1118,7 +1119,6 @@ class HumanAgentConfig(AgentConfig):
     agent_type: str = "AmassHuman"
     draw_fps_human: int = 60
     grab_path: str = ""
-    grasp_managers: int = 2
 
 
 @attr.s(auto_attribs=True, slots=True)

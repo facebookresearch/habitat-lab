@@ -498,5 +498,5 @@ class HumanJointAction(HumanAction):
                 for i in range(4)
             ]
             new_transform = mn.Matrix4(*vecs)
-            self._sim.agent.set_joint_transform(new_pos, new_transform)
+            self.cur_human.set_joint_transform(new_pos, new_transform)
         return self._sim.step(HabitatSimActions.changejoint_action)

@@ -61,7 +61,7 @@ class AgentManager:
         self._all_agent_data = []
 
         self._is_pb_installed = is_pb_installed()
-        for agent_name in cfg.agents:
+        for agent_name in cfg.agents_order:
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.agent_type)
             agent = agent_cls(agent_cfg.agent_urdf, sim)
