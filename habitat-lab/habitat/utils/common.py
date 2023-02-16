@@ -52,21 +52,3 @@ def cull_string_list_by_substrings(
                     culled_list.append(string)
                     break
     return culled_list
-
-
-
-
-
-def transform_global_to_base(XYT, current_pose, trans=None):
-    """
-    Transforms the point cloud into geocentric frame to account for
-    camera position
-    """
-    goal_pos = trans.inverted().transform_point(
-        np.array([XYT[0], 0.0, XYT[1]])
-    )
-    error_t = XYT[2] - current_pose[2]
-    error_t = (error_t + np.pi) % (2.0*np.pi) - np.pi
-    error_x = goal_pos[0]
-    error_y = goal_pos[2]
-    return [error_x, error_y, error_t]
