@@ -964,6 +964,8 @@ class DistanceToGoal(Measure):
             List[Tuple[float, float, float]]
         ] = None
         self._distance_to = self._config.distance_to
+        self._distance_from = self._config.distance_from
+        self._goals_attr = self._config.goals_attr
 
         super().__init__(**kwargs)
 
@@ -990,7 +992,7 @@ class DistanceToGoal(Measure):
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
-        if self._config.distance_from == "END_EFFECTOR":
+        if self._distance_from == "END_EFFECTOR":
             current_position = self.get_end_effector_position()
         else:
             current_position = self.get_base_position()
@@ -1006,15 +1008,15 @@ class DistanceToGoal(Measure):
                             ord=2,
                             axis=-1,
                         )
-                        for goal in getattr(episode, self._config.goals_attr)
+                        for goal in getattr(episode, self._goals_attr)
                     ]
                 )
-            if self._distance_to == "POINT":
+            elif self._distance_to == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position,
                     [
                         goal.position
-                        for goal in getattr(episode, self._config.goals_attr)
+                        for goal in getattr(episode, self._goals_attr)
                     ],
                     episode,
                 )
