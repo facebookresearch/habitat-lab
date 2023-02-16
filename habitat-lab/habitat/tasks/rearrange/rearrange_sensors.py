@@ -93,6 +93,7 @@ class ObjectEmbeddingSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
+        self._dimensionality = self._config.dimensionality
         with open(config.embeddings_file, "rb") as f:
             self._embeddings = pickle.load(f)
 
@@ -106,7 +107,7 @@ class ObjectEmbeddingSensor(Sensor):
 
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
-            shape=(self._config.dimensionality,),
+            shape=(self._dimensionality,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -171,7 +172,10 @@ class ObjectSegmentationSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
+        self._dimensionality = self._config.dimensionality
+        self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
+        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -183,8 +187,8 @@ class ObjectSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._config.dimensionality,
-                self._config.dimensionality,
+                self._dimensionality,
+                self._dimensionality,
                 1,
             ),
             low=0,
@@ -193,7 +197,7 @@ class ObjectSegmentationSensor(Sensor):
         )
 
     def get_observation(self, observations, *args, episode, task, **kwargs):
-        if np.random.random() < self._config.blank_out_prob:
+        if np.random.random() < self._blank_out_prob:
             return np.zeros_like(
                 observations["robot_head_panoptic"], dtype=np.uint8
             )
@@ -205,7 +209,7 @@ class ObjectSegmentationSensor(Sensor):
                 segmentation_sensor = segmentation_sensor | (
                     observations["robot_head_panoptic"]
                     == self._sim.scene_obj_ids[int(g.object_id)]
-                    + self._sim.habitat_config.instance_ids_start
+                    + self._instance_ids_start
                 )
             return segmentation_sensor
 
@@ -1055,6 +1059,8 @@ class RearrangeReward(UsesRobotInterface, Measure):
         self._task = task
         self._force_pen = self._config.force_pen
         self._max_force_pen = self._config.max_force_pen
+        self._constraint_violate_pen = self._config.constraint_violate_pen
+        self._force_end_pen = self._config.force_end_pen
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -1082,13 +1088,13 @@ class RearrangeReward(UsesRobotInterface, Measure):
         if self._sim.get_robot_data(
             self.robot_id
         ).grasp_mgr.is_violating_hold_constraint():
-            reward -= self._config.constraint_violate_pen
+            reward -= self._constraint_violate_pen
 
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
         if force_terminate:
-            reward -= self._config.force_end_pen
+            reward -= self._force_end_pen
 
         self._metric = reward
 
