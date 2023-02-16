@@ -1440,6 +1440,12 @@ class WaypointAction(VelocityAction):
                 xyt
             )
 
+            # Apply action and step simulation
+            next_agent_state = self._apply_velocity_action(
+                linear_velocity, angular_velocity, time_step=dt
+            )
+            xyt = self._agent_state_to_xyt(next_agent_state)
+
             # Stop is called early if commanded speed is low
             if (
                 abs(linear_velocity) < self._config.min_abs_lin_speed
@@ -1447,12 +1453,6 @@ class WaypointAction(VelocityAction):
             ):
                 task.is_stop_called = True  # type: ignore
                 break
-
-            # Apply action and step simulation
-            next_agent_state = self._apply_velocity_action(
-                linear_velocity, angular_velocity, time_step=dt
-            )
-            xyt = self._agent_state_to_xyt(next_agent_state)
 
         return self._get_agent_observation(next_agent_state)
 
