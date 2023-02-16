@@ -1009,7 +1009,7 @@ class DistanceToGoal(Measure):
                         for goal in getattr(episode, self._config.goals_attr)
                     ]
                 )
-            if self._distance_to == "POINT":
+            elif self._distance_to == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position,
                     [
