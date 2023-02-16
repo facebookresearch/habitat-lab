@@ -35,12 +35,12 @@ from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.controller_wrapper import ContinuousController
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
-from habitat.utils.controller_wrapper import ContinuousController
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -1207,62 +1207,51 @@ class VelocityAction(SimulatorTaskAction):
             allow_sliding: whether the agent will slide on collision
         """
         # Preprocess velocity input
-        if self._config.enable_scale_convert:
-            linear_velocity = self._scale_inputs(
-                linear_velocity, 
-                [-1, 1], 
-                [self._config.min_lin_vel, self._config.max_lin_vel]
-            )
-            angular_velocity = self._scale_inputs(
-                angular_velocity, 
-                [-1, 1], 
-                [self._config.min_ang_vel, self._config.max_ang_vel]
-            )
-
-        linear_velocity_clamped = np.clip(
-            linear_velocity, 
-            self._config.lin_vel_range[0], 
-            self._config.lin_vel_range[1]
-        )
-        angular_velocity_clamped = np.clip(
-            angular_velocity, 
-            self._config.ang_vel_range[0], 
-            self._config.ang_vel_range[1]
+        lin_vel_processed, ang_vel_processed = self._preprocess_action(
+            linear_velocity, angular_velocity
         )
 
         # Apply action and get next observation
         agent_state_result = self._apply_velocity_action(
-            linear_velocity_clamped, 
-            angular_velocity_clamped, 
-            time_step=time_step, 
+            lin_vel_processed,
+            ang_vel_processed,
+            time_step=time_step,
             allow_sliding=allow_sliding,
         )
+
         return self._get_agent_observation(agent_state_result)
 
-    @staticmethod
-    def _agent_state_to_xyt(agent_state):
-        return np.array([
-            agent_state.position[0],
-            agent_state.position[2],
-            float(agent_state.rotation.angle()),
-        ])
+    def _preprocess_action(self, linear_velocity, angular_velocity):
+        """Perform scaling and clamping of input"""
+        if self._config.enable_scale_convert:
+            linear_velocity = self._scale_inputs(
+                linear_velocity,
+                [-1, 1],
+                [self._config.min_lin_vel, self._config.max_lin_vel],
+            )
+            angular_velocity = self._scale_inputs(
+                angular_velocity,
+                [-1, 1],
+                [self._config.min_ang_vel, self._config.max_ang_vel],
+            )
 
-    def _get_agent_observation(self, agent_state):
-        position = agent_state.position
-        rotation = [
-            *agent_state.rotation.vector,
-            agent_state.rotation.scalar,
-        ]
-        return self._sim.get_observations_at(
-            position=position,
-            rotation=rotation,
-            keep_agent_at_new_pose=True,
+        linear_velocity_clamped = np.clip(
+            linear_velocity,
+            self._config.lin_vel_range[0],
+            self._config.lin_vel_range[1],
+        )
+        angular_velocity_clamped = np.clip(
+            angular_velocity,
+            self._config.ang_vel_range[0],
+            self._config.ang_vel_range[1],
         )
 
+        return linear_velocity_clamped, angular_velocity_clamped
+
     def _apply_velocity_action(
-        self, 
-        linear_velocity: float, 
-        angular_velocity: float, 
+        self,
+        linear_velocity: float,
+        angular_velocity: float,
         time_step: Optional[float] = None,
         allow_sliding: Optional[bool] = None,
     ):
@@ -1332,16 +1321,32 @@ class VelocityAction(SimulatorTaskAction):
 
         return final_agent_state
 
+    def _get_agent_observation(self, agent_state):
+        position = agent_state.position
+        rotation = [
+            *agent_state.rotation.vector,
+            agent_state.rotation.scalar,
+        ]
+        return self._sim.get_observations_at(
+            position=position,
+            rotation=rotation,
+            keep_agent_at_new_pose=True,
+        )
+
     @staticmethod
-    def _scale_inputs(input_val: float, input_range: List[float], output_range: List[float]) -> float:
+    def _scale_inputs(
+        input_val: float, input_range: List[float], output_range: List[float]
+    ) -> float:
         """
-        Transform input from input range to output range 
+        Transform input from input range to output range
         (ex: from normalized input in range [-1, 1] to [y_min, y_max])
         TODO: This function should go into utils of some sort
         """
         w_input = input_range[1] - input_range[0]
         w_output = output_range[1] - output_range[0]
-        return output_range[0] * w_output * (input_val - input_range) / w_input
+        return (
+            output_range[0] + (input_val - input_range[0]) * w_output / w_input
+        )
 
 
 @registry.register_task_action
@@ -1349,24 +1354,91 @@ class WaypointAction(VelocityAction):
     name: str = "waypoint_control"
 
     def __init__(self, *args: Any, **kwargs: Any):
-        super().__init__(**args, **kwargs)
+        super().__init__(*args, **kwargs)
         # Init goto velocity controller
         self.w2v_controller = ContinuousController()
 
-    def _step_rel_waypoint(self, xyt_waypoint, duration, *args, **kwargs):
+    def step(self, xyt_waypoint, task: EmbodiedTask, *args, **kwargs):
+        # Preprocess waypoint input
+        xyt_waypoint_processed = self._preprocess_action(xyt_waypoint)
+
+        # Execute waypoint
+        return self._step_rel_waypoint(
+            xyt_waypoint_processed,
+            self._config.action_duration,
+            task,
+            *args,
+            **kwargs,
+        )
+
+    def _preprocess_action(self, xyt_waypoint):
+        """Perform scaling and clamping of input"""
+        if self._config.enable_scale_convert:
+            xyt_waypoint[0] = self._scale_inputs(
+                xyt_waypoint[0],
+                [-1, 1],
+                [
+                    -self._config.waypoint_lin_range,
+                    self._config.waypoint_lin_range,
+                ],
+            )
+            xyt_waypoint[1] = self._scale_inputs(
+                xyt_waypoint[1],
+                [-1, 1],
+                [
+                    -self._config.waypoint_lin_range,
+                    self._config.waypoint_lin_range,
+                ],
+            )
+            xyt_waypoint[2] = self._scale_inputs(
+                xyt_waypoint[2],
+                [-1, 1],
+                [
+                    -self._config.waypoint_ang_range,
+                    self._config.waypoint_ang_range,
+                ],
+            )
+
+        r_clamped = np.clip(
+            np.linalg.norm(xyt_waypoint[:2]),
+            -self._config.waypoint_lin_range,
+            self._config.waypoint_lin_range,
+        )
+        heading_angle = np.arctan2(xyt_waypoint[0], xyt_waypoint[1])
+        theta_clamped = np.clip(
+            xyt_waypoint[2],
+            -self._config.waypoint_ang_range,
+            self._config.waypoint_ang_range,
+        )
+
+        xyt_waypoint_clamped = [
+            r_clamped * np.cos(heading_angle),
+            r_clamped * np.sin(heading_angle),
+            theta_clamped,
+        ]
+
+        return xyt_waypoint_clamped
+
+    def _step_rel_waypoint(
+        self, xyt_waypoint, duration, task, *args, **kwargs
+    ):
         """Use the waypoint-to-velocity controller to navigate to the waypoint"""
 
         # Initialize control loop
-        xyt_init = self._get_agent_xyt()
-        self.w2v_controller.set_goal(xyt_waypoint, start=xyt_init, relative=True)
+        xyt_init = self._agent_state_to_xyt(self._sim.get_agent_state())
+        self.w2v_controller.set_goal(
+            xyt_waypoint, start=xyt_init, relative=True
+        )
 
         xyt = xyt_init.copy()
         dt = self._config.time_step
 
         # Forward simulate
-        for t in np.arange(0.0, duration / dt) * dt:
+        for _t in np.arange(0.0, duration / dt) * dt:
             # Query velocity controller for control input
-            linear_velocity, angular_velocity = self.w2v_controller.forward(xyt)
+            linear_velocity, angular_velocity = self.w2v_controller.forward(
+                xyt
+            )
 
             # Stop is called early if commanded speed is low
             if (
@@ -1378,56 +1450,22 @@ class WaypointAction(VelocityAction):
 
             # Apply action and step simulation
             next_agent_state = self._apply_velocity_action(
-                linear_velocity, 
-                angular_velocity, 
-                time_step=dt
+                linear_velocity, angular_velocity, time_step=dt
             )
             xyt = self._agent_state_to_xyt(next_agent_state)
 
-        return self._get_agent_observation()
+        return self._get_agent_observation(next_agent_state)
 
-    def step(self, xyt_waypoint, task: EmbodiedTask,
-        *args, **kwargs):
-        # Preprocess waypoint input
-        if self._config.enable_scale_convert:
-            xyt_waypoint[0] = self._scale_inputs(
-                xyt_waypoint[0], 
-                [-1, 1], 
-                [-self._config.waypoint_lin_range, self._config.waypoint_lin_range]
-            )
-            xyt_waypoint[1] = self._scale_inputs(
-                xyt_waypoint[1], 
-                [-1, 1], 
-                [-self._config.waypoint_lin_range, self._config.waypoint_lin_range]
-            )
-            xyt_waypoint[2] = self._scale_inputs(
-                xyt_waypoint[2], 
-                [-1, 1], 
-                [-self._config.waypoint_ang_range, self._config.waypoint_ang_range]
-            )
-
-        r_clamped = np.clip(
-            np.linalg.norm(xyt_waypoint[:2]), 
-            -self._config.waypoint_lin_range, 
-            self._config.waypoint_lin_range
-        )
-        heading_angle = np.arctan2(xyt_waypoint[0], xyt_waypoint[1])
-        theta_clamped = np.clip(
-            xyt_waypoint[2],
-            -self._config.waypoint_ang_range, 
-            self._config.waypoint_ang_range
+    @staticmethod
+    def _agent_state_to_xyt(agent_state):
+        return np.array(
+            [
+                agent_state.position[0],
+                agent_state.position[2],
+                float(agent_state.rotation.angle()),
+            ]
         )
 
-        xyt_waypoint_clamped = [
-            r_clamped * np.cos(heading_angle),
-            r_clamped * np.sin(heading_angle),
-            theta_clamped,
-        ]
-
-        # Execute waypoint
-        return self._step_rel_waypoint(
-            xyt_waypoint_clamped, self._config.action_duration, *args, **kwargs
-        )
 
 @registry.register_task_action
 class MoveForwardWaypointAction(WaypointAction):
@@ -1437,9 +1475,9 @@ class MoveForwardWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = [self.config.forward_step_size, 0.0, 0.0]
+        xyt_waypoint = [self._config.forward_step_size, 0.0, 0.0]
         return self._step_rel_waypoint(
-           xyt_waypoint, self._config.action_duration, *args, **kwargs
+            xyt_waypoint, self._config.action_duration, *args, **kwargs
         )
 
 
@@ -1451,7 +1489,7 @@ class TurnLeftWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = [0.0, 0.0, np.deg2rad(self.config.turn_angle)]
+        xyt_waypoint = [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.action_duration, *args, **kwargs
         )
@@ -1465,7 +1503,7 @@ class TurnRightWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = [0.0, 0.0, -np.deg2rad(self.config.turn_angle)]
+        xyt_waypoint = [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
         return self._step_rel_waypoint(xyt_waypoint, *args, **kwargs)
 
 
