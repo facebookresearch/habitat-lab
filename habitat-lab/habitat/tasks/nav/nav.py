@@ -1434,7 +1434,7 @@ class WaypointAction(VelocityAction):
         dt = self._config.time_step
 
         # Forward simulate
-        for _t in np.arange(0.0, duration / dt) * dt:
+        for _t in np.arange(0, max(duration / dt, 1)) * dt:
             # Query velocity controller for control input
             linear_velocity, angular_velocity = self.w2v_controller.forward(
                 xyt
