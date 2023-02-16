@@ -35,12 +35,12 @@ from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.controller_wrapper import ContinuousController
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
 )
 from habitat.utils.visualizations import fog_of_war, maps
-from habitat.utils.controller_wrapper import ContinuousController
 
 try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
@@ -1222,36 +1222,39 @@ class VelocityAction(SimulatorTaskAction):
         if "base_vel" in kwargs:  # Velocity control mode
             linear_velocity = max(0.0, kwargs["base_vel"][0])
             angular_velocity = kwargs["base_vel"][1]
-        elif "base_dis" in kwargs: # Discrete control mode
+        elif "base_dis" in kwargs:  # Discrete control mode
             move = kwargs["base_dis"][0]
             turn = kwargs["base_dis"][1]
             if move > 0:
-                linear_velocity = 0.15 * (1/self.time_step)
+                linear_velocity = 0.15 * (1 / self.time_step)
             else:
                 linear_velocity = 0
             if turn > 0:
-                angular_velocity = np.pi * 30.0/180.0 * (1/self.time_step)
+                angular_velocity = np.pi * 30.0 / 180.0 * (1 / self.time_step)
             elif turn < 0:
-                angular_velocity = -np.pi * 30.0/180.0 * (1/self.time_step)
+                angular_velocity = -np.pi * 30.0 / 180.0 * (1 / self.time_step)
             else:
                 angular_velocity = 0
-        elif "base_pt" in kwargs: # Waypoint control mode
+        elif "base_pt" in kwargs:  # Waypoint control mode
             # init the controllers
             w2v_controller = ContinuousController()
             # Get the transformation of the agent
             trans = self._sim.agents[0].scene_node.transformation
             # Define the global position
-            target_x = max(0.0, kwargs["base_pt"][0]*1.0)
+            target_x = max(0.0, kwargs["base_pt"][0] * 1.0)
             global_pos = trans.transform_point(np.array([target_x, 0.0, 0.0]))
             # Set the target rotation angle
             target_theta = kwargs["base_pt"][1]
-            target_theta = float(self._sim.agents[0].state.rotation.angle()) + target_theta
+            target_theta = (
+                float(self._sim.agents[0].state.rotation.angle())
+                + target_theta
+            )
             # Set the goal
-            xyt_goal = [
+            xyt_goal = np.array([
                 global_pos[0],
                 global_pos[2],
                 target_theta,
-            ]
+            ])
             w2v_controller.set_goal(xyt_goal)
             # Get the current location of the agent
             xyt = [
@@ -1262,7 +1265,7 @@ class VelocityAction(SimulatorTaskAction):
             # Get the velocity action
             vel_action = w2v_controller.forward(xyt, trans)
             linear_velocity = vel_action[0]
-            angular_velocity =  vel_action[1]
+            angular_velocity = vel_action[1]
 
         if self._enable_scale_convert:
             # Convert from [-1, 1] to [0, 1] range
