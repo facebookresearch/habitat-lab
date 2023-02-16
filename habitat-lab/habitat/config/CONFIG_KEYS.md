@@ -18,16 +18,16 @@ For a list of all the available datasets, see [this page](../../../DATASETS.md).
 The definition of the task in Habitat.
 There are many different Tasks determined by the `habitat.task.type` config:
  - Point navigation : `Nav-0` The agent needs to navigate to a geometric goal position.
- - Image navigation : `Nav-0` The agent needs to navigate to an object matching the type of a goal image.
- - Instance image navigation:`InstanceImageNav-v1` The agent needs to navigate to an object matching the type of a goal image that is sampled from the current scene.
+ - Image navigation : `Nav-0` The agent needs to navigate to an object matching the type shown in a goal image.
+ - Instance image navigation:`InstanceImageNav-v1` The agent needs to navigate to an object matching the type shown in a goal image that is sampled from the current scene.
  - Object navigation : `ObjectNav-v1` The agent needs to navigate to a specific type of object in the scene indicated by a categorical value.
  - Rearrangement close drawer: `RearrangeCloseDrawerTask-v0` The agent must close the kitchen drawer in the scene.
  - Rearrangement open drawer: `RearrangeOpenDrawerTask-v0` The agent must open the kitchen drawer in the scene.
  - Rearrangement close fridge : `RearrangeCloseFridgeTask-v0` The agent must close the kitchen fridge in the scene.
  - Rearrangement open fridge : `RearrangeOpenFridgeTask-v0` The agent must open the kitchen fridge in the scene.
- - Rearrangement navigate to object : `NavToObjTask-v0` The agent must navigate to a geometric position in the scene.
- - Rearrangement pick : `RearrangePickTask-v0` The agent must pick up a specific object in the scene from its geometric coordinates.
- - Rearrangement place : `RearrangePlaceTask-v0` The agent must place a held object to a geometric set of coordinates.
+ - Rearrangement navigate to object : `NavToObjTask-v0` The agent must navigate to an object located at a known geometric position in the scene.
+ - Rearrangement pick : `RearrangePickTask-v0` The agent must pick up a specific object in the scene from given the object's geometric coordinates.
+ - Rearrangement place : `RearrangePlaceTask-v0` The agent must place a grasped object at  a geometric set of coordinates.
  - Rearrangement do nothing : `RearrangeEmptyTask-v0` The agent does not have to do anything. Useful for debugging.
  - Rearrangement reach : `RearrangeReachTask-v0` The agent must place its end effector into a specific location defined by geometric coordinates.
  - Rearrangement composite tasks : `RearrangeCompositeTask-v0` The agent must perform a sequence of sub-tasks in succession defined by a PDDL plan.
@@ -101,7 +101,7 @@ defaults:
 | --- | --- |
 | habitat.task.measurements.num_steps| In both Navigation and Rearrangement tasks, counts the number of steps since  the start of the episode.|
 | habitat.task.measurements.distance_to_goal | In Navigation tasks only, measures the geodesic distance to the goal.|
-|habitat.task.measurements.distance_to_goal.distance_to | If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint. |
+|habitat.task.measurements.distance_to_goal.distance_to | If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal viewpoints (useful in image nav). |
 |habitat.task.measurements.success |     For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.  A success is defined as calling the `habitat.task.actions.stop` when the `habitat.task.measurements.distance_to_goal` Measure is smaller than `success_distance`.|
 |habitat.task.measurements.success.success_distance| The minimal distance the robot must be to the goal for a success.|
 |habitat.task.measurements.spl|    For Navigation tasks only, Measures the SPL (Success weighted by Path Length) ref: [On Evaluation of Embodied Agents - Anderson et. al](https://arxiv.org/pdf/1807.06757.pdf).  Measure is always 0 except at success where it will be  the ratio of the optimal distance from start to goal over the total distance  traveled by the agent. Maximum value is 1. `SPL = success * optimal_distance_to_goal / distance_traveled_so_far`
@@ -133,7 +133,7 @@ defaults:
 
 | Key | Description |
 | --- | --- |
-|habitat.task.actions.arm_action |In Rearrangement tasks only, the action that will move the robot arm around. |
+|habitat.task.actions.arm_action |In Rearrangement tasks only, the action that will move the robot arm around. The action represents to delta angle (in radians) of each joint. |
 |habitat.task.actions.arm_action.grasp_thresh_dist| The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.|
 |habitat.task.actions.arm_action.grip_controller| Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector. |
 |habitat.task.actions.base_velocity |     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
@@ -157,7 +157,7 @@ defaults:
 ## Rearrangement Measures
 | Key | Description |
 | --- | --- |
-|habitat.task.measurements.end_effector_to_rest_distance | Rearrangement only. Distance between current end effector position  and the resting position of the end effector. Requires that the   RelativeRestingPositionSensor is attached to the agent. |
+|habitat.task.measurements.end_effector_to_rest_distance | Rearrangement only. Distance between current end effector position  and the resting position of the end effector. Requires that the RelativeRestingPositionSensor is attached to the agent (see Rearrangement Sensors above to see how to attach sensors). |
 |habitat.task.measurements.robot_force |      The amount of force in newton's applied by the robot. It computes both the instantaneous and accumulated force during the episode. |
 |habitat.task.measurements.does_want_terminate | Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.    |
 |habitat.task.measurements.force_terminate |    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.   Note that if the measure is 1.0, the task will end as a result. |
