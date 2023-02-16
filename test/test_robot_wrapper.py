@@ -55,6 +55,7 @@ default_sim_settings = {
     "frustum_culling": True,
 }
 
+
 # build SimulatorConfiguration
 def make_cfg(settings):
     sim_cfg = habitat_sim.SimulatorConfiguration()

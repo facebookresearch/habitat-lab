@@ -268,7 +268,6 @@ class EQACNNPretrainTrainer(BaseILTrainer):
                     % config.habitat_baselines.il.eval_save_results_interval
                     == 0
                 ):
-
                     result_id = "ckpt_{}_{}".format(
                         checkpoint_index, idx[0].item()
                     )

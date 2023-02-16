@@ -93,16 +93,13 @@ def get_input_vel_ctlr(
 
     arm_action_name = "arm_action"
     base_action_name = "base_velocity"
-    arm_key = "arm_action"
-    grip_key = "grip_action"
-    base_key = "base_vel"
+    agent_k = f"agent_{agent_to_control}"
     if multi_agent:
-        agent_k = f"agent_{agent_to_control}"
         arm_action_name = f"{agent_k}_{arm_action_name}"
         base_action_name = f"{agent_k}_{base_action_name}"
-        arm_key = f"{agent_k}_{arm_key}"
-        grip_key = f"{agent_k}_{grip_key}"
-        base_key = f"{agent_k}_{base_key}"
+    arm_key = f"{agent_k}_arm_action"
+    grip_key = f"{agent_k}_grip_action"
+    base_key = f"{agent_k}_base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[

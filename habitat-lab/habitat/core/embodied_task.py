@@ -261,7 +261,6 @@ class EmbodiedTask:
         self._is_episode_active = False
 
     def _init_entities(self, entities_configs, register_func) -> OrderedDict:
-
         entities = OrderedDict()
         for entity_name, entity_cfg in entities_configs.items():
             entity_cfg = OmegaConf.create(entity_cfg)
@@ -371,7 +370,7 @@ class EmbodiedTask:
         :param sim_config: config for simulator.
         :param episode: current episode.
         """
-        raise NotImplementedError
+        return sim_config
 
     def _check_episode_is_active(
         self,

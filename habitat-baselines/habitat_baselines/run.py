@@ -3,55 +3,32 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-import argparse
 import random
-from typing import TYPE_CHECKING, Optional
+import sys
+from typing import TYPE_CHECKING
 
+import hydra
 import numpy as np
 import torch
 
-from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.config.default import get_config
+from habitat.config.default import patch_config
+from habitat.config.default_structured_configs import register_hydra_plugin
+from habitat_baselines.config.default_structured_configs import (
+    HabitatBaselinesConfigPlugin,
+)
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-def build_parser(
-    parser: Optional[argparse.ArgumentParser] = None,
-) -> argparse.ArgumentParser:
-    if parser is None:
-        parser = argparse.ArgumentParser(
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter
-        )
-
-    parser.add_argument(
-        "--run-type",
-        choices=["train", "eval"],
-        required=True,
-        help="run type of the experiment (train or eval)",
-    )
-    parser.add_argument(
-        "--exp-config",
-        type=str,
-        required=True,
-        help="path to config yaml containing info about experiment",
-    )
-    parser.add_argument(
-        "opts",
-        default=None,
-        nargs=argparse.REMAINDER,
-        help="Modify config options from command line",
-    )
-
-    return parser
-
-
-def main():
-    parser = build_parser()
-
-    args = parser.parse_args()
-    run_exp(**vars(args))
+@hydra.main(
+    version_base=None,
+    config_path="config",
+    config_name="pointnav/ppo_pointnav_example",
+)
+def main(cfg: "DictConfig"):
+    cfg = patch_config(cfg)
+    execute_exp(cfg, "eval" if cfg.habitat_baselines.evaluate else "train")
 
 
 def execute_exp(config: "DictConfig", run_type: str) -> None:
@@ -69,6 +46,8 @@ def execute_exp(config: "DictConfig", run_type: str) -> None:
     ):
         torch.set_num_threads(1)
 
+    from habitat_baselines.common.baseline_registry import baseline_registry
+
     trainer_init = baseline_registry.get_trainer(
         config.habitat_baselines.trainer_name
     )
@@ -83,20 +62,16 @@ def execute_exp(config: "DictConfig", run_type: str) -> None:
         trainer.eval()
 
 
-def run_exp(exp_config: str, run_type: str, opts=None) -> None:
-    r"""Runs experiment given mode and config
-
-    Args:
-        exp_config: path to config file.
-        run_type: "train" or "eval".
-        opts: list of strings of additional config options.
-
-    Returns:
-        None.
-    """
-    config = get_config(exp_config, opts)
-    execute_exp(config, run_type)
-
-
 if __name__ == "__main__":
+    register_hydra_plugin(HabitatBaselinesConfigPlugin)
+    if "--exp-config" in sys.argv or "--run-type" in sys.argv:
+        raise ValueError(
+            "The API of run.py has changed to be compatible with hydra.\n"
+            "--exp-config is now --config-name and is a config path inside habitat-baselines/habitat_baselines/config/. \n"
+            "--run-type train is replaced with habitat_baselines.evaluate=False (default) and --run-type eval is replaced with habitat_baselines.evaluate=True.\n"
+            "instead of calling:\n\n"
+            "python habitat-baselines/habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/<path-to-config> --run-type train/eval\n\n"
+            "You now need to do:\n\n"
+            "python habitat-baselines/habitat_baselines/run.py --config-name=<path-to-config> habitat_baselines.evaluate=False/True\n"
+        )
     main()

@@ -2,6 +2,8 @@ Habitat-Lab Configuration System
 ================================
 ![Habitat with Hydra](/res/img/habitat_with_hydra.png)
 
+For a description of some of the most important configuration keys of the habitat benchmarks, refer to [this file](CONFIG_KEYS.md).
+
 Habitat-Lab's configuration system has been changed from [YACS](https://github.com/rbgirshick/yacs)
 to [Hydra](https://hydra.cc).
 
@@ -241,7 +243,6 @@ habitat:
     constraint_violation_drops_object: false
     force_regenerate: false
     should_save_to_cache: true
-    must_look_at_targ: true
     object_in_hand_sample_prob: 0.167
     render_target: true
     ee_sample_factor: 0.2
@@ -329,7 +330,7 @@ class SimulatorConfig(HabitatBaseConfig):
 ```
 - [Parameter sweeping and multirun](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/). For example, launching 3 experiments with three different learning rates:
 ```bash
-python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
+python -u habitat-baselines/habitat_baselines/run.py --config-name=config.yaml  \
 –-multirun habitat_baselines.rl.ppo.lr 2.5e-4,2.5e-5,2.5e-6
 ```
 - Seamless [SLURM](https://slurm.schedmd.com/documentation.html) integration through
@@ -337,8 +338,8 @@ python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
   To enable the feature Submitit plugin should be installed: `pip install hydra-submitit-launcher --upgrade`
   and `submitit_slurm` launcher specified in the command line `hydra/launcher=submitit_slurm`:
 ```bash
-python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
-hydra/launcher=submitit_slurm
+python -u habitat-baselines/habitat_baselines/run.py --config-name=config.yaml  \
+hydra/launcher=submitit_slurm --multirun
 ```
 - Making the config key required by setting its value to `MISSING`. For example, we require the user to explicitly
   set the `task` and the `dataset` in every Habitat-Lab benchmark config (see `HabitatConfig` Structured Config
@@ -365,10 +366,19 @@ config = habitat.get_config("benchmark/nav/pointnav/pointnav_gibson.yaml")
 ```
 ### override the config
 #### via command line
+Override config values:
 ```bash
-python -u habitat_baselines/run.py --exp-config config.yaml --run-type train \
-habitat_baselines.total_num_steps=100 # overriding total_num_steps
+python -u habitat_baselines/run.py --config-name=pointnav/ddppo_pointnav.yaml \
+habitat.environment.max_episode_steps=250 \
+habitat_baselines.total_num_steps=100
 ```
+
+Override the Config Group Option value:
+```bash
+python -u habitat_baselines/run.py --config-name=pointnav/ddppo_pointnav.yaml \
+benchmark/nav/pointnav=pointnav_hm3d  # overriding benchmark config to be pointnav_hm3d
+```
+
 #### via yaml
 Yaml file definitions or overrides are defined after the Defaults List:
 ```yaml

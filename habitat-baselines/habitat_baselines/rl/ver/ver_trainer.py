@@ -52,12 +52,7 @@ from habitat_baselines.rl.ver.worker_common import (
     WorkerBase,
     WorkerQueues,
 )
-from habitat_baselines.utils.common import (
-    cosine_decay,
-    get_num_actions,
-    inference_mode,
-    is_continuous_action_space,
-)
+from habitat_baselines.utils.common import cosine_decay, inference_mode
 
 try:
     torch.backends.cudnn.allow_tf32 = True
@@ -186,7 +181,8 @@ class VERTrainer(PPOTrainer):
         action_space = init_reports[0]["act_space"]
 
         self.policy_action_space = action_space
-        self.orig_policy_action_space = None
+        self.env_action_space = action_space
+        self.orig_env_action_space = None
 
         [
             ew.set_action_plugin(
@@ -196,14 +192,6 @@ class VERTrainer(PPOTrainer):
             )
             for ew in self.environment_workers
         ]
-        if is_continuous_action_space(action_space):
-            # Assume ALL actions are NOT discrete
-            action_shape = (get_num_actions(action_space),)
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
 
         ppo_cfg = self.config.habitat_baselines.rl.ppo
         if torch.cuda.is_available():
@@ -253,8 +241,6 @@ class VERTrainer(PPOTrainer):
                 action_space=self.policy_action_space,
                 recurrent_hidden_state_size=ppo_cfg.hidden_size,
                 num_recurrent_layers=self.actor_critic.net.num_recurrent_layers,
-                action_shape=action_shape,
-                discrete_actions=discrete_actions,
                 observation_space=rollouts_obs_space,
             )
             self.rollouts = VERRolloutStorage(**storage_kwargs)
@@ -290,7 +276,7 @@ class VERTrainer(PPOTrainer):
         self.actor_critic.share_memory()
 
         if self._is_distributed:
-            self.agent.init_distributed(find_unused_params=False)
+            self.agent.init_distributed(find_unused_params=False)  # type: ignore[operator]
 
         logger.info(
             "agent number of parameters: {}".format(
@@ -363,7 +349,6 @@ class VERTrainer(PPOTrainer):
                 ews_to_wait = []
 
         [a.wait_sync() for a in ews_to_wait]
-        ews_to_wait = []
 
         if self._is_distributed:
             torch.distributed.barrier()
@@ -383,7 +368,6 @@ class VERTrainer(PPOTrainer):
         ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         with self.timer.avg_time("learn"):
-
             t_compute_returns = time.perf_counter()
 
             with self.timer.avg_time("compute returns"), inference_mode():
@@ -441,7 +425,14 @@ class VERTrainer(PPOTrainer):
         self.num_steps_done = 0
         resume_state = load_resume_state(self.config)
         if resume_state is not None:
-            self.config = resume_state["config"]
+            if not self.config.habitat_baselines.load_resume_state_config:
+                raise FileExistsError(
+                    f"The configuration provided has habitat_baselines.load_resume_state_config=False but a previous training run exists. You can either delete the checkpoint folder {self.config.habitat_baselines.checkpoint_folder}, or change the configuration key habitat_baselines.checkpoint_folder in your new run."
+                )
+
+            self.config = self._get_resume_state_config_or_new_config(
+                resume_state["config"]
+            )
 
             requeue_stats = resume_state["requeue_stats"]
             self.num_steps_done = requeue_stats["num_steps_done"]

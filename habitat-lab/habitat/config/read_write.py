@@ -12,9 +12,14 @@ if TYPE_CHECKING:
     from omegaconf import Container
 
 
-# TODO : Delete this when migration to hydra is complete
 @contextmanager
 def read_write(config: "Container") -> Generator[Node, None, None]:
+    r"""
+    Temporarily authorizes the modification of a OmegaConf configuration
+    within a context. Use the 'with' statement to enter the context.
+
+    :param config: The configuration object that should get writing access
+    """
     prev_state_readonly = config._get_node_flag("readonly")
     prev_state_struct = config._get_node_flag("struct")
     try:

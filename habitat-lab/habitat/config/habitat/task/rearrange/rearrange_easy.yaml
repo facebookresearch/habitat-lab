@@ -19,6 +19,7 @@ defaults:
     - did_violate_hold_constraint
     - move_objects_reward
     - gfx_replay_measure
+    - composite_stage_goals
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -28,6 +29,7 @@ defaults:
     - end_effector_sensor
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
+    - localization_sensor
   - _self_
 
 type: RearrangeCompositeTask-v0

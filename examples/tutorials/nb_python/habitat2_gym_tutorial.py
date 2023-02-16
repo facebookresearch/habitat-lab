@@ -62,7 +62,7 @@ os.environ["HABITAT_SIM_LOG"] = "quiet"
 import gym
 
 # flake8: noqa
-import habitat.utils.gym_definitions
+import habitat.gym
 
 # %% [markdown]
 # # Simple Example

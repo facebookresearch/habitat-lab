@@ -5,13 +5,15 @@
 # LICENSE file in the root directory of this source tree.
 
 import warnings
-from typing import List, Optional, Union
+from typing import TYPE_CHECKING, List, Optional, Union
 
 import numpy as np
 
 import habitat_sim
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+
+if TYPE_CHECKING:
+    from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 
 
 def action_to_one_hot(action: int) -> np.ndarray:
@@ -37,12 +39,11 @@ class ShortestPathFollower:
 
     def __init__(
         self,
-        sim: HabitatSim,
+        sim: "HabitatSim",
         goal_radius: float,
         return_one_hot: bool = True,
         stop_on_error: bool = True,
     ):
-
         self._return_one_hot = return_one_hot
         self._sim = sim
         self._goal_radius = goal_radius

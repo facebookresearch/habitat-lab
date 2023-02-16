@@ -75,7 +75,7 @@ import numpy as np
 from hydra.core.config_store import ConfigStore
 
 import habitat
-import habitat.utils.gym_definitions
+import habitat.gym
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
@@ -186,6 +186,7 @@ if vut.is_notebook():
 #
 # For other examples of task, sensor, and measurement definitions, [see here
 # for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
+
 
 # %%
 @registry.register_task(name="RearrangeDemoNavPickTask-v0")

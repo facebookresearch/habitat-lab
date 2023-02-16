@@ -24,5 +24,4 @@ export MAIN_ADDR
 
 set -x
 srun python -u -m habitat_baselines.run \
-    --exp-config habitat-baselines/habitat_baselines/config/pointnav/ddppo_pointnav.yaml \
-    --run-type train
+    --config-name=pointnav/ddppo_pointnav.yaml

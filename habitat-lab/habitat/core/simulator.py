@@ -277,7 +277,9 @@ class Simulator:
     def seed(self, seed: int) -> None:
         raise NotImplementedError
 
-    def reconfigure(self, config: "DictConfig") -> None:
+    def reconfigure(
+        self, config: "DictConfig", episode: Optional[Episode] = None
+    ) -> None:
         raise NotImplementedError
 
     def geodesic_distance(

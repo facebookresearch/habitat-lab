@@ -165,5 +165,5 @@ the config object.
 
     env.close()
 
-.. image:: habitat-lab-demo.png
+.. image:: ../images/habitat-lab-demo-images/habitat-lab-demo.png
     :alt: Actions and sensors

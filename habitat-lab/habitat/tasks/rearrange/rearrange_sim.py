@@ -24,7 +24,8 @@ import numpy.typing as npt
 import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
-from habitat.core.simulator import Observations
+from habitat.core.simulator import AgentState, Observations
+from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 # flake8: noqa
 from habitat.robots import FetchRobot, FetchRobotNoWheels
@@ -43,6 +44,7 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
+from habitat_sim.utils.common import quat_from_magnum
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -75,9 +77,9 @@ class RearrangeSim(HabitatSim):
         super().__init__(config)
 
         self.first_setup = True
-        self.ep_info: Optional["DictConfig"] = None
+        self.ep_info: Optional[RearrangeEpisode] = None
         self.prev_loaded_navmesh = None
-        self.prev_scene_id = None
+        self.prev_scene_id: Optional[str] = None
 
         # Number of physics updates per action
         self.ac_freq_ratio = self.habitat_config.ac_freq_ratio
@@ -107,6 +109,17 @@ class RearrangeSim(HabitatSim):
         self.ctrl_arm = True
 
         self.robots_mgr = RobotManager(self.habitat_config, self)
+
+        self._debug_render_robot = self.habitat_config.debug_render_robot
+        self._debug_render_goal = self.habitat_config.debug_render_goal
+        self._debug_render = self.habitat_config.debug_render
+        self._concur_render = self.habitat_config.concur_render
+        self._enable_gfx_replay_save = (
+            self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
+        )
+        self._needs_markers = self.habitat_config.needs_markers
+        self._update_robot = self.habitat_config.update_robot
+        self._step_physics = self.habitat_config.step_physics
 
     @property
     def robot(self):
@@ -138,7 +151,7 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self.habitat_config.concur_render:
+        if self._concur_render:
             self.renderer.acquire_gl_context()
 
     def sleep_all_objects(self):
@@ -148,14 +161,15 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         for _, ro in rom.get_objects_by_handle_substring().items():
             ro.awake = False
+
         aom = self.get_articulated_object_manager()
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
 
-    def add_markers(self, ep_info: "DictConfig"):
+    def add_markers(self, ep_info: RearrangeEpisode):
         self._markers = {}
         aom = self.get_articulated_object_manager()
-        for marker in ep_info["markers"]:
+        for marker in ep_info.markers:
             p = marker["params"]
             ao = aom.get_object_by_handle(p["object"])
             name_to_link = {}
@@ -189,13 +203,11 @@ class RearrangeSim(HabitatSim):
             self.reset_agent(i)
         return None
 
-    def reconfigure(self, config: "DictConfig"):
-        self.step_idx = 0
-        ep_info = config["ep_info"][0]
-        self.instance_handle_to_ref_handle = ep_info["info"]["object_labels"]
+    def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
+        self.instance_handle_to_ref_handle = ep_info.info["object_labels"]
 
         with read_write(config):
-            config["scene"] = ep_info["scene_id"]
+            config["scene"] = ep_info.scene_id
 
         super().reconfigure(config, should_close_on_new_scene=False)
 
@@ -204,7 +216,7 @@ class RearrangeSim(HabitatSim):
         self.ep_info = ep_info
         self._try_acquire_context()
 
-        new_scene = self.prev_scene_id != ep_info["scene_id"]
+        new_scene = self.prev_scene_id != ep_info.scene_id
 
         if new_scene:
             self._prev_obj_names = None
@@ -212,13 +224,13 @@ class RearrangeSim(HabitatSim):
         self.robots_mgr.reconfigure(new_scene)
 
         # Only remove and re-add objects if we have a new set of objects.
-        obj_names = [x[0] for x in ep_info["rigid_objs"]]
+        obj_names = [x[0] for x in ep_info.rigid_objs]
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
 
-        self.prev_scene_id = ep_info["scene_id"]
+        self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
         self._viz_handle_to_template = {}
 
@@ -234,7 +246,7 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info, should_add_objects)
-        self._setup_targets()
+        self._setup_targets(ep_info)
 
         self.add_markers(ep_info)
 
@@ -242,8 +254,14 @@ class RearrangeSim(HabitatSim):
         if self.habitat_config.auto_sleep:
             self.sleep_all_objects()
 
+        rom = self.get_rigid_object_manager()
+        self._obj_orig_motion_types = {
+            handle: ro.motion_type
+            for handle, ro in rom.get_objects_by_handle_substring().items()
+        }
+
         if new_scene:
-            self._load_navmesh()
+            self._load_navmesh(ep_info)
 
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
@@ -309,20 +327,20 @@ class RearrangeSim(HabitatSim):
                 break
         if attempt_i == max_attempts - 1:
             rearrange_logger.warning(
-                f"Could not find a collision free start for {self.ep_info['episode_id']}"
+                f"Could not find a collision free start for {self.ep_info.episode_id}"
             )
         return start_pos, start_rot
 
-    def _setup_targets(self):
+    def _setup_targets(self, ep_info):
         self._targets = {}
-        for target_handle, transform in self.ep_info["targets"].items():
+        for target_handle, transform in ep_info.targets.items():
             self._targets[target_handle] = mn.Matrix4(
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-    def _load_navmesh(self):
-        scene_name = self.ep_info["scene_id"].split("/")[-1].split(".")[0]
-        base_dir = osp.join(*self.ep_info["scene_id"].split("/")[:2])
+    def _load_navmesh(self, ep_info):
+        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
+        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
         self.pathfinder.load_nav_mesh(navmesh_path)
@@ -361,13 +379,12 @@ class RearrangeSim(HabitatSim):
         # managed by the underlying sim.
         self.art_objs = []
 
-    def _set_ao_states_from_ep(self, ep_info: "DictConfig") -> None:
+    def _set_ao_states_from_ep(self, ep_info: RearrangeEpisode) -> None:
         """
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
         """
         aom = self.get_articulated_object_manager()
-        # NOTE: ep_info["ao_states"]: Dict[str, Dict[int, float]] : {instance_handle -> {link_ix, state}}
-        for aoi_handle, joint_states in ep_info["ao_states"].items():
+        for aoi_handle, joint_states in ep_info.ao_states.items():
             ao = aom.get_object_by_handle(aoi_handle)
             ao_pose = ao.joint_positions
             for link_ix, joint_state in joint_states.items():
@@ -413,14 +430,13 @@ class RearrangeSim(HabitatSim):
         return new_pos
 
     def _add_objs(
-        self, ep_info: "DictConfig", should_add_objects: bool
+        self, ep_info: RearrangeEpisode, should_add_objects: bool
     ) -> None:
         # Load clutter objects:
-        # NOTE: ep_info["rigid_objs"]: List[Tuple[str, np.array]]  # list of objects, each with (handle, transform)
         rom = self.get_rigid_object_manager()
         obj_counts: Dict[str, int] = defaultdict(int)
 
-        for i, (obj_handle, transform) in enumerate(ep_info["rigid_objs"]):
+        for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
                 obj_attr_mgr = self.get_object_template_manager()
                 matching_templates = (
@@ -473,7 +489,7 @@ class RearrangeSim(HabitatSim):
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
 
-    def _create_obj_viz(self, ep_info: "DictConfig"):
+    def _create_obj_viz(self):
         """
         Adds a visualization of the goal for each of the target objects in the
         scene. This is the same as the target object, but is a render only
@@ -490,7 +506,7 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
         for target_handle, transform in self._targets.items():
             # Visualize the goal of the object
-            if self.habitat_config.debug_render_goal:
+            if self._debug_render_goal:
                 new_target_handle = (
                     target_handle.split("_:")[0] + ".object_config.json"
                 )
@@ -618,11 +634,24 @@ class RearrangeSim(HabitatSim):
                 for grasp_mgr in self.robots_mgr.grasp_iter:
                     grasp_mgr.desnap(True)
 
+    def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
+        robot = self.get_robot_data(agent_id).robot
+        rotation = mn.Quaternion.rotation(
+            mn.Rad(robot.base_rot) - mn.Rad(0 * np.pi / 2), mn.Vector3(0, 1, 0)
+        )
+        rot_offset = mn.Quaternion.rotation(
+            mn.Rad(-np.pi / 2), mn.Vector3(0, 1, 0)
+        )
+        return AgentState(
+            robot.base_pos,
+            quat_from_magnum(robot.sim_obj.rotation * rot_offset),
+        )
+
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
-        if self.habitat_config.debug_render:
-            if self.habitat_config.debug_render_robot:
+        if self._debug_render:
+            if self._debug_render_robot:
                 self.robots_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
@@ -652,7 +681,7 @@ class RearrangeSim(HabitatSim):
 
         self.maybe_update_robot()
 
-        if self.habitat_config.concur_render:
+        if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -666,15 +695,14 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
-        if self.habitat_config.habitat_sim_v0.enable_gfx_replay_save:
+        if self._enable_gfx_replay_save:
             self.gfx_replay_manager.save_keyframe()
-        self.step_idx += 1
 
-        if self.habitat_config.needs_markers:
+        if self._needs_markers:
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs and self.habitat_config.debug_render:
+        if "robot_third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -684,7 +712,7 @@ class RearrangeSim(HabitatSim):
                 )
 
             # Also render debug information
-            self._create_obj_viz(self.ep_info)
+            self._create_obj_viz()
 
             debug_obs = self.get_sensor_observations()
             obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
@@ -698,7 +726,7 @@ class RearrangeSim(HabitatSim):
         things, this will set the robot's sensors' positions to their new
         positions.
         """
-        if self.habitat_config.update_robot:
+        if self._update_robot:
             self.robots_mgr.update_robots()
 
     def visualize_position(
@@ -741,9 +769,8 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the robot.
         """
-
         # optionally step physics and update the robot for benchmarking purposes
-        if self.habitat_config.step_physics:
+        if self._step_physics:
             self.step_world(dt)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
@@ -763,7 +790,7 @@ class RearrangeSim(HabitatSim):
 
     def get_n_targets(self) -> int:
         """Get the number of rearrange targets."""
-        return len(self.ep_info["targets"])
+        return len(self.ep_info.targets)
 
     def get_target_objs_start(self) -> np.ndarray:
         """Get the initial positions of all objects targeted for rearrangement as a numpy array."""

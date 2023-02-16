@@ -238,12 +238,17 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         render_frame = np.concatenate(render_obs_images, axis=1)
 
     # draw collision
-    if "collisions" in info and info["collisions"]["is_collision"]:
+    if info.get("collisions.is_collision", False):
         render_frame = draw_collision(render_frame)
 
-    if "top_down_map" in info:
+    if "top_down_map.map" in info:
+        map_info = {
+            k[len("top_down_map.") :]: v
+            for k, v in info.items()
+            if k.startswith("top_down_map.")
+        }
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            info["top_down_map"], render_frame.shape[0]
+            map_info, render_frame.shape[0]
         )
         render_frame = np.concatenate((render_frame, top_down_map), axis=1)
     return render_frame

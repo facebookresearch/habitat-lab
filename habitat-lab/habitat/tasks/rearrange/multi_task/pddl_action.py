@@ -162,7 +162,7 @@ class PddlAction:
             p.set_state(sim_info)
 
     @property
-    def param_values(self):
+    def param_values(self) -> Optional[List[PddlEntity]]:
         if self._param_values is None:
             raise ValueError(
                 "Accessing action param values before they are set."
@@ -193,7 +193,6 @@ class PddlAction:
         should_reset: bool = True,
         add_task_kwargs: Optional[Dict[str, Any]] = None,
     ) -> RearrangeTask:
-
         rearrange_logger.debug(
             f"Loading task {self._task_info.task} with definition {self._task_info.task_def}"
         )

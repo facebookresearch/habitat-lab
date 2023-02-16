@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from torch import distributed as distrib
 
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.rl.ppo import PPO
 
 
@@ -98,6 +99,7 @@ class DecentralizedDistributedMixin:
                                    forward pass, otherwise the gradient reduction
                                    will not work correctly.
         """
+
         # NB: Used to hide the hooks from the nn.Module,
         # so they don't show up in the state_dict
         class Guard:  # noqa: SIM119
@@ -130,5 +132,6 @@ class DecentralizedDistributedMixin:
         )
 
 
+@baseline_registry.register_updater
 class DDPPO(DecentralizedDistributedMixin, PPO):
     pass

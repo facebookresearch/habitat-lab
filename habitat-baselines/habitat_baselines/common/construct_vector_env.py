@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any, List, Type
 
 from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.config import read_write
-from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.gym import make_gym_from_config
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -75,7 +75,6 @@ def construct_envs(
     for i in range(num_environments):
         proc_config = config.copy()
         with read_write(proc_config):
-
             task_config = proc_config.habitat
             task_config.seed = task_config.seed + i
             if len(scenes) > 0:

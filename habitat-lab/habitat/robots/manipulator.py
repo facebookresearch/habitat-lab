@@ -181,7 +181,8 @@ class Manipulator(RobotInterface):
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
-        NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes."""
+        NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes.
+        """
         self.sim_obj.clear_joint_states()
         self.arm_joint_pos = self.params.arm_init_params
         self._fix_joint_values = None
