@@ -338,7 +338,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     trainer_name: str = "ppo"
     torch_gpu_id: int = 0
-    video_render_views: List[str] = dict()
+    video_render_views: List[str] = []
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
     video_dir: str = "video_dir"
@@ -397,11 +397,6 @@ cs.store(
     group="habitat_baselines",
     name="habitat_baselines_rl_config_base",
     node=HabitatBaselinesRLConfig(),
-)
-cs.store(
-    group="habitat_baselines",
-    name="habitat_baselines_orbslam2_config_base",
-    node=HabitatBaselinesORBSLAMConfig,
 )
 cs.store(
     group="habitat_baselines",
