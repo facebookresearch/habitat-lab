@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 from home_robot.control.goto_controller import GotoVelocityController
 from omegaconf import OmegaConf
@@ -33,11 +35,21 @@ class ContinuousController:
         self.controller = GotoVelocityController(cfg)
         self.controller.set_yaw_tracking(track_yaw)
 
-    def set_goal(self, goal: np.ndarray, vel_goal=None):
+    def set_goal(
+        self,
+        goal: np.ndarray,
+        start: Optional[np.ndarray] = None,
+        relative: bool = False,
+    ):
         """Update controller goal
         goal: Desired robot base SE2 pose in global frame
         """
-        self.controller.update_goal(goal)
+        if relative:
+            assert (
+                start is not None
+            ), "Start pose required if goal is relative."
+            self.controller.update_pose_feedback(start)
+        self.controller.update_goal(goal, relative=relative)
 
     def forward(self, xyt, *args, **kwargs):
         """Query controller to compute velocity command
