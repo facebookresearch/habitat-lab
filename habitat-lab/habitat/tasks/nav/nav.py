@@ -1284,7 +1284,6 @@ class VelocityAction(SimulatorTaskAction):
 
         # snap rigid state to navmesh and set state to object/agent
         step_fn = self._sim.pathfinder.try_step_no_sliding  # type: ignore
-
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
         )
@@ -1308,7 +1307,7 @@ class VelocityAction(SimulatorTaskAction):
 
         final_agent_state = self._sim.get_agent_state()
         final_agent_state.position = final_position
-        final_agent_state.position = goal_rigid_state.rotation
+        final_agent_state.rotation = goal_rigid_state.rotation
 
         return final_agent_state
 
