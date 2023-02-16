@@ -146,8 +146,8 @@ jobs:
                 conda create -y -n habitat python=3.7
                 . activate habitat
                 pip install -U pip
-                conda install -q -y -c conda-forge ninja ccache numpy pytest pytest-mock pytest-cov psutil
-                pip install pytest-sugar>=0.9.6 mock cython pygame flaky
+                conda install -q -y -c conda-forge ninja ccache numpy
+                pip install pytest-sugar>=0.9.6 mock cython pygame flaky pytest pytest-mock pytest-cov psutil
               fi
       - run:
           name: Install pytorch
@@ -272,6 +272,7 @@ jobs:
           name: Run api tests
           no_output_timeout: 120m
           command: |
+
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
               pip install -e habitat-lab

@@ -1519,6 +1519,12 @@ cs.store(
     node=BaseVelocityActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.velocity_control",
+    group="habitat/task/actions",
+    name="velocity_control",
+    node=VelocityControlActionConfig,
+)
+cs.store(
     package="habitat.task.actions.empty",
     group="habitat/task/actions",
     name="empty",
