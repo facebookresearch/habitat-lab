@@ -1192,7 +1192,6 @@ class VelocityAction(SimulatorTaskAction):
         linear_velocity: float = None,
         angular_velocity: float = None,
         time_step: Optional[float] = None,
-        allow_sliding: Optional[bool] = None,
         **kwargs: Any,
     ):
         r"""Moves the agent with a provided linear and angular velocity for the
@@ -1204,7 +1203,6 @@ class VelocityAction(SimulatorTaskAction):
             angular_velocity: between [-1,1], scaled according to
                              config.ang_vel_range
             time_step: amount of time to move the agent for
-            allow_sliding: whether the agent will slide on collision
         """
         # Preprocess velocity input
         lin_vel_processed, ang_vel_processed = self._preprocess_action(
@@ -1216,7 +1214,6 @@ class VelocityAction(SimulatorTaskAction):
             lin_vel_processed,
             ang_vel_processed,
             time_step=time_step,
-            allow_sliding=allow_sliding,
         )
 
         return self._get_agent_observation(agent_state_result)
@@ -1253,7 +1250,6 @@ class VelocityAction(SimulatorTaskAction):
         linear_velocity: float,
         angular_velocity: float,
         time_step: Optional[float] = None,
-        allow_sliding: Optional[bool] = None,
     ):
         """
         Apply velocity command to simulation, step simulation, and return agent observation
@@ -1261,8 +1257,6 @@ class VelocityAction(SimulatorTaskAction):
         # Parse inputs
         if time_step is None:
             time_step = self._config.time_step
-        if allow_sliding is None:
-            allow_sliding = self._config.allow_sliding
 
         # Map velocity actions
         self.vel_control.linear_velocity = np.array(
@@ -1289,10 +1283,7 @@ class VelocityAction(SimulatorTaskAction):
         )
 
         # snap rigid state to navmesh and set state to object/agent
-        if allow_sliding:
-            step_fn = self._sim.pathfinder.try_step  # type: ignore
-        else:
-            step_fn = self._sim.pathfinder.try_step_no_sliding  # type: ignore
+        step_fn = self._sim.pathfinder.try_step_no_sliding  # type: ignore
 
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
