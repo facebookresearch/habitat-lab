@@ -43,6 +43,43 @@ __all__ = [
     "CompassSensorConfig",
     "GPSSensorConfig",
     "PointGoalWithGPSCompassSensorConfig",
+    # REARRANGEMENT ACTIONS
+    "EmptyActionConfig",
+    "ArmActionConfig",
+    "BaseVelocityActionConfig",
+    "RearrangeStopActionConfig",
+    "OracleNavActionConfig",
+    # REARRANGEMENT LAB SENSORS
+    "RelativeRestingPositionSensorConfig",
+    "IsHoldingSensorConfig",
+    "EEPositionSensorConfig",
+    "JointSensorConfig",
+    "TargetStartSensorConfig",
+    "GoalSensorConfig",
+    "TargetStartGpsCompassSensorConfig",
+    "TargetGoalGpsCompassSensorConfig",
+    # REARRANGEMENT MEASUREMENTS
+    "EndEffectorToRestDistanceMeasurementConfig",
+    "RobotForceMeasurementConfig",
+    "DoesWantTerminateMeasurementConfig",
+    "ForceTerminateMeasurementConfig",
+    "ObjectToGoalDistanceMeasurementConfig",
+    "ObjAtGoalMeasurementConfig",
+    "ArtObjAtDesiredStateMeasurementConfig",
+    "RotDistToGoalMeasurementConfig",
+    "CompositeStageGoalsMeasurementConfig",
+    "NavToPosSuccMeasurementConfig",
+    # REARRANGEMENT MEASUREMENTS TASK REWARDS AND MEASURES
+    "RearrangePickSuccessMeasurementConfig",
+    "RearrangePickRewardMeasurementConfig",
+    "PlaceSuccessMeasurementConfig",
+    "PlaceRewardMeasurementConfig",
+    "ArtObjSuccessMeasurementConfig",
+    "ArtObjRewardMeasurementConfig",
+    "NavToObjSuccessMeasurementConfig",
+    "NavToObjRewardMeasurementConfig",
+    "CompositeSuccessMeasurementConfig",
+    "CompositeRewardMeasurementConfig",
 ]
 
 
@@ -66,8 +103,9 @@ class IteratorOptionsConfig(HabitatBaseConfig):
 class EnvironmentConfig(HabitatBaseConfig):
     r"""
     Some habitat environment configurations.
-    :data max_episode_steps: The maximum number of environment steps before the episode ends.
-    :data max_episode_seconds: The maximum number of seconds steps before the episode ends.
+
+    :property max_episode_steps: The maximum number of environment steps before the episode ends.
+    :property max_episode_seconds: The maximum number of wall-clock seconds before the episode ends.
     """
     max_episode_steps: int = 1000
     max_episode_seconds: int = 10000000
@@ -98,6 +136,9 @@ class StopActionConfig(ActionConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class EmptyActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the pass action. The robot will do nothing.
+    """
     type: str = "EmptyAction"
 
 
@@ -171,6 +212,12 @@ class VelocityControlActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 @attr.s(auto_attribs=True, slots=True)
 class ArmActionConfig(ActionConfig):
+    r"""
+    In Rearrangement tasks only, the action that will move the robot arm around. The action represents to delta angle (in radians) of each joint.
+
+    :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
+    :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
     grip_controller: Optional[str] = None
@@ -186,6 +233,9 @@ class ArmActionConfig(ActionConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class BaseVelocityActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
     type: str = "BaseVelAction"
     lin_speed: float = 10.0
     ang_speed: float = 10.0
@@ -195,6 +245,9 @@ class BaseVelocityActionConfig(ActionConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RearrangeStopActionConfig(ActionConfig):
+    r"""
+    In rearrangement tasks only, if the robot calls this action, the task will end.
+    """
     type: str = "RearrangeStopAction"
 
 
@@ -206,7 +259,7 @@ class PddlApplyActionConfig(ActionConfig):
 @attr.s(auto_attribs=True, slots=True)
 class OracleNavActionConfig(ActionConfig):
     """
-    Oracle navigation action.
+    Rearrangement Only, Oracle navigation action.
     This action takes as input a discrete ID which refers to an object in the
     PDDL domain. The oracle navigation controller then computes the actions to
     navigate to that desired object.
@@ -262,8 +315,9 @@ class ObjectGoalSensorConfig(LabSensorConfig):
     r"""
     For Object Navigation tasks only. Generates a discrete observation containing
     the id of the goal object for the episode.
-    :data goal_spec: A string that can take the value TASK_CATEGORY_ID or OBJECT_ID. If the value is TASK_CATEGORY_ID, then the observation will be the id of the `episode.object_category` attribute, if the value is OBJECT_ID, then the observation will be the id of the first goal object.
-    :data goal_spec_max_val: If the `goal_spec` is OBJECT_ID, then `goal_spec_max_val` is the total number of different objects that can be goals. Note that this value must be greater than the largest episode goal category id.
+
+    :property goal_spec: A string that can take the value TASK_CATEGORY_ID or OBJECT_ID. If the value is TASK_CATEGORY_ID, then the observation will be the id of the `episode.object_category` attribute, if the value is OBJECT_ID, then the observation will be the id of the first goal object.
+    :property goal_spec_max_val: If the `goal_spec` is OBJECT_ID, then `goal_spec_max_val` is the total number of different objects that can be goals. Note that this value must be greater than the largest episode goal category id.
     """
     type: str = "ObjectGoalSensor"
     goal_spec: str = "TASK_CATEGORY_ID"
@@ -329,22 +383,37 @@ class ProximitySensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class JointSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
     type: str = "JointSensor"
     dimensionality: int = 7
 
 
 @attr.s(auto_attribs=True, slots=True)
 class EEPositionSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. the cartesian coordinates (3 floats) of the arm's end effector in the frame of reference of the robot's base.
+    """
     type: str = "EEPositionSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class IsHoldingSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. A single float sensor with value 1.0 if the robot is grasping any object and 0.0 otherwise.
+    """
     type: str = "IsHoldingSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class RelativeRestingPositionSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position.
+    The three values correspond to the cartesian coordinates of the resting position in the frame of reference of the end effector.
+    The desired resting position is determined by the habitat.task.desired_resting_position coordinates relative to the robot's base.
+    """
+
     type: str = "RelativeRestingPositionSensor"
 
 
@@ -386,6 +455,9 @@ class MarkerRelPosSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class TargetStartSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the relative position from end effector to a target object that needs to be picked up.
+    """
     type: str = "TargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
@@ -400,6 +472,10 @@ class TargetCurrentSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class GoalSensorConfig(LabSensorConfig):
+    """
+    Rearrangement only. Returns the relative position from end effector to a goal position in which the agent needs to place an object.
+    """
+
     type: str = "GoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
@@ -417,11 +493,17 @@ class GlobalPredicatesSensorConfig(LabSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class TargetStartGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
+    """
     type: str = "TargetStartGpsCompassSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the desired goal position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
+    """
     type: str = "TargetGoalGpsCompassSensor"
 
 
@@ -481,7 +563,7 @@ class SuccessMeasurementConfig(MeasurementConfig):
     A success is defined as calling the `StopAction` when the `DistanceToGoal`
     Measure is smaller than `success_distance`.
 
-    :data success_distance: The minimal distance the robot must be to the goal for a success.
+    :property success_distance: The minimal distance the robot must be to the goal for a success.
     """
     type: str = "Success"
     success_distance: float = 0.2
@@ -543,12 +625,22 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RobotForceMeasurementConfig(MeasurementConfig):
+    r"""
+    The amount of force in newton's applied by the robot. It computes both the instant and accumulated.
+    """
     type: str = "RobotForce"
     min_force: float = 20.0
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ForceTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
+    Note that if the measure is 1.0, the task will end as a result.
+
+    :property max_accum_force: The threshold for the accumulated force. -1 is no threshold.
+    :property max_instant_force: The threshold for the current, instant force. -1 is no threshold.
+    """
     type: str = "ForceTerminate"
     max_accum_force: float = -1.0
     max_instant_force: float = -1.0
@@ -561,6 +653,9 @@ class RobotCollisionsMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
+    r"""
+    In rearrangement only. The distance between the target object and the goal position for the object.
+    """
     type: str = "ObjectToGoalDistance"
 
 
@@ -571,6 +666,12 @@ class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
+    """
+    Rearrangement only. Distance between current end effector position
+    and the resting position of the end effector. Requires that the
+    RelativeRestingPositionSensor is attached to the agent.
+    """
+
     type: str = "EndEffectorToRestDistance"
 
 
@@ -581,6 +682,9 @@ class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement open/close container tasks only. Whether the articulated object (fridge or cabinet door) towards a desired state (open or closed) as defined by the task.
+    """
     type: str = "ArtObjAtDesiredState"
     use_absolute_distance: bool = True
     success_dist_threshold: float = 0.05
@@ -603,6 +707,9 @@ class ArtObjStateMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ArtObjSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement open/close container tasks only. Requires art_obj_at_desired_state. Is 1.0 if the articulated object is in desired state and the end effector is within rest_dist_threshold of the resting position. If must_call_stop is True, the robot must also call the rearrange_stop action.
+    """
     type: str = "ArtObjSuccess"
     rest_dist_threshold: float = 0.15
     must_call_stop: bool = True
@@ -610,6 +717,16 @@ class ArtObjSuccessMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ArtObjRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement open/close container tasks only. Requires art_obj_at_desired_state.
+
+    :property dist_reward: At each step, the measure adds dist_reward times the distance the end effector moved towards the articulated object.
+    :property wrong_grasp_end: If true, the task will end if the robot picks the wrong articulated object.
+    :property wrong_grasp_pen: The penalty for picking the wrong articulated object.
+    :property art_dist_reward: At each step, increments the reward by the amount the articulated moved in the correct direction.
+    :property art_at_desired_state_reward: The reward for putting the articulated object in the right state.
+    :property grasp_reward: The reward for grasping the correct articulated object.
+    """
     type: str = "ArtObjReward"
     dist_reward: float = 1.0
     wrong_grasp_end: bool = False
@@ -628,6 +745,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RotDistToGoalMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The angle between the forward direction of the agent and the direction to the goal location.
+    """
     type: str = "RotDistToGoal"
 
 
@@ -645,12 +765,22 @@ class BadCalledTerminateMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position.
+    """
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
 
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToObjRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation task only. The reward for rearrangement navigation.
+
+    :property dist_reward: At each step, the measure adds dist_reward times the distance the robot's base moved towards the goal position.
+    :property should_reward_turn: If true, the robot receives a reward for turning towards the target position.
+    :property angle_dist_reward: The reward multiplier for the robot turning towards the goal position.
+    """
     type: str = "NavToObjReward"
     # reward the agent for facing the object?
     should_reward_turn: bool = True
@@ -667,6 +797,13 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToObjSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
+
+    :property must_look_at_targ: If true, the robot must be facing the correct object in addition to being close to it.
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    :property success_angle_dist: When the robot must look at the target, this is the maximum angle in radians the robot can have when facing the object.
+    """
     type: str = "NavToObjSuccess"
     must_look_at_targ: bool = True
     must_call_stop: bool = True
@@ -722,6 +859,17 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RearrangePickRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the pick task.
+
+    :property dist_reward: At each step, the measure adds dist_reward times the distance the end effector moved towards the target.
+    :property pick_reward: If the robot picks the target object, it receives pick_reward reward.
+    :property drop_pen: The penalty for dropping the object.
+    :property wrong_pick_pen: The penalty for picking the wrong object.
+    :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
+    :property drop_obj_should_end: If true, the task will end if the robot drops the object.
+    :property wrong_pick_should_end: If true, the task will end if the robot picks the wrong object.
+    """
     type: str = "RearrangePickReward"
     dist_reward: float = 2.0
     pick_reward: float = 2.0
@@ -738,18 +886,35 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
+    """
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ObjAtGoalMeasurementConfig(MeasurementConfig):
+    r"""
+    The measure is a dictionary of target indexes to float. The values are 1 if the object is within succ_thresh of the goal position for that object.
+
+    :property succ_thresh: The threshold distance below which an object is considered at the goal location.
+    """
     type: str = "ObjAtGoal"
     succ_thresh: float = 0.15
 
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the place task.
+
+    :property dist_reward: At each step, the measure adds dist_reward times the distance the end effector moved towards the target.
+    :property place_reward: If the robot placed the target object correctly, it receives place_reward reward.
+    :property drop_pen: The penalty for dropping the object.
+    :property force_pen: At each step, adds a penalty of force_pen times the current force on the robot.
+    :property wrong_drop_should_end: If true, the task will end if the robot drops the object.
+    """
     type: str = "PlaceReward"
     dist_reward: float = 2.0
     place_reward: float = 5.0
@@ -766,6 +931,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot placed the target object on the goal position and has its end effector within ee_resting_success_threshold of its resting position.
+    """
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
 
@@ -777,11 +945,19 @@ class CompositeNodeIdxMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.
+    """
     type: str = "CompositeStageGoals"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class CompositeSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    """
     type: str = "CompositeSuccess"
     must_call_stop: bool = True
 
@@ -795,6 +971,9 @@ class CompositeRewardMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
+    r"""
+    Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
+    """
     type: str = "DoesWantTerminate"
 
 
@@ -813,7 +992,7 @@ class DistanceToGoalMeasurementConfig(MeasurementConfig):
     r"""
     In Navigation tasks only, measures the geodesic distance to the goal.
 
-    :data distance_to: If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint.
+    :property distance_to: If 'POINT' measures the distance to the closest episode goal. If 'VIEW_POINTS' measures the distance to the episode's goal's viewpoint.
     """
     type: str = "DistanceToGoal"
     distance_to: str = "POINT"
@@ -838,10 +1017,33 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
-    :data type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
-    :data reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
-    :data success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
-    :data end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
+
+    :property type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+    :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
+    :property success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
+    :property end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
+    :property task_spec: When doing the `RearrangeCompositeTask-v0` only, will look for a pddl plan of that name to determine the sequence of tasks that need to be completed. The format of the pddl plans files is undocumented.
+    :property task_spec_base_path:  When doing the `RearrangeCompositeTask-v0` only, the relative path where the task_spec file will be searched.
+    :property spawn_max_dists_to_obj: For `RearrangePickTask-v0` task only. Controls the maximum distance the robot can be spawned from the target object.
+    :property base_angle_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's rotation angle at the start of an episode.
+    :property base_noise: For Rearrangement tasks only. Controls the standard deviation of the random normal noise applied to the base's position at the start of an episode.
+
+    There are many different Tasks determined by the `habitat.task.type` config:
+
+    -   Point navigation : `Nav-0`
+    -   Image navigation : `Nav-0`
+    -   Instance image navigation:`InstanceImageNav-v1`
+    -   Object navigation : `ObjectNav-v1`
+    -   Rearrangement close drawer: `RearrangeCloseDrawerTask-v0`
+    -   Rearrangement open drawer: `RearrangeOpenDrawerTask-v0`
+    -   Rearrangement close fridge : `RearrangeCloseFridgeTask-v0`
+    -   Rearrangement open fridge : `RearrangeOpenFridgeTask-v0`
+    -   Rearrangement navigate to object : `NavToObjTask-v0`
+    -   Rearrangement pick : `RearrangePickTask-v0`
+    -   Rearrangement place : `RearrangePlaceTask-v0`
+    -   Rearrangement do nothing : `RearrangeEmptyTask-v0`
+    -   Rearrangement reach : `RearrangeReachTask-v0`
+    -   Rearrangement composite tasks : `RearrangeCompositeTask-v0`
     """
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
@@ -1187,10 +1389,10 @@ class PyrobotConfig(HabitatBaseConfig):
 class DatasetConfig(HabitatBaseConfig):
     r"""Configuration for the dataset of the task.
 
-    :data type: The key for the dataset class that will be used. Examples of such keys are `PointNav-v1`, `ObjectNav-v1`, `InstanceImageNav-v1` or `RearrangeDataset-v0`. Different datasets have different properties so you should use the dataset that fits your task.
-    :data scenes_dir: The path to the directory containing the scenes that will be used. You should put all your scenes in the same folder (example `data/scene_datasets`) to avoid having to change it.
-    :data data_path: The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.
-    :data split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between training, validation and test episodes by only changing the split argument.
+    :property type: The key for the dataset class that will be used. Examples of such keys are `PointNav-v1`, `ObjectNav-v1`, `InstanceImageNav-v1` or `RearrangeDataset-v0`. Different datasets have different properties so you should use the dataset that fits your task.
+    :property scenes_dir: The path to the directory containing the scenes that will be used. You should put all your scenes in the same folder (example `data/scene_datasets`) to avoid having to change it.
+    :property data_path: The path to the episode dataset. Episodes need to be compatible with the `type` argument (so they will load properly) and only use scenes that are present in the `scenes_dir`.
+    :property split: `data_path` can have a `split` in the path. For example: "data/datasets/pointnav/habitat-test-scenes/v1/{split}/{split}.json.gz" the value in "{split}" will be replaced by the value of the `split` argument. This allows to easily swap between training, validation and test episodes by only changing the split argument.
 
     A dataset consists of episodes
     (a start configuration for a task within a scene) and a scene dataset
@@ -1219,9 +1421,10 @@ class GymConfig(HabitatBaseConfig):
 class HabitatConfig(HabitatBaseConfig):
     r"""
     The entry point for the configuration of Habitat. It holds the environment, simulator, task and dataset configurations.
-    :data seed: The seed the environment will be initialized with.
-    :data env_task: Indicates wether the environment is a Habitat gym environment (`GymHabitatEnv`) or a generic gym environment (`GymRegistryEnv`).
-    :data env_task_gym_id: if `env_task` is `GymRegistryEnv`, env_task_gym_id is the identifier of the generic gym environment
+
+    :property seed: The seed the environment will be initialized with.
+    :property env_task: Indicates wether the environment is a Habitat gym environment (`GymHabitatEnv`) or a generic gym environment (`GymRegistryEnv`).
+    :property env_task_gym_id: if `env_task` is `GymRegistryEnv`, env_task_gym_id is the identifier of the generic gym environment
     """
     seed: int = 100
     # GymHabitatEnv works for all Habitat tasks, including Navigation and
