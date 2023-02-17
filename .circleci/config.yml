@@ -146,6 +146,7 @@ jobs:
                 conda create -y -n habitat python=3.7
                 . activate habitat
                 pip install -U pip
+
                 conda install -q -y -c conda-forge ninja ccache numpy
                 pip install pytest-sugar>=0.9.6 mock cython pygame flaky pytest pytest-mock pytest-cov psutil
               fi
