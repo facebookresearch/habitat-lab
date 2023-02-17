@@ -1208,7 +1208,6 @@ class DatasetConfig(HabitatBaseConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class GymConfig(HabitatBaseConfig):
-    auto_name: str = ""
     obs_keys: Optional[List[str]] = None
     action_keys: Optional[List[str]] = None
     achieved_goal_keys: List = []

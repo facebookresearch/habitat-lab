@@ -183,9 +183,7 @@ class NnSkillPolicy(SkillPolicy):
 
         for k in config.obs_skill_inputs:
             if k not in filtered_obs_space.spaces:
-                raise ValueError(
-                    f"Could not find {k} for skill {policy_cfg.habitat.gym.auto_name}"
-                )
+                raise ValueError(f"Could not find {k} for skill")
             space = filtered_obs_space.spaces[k]
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)

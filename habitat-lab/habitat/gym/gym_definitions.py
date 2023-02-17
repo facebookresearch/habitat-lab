@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
-from glob import glob
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import gym
@@ -24,15 +23,22 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-gym_task_config_dir = osp.join(_HABITAT_CFG_DIR, "benchmark/")
-
-
-def _get_gym_name(cfg: "DictConfig") -> Optional[str]:
-    if "habitat" in cfg:
-        cfg = cfg.habitat
-    if "gym" in cfg and "auto_name" in cfg["gym"]:
-        return cfg["gym"]["auto_name"]
-    return None
+PRE_REGISTERED_GYM_TASKS = {
+    "CloseFridge": "benchmark/rearrange/close_fridge.yaml",
+    "Pick": "benchmark/rearrange/pick.yaml",
+    "NavToObj": "benchmark/rearrange/nav_to_obj.yaml",
+    "RearrangeEasyMultiAgent": "benchmark/rearrange/rearrange_easy_multi_agent.yaml",
+    "ReachState": "benchmark/rearrange/reach_state.yaml",
+    "CloseCab": "benchmark/rearrange/close_cab.yaml",
+    "SetTable": "benchmark/rearrange/set_table.yaml",
+    "OpenCab": "benchmark/rearrange/open_cab.yaml",
+    "Place": "benchmark/rearrange/place.yaml",
+    "Rearrange": "benchmark/rearrange/rearrange.yaml",
+    "PrepareGroceries": "benchmark/rearrange/prepare_groceries.yaml",
+    "RearrangeEasy": "benchmark/rearrange/rearrange_easy.yaml",
+    "OpenFridge": "benchmark/rearrange/open_fridge.yaml",
+    "TidyHouse": "benchmark/rearrange/tidy_house.yaml",
+}
 
 
 def _get_env_name(cfg: "DictConfig") -> Optional[str]:
@@ -115,24 +121,18 @@ if "Habitat-v0" not in registry.env_specs:
     gym_template_handle = "Habitat%s-v0"
     render_gym_template_handle = "HabitatRender%s-v0"
 
-    for fname in glob(
-        osp.join(gym_task_config_dir, "**/*.yaml"), recursive=True
-    ):
-        full_path = osp.join(gym_task_config_dir, fname)
-        if not fname.endswith(".yaml"):
-            continue
-        cfg_data = get_config(full_path)
-        gym_name = _get_gym_name(cfg_data)
-        if gym_name is not None:
-            # Register this environment name with this config
-            _try_register(
-                id_name=gym_template_handle % gym_name,
-                entry_point="habitat.gym.gym_definitions:_make_habitat_gym_env",
-                kwargs={"cfg_file_path": full_path},
-            )
+    for gym_name, file_name in PRE_REGISTERED_GYM_TASKS.items():
+        # Register this environment name with this config
+        full_path = osp.join(_HABITAT_CFG_DIR, file_name)
+        _try_register(
+            id_name=gym_template_handle % gym_name,
+            entry_point="habitat.gym.gym_definitions:_make_habitat_gym_env",
+            kwargs={"cfg_file_path": full_path},
+        )
+        # print(gym_template_handle % gym_name)
 
-            _try_register(
-                id_name=render_gym_template_handle % gym_name,
-                entry_point="habitat.gym.gym_definitions:_make_habitat_gym_env",
-                kwargs={"cfg_file_path": full_path, "use_render_mode": True},
-            )
+        _try_register(
+            id_name=render_gym_template_handle % gym_name,
+            entry_point="habitat.gym.gym_definitions:_make_habitat_gym_env",
+            kwargs={"cfg_file_path": full_path, "use_render_mode": True},
+        )
