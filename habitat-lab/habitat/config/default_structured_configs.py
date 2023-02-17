@@ -229,8 +229,8 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     acc_lin: float = 0.2
     acc_ang: float = 0.6
     max_heading_ang: float = 0.7854  # 45 degrees in rad
-    lin_error_tol = 0.01
-    ang_error_tol = 0.025
+    lin_error_tol: float = 0.01
+    ang_error_tol: float = 0.025
 
 
 @attr.s(auto_attribs=True, slots=True)
