@@ -22,6 +22,14 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     HighLevelPolicy,
     NeuralHighLevelPolicy,
 )
+from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
+    HumanPickSkillPolicy,
+    HumanPlaceSkillPolicy,
+    HumanWaitSkillPolicy,
+    NoopHumanSkillPolicy,
+    OracleNavHumanPolicy,
+    ResetArmHumanSkill,
+)
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
     NavSkillPolicy,
@@ -33,14 +41,6 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     SkillPolicy,
     WaitSkillPolicy,
 )
-from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
-    HumanWaitSkillPolicy,
-    HumanPickSkillPolicy,
-    HumanPlaceSkillPolicy,
-    OracleNavHumanPolicy,
-    NoopHumanSkillPolicy
-)
-
 from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
@@ -248,6 +248,20 @@ class HierarchicalPolicy(nn.Module, Policy):
             device=masks.device,
         )
 
+        hl_wants_skill_term = self._high_level_policy.get_termination(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            self._cur_skills,
+            log_info,
+        )
+        # Initialize empty action set based on the overall action space.
+        actions = torch.zeros(
+            (self._num_envs, get_num_actions(self._action_space)),
+            device=masks.device,
+        )
+
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
             sel_dat={
@@ -286,7 +300,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
         # Always call high-level if the episode is over.
-        call_high_level = call_high_level | ~masks.view(-1)
+        call_high_level = call_high_level | (~masks_cpu).view(-1)
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
@@ -307,7 +321,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 deterministic,
                 log_info,
             )
-            
+
             sel_grouped_skills = self._broadcast_skill_ids(
                 new_skills,
                 sel_dat={},
@@ -329,8 +343,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                     raise ValueError(
                         f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
                     )
-            self._cur_skills = ((~call_high_level) * self._cur_skills.to(masks.device)) + (
-                call_high_level * new_skills.to(masks.device)
+            self._cur_skills = ((~call_high_level) * self._cur_skills) + (
+                call_high_level * new_skills
             )
 
         grouped_skills = self._broadcast_skill_ids(

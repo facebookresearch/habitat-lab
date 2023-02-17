@@ -1,38 +1,33 @@
-
 from dataclasses import dataclass
-
-from typing import TYPE_CHECKING, Iterator, Optional
-
-from typing import Iterator, Optional, List
-
+from typing import TYPE_CHECKING, Iterator, List, Optional
 
 import magnum as mn
 import numpy as np
 
 from habitat.agents import AgentInterface as Agent
-
-from habitat.agents.humanoids.amass_human  import AmassHuman
+from habitat.agents.humanoids.amass_human import AmassHuman
 from habitat.agents.robots import (
     FetchRobot,
     FetchRobotNoWheels,
     SpotRobot,
     StretchRobot,
 )
-
 from habitat.agents.robots.fetch_suction import FetchSuctionRobot
-from habitat.tasks.rearrange.rearrange_grasp_manager import RearrangeGraspManager
-
+from habitat.tasks.rearrange.rearrange_grasp_manager import (
+    RearrangeGraspManager,
+)
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
-
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
 
 @dataclass
 class AgentData:
     """
     Data needed to manage a robot instance.
     """
+
     agent: Agent
     grasp_mgrs: List[RearrangeGraspManager]
     cfg: "DictConfig"
@@ -40,14 +35,10 @@ class AgentData:
     is_pb_installed: bool
     _ik_helper: Optional[IkHelper] = None
 
-
-
     @property
     def grasp_mgr(self):
         if len(self.grasp_mgrs) == 0:
-            raise Exception(
-                "Agent data has no grasp manager defined"
-            )
+            raise Exception("Agent data has no grasp manager defined")
         return self.grasp_mgrs[0]
 
     @property
@@ -70,14 +61,16 @@ class AgentManager:
         self._all_agent_data = []
 
         self._is_pb_installed = is_pb_installed()
-        for agent_name in cfg.agents:
+        for agent_name in cfg.agents_order:
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.agent_type)
             agent = agent_cls(agent_cfg.agent_urdf, sim)
 
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):
-                graps_mgr = RearrangeGraspManager(sim, cfg, agent, grasp_manager_id)
+                graps_mgr = RearrangeGraspManager(
+                    sim, cfg, agent, grasp_manager_id
+                )
                 grasp_managers.append(graps_mgr)
             self._all_agent_data.append(
                 # TODO: start_js should be more flexible to support
@@ -87,7 +80,7 @@ class AgentManager:
                     grasp_mgrs=grasp_managers,
                     start_js=np.array(agent.params.arm_init_params),
                     cfg=agent_cfg,
-                    is_pb_installed=self._is_pb_installed
+                    is_pb_installed=self._is_pb_installed,
                 )
             )
 
@@ -157,8 +150,6 @@ class AgentManager:
     @property
     def grasp_iter(self) -> Iterator[RearrangeGraspManager]:
         return iter(())
-
-
 
     def first_setup(self):
         for robot_data in self._all_agent_data:

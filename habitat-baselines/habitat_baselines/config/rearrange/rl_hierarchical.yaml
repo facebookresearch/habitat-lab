@@ -16,6 +16,8 @@ defaults:
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
+  updater_name: "HRLPPO"
+  distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
   eval_ckpt_path_dir: ""
@@ -28,7 +30,7 @@ habitat_baselines:
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['reward', 'force', 'composite_success']
   load_resume_state_config: False
-  rollout_storage: "HrlRolloutStorage"
+  rollout_storage_name: "HrlRolloutStorage"
 
   eval:
     use_ckpt_config: False

@@ -43,13 +43,17 @@ class NnSkillPolicy(SkillPolicy):
         filtered_action_space: spaces.Space,
         batch_size,
         should_keep_hold_state: bool = False,
-        ignore_grip: bool = False
+        ignore_grip: bool = False,
     ):
         """
         :param action_space: The overall action space of the entire task, not task specific.
         """
         super().__init__(
-            config, action_space, batch_size, should_keep_hold_state, ignore_grip=ignore_grip
+            config,
+            action_space,
+            batch_size,
+            should_keep_hold_state,
+            ignore_grip=ignore_grip,
         )
         self._wrap_policy = wrap_policy
         self._filtered_obs_space = filtered_obs_space

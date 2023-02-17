@@ -91,9 +91,15 @@ class HighLevelPolicy(nn.Module):
         raise NotImplementedError()
 
     def apply_mask(self, mask: torch.Tensor) -> None:
-        pass
+        """
+        Called before every step with the mask information at the current step.
+        """
 
     def get_policy_components(self) -> List[nn.Module]:
+        """
+        Gets the torch modules that are in the HL policy architecture.
+        """
+
         return []
 
     def get_termination(

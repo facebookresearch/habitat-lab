@@ -8,16 +8,21 @@ class HumanAction(SimulatorTaskAction):
     """
 
     _sim: RearrangeSim
+    def __init__(self, *args, **kwargs):
+        super().__init__(self, *args, **kwargs)
+        if "agent_index" not in self._config or self._config.agent_index is None:
+            self._agent_index = 0
+            self._multi_agent = False
+        else:
+            self._agent_index = self._config.agent_index
+            self._multi_agent = True
 
     @property
     def _human_mgr(self):
         """
         Underlying human mananger for the human instance the action is attached to.
         """
-
-        if "agent" not in self._config or self._config.agent is None:
-            return self._sim.agents_mgr[0]
-        return self._sim.agents_mgr[self._config.agent]
+        return self._sim.agents_mgr[self._agent_index]
 
     @property
     def _ik_helper(self):
@@ -48,6 +53,6 @@ class HumanAction(SimulatorTaskAction):
         there are multiple agents.
         """
 
-        if "agent" in self._config and self._config.agent is not None:
-            return f"agent_{self._config.agent}_"
-        return ""
+        if not self._multi_agent:
+            return ""
+        return f"agent_{self._agent_index}_"

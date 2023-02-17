@@ -16,10 +16,7 @@ from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
     build_rnn_build_seq_info,
 )
-from habitat_baselines.utils.common import (
-    get_num_actions,
-    is_continuous_action_space,
-)
+from habitat_baselines.utils.common import get_action_space_info
 
 
 @baseline_registry.register_storage
@@ -36,18 +33,7 @@ class RolloutStorage:
         num_recurrent_layers=1,
         is_double_buffered: bool = False,
     ):
-        if is_continuous_action_space(action_space):
-            # Assume ALL actions are NOT discrete
-            action_shape = (
-                get_num_actions(
-                    action_space,
-                ),
-            )
-            discrete_actions = False
-        else:
-            # For discrete pointnav
-            action_shape = (1,)
-            discrete_actions = True
+        action_shape, discrete_actions = get_action_space_info(action_space)
 
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()

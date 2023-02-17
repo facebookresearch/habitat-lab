@@ -2,24 +2,18 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
+from typing import List, Tuple
 
 import magnum as mn
 import numpy as np
-import os
-from os import path as osp
-
+import pybullet as p
+import torch
 from fairmotion.core import motion
 from fairmotion.data import amass
-from fairmotion.ops import motion as motion_ops
 from fairmotion.ops import conversions
-
+from fairmotion.ops import motion as motion_ops
 from human_body_prior.body_model.body_model import BodyModel
-
-import pybullet as p
-
-import torch
 
 
 @dataclass
@@ -42,7 +36,7 @@ class MotionData:
         self.poses = motion_.poses
         self.fps = motion_.fps
         self.num_of_frames: int = len(motion_.poses)
-        self.map_of_total_displacement: float = []
+        self.map_of_total_displacement: List[float] = []
         self.center_of_root_drift: mn.Vector3 = mn.Vector3()
         self.time_length = self.num_of_frames * (1.0 / motion_.fps)
 
@@ -143,23 +137,21 @@ class MotionData:
         self.center_of_root_drift = summ / self.num_of_frames
 
     @classmethod
-    def obtain_pose(cls, skel: motion.Skeleton, body_info, index)-> motion.Pose:
-        pose_body = body_info['pose'][index]
-        root_orient = body_info['root_orient'][index]
-        root_trans = body_info['trans'][index]
+    def obtain_pose(
+        cls, skel: motion.Skeleton, body_info, index
+    ) -> motion.Pose:
+        pose_body = body_info["pose"][index]
+        root_orient = body_info["root_orient"][index]
+        root_trans = body_info["trans"][index]
         num_joints = (pose_body.shape[0] // 3) + 1
         # breakpoint()
         pose_data = []
         for j in range(num_joints):
             if j == 0:
-                T = conversions.Rp2T(
-                    conversions.A2R(root_orient), root_trans
-                )
+                T = conversions.Rp2T(conversions.A2R(root_orient), root_trans)
             else:
                 T = conversions.R2T(
-                    conversions.A2R(
-                        pose_body[(j - 1) * 3 : (j - 1) * 3 + 3]
-                    )
+                    conversions.A2R(pose_body[(j - 1) * 3 : (j - 1) * 3 + 3])
                 )
             pose_data.append(T)
         # if len(pose_data) == 8:
@@ -171,24 +163,37 @@ class AmassHelper:
     """
     This class contains methods to load and convert AmassData into a format for Habitat
     """
+
     def __init__(self, bm_path):
         self.bm_path = bm_path
         self.bm = BodyModel(
-            bm_fname=bm_path, 
-            num_betas=10, 
+            bm_fname=bm_path,
+            num_betas=10,
             # model_type=model_type
         )
 
         # Get skeleton
         # bdata = np.load(bm_path)
-        betas = np.array([-0.0312, -0.1780, -0.0597,  0.0200,  0.0168,  0.0530, -0.0313, -0.0084,
-         0.0375,  0.0034])
+        betas = np.array(
+            [
+                -0.0312,
+                -0.1780,
+                -0.0597,
+                0.0200,
+                0.0168,
+                0.0530,
+                -0.0313,
+                -0.0084,
+                0.0375,
+                0.0034,
+            ]
+        )
         betas = torch.tensor(betas[np.newaxis]).float()
         # betas = bdata["betas"][:10][np.newaxis]
         joint_names = amass.joint_names
-        
+
         num_joints = len(joint_names)
-        
+
         self.skeleton = amass.create_skeleton_from_amass_bodymodel(
             self.bm, betas, num_joints, joint_names
         )
@@ -216,8 +221,12 @@ class AmassHelper:
         else:
             rotation1 = mn.Quaternion()
 
-        forward_v = forward_v * (mn.Vector3(1.0, 1.0, 1.0) - mn.Vector3.y_axis())
-        angle2 = mn.math.angle(forward_v.normalized(), -1 * mn.Vector3.z_axis())
+        forward_v = forward_v * (
+            mn.Vector3(1.0, 1.0, 1.0) - mn.Vector3.y_axis()
+        )
+        angle2 = mn.math.angle(
+            forward_v.normalized(), -1 * mn.Vector3.z_axis()
+        )
         axis2 = mn.Vector3.y_axis()
         rotation2 = mn.Quaternion.rotation(angle2, axis2)
 
@@ -225,8 +234,13 @@ class AmassHelper:
 
     @classmethod
     def convert_CMUamass_single_pose(
-        cls, pose, joint_info, raw=False, debug=False,
-        translation_offset=mn.Vector3(), rotation_offset=mn.Quaternion(), root_index=0
+        cls,
+        pose,
+        joint_info,
+        raw=False,
+        translation_offset=mn.Vector3(),
+        rotation_offset=mn.Quaternion(),
+        root_index=0,
     ) -> Tuple[List[float], mn.Vector3, mn.Quaternion]:
         """
         Converts a pose from CMU format into a format that can be processed in habitat:
@@ -253,7 +267,9 @@ class AmassHelper:
         if not raw:
             # Rotate so that up is in Y and front is in -Z
             final_rotation_correction = (
-                cls.global_correction_quat(mn.Vector3.z_axis(), mn.Vector3.x_axis())
+                cls.global_correction_quat(
+                    mn.Vector3.z_axis(), mn.Vector3.x_axis()
+                )
                 * rotation_offset
             )
 
@@ -294,8 +310,8 @@ class AmassHelper:
         
         for model_link_id in range(len(joint_info)):
             joint_type = joint_info[model_link_id][2]
-            joint_name = joint_info[model_link_id][1].decode('UTF-8')
-            pose_joint_index = pose.skel.index_joint[inv_map[joint_name]]
+            joint_name = joint_info[model_link_id][1].decode("UTF-8")
+            pose_joint_index = pose.skel.index_joint[joint_name]
             # When the target joint do not have dof, we simply ignore it
             if joint_type == p.JOINT_FIXED:
                 continue
@@ -312,7 +328,6 @@ class AmassHelper:
                 )
 
             T = pose.get_transform(pose_joint_index, local=True)
-
 
             if joint_type == p.JOINT_SPHERICAL:
                 Q, _ = conversions.T2Qp(T)

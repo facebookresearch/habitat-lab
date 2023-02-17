@@ -1,22 +1,36 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
+import os.path as osp
+from dataclasses import dataclass
 
 import torch
-import os.path as osp
+
+from habitat.core.spaces import ActionSpace
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_sensors import (
+    HumanJointSensor,
     IsHoldingSensor,
     RelativeRestingPositionSensor,
 )
-from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.common.logging import baselines_logger
-
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.core.spaces import ActionSpace
-from habitat_baselines.rl.hrl.utils import find_action_range, find_action_range_pddl
+from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
+from habitat_baselines.rl.hrl.utils import (
+    find_action_range,
+    find_action_range_pddl,
+)
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 
+
 class HumanPickSkillPolicy(NnSkillPolicy):
+    @dataclass
+    class HumanPickActionArgs:
+        """
+        :property action_idx: The index of the oracle action we want to execute
+        """
+
+        action_idx: int
+
     def __init__(
         self,
         wrap_policy,
@@ -27,8 +41,7 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         batch_size,
         pddl_domain_path,
         pddl_task_path,
-        task_config
-
+        task_config,
     ):
         super().__init__(
             wrap_policy,
@@ -37,47 +50,48 @@ class HumanPickSkillPolicy(NnSkillPolicy):
             filtered_obs_space,
             filtered_action_space,
             batch_size,
-            ignore_grip=True
+            ignore_grip=True,
         )
-        self._pick_ac_idx, _ = find_action_range(
-            action_space, "humanpick_action"
-        )
-        self._place_ac_idx, _ = find_action_range(
-            action_space, "humanplace_action"
-        )
-        self._hand_ac_idx = self._pick_ac_idx + 1
-
-
         self._pddl_problem = PddlProblem(
             pddl_domain_path,
             pddl_task_path,
             task_config,
         )
-
-        self.pddl_action_idx = find_action_range_pddl(
-            self._pddl_problem.get_ordered_actions(), "pick"
+        self._all_entities = self._pddl_problem.get_ordered_entities_list()
+        self._oracle_nav_ac_idx, _ = find_action_range(
+            action_space, "human_pick_action"
         )
+        self._is_target_obj = None
+        self._targ_obj_idx = None
+        self._prev_joint = [None for _ in range(self._batch_size)]
+        self.count_action = 0
 
-
-    def _is_skill_done(
+    def on_enter(
         self,
+        skill_arg,
+        batch_idx,
         observations,
         rnn_hidden_states,
         prev_actions,
-        masks,
-        batch_idx,
-    ) -> torch.BoolTensor:
-        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
-        return is_holding.type(torch.bool)
+    ):
+        self._is_target_obj = None
+        self._targ_obj_idx = None
+        for i in batch_idx:
+            self._prev_joint[i] = None
+
+        ret = super().on_enter(
+            skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
+        )
+        self._was_running_on_prev_step = False
+        return ret
 
     @classmethod
     def from_config(
         cls, config, observation_space, action_space, batch_size, full_config
     ):
         filtered_action_space = ActionSpace(
-            {config.nav_action_name: action_space[config.nav_action_name]}
+            {config.action_name: action_space[config.action_name]}
         )
-
         baselines_logger.debug(
             f"Loaded action space {filtered_action_space} for skill {config.skill_name}"
         )
@@ -94,21 +108,40 @@ class HumanPickSkillPolicy(NnSkillPolicy):
                 full_config.habitat.task.task_spec + ".yaml",
             ),
             full_config.habitat.task,
-
         )
 
-    def _mask_pick(self, action, observations):
-        # Mask out the release if the object is already held.
-        is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
-        for i in torch.nonzero(is_holding):
-            # Do not release the object once it is held
-            action[i, self._hand_ac_idx] = 1.0
-            action[i, self._desnap_ac_idx] = 0.0
-        return action
+    def _is_skill_done(
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
+    ) -> torch.BoolTensor:
+        ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
+
+        cur_joint = observations[HumanJointSensor.cls_uuid].cpu()
+        for i, batch_i in enumerate(batch_idx):
+            prev_joint = self._prev_joint[batch_i]
+            if prev_joint is not None:
+                movement = torch.linalg.norm(prev_joint - cur_joint[i])
+                ret[i] = movement < self._config.stop_thresh
+            self._prev_joint[batch_i] = cur_joint[i]
+
+        return ret
 
     def _parse_skill_arg(self, skill_arg):
-        self._internal_log(f"Parsing skill argument {skill_arg}")
-        return int(skill_arg[0].split("|")[1])
+        if len(skill_arg) == 2:
+            search_target, _ = skill_arg
+        elif len(skill_arg) == 3:
+            _, search_target, _ = skill_arg
+        else:
+            raise ValueError(
+                f"Unexpected number of skill arguments in {skill_arg}"
+            )
+
+        target = self._pddl_problem.get_entity(search_target)
+        if target is None:
+            raise ValueError(
+                f"Cannot find matching entity for {search_target}"
+            )
+        match_i = self._all_entities.index(target)
+        return HumanPickSkillPolicy.HumanPickActionArgs(match_i)
 
     def _internal_act(
         self,
@@ -119,18 +152,12 @@ class HumanPickSkillPolicy(NnSkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        action = torch.zeros(prev_actions.shape, device=masks.device)
+        full_action = torch.zeros(prev_actions.shape, device=masks.device)
         action_idxs = torch.FloatTensor(
-            [self._cur_skill_args[i] for i in cur_batch_idx]
+            [self._cur_skill_args[i].action_idx + 1 for i in cur_batch_idx]
         )
 
-        # TODO: hardcoded, indices based on self._pddl_problem.get_ordered_entities_list()
-        action[:, self._pick_ac_idx+self.pddl_action_idx[0]] = 7
-        action[:, self._pick_ac_idx+self.pddl_action_idx[0]+1] = 8
-        # action = self._mask_pick(action, observations)
-        # action[:, self._hand_ac_idx] = 1.0
-        # breakpoint()
+        full_action[:, self._oracle_nav_ac_idx] = action_idxs
         return PolicyActionData(
-            actions=action, rnn_hidden_states=rnn_hidden_states
+            actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
-        

@@ -121,7 +121,7 @@ class OracleNavPolicy(NnSkillPolicy):
         for i, batch_i in enumerate(batch_idx):
             prev_pos = self._prev_pos[batch_i]
             if prev_pos is not None:
-                movement = torch.linalg.norm(prev_pos - cur_pos[i])
+                movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
                 ret[i] = movement < self._config.stop_thresh
             self._prev_pos[batch_i] = cur_pos[i]
 
@@ -129,7 +129,7 @@ class OracleNavPolicy(NnSkillPolicy):
 
     def _parse_skill_arg(self, skill_arg):
         if len(skill_arg) == 2:
-            search_target, _ = skill_arg
+            targ_obj, _ = skill_arg
         elif len(skill_arg) == 3:
             _, search_target, _ = skill_arg
         else:

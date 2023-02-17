@@ -23,8 +23,6 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-
-
 class RearrangeGraspManager:
     """
     Manages the agent grasping onto rigid objects and the links of articulated objects.
@@ -44,6 +42,8 @@ class RearrangeGraspManager:
         self._config = config
         self._managed_robot = robot
         self.ee_index = ee_index
+
+        self._kinematic_mode = self._sim.habitat_config.kinematic_mode
 
     def reconfigure(self) -> None:
         """Removes any existing constraints managed by this structure.
@@ -98,16 +98,15 @@ class RearrangeGraspManager:
         Used to wait for a dropped object to clear the end effector's proximity before re-activating collisions between them.
         """
         if self._leave_info is not None:
-            ee_pos = self._managed_robot.ee_transform(self.ee_index).translation
+            ee_pos = self._managed_robot.ee_transform(
+                self.ee_index
+            ).translation
             rigid_obj = self._leave_info[0]
             dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
                 rigid_obj.override_collision_group(CollisionGroups.Default)
                 self._leave_info = None
-        if (
-            self._sim.habitat_config.kinematic_mode
-            and self._snapped_obj_id is not None
-        ):
+        if self._kinematic_mode and self._snapped_obj_id is not None:
             self.update_object_to_grasp()
 
     def desnap(self, force=False) -> None:
@@ -189,7 +188,7 @@ class RearrangeGraspManager:
         marker = self._sim.get_marker(marker_name)
         self._snapped_marker_id = marker_name
         self._managed_robot.open_gripper()
-        if self._sim.habitat_config.kinematic_mode:
+        if self._kinematic_mode:
             return
 
         self._snap_constraints = [
@@ -314,7 +313,7 @@ class RearrangeGraspManager:
 
         self._managed_robot.open_gripper()
 
-        if self._sim.habitat_config.kinematic_mode:
+        if self._kinematic_mode:
             return
 
         # Set collision group to GraspedObject so that it doesn't collide
@@ -345,7 +344,6 @@ class RearrangeGraspManager:
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")
-
 
 
 class HumanRearrangeGraspManager(RearrangeGraspManager):

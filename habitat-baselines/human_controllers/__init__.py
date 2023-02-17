@@ -7,7 +7,4 @@
 from human_controllers.amass_human_controller import AmassHumanController
 from human_controllers.seq_pose_human_controller import SeqPoseHumanController
 
-__all__ = [
-    "AmassHumanController",
-    "SeqPoseHumanController"
-]
+__all__ = ["AmassHumanController", "SeqPoseHumanController"]

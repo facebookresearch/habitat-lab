@@ -6,8 +6,8 @@ import torch
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
-from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
+    LocalizationSensor,
     TargetGoalGpsCompassSensor,
     TargetStartGpsCompassSensor,
 )
@@ -45,7 +45,7 @@ class OracleNavHumanPolicy(NnSkillPolicy):
             filtered_obs_space,
             filtered_action_space,
             batch_size,
-            ignore_grip=True
+            ignore_grip=True,
         )
 
         self._pddl_problem = PddlProblem(
@@ -60,7 +60,6 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         self._is_target_obj = None
         self._targ_obj_idx = None
         self._prev_pos = [None for _ in range(self._batch_size)]
-
 
     def on_enter(
         self,
@@ -107,12 +106,7 @@ class OracleNavHumanPolicy(NnSkillPolicy):
         )
 
     def _is_skill_done(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        batch_idx
+        self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
@@ -125,7 +119,6 @@ class OracleNavHumanPolicy(NnSkillPolicy):
             self._prev_pos[batch_i] = cur_pos[i]
 
         return ret
-
 
     def _parse_skill_arg(self, skill_arg):
         if len(skill_arg) == 2:

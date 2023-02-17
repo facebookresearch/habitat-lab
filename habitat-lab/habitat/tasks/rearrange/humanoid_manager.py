@@ -1,32 +1,27 @@
-
 from dataclasses import dataclass
-
-from typing import TYPE_CHECKING, Iterator, Optional
-
-from typing import Iterator, Optional, List
-
+from typing import TYPE_CHECKING, Iterator, List, Optional
 
 import magnum as mn
 import numpy as np
 
-from habitat.humanoids.amass_human  import AmassHuman
+from habitat.humanoids.amass_human import AmassHuman
 from habitat.humanoids.human_base import Humanoid
-
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
-    RearrangeGraspManager, HumanRearrangeGraspManager
+    HumanRearrangeGraspManager,
+    RearrangeGraspManager,
 )
-
 from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
-
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
 
 @dataclass
 class HumanData:
     """
     Data needed to manage a robot instance.
     """
+
     humanoid: Humanoid
     grasp_mgrs: List[RearrangeGraspManager]
     robot: Humanoid
@@ -35,14 +30,10 @@ class HumanData:
     cfg: "DictConfig"
     _ik_helper: Optional[IkHelper] = None
 
-
-
     @property
     def grasp_mgr(self):
         if len(self.grasp_mgrs) == 0:
-            raise Exception(
-                "Human data has no grasp manager defined"
-            )
+            raise Exception("Human data has no grasp manager defined")
         return self.grasp_mgrs[0]
 
     @property
@@ -74,9 +65,8 @@ class HumanoidManager:
             human_cls = AmassHuman
             human = human_cls(agent_cfg.agent_urdf, sim)
 
-
-            grasp_mgr_left = HumanRearrangeGraspManager(sim, cfg, human, 0)
-            grasp_mgr_right = HumanRearrangeGraspManager(sim, cfg, human, 1)
+            grasp_mgr_left = HumanRearrangeGraspManager(sim, cfg, human, 1)
+            grasp_mgr_right = HumanRearrangeGraspManager(sim, cfg, human, 0)
             self._all_human_data.append(
                 HumanData(
                     humanoid=human,
@@ -84,7 +74,7 @@ class HumanoidManager:
                     robot=human,
                     start_js=np.array(human.params.arm_init_params_left),
                     cfg=agent_cfg,
-                    is_pb_installed=self._is_pb_installed
+                    is_pb_installed=self._is_pb_installed,
                 )
             )
 

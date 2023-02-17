@@ -33,6 +33,7 @@ class HRLPPO(PPO):
             action_log_probs,
             dist_entropy,
             _,
+            _,
         ) = self._evaluate_actions(
             batch["observations"],
             batch["recurrent_hidden_states"],

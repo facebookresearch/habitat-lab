@@ -215,16 +215,19 @@ class JointSensor(UsesRobotInterface, Sensor):
         ).agent.arm_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
+
 @registry.register_sensor
 class HumanJointSensor(UsesRobotInterface, Sensor):
+    cls_uuid: str = "human_joint"
+
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
 
     def _get_uuid(self, *args, **kwargs):
         # TODO(xavierpuig): this should maybe aslo have a key joint. Can we handle that?
-        # Or change the joint key above to aovid confusion
-        return "human_joint"
+        # Or change the joint key above to avoid confusion
+        return self.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
@@ -238,10 +241,9 @@ class HumanJointSensor(UsesRobotInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
-            self.robot_id
-        ).agent.joint_rot
+        joints_pos = self._sim.get_agent_data(self.robot_id).agent.joint_rot
         return np.array(joints_pos, dtype=np.float32)
+
 
 @registry.register_sensor
 class JointVelocitySensor(UsesRobotInterface, Sensor):
@@ -465,7 +467,9 @@ class GfxReplayMeasure(Measure):
 
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
-        self._config = config
+        self._enable_gfx_replay_save = (
+            self._sim.sim_config.sim_cfg.enable_gfx_replay_save
+        )
         super().__init__(**kwargs)
 
     @staticmethod
@@ -477,10 +481,7 @@ class GfxReplayMeasure(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        if (
-            not task._is_episode_active
-            and self._sim.sim_config.sim_cfg.enable_gfx_replay_save
-        ):
+        if not task._is_episode_active and self._enable_gfx_replay_save:
             self._metric = (
                 self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
             )
@@ -488,7 +489,7 @@ class GfxReplayMeasure(Measure):
             self._metric = ""
 
     def get_metric(self, force_get=False):
-        if force_get and self._sim.sim_config.sim_cfg.enable_gfx_replay_save:
+        if force_get and self._enable_gfx_replay_save:
             return (
                 self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
             )
@@ -506,6 +507,7 @@ class ObjAtGoal(Measure):
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._config = config
+        self._succ_thresh = self._config.succ_thresh
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -533,7 +535,7 @@ class ObjAtGoal(Measure):
         ].get_metric()
 
         self._metric = {
-            str(idx): dist < self._config.succ_thresh
+            str(idx): dist < self._succ_thresh
             for idx, dist in obj_to_goal_dists.items()
         }
 
@@ -719,6 +721,8 @@ class RobotForce(UsesRobotInterface, Measure):
         self._sim = sim
         self._config = config
         self._task = task
+        self._count_obj_collisions = self._task._config.count_obj_collisions
+        self._min_force = self._config.min_force
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -746,14 +750,14 @@ class RobotForce(UsesRobotInterface, Measure):
         robot_force, _, overall_force = self._task.get_coll_forces(
             self.robot_id
         )
-        if self._task._config.count_obj_collisions:
+        if self._count_obj_collisions:
             self._cur_force = overall_force
         else:
             self._cur_force = robot_force
 
         if self._prev_force is not None:
             self._add_force = self._cur_force - self._prev_force
-            if self._add_force > self._config.min_force:
+            if self._add_force > self._min_force:
                 self._accum_force += self._add_force
                 self._prev_force = self._cur_force
             elif self._add_force < 0.0:
@@ -800,6 +804,8 @@ class ForceTerminate(Measure):
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
         self._config = config
+        self._max_accum_force = self._config.max_accum_force
+        self._max_instant_force = self._config.max_instant_force
         self._task = task
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
@@ -830,20 +836,20 @@ class ForceTerminate(Measure):
         accum_force = force_info["accum"]
         instant_force = force_info["instant"]
         if (
-            self._config.max_accum_force > 0
-            and accum_force > self._config.max_accum_force
+            self._max_instant_force > 0
+            and accum_force > self._max_instant_force
         ):
             rearrange_logger.debug(
-                f"Force threshold={self._config.max_accum_force} exceeded with {accum_force}, ending episode"
+                f"Force threshold={self._max_instant_force} exceeded with {accum_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True
         elif (
-            self._config.max_instant_force > 0
-            and instant_force > self._config.max_instant_force
+            self._max_instant_force > 0
+            and instant_force > self._max_instant_force
         ):
             rearrange_logger.debug(
-                f"Force instant threshold={self._config.max_instant_force} exceeded with {instant_force}, ending episode"
+                f"Force instant threshold={self._max_instant_force} exceeded with {instant_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True
@@ -889,7 +895,8 @@ class RearrangeReward(UsesRobotInterface, Measure):
         self._sim = sim
         self._config = config
         self._task = task
-
+        self._force_pen = self._config.force_pen
+        self._max_force_pen = self._config.max_force_pen
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -936,8 +943,8 @@ class RearrangeReward(UsesRobotInterface, Measure):
         reward -= max(
             0,  # This penalty is always positive
             min(
-                self._config.force_pen * force_metric.add_force,
-                self._config.max_force_pen,
+                self._force_pen * force_metric.add_force,
+                self._max_force_pen,
             ),
         )
         return reward

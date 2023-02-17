@@ -4,20 +4,18 @@
 
 
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
 
-
-from habitat_sim.simulator import Simulator
-
 import habitat_sim.physics as phy
-from habitat_sim.utils.common import orthonormalize_rotation_shear
 from habitat.agents import AgentInterface
+from habitat_sim.simulator import Simulator
+from habitat_sim.utils.common import orthonormalize_rotation_shear
+
 
 class Humanoid(AgentInterface):
-    """ Generic manipulator for the human """
+    """Generic manipulator for the human"""
 
     def __init__(
         self,
@@ -38,7 +36,6 @@ class Humanoid(AgentInterface):
         self._sim = sim
         self.sim_obj = sim_obj
 
-        
         self.joint_rotation = None
         self.root_position = None
         self.root_orientation = None
@@ -63,15 +60,11 @@ class Humanoid(AgentInterface):
         """Instantiates the humanoid in the scene. Loads the URDF, sets initial state of parameters, joints, etc..."""
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
-            # TODO: is fixed_base here needed
-            # breakpoint()
-            fbx_path = 'data/human_sim_data/human_smpl_textured.fbx'
-            self.sim_obj = ao_mgr.add_skinned_articulated_object_from_urdf(
-                self.urdf_path, fbx_path, fixed_base=False
+            # TODO: is fixed_base here neededs
+            self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
+                self.urdf_path, fixed_base=False, maintain_link_order=True
             )
-            # self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-            #     self.urdf_path, fixed_base=False
-            # )
+            
             # TODO: is it right to do it here
             self.sim_obj.motion_type = phy.MotionType.KINEMATIC
         # breakpoint()
@@ -85,8 +78,6 @@ class Humanoid(AgentInterface):
         # self.joint_limits = self.sim_obj.joint_position_limits
 
         # self._update_motor_settings_cache()
-
-
 
     def update(self) -> None:
         if self._cameras is not None:
@@ -136,7 +127,6 @@ class Humanoid(AgentInterface):
         self.sim_obj.clear_joint_states()
         self.update()
         # Manipulator.reset(self)
-        pass
 
     @property
     def base_transformation(self):
@@ -149,23 +139,17 @@ class Humanoid(AgentInterface):
 
     @property
     def base_pos(self):
-        return self.sim_obj.translation - self.sim_obj.transformation.transform_vector(
-            self.params.base_offset
-        )
+        return self.sim_obj.translation - self.params.base_offset
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
-        
-        self.sim_obj.translation = position + self.sim_obj.transformation.transform_vector(
-            self.params.base_offset
-        )
+        self.sim_obj.translation = position + self.params.base_offset
         """Set the robot base to a desired ground position (e.g. NavMesh point)"""
         # raise NotImplementedError("The base type is not implemented.")
 
     @property
     def base_rot(self):
         return self.root_orientation
-
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
@@ -181,7 +165,6 @@ class Humanoid(AgentInterface):
     @property
     def root_rot(self):
         return self.root_orientation
-
 
     @property
     def joint_rot(self):
