@@ -96,7 +96,7 @@ class AmassHumanController:
         self.path_distance_walked = 0
 
         # Option args
-        self.use_ik_grab = True
+        self.use_ik_grab = False
 
         if obj_translation is not None:
             self.base_pos = obj_translation
@@ -107,8 +107,9 @@ class AmassHumanController:
         self.link_ids = list(range(p.getNumJoints(self.human_bullet_id)))
 
         # TODO: There is a mismatch between the indices we get here and ht eones from model.get_link_ids. Would be good to resolve it
-        link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
-
+        # link_indices = [0, 1, 2, 6, 7, 8, 14, 11, 12, 13, 9, 10, 15, 16, 17, 18, 3, 4, 5]
+        link_indices = [0, 1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 13, 10, 9, 15, 16, 17, 18]
+        
         # Joint INFO
         # https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html#getjointinfo
 
@@ -142,14 +143,13 @@ class AmassHumanController:
                 self.grab_quaternions = pick['joints']
                 self.grab_transform = pick['root_transform']
             self.coords_grab = grab_data['coord']
-            # breakpoint()
             self.vpose = {
                 'min': self.coords_grab.min(0),
                 'max': self.coords_grab.max(0),
                 'bins': [40, 40, 10]
             }
         self.reach_pos = 0
-        # breakpoint()
+        
     
     @property
     def base_pos(self):
@@ -174,8 +174,8 @@ class AmassHumanController:
     def stop(self, progress=None):
 
         new_pose =  self.motions.standing_pose
-        new_pose, new_root_trans, root_rotation = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
-
+        new_pose, new_root_trans, root_rotation = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info, debug=True)
+        # breakpoint()
         if progress is None:
             self.time_since_stop += 1
             if self.fully_started:
@@ -243,6 +243,12 @@ class AmassHumanController:
         return distance_covered - prev_distance
 
     def _select_index(self, position: mn.Vector3):
+        """
+        Given a matrix indexed with 3D coordinates, finds the index of the matrix
+        whose key is closest to position. The matrix is indexed such that index i stores coordinate
+        (x_{min} + (x_{max}-x_{min}) * xb, y_{min} + (y_{max}-y_{min})*yb, z_{min} + (z_{max}-z_{min}) * zb)
+        with yb = N // (bins_x * bins_z), xb = (N // bins_z) % bin_x, zb = N % (bins_x * bins_z) 
+        """
         def find_index_quant(minv, maxv, num_bins, value):
             # Find the quantization bin
             value = max(min(value, maxv), minv)
@@ -259,20 +265,15 @@ class AmassHumanController:
             (self.vpose['min'][1], self.vpose['max'][1], self.vpose['bins'][1], y_diff),
             (self.vpose['min'][2], self.vpose['max'][2], self.vpose['bins'][2], z_diff),
         ]
-        # print(x_diff, y_diff, z_diff)
-        # breakpoint()
+
         x_ind, y_ind, z_ind = [find_index_quant(*data) for data in coord_data]
-        # print(x_ind, y_ind, z_ind)
+
         index = y_ind * self.vpose['bins'][0] * self.vpose['bins'][2] + x_ind * self.vpose['bins'][2] + z_ind
-        # print(self.coords_grab[index])
-        # breakpoint()
+
         return index
 
     def reach(self, position: mn.Vector3):
-        # Move the X hand towards that position
-
-        # Make position relative to the root
-        # position_relative = position - self.root_pos
+        """ Set hand pose to reach a certain position, defined relative to the root """
 
 
         if not self.use_ik_grab:
@@ -287,7 +288,6 @@ class AmassHumanController:
         return curr_pose, curr_transform
 
     def walk(self, position: mn.Vector3):
-        # breakpoint()
         """ Walks to the desired position. Rotates the character if facing in a different direction """
         step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
         forward_V = position
@@ -311,9 +311,7 @@ class AmassHumanController:
             else:
                 new_angle = curr_angle * np.pi / 180
                 forward_V2 = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
-                # breakpoint()
-                # print(mn.Vector3(forward_V).normalized(), forward_V2.normalized())
-                # breakpoint()
+
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
         forward_V = mn.Vector3(forward_V)
@@ -350,26 +348,18 @@ class AmassHumanController:
         self.prev_orientation = forward_V
 
         
-        full_transform = self.obtain_root_transform_at_frame(0) # self.mocap_frame)
+        full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
         full_transform.translation *= 0
-        #print(full_transform.translation)
-        # breakpoint()
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform.translation, 
             self.obj_transform.translation + forward_V.normalized(), mn.Vector3.y_axis()
         )
 
         # Remove the forward component, we will set it later ouselves
-        # breakpoint()
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         full_transform = look_at_path_T @ full_transform
 
 
-        # Remove the forward component, we will set it later ouselves
-        #diff_trans = full_transform.translation - self.obj_transform.translation
-        #breakpoint()
-        
-        #diff_trans.projected(forward_V)
         full_transform.translation += forward_V * dist_diff;
         
         

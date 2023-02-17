@@ -65,9 +65,13 @@ class Humanoid(AgentInterface):
             ao_mgr = self._sim.get_articulated_object_manager()
             # TODO: is fixed_base here needed
             # breakpoint()
-            self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-                self.urdf_path, fixed_base=False
+            fbx_path = 'data/human_sim_data/human_smpl_textured.fbx'
+            self.sim_obj = ao_mgr.add_skinned_articulated_object_from_urdf(
+                self.urdf_path, fbx_path, fixed_base=False
             )
+            # self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
+            #     self.urdf_path, fixed_base=False
+            # )
             # TODO: is it right to do it here
             self.sim_obj.motion_type = phy.MotionType.KINEMATIC
         # breakpoint()

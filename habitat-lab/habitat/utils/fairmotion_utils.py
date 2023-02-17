@@ -225,7 +225,7 @@ class AmassHelper:
 
     @classmethod
     def convert_CMUamass_single_pose(
-        cls, pose, joint_info, raw=False, 
+        cls, pose, joint_info, raw=False, debug=False,
         translation_offset=mn.Vector3(), rotation_offset=mn.Quaternion(), root_index=0
     ) -> Tuple[List[float], mn.Vector3, mn.Quaternion]:
         """
@@ -269,10 +269,33 @@ class AmassHelper:
         Q, _ = conversions.T2Qp(root_T)
 
         # Other joints
+        joint_map = {}
+        joint_map["root"] = "m_avg_Pelvis"
+        joint_map["lhip"] = "m_avg_L_Hip"
+        joint_map["lknee"] = "m_avg_L_Knee"
+        joint_map["lankle"] = "m_avg_L_Ankle"
+        joint_map["rhip"] = "m_avg_R_Hip"
+        joint_map["rknee"] = "m_avg_R_Knee"
+        joint_map["rankle"] = "m_avg_R_Ankle"
+        joint_map["lowerback"] = "m_avg_Spine1"
+        joint_map["upperback"] = "m_avg_Spine2"
+        joint_map["chest"] = "m_avg_Spine3"
+        joint_map["lowerneck"] = "m_avg_Neck"
+        joint_map["upperneck"] = "m_avg_Head"
+        joint_map["lclavicle"] = "m_avg_L_Collar"
+        joint_map["lshoulder"] = "m_avg_L_Shoulder"
+        joint_map["lelbow"] = "m_avg_L_Elbow"
+        joint_map["lwrist"] = "m_avg_L_Wrist"
+        joint_map["rclavicle"] = "m_avg_R_Collar"
+        joint_map["rshoulder"] = "m_avg_R_Shoulder"
+        joint_map["relbow"] = "m_avg_R_Elbow"
+        joint_map["rwrist"] = "m_avg_R_Wrist"
+        inv_map = {v: k for k, v in joint_map.items()}
+        
         for model_link_id in range(len(joint_info)):
             joint_type = joint_info[model_link_id][2]
             joint_name = joint_info[model_link_id][1].decode('UTF-8')
-            pose_joint_index = pose.skel.index_joint[joint_name]
+            pose_joint_index = pose.skel.index_joint[inv_map[joint_name]]
             # When the target joint do not have dof, we simply ignore it
             if joint_type == p.JOINT_FIXED:
                 continue
@@ -295,5 +318,7 @@ class AmassHelper:
                 Q, _ = conversions.T2Qp(T)
 
             new_pose += list(Q)
+            # if debug:
+            #     print(joint_name, Q)
         # breakpoint()
         return new_pose, root_translation, root_rotation
