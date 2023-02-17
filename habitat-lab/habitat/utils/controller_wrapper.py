@@ -10,13 +10,13 @@ class ContinuousController:
 
     def __init__(
         self,
-        v_max=1.0,
-        w_max=1.0,
-        acc_lin=2.4,
-        acc_ang=2.4,
-        max_heading_ang=np.pi / 10,
-        lin_error_tol=0.001,
-        ang_error_tol=0.001,
+        v_max=0.3,
+        w_max=0.45,
+        acc_lin=0.2,
+        acc_ang=0.6,
+        max_heading_ang=np.pi / 4,
+        lin_error_tol=0.01,
+        ang_error_tol=0.025,
         track_yaw=True,
     ):
         # Generate config
