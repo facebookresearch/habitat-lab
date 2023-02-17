@@ -1348,7 +1348,7 @@ class WaypointAction(VelocityAction):
         # Init goto velocity controller
         self.w2v_controller = ContinuousController()
 
-    def step(self, xyt_waypoint, task: EmbodiedTask, *args, **kwargs):
+    def step(self, xyt_waypoint, *args, **kwargs):
         # Preprocess waypoint input
         xyt_waypoint_processed = self._preprocess_action(xyt_waypoint)
 
@@ -1356,7 +1356,6 @@ class WaypointAction(VelocityAction):
         return self._step_rel_waypoint(
             xyt_waypoint_processed,
             self._config.action_duration,
-            task,
             *args,
             **kwargs,
         )
@@ -1409,9 +1408,7 @@ class WaypointAction(VelocityAction):
 
         return np.array(xyt_waypoint_clamped)
 
-    def _step_rel_waypoint(
-        self, xyt_waypoint, duration, task, *args, **kwargs
-    ):
+    def _step_rel_waypoint(self, xyt_waypoint, duration, *args, **kwargs):
         """Use the waypoint-to-velocity controller to navigate to the waypoint"""
 
         # Initialize control loop
@@ -1441,7 +1438,6 @@ class WaypointAction(VelocityAction):
                 abs(linear_velocity) < self._config.min_abs_lin_speed
                 and abs(angular_velocity) < self._config.min_abs_ang_speed
             ):
-                task.is_stop_called = True  # type: ignore
                 break
 
         return self._get_agent_observation(next_agent_state)
