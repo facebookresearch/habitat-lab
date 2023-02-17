@@ -1494,7 +1494,9 @@ class TurnRightWaypointAction(WaypointAction):
         xyt_waypoint = np.array(
             [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
         )
-        return self._step_rel_waypoint(xyt_waypoint, *args, **kwargs)
+        return self._step_rel_waypoint(
+            xyt_waypoint, self._config.action_duration, *args, **kwargs
+        )
 
 
 @registry.register_task(name="Nav-v0")
