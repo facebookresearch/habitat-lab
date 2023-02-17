@@ -1346,7 +1346,7 @@ class WaypointAction(VelocityAction):
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
         # Init goto velocity controller
-        self.w2v_controller = ContinuousController()
+        self.w2v_controller = ContinuousController(self._config)
 
     def step(self, xyt_waypoint, *args, **kwargs):
         # Preprocess waypoint input
