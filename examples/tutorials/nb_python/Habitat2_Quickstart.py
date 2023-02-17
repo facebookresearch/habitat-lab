@@ -187,6 +187,7 @@ if vut.is_notebook():
 # For other examples of task, sensor, and measurement definitions, [see here
 # for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
 
+
 # %%
 @registry.register_task(name="RearrangeDemoNavPickTask-v0")
 class NavPickTaskV1(RearrangeTask):

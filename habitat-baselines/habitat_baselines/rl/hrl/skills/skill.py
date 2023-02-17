@@ -2,15 +2,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, List, Optional, Tuple
+import logging
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
 
+from habitat.core.simulator import Observations
 from habitat.tasks.rearrange.rearrange_sensors import IsHoldingSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.utils import find_action_range
-from habitat_baselines.rl.ppo.policy import Policy
+from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -27,6 +29,9 @@ class SkillPolicy(Policy):
         """
         self._config = config
         self._batch_size = batch_size
+        self._apply_postconds = self._config.apply_postconds
+        self._force_end_on_timeout = self._config.force_end_on_timeout
+        self._max_skill_steps = self._config.max_skill_steps
 
         self._cur_skill_step = torch.zeros(self._batch_size)
         self._should_keep_hold_state = should_keep_hold_state
@@ -35,6 +40,22 @@ class SkillPolicy(Policy):
             None for _ in range(self._batch_size)
         ]
         self._raw_skill_args: List[Optional[str]] = [
+            None for _ in range(self._batch_size)
+        ]
+        self._full_ac_size = get_num_actions(action_space)
+
+        # TODO: for some reason this doesnt work with "pddl_apply_action" in action_space
+        # and needs to go through the keys argument
+        if "pddl_apply_action" in list(action_space.keys()):
+            self._pddl_ac_start, _ = find_action_range(
+                action_space, "pddl_apply_action"
+            )
+        else:
+            self._pddl_ac_start = None
+        if self._apply_postconds and self._pddl_ac_start is None:
+            raise ValueError(f"Could not find PDDL action in skill {self}")
+
+        self._delay_term: List[Optional[bool]] = [
             None for _ in range(self._batch_size)
         ]
 
@@ -54,7 +75,7 @@ class SkillPolicy(Policy):
             action_space, "rearrange_stop"
         )
 
-    def _internal_log(self, s, observations=None):
+    def _internal_log(self, s):
         baselines_logger.debug(
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
         )
@@ -67,9 +88,17 @@ class SkillPolicy(Policy):
         """
         return [self._cur_skill_args[i] for i in batch_idx]
 
+    @property
+    def has_hidden_state(self):
+        """
+        Returns if the skill requires a hidden state.
+        """
+
+        return False
+
     def _keep_holding_state(
-        self, full_action: torch.Tensor, observations
-    ) -> torch.Tensor:
+        self, action_data: PolicyActionData, observations
+    ) -> PolicyActionData:
         """
         Makes the action so it does not result in dropping or picking up an
         object. Used in navigation and other skills which are not supposed to
@@ -79,48 +108,124 @@ class SkillPolicy(Policy):
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         # If it is not holding (0) want to keep releasing -> output -1.
         # If it is holding (1) want to keep grasping -> output +1.
-        full_action[:, self._grip_ac_idx] = is_holding + (is_holding - 1.0)
-        return full_action
+        action_data.write_action(
+            self._grip_ac_idx, is_holding + (is_holding - 1.0)
+        )
+        return action_data
+
+    def _apply_postcond(
+        self,
+        actions,
+        log_info,
+        skill_name,
+        env_i,
+        idx,
+    ):
+        """
+        Modifies the actions according to the postconditions set in self._pddl_problem.actions[skill_name]
+        """
+        skill_args = self._raw_skill_args[env_i]
+        action = self._pddl_problem.actions[skill_name]
+
+        entities = [self._pddl_problem.get_entity(x) for x in skill_args]
+        assert (
+            self._pddl_ac_start is not None
+        ), "Apply post cond not supported when pddl action not in action space"
+
+        ac_idx = self._pddl_ac_start
+        found = False
+        for other_action in self._action_ordering:
+            if other_action.name != action.name:
+                ac_idx += other_action.n_args
+            else:
+                found = True
+                break
+        if not found:
+            raise ValueError(f"Could not find action {action}")
+
+        entity_idxs = [
+            self._entities_list.index(entity) + 1 for entity in entities
+        ]
+        if len(entity_idxs) != action.n_args:
+            raise ValueError(
+                f"The skill was called with the wrong # of args {action.n_args} versus {entity_idxs} for {action} with {skill_args} and {entities}. Make sure the skill and PDDL definition match."
+            )
+
+        actions[idx, ac_idx : ac_idx + action.n_args] = torch.tensor(
+            entity_idxs, dtype=actions.dtype, device=actions.device
+        )
+        apply_action = action.clone()
+        apply_action.set_param_values(entities)
+
+        log_info[env_i]["pddl_action"] = apply_action.compact_str
+        return actions[idx]
 
     def should_terminate(
         self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        batch_idx,
-    ) -> Tuple[torch.BoolTensor, torch.BoolTensor]:
+        observations: Observations,
+        rnn_hidden_states: torch.Tensor,
+        prev_actions: torch.Tensor,
+        masks: torch.Tensor,
+        actions: torch.Tensor,
+        hl_wants_skill_term: torch.BoolTensor,
+        batch_idx: List[int],
+        skill_name: List[str],
+        log_info: List[Dict[str, Any]],
+    ) -> Tuple[torch.BoolTensor, torch.BoolTensor, torch.Tensor]:
         """
-        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        :returns: Both of the BoolTensor's will be on the CPU.
+            - `is_skill_done`: Shape (batch_size,) size tensor where 1
+              indicates the skill to return control to HL policy.
+            - `bad_terminate`: Shape (batch_size,) size tensor where 1
+              indicates the skill should immediately end the episode.
         """
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
-        )
+        ).cpu()
         if is_skill_done.sum() > 0:
             self._internal_log(
                 f"Requested skill termination {is_skill_done}",
-                observations,
             )
 
+        cur_skill_step = self._cur_skill_step[batch_idx]
+
         bad_terminate = torch.zeros(
-            self._cur_skill_step.shape,
-            device=self._cur_skill_step.device,
+            cur_skill_step.shape,
+            device=cur_skill_step.device,
             dtype=torch.bool,
         )
-        if self._config.max_skill_steps > 0:
-            over_max_len = self._cur_skill_step > self._config.max_skill_steps
-            if self._config.force_end_on_timeout:
+        if self._max_skill_steps > 0:
+            over_max_len = cur_skill_step >= self._max_skill_steps
+            if self._force_end_on_timeout:
                 bad_terminate = over_max_len
             else:
                 is_skill_done = is_skill_done | over_max_len
 
+        is_skill_done |= hl_wants_skill_term
+
+        new_actions = torch.zeros_like(actions)
+        for i, env_i in enumerate(batch_idx):
+            if self._delay_term[env_i]:
+                self._internal_log(
+                    "Terminating skill due to delayed termination."
+                )
+                self._delay_term[env_i] = False
+                is_skill_done[i] = True
+            elif self._apply_postconds and is_skill_done[i]:
+                new_actions[i] = self._apply_postcond(
+                    actions, log_info, skill_name[i], env_i, i
+                )
+                self._delay_term[env_i] = True
+                is_skill_done[i] = False
+                self._internal_log(
+                    "Applying PDDL action and terminating on the next step."
+                )
+
         if bad_terminate.sum() > 0:
             self._internal_log(
-                f"Bad terminating due to timeout {self._cur_skill_step}, {bad_terminate}",
-                observations,
+                f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
             )
-
-        return is_skill_done, bad_terminate
+        return is_skill_done, bad_terminate, new_actions
 
     def on_enter(
         self,
@@ -138,6 +243,10 @@ class SkillPolicy(Policy):
         self._cur_skill_step[batch_idxs] = 0
         for i, batch_idx in enumerate(batch_idxs):
             self._raw_skill_args[batch_idx] = skill_arg[i]
+            if baselines_logger.level >= logging.DEBUG:
+                baselines_logger.debug(
+                    f"Entering skill {self} with arguments {skill_arg[i]}"
+                )
             self._cur_skill_args[batch_idx] = self._parse_skill_arg(
                 skill_arg[i]
             )
@@ -146,6 +255,11 @@ class SkillPolicy(Policy):
             rnn_hidden_states[batch_idxs] * 0.0,
             prev_actions[batch_idxs] * 0.0,
         )
+
+    def set_pddl_problem(self, pddl_prob):
+        self._pddl_problem = pddl_prob
+        self._entities_list = self._pddl_problem.get_ordered_entities_list()
+        self._action_ordering = self._pddl_problem.get_ordered_actions()
 
     @classmethod
     def from_config(
@@ -166,7 +280,7 @@ class SkillPolicy(Policy):
         :returns: Predicted action and next rnn hidden state.
         """
         self._cur_skill_step[cur_batch_idx] += 1
-        action, hxs = self._internal_act(
+        action_data = self._internal_act(
             observations,
             rnn_hidden_states,
             prev_actions,
@@ -176,11 +290,11 @@ class SkillPolicy(Policy):
         )
 
         if self._should_keep_hold_state:
-            action = self._keep_holding_state(action, observations)
-        return action, hxs
+            action_data = self._keep_holding_state(action_data, observations)
+        return action_data
 
     def to(self, device):
-        self._cur_skill_step = self._cur_skill_step.to(device)
+        pass
 
     def _select_obs(self, obs, cur_batch_idx):
         """
@@ -196,9 +310,7 @@ class SkillPolicy(Policy):
                 )
 
             entity_positions = obs[k].view(
-                len(cur_batch_idx),
-                -1,
-                self._config.get("obs_skill_input_dim", 3),
+                len(cur_batch_idx), -1, self._config.obs_skill_input_dim
             )
             obs[k] = entity_positions[
                 torch.arange(len(cur_batch_idx)), cur_multi_sensor_index
@@ -209,7 +321,9 @@ class SkillPolicy(Policy):
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         """
-        :returns: A (batch_size,) size tensor where 1 indicates the skill wants to end and 0 if not.
+        :returns: A (batch_size,) size tensor where 1 indicates the skill wants
+            to end and 0 if not where batch_size is potentially a subset of the
+            overall num_environments as specified by `batch_idx`.
         """
         return torch.zeros(observations.shape[0], dtype=torch.bool).to(
             masks.device
@@ -229,5 +343,5 @@ class SkillPolicy(Policy):
         masks,
         cur_batch_idx,
         deterministic=False,
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> PolicyActionData:
         raise NotImplementedError()

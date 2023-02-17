@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import glob
+import itertools
 import os
 import random
 
@@ -13,6 +14,7 @@ import pytest
 
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
+from habitat_baselines.run import execute_exp
 
 try:
     import torch
@@ -146,6 +148,79 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     # Train
     trainer.train()
     # Training should complete without raising an error.
+
+
+@pytest.mark.parametrize(
+    "config_path,policy_type,skill_type,mode",
+    list(
+        itertools.product(
+            [
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
+            ],
+            [
+                "hl_neural",
+                "hl_fixed",
+            ],
+            [
+                "nn_skills",
+                "oracle_skills",
+            ],
+            [
+                "eval",
+                "train",
+            ],
+        )
+    ),
+)
+def test_hrl(config_path, policy_type, skill_type, mode):
+    TRAIN_LOG_FILE = "data/test_train.log"
+
+    if policy_type == "hl_neural" and skill_type == "nn_skills":
+        return
+    if policy_type == "hl_fixed" and mode == "train":
+        return
+    if skill_type == "oracle_skills" and "oracle" not in config_path:
+        return
+    # Remove the checkpoints from previous tests
+    for f in glob.glob("data/test_checkpoints/test_training/*"):
+        os.remove(f)
+    if os.path.exists(TRAIN_LOG_FILE):
+        os.remove(TRAIN_LOG_FILE)
+
+    # Setup the training
+    config = get_config(
+        config_path,
+        [
+            "habitat_baselines.num_updates=1",
+            "habitat_baselines.eval.split=minival",
+            "habitat.dataset.split=minival",
+            "habitat_baselines.total_num_steps=-1.0",
+            "habitat_baselines.test_episode_count=1",
+            "habitat_baselines.checkpoint_folder=data/test_checkpoints/test_training",
+            f"habitat_baselines.log_file={TRAIN_LOG_FILE}",
+            f"habitat_baselines/rl/policy={policy_type}",
+            f"habitat_baselines/rl/policy/hierarchical_policy/defined_skills={skill_type}",
+        ],
+    )
+    with read_write(config):
+        config.habitat_baselines.eval.update({"video_option": []})
+        for (
+            skill_name,
+            skill,
+        ) in (
+            config.habitat_baselines.rl.policy.hierarchical_policy.defined_skills.items()
+        ):
+            if skill.load_ckpt_file == "":
+                continue
+            skill.update(
+                {
+                    "force_config_file": f"benchmark/rearrange={skill_name}",
+                    "max_skill_steps": 1,
+                    "load_ckpt_file": "",
+                }
+            )
+        execute_exp(config, mode)
 
 
 @pytest.mark.skipif(

@@ -14,31 +14,33 @@ from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
 
 
-def compute_turn(rel, turn_vel, robot_forward):
-    is_left = np.cross(robot_forward, rel) > 0
-    if is_left:
-        vel = [0, -turn_vel]
-    else:
-        vel = [0, turn_vel]
-    return vel
-
-
-def get_possible_nav_to_actions(pddl_problem):
-    return pddl_problem.get_possible_actions(
-        allowed_action_names=["nav", "nav_to_receptacle"],
-        true_preds=None,
-    )
-
-
 @registry.register_task_action
 class OracleNavAction(BaseVelAction):
+    """
+    An action that will convert the index of an entity (in the sense of
+    `PddlEntity`) to navigate to and convert this to base control to move the
+    robot to the closest navigable position to that entity. The entity index is
+    the index into the list of all available entities in the current scene.
+    """
+
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task
 
-        self._poss_actions = get_possible_nav_to_actions(task.pddl_problem)
+        self._poss_entities = (
+            self._task.pddl_problem.get_ordered_entities_list()
+        )
         self._prev_ep_id = None
         self._targets = {}
+
+    @staticmethod
+    def _compute_turn(rel, turn_vel, robot_forward):
+        is_left = np.cross(robot_forward, rel) > 0
+        if is_left:
+            vel = [0, -turn_vel]
+        else:
+            vel = [0, turn_vel]
+        return vel
 
     @property
     def action_space(self):
@@ -62,8 +64,7 @@ class OracleNavAction(BaseVelAction):
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         if nav_to_target_idx not in self._targets:
-            action = self._poss_actions[nav_to_target_idx]
-            nav_to_obj = action.get_arg_value("obj")
+            nav_to_obj = self._poss_entities[nav_to_target_idx]
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
@@ -95,7 +96,7 @@ class OracleNavAction(BaseVelAction):
             self._action_arg_prefix + "oracle_nav_action"
         ]
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
-            self._poss_actions
+            self._poss_entities
         ):
             if is_last_action:
                 return self._sim.step(HabitatSimActions.base_velocity)
@@ -134,7 +135,7 @@ class OracleNavAction(BaseVelAction):
         if not at_goal:
             if dist_to_final_nav_targ < self._config.dist_thresh:
                 # Look at the object
-                vel = compute_turn(
+                vel = OracleNavAction._compute_turn(
                     rel_pos, self._config.turn_velocity, robot_forward
                 )
             elif angle_to_target < self._config.turn_thresh:
@@ -142,7 +143,7 @@ class OracleNavAction(BaseVelAction):
                 vel = [self._config.forward_velocity, 0]
             else:
                 # Look at the target waypoint.
-                vel = compute_turn(
+                vel = OracleNavAction._compute_turn(
                     rel_targ, self._config.turn_velocity, robot_forward
                 )
         else:

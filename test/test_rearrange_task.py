@@ -5,10 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import ctypes
-import gc
-import itertools
 import json
-import os
 import os.path as osp
 import sys
 import time
@@ -20,7 +17,6 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import magnum as mn
 import numpy as np
 import pytest
-import torch
 import yaml
 from omegaconf import DictConfig, OmegaConf
 
@@ -39,8 +35,6 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat.utils.geometry_utils import point_in_triangle_test
 from habitat_baselines.config.default import get_config as baselines_get_config
-from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
-from habitat_baselines.run import run_exp
 
 CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
@@ -125,33 +119,6 @@ def test_rearrange_baseline_envs(test_cfg_path):
         glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
-def test_rearrange_tasks(test_cfg_path):
-    """
-    Test the underlying Habitat Tasks
-    """
-    if not osp.isfile(test_cfg_path):
-        return
-
-    config = get_config(test_cfg_path)
-    if (
-        config.habitat.dataset.data_path
-        == "data/ep_datasets/bench_scene.json.gz"
-    ):
-        pytest.skip(
-            "This config is only useful for examples and does not have the generated dataset"
-        )
-
-    with habitat.Env(config=config) as env:
-        for _ in range(5):
-            env.reset()
-
-
-@pytest.mark.parametrize(
-    "test_cfg_path",
-    list(
-        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
-    ),
-)
 def test_composite_tasks(test_cfg_path):
     """
     Test for the Habitat composite tasks.
@@ -219,36 +186,6 @@ def test_rearrange_episode_generator(
     logger.info(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
     )
-
-
-@pytest.mark.parametrize(
-    "test_cfg_path,mode",
-    list(
-        itertools.product(
-            glob("habitat-baselines/habitat_baselines/config/tp_srl_test/*"),
-            ["eval"],
-        )
-    ),
-)
-def test_tp_srl(test_cfg_path, mode):
-    # For testing with world_size=1
-    os.environ["MAIN_PORT"] = str(find_free_port())
-
-    run_exp(
-        test_cfg_path.replace(
-            "habitat-baselines/habitat_baselines/config/", ""
-        ),
-        mode,
-        ["habitat_baselines.eval.split=train"],
-    )
-
-    # Needed to destroy the trainer
-    gc.collect()
-
-    # Deinit processes group
-    if torch.distributed.is_initialized():
-        torch.distributed.destroy_process_group()
-
 
 @pytest.mark.skipif(
     not osp.exists("data/test_assets/"),

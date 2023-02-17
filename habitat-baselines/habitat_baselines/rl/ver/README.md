@@ -28,8 +28,7 @@ To use VER, simply change the `trainer_name` to `"ver"` in either the config or 
 
 ```bash
 python -u habitat_baselines/run.py \
-  --exp-config habitat-baselines/habitat_baselines/config/pointnav/ppo_pointnav_example.yaml \
-  --run-type train \
+  --config-name=pointnav/ppo_pointnav_example.yaml \
   habitat_baselines.trainer_name=ver
 ```
 
