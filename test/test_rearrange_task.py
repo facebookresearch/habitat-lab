@@ -187,6 +187,7 @@ def test_rearrange_episode_generator(
         f"successful_ep = {len(dataset.episodes)} generated in {time.time()-start_time} seconds."
     )
 
+
 @pytest.mark.skipif(
     not osp.exists("data/test_assets/"),
     reason="This test requires habitat-sim test assets.",
