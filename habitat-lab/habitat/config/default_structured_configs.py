@@ -172,10 +172,20 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     """
     type: str = "WaypointAction"
     action_duration: float = 1.0  # seconds
-    min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 1.0  # # deg/sec
+    # Action space range
     waypoint_lin_range: float = 0.25  # meters
     waypoint_ang_range: float = 180  # degrees
+    # For early termination of the action
+    min_abs_lin_speed: float = 0.025  # meters/sec
+    min_abs_ang_speed: float = 1.0  # deg/sec
+    # Controller parameters
+    v_max: float = 0.3
+    w_max: float = 0.45
+    acc_lin: float = 0.2
+    acc_ang: float = 0.6
+    max_heading_ang: float = 0.7854  # 45 degrees in rad
+    lin_error_tol = 0.01
+    ang_error_tol = 0.025
 
 
 @attr.s(auto_attribs=True, slots=True)
