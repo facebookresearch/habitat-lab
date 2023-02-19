@@ -1444,11 +1444,21 @@ class WaypointAction(VelocityAction):
 
     @staticmethod
     def _agent_state_to_xyt(agent_state):
+        """
+        Home robot coordinate system: +z = up
+        Habitat coordinate system: +y = up
+
+        We map the coordinate systems by assuming the +x axis is shared
+        x -> x
+        y -> -z
+        rz -> -ry
+        """
         return np.array(
             [
                 agent_state.position[0],
-                agent_state.position[2],
-                float(agent_state.rotation.angle()),
+                -agent_state.position[2],
+                float(agent_state.rotation.angle())
+                * agent_state.rotation.axis()[1],
             ]
         )
 
