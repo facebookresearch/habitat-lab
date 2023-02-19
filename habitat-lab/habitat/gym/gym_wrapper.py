@@ -23,18 +23,6 @@ except ImportError:
     pygame = None
 
 
-def flatten_dict(d, parent_key=""):
-    # From https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + "." + str(k) if parent_key else str(k)
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-
 def smash_observation_space(obs_space, limit_keys):
     obs_shapes = [obs_space.spaces[k].shape for k in limit_keys]
 
@@ -265,7 +253,6 @@ class HabGymWrapper(gym.Env):
         obs, reward, done, info = self._env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
-        info = flatten_dict(info)
         return obs, reward, done, info
 
     def _transform_obs(self, obs):
@@ -303,7 +290,7 @@ class HabGymWrapper(gym.Env):
 
     def render(self, mode: str = "human") -> np.ndarray:
         frame = None
-        last_infos = flatten_dict(self._env._env.get_metrics())
+        last_infos = self._env._env.get_metrics()
         if mode == "rgb_array":
             frame = observations_to_image(self._last_obs, last_infos)
         elif mode == "human":

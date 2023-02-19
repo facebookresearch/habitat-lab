@@ -6,7 +6,7 @@
 
 from os import makedirs
 from os import path as osp
-from typing import List
+from typing import Any, Dict, List, Tuple
 
 from habitat.core.logging import logger
 
@@ -52,3 +52,23 @@ def cull_string_list_by_substrings(
                     culled_list.append(string)
                     break
     return culled_list
+
+
+def flatten_dict(d: Dict, parent_key: str = "", sep: str = ".") -> Dict:
+    r"""Flattens nested dict.
+
+    Source: https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
+
+    :param d: Nested dict.
+    :param parent_key: Parameter to set parent dict key.
+    :param sep: Nested keys separator.
+    :return: Flattened dict.
+    """
+    items: List[Tuple[str, Any]] = []
+    for k, v in d.items():
+        new_key = parent_key + sep + str(k) if parent_key else str(k)
+        if isinstance(v, dict):
+            items.extend(flatten_dict(v, parent_key=new_key).items())
+        else:
+            items.append((new_key, v))
+    return dict(items)

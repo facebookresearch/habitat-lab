@@ -25,8 +25,10 @@ from habitat.config.default import get_agent_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
-from habitat.utils.render_wrapper import overlay_frame
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import (
+    observations_to_image,
+    overlay_frame,
+)
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.construct_vector_env import construct_envs
