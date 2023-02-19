@@ -115,5 +115,5 @@ class GymHabitatEnv(gym.Wrapper):
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ):
         base_env = RLTaskEnv(config=config, dataset=dataset)
-        env = HabGymWrapper(base_env)
+        env = HabGymWrapper(env=base_env, habitat_gym_config=config.gym)
         super().__init__(env)
