@@ -402,12 +402,12 @@ class RLEnv(gym.Env):
         self._env.episodes = episodes
 
     def current_episode(self, all_info: bool = False) -> BaseEpisode:
-        """
-        Returns the current episode of the environment.
-        :param all_info: If true, all of the information in the episode
-        will be provided. Otherwise, only episode_id and scene_id will
-        be included
-        :return: The BaseEpisode object for the current episode
+        r"""Returns the current episode of the environment.
+
+        :param all_info: If true, all the information in the episode
+                         will be provided. Otherwise, only episode_id
+                         and scene_id will be included.
+        :return: The BaseEpisode object for the current episode.
         """
         if all_info:
             return self._env.current_episode

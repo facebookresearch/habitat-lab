@@ -20,7 +20,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
     from habitat.core.dataset import BaseEpisode
-    from habitat.core.environments import RLTaskEnv
+    from habitat.core.env import RLEnv
 
 try:
     import pygame
@@ -174,7 +174,7 @@ class HabGymWrapper(gym.Wrapper):
 
     def __init__(
         self,
-        env: "RLTaskEnv",
+        env: "RLEnv",
         habitat_gym_config: "DictConfig",
         save_orig_obs: bool = False,
     ):
@@ -252,13 +252,6 @@ class HabGymWrapper(gym.Wrapper):
         return self.unwrapped.number_of_episodes
 
     def current_episode(self, all_info: bool = False) -> "BaseEpisode":
-        r"""Returns the current episode of the environment.
-
-        :param all_info: If true, all the information in the episode
-                         will be provided. Otherwise, only episode_id
-                         and scene_id will be included.
-        :return: The BaseEpisode object for the current episode.
-        """
         return self.unwrapped.current_episode(all_info)
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
@@ -335,5 +328,5 @@ class HabGymWrapper(gym.Wrapper):
         self.env.close()
 
     @property
-    def unwrapped(self) -> "RLTaskEnv":
-        return cast("RLTaskEnv", self.env.unwrapped)
+    def unwrapped(self) -> "RLEnv":
+        return cast("RLEnv", self.env.unwrapped)
