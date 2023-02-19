@@ -1426,6 +1426,16 @@ class WaypointAction(VelocityAction):
             linear_velocity, angular_velocity = self.w2v_controller.forward(
                 xyt
             )
+            if _t == 0:
+                print(
+                    f"velocity command: [{linear_velocity}, {angular_velocity}]"
+                )
+                print(
+                    f"controller state: {self.w2v_controller.controller.xyt_loc}"
+                )
+                print(
+                    f"controller goal:  {self.w2v_controller.controller.xyt_goal}"
+                )
 
             # Apply action and step simulation
             next_agent_state = self._apply_velocity_action(
