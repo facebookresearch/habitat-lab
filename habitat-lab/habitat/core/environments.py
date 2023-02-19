@@ -84,7 +84,7 @@ class RLTaskEnv(habitat.RLEnv):
         return done
 
     def get_info(self, observations):
-        return self.habitat_env.get_metrics()
+        return self._env.get_metrics()
 
 
 @habitat.registry.register_env(name="GymRegistryEnv")
