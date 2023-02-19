@@ -113,6 +113,8 @@ class RearrangePickReward(RearrangeReward):
         self._dist_reward = config.dist_reward
         self._drop_pen = config.drop_pen
         self._drop_obj_should_end = config.drop_obj_should_end
+        self._object_goal = config.object_goal
+        self._sparse_reward = config.sparse_reward
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -127,7 +129,7 @@ class RearrangePickReward(RearrangeReward):
                 ForceTerminate.cls_uuid,
             ],
         )
-        if self._config.object_goal:
+        if self._object_goal:
             task.measurements.check_measure_dependencies(
                 self.uuid, [PickDistanceToGoal.cls_uuid]
             )
@@ -155,7 +157,7 @@ class RearrangePickReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-        if self._config.object_goal:
+        if self._object_goal:
             ee_to_object_distance = task.measurements.measures[
                 PickDistanceToGoal.cls_uuid
             ].get_metric()
@@ -177,7 +179,7 @@ class RearrangePickReward(RearrangeReward):
 
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
-            if self._config.object_goal:
+            if self._object_goal:
                 permissible_obj_ids = [
                     self._sim.scene_obj_ids[int(g.object_id)]
                     for g in episode.candidate_objects
@@ -202,8 +204,8 @@ class RearrangePickReward(RearrangeReward):
                 self.cur_dist = -1
                 return
 
-        # If SPARSE_REWARD=True, use dense reward only after the object gets picked for bringing arm to resting position
-        if not self._config.sparse_reward or did_pick:
+        # If _sparse_reward is True, use dense reward only after the object gets picked for bringing arm to resting position
+        if not self._sparse_reward or did_pick:
             if self._use_diff:
                 if self.cur_dist < 0:
                     dist_diff = 0.0
@@ -236,6 +238,7 @@ class RearrangePickSuccess(Measure):
         self._sim = sim
         self._config = config
         self._ee_resting_success_threshold = self._config.ee_resting_success_threshold
+        self._object_goal = self._config.object_goal
         self._prev_ee_pos = None
         super().__init__(**kwargs)
 
@@ -261,7 +264,7 @@ class RearrangePickSuccess(Measure):
 
         # Is the agent holding the object and it's at the start?
 
-        if self._config.object_goal:
+        if self._object_goal:
             permissible_obj_ids = [
                 self._sim.scene_obj_ids[int(g.object_id)]
                 for g in episode.candidate_objects

@@ -92,6 +92,8 @@ class PlaceReward(RearrangeReward):
         self._wrong_drop_should_end = config.wrong_drop_should_end
         self._use_diff = config.use_diff
         self._dist_reward = config.dist_reward
+        self._sparse_reward = config.sparse_reward
+        self._place_anywhere = config.place_anywhere
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -107,7 +109,7 @@ class PlaceReward(RearrangeReward):
                 ForceTerminate.cls_uuid,
             ],
         )
-        if not self._config.sparse_reward:
+        if not self._sparse_reward:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
@@ -115,7 +117,7 @@ class PlaceReward(RearrangeReward):
                     EndEffectorToGoalDistance.cls_uuid,
                 ],
             )
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
@@ -155,7 +157,7 @@ class PlaceReward(RearrangeReward):
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             obj_at_goal = task.measurements.measures[
                 ObjAnywhereOnGoal.cls_uuid
             ].get_metric()
@@ -168,7 +170,7 @@ class PlaceReward(RearrangeReward):
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
-            if self._config.sparse_reward:
+            if self._sparse_reward:
                 dist_to_goal = 0.0
             elif self._use_ee_dist:
                 ee_to_goal_dist = task.measurements.measures[
@@ -227,6 +229,7 @@ class PlaceSuccess(Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
         self._ee_resting_success_threshold = self._config.ee_resting_success_threshold
+        self._place_anywhere = self._config.place_anywhere
         self._sim = sim
         super().__init__(**kwargs)
 
@@ -241,7 +244,7 @@ class PlaceSuccess(Measure):
                 EndEffectorToRestDistance.cls_uuid,
             ],
         )
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
@@ -264,7 +267,7 @@ class PlaceSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             is_obj_at_goal = task.measurements.measures[
                 ObjAnywhereOnGoal.cls_uuid
             ].get_metric()
