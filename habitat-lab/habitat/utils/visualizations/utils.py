@@ -14,7 +14,6 @@ import tqdm
 
 from habitat.core.logging import logger
 from habitat.core.utils import try_cv2_import
-from habitat.tasks.nav.nav import Collisions, TopDownMap
 from habitat.utils.common import flatten_dict
 from habitat.utils.visualizations import maps
 
@@ -240,11 +239,11 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         render_frame = np.concatenate(render_obs_images, axis=1)
 
     # draw collision
-    collisions_key = Collisions.uuid
+    collisions_key = "collisions"
     if collisions_key in info and info[collisions_key]["is_collision"]:
         render_frame = draw_collision(render_frame)
 
-    top_down_map_key = TopDownMap.uuid
+    top_down_map_key = "top_down_map"
     if top_down_map_key in info:
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
             info[top_down_map_key], render_frame.shape[0]
