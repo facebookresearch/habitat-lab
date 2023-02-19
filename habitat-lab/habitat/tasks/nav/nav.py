@@ -1427,15 +1427,9 @@ class WaypointAction(VelocityAction):
                 xyt
             )
             if _t == 0:
-                print(
-                    f"velocity command: [{linear_velocity}, {angular_velocity}]"
-                )
-                print(
-                    f"controller state: {self.w2v_controller.controller.xyt_loc}"
-                )
-                print(
-                    f"controller goal:  {self.w2v_controller.controller.xyt_goal}"
-                )
+                print(f"vel command: [{linear_velocity}, {angular_velocity}]")
+                print(f"xyt state: {self.w2v_controller.controller.xyt_loc}")
+                print(f"xyt goal:  {self.w2v_controller.controller.xyt_goal}")
 
             # Apply action and step simulation
             next_agent_state = self._apply_velocity_action(
@@ -1463,12 +1457,16 @@ class WaypointAction(VelocityAction):
         y -> -z
         rz -> -ry
         """
+        y_rot = (
+            float(agent_state.rotation.angle())
+            * agent_state.rotation.axis()[1]
+        )
+
         return np.array(
             [
                 agent_state.position[0],
                 -agent_state.position[2],
-                float(agent_state.rotation.angle())
-                * agent_state.rotation.axis()[1],
+                y_rot,
             ]
         )
 
