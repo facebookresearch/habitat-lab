@@ -106,6 +106,15 @@ class RearrangePickReward(RearrangeReward):
         self.cur_dist = -1.0
         self._prev_picked = False
         self._metric = None
+        self._pick_reward = config.pick_reward
+        self._wrong_pick_pen = config.wrong_pick_pen
+        self._wrong_pick_should_end = config.wrong_pick_should_end
+        self._use_diff = config.use_diff
+        self._dist_reward = config.dist_reward
+        self._drop_pen = config.drop_pen
+        self._drop_obj_should_end = config.drop_obj_should_end
+        self._object_goal = config.object_goal
+        self._sparse_reward = config.sparse_reward
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -120,7 +129,7 @@ class RearrangePickReward(RearrangeReward):
                 ForceTerminate.cls_uuid,
             ],
         )
-        if self._config.object_goal:
+        if self._object_goal:
             task.measurements.check_measure_dependencies(
                 self.uuid, [PickDistanceToGoal.cls_uuid]
             )
@@ -148,7 +157,7 @@ class RearrangePickReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
-        if self._config.object_goal:
+        if self._object_goal:
             ee_to_object_distance = task.measurements.measures[
                 PickDistanceToGoal.cls_uuid
             ].get_metric()
@@ -170,7 +179,7 @@ class RearrangePickReward(RearrangeReward):
 
         did_pick = cur_picked and (not self._prev_picked)
         if did_pick:
-            if self._config.object_goal:
+            if self._object_goal:
                 permissible_obj_ids = [
                     self._sim.scene_obj_ids[int(g.object_id)]
                     for g in episode.candidate_objects
@@ -179,14 +188,14 @@ class RearrangePickReward(RearrangeReward):
                 abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
                 permissible_obj_ids = [abs_targ_obj_idx]
             if snapped_id in permissible_obj_ids:
-                self._metric += self._config.pick_reward
+                self._metric += self._pick_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self.cur_dist = -1
             else:
                 # picked the wrong object
-                self._metric -= self._config.wrong_pick_pen
-                if self._config.wrong_pick_should_end:
+                self._metric -= self._wrong_pick_pen
+                if self._wrong_pick_should_end:
                     rearrange_logger.debug(
                         "Grasped wrong object, ending episode."
                     )
@@ -195,9 +204,9 @@ class RearrangePickReward(RearrangeReward):
                 self.cur_dist = -1
                 return
 
-        # If SPARSE_REWARD=True, use dense reward only after the object gets picked for bringing arm to resting position
-        if not self._config.sparse_reward or did_pick:
-            if self._config.use_diff:
+        # If _sparse_reward is True, use dense reward only after the object gets picked for bringing arm to resting position
+        if not self._sparse_reward or did_pick:
+            if self._use_diff:
                 if self.cur_dist < 0:
                     dist_diff = 0.0
                 else:
@@ -205,15 +214,15 @@ class RearrangePickReward(RearrangeReward):
 
                 # Filter out the small fluctuations
                 dist_diff = round(dist_diff, 3)
-                self._metric += self._config.dist_reward * dist_diff
+                self._metric += self._dist_reward * dist_diff
             else:
-                self._metric -= self._config.dist_reward * dist_to_goal
+                self._metric -= self._dist_reward * dist_to_goal
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
             # Dropped the object
-            self._metric -= self._config.drop_pen
-            if self._config.drop_obj_should_end:
+            self._metric -= self._drop_pen
+            if self._drop_obj_should_end:
                 self._task.should_end = True
             self._prev_picked = cur_picked
             self.cur_dist = -1
@@ -228,6 +237,8 @@ class RearrangePickSuccess(Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
+        self._ee_resting_success_threshold = self._config.ee_resting_success_threshold
+        self._object_goal = self._config.object_goal
         self._prev_ee_pos = None
         super().__init__(**kwargs)
 
@@ -253,7 +264,7 @@ class RearrangePickSuccess(Measure):
 
         # Is the agent holding the object and it's at the start?
 
-        if self._config.object_goal:
+        if self._object_goal:
             permissible_obj_ids = [
                 self._sim.scene_obj_ids[int(g.object_id)]
                 for g in episode.candidate_objects
@@ -267,7 +278,7 @@ class RearrangePickSuccess(Measure):
         self._metric = (
             self._sim.grasp_mgr.snap_idx in permissible_obj_ids
             and not self._sim.grasp_mgr.is_violating_hold_constraint()
-            and ee_to_rest_distance < self._config.ee_resting_success_threshold
+            and ee_to_rest_distance < self._ee_resting_success_threshold
         )
 
         self._prev_ee_pos = observations["ee_pos"]
