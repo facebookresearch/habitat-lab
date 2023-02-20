@@ -6,7 +6,7 @@
 
 from collections import OrderedDict
 from collections.abc import Mapping
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -27,6 +27,9 @@ try:
 
 except ImportError:
     pygame = None
+
+
+HabGymWrapperObsType = Union[np.ndarray, Dict[str, np.ndarray]]
 
 
 def smash_observation_space(obs_space, limit_keys):
@@ -233,7 +236,9 @@ class HabGymWrapper(gym.Wrapper):
 
         self._screen: Optional[pygame.surface.Surface] = None
 
-    def step(self, action: Union[np.ndarray, int]):
+    def step(
+        self, action: Union[np.ndarray, int]
+    ) -> Tuple[HabGymWrapperObsType, float, bool, dict]:
         assert self.action_space.contains(
             action
         ), f"Invalid action {action} for action space {self.action_space}"
@@ -288,10 +293,17 @@ class HabGymWrapper(gym.Wrapper):
 
         return observation
 
-    def reset(self) -> Union[np.ndarray, Dict[str, np.ndarray]]:
-        obs = self.env.reset()
-        self._last_obs = obs
-        return self._transform_obs(obs)
+    def reset(
+        self, *args, return_info: bool = False, **kwargs
+    ) -> Union[HabGymWrapperObsType, Tuple[HabGymWrapperObsType, dict]]:
+        obs = self.env.reset(*args, return_info=return_info, **kwargs)
+        if return_info:
+            obs, info = obs
+            self._last_obs = obs
+            return self._transform_obs(obs), info
+        else:
+            self._last_obs = obs
+            return self._transform_obs(obs)
 
     def render(self, mode: str = "human", **kwargs):
         last_infos = self.unwrapped.get_info(observations=None)
