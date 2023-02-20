@@ -1169,6 +1169,7 @@ class VelocityAction(SimulatorTaskAction):
         self.min_abs_lin_speed = config.min_abs_lin_speed
         self.min_abs_ang_speed = config.min_abs_ang_speed
         self.time_step = config.time_step
+        self.enable_scale_convert = config.enable_scale_convert
         self._allow_sliding = self._sim.config.sim_cfg.allow_sliding  # type: ignore
 
     @property
@@ -1194,11 +1195,9 @@ class VelocityAction(SimulatorTaskAction):
     def step(
         self,
         *args: Any,
-        task: EmbodiedTask,
-        linear_velocity: float,
-        angular_velocity: float,
+        linear_velocity: float = None,
+        angular_velocity: float = None,
         time_step: Optional[float] = None,
-        allow_sliding: Optional[bool] = None,
         **kwargs: Any,
     ):
         r"""Moves the agent with a provided linear and angular velocity for the
@@ -1210,42 +1209,69 @@ class VelocityAction(SimulatorTaskAction):
             angular_velocity: between [-1,1], scaled according to
                              config.ang_vel_range
             time_step: amount of time to move the agent for
-            allow_sliding: whether the agent will slide on collision
         """
-        if allow_sliding is None:
-            allow_sliding = self._allow_sliding
+        # Preprocess velocity input
+        lin_vel_processed, ang_vel_processed = self._preprocess_action(
+            linear_velocity, angular_velocity
+        )
+
+        # Apply action and get next observation
+        agent_state_result = self._apply_velocity_action(
+            lin_vel_processed,
+            ang_vel_processed,
+            time_step=time_step,
+        )
+
+        return self._get_agent_observation(agent_state_result)
+
+    def _preprocess_action(self, linear_velocity, angular_velocity):
+        """Perform scaling and clamping of input"""
+        if self.enable_scale_convert:
+            linear_velocity = self._scale_inputs(
+                linear_velocity,
+                [-1, 1],
+                [self.min_lin_vel, self.max_lin_vel],
+            )
+            angular_velocity = self._scale_inputs(
+                angular_velocity,
+                [-1, 1],
+                [self.min_ang_vel, self.max_ang_vel],
+            )
+
+        linear_velocity_clamped = np.clip(
+            linear_velocity,
+            self.min_lin_vel,
+            self.max_lin_vel,
+        )
+        angular_velocity_clamped = np.clip(
+            angular_velocity,
+            self.min_ang_vel,
+            self.max_ang_vel,
+        )
+
+        return linear_velocity_clamped, angular_velocity_clamped
+
+    def _apply_velocity_action(
+        self,
+        linear_velocity: float,
+        angular_velocity: float,
+        time_step: Optional[float] = None,
+    ):
+        """
+        Apply velocity command to simulation, step simulation, and return agent observation
+        """
+        # Parse inputs
         if time_step is None:
-            time_step = self.time_step
+            time_step = self._config.time_step
 
-        # Convert from [-1, 1] to [0, 1] range
-        linear_velocity = (linear_velocity + 1.0) / 2.0
-        angular_velocity = (angular_velocity + 1.0) / 2.0
-
-        # Scale actions
-        linear_velocity = self.min_lin_vel + linear_velocity * (
-            self.max_lin_vel - self.min_lin_vel
-        )
-        angular_velocity = self.min_ang_vel + angular_velocity * (
-            self.max_ang_vel - self.min_ang_vel
-        )
-
-        # Stop is called if both linear/angular speed are below their threshold
-        if (
-            abs(linear_velocity) < self.min_abs_lin_speed
-            and abs(angular_velocity) < self.min_abs_ang_speed
-        ):
-            task.is_stop_called = True  # type: ignore
-            return self._sim.get_observations_at(position=None, rotation=None)
-
-        angular_velocity = np.deg2rad(angular_velocity)
-        self.vel_control.linear_velocity = np.array(
+        # Map velocity actions
+        self.vel_control.linear_velocity = mn.Vector3(
             [0.0, 0.0, -linear_velocity]
         )
-        self.vel_control.angular_velocity = np.array(
+        self.vel_control.angular_velocity = mn.Vector3(
             [0.0, angular_velocity, 0.0]
         )
         agent_state = self._sim.get_agent_state()
-
         # Convert from np.quaternion (quaternion.quaternion) to mn.Quaternion
         normalized_quaternion = agent_state.rotation
         agent_mn_quat = mn.Quaternion(
@@ -1255,32 +1281,22 @@ class VelocityAction(SimulatorTaskAction):
             agent_mn_quat,
             agent_state.position,
         )
-
         # manually integrate the rigid state
         goal_rigid_state = self.vel_control.integrate_transform(
             time_step, current_rigid_state
         )
 
         # snap rigid state to navmesh and set state to object/agent
-        if allow_sliding:
-            step_fn = self._sim.pathfinder.try_step  # type: ignore
-        else:
-            step_fn = self._sim.pathfinder.try_step_no_sliding  # type: ignore
-
+        step_fn = self._sim.pathfinder.try_step_no_sliding  # type: ignore
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
         )
-        final_rotation = [
-            *goal_rigid_state.rotation.vector,
-            goal_rigid_state.rotation.scalar,
-        ]
 
         # Check if a collision occured
         dist_moved_before_filter = (
             goal_rigid_state.translation - agent_state.position
         ).dot()
         dist_moved_after_filter = (final_position - agent_state.position).dot()
-
         # NB: There are some cases where ||filter_end - end_pos|| > 0 when a
         # collision _didn't_ happen. One such case is going up stairs.  Instead,
         # we check to see if the the amount moved after the application of the
@@ -1289,17 +1305,41 @@ class VelocityAction(SimulatorTaskAction):
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
 
-        agent_observations = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
-        )
-
         # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
-        return agent_observations
+        final_agent_state = self._sim.get_agent_state()
+        final_agent_state.position = final_position
+        final_agent_state.rotation = goal_rigid_state.rotation
 
+        return final_agent_state
+
+    def _get_agent_observation(self, agent_state):
+        position = agent_state.position
+        rotation = [
+            *agent_state.rotation.vector,
+            agent_state.rotation.scalar,
+        ]
+        return self._sim.get_observations_at(
+            position=position,
+            rotation=rotation,
+            keep_agent_at_new_pose=True,
+        )
+
+    @staticmethod
+    def _scale_inputs(
+        input_val: float, input_range: List[float], output_range: List[float]
+    ) -> float:
+        """
+        Transform input from input range to output range
+        (ex: from normalized input in range [-1, 1] to [y_min, y_max])
+        TODO: This function should go into utils of some sort
+        """
+        w_input = input_range[1] - input_range[0]
+        w_output = output_range[1] - output_range[0]
+        return (
+            output_range[0] + (input_val - input_range[0]) * w_output / w_input
+        )
 
 @registry.register_task(name="Nav-v0")
 class NavigationTask(EmbodiedTask):

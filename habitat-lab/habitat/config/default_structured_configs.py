@@ -205,6 +205,7 @@ class VelocityControlActionConfig(ActionConfig):
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 1.0  # seconds
+    enable_scale_convert: bool = True
 
 
 # -----------------------------------------------------------------------------
