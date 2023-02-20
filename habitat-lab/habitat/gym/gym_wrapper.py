@@ -314,11 +314,12 @@ class HabGymWrapper(gym.Wrapper):
                 raise ValueError(
                     "Render mode human not supported without pygame."
                 )
-            pygame.init()
             frame = observations_to_image(self._last_obs, last_infos)
-            self._screen = pygame.display.set_mode(
-                [frame.shape[1], frame.shape[0]]
-            )
+            if self._screen is None:
+                pygame.init()
+                self._screen = pygame.display.set_mode(
+                    [frame.shape[1], frame.shape[0]]
+                )
             draw_frame = np.transpose(
                 frame, (1, 0, 2)
             )  # (H, W, C) -> (W, H, C)
