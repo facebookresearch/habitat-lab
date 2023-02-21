@@ -14,6 +14,7 @@ from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.config.default import get_config
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
 
 
@@ -73,6 +74,10 @@ class NnSkillPolicy(SkillPolicy):
             return []
 
     @property
+    def has_hidden_state(self):
+        return self.num_recurrent_layers != 0
+
+    @property
     def num_recurrent_layers(self):
         if self._wrap_policy is not None:
             return self._wrap_policy.net.num_recurrent_layers
@@ -118,7 +123,7 @@ class NnSkillPolicy(SkillPolicy):
         masks,
         cur_batch_idx,
         deterministic=False,
-    ):
+    ) -> PolicyActionData:
         filtered_obs = self._get_filtered_obs(observations, cur_batch_idx)
 
         filtered_prev_actions = prev_actions[
@@ -126,19 +131,25 @@ class NnSkillPolicy(SkillPolicy):
         ]
         filtered_obs = self._select_obs(filtered_obs, cur_batch_idx)
 
-        _, action, _, rnn_hidden_states = self._wrap_policy.act(
+        action_data = self._wrap_policy.act(
             filtered_obs,
             rnn_hidden_states,
             filtered_prev_actions,
             masks,
             deterministic,
         )
-        full_action = torch.zeros(prev_actions.shape, device=masks.device)
-        full_action[:, self._ac_start : self._ac_start + self._ac_len] = action
+        full_action = torch.zeros(
+            (masks.shape[0], self._full_ac_size), device=masks.device
+        )
+        full_action[
+            :, self._ac_start : self._ac_start + self._ac_len
+        ] = action_data.actions
+        action_data.actions = full_action
+
         self._did_want_done[cur_batch_idx] = full_action[
-            cur_batch_idx, self._stop_action_idx
+            :, self._stop_action_idx
         ]
-        return full_action, rnn_hidden_states
+        return action_data
 
     @classmethod
     def from_config(
@@ -171,6 +182,10 @@ class NnSkillPolicy(SkillPolicy):
         )
 
         for k in config.obs_skill_inputs:
+            if k not in filtered_obs_space.spaces:
+                raise ValueError(
+                    f"Could not find {k} for skill {policy_cfg.habitat.gym.auto_name}"
+                )
             space = filtered_obs_space.spaces[k]
             # There is always a 3D position
             filtered_obs_space.spaces[k] = truncate_obs_space(space, 3)

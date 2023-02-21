@@ -66,6 +66,10 @@ def append_text_to_image(
 
 
 def overlay_frame(frame, info, additional=None):
+    """
+    Renders text from the `info` dictionary to the `frame` image.
+    """
+
     lines = []
     flattened_info = flatten_dict(info)
     for k, v in flattened_info.items():

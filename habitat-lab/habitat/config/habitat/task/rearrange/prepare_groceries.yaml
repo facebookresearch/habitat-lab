@@ -28,6 +28,7 @@ defaults:
     - end_effector_sensor
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
+    - localization_sensor
   - _self_
 
 type: RearrangeCompositeTask-v0
