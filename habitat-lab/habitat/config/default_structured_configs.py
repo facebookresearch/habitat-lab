@@ -198,12 +198,13 @@ class TeleportActionConfig(ActionConfig):
 @attr.s(auto_attribs=True, slots=True)
 class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
-    # meters/sec
-    lin_vel_range: List[float] = [0.0, 0.25]
-    # deg/sec
-    ang_vel_range: List[float] = [-10.0, 10.0]
+    lin_vel_range: List[float] = [0.0, 0.25]  # meters/sec
+    ang_vel_range: List[float] = [-10.0, 10.0]  # deg/sec
     time_step: float = 0.2  # seconds
     enable_scale_convert: bool = True
+    # Stop criteria
+    min_abs_lin_speed: float = 0.025  # meters/sec
+    min_abs_ang_speed: float = 1.0  # deg/sec
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -218,9 +219,6 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Action space range
     waypoint_lin_range: float = 0.25  # meters
     waypoint_ang_range: float = 180  # degrees
-    # For early termination of the action
-    min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 1.0  # deg/sec
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
@@ -229,6 +227,9 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     max_heading_ang: float = 0.7854  # 45 degrees in rad
     lin_error_tol: float = 0.01
     ang_error_tol: float = 0.025
+    # Stop criteria
+    min_abs_lin_diff: float = 0.01  # meters
+    min_abs_ang_diff: float = 3.0  # deg
 
 
 @attr.s(auto_attribs=True, slots=True)
