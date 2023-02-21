@@ -268,9 +268,11 @@ class EEPositionSensor(UsesArticulatedAgentInterface, Sensor):
         trans = self._sim.get_agent_data(
             self.agent_id
         ).robot.base_transformation
-        ee_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).robot.ee_transform.translation
+        ee_pos = (
+            self._sim.get_agent_data(self.agent_id)
+            .robot.ee_transform()
+            .translation
+        )
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
         return np.array(local_ee_pos, dtype=np.float32)
@@ -302,9 +304,11 @@ class RelativeRestingPositionSensor(UsesArticulatedAgentInterface, Sensor):
         base_trans = self._sim.get_agent_data(
             self.agent_id
         ).robot.base_transformation
-        ee_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).robot.ee_transform.translation
+        ee_pos = (
+            self._sim.get_agent_data(self.agent_id)
+            .robot.ee_transform()
+            .translation
+        )
         local_ee_pos = base_trans.inverted().transform_point(ee_pos)
 
         relative_desired_resting = task.desired_resting - local_ee_pos
@@ -527,9 +531,11 @@ class EndEffectorToGoalDistance(UsesArticulatedAgentInterface, Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, observations, **kwargs):
-        ee_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).robot.ee_transform.translation
+        ee_pos = (
+            self._sim.get_agent_data(self.agent_id)
+            .robot.ee_transform()
+            .translation
+        )
 
         idxs, goals = self._sim.get_targets()
 
@@ -559,9 +565,11 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, episode, **kwargs):
-        ee_pos = self._sim.get_agent_data(
-            self.agent_id
-        ).robot.ee_transform.translation
+        ee_pos = (
+            self._sim.get_agent_data(self.agent_id)
+            .robot.ee_transform()
+            .translation
+        )
 
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
@@ -630,9 +638,11 @@ class ReturnToRestDistance(UsesArticulatedAgentInterface, Measure):
         if picked_correct:
             self._metric = rest_dist
         else:
-            T_inv = self._sim.get_agent_data(
-                self.agent_id
-            ).robot.ee_transform.inverted()
+            T_inv = (
+                self._sim.get_agent_data(self.agent_id)
+                .robot.ee_transform()
+                .inverted()
+            )
             idxs, _ = self._sim.get_targets()
             scene_pos = self._sim.get_scene_pos()
             pos = scene_pos[idxs][0]

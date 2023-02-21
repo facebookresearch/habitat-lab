@@ -50,6 +50,7 @@ class SpotParams:
         there are legs).
     :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
         there are legs).
+    :property ee_count: how many end effectors
     """
 
     arm_joints: List[int]
@@ -58,8 +59,8 @@ class SpotParams:
     arm_init_params: Optional[List[float]]
     gripper_init_params: Optional[List[float]]
 
-    ee_offset: mn.Vector3
-    ee_link: int
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
     ee_constraint: np.ndarray
 
     cameras: Dict[str, ArticulatedAgentCameraParams]
@@ -80,6 +81,8 @@ class SpotParams:
     leg_mtr_pos_gain: Optional[float] = None
     leg_mtr_vel_gain: Optional[float] = None
     leg_mtr_max_impulse: Optional[float] = None
+
+    ee_count: Optional[int] = 1
 
 
 class SpotRobot(MobileManipulator):
@@ -104,9 +107,9 @@ class SpotRobot(MobileManipulator):
                 0.7,
                 -1.5,
             ],
-            ee_offset=mn.Vector3(0.08, 0, 0),
-            ee_link=7,
-            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
+            ee_offset=[mn.Vector3(0.08, 0, 0)],
+            ee_links=[7],
+            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={
                 "robot_arm": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),

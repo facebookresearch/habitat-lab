@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, List, Optional
 
 import magnum as mn
 import numpy as np
@@ -28,17 +28,23 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class AgentData:
+class ArticulatedAgentData:
     """
     Data needed to manage an agent instance.
     """
 
     articulated_agent: MobileManipulator
-    grasp_mgr: RearrangeGraspManager
+    grasp_mgrs: List[RearrangeGraspManager]
     cfg: "DictConfig"
     start_js: np.ndarray
     is_pb_installed: bool
     _ik_helper: Optional[IkHelper] = None
+
+    @property
+    def grasp_mgr(self):
+        if len(self.grasp_mgrs) == 0:
+            raise Exception("Agent data has no grasp manager defined")
+        return self.grasp_mgrs[0]
 
     @property
     def ik_helper(self):
@@ -49,7 +55,7 @@ class AgentData:
         return self._ik_helper
 
 
-class AgentManager:
+class ArticulatedAgentManager:
     """
     Handles creating, updating and managing all agent instances.
     """
@@ -64,7 +70,12 @@ class AgentManager:
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.robot_type)
             agent = agent_cls(agent_cfg.robot_urdf, sim)
-            grasp_mgr = RearrangeGraspManager(sim, cfg, agent)
+            grasp_managers = []
+            for grasp_manager_id in range(agent_cfg.grasp_managers):
+                graps_mgr = RearrangeGraspManager(
+                    sim, cfg, agent, grasp_manager_id
+                )
+                grasp_managers.append(graps_mgr)
 
             if len(cfg.agents) > 1:
                 # Prefix sensors if there is more than 1 agent in the scene.
@@ -78,9 +89,9 @@ class AgentManager:
                             agent._cameras[camera_prefix].append(sensor_name)
 
             self._all_agent_data.append(
-                AgentData(
+                ArticulatedAgentData(
                     articulated_agent=agent,
-                    grasp_mgr=grasp_mgr,
+                    grasp_mgrs=grasp_managers,
                     cfg=agent_cfg,
                     start_js=np.array(agent.params.arm_init_params),
                     is_pb_installed=self._is_pb_installed,
@@ -101,7 +112,9 @@ class AgentManager:
                     )
 
                 agent_data.articulated_agent.reconfigure()
-            agent_data.grasp_mgr.reset()
+
+            for grasp_manager in agent_data.grasp_mgrs:
+                grasp_manager.reset()
 
     def post_obj_load_reconfigure(self):
         """
@@ -163,20 +176,22 @@ class AgentManager:
                     agent_data.start_js,
                 )
 
-    def update_robots(self):
+    def update_agents(self):
         """
-        Update all robot instance managers.
+        Update all agent instance managers.
         """
 
         for agent_data in self._all_agent_data:
-            agent_data.grasp_mgr.update()
+            for grasp_mgr in agent_data.grasp_mgrs:
+                grasp_mgr.update()
             agent_data.articulated_agent.update()
 
     def update_debug(self):
         """
         Only call when in debug mode. This renders visualization helpers for
-        the robots.
+        the agents.
         """
 
         for agent_data in self._all_agent_data:
-            agent_data.grasp_mgr.update_debug()
+            for grasp_mgr in agent_data.grasp_mgrs:
+                grasp_mgr.update_debug()

@@ -23,10 +23,10 @@ class StretchRobot(MobileManipulator):
                 dtype=np.float32,
             ),
             gripper_init_params=np.array([0.0, 0.0], dtype=np.float32),
-            ee_offset=mn.Vector3(0.08, 0, 0),
-            ee_link=36,
+            ee_offset=[mn.Vector3(0.08, 0, 0)],
+            ee_links=[36],
             ee_constraint=np.array(
-                [[-0.08, 0.29], [-0.84, -0.27], [0.01, 1.12]]
+                [[[-0.08, 0.29], [-0.84, -0.27], [0.01, 1.12]]]
             ),
             cameras={
                 "robot_head": ArticulatedAgentCameraParams(

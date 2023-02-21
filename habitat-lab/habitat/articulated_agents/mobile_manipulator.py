@@ -47,8 +47,8 @@ class MobileManipulatorParams:
         resets to 0.
     :property ee_offset: The 3D offset from the end-effector link to the true
         end-effector position.
-    :property ee_link: The Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (2, N) shaped array specifying the upper and
+    :property ee_links: A list with the Habitat Sim link ID of the end-effector.
+    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and
         lower limits for each end-effector joint where N is the arm DOF.
     :property cameras: The cameras and where they should go. The key is the
         prefix to match in the sensor names. For example, a key of `"robot_head"`
@@ -68,6 +68,7 @@ class MobileManipulatorParams:
     :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
         there are wheels).
     :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    :property ee_count: how many end effectors
     """
 
     arm_joints: List[int]
@@ -77,8 +78,8 @@ class MobileManipulatorParams:
     arm_init_params: Optional[np.ndarray]
     gripper_init_params: Optional[np.ndarray]
 
-    ee_offset: mn.Vector3
-    ee_link: int
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
     ee_constraint: np.ndarray
 
     cameras: Dict[str, ArticulatedAgentCameraParams]
@@ -97,6 +98,8 @@ class MobileManipulatorParams:
 
     base_offset: mn.Vector3
     base_link_names: Set[str]
+
+    ee_count: Optional[int] = 1
 
 
 class MobileManipulator(Manipulator, ArticulatedAgentBase):

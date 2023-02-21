@@ -30,7 +30,9 @@ from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
-from habitat.tasks.rearrange.agent_manager import AgentManager
+from habitat.tasks.rearrange.articulated_agent_manager import (
+    ArticulatedAgentManager,
+)
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
@@ -108,7 +110,7 @@ class RearrangeSim(HabitatSim):
         # architecture).
         self.ctrl_arm = True
 
-        self.agents_mgr = AgentManager(self.habitat_config, self)
+        self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
         self._debug_render_robot = self.habitat_config.debug_render_robot
         self._debug_render_goal = self.habitat_config.debug_render_goal
@@ -722,13 +724,13 @@ class RearrangeSim(HabitatSim):
 
     def maybe_update_robot(self):
         """
-        Calls the update robots method on the robot manager if the
+        Calls the update agents method on the robot manager if the
         `update_robot` configuration is set to True. Among other
         things, this will set the robot's sensors' positions to their new
         positions.
         """
         if self._update_robot:
-            self.agents_mgr.update_robots()
+            self.agents_mgr.update_agents()
 
     def visualize_position(
         self,

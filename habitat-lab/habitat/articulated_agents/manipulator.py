@@ -39,6 +39,8 @@ class Manipulator(ArticulatedAgentInterface):
         self._fixed_base = fixed_based
         self.sim_obj = sim_obj
 
+        # Adapt Manipulator params to support multiple end effector indices
+
         # NOTE: the follow members cache static info for improved efficiency over querying the API
         # maps joint ids to motor settings for convenience
         self.joint_motors: Dict[int, Tuple[int, JointMotorSettings]] = {}
@@ -208,27 +210,33 @@ class Manipulator(ArticulatedAgentInterface):
         )
         return lower_lims, upper_lims
 
-    @property
-    def ee_link_id(self) -> int:
-        """Gets the Habitat Sim link id of the end-effector."""
-        return self.params.ee_link
+    def ee_link_id(self, ee_index: int = 0) -> int:
+        """Gets the Habitat Sim link id of the end-effector.
+
+        :param ee_index: the end effector index for which we want the link id
+        """
+        if ee_index <= len(self.params.ee_links):
+            raise ValueError(
+                "The current manipulator does not have enough end effectors"
+            )
+        return self.params.ee_links[ee_index]
 
     @property
-    def ee_local_offset(self) -> mn.Vector3:
+    def ee_local_offset(self, ee_index: int = 0) -> mn.Vector3:
         """Gets the relative offset of the end-effector center from the
         end-effector link.
         """
         return self.params.ee_offset
 
     def calculate_ee_forward_kinematics(
-        self, joint_state: np.ndarray
+        self, joint_state: np.ndarray, ee_index: int = 0
     ) -> np.ndarray:
         """Gets the end-effector position for the given joint state."""
         self.sim_obj.joint_positions = joint_state
-        return self.ee_transform.translation
+        return self.ee_transform(ee_index).translation
 
     def calculate_ee_inverse_kinematics(
-        self, ee_target_position: np.ndarray
+        self, ee_target_position: np.ndarray, ee_index: int = 0
     ) -> np.ndarray:
         """Gets the joint states necessary to achieve the desired end-effector
         configuration.
@@ -237,25 +245,34 @@ class Manipulator(ArticulatedAgentInterface):
             "Currently no implementation for generic IK."
         )
 
-    @property
-    def ee_transform(self) -> mn.Matrix4:
+    def ee_transform(self, ee_index: int = 0) -> mn.Matrix4:
         """Gets the transformation of the end-effector location. This is offset
         from the end-effector link location.
+
+
+        :param ee_index: the end effector index for which we want the link transform
         """
+        if ee_index <= len(self.params.ee_links):
+            raise ValueError(
+                "The current manipulator does not have enough end effectors"
+            )
+
         ef_link_transform = self.sim_obj.get_link_scene_node(
-            self.params.ee_link
+            self.params.ee_links[ee_index]
         ).transformation
         ef_link_transform.translation = ef_link_transform.transform_point(
-            self.ee_local_offset
+            self.ee_local_offset[ee_index]
         )
         return ef_link_transform
 
-    def clip_ee_to_workspace(self, pos: np.ndarray) -> np.ndarray:
+    def clip_ee_to_workspace(
+        self, pos: np.ndarray, ee_index: int
+    ) -> np.ndarray:
         """Clips a 3D end-effector position within region the robot can reach."""
         return np.clip(
             pos,
-            self.params.ee_constraint[:, 0],
-            self.params.ee_constraint[:, 1],
+            self.params.ee_constraint[ee_index, :, 0],
+            self.params.ee_constraint[ee_index, :, 1],
         )
 
     @property
