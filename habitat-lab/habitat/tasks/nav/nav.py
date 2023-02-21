@@ -1381,6 +1381,28 @@ class WaypointAction(VelocityAction):
         self._min_abs_lin_diff = self._config.min_abs_lin_diff
         self._min_abs_ang_diff = self._config.min_abs_ang_diff
 
+    @property
+    def action_space(self):
+        lo = [
+            self._waypoint_lin_range[0],
+            self._waypoint_lin_range[0],
+            self._waypoint_ang_range[0],
+        ]
+        hi = [
+            self._waypoint_lin_range[1],
+            self._waypoint_lin_range[1],
+            self._waypoint_ang_range[1],
+        ]
+        return ActionSpace(
+            {
+                "xyt_waypoint": spaces.Box(
+                    low=np.array(lo),
+                    high=np.array(hi),
+                    dtype=np.float32,
+                ),
+            }
+        )
+
     def step(
         self, task: EmbodiedTask, xyt_waypoint: List[float], *args, **kwargs
     ):
@@ -1407,56 +1429,51 @@ class WaypointAction(VelocityAction):
         angular_diff = abs(xyt_waypoint[2])
 
         lin_check = linear_diff < self._min_abs_lin_diff
-        ang_check = angular_diff < self._min_abs_ang_diff
+        ang_check = angular_diff < np.deg2rad(self._min_abs_ang_diff)
         return lin_check and ang_check
 
     def _preprocess_action(self, xyt_waypoint):
         """Perform scaling and clamping of input"""
+        # Scale
         if self._enable_scale_convert:
             xyt_waypoint[0] = self._scale_inputs(
                 xyt_waypoint[0],
                 [-1, 1],
                 [
-                    -self._waypoint_lin_range,
-                    self._waypoint_lin_range,
+                    self._waypoint_lin_range[0],
+                    self._waypoint_lin_range[1],
                 ],
             )
             xyt_waypoint[1] = self._scale_inputs(
                 xyt_waypoint[1],
                 [-1, 1],
                 [
-                    -self._waypoint_lin_range,
-                    self._waypoint_lin_range,
+                    self._waypoint_lin_range[0],
+                    self._waypoint_lin_range[1],
                 ],
             )
             xyt_waypoint[2] = self._scale_inputs(
                 xyt_waypoint[2],
                 [-1, 1],
                 [
-                    -self._waypoint_ang_range,
-                    self._waypoint_ang_range,
+                    self._waypoint_ang_range[0],
+                    self._waypoint_ang_range[1],
                 ],
             )
 
-        r_clamped = np.clip(
-            np.linalg.norm(xyt_waypoint[:2]),
-            -self._waypoint_lin_range,
-            self._waypoint_lin_range,
-        )
-        heading_angle = np.arctan2(xyt_waypoint[0], xyt_waypoint[1])
-        theta_clamped = np.clip(
-            xyt_waypoint[2],
-            -self._waypoint_ang_range,
-            self._waypoint_ang_range,
+        # Clamp
+        xyt_waypoint_clamped = np.array(
+            [
+                np.clip(xyt_waypoint[0], *self._waypoint_lin_range),
+                np.clip(xyt_waypoint[1], *self._waypoint_lin_range),
+                np.clip(xyt_waypoint[2], *self._waypoint_ang_range),
+            ]
         )
 
-        xyt_waypoint_clamped = [
-            r_clamped * np.cos(heading_angle),
-            r_clamped * np.sin(heading_angle),
-            theta_clamped,
-        ]
+        # Convert deg to rad
+        xyt_waypoint_clamped[2] = np.deg2rad(xyt_waypoint_clamped[2])
 
-        return np.array(xyt_waypoint_clamped)
+        return xyt_waypoint_clamped
 
     def _step_rel_waypoint(self, xyt_waypoint, duration, *args, **kwargs):
         """Use the waypoint-to-velocity controller to navigate to the waypoint"""
@@ -1542,9 +1559,7 @@ class TurnLeftWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array(
-            [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
-        )
+        xyt_waypoint = np.array([0.0, 0.0, self._config.turn_angle])
         return self._step_rel_waypoint(
             xyt_waypoint, self._action_duration, *args, **kwargs
         )
@@ -1558,9 +1573,7 @@ class TurnRightWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array(
-            [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
-        )
+        xyt_waypoint = np.array([0.0, 0.0, -self._config.turn_angle])
         return self._step_rel_waypoint(
             xyt_waypoint, self._action_duration, *args, **kwargs
         )
