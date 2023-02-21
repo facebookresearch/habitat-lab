@@ -537,6 +537,7 @@ class Success(Measure):
     ):
         self._sim = sim
         self._config = config
+        self._success_distance = self._config.success_distance
 
         super().__init__()
 
@@ -559,7 +560,7 @@ class Success(Measure):
         if (
             hasattr(task, "is_stop_called")
             and task.is_stop_called  # type: ignore
-            and distance_to_target < self._config.success_distance
+            and distance_to_target < self._success_distance
         ):
             self._metric = 1.0
         else:
@@ -980,6 +981,9 @@ class DistanceToGoal(Measure):
         self._episode_view_points: Optional[
             List[Tuple[float, float, float]]
         ] = None
+        self._distance_to = self._config.distance_to
+        self._distance_from = self._config.distance_from
+        self._goals_attr = self._config.goals_attr
 
         super().__init__(**kwargs)
 
@@ -995,7 +999,7 @@ class DistanceToGoal(Measure):
     def reset_metric(self, episode, *args: Any, **kwargs: Any):
         self._previous_position = None
         self._metric = None
-        if self._config.distance_to == "VIEW_POINTS":
+        if self._distance_to == "VIEW_POINTS":
             self._episode_view_points = [
                 view_point.agent_state.position
                 for goal in episode.goals
@@ -1006,7 +1010,7 @@ class DistanceToGoal(Measure):
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
-        if self._config.distance_from == "END_EFFECTOR":
+        if self._distance_from == "END_EFFECTOR":
             current_position = self.get_end_effector_position()
         else:
             current_position = self.get_base_position()
@@ -1014,7 +1018,7 @@ class DistanceToGoal(Measure):
         if self._previous_position is None or not np.allclose(
             self._previous_position, current_position, atol=1e-4
         ):
-            if self._config.distance_to == "EUCLIDEAN_POINT":
+            if self._distance_to == "EUCLIDEAN_POINT":
                 distance_to_target = min(
                     [
                         np.linalg.norm(
@@ -1022,25 +1026,25 @@ class DistanceToGoal(Measure):
                             ord=2,
                             axis=-1,
                         )
-                        for goal in getattr(episode, self._config.goals_attr)
+                        for goal in getattr(episode, self._goals_attr)
                     ]
                 )
-            elif self._config.distance_to == "POINT":
+            elif self._distance_to == "POINT":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position,
                     [
                         goal.position
-                        for goal in getattr(episode, self._config.goals_attr)
+                        for goal in getattr(episode, self._goals_attr)
                     ],
                     episode,
                 )
-            elif self._config.distance_to == "VIEW_POINTS":
+            elif self._distance_to == "VIEW_POINTS":
                 distance_to_target = self._sim.geodesic_distance(
                     current_position, self._episode_view_points, episode
                 )
             else:
                 logger.error(
-                    f"Non valid distance_to parameter was provided: {self._config.distance_to}"
+                    f"Non valid distance_to parameter was provided: {self._distance_to }"
                 )
             self._previous_position = (
                 current_position[0],
@@ -1223,6 +1227,7 @@ class VelocityAction(SimulatorTaskAction):
         self.min_abs_lin_speed = config.min_abs_lin_speed
         self.min_abs_ang_speed = config.min_abs_ang_speed
         self.time_step = config.time_step
+        self._allow_sliding = self._sim.config.sim_cfg.allow_sliding  # type: ignore
 
     @property
     def action_space(self):
@@ -1266,7 +1271,7 @@ class VelocityAction(SimulatorTaskAction):
             allow_sliding: whether the agent will slide on collision
         """
         if allow_sliding is None:
-            allow_sliding = self._sim.config.sim_cfg.allow_sliding  # type: ignore
+            allow_sliding = self._allow_sliding
         if time_step is None:
             time_step = self.time_step
 

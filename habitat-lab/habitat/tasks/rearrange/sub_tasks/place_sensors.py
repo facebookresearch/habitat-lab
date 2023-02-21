@@ -85,7 +85,15 @@ class PlaceReward(RearrangeReward):
         self._prev_dist = -1.0
         self._prev_dropped = False
         self._metric = None
-
+        self._use_ee_dist = config.use_ee_dist
+        self._min_dist_to_goal = config.min_dist_to_goal
+        self._place_reward = config.place_reward
+        self._drop_pen = config.drop_pen
+        self._wrong_drop_should_end = config.wrong_drop_should_end
+        self._use_diff = config.use_diff
+        self._dist_reward = config.dist_reward
+        self._sparse_reward = config.sparse_reward
+        self._place_anywhere = config.place_anywhere
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -101,7 +109,7 @@ class PlaceReward(RearrangeReward):
                 ForceTerminate.cls_uuid,
             ],
         )
-        if not self._config.sparse_reward:
+        if not self._sparse_reward:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
@@ -109,7 +117,7 @@ class PlaceReward(RearrangeReward):
                     EndEffectorToGoalDistance.cls_uuid,
                 ],
             )
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
@@ -149,7 +157,7 @@ class PlaceReward(RearrangeReward):
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             obj_at_goal = task.measurements.measures[
                 ObjAnywhereOnGoal.cls_uuid
             ].get_metric()
@@ -162,9 +170,9 @@ class PlaceReward(RearrangeReward):
         cur_picked = snapped_id is not None
 
         if (not obj_at_goal) or cur_picked:
-            if self._config.sparse_reward:
+            if self._sparse_reward:
                 dist_to_goal = 0.0
-            elif self._config.use_ee_dist:
+            elif self._use_ee_dist:
                 ee_to_goal_dist = task.measurements.measures[
                     EndEffectorToGoalDistance.cls_uuid
                 ].get_metric()
@@ -174,7 +182,7 @@ class PlaceReward(RearrangeReward):
                     ObjectToGoalDistance.cls_uuid
                 ].get_metric()
                 dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
-            min_dist = self._config.min_dist_to_goal
+            min_dist = self._min_dist_to_goal
         else:
             dist_to_goal = ee_to_rest_distance
             min_dist = 0.0
@@ -182,14 +190,14 @@ class PlaceReward(RearrangeReward):
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
             if obj_at_goal:
-                reward += self._config.place_reward
+                reward += self._place_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self._prev_dist = -1
             else:
                 # Dropped at wrong location
-                reward -= self._config.drop_pen
-                if self._config.wrong_drop_should_end:
+                reward -= self._drop_pen
+                if self._wrong_drop_should_end:
                     rearrange_logger.debug(
                         "Dropped to wrong place, ending episode."
                     )
@@ -198,7 +206,7 @@ class PlaceReward(RearrangeReward):
                     return
 
         if dist_to_goal >= min_dist:
-            if self._config.use_diff:
+            if self._use_diff:
                 if self._prev_dist < 0:
                     dist_diff = 0.0
                 else:
@@ -206,9 +214,9 @@ class PlaceReward(RearrangeReward):
 
                 # Filter out the small fluctuations
                 dist_diff = round(dist_diff, 3)
-                reward += self._config.dist_reward * dist_diff
+                reward += self._dist_reward * dist_diff
             else:
-                reward -= self._config.dist_reward * dist_to_goal
+                reward -= self._dist_reward * dist_to_goal
         self._prev_dist = dist_to_goal
 
         self._metric = reward
@@ -220,6 +228,8 @@ class PlaceSuccess(Measure):
 
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
+        self._ee_resting_success_threshold = self._config.ee_resting_success_threshold
+        self._place_anywhere = self._config.place_anywhere
         self._sim = sim
         super().__init__(**kwargs)
 
@@ -234,7 +244,7 @@ class PlaceSuccess(Measure):
                 EndEffectorToRestDistance.cls_uuid,
             ],
         )
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
@@ -257,7 +267,7 @@ class PlaceSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        if self._config.place_anywhere:
+        if self._place_anywhere:
             is_obj_at_goal = task.measurements.measures[
                 ObjAnywhereOnGoal.cls_uuid
             ].get_metric()
@@ -274,5 +284,5 @@ class PlaceSuccess(Measure):
         self._metric = (
             not is_holding
             and is_obj_at_goal
-            and ee_to_rest_distance < self._config.ee_resting_success_threshold
+            and ee_to_rest_distance < self._ee_resting_success_threshold
         )
