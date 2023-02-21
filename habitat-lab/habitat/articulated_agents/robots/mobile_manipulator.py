@@ -11,7 +11,7 @@ import numpy as np
 from habitat.articulated_agents.articulated_agent_base import (
     ArticulatedAgentBase,
 )
-from habitat.articulated_agents.robots.manipulator import Manipulator
+from habitat.articulated_agents.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 

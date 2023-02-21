@@ -14,4 +14,5 @@ from habitat.articulated_agents.articulated_agent_interface import (
 __all__ = [
     "ArticulatedAgentInterface",
     "ArticulatedAgentBase",
+    "Manipulator",
 ]
