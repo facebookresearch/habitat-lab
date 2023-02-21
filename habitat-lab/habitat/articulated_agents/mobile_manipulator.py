@@ -16,8 +16,8 @@ from habitat_sim.simulator import Simulator
 
 
 @attr.s(auto_attribs=True, slots=True)
-class RobotCameraParams:
-    """Data to configure a camera placement on the robot.
+class ArticulatedAgentCameraParams:
+    """Data to configure a camera placement on the articulated agent.
     :property attached_link_id: Which link ID this camera is attached to, -1
         for the base link.
     :property cam_offset_pos: The 3D position of the camera relative to the
@@ -81,7 +81,7 @@ class MobileManipulatorParams:
     ee_link: int
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams]
+    cameras: Dict[str, ArticulatedAgentCameraParams]
 
     gripper_closed_state: np.ndarray
     gripper_open_state: np.ndarray

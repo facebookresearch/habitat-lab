@@ -5,10 +5,10 @@
 import magnum as mn
 import numpy as np
 
-from habitat.articulated_agents.robots.mobile_manipulator import (
+from habitat.articulated_agents.mobile_manipulator import (
+    ArticulatedAgentCameraParams,
     MobileManipulator,
     MobileManipulatorParams,
-    RobotCameraParams,
 )
 
 
@@ -27,19 +27,19 @@ class FetchRobot(MobileManipulator):
             ee_link=22,
             ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
             cameras={
-                "robot_arm": RobotCameraParams(
+                "robot_arm": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
                     cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
                     attached_link_id=22,
                     relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
                     @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
-                "robot_head": RobotCameraParams(
+                "robot_head": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.25, 1.2, 0.0),
                     cam_look_at_pos=mn.Vector3(0.75, 1.0, 0.0),
                     attached_link_id=-1,
                 ),
-                "robot_third": RobotCameraParams(
+                "robot_third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,

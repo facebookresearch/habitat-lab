@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Iterator, Optional
 import magnum as mn
 import numpy as np
 
+from habitat.articulated_agents.mobile_manipulator import MobileManipulator
+
 # flake8: noqa
 from habitat.articulated_agents.robots import (
     FetchRobot,
@@ -16,9 +18,6 @@ from habitat.articulated_agents.robots import (
     StretchRobot,
 )
 from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
-from habitat.articulated_agents.robots.mobile_manipulator import (
-    MobileManipulator,
-)
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )

@@ -8,9 +8,9 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.articulated_agents.robots.mobile_manipulator import (
+from habitat.articulated_agents.mobile_manipulator import (
+    ArticulatedAgentCameraParams,
     MobileManipulator,
-    RobotCameraParams,
 )
 
 
@@ -62,7 +62,7 @@ class SpotParams:
     ee_link: int
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams]
+    cameras: Dict[str, ArticulatedAgentCameraParams]
 
     gripper_closed_state: List[float]
     gripper_open_state: List[float]
@@ -108,14 +108,14 @@ class SpotRobot(MobileManipulator):
             ee_link=7,
             ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
             cameras={
-                "robot_arm": RobotCameraParams(
+                "robot_arm": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
                     cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
                     @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
-                "robot_head_stereo_right": RobotCameraParams(
+                "robot_head_stereo_right": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, 0.03614789234067159
                     ),
@@ -124,7 +124,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "robot_head_stereo_left": RobotCameraParams(
+                "robot_head_stereo_left": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, -0.03740343144695029
                     ),
@@ -133,7 +133,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "robot_third": RobotCameraParams(
+                "robot_third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,

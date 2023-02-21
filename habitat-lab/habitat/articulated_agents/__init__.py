@@ -10,9 +10,18 @@ from habitat.articulated_agents.articulated_agent_base import (
 from habitat.articulated_agents.articulated_agent_interface import (
     ArticulatedAgentInterface,
 )
+from habitat.articulated_agents.manipulator import Manipulator
+from habitat.articulated_agents.mobile_manipulator import (
+    ArticulatedAgentCameraParams,
+    MobileManipulator,
+    MobileManipulatorParams,
+)
 
 __all__ = [
     "ArticulatedAgentInterface",
     "ArticulatedAgentBase",
     "Manipulator",
+    "MobileManipulator",
+    "MobileManipulatorParams",
+    "ArticulatedAgentCameraParams",
 ]
