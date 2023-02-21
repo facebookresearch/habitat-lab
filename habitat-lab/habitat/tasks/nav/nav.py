@@ -1166,18 +1166,26 @@ class VelocityAction(SimulatorTaskAction):
         self.vel_control.lin_vel_is_local = True
         self.vel_control.ang_vel_is_local = True
 
+        # Cache config
+        self._lin_vel_range = self._config.lin_vel_range
+        self._ang_vel_range = self._config.ang_vel_range
+        self._enable_scale_convert = self._config.enable_scale_convert
+        self._time_step = self._config.time_step
+        self._min_abs_lin_speed = self._config.min_abs_lin_speed
+        self._min_abs_ang_speed = self._config.min_abs_ang_speed
+
     @property
     def action_space(self):
         return ActionSpace(
             {
                 "linear_velocity": spaces.Box(
-                    low=np.array([self._config.min_lin_vel]),
-                    high=np.array([self._config.max_lin_vel]),
+                    low=np.array([self._lin_vel_range[0]]),
+                    high=np.array([self._lin_vel_range[1]]),
                     dtype=np.float32,
                 ),
                 "angular_velocity": spaces.Box(
-                    low=np.array([self._config.min_ang_vel]),
-                    high=np.array([self._config.max_ang_vel]),
+                    low=np.array([self._ang_vel_range[0]]),
+                    high=np.array([self._ang_vel_range[1]]),
                     dtype=np.float32,
                 ),
             }
@@ -1226,33 +1234,33 @@ class VelocityAction(SimulatorTaskAction):
 
     def _check_stop(self, linear_velocity, angular_velocity) -> bool:
         """Use a heuristic to determine if an action qualifies as a stop action"""
-        lin_check = abs(linear_velocity) < self._config.min_abs_lin_speed
-        ang_check = abs(angular_velocity) < self._config.min_abs_ang_speed
+        lin_check = abs(linear_velocity) < self._min_abs_lin_speed
+        ang_check = abs(angular_velocity) < self._min_abs_ang_speed
         return lin_check and ang_check
 
     def _preprocess_action(self, linear_velocity, angular_velocity):
         """Perform scaling and clamping of input"""
-        if self._config.enable_scale_convert:
+        if self._enable_scale_convert:
             linear_velocity = self._scale_inputs(
                 linear_velocity,
                 [-1, 1],
-                [self._config.min_lin_vel, self._config.max_lin_vel],
+                self._lin_vel_range,
             )
             angular_velocity = self._scale_inputs(
                 angular_velocity,
                 [-1, 1],
-                [self._config.min_ang_vel, self._config.max_ang_vel],
+                self._ang_vel_range,
             )
 
         linear_velocity_clamped = np.clip(
             linear_velocity,
-            self._config.lin_vel_range[0],
-            self._config.lin_vel_range[1],
+            self._lin_vel_range[0],
+            self._lin_vel_range[1],
         )
         angular_velocity_clamped = np.clip(
             angular_velocity,
-            self._config.ang_vel_range[0],
-            self._config.ang_vel_range[1],
+            self._ang_vel_range[0],
+            self._ang_vel_range[1],
         )
 
         return linear_velocity_clamped, angular_velocity_clamped
@@ -1268,7 +1276,7 @@ class VelocityAction(SimulatorTaskAction):
         """
         # Parse inputs
         if time_step is None:
-            time_step = self._config.time_step
+            time_step = self._time_step
 
         # Map velocity actions
         self.vel_control.linear_velocity = np.array(
@@ -1362,8 +1370,16 @@ class WaypointAction(VelocityAction):
 
     def __init__(self, *args: Any, **kwargs: Any):
         super().__init__(*args, **kwargs)
+
         # Init goto velocity controller
         self.w2v_controller = ContinuousController(self._config)
+
+        # Cache hydra configs
+        self._action_duration = self._config.action_duration
+        self._waypoint_lin_range = self._config.waypoint_lin_range
+        self._waypoint_ang_range = self._config.waypoint_ang_range
+        self._min_abs_lin_diff = self._config.min_abs_lin_diff
+        self._min_abs_ang_diff = self._config.min_abs_ang_diff
 
     def step(
         self, task: EmbodiedTask, xyt_waypoint: List[float], *args, **kwargs
@@ -1380,7 +1396,7 @@ class WaypointAction(VelocityAction):
         # Execute waypoint
         return self._step_rel_waypoint(
             xyt_waypoint_processed,
-            self._config.action_duration,
+            self._action_duration,
             *args,
             **kwargs,
         )
@@ -1390,48 +1406,48 @@ class WaypointAction(VelocityAction):
         linear_diff = np.linalg.norm([xyt_waypoint[:2]])
         angular_diff = abs(xyt_waypoint[2])
 
-        lin_check = linear_diff < self._config.min_abs_lin_diff
-        ang_check = angular_diff < self._config.min_abs_ang_diff
+        lin_check = linear_diff < self._min_abs_lin_diff
+        ang_check = angular_diff < self._min_abs_ang_diff
         return lin_check and ang_check
 
     def _preprocess_action(self, xyt_waypoint):
         """Perform scaling and clamping of input"""
-        if self._config.enable_scale_convert:
+        if self._enable_scale_convert:
             xyt_waypoint[0] = self._scale_inputs(
                 xyt_waypoint[0],
                 [-1, 1],
                 [
-                    -self._config.waypoint_lin_range,
-                    self._config.waypoint_lin_range,
+                    -self._waypoint_lin_range,
+                    self._waypoint_lin_range,
                 ],
             )
             xyt_waypoint[1] = self._scale_inputs(
                 xyt_waypoint[1],
                 [-1, 1],
                 [
-                    -self._config.waypoint_lin_range,
-                    self._config.waypoint_lin_range,
+                    -self._waypoint_lin_range,
+                    self._waypoint_lin_range,
                 ],
             )
             xyt_waypoint[2] = self._scale_inputs(
                 xyt_waypoint[2],
                 [-1, 1],
                 [
-                    -self._config.waypoint_ang_range,
-                    self._config.waypoint_ang_range,
+                    -self._waypoint_ang_range,
+                    self._waypoint_ang_range,
                 ],
             )
 
         r_clamped = np.clip(
             np.linalg.norm(xyt_waypoint[:2]),
-            -self._config.waypoint_lin_range,
-            self._config.waypoint_lin_range,
+            -self._waypoint_lin_range,
+            self._waypoint_lin_range,
         )
         heading_angle = np.arctan2(xyt_waypoint[0], xyt_waypoint[1])
         theta_clamped = np.clip(
             xyt_waypoint[2],
-            -self._config.waypoint_ang_range,
-            self._config.waypoint_ang_range,
+            -self._waypoint_ang_range,
+            self._waypoint_ang_range,
         )
 
         xyt_waypoint_clamped = [
@@ -1452,7 +1468,7 @@ class WaypointAction(VelocityAction):
         )
 
         xyt = xyt_init.copy()
-        dt = self._config.time_step
+        dt = self._time_step
 
         # Forward simulate
         for _t in np.arange(0, max(duration / dt, 1)) * dt:
@@ -1471,10 +1487,10 @@ class WaypointAction(VelocityAction):
             )
             xyt = self._agent_state_to_xyt(next_agent_state)
 
-            # Stop is called early if commanded speed is low
+            # Complete action early if commanded speed is low
             if (
-                abs(linear_velocity) < self._config.min_abs_lin_speed
-                and abs(angular_velocity) < self._config.min_abs_ang_speed
+                abs(linear_velocity) < self._min_abs_lin_speed
+                and abs(angular_velocity) < self._min_abs_ang_speed
             ):
                 break
 
@@ -1515,7 +1531,7 @@ class MoveForwardWaypointAction(WaypointAction):
         """
         xyt_waypoint = np.array([self._config.forward_step_size, 0.0, 0.0])
         return self._step_rel_waypoint(
-            xyt_waypoint, self._config.action_duration, *args, **kwargs
+            xyt_waypoint, self._action_duration, *args, **kwargs
         )
 
 
@@ -1531,7 +1547,7 @@ class TurnLeftWaypointAction(WaypointAction):
             [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
         )
         return self._step_rel_waypoint(
-            xyt_waypoint, self._config.action_duration, *args, **kwargs
+            xyt_waypoint, self._action_duration, *args, **kwargs
         )
 
 
@@ -1547,7 +1563,7 @@ class TurnRightWaypointAction(WaypointAction):
             [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
         )
         return self._step_rel_waypoint(
-            xyt_waypoint, self._config.action_duration, *args, **kwargs
+            xyt_waypoint, self._action_duration, *args, **kwargs
         )
 
 
