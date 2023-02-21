@@ -217,7 +217,7 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     type: str = "WaypointAction"
     action_duration: float = 1.0  # seconds
     # Action space range
-    waypoint_lin_range: List[float] = [-0.25, 0.25]  # meters
+    waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
     waypoint_ang_range: List[float] = [-180, 180]  # degrees
     # Stop criteria
     min_abs_lin_diff: float = 0.01  # meters
