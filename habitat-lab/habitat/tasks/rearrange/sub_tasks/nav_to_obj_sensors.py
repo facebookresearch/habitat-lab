@@ -50,8 +50,8 @@ class NavGoalPointGoalSensor(UsesAgentInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.get_robot_data(
-            self.robot_id
+        robot_T = self._sim.get_agent_data(
+            self.agent_id
         ).robot.base_transformation
 
         dir_vector = robot_T.inverted().transform_point(task.nav_goal_pos)
@@ -83,7 +83,7 @@ class OracleNavigationActionSensor(Sensor):
         )
 
     def _path_to_point(self, point):
-        agent_pos = self._sim.robot.base_pos
+        agent_pos = self._sim.agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
@@ -177,7 +177,7 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.robot.base_pos)[[0, 2]]
+            np.array(self._sim.agent.base_pos)[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 

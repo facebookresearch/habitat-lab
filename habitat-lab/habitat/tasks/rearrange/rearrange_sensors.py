@@ -61,8 +61,8 @@ class TargetCurrentSensor(UsesAgentInterface, MultiObjSensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         self._sim: RearrangeSim
-        T_inv = self._sim.get_robot_data(
-            self.robot_id
+        T_inv = self._sim.get_agent_data(
+            self.agent_id
         ).robot.ee_transform.inverted()
 
         idxs, _ = self._sim.get_targets()
@@ -85,7 +85,7 @@ class TargetStartSensor(UsesAgentInterface, MultiObjSensor):
 
     def get_observation(self, *args, observations, episode, **kwargs):
         self._sim: RearrangeSim
-        global_T = self._sim.get_robot_data(self.robot_id).robot.ee_transform
+        global_T = self._sim.get_agent_data(self.agent_id).robot.ee_transform
         T_inv = global_T.inverted()
         pos = self._sim.get_target_objs_start()
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
@@ -115,8 +115,8 @@ class PositionGpsCompassSensor(UsesAgentInterface, Sensor):
 
     def get_observation(self, task, *args, **kwargs):
         pos = self._get_positions()
-        robot_T = self._sim.get_robot_data(
-            self.robot_id
+        robot_T = self._sim.get_agent_data(
+            self.agent_id
         ).robot.base_transformation
 
         rel_pos = batch_transform_point(pos, robot_T.inverted(), np.float32)
@@ -173,7 +173,7 @@ class GoalSensor(UsesAgentInterface, MultiObjSensor):
     cls_uuid: str = "obj_goal_sensor"
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        global_T = self._sim.get_robot_data(self.robot_id).robot.ee_transform
+        global_T = self._sim.get_agent_data(self.agent_id).robot.ee_transform
         T_inv = global_T.inverted()
 
         _, pos = self._sim.get_targets()
@@ -210,8 +210,8 @@ class JointSensor(UsesAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_robot_data(
-            self.robot_id
+        joints_pos = self._sim.get_agent_data(
+            self.agent_id
         ).robot.arm_joint_pos
         return np.array(joints_pos, dtype=np.float32)
 
@@ -237,7 +237,7 @@ class JointVelocitySensor(UsesAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_robot_data(self.robot_id).robot.arm_velocity
+        joints_pos = self._sim.get_agent_data(self.agent_id).robot.arm_velocity
         return np.array(joints_pos, dtype=np.float32)
 
 
@@ -265,11 +265,11 @@ class EEPositionSensor(UsesAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        trans = self._sim.get_robot_data(
-            self.robot_id
+        trans = self._sim.get_agent_data(
+            self.agent_id
         ).robot.base_transformation
-        ee_pos = self._sim.get_robot_data(
-            self.robot_id
+        ee_pos = self._sim.get_agent_data(
+            self.agent_id
         ).robot.ee_transform.translation
         local_ee_pos = trans.inverted().transform_point(ee_pos)
 
@@ -299,11 +299,11 @@ class RelativeRestingPositionSensor(UsesAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, task, *args, **kwargs):
-        base_trans = self._sim.get_robot_data(
-            self.robot_id
+        base_trans = self._sim.get_agent_data(
+            self.agent_id
         ).robot.base_transformation
-        ee_pos = self._sim.get_robot_data(
-            self.robot_id
+        ee_pos = self._sim.get_agent_data(
+            self.agent_id
         ).robot.ee_transform.translation
         local_ee_pos = base_trans.inverted().transform_point(ee_pos)
 
@@ -369,7 +369,7 @@ class LocalizationSensor(UsesAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        robot = self._sim.get_robot_data(self.robot_id).robot
+        robot = self._sim.get_agent_data(self.agent_id).robot
         T = robot.base_transformation
         forward = np.array([1.0, 0, 0])
         heading_angle = get_angle_to_pos(T.transform_vector(forward))
@@ -399,7 +399,7 @@ class IsHoldingSensor(UsesAgentInterface, Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         return np.array(
-            int(self._sim.get_robot_data(self.robot_id).grasp_mgr.is_grasped),
+            int(self._sim.get_agent_data(self.agent_id).grasp_mgr.is_grasped),
             dtype=np.float32,
         ).reshape((1,))
 
@@ -527,8 +527,8 @@ class EndEffectorToGoalDistance(UsesAgentInterface, Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, observations, **kwargs):
-        ee_pos = self._sim.get_robot_data(
-            self.robot_id
+        ee_pos = self._sim.get_agent_data(
+            self.agent_id
         ).robot.ee_transform.translation
 
         idxs, goals = self._sim.get_targets()
@@ -559,8 +559,8 @@ class EndEffectorToObjectDistance(UsesAgentInterface, Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, episode, **kwargs):
-        ee_pos = self._sim.get_robot_data(
-            self.robot_id
+        ee_pos = self._sim.get_agent_data(
+            self.agent_id
         ).robot.ee_transform.translation
 
         idxs, _ = self._sim.get_targets()
@@ -623,15 +623,15 @@ class ReturnToRestDistance(UsesAgentInterface, Measure):
         to_resting = observations[RelativeRestingPositionSensor.cls_uuid]
         rest_dist = np.linalg.norm(to_resting)
 
-        snapped_id = self._sim.get_robot_data(self.robot_id).grasp_mgr.snap_idx
+        snapped_id = self._sim.get_agent_data(self.agent_id).grasp_mgr.snap_idx
         abs_targ_obj_idx = self._sim.scene_obj_ids[task.abs_targ_idx]
         picked_correct = snapped_id == abs_targ_obj_idx
 
         if picked_correct:
             self._metric = rest_dist
         else:
-            T_inv = self._sim.get_robot_data(
-                self.robot_id
+            T_inv = self._sim.get_agent_data(
+                self.agent_id
             ).robot.ee_transform.inverted()
             idxs, _ = self._sim.get_targets()
             scene_pos = self._sim.get_scene_pos()
@@ -670,7 +670,7 @@ class RobotCollisions(UsesAgentInterface, Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        cur_coll_info = self._task.get_cur_collision_info(self.robot_id)
+        cur_coll_info = self._task.get_cur_collision_info(self.agent_id)
         self._accum_coll_info += cur_coll_info
         self._metric = {
             "total_collisions": self._accum_coll_info.total_collisions,
@@ -719,7 +719,7 @@ class RobotForce(UsesAgentInterface, Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         robot_force, _, overall_force = self._task.get_coll_forces(
-            self.robot_id
+            self.agent_id
         )
         if self._count_obj_collisions:
             self._cur_force = overall_force
@@ -851,8 +851,8 @@ class DidViolateHoldConstraintMeasure(UsesAgentInterface, Measure):
         )
 
     def update_metric(self, *args, **kwargs):
-        self._metric = self._sim.get_robot_data(
-            self.robot_id
+        self._metric = self._sim.get_agent_data(
+            self.agent_id
         ).grasp_mgr.is_violating_hold_constraint()
 
 
@@ -892,8 +892,8 @@ class RearrangeReward(UsesAgentInterface, Measure):
 
         reward += self._get_coll_reward()
 
-        if self._sim.get_robot_data(
-            self.robot_id
+        if self._sim.get_agent_data(
+            self.agent_id
         ).grasp_mgr.is_violating_hold_constraint():
             reward -= self._config.constraint_violate_pen
 

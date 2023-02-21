@@ -26,7 +26,7 @@ Habitat supports three types of robots: Fetch from Fetch Robotics, Stretch from 
     - Robot parameters such as the camera's transformation, end-effector position, control gain, and more are specified in each robot class (e.g., inside `stretch_robot.py`).
 
 1. **Miscellanies**
-    - Q: Where is the robot being initialized? A: `habitat/tasks/rearrange/robot_manager.py` is a class that imports all the robots (e.g., it calls `stretch_robot.py`). `habitat/tasks/rearrange/rearrange_sim.py` is a class that imports `robot_manager.py` and the robot is being initialized.
+    - Q: Where is the robot being initialized? A: `habitat/tasks/rearrange/agent_manager.py` is a class that imports all the robots (e.g., it calls `stretch_robot.py`). `habitat/tasks/rearrange/rearrange_sim.py` is a class that imports `agent_manager.py` and the robot is being initialized.
     - Q: Where are the robot-related parameters being defined? A: They are defined in each robot class. For example, for Stretch, we define the parameters in `stretch_robot.py`.
     - Q: Which robot should I use? A: It depends on the task. For the clustering environment, we might want to use Stretch due to its small base. On the other hand, for the task that requires climbing up stairs, Spot can whereas Stretch cannot.
 

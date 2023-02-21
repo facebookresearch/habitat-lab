@@ -89,7 +89,7 @@ def get_input_vel_ctlr(
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
-    multi_agent = len(env._sim.robots_mgr) > 1
+    multi_agent = len(env._sim.agents_mgr) > 1
 
     arm_action_name = "arm_action"
     base_action_name = "base_velocity"
@@ -252,15 +252,15 @@ def get_input_vel_ctlr(
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the robot, useful for debugging.
-        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
-        rot = env._sim.robot.sim_obj.rotation
-        ee_pos = env._sim.robot.ee_transform.translation
+        pos = [float("%.3f" % x) for x in env._sim.agent.sim_obj.translation]
+        rot = env._sim.agent.sim_obj.rotation
+        ee_pos = env._sim.agent.ee_transform.translation
         logger.info(
             f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the robot, useful for debugging.
-        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
+        joint_state = [float("%.3f" % x) for x in env._sim.agent.arm_joint_pos]
         logger.info(f"Robot arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
@@ -395,7 +395,7 @@ def play_env(env, args, config):
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
-    is_multi_agent = len(env._sim.robots_mgr) > 1
+    is_multi_agent = len(env._sim.agents_mgr) > 1
 
     while True:
         if (
@@ -414,7 +414,7 @@ def play_env(env, args, config):
 
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
-            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            agent_to_control = agent_to_control % len(env._sim.agents_mgr)
             logger.info(
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )

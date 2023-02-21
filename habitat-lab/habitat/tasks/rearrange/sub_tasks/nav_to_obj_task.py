@@ -115,8 +115,8 @@ class DynNavRLEnv(RearrangeTask):
             episode, force_idx=self.force_obj_to_idx
         )
 
-        self._sim.robot.base_pos = self._nav_to_info.robot_start_pos
-        self._sim.robot.base_rot = self._nav_to_info.robot_start_angle
+        self._sim.agent.base_pos = self._nav_to_info.robot_start_pos
+        self._sim.agent.base_rot = self._nav_to_info.robot_start_angle
 
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
