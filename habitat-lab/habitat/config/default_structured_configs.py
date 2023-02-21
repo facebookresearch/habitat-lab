@@ -1576,6 +1576,30 @@ cs.store(
     node=VelocityControlActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.waypoint_control",
+    group="habitat/task/actions",
+    name="waypoint_control",
+    node=WaypointControlActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.move_forward_waypoint",
+    group="habitat/task/actions",
+    name="move_forward_waypoint",
+    node=MoveForwardWaypointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.turn_left_waypoint",
+    group="habitat/task/actions",
+    name="turn_left_waypoint",
+    node=TurnLeftWaypointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.turn_right_waypoint",
+    group="habitat/task/actions",
+    name="turn_right_waypoint",
+    node=TurnRightWaypointActionConfig,
+)
+cs.store(
     package="habitat.task.actions.base_velocity",
     group="habitat/task/actions",
     name="base_velocity",
