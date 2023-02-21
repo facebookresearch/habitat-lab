@@ -16,6 +16,10 @@ from habitat.articulated_agents.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
 )
+from habitat.articulated_agents.static_manipulator import (
+    StaticManipulator,
+    StaticManipulatorParams,
+)
 
 __all__ = [
     "ArticulatedAgentInterface",
@@ -24,4 +28,6 @@ __all__ = [
     "MobileManipulator",
     "MobileManipulatorParams",
     "ArticulatedAgentCameraParams",
+    "StaticManipulator",
+    "StaticManipulatorParams",
 ]

@@ -7,15 +7,6 @@ Habitat supports three types of robots: Fetch from Fetch Robotics, Stretch from 
 
 ## Robot's Component Design
 
-1. **Control**
-    - `manipulator.py` controls the arm and gripper joint angles.
-    - `agent_base.py` controls the leg joint angles or base position depending on the morphology of the robot.
-
-1. **Robot Module**
-    - `mobile_manipulator.py` is a class that is built upon `manipulator.py` and `agent_base.py`. We kinematically simulate the robot to control its position.
-    - `static_manipulator.py` is a class that is built upon `manipulator.py`. Since it is "static", it does not call `agent_base.py`.
-    - `agent_interface.py` defines a generic agent interface.
-
 1. **Robot**
     - `fetch_robot.py` is built upon `mobile_manipulator.py`.
     - `franka_robot.py` is built upon `static_manipulator.py`.

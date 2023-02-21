@@ -10,10 +10,6 @@ from habitat.articulated_agents.robots.fetch_robot import (
 )
 from habitat.articulated_agents.robots.franka_robot import FrankaRobot
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
-from habitat.articulated_agents.robots.static_manipulator import (
-    StaticManipulator,
-    StaticManipulatorParams,
-)
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 
 __all__ = [
@@ -22,6 +18,4 @@ __all__ = [
     "FrankaRobot",
     "SpotRobot",
     "StretchRobot",
-    "StaticManipulatorParams",
-    "StaticManipulator",
 ]
