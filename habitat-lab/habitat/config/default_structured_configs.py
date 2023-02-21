@@ -221,8 +221,11 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     type: str = "WaypointAction"
     action_duration: float = 1.0  # seconds
     # Action space range
-    waypoint_lin_range: float = 0.25  # meters
-    waypoint_ang_range: float = 180  # degrees
+    waypoint_lin_range: List[float] = [-0.25, 0.25]  # meters
+    waypoint_ang_range: List[float] = [-180, 180]  # degrees
+    # Stop criteria
+    min_abs_lin_diff: float = 0.01  # meters
+    min_abs_ang_diff: float = 3.0  # deg
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
@@ -231,9 +234,6 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     max_heading_ang: float = 0.7854  # 45 degrees in rad
     lin_error_tol: float = 0.01
     ang_error_tol: float = 0.025
-    # Stop criteria
-    min_abs_lin_diff: float = 0.01  # meters
-    min_abs_ang_diff: float = 3.0  # deg
 
 
 @dataclass
