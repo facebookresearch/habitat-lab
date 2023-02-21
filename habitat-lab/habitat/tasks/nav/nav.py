@@ -1189,6 +1189,7 @@ class VelocityAction(SimulatorTaskAction):
     def step(
         self,
         *args: Any,
+        task: EmbodiedTask,
         linear_velocity: float = None,
         angular_velocity: float = None,
         time_step: Optional[float] = None,
@@ -1209,6 +1210,11 @@ class VelocityAction(SimulatorTaskAction):
             linear_velocity, angular_velocity
         )
 
+        # Check if the action is a stop action
+        if self._check_stop(lin_vel_processed, ang_vel_processed):
+            task.is_stop_called = True  # type: ignore
+            return self._get_agent_observation()
+
         # Apply action and get next observation
         agent_state_result = self._apply_velocity_action(
             lin_vel_processed,
@@ -1217,6 +1223,12 @@ class VelocityAction(SimulatorTaskAction):
         )
 
         return self._get_agent_observation(agent_state_result)
+
+    def _check_stop(self, linear_velocity, angular_velocity) -> bool:
+        """Use a heuristic to determine if an action qualifies as a stop action"""
+        lin_check = abs(linear_velocity) < self._config.min_abs_lin_speed
+        ang_check = abs(angular_velocity) < self._config.min_abs_ang_speed
+        return lin_check and ang_check
 
     def _preprocess_action(self, linear_velocity, angular_velocity):
         """Perform scaling and clamping of input"""
@@ -1311,12 +1323,17 @@ class VelocityAction(SimulatorTaskAction):
 
         return final_agent_state
 
-    def _get_agent_observation(self, agent_state):
-        position = agent_state.position
-        rotation = [
-            *agent_state.rotation.vector,
-            agent_state.rotation.scalar,
-        ]
+    def _get_agent_observation(self, agent_state=None):
+        position = None
+        rotation = None
+
+        if agent_state is not None:
+            position = agent_state.position
+            rotation = [
+                *agent_state.rotation.vector,
+                agent_state.rotation.scalar,
+            ]
+
         return self._sim.get_observations_at(
             position=position,
             rotation=rotation,
@@ -1348,9 +1365,17 @@ class WaypointAction(VelocityAction):
         # Init goto velocity controller
         self.w2v_controller = ContinuousController(self._config)
 
-    def step(self, xyt_waypoint, *args, **kwargs):
+    def step(
+        self, task: EmbodiedTask, xyt_waypoint: List[float], *args, **kwargs
+    ):
         # Preprocess waypoint input
+        assert len(xyt_waypoint) == 3, "Waypoint vector must be of length 3."
         xyt_waypoint_processed = self._preprocess_action(xyt_waypoint)
+
+        # Check if the action is a stop action
+        if self._check_stop(xyt_waypoint_processed):
+            task.is_stop_called = True  # type: ignore
+            return self._get_agent_observation()
 
         # Execute waypoint
         return self._step_rel_waypoint(
@@ -1359,6 +1384,15 @@ class WaypointAction(VelocityAction):
             *args,
             **kwargs,
         )
+
+    def _check_stop(self, xyt_waypoint) -> bool:
+        """Use a heuristic to determine if an action qualifies as a stop action"""
+        linear_diff = np.linalg.norm([xyt_waypoint[:2]])
+        angular_diff = abs(xyt_waypoint[2])
+
+        lin_check = linear_diff < self._config.min_abs_lin_diff
+        ang_check = angular_diff < self._config.min_abs_ang_diff
+        return lin_check and ang_check
 
     def _preprocess_action(self, xyt_waypoint):
         """Perform scaling and clamping of input"""
