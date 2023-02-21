@@ -358,7 +358,7 @@ class IkHelper:
         return js[: self._arm_len]
 
 
-class UsesAgentInterface:
+class UsesArticulatedAgentInterface:
     """
     For sensors or actions that are agent specific. Used to split actions and
     sensors between multiple agents.
@@ -434,8 +434,8 @@ def get_robot_spawns(
         if target_distance > distance_threshold or not is_navigable:
             continue
 
-        sim.agent.base_pos = start_position
-        sim.agent.base_rot = start_rotation
+        sim.articulated_agent.base_pos = start_position
+        sim.articulated_agent.base_rot = start_rotation
 
         # Make sure the robot is not colliding with anything in this
         # position.

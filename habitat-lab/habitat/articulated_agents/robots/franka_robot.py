@@ -5,7 +5,7 @@
 import magnum as mn
 import numpy as np
 
-from habitat.agents.robots.static_manipulator import (
+from habitat.articulated_agents.robots.static_manipulator import (
     StaticManipulator,
     StaticManipulatorParams,
 )

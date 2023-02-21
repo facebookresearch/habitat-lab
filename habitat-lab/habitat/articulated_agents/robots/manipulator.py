@@ -8,13 +8,15 @@ from typing import Dict, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.agents.agent_interface import AgentInterface
+from habitat.articulated_agents.articulated_agent_interface import (
+    ArticulatedAgentInterface,
+)
 from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
 from habitat_sim.utils.common import orthonormalize_rotation_shear
 
 
-class Manipulator(AgentInterface):
+class Manipulator(ArticulatedAgentInterface):
     """Generic manupulator interface defines standard API functions. Robot with a controllable arm."""
 
     def __init__(
@@ -28,7 +30,7 @@ class Manipulator(AgentInterface):
         **kwargs,
     ):
         r"""Constructor"""
-        AgentInterface.__init__(self)
+        ArticulatedAgentInterface.__init__(self)
         # Assign the variables
         self.params = params
         self.urdf_path = urdf_path

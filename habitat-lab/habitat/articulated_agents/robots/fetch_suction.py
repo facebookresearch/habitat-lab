@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from habitat.agents.robots import FetchRobot
+from habitat.articulated_agents.robots import FetchRobot
 
 
 class FetchSuctionRobot(FetchRobot):

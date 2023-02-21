@@ -20,7 +20,7 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
     CollisionDetails,
-    UsesAgentInterface,
+    UsesArticulatedAgentInterface,
     rearrange_collision,
     rearrange_logger,
 )
@@ -46,7 +46,7 @@ class RearrangeTask(NavigationTask):
         task_obs_spaces = OrderedDict()
         for robot_idx, agent_id in enumerate(self._sim.agents_mgr.agent_names):
             for sensor_name, sensor in sensor_suite.sensors.items():
-                if isinstance(sensor, UsesAgentInterface):
+                if isinstance(sensor, UsesArticulatedAgentInterface):
                     new_sensor = copy.copy(sensor)
                     new_sensor.agent_id = robot_idx
                     full_name = f"{agent_id}_{sensor_name}"

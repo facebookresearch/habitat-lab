@@ -8,7 +8,7 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.agents.robots.mobile_manipulator import (
+from habitat.articulated_agents.robots.mobile_manipulator import (
     MobileManipulator,
     RobotCameraParams,
 )

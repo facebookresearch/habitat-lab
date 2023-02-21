@@ -24,7 +24,7 @@ import numpy.typing as npt
 import habitat_sim
 
 # flake8: noqa
-from habitat.agents.robots import FetchRobot, FetchRobotNoWheels
+from habitat.articulated_agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
@@ -122,7 +122,7 @@ class RearrangeSim(HabitatSim):
         self._step_physics = self.habitat_config.step_physics
 
     @property
-    def agent(self):
+    def articulated_agent(self):
         if len(self.agents_mgr) > 1:
             raise ValueError(f"Cannot access `sim.robot` with multiple robots")
         return self.agents_mgr[0].robot
@@ -478,7 +478,8 @@ class RearrangeSim(HabitatSim):
 
         ao_mgr = self.get_articulated_object_manager()
         robot_art_handles = [
-            robot.sim_obj.handle for robot in self.agents_mgr.agents_iter
+            robot.sim_obj.handle
+            for robot in self.agents_mgr.articulated_agents_iter
         ]
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
@@ -490,7 +491,7 @@ class RearrangeSim(HabitatSim):
             self.art_objs.append(ao)
 
     def _create_obj_viz(self):
-        """
+        """f
         Adds a visualization of the goal for each of the target objects in the
         scene. This is the same as the target object, but is a render only
         object. This also places dots around the bounding box of the object to
@@ -557,7 +558,7 @@ class RearrangeSim(HabitatSim):
         # automatically be set to 0 in `set_state`.
         robot_T = [
             robot.sim_obj.transformation
-            for robot in self.agents_mgr.agents_iter
+            for robot in self.agents_mgr.articulated_agents_iter
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
@@ -568,7 +569,7 @@ class RearrangeSim(HabitatSim):
 
         robot_js = [
             robot.sim_obj.joint_positions
-            for robot in self.agents_mgr.agents_iter
+            for robot in self.agents_mgr.articulated_agents_iter
         ]
 
         ret = {
@@ -597,7 +598,7 @@ class RearrangeSim(HabitatSim):
 
         if state["robot_T"] is not None:
             for robot_T, robot in zip(
-                state["robot_T"], self.agents_mgr.agents_iter
+                state["robot_T"], self.agents_mgr.articulated_agents_iter
             ):
                 robot.sim_obj.transformation = robot_T
                 n_dof = len(robot.sim_obj.joint_forces)
@@ -606,7 +607,7 @@ class RearrangeSim(HabitatSim):
 
         if "robot_js" in state:
             for robot_js, robot in zip(
-                state["robot_js"], self.agents_mgr.agents_iter
+                state["robot_js"], self.agents_mgr.articulated_agents_iter
             ):
                 robot.sim_obj.joint_positions = robot_js
 

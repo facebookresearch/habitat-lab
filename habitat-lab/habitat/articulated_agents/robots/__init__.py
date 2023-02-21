@@ -4,19 +4,22 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat.agents.robots.fetch_robot import FetchRobot, FetchRobotNoWheels
-from habitat.agents.robots.franka_robot import FrankaRobot
-from habitat.agents.robots.mobile_manipulator import (
+from habitat.articulated_agents.robots.fetch_robot import (
+    FetchRobot,
+    FetchRobotNoWheels,
+)
+from habitat.articulated_agents.robots.franka_robot import FrankaRobot
+from habitat.articulated_agents.robots.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
     RobotCameraParams,
 )
-from habitat.agents.robots.spot_robot import SpotRobot
-from habitat.agents.robots.static_manipulator import (
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.articulated_agents.robots.static_manipulator import (
     StaticManipulator,
     StaticManipulatorParams,
 )
-from habitat.agents.robots.stretch_robot import StretchRobot
+from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 
 __all__ = [
     "MobileManipulatorParams",

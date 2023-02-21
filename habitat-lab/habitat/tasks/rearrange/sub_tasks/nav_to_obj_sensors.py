@@ -15,14 +15,17 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesAgentInterface, get_angle_to_pos
+from habitat.tasks.rearrange.utils import (
+    UsesArticulatedAgentInterface,
+    get_angle_to_pos,
+)
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_sensor
-class NavGoalPointGoalSensor(UsesAgentInterface, Sensor):
+class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -83,7 +86,7 @@ class OracleNavigationActionSensor(Sensor):
         )
 
     def _path_to_point(self, point):
-        agent_pos = self._sim.agent.base_pos
+        agent_pos = self._sim.articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
@@ -177,7 +180,7 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.agent.base_pos)[[0, 2]]
+            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 

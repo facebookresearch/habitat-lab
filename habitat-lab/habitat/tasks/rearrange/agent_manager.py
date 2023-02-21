@@ -9,14 +9,16 @@ import magnum as mn
 import numpy as np
 
 # flake8: noqa
-from habitat.agents.robots import (
+from habitat.articulated_agents.robots import (
     FetchRobot,
     FetchRobotNoWheels,
     SpotRobot,
     StretchRobot,
 )
-from habitat.agents.robots.fetch_suction import FetchSuctionRobot
-from habitat.agents.robots.mobile_manipulator import MobileManipulator
+from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
+from habitat.articulated_agents.robots.mobile_manipulator import (
+    MobileManipulator,
+)
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
@@ -32,7 +34,7 @@ class AgentData:
     Data needed to manage an agent instance.
     """
 
-    agent: MobileManipulator
+    articulated_agent: MobileManipulator
     grasp_mgr: RearrangeGraspManager
     cfg: "DictConfig"
     start_js: np.ndarray
@@ -78,7 +80,7 @@ class AgentManager:
 
             self._all_agent_data.append(
                 AgentData(
-                    agent=agent,
+                    articulated_agent=agent,
                     grasp_mgr=grasp_mgr,
                     cfg=agent_cfg,
                     start_js=np.array(agent.params.arm_init_params),
@@ -92,14 +94,14 @@ class AgentManager:
             if is_new_scene:
                 agent_data.grasp_mgr.reconfigure()
                 if (
-                    agent_data.agent.sim_obj is not None
-                    and agent_data.agent.sim_obj.is_alive
+                    agent_data.articulated_agent.sim_obj is not None
+                    and agent_data.articulated_agent.sim_obj.is_alive
                 ):
                     ao_mgr.remove_object_by_id(
-                        agent_data.agent.sim_obj.object_id
+                        agent_data.articulated_agent.sim_obj.object_id
                     )
 
-                agent_data.agent.reconfigure()
+                agent_data.articulated_agent.reconfigure()
             agent_data.grasp_mgr.reset()
 
     def post_obj_load_reconfigure(self):
@@ -108,20 +110,20 @@ class AgentManager:
         """
 
         for agent_data in self._all_agent_data:
-            agent_data.agent.params.arm_init_params = (
+            agent_data.articulated_agent.params.arm_init_params = (
                 agent_data.start_js
                 + agent_data.cfg.joint_start_noise
                 * np.random.randn(len(agent_data.start_js))
             )
-            agent_data.agent.reset()
+            agent_data.articulated_agent.reset()
 
             # consume a fixed position from SIMUALTOR.agent_0 if configured
             if agent_data.cfg.is_set_start_state:
-                agent_data.agent.base_pos = mn.Vector3(
+                agent_data.articulated_agent.base_pos = mn.Vector3(
                     agent_data.cfg.start_position
                 )
                 agent_rot = agent_data.cfg.start_rotation
-                agent_data.agent.sim_obj.rotation = mn.Quaternion(
+                agent_data.articulated_agent.sim_obj.rotation = mn.Quaternion(
                     mn.Vector3(agent_rot[:3]), agent_rot[3]
                 )
 
@@ -140,13 +142,13 @@ class AgentManager:
         return len(self._all_agent_data)
 
     @property
-    def agents_iter(self) -> Iterator[MobileManipulator]:
+    def articulated_agents_iter(self) -> Iterator[MobileManipulator]:
         """
         Iterator over all agent interfaces.
         """
 
         for agent_data in self._all_agent_data:
-            yield agent_data.agent
+            yield agent_data.articulated_agent
 
     @property
     def grasp_iter(self) -> Iterator[RearrangeGraspManager]:
@@ -169,7 +171,7 @@ class AgentManager:
 
         for agent_data in self._all_agent_data:
             agent_data.grasp_mgr.update()
-            agent_data.agent.update()
+            agent_data.articulated_agent.update()
 
     def update_debug(self):
         """
