@@ -146,7 +146,7 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
         self.min_depth_value = config.min_depth
         self.max_depth_value = config.max_depth
         self.normalize_depth = config.normalize_depth
-        if config.normalize_depth:
+        if self.normalize_depth:
             self._obs_shape = spaces.Box(
                 low=0,
                 high=1,
