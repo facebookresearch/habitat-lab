@@ -1507,10 +1507,9 @@ class WaypointAction(VelocityAction):
         y -> -z
         rz -> -ry
         """
-        y_rot = (
-            float(agent_state.rotation.angle())
-            * agent_state.rotation.axis()[1]
-        )
+        mn_axis = agent_state.rotation.axis()
+        mn_angle = float(agent_state.rotation.angle())
+        y_rot = 0.0 if mn_angle == 0.0 else mn_axis[1] * mn_angle
 
         return np.array(
             [
