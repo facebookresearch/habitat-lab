@@ -206,9 +206,12 @@ class VelocityControlActionConfig(ActionConfig):
     ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
     time_step: float = 0.2  # seconds
     enable_scale_convert: bool = True
+    # Stop criteria
+    min_abs_lin_speed: float = 0.025  # meters/sec
+    min_abs_ang_speed: float = 1.0  # deg/sec
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class WaypointControlActionConfig(VelocityControlActionConfig):
     r"""
     In Navigation tasks only, this action will utilize a velocity controller to
@@ -220,9 +223,6 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Action space range
     waypoint_lin_range: float = 0.25  # meters
     waypoint_ang_range: float = 180  # degrees
-    # For early termination of the action
-    min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 1.0  # deg/sec
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
@@ -231,9 +231,12 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     max_heading_ang: float = 0.7854  # 45 degrees in rad
     lin_error_tol: float = 0.01
     ang_error_tol: float = 0.025
+    # Stop criteria
+    min_abs_lin_diff: float = 0.01  # meters
+    min_abs_ang_diff: float = 3.0  # deg
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will move the robot forward by
@@ -244,7 +247,7 @@ class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
     forward_step_size: float = 0.25  # meters
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
@@ -255,7 +258,7 @@ class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     turn_angle: int = 30  # degrees
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
