@@ -9,14 +9,14 @@ import magnum as mn
 import numpy as np
 
 # flake8: noqa
-from habitat.robots import (
+from habitat.agents.robots import (
     FetchRobot,
     FetchRobotNoWheels,
     SpotRobot,
     StretchRobot,
 )
-from habitat.robots.fetch_suction import FetchSuctionRobot
-from habitat.robots.mobile_manipulator import MobileManipulator
+from habitat.agents.robots.fetch_suction import FetchSuctionRobot
+from habitat.agents.robots.mobile_manipulator import MobileManipulator
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )

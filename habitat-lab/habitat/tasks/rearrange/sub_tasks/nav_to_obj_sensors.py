@@ -15,14 +15,14 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
+from habitat.tasks.rearrange.utils import UsesAgentInterface, get_angle_to_pos
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_sensor
-class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
+class NavGoalPointGoalSensor(UsesAgentInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.

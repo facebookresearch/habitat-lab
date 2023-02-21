@@ -8,12 +8,12 @@ from typing import Dict, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.robots.robot_interface import RobotInterface
+from habitat.agents.agent_interface import AgentInterface
 from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
 
 
-class RobotBase(RobotInterface):
+class AgentBase(AgentInterface):
     """Generic manupulator interface defines standard API functions. Robot with a controllable base."""
 
     def __init__(
@@ -32,7 +32,7 @@ class RobotBase(RobotInterface):
             "mobile",
             "leg",
         ], f"'{base_type}' is invalid - valid options are [mobile, leg]. Or you write your own class."
-        RobotInterface.__init__(self)
+        AgentInterface.__init__(self)
         # Assign the variables
         self.params = params
         self.urdf_path = urdf_path

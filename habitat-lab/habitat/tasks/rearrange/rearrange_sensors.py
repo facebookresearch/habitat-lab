@@ -15,7 +15,7 @@ from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CollisionDetails,
-    UsesRobotInterface,
+    UsesAgentInterface,
     batch_transform_point,
     get_angle_to_pos,
     rearrange_logger,
@@ -44,7 +44,7 @@ class MultiObjSensor(PointGoalSensor):
 
 
 @registry.register_sensor
-class TargetCurrentSensor(UsesRobotInterface, MultiObjSensor):
+class TargetCurrentSensor(UsesAgentInterface, MultiObjSensor):
     """
     This is the ground truth object position sensor relative to the robot end-effector coordinate frame.
     """
@@ -76,7 +76,7 @@ class TargetCurrentSensor(UsesRobotInterface, MultiObjSensor):
 
 
 @registry.register_sensor
-class TargetStartSensor(UsesRobotInterface, MultiObjSensor):
+class TargetStartSensor(UsesAgentInterface, MultiObjSensor):
     """
     Relative position from end effector to target object
     """
@@ -91,7 +91,7 @@ class TargetStartSensor(UsesRobotInterface, MultiObjSensor):
         return batch_transform_point(pos, T_inv, np.float32).reshape(-1)
 
 
-class PositionGpsCompassSensor(UsesRobotInterface, Sensor):
+class PositionGpsCompassSensor(UsesAgentInterface, Sensor):
     def __init__(self, *args, sim, task, **kwargs):
         self._task = task
         self._sim = sim
@@ -165,7 +165,7 @@ class AbsTargetStartSensor(MultiObjSensor):
 
 
 @registry.register_sensor
-class GoalSensor(UsesRobotInterface, MultiObjSensor):
+class GoalSensor(UsesAgentInterface, MultiObjSensor):
     """
     Relative to the end effector
     """
@@ -190,7 +190,7 @@ class AbsGoalSensor(MultiObjSensor):
 
 
 @registry.register_sensor
-class JointSensor(UsesRobotInterface, Sensor):
+class JointSensor(UsesAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
@@ -217,7 +217,7 @@ class JointSensor(UsesRobotInterface, Sensor):
 
 
 @registry.register_sensor
-class JointVelocitySensor(UsesRobotInterface, Sensor):
+class JointVelocitySensor(UsesAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
@@ -242,7 +242,7 @@ class JointVelocitySensor(UsesRobotInterface, Sensor):
 
 
 @registry.register_sensor
-class EEPositionSensor(UsesRobotInterface, Sensor):
+class EEPositionSensor(UsesAgentInterface, Sensor):
     cls_uuid: str = "ee_pos"
 
     def __init__(self, sim, config, *args, **kwargs):
@@ -277,7 +277,7 @@ class EEPositionSensor(UsesRobotInterface, Sensor):
 
 
 @registry.register_sensor
-class RelativeRestingPositionSensor(UsesRobotInterface, Sensor):
+class RelativeRestingPositionSensor(UsesAgentInterface, Sensor):
     cls_uuid: str = "relative_resting_position"
 
     def _get_uuid(self, *args, **kwargs):
@@ -343,7 +343,7 @@ class RestingPositionSensor(Sensor):
 
 
 @registry.register_sensor
-class LocalizationSensor(UsesRobotInterface, Sensor):
+class LocalizationSensor(UsesAgentInterface, Sensor):
     """
     The position and angle of the robot in world coordinates.
     """
@@ -377,7 +377,7 @@ class LocalizationSensor(UsesRobotInterface, Sensor):
 
 
 @registry.register_sensor
-class IsHoldingSensor(UsesRobotInterface, Sensor):
+class IsHoldingSensor(UsesAgentInterface, Sensor):
     """
     Binary if the robot is holding an object or grasped onto an articulated object.
     """
@@ -512,7 +512,7 @@ class ObjAtGoal(Measure):
 
 
 @registry.register_measure
-class EndEffectorToGoalDistance(UsesRobotInterface, Measure):
+class EndEffectorToGoalDistance(UsesAgentInterface, Measure):
     cls_uuid: str = "ee_to_goal_distance"
 
     def __init__(self, sim, *args, **kwargs):
@@ -539,7 +539,7 @@ class EndEffectorToGoalDistance(UsesRobotInterface, Measure):
 
 
 @registry.register_measure
-class EndEffectorToObjectDistance(UsesRobotInterface, Measure):
+class EndEffectorToObjectDistance(UsesAgentInterface, Measure):
     """
     Gets the distance between the end-effector and all current target object COMs.
     """
@@ -600,7 +600,7 @@ class EndEffectorToRestDistance(Measure):
 
 
 @registry.register_measure
-class ReturnToRestDistance(UsesRobotInterface, Measure):
+class ReturnToRestDistance(UsesAgentInterface, Measure):
     """
     Distance between end-effector and resting position if the robot is holding the object.
     """
@@ -642,7 +642,7 @@ class ReturnToRestDistance(UsesRobotInterface, Measure):
 
 
 @registry.register_measure
-class RobotCollisions(UsesRobotInterface, Measure):
+class RobotCollisions(UsesAgentInterface, Measure):
     """
     Returns a dictionary with the counts for different types of collisions.
     """
@@ -681,7 +681,7 @@ class RobotCollisions(UsesRobotInterface, Measure):
 
 
 @registry.register_measure
-class RobotForce(UsesRobotInterface, Measure):
+class RobotForce(UsesAgentInterface, Measure):
     """
     The amount of force in newton's accumulatively applied by the robot.
     """
@@ -829,7 +829,7 @@ class ForceTerminate(Measure):
 
 
 @registry.register_measure
-class DidViolateHoldConstraintMeasure(UsesRobotInterface, Measure):
+class DidViolateHoldConstraintMeasure(UsesAgentInterface, Measure):
     cls_uuid: str = "did_violate_hold_constraint"
 
     @staticmethod
@@ -856,7 +856,7 @@ class DidViolateHoldConstraintMeasure(UsesRobotInterface, Measure):
         ).grasp_mgr.is_violating_hold_constraint()
 
 
-class RearrangeReward(UsesRobotInterface, Measure):
+class RearrangeReward(UsesAgentInterface, Measure):
     """
     An abstract class defining some measures that are always a part of any
     reward function in the Habitat 2.0 tasks.

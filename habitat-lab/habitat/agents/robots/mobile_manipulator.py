@@ -8,8 +8,8 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.robots.manipulator import Manipulator
-from habitat.robots.robot_base import RobotBase
+from habitat.agents.agent_base import AgentBase
+from habitat.agents.robots.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 
@@ -97,7 +97,7 @@ class MobileManipulatorParams:
     base_link_names: Set[str]
 
 
-class MobileManipulator(Manipulator, RobotBase):
+class MobileManipulator(Manipulator, AgentBase):
     """Robot with a controllable base and arm."""
 
     def __init__(
@@ -127,7 +127,7 @@ class MobileManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
         )
         # instantiate a robotBase
-        RobotBase.__init__(
+        AgentBase.__init__(
             self,
             urdf_path=urdf_path,
             params=params,
@@ -141,18 +141,18 @@ class MobileManipulator(Manipulator, RobotBase):
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         Manipulator.reconfigure(self)
-        RobotBase.reconfigure(self)
+        AgentBase.reconfigure(self)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
         Manipulator.update(self)
-        RobotBase.update(self)
+        AgentBase.update(self)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes.
         """
         Manipulator.reset(self)
-        RobotBase.reset(self)
+        AgentBase.reset(self)

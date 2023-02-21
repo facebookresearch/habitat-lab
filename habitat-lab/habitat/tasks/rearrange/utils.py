@@ -358,7 +358,7 @@ class IkHelper:
         return js[: self._arm_len]
 
 
-class UsesRobotInterface:
+class UsesAgentInterface:
     """
     For sensors or actions that are robot specific. Used to split actions and
     sensors between multiple robots.

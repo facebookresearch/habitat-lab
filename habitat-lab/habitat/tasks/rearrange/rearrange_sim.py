@@ -22,13 +22,13 @@ import numpy as np
 import numpy.typing as npt
 
 import habitat_sim
+
+# flake8: noqa
+from habitat.agents.robots import FetchRobot, FetchRobotNoWheels
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, Observations
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-
-# flake8: noqa
-from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (

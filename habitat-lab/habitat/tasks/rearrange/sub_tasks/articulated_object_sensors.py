@@ -16,11 +16,11 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     EndEffectorToRestDistance,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
+from habitat.tasks.rearrange.utils import UsesAgentInterface, rearrange_logger
 
 
 @registry.register_sensor
-class MarkerRelPosSensor(UsesRobotInterface, Sensor):
+class MarkerRelPosSensor(UsesAgentInterface, Sensor):
     """
     Tracks the relative position of a marker to the robot end-effector
     specified by `use_marker_name` in the task. This `use_marker_name` must
@@ -230,7 +230,7 @@ class ArtObjSuccess(Measure):
 
 
 @registry.register_measure
-class EndEffectorDistToMarker(UsesRobotInterface, Measure):
+class EndEffectorDistToMarker(UsesAgentInterface, Measure):
     """
     The distance of the end-effector to the target marker on the articulated object.
     """
