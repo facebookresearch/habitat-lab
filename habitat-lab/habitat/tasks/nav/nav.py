@@ -1176,20 +1176,36 @@ class VelocityAction(SimulatorTaskAction):
 
     @property
     def action_space(self):
-        return ActionSpace(
-            {
-                "linear_velocity": spaces.Box(
-                    low=np.array([self._lin_vel_range[0]]),
-                    high=np.array([self._lin_vel_range[1]]),
-                    dtype=np.float32,
-                ),
-                "angular_velocity": spaces.Box(
-                    low=np.array([self._ang_vel_range[0]]),
-                    high=np.array([self._ang_vel_range[1]]),
-                    dtype=np.float32,
-                ),
-            }
-        )
+        if self._enable_scale_convert:
+            return ActionSpace(
+                {
+                    "linear_velocity": spaces.Box(
+                        low=np.array([-1]),
+                        high=np.array([1]),
+                        dtype=np.float32,
+                    ),
+                    "angular_velocity": spaces.Box(
+                        low=np.array([-1]),
+                        high=np.array([1]),
+                        dtype=np.float32,
+                    ),
+                }
+            )
+        else:
+            return ActionSpace(
+                {
+                    "linear_velocity": spaces.Box(
+                        low=np.array([self._lin_vel_range[0]]),
+                        high=np.array([self._lin_vel_range[1]]),
+                        dtype=np.float32,
+                    ),
+                    "angular_velocity": spaces.Box(
+                        low=np.array([self._ang_vel_range[0]]),
+                        high=np.array([self._ang_vel_range[1]]),
+                        dtype=np.float32,
+                    ),
+                }
+            )
 
     def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         task.is_stop_called = False  # type: ignore
@@ -1383,25 +1399,36 @@ class WaypointAction(VelocityAction):
 
     @property
     def action_space(self):
-        lo = [
-            self._waypoint_lin_range[0],
-            self._waypoint_lin_range[0],
-            self._waypoint_ang_range[0],
-        ]
-        hi = [
-            self._waypoint_lin_range[1],
-            self._waypoint_lin_range[1],
-            self._waypoint_ang_range[1],
-        ]
-        return ActionSpace(
-            {
-                "xyt_waypoint": spaces.Box(
-                    low=np.array(lo),
-                    high=np.array(hi),
-                    dtype=np.float32,
-                ),
-            }
-        )
+        if self._enable_scale_convert:
+            return ActionSpace(
+                {
+                    "xyt_waypoint": spaces.Box(
+                        low=-np.ones(3),
+                        high=np.ones(3),
+                        dtype=np.float32,
+                    ),
+                }
+            )
+        else:
+            lo = [
+                self._waypoint_lin_range[0],
+                self._waypoint_lin_range[0],
+                self._waypoint_ang_range[0],
+            ]
+            hi = [
+                self._waypoint_lin_range[1],
+                self._waypoint_lin_range[1],
+                self._waypoint_ang_range[1],
+            ]
+            return ActionSpace(
+                {
+                    "xyt_waypoint": spaces.Box(
+                        low=np.array(lo),
+                        high=np.array(hi),
+                        dtype=np.float32,
+                    ),
+                }
+            )
 
     def step(
         self, task: EmbodiedTask, xyt_waypoint: List[float], *args, **kwargs
