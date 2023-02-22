@@ -257,7 +257,7 @@ def get_input_vel_ctlr(
             for x in env._sim.articulated_agent.sim_obj.translation
         ]
         rot = env._sim.articulated_agent.sim_obj.rotation
-        ee_pos = env._sim.articulated_agent.ee_transform.translation
+        ee_pos = env._sim.articulated_agent.ee_transform().translation
         logger.info(
             f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
