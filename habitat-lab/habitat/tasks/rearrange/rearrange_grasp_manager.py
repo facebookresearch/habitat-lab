@@ -32,9 +32,9 @@ class RearrangeGraspManager:
         self, sim, config: "DictConfig", articulated_agent, ee_index=0
     ) -> None:
         """Initialize a grasp manager for the simulator instance provided.
-        :param sim:
+        :param sim: Pointer to the simulator where the agent is instantiated
         :param config: The task's "simulator" subconfig node. Defines grasping parameters.
-        :param articulated_agent:
+        :param articulated_agent: The agent for which we want to manage grasping
         :param ee_index: The index of the end effector of the articulated_agent belonging to this grasp_manager
         """
         self._sim = sim
@@ -241,11 +241,9 @@ class RearrangeGraspManager:
 
         if constraint_type == RigidConstraintType.Fixed:
             # we set the link frame to object rotation in link space (objR -> world -> link)
-            link_node = (
-                self._managed_articulated_agent.sim_obj.get_link_scene_node(
-                    self._managed_articulated_agent.ee_link_id(self.ee_index)
-                )
-            )
+            link_id = self._managed_articulated_agent.ee_link_id(self.ee_index)
+            sim_object = self._managed_articulated_agent.sim_obj
+            link_node = sim_object.get_link_scene_node(link_id)
             link_frame_world_space = (
                 link_node.absolute_transformation().rotation()
             )
