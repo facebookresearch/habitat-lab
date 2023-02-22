@@ -6,7 +6,6 @@
 
 import importlib
 import sys
-from glob import glob
 
 import gym
 import gym.spaces as spaces
@@ -17,7 +16,7 @@ import pytest
 import habitat.gym
 import habitat.utils.env_utils
 from habitat.core.environments import get_env_class
-from habitat.gym.gym_definitions import _get_env_name
+from habitat.gym.gym_definitions import PRE_REGISTERED_GYM_TASKS, _get_env_name
 
 # using mock for pygame to avoid having a pygame windows
 sys.modules["pygame"] = mock.MagicMock()
@@ -164,21 +163,16 @@ def test_full_gym_wrapper(config_file, override_options):
 
 
 @pytest.mark.parametrize(
-    "test_cfg_path",
-    list(
-        glob("habitat-lab/habitat/config/benchmark/**/*.yaml", recursive=True),
-    ),
+    "env_name",
+    list(PRE_REGISTERED_GYM_TASKS.keys()),
 )
-def test_auto_gym_wrapper(test_cfg_path):
+def test_auto_gym_wrapper(env_name):
     """
     Test all defined automatic Gym wrappers work
     """
-    config = habitat.get_config(test_cfg_path)
-    if "gym" not in config.habitat or config.habitat.gym.auto_name == "":
-        pytest.skip(f"Gym environment name isn't set for {test_cfg_path}.")
     pytest.importorskip("pygame")
     for prefix in ["", "Render"]:
-        full_gym_name = f"Habitat{prefix}{config.habitat.gym.auto_name}-v0"
+        full_gym_name = f"Habitat{prefix}{env_name}-v0"
 
         hab_gym = gym.make(
             full_gym_name,
