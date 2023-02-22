@@ -1171,6 +1171,7 @@ class VelocityAction(SimulatorTaskAction):
         self._ang_vel_range = self._config.ang_vel_range
         self._enable_scale_convert = self._config.enable_scale_convert
         self._time_step = self._config.time_step
+        self._use_stop_heuristic = self._config.use_stop_heuristic
         self._min_abs_lin_speed = self._config.min_abs_lin_speed
         self._min_abs_ang_speed = self._config.min_abs_ang_speed
 
@@ -1235,7 +1236,9 @@ class VelocityAction(SimulatorTaskAction):
         )
 
         # Check if the action is a stop action
-        if self._check_stop(lin_vel_processed, ang_vel_processed):
+        if self._use_stop_heuristic and self._check_stop(
+            lin_vel_processed, ang_vel_processed
+        ):
             task.is_stop_called = True  # type: ignore
             return self._get_agent_observation()
 
@@ -1391,9 +1394,9 @@ class WaypointAction(VelocityAction):
         self.w2v_controller = ContinuousController(self._config)
 
         # Cache hydra configs
-        self._action_duration = self._config.action_duration
         self._waypoint_lin_range = self._config.waypoint_lin_range
         self._waypoint_ang_range = self._config.waypoint_ang_range
+        self._max_max_duration = self._config.max_max_duration
         self._min_abs_lin_diff = self._config.min_abs_lin_diff
         self._min_abs_ang_diff = self._config.min_abs_ang_diff
 
@@ -1427,25 +1430,37 @@ class WaypointAction(VelocityAction):
                         high=np.array(hi),
                         dtype=np.float32,
                     ),
+                    "max_duration": spaces.Box(
+                        low=np.array([0.0]),
+                        high=np.array([self._max_max_duration]),
+                        dtype=np.float32,
+                    ),
                 }
             )
 
     def step(
-        self, task: EmbodiedTask, xyt_waypoint: List[float], *args, **kwargs
+        self,
+        task: EmbodiedTask,
+        xyt_waypoint: List[float],
+        wait_duration: float,
+        *args,
+        **kwargs,
     ):
         # Preprocess waypoint input
         assert len(xyt_waypoint) == 3, "Waypoint vector must be of length 3."
         xyt_waypoint_processed = self._preprocess_action(xyt_waypoint)
 
         # Check if the action is a stop action
-        if self._check_stop(xyt_waypoint_processed):
+        if self._use_stop_heuristic and self._check_stop(
+            xyt_waypoint_processed
+        ):
             task.is_stop_called = True  # type: ignore
             return self._get_agent_observation()
 
         # Execute waypoint
         return self._step_rel_waypoint(
             xyt_waypoint_processed,
-            self._action_duration,
+            wait_duration,
             *args,
             **kwargs,
         )
@@ -1502,7 +1517,9 @@ class WaypointAction(VelocityAction):
 
         return xyt_waypoint_clamped
 
-    def _step_rel_waypoint(self, xyt_waypoint, duration, *args, **kwargs):
+    def _step_rel_waypoint(
+        self, xyt_waypoint, max_wait_duration, *args, **kwargs
+    ):
         """Use the waypoint-to-velocity controller to navigate to the waypoint"""
 
         # Initialize control loop
@@ -1515,7 +1532,7 @@ class WaypointAction(VelocityAction):
         dt = self._time_step
 
         # Forward simulate
-        for _t in np.arange(0, max(duration / dt, 1)) * dt:
+        for _t in np.arange(0, max(max_wait_duration / dt, 1)) * dt:
             # Query velocity controller for control input
             linear_velocity, angular_velocity = self.w2v_controller.forward(
                 xyt
@@ -1579,7 +1596,7 @@ class MoveForwardWaypointAction(WaypointAction):
         """
         xyt_waypoint = np.array([self._config.forward_step_size, 0.0, 0.0])
         return self._step_rel_waypoint(
-            xyt_waypoint, self._action_duration, *args, **kwargs
+            xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
 
 
@@ -1593,7 +1610,7 @@ class TurnLeftWaypointAction(WaypointAction):
         """
         xyt_waypoint = np.array([0.0, 0.0, self._config.turn_angle])
         return self._step_rel_waypoint(
-            xyt_waypoint, self._action_duration, *args, **kwargs
+            xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
 
 
@@ -1607,7 +1624,7 @@ class TurnRightWaypointAction(WaypointAction):
         """
         xyt_waypoint = np.array([0.0, 0.0, -self._config.turn_angle])
         return self._step_rel_waypoint(
-            xyt_waypoint, self._action_duration, *args, **kwargs
+            xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
 
 
