@@ -1401,6 +1401,11 @@ class WaypointAction(VelocityAction):
         self._min_abs_lin_diff = self._config.min_abs_lin_diff
         self._min_abs_ang_diff = self._config.min_abs_ang_diff
 
+        if self._yaw_input_in_degrees:
+            self._waypoint_ang_range = [
+                np.deg2rad(d) for d in self._waypoint_ang_range
+            ]
+
     @property
     def action_space(self):
         if self._enable_scale_convert:
@@ -1472,7 +1477,7 @@ class WaypointAction(VelocityAction):
         angular_diff = abs(xyt_waypoint[2])
 
         lin_check = linear_diff < self._min_abs_lin_diff
-        ang_check = angular_diff < np.deg2rad(self._min_abs_ang_diff)
+        ang_check = angular_diff < self._min_abs_ang_diff
         return lin_check and ang_check
 
     def _preprocess_action(self, xyt_waypoint):
@@ -1610,9 +1615,7 @@ class TurnLeftWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array(
-            [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
-        )
+        xyt_waypoint = np.array([0.0, 0.0, self._config.turn_angle])
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
@@ -1626,9 +1629,7 @@ class TurnRightWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array(
-            [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
-        )
+        xyt_waypoint = np.array([0.0, 0.0, -self._config.turn_angle])
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )

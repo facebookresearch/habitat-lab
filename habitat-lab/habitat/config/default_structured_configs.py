@@ -7,6 +7,11 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+<<<<<<< HEAD
+=======
+import attr
+import numpy as np
+>>>>>>> 9e3e90b1 (Unify inputs and configs to use radians)
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
 
@@ -201,15 +206,15 @@ class TeleportActionConfig(ActionConfig):
 class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     # meters/sec
-    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.25])
-    # deg/sec
-    ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
+    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.3])
+    # rad/sec
+    ang_vel_range: List[float] = field(default_factory=lambda: [-0.45, 0.45])
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
     # Stop criteria
     use_stop_heuristic: bool = False
     min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 1.0  # deg/sec
+    min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
 
 
 @dataclass
@@ -223,18 +228,18 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     action_duration: float = 1.0  # seconds
     # Action space range
     waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
-    waypoint_ang_range: List[float] = [-180, 180]  # degrees
+    waypoint_ang_range: List[float] = [-np.pi, 180]  # radians
     max_max_duration: float = 10.0  # seconds
     yaw_input_in_degrees: bool = False
     # Stop criteria
     min_abs_lin_diff: float = 0.01  # meters
-    min_abs_ang_diff: float = 3.0  # deg
+    min_abs_ang_diff: float = 0.05  # rad (3 degrees)
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
     acc_lin: float = 0.2
     acc_ang: float = 0.6
-    max_heading_ang: float = 0.7854  # 45 degrees in rad
+    max_heading_ang: float = np.pi / 4  # rad
     lin_error_tol: float = 0.01
     ang_error_tol: float = 0.025
 
@@ -258,7 +263,7 @@ class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     """
     type: str = "TurnLeftWaypointAction"
     max_wait_duration: float = 3.0  # seconds
-    turn_angle: int = 30  # degrees
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
 @dataclass
@@ -269,7 +274,7 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     """
     type: str = "TurnRightWaypointAction"
     max_wait_duration: float = 3.0  # seconds
-    turn_angle: int = 30  # degrees
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
 # -----------------------------------------------------------------------------
