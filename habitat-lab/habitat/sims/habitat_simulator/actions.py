@@ -197,6 +197,8 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
 @registry.register_action_space_configuration(name="velocitycontrol")
 class HabitatSimVelocityCtrlActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
+        if not HabitatSimActions.has_action("VELOCITY_CTRL"):
+            HabitatSimActions.extend_action_space("VELOCITY_CTRL")
         return {
             HabitatSimActions.VELOCITY_CTRL: habitat_sim.ActionSpec(
                 "velocity_control"
