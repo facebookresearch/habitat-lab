@@ -204,7 +204,7 @@ class VelocityControlActionConfig(ActionConfig):
     lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.25])
     # deg/sec
     ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
-    time_step: float = 0.2  # seconds
+    time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
     # Stop criteria
     min_abs_lin_speed: float = 0.025  # meters/sec
