@@ -44,9 +44,15 @@ def draw_top_down_map(info, output_size):
 
 def shortest_path_example():
     config = habitat.get_config(
-        config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        # config_path="benchmark/nav/pointnav/pointnav_habitat_test.yaml",
+        config_path="benchmark/nav/objectnav/objectnav_hm3d.yaml",
         overrides=[
-            "+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map"
+            "+habitat/task/measurements@habitat.task.measurements.top_down_map=top_down_map",
+            "habitat.task.measurements.top_down_map.draw_goal_aabbs=False",
+            "habitat.simulator.action_space_config=velocitycontrol",
+            # "habitat/task/actions=velocity_control",
+            # "habitat/task/actions=[move_forward, turn_left, turn_right, stop]"
+            "habitat/task/actions=[move_forward_waypoint, turn_left_waypoint, turn_right_waypoint, stop]",
         ],
     )
 
@@ -78,8 +84,15 @@ def shortest_path_example():
 
                 observations, reward, done, info = env.step(best_action)
                 im = observations["rgb"]
+
+                depth_im = observations["depth"] * 255
+                depth_im = np.repeat(depth_im, 3, axis=2)
+
                 top_down_map = draw_top_down_map(info, im.shape[0])
-                output_im = np.concatenate((im, top_down_map), axis=1)
+
+                output_im = np.concatenate(
+                    (im, depth_im, top_down_map), axis=1
+                )
                 images.append(output_im)
             images_to_video(images, dirname, "trajectory")
             print("Episode finished")
