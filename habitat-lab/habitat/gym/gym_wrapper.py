@@ -17,8 +17,6 @@ from habitat.core.spaces import EmptySpace
 from habitat.utils.visualizations.utils import observations_to_image
 
 if TYPE_CHECKING:
-    from omegaconf import DictConfig
-
     from habitat.core.dataset import BaseEpisode
     from habitat.core.env import RLEnv
 
@@ -178,11 +176,11 @@ class HabGymWrapper(gym.Wrapper):
     def __init__(
         self,
         env: "RLEnv",
-        habitat_gym_config: "DictConfig",
         save_orig_obs: bool = False,
     ):
         super().__init__(env)
 
+        habitat_gym_config = env.config.gym
         self._gym_goal_keys = habitat_gym_config.desired_goal_keys
         self._gym_achieved_goal_keys = habitat_gym_config.achieved_goal_keys
         self._gym_action_keys = habitat_gym_config.action_keys
@@ -254,10 +252,10 @@ class HabGymWrapper(gym.Wrapper):
 
     @property
     def number_of_episodes(self) -> int:
-        return self.unwrapped.number_of_episodes
+        return self.env.number_of_episodes
 
     def current_episode(self, all_info: bool = False) -> "BaseEpisode":
-        return self.unwrapped.current_episode(all_info)
+        return self.env.current_episode(all_info)
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
         obs, reward, done, info = self.env.step(action=action)
@@ -306,7 +304,7 @@ class HabGymWrapper(gym.Wrapper):
             return self._transform_obs(obs)
 
     def render(self, mode: str = "human", **kwargs):
-        last_infos = self.unwrapped.get_info(observations=None)
+        last_infos = self.env.get_info(observations=None)
         if mode == "rgb_array":
             frame = observations_to_image(self._last_obs, last_infos)
         elif mode == "human":
