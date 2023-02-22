@@ -76,13 +76,9 @@ def shortest_path_example():
             print("Agent stepping around inside environment.")
             images = []
             while not env.habitat_env.episode_over:
-                best_action = follower.get_next_action(
-                    env.habitat_env.current_episode.goals[0].position
-                )
-                if best_action is None:
-                    break
+                action = env.action_space.sample()
 
-                observations, reward, done, info = env.step(best_action)
+                observations, reward, done, info = env.step(action)
                 im = observations["rgb"]
 
                 depth_im = observations["depth"] * 255
