@@ -203,6 +203,7 @@ class VelocityControlActionConfig(ActionConfig):
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
     # Stop criteria
+    use_stop_heuristic: bool = False
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # deg/sec
 
@@ -219,6 +220,7 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Action space range
     waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
     waypoint_ang_range: List[float] = [-180, 180]  # degrees
+    max_max_duration: float = 10.0  # seconds
     # Stop criteria
     min_abs_lin_diff: float = 0.01  # meters
     min_abs_ang_diff: float = 3.0  # deg
@@ -239,7 +241,7 @@ class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
     """
     type: str = "MoveForwardWaypointAction"
-    action_duration: float = 3.0  # seconds
+    max_wait_duration: float = 3.0  # seconds
     forward_step_size: float = 0.25  # meters
 
 
@@ -250,7 +252,7 @@ class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnLeftWaypointAction"
-    action_duration: float = 3.0  # seconds
+    max_wait_duration: float = 3.0  # seconds
     turn_angle: int = 30  # degrees
 
 
@@ -261,7 +263,7 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnRightWaypointAction"
-    action_duration: float = 3.0  # seconds
+    max_wait_duration: float = 3.0  # seconds
     turn_angle: int = 30  # degrees
 
 
