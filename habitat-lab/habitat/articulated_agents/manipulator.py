@@ -266,7 +266,7 @@ class Manipulator(ArticulatedAgentInterface):
         return ef_link_transform
 
     def clip_ee_to_workspace(
-        self, pos: np.ndarray, ee_index: int
+        self, pos: np.ndarray, ee_index: int = 0
     ) -> np.ndarray:
         """Clips a 3D end-effector position within region the robot can reach."""
         return np.clip(
