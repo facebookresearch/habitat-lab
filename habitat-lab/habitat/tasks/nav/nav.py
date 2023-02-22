@@ -1551,11 +1551,24 @@ class WaypointAction(VelocityAction):
         y -> -z
         rz -> -ry
         """
+        # Convert rotation to rotation vector
+        q = agent_state.rotation
+        if type(q) is mn.Quaternion:
+            q = quaternion.from_float_array(
+                np.array([q.scalar] + list(q.vector))
+            )
+        elif type(q) is np.ndarray:
+            q = quaternion.from_float_array(q)
+        elif type(q) is not quaternion.quaternion:
+            raise TypeError("Invalid agent_state.rotation type.")
+
+        agent_rotvec = quaternion.as_rotation_vector(q)
+
         return np.array(
             [
                 agent_state.position[0],
                 -agent_state.position[2],
-                quaternion.as_rotation_vector(agent_state.rotation)[1],
+                agent_rotvec[1],
             ]
         )
 
