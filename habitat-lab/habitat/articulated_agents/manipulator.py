@@ -40,7 +40,6 @@ class Manipulator(ArticulatedAgentInterface):
         self.sim_obj = sim_obj
 
         # Adapt Manipulator params to support multiple end effector indices
-
         # NOTE: the follow members cache static info for improved efficiency over querying the API
         # maps joint ids to motor settings for convenience
         self.joint_motors: Dict[int, Tuple[int, JointMotorSettings]] = {}
@@ -215,7 +214,7 @@ class Manipulator(ArticulatedAgentInterface):
 
         :param ee_index: the end effector index for which we want the link id
         """
-        if ee_index <= len(self.params.ee_links):
+        if ee_index >= len(self.params.ee_links):
             raise ValueError(
                 "The current manipulator does not have enough end effectors"
             )
@@ -228,6 +227,10 @@ class Manipulator(ArticulatedAgentInterface):
 
         :param ee_index: the end effector index for which we want the link id
         """
+        if ee_index >= len(self.params.ee_offset):
+            raise ValueError(
+                "The current manipulator does not have enough end effectors"
+            )
         return self.params.ee_offset[ee_index]
 
     def calculate_ee_forward_kinematics(
