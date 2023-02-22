@@ -225,8 +225,10 @@ class Manipulator(ArticulatedAgentInterface):
     def ee_local_offset(self, ee_index: int = 0) -> mn.Vector3:
         """Gets the relative offset of the end-effector center from the
         end-effector link.
+
+        :param ee_index: the end effector index for which we want the link id
         """
-        return self.params.ee_offset
+        return self.params.ee_offset[ee_index]
 
     def calculate_ee_forward_kinematics(
         self, joint_state: np.ndarray, ee_index: int = 0
