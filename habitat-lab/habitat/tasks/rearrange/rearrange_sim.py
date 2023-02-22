@@ -112,7 +112,9 @@ class RearrangeSim(HabitatSim):
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
-        self._debug_render_robot = self.habitat_config.debug_render_robot
+        self._debug_render_articulated_agent = (
+            self.habitat_config.debug_render_articulated_agent
+        )
         self._debug_render_goal = self.habitat_config.debug_render_goal
         self._debug_render = self.habitat_config.debug_render
         self._concur_render = self.habitat_config.concur_render
@@ -120,20 +122,24 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
         )
         self._needs_markers = self.habitat_config.needs_markers
-        self._update_robot = self.habitat_config.update_robot
+        self._update_articulated_agent = (
+            self.habitat_config.update_articulated_agent
+        )
         self._step_physics = self.habitat_config.step_physics
 
     @property
     def articulated_agent(self):
         if len(self.agents_mgr) > 1:
-            raise ValueError(f"Cannot access `sim.robot` with multiple robots")
-        return self.agents_mgr[0].robot
+            raise ValueError(
+                f"Cannot access `sim.articulated_agent` with multiple articulated agents"
+            )
+        return self.agents_mgr[0].articulated_agent
 
     @property
     def grasp_mgr(self):
         if len(self.agents_mgr) > 1:
             raise ValueError(
-                f"Cannot access `sim.grasp_mgr` with multiple robots"
+                f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
             )
         return self.agents_mgr[0].grasp_mgr
 
@@ -294,10 +300,10 @@ class RearrangeSim(HabitatSim):
             return self.agents_mgr[agent_idx]
 
     @property
-    def num_robots(self):
+    def num_articulated_agents(self):
         return len(self.agents_mgr)
 
-    def set_robot_base_to_random_point(
+    def set_articulated_agent_base_to_random_point(
         self,
         max_attempts: int = 50,
         agent_idx: Optional[int] = None,
@@ -306,7 +312,7 @@ class RearrangeSim(HabitatSim):
         """
         :returns: The set base position and rotation
         """
-        robot = self.get_agent_data(agent_idx).robot
+        articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point()
@@ -319,8 +325,8 @@ class RearrangeSim(HabitatSim):
             ):
                 continue
 
-            robot.base_pos = start_pos
-            robot.base_rot = start_rot
+            articulated_agent.base_pos = start_pos
+            articulated_agent.base_rot = start_rot
             self.perform_discrete_collision_detection()
             did_collide, _ = rearrange_collision(
                 self, True, ignore_base=False, agent_idx=agent_idx
@@ -479,15 +485,15 @@ class RearrangeSim(HabitatSim):
             obj_counts[obj_handle] += 1
 
         ao_mgr = self.get_articulated_object_manager()
-        robot_art_handles = [
-            robot.sim_obj.handle
-            for robot in self.agents_mgr.articulated_agents_iter
+        articulated_agent_art_handles = [
+            articulated_agent.sim_obj.handle
+            for articulated_agent in self.agents_mgr.articulated_agents_iter
         ]
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
             if (
                 self.habitat_config.kinematic_mode
-                and ao.handle not in robot_art_handles
+                and ao.handle not in articulated_agent_art_handles
             ):
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
@@ -542,11 +548,11 @@ class RearrangeSim(HabitatSim):
                 True, rom.get_object_by_handle(target_handle).object_id
             )
 
-    def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
+    def capture_state(self, with_articulated_agent_js=False) -> Dict[str, Any]:
         """
         Record and return a dict of state info.
 
-        :param with_robot_js: If true, state dict includes robot joint positions in addition.
+        :param with_articulated_agent_js: If true, state dict includes articulated_agent joint positions in addition.
 
         State info dict includes:
          - Robot transform
@@ -554,13 +560,13 @@ class RearrangeSim(HabitatSim):
          - a list of RigidObject transforms
          - a list of ArticulatedObject joint states
          - the object id of currently grasped object (or None)
-         - (optionally) the robot's joint positions
+         - (optionally) the articulated_agent's joint positions
         """
         # Don't need to capture any velocity information because this will
         # automatically be set to 0 in `set_state`.
-        robot_T = [
-            robot.sim_obj.transformation
-            for robot in self.agents_mgr.articulated_agents_iter
+        articulated_agent_T = [
+            articulated_agent.sim_obj.transformation
+            for articulated_agent in self.agents_mgr.articulated_agents_iter
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
@@ -569,13 +575,13 @@ class RearrangeSim(HabitatSim):
         ]
         art_pos = [ao.joint_positions for ao in self.art_objs]
 
-        robot_js = [
-            robot.sim_obj.joint_positions
-            for robot in self.agents_mgr.articulated_agents_iter
+        articulated_agent_js = [
+            articulated_agent.sim_obj.joint_positions
+            for articulated_agent in self.agents_mgr.articulated_agents_iter
         ]
 
         ret = {
-            "robot_T": robot_T,
+            "robot_T": articulated_agent_T,
             "art_T": art_T,
             "static_T": static_T,
             "art_pos": art_pos,
@@ -583,8 +589,8 @@ class RearrangeSim(HabitatSim):
                 grasp_mgr.snap_idx for grasp_mgr in self.agents_mgr.grasp_iter
             ],
         }
-        if with_robot_js:
-            ret["robot_js"] = robot_js
+        if with_articulated_agent_js:
+            ret["robot_js"] = articulated_agent_js
         return ret
 
     def set_state(self, state: Dict[str, Any], set_hold=False) -> None:
@@ -638,23 +644,24 @@ class RearrangeSim(HabitatSim):
                     grasp_mgr.desnap(True)
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
-        robot = self.get_agent_data(agent_id).robot
+        articulated_agent = self.get_agent_data(agent_id).articulated_agent
         rotation = mn.Quaternion.rotation(
-            mn.Rad(robot.base_rot) - mn.Rad(0 * np.pi / 2), mn.Vector3(0, 1, 0)
+            mn.Rad(articulated_agent.base_rot) - mn.Rad(0 * np.pi / 2),
+            mn.Vector3(0, 1, 0),
         )
         rot_offset = mn.Quaternion.rotation(
             mn.Rad(-np.pi / 2), mn.Vector3(0, 1, 0)
         )
         return AgentState(
-            robot.base_pos,
-            quat_from_magnum(robot.sim_obj.rotation * rot_offset),
+            articulated_agent.base_pos,
+            quat_from_magnum(articulated_agent.sim_obj.rotation * rot_offset),
         )
 
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
         if self._debug_render:
-            if self._debug_render_robot:
+            if self._debug_render_articulated_agent:
                 self.agents_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
@@ -682,19 +689,19 @@ class RearrangeSim(HabitatSim):
                 add_back_viz_objs[name] = (before_pos, r)
             self.viz_ids = defaultdict(lambda: None)
 
-        self.maybe_update_robot()
+        self.maybe_update_articulated_agent()
 
         if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1, update_robot=False)
+                self.internal_step(-1, update_articulated_agent=False)
 
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
             for _ in range(self.ac_freq_ratio):
-                self.internal_step(-1, update_robot=False)
+                self.internal_step(-1, update_articulated_agent=False)
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
@@ -722,14 +729,14 @@ class RearrangeSim(HabitatSim):
 
         return obs
 
-    def maybe_update_robot(self):
+    def maybe_update_articulated_agent(self):
         """
-        Calls the update agents method on the robot manager if the
-        `update_robot` configuration is set to True. Among other
-        things, this will set the robot's sensors' positions to their new
+        Calls the update agents method on the articulated agent manager if the
+        `update_articulated_agent` configuration is set to True. Among other
+        things, this will set the articulated agent's sensors' positions to their new
         positions.
         """
-        if self._update_robot:
+        if self._update_articulated_agent:
             self.agents_mgr.update_agents()
 
     def visualize_position(
@@ -764,15 +771,15 @@ class RearrangeSim(HabitatSim):
         return viz_obj.object_id
 
     def internal_step(
-        self, dt: Union[int, float], update_robot: bool = True
+        self, dt: Union[int, float], update_articulated_agent: bool = True
     ) -> None:
-        """Step the world and update the robot.
+        """Step the world and update the articulated_agent.
 
         :param dt: Timestep by which to advance the world. Multiple physics substeps can be excecuted within a single timestep. -1 indicates a single physics substep.
 
-        Never call sim.step_world directly or miss updating the robot.
+        Never call sim.step_world directly or miss updating the articulated_agent.
         """
-        # optionally step physics and update the robot for benchmarking purposes
+        # optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
             self.step_world(dt)
 

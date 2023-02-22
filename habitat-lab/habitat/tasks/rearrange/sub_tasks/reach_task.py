@@ -61,5 +61,5 @@ class RearrangeReachTaskV1(RearrangeTask):
                 global_pos, self._sim.viz_ids["reach_target"]
             )
 
-        self._sim.maybe_update_robot()
+        self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)

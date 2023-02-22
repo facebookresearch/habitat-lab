@@ -1285,8 +1285,8 @@ class SimulatorConfig(HabitatBaseConfig):
     concur_render: bool = False
     # If markers should be updated at every step:
     needs_markers: bool = True
-    # If the robot camera positions should be updated at every step:
-    update_robot: bool = True
+    # If the articulated_agent camera positions should be updated at every step:
+    update_articulated_agent: bool = True
     scene: str = "data/scene_datasets/habitat-test-scenes/van-gogh-room.glb"
     # The scene dataset to load in the metadatamediator,
     # should contain simulator.scene:
@@ -1302,7 +1302,7 @@ class SimulatorConfig(HabitatBaseConfig):
     tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
     default_agent_id: int = 0
     debug_render: bool = False
-    debug_render_robot: bool = False
+    debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed

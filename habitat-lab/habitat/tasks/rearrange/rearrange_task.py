@@ -44,11 +44,11 @@ class RearrangeTask(NavigationTask):
 
         task_new_sensors: Dict[str, Sensor] = {}
         task_obs_spaces = OrderedDict()
-        for robot_idx, agent_id in enumerate(self._sim.agents_mgr.agent_names):
+        for agent_idx, agent_id in enumerate(self._sim.agents_mgr.agent_names):
             for sensor_name, sensor in sensor_suite.sensors.items():
                 if isinstance(sensor, UsesArticulatedAgentInterface):
                     new_sensor = copy.copy(sensor)
-                    new_sensor.agent_id = robot_idx
+                    new_sensor.agent_id = agent_idx
                     full_name = f"{agent_id}_{sensor_name}"
                     task_new_sensors[full_name] = new_sensor
                     task_obs_spaces[full_name] = new_sensor.observation_space
@@ -145,7 +145,10 @@ class RearrangeTask(NavigationTask):
     def _set_robot_start(self, agent_idx: int) -> None:
         robot_start = self._get_cached_robot_start(agent_idx)
         if robot_start is None:
-            robot_pos, robot_rot = self._sim.set_robot_base_to_random_point(
+            (
+                robot_pos,
+                robot_rot,
+            ) = self._sim.set_articulated_agent_base_to_random_point(
                 agent_idx=agent_idx
             )
             self._cache_robot_start((robot_pos, robot_rot), agent_idx)
@@ -166,7 +169,7 @@ class RearrangeTask(NavigationTask):
             self._is_episode_active = True
 
             if self._should_place_robot:
-                for agent_idx in range(self._sim.num_robots):
+                for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_robot_start(agent_idx)
 
         self.prev_measures = self.measurements.get_metrics()
@@ -177,7 +180,7 @@ class RearrangeTask(NavigationTask):
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:
-            self._sim.maybe_update_robot()
+            self._sim.maybe_update_articulated_agent()
             return self._get_observations(episode)
         else:
             return None
@@ -236,7 +239,7 @@ class RearrangeTask(NavigationTask):
         if self.should_end:
             done = True
 
-        # Check that none of the robots are violating the hold constraint
+        # Check that none of the articulated agents are violating the hold constraint
         for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
@@ -252,11 +255,13 @@ class RearrangeTask(NavigationTask):
 
         return not done
 
-    def get_coll_forces(self, robot_id):
-        grasp_mgr = self._sim.get_agent_data(robot_id).grasp_mgr
-        robot = self._sim.get_agent_data(robot_id).robot
+    def get_coll_forces(self, articulated_agent_id):
+        grasp_mgr = self._sim.get_agent_data(articulated_agent_id).grasp_mgr
+        articulated_agent = self._sim.get_agent_data(
+            articulated_agent_id
+        ).robot
         snapped_obj = grasp_mgr.snap_idx
-        robot_id = robot.sim_obj.object_id
+        articulated_agent_id = articulated_agent.sim_obj.object_id
         contact_points = self._sim.get_physics_contact_points()
 
         def get_max_force(contact_points, check_id):
@@ -284,7 +289,7 @@ class RearrangeTask(NavigationTask):
         max_force = max(forces) if len(forces) > 0 else 0
 
         max_obj_force = get_max_force(contact_points, snapped_obj)
-        max_robot_force = get_max_force(contact_points, robot_id)
+        max_robot_force = get_max_force(contact_points, articulated_agent_id)
         return max_robot_force, max_obj_force, max_force
 
     def get_cur_collision_info(self, agent_idx) -> CollisionDetails:

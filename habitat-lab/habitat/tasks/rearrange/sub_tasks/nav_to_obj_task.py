@@ -97,7 +97,10 @@ class DynNavRLEnv(RearrangeTask):
                 > self._config.min_start_distance
             )
 
-        robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
+        (
+            robot_pos,
+            robot_angle,
+        ) = self._sim.set_articulated_agent_base_to_random_point(
             filter_func=filter_func
         )
 
@@ -137,5 +140,5 @@ class DynNavRLEnv(RearrangeTask):
                 self._sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
-        self._sim.maybe_update_robot()
+        self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)
