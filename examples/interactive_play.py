@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-Manually control the robot to interact with the environment. Run as
+Manually control the articulated agent to interact with the environment. Run as
 ```
 python examples/interative_play.py
 ```
@@ -13,22 +13,22 @@ python examples/interative_play.py
 To Run you need PyGame installed (to install run `pip install pygame==2.0.1`).
 
 By default this controls with velocity control (which makes controlling the
-robot hard). To use IK control instead add the `--add-ik` command line argument.
+agent hard). To use IK control instead add the `--add-ik` command line argument.
 
 Controls:
 - For velocity control
-    - 1-7 to increase the motor target for the robot arm joints
-    - Q-U to decrease the motor target for the robot arm joints
+    - 1-7 to increase the motor target for the articulated agent arm joints
+    - Q-U to decrease the motor target for the articulated agent arm joints
 - For IK control
     - W,S,A,D to move side to side
     - E,Q to move up and down
-- I,J,K,L to move the robot base around
-- PERIOD to print the current world coordinates of the robot base.
+- I,J,K,L to move the articulated agent base around
+- PERIOD to print the current world coordinates of the articulated agent base.
 - Z to toggle the camera to free movement mode. When in free camera mode:
     - W,S,A,D,Q,E to translate the camera
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
-- X to change the robot that is being controlled (if there are multiple robots).
+- X to change the articulated agent that is being controlled (if there are multiple articulated agents).
 
 Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
@@ -251,17 +251,17 @@ def get_input_vel_ctlr(
             magic_grasp = 1
 
     if keys[pygame.K_PERIOD]:
-        # Print the current position of the robot, useful for debugging.
+        # Print the current position of the articulated agent, useful for debugging.
         pos = [float("%.3f" % x) for x in env._sim.agent.sim_obj.translation]
         rot = env._sim.agent.sim_obj.rotation
         ee_pos = env._sim.agent.ee_transform.translation
         logger.info(
-            f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
+            f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
-        # Print the current arm state of the robot, useful for debugging.
+        # Print the current arm state of the articulated agent, useful for debugging.
         joint_state = [float("%.3f" % x) for x in env._sim.agent.arm_joint_pos]
-        logger.info(f"Robot arm joint state: {joint_state}")
+        logger.info(f"Agent arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
