@@ -1606,6 +1606,10 @@ class MoveForwardWaypointAction(WaypointAction):
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
 
+    @property
+    def action_space(self) -> spaces.Dict:
+        return spaces.Dict({})
+
 
 @registry.register_task_action
 class TurnLeftWaypointAction(WaypointAction):
@@ -1620,6 +1624,10 @@ class TurnLeftWaypointAction(WaypointAction):
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
 
+    @property
+    def action_space(self) -> spaces.Dict:
+        return spaces.Dict({})
+
 
 @registry.register_task_action
 class TurnRightWaypointAction(WaypointAction):
@@ -1633,6 +1641,10 @@ class TurnRightWaypointAction(WaypointAction):
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
+
+    @property
+    def action_space(self) -> spaces.Dict:
+        return spaces.Dict({})
 
 
 @registry.register_task(name="Nav-v0")
