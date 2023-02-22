@@ -493,7 +493,7 @@ class RearrangeSim(HabitatSim):
             self.art_objs.append(ao)
 
     def _create_obj_viz(self):
-        """f
+        """
         Adds a visualization of the goal for each of the target objects in the
         scene. This is the same as the target object, but is a render only
         object. This also places dots around the bounding box of the object to
