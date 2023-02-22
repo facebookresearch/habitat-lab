@@ -1397,6 +1397,7 @@ class WaypointAction(VelocityAction):
         self._waypoint_lin_range = self._config.waypoint_lin_range
         self._waypoint_ang_range = self._config.waypoint_ang_range
         self._max_max_duration = self._config.max_max_duration
+        self._yaw_input_in_degrees = self._config.yaw_input_in_degrees
         self._min_abs_lin_diff = self._config.min_abs_lin_diff
         self._min_abs_ang_diff = self._config.min_abs_ang_diff
 
@@ -1513,7 +1514,8 @@ class WaypointAction(VelocityAction):
         )
 
         # Convert deg to rad
-        xyt_waypoint_clamped[2] = np.deg2rad(xyt_waypoint_clamped[2])
+        if self._yaw_input_in_degrees:
+            xyt_waypoint_clamped[2] = np.deg2rad(xyt_waypoint_clamped[2])
 
         return xyt_waypoint_clamped
 
@@ -1608,7 +1610,9 @@ class TurnLeftWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array([0.0, 0.0, self._config.turn_angle])
+        xyt_waypoint = np.array(
+            [0.0, 0.0, np.deg2rad(self._config.turn_angle)]
+        )
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
@@ -1622,7 +1626,9 @@ class TurnRightWaypointAction(WaypointAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array([0.0, 0.0, -self._config.turn_angle])
+        xyt_waypoint = np.array(
+            [0.0, 0.0, -np.deg2rad(self._config.turn_angle)]
+        )
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
