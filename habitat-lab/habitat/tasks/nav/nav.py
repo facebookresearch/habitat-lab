@@ -1396,7 +1396,7 @@ class WaypointAction(VelocityAction):
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range
         self._waypoint_ang_range = self._config.waypoint_ang_range
-        self._max_max_duration = self._config.max_max_duration
+        self._wait_duration_range = self._config.wait_duration_range
         self._yaw_input_in_degrees = self._config.yaw_input_in_degrees
         self._min_abs_lin_diff = self._config.min_abs_lin_diff
         self._min_abs_ang_diff = self._config.min_abs_ang_diff
@@ -1437,8 +1437,8 @@ class WaypointAction(VelocityAction):
                         dtype=np.float32,
                     ),
                     "max_duration": spaces.Box(
-                        low=np.array([0.0]),
-                        high=np.array([self._max_max_duration]),
+                        low=np.array([self._wait_duration_range[0]]),
+                        high=np.array([self._wait_duration_range[1]]),
                         dtype=np.float32,
                     ),
                 }
