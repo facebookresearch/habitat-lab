@@ -2,6 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+
 import numpy as np
 from gym import spaces
 
@@ -18,6 +19,7 @@ class PddlApplyAction(RobotAction):
         self._entities_list = None
         self._action_ordering = None
         self._was_prev_action_invalid = False
+        self._action_suffix = ""
 
     @property
     def action_space(self):
@@ -32,7 +34,8 @@ class PddlApplyAction(RobotAction):
         action_n_args = sum(
             [action.n_args for action in self._action_ordering]
         )
-
+        # TODO: it seems like the space here indicates which action type to call
+        # as per the step function. Why is is between -1 and 1
         return spaces.Dict(
             {
                 self._action_arg_prefix
@@ -66,6 +69,7 @@ class PddlApplyAction(RobotAction):
             if sum(action_part) > 0:
                 # Take action
                 # Convert 1 indexed to 0 indexed.
+
                 real_action_idxs = [int(a) - 1 for a in action_part]
                 for a in real_action_idxs:
                     if a < 0.0:

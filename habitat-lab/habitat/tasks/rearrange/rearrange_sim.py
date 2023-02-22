@@ -28,13 +28,12 @@ from habitat.core.simulator import AgentState, Observations
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 
 # flake8: noqa
-from habitat.robots import FetchRobot, FetchRobotNoWheels
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
+from habitat.tasks.rearrange.agent_manager import AgentManager
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
-from habitat.tasks.rearrange.robot_manager import RobotManager
 from habitat.tasks.rearrange.utils import (
     get_aabb,
     make_render_only,
@@ -107,8 +106,7 @@ class RearrangeSim(HabitatSim):
         # some scene sensing (used in the sense phase of the sense-plan act
         # architecture).
         self.ctrl_arm = True
-
-        self.robots_mgr = RobotManager(self.habitat_config, self)
+        self.agents_mgr = AgentManager(self.habitat_config, self)
 
         self._debug_render_robot = self.habitat_config.debug_render_robot
         self._debug_render_goal = self.habitat_config.debug_render_goal
@@ -122,18 +120,18 @@ class RearrangeSim(HabitatSim):
         self._step_physics = self.habitat_config.step_physics
 
     @property
-    def robot(self):
-        if len(self.robots_mgr) > 1:
-            raise ValueError(f"Cannot access `sim.robot` with multiple robots")
-        return self.robots_mgr[0].robot
+    def agent(self):
+        if len(self.agents_mgr) > 1:
+            raise ValueError(f"Cannot access `sim.agent` with multiple agents")
+        return self.agents_mgr[0].agent
 
     @property
     def grasp_mgr(self):
-        if len(self.robots_mgr) > 1:
+        if len(self.agents_mgr) > 1:
             raise ValueError(
                 f"Cannot access `sim.grasp_mgr` with multiple robots"
             )
-        return self.robots_mgr[0].grasp_mgr
+        return self.agents_mgr[0].grasp_mgr
 
     def _get_target_trans(self):
         """
@@ -221,7 +219,7 @@ class RearrangeSim(HabitatSim):
         if new_scene:
             self._prev_obj_names = None
 
-        self.robots_mgr.reconfigure(new_scene)
+        self.agents_mgr.reconfigure(new_scene)
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
@@ -242,7 +240,7 @@ class RearrangeSim(HabitatSim):
         # Load specified articulated object states from episode config
         self._set_ao_states_from_ep(ep_info)
 
-        self.robots_mgr.post_obj_load_reconfigure()
+        self.agents_mgr.post_obj_load_reconfigure()
 
         # add episode clutter objects additional to base scene objects
         self._add_objs(ep_info, should_add_objects)
@@ -279,23 +277,23 @@ class RearrangeSim(HabitatSim):
 
         if self.first_setup:
             self.first_setup = False
-            self.robots_mgr.first_setup()
+            self.agents_mgr.first_setup()
             # Capture the starting art states
             self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
-    def get_robot_data(self, agent_idx: Optional[int]):
+    def get_agent_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
-            return self.robots_mgr[0]
+            return self.agents_mgr[0]
         else:
-            return self.robots_mgr[agent_idx]
+            return self.agents_mgr[agent_idx]
 
     @property
     def num_robots(self):
-        return len(self.robots_mgr)
+        return len(self.agents_mgr)
 
-    def set_robot_base_to_random_point(
+    def set_agent_base_to_random_point(
         self,
         max_attempts: int = 50,
         agent_idx: Optional[int] = None,
@@ -304,7 +302,7 @@ class RearrangeSim(HabitatSim):
         """
         :returns: The set base position and rotation
         """
-        robot = self.get_robot_data(agent_idx).robot
+        robot = self.get_agent_data(agent_idx).agent
 
         for attempt_i in range(max_attempts):
             start_pos = self.pathfinder.get_random_navigable_point()
@@ -478,7 +476,7 @@ class RearrangeSim(HabitatSim):
 
         ao_mgr = self.get_articulated_object_manager()
         robot_art_handles = [
-            robot.sim_obj.handle for robot in self.robots_mgr.robots_iter
+            robot.sim_obj.handle for robot in self.agents_mgr.robots_iter
         ]
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
@@ -557,7 +555,7 @@ class RearrangeSim(HabitatSim):
         # automatically be set to 0 in `set_state`.
         robot_T = [
             robot.sim_obj.transformation
-            for robot in self.robots_mgr.robots_iter
+            for robot in self.agents_mgr.robots_iter
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
@@ -568,7 +566,7 @@ class RearrangeSim(HabitatSim):
 
         robot_js = [
             robot.sim_obj.joint_positions
-            for robot in self.robots_mgr.robots_iter
+            for robot in self.agents_mgr.robots_iter
         ]
 
         ret = {
@@ -577,7 +575,7 @@ class RearrangeSim(HabitatSim):
             "static_T": static_T,
             "art_pos": art_pos,
             "obj_hold": [
-                grasp_mgr.snap_idx for grasp_mgr in self.robots_mgr.grasp_iter
+                grasp_mgr.snap_idx for grasp_mgr in self.agents_mgr.grasp_iter
             ],
         }
         if with_robot_js:
@@ -597,7 +595,7 @@ class RearrangeSim(HabitatSim):
 
         if state["robot_T"] is not None:
             for robot_T, robot in zip(
-                state["robot_T"], self.robots_mgr.robots_iter
+                state["robot_T"], self.agents_mgr.robots_iter
             ):
                 robot.sim_obj.transformation = robot_T
                 n_dof = len(robot.sim_obj.joint_forces)
@@ -606,7 +604,7 @@ class RearrangeSim(HabitatSim):
 
         if "robot_js" in state:
             for robot_js, robot in zip(
-                state["robot_js"], self.robots_mgr.robots_iter
+                state["robot_js"], self.agents_mgr.robots_iter
             ):
                 robot.sim_obj.joint_positions = robot_js
 
@@ -626,12 +624,12 @@ class RearrangeSim(HabitatSim):
         if set_hold:
             if state["obj_hold"] is not None:
                 for obj_hold_state, grasp_mgr in zip(
-                    state["obj_hold"], self.robots_mgr.grasp_iter
+                    state["obj_hold"], self.agents_mgr.grasp_iter
                 ):
                     self.internal_step(-1)
                     grasp_mgr.snap_to_obj(obj_hold_state)
             else:
-                for grasp_mgr in self.robots_mgr.grasp_iter:
+                for grasp_mgr in self.agents_mgr.grasp_iter:
                     grasp_mgr.desnap(True)
 
     def get_agent_state(self, agent_id: int = 0) -> habitat_sim.AgentState:
@@ -652,7 +650,7 @@ class RearrangeSim(HabitatSim):
 
         if self._debug_render:
             if self._debug_render_robot:
-                self.robots_mgr.update_debug()
+                self.agents_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
             # Don't draw bounding boxes over target objects.
@@ -727,7 +725,7 @@ class RearrangeSim(HabitatSim):
         positions.
         """
         if self._update_robot:
-            self.robots_mgr.update_robots()
+            self.agents_mgr.update_agents()
 
     def visualize_position(
         self,

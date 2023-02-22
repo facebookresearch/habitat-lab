@@ -1,0 +1,64 @@
+
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    add_arm_rest: False
+    name: "FixedHighLevelPolicy"
+  defined_skills:
+    nav_to_obj:
+      skill_name: "OracleNavHumanPolicy"
+      obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+      nav_action_name: "humanjoint_action"
+      max_skill_steps: 300
+      
+    # human_pick:
+    #   skill_name: "HumanPickSkillPolicy"
+    #   obs_skill_inputs: ["obj_goal_sensor"]
+    #   nav_action_name: "humanpick_action"
+    #   max_skill_steps: 200
+    #   force_end_on_timeout: True
+    #   load_ckpt_file: ""
+
+    human_pick:
+      skill_name: "NoopHumanSkillPolicy"
+      obs_skill_inputs: ["obj_start_sensor"]
+      max_skill_steps: 1
+      apply_postconds: True
+      force_end_on_timeout: False
+
+
+    human_place:
+      skill_name: "NoopHumanSkillPolicy"
+      obs_skill_inputs: ["obj_start_sensor"]
+      max_skill_steps: 1
+      apply_postconds: True
+      force_end_on_timeout: False
+
+    # human_place:
+    #   skill_name: "HumanPlaceSkillPolicy"
+    #   nav_action_name: "humanplace_action"
+    #   name: "PointNavResNetPolicy"
+    #   obs_skill_inputs: ["obj_goal_sensor"]
+    #   max_skill_steps: 200
+
+    wait_skill:
+      skill_name: "HumanWaitSkillPolicy"
+      max_skill_steps: -1
+      force_end_on_timeout: False
+
+  use_skills:
+    # Uncomment if you are also using these skills
+    # open_cab: "NN_OPEN_CAB"
+    # open_fridge: "NN_OPEN_FRIDGE"
+    # close_cab: "NN_OPEN_CAB"
+    # close_fridge: "NN_OPEN_FRIDGE"
+    pick: "human_pick"
+    place: "human_place"
+    nav: "nav_to_obj"
+    nav_to_receptacle: "nav_to_obj"
+    wait: "wait_skill"
+    # reset_arm: "reset_arm_skill"

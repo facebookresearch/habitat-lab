@@ -28,7 +28,7 @@ class RearrangeGraspManager:
     Manages the agent grasping onto rigid objects and the links of articulated objects.
     """
 
-    def __init__(self, sim, config: "DictConfig", robot) -> None:
+    def __init__(self, sim, config: "DictConfig", robot, ee_index=0) -> None:
         """Initialize a grasp manager for the simulator instance provided.
 
         :param config: The task's "simulator" subconfig node. Defines grasping parameters.
@@ -41,6 +41,7 @@ class RearrangeGraspManager:
         self._leave_info: Optional[Tuple[mn.Vector3, float]] = None
         self._config = config
         self._managed_robot = robot
+        self.ee_index = ee_index
 
         self._kinematic_mode = self._sim.habitat_config.kinematic_mode
 
@@ -97,7 +98,9 @@ class RearrangeGraspManager:
         Used to wait for a dropped object to clear the end effector's proximity before re-activating collisions between them.
         """
         if self._leave_info is not None:
-            ee_pos = self._managed_robot.ee_transform.translation
+            ee_pos = self._managed_robot.ee_transform(
+                self.ee_index
+            ).translation
             rigid_obj = self._leave_info[0]
             dist = np.linalg.norm(ee_pos - rigid_obj.translation)
             if dist >= self._leave_info[1]:
@@ -217,8 +220,8 @@ class RearrangeGraspManager:
         :return: The id of the newly created constraint or -1 if failed.
         """
         c = RigidConstraintSettings()
-        c.object_id_a = self._managed_robot.get_robot_sim_id()
-        c.link_id_a = self._managed_robot.ee_link_id
+        c.object_id_a = self._managed_robot.get_agent_sim_id()
+        c.link_id_a = self._managed_robot.ee_link_id(self.ee_index)
         c.object_id_b = obj_id_b
         if link_id_b is not None:
             c.link_id_b = link_id_b
@@ -233,7 +236,7 @@ class RearrangeGraspManager:
         if constraint_type == RigidConstraintType.Fixed:
             # we set the link frame to object rotation in link space (objR -> world -> link)
             link_node = self._managed_robot.sim_obj.get_link_scene_node(
-                self._managed_robot.ee_link_id
+                self._managed_robot.ee_link_id(self.ee_index)
             )
             link_frame_world_space = (
                 link_node.absolute_transformation().rotation()
@@ -341,3 +344,9 @@ class RearrangeGraspManager:
 
         if any((x == -1 for x in self._snap_constraints)):
             raise ValueError("Created bad constraint")
+
+
+class HumanRearrangeGraspManager(RearrangeGraspManager):
+    def __init__(self, sim, config: "DictConfig", robot, hand=0) -> None:
+        super().__init__(sim, config, robot)
+        self.ee_index = hand

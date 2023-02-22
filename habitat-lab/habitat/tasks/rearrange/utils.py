@@ -95,10 +95,10 @@ def rearrange_collision(
     agent_idx: Optional[int] = None,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
-    robot_model = sim.get_robot_data(agent_idx).robot
-    grasp_mgr = sim.get_robot_data(agent_idx).grasp_mgr
+    robot_model = sim.get_agent_data(agent_idx).agent
+    grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
-    robot_id = robot_model.get_robot_sim_id()
+    robot_id = robot_model.get_agent_sim_id()
     added_objs = sim.scene_obj_ids
     snapped_obj_id = grasp_mgr.snap_idx
 
@@ -277,7 +277,7 @@ def is_pb_installed():
 class IkHelper:
     def __init__(self, only_arm_urdf, arm_start):
         self._arm_start = arm_start
-        self._arm_len = 7
+
         self.pc_id = p.connect(p.DIRECT)
 
         self.robo_id = p.loadURDF(
@@ -287,12 +287,14 @@ class IkHelper:
             flags=p.URDF_USE_INERTIA_FROM_FILE,
             physicsClientId=self.pc_id,
         )
-
+        # breakpoint()
         p.setGravity(0, 0, -9.81, physicsClientId=self.pc_id)
-        JOINT_DAMPING = 0.5
-        self.pb_link_idx = 7
-
-        for link_idx in range(15):
+        JOINT_DAMPING = 0.0001
+        # TODO: this should be a variable somewhere else
+        self.pb_link_idx = 15
+        num_joints = p.getNumJoints(self.robo_id, self.pc_id)
+        self._arm_len = num_joints
+        for link_idx in range(num_joints):
             p.changeDynamics(
                 self.robo_id,
                 link_idx,
@@ -301,17 +303,17 @@ class IkHelper:
                 jointDamping=JOINT_DAMPING,
                 physicsClientId=self.pc_id,
             )
-            p.changeDynamics(
-                self.robo_id,
-                link_idx,
-                maxJointVelocity=200,
-                physicsClientId=self.pc_id,
-            )
+            # p.changeDynamics(
+            #     self.robo_id,
+            #     link_idx,
+            #     maxJointVelocity=200,
+            #     physicsClientId=self.pc_id,
+            # )
 
     def set_arm_state(self, joint_pos, joint_vel=None):
         if joint_vel is None:
             joint_vel = np.zeros((len(joint_pos),))
-        for i in range(7):
+        for i in range(len(joint_pos)):
             p.resetJointState(
                 self.robo_id,
                 i,
@@ -355,7 +357,11 @@ class IkHelper:
             targ_ee,
             physicsClientId=self.pc_id,
         )
-        return js[: self._arm_len]
+
+        #!p.calculateInverseKinematics(self.robo_id, self.pb_link_idx, targ_ee, physicsClientId=self.pc_id)
+        # print(js)
+        # breakpoint()
+        return js  # [: self._arm_len]
 
 
 class UsesRobotInterface:
@@ -434,8 +440,8 @@ def get_robot_spawns(
         if target_distance > distance_threshold or not is_navigable:
             continue
 
-        sim.robot.base_pos = start_position
-        sim.robot.base_rot = start_rotation
+        sim.agent.base_pos = start_position
+        sim.agent.base_rot = start_rotation
 
         # Make sure the robot is not colliding with anything in this
         # position.

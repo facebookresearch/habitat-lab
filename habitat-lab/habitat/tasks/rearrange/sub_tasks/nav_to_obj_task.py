@@ -97,7 +97,7 @@ class DynNavRLEnv(RearrangeTask):
                 > self._config.min_start_distance
             )
 
-        robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
+        robot_pos, robot_angle = self._sim.set_agent_base_to_random_point(
             filter_func=filter_func
         )
 

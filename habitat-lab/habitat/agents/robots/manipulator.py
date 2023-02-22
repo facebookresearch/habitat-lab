@@ -8,7 +8,7 @@ from typing import Dict, List, Optional, Tuple
 import magnum as mn
 import numpy as np
 
-from habitat.robots.robot_interface import RobotInterface
+from habitat.agents.robots.robot_interface import RobotInterface
 from habitat_sim.physics import JointMotorSettings
 from habitat_sim.simulator import Simulator
 from habitat_sim.utils.common import orthonormalize_rotation_shear
@@ -206,8 +206,7 @@ class Manipulator(RobotInterface):
         )
         return lower_lims, upper_lims
 
-    @property
-    def ee_link_id(self) -> int:
+    def ee_link_id(self, index=0) -> int:
         """Gets the Habitat Sim link id of the end-effector."""
         return self.params.ee_link
 

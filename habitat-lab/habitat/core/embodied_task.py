@@ -267,6 +267,8 @@ class EmbodiedTask:
             if "type" not in entity_cfg:
                 raise ValueError(f"Could not find type in {entity_cfg}")
             entity_type = register_func(entity_cfg.type)
+            if entity_type is None:
+                breakpoint()
             assert (
                 entity_type is not None
             ), f"invalid {entity_name} type {entity_cfg.type}"

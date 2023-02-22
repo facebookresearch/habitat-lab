@@ -9,10 +9,10 @@ from os import path as osp
 import numpy as np
 import pytest
 
-import habitat.robots.fetch_robot as fetch_robot
-import habitat.robots.franka_robot as franka_robot
-import habitat.robots.spot_robot as spot_robot
-import habitat.robots.stretch_robot as stretch_robot
+import habitat.agents.robots.fetch_robot as fetch_robot
+import habitat.agents.robots.franka_robot as franka_robot
+import habitat.agents.robots.spot_robot as spot_robot
+import habitat.agents.robots.stretch_robot as stretch_robot
 import habitat_sim
 import habitat_sim.agent
 
@@ -313,7 +313,7 @@ def test_fetch_robot_wrapper(fixed_base):
         fetch = fetch_robot.FetchRobot(robot_path, sim, fixed_base=fixed_base)
         fetch.reconfigure()
         fetch.update()
-        assert fetch.get_robot_sim_id() == 1  # 0 is the ground plane
+        assert fetch.get_agent_sim_id() == 1  # 0 is the ground plane
         print(fetch.get_link_and_joint_names())
         observations += simulate(sim, 1.0, produce_debug_video)
 
@@ -467,7 +467,7 @@ def test_franka_robot_wrapper():
         franka = franka_robot.FrankaRobot(urdf_path=robot_path, sim=sim)
         franka.reconfigure()
         franka.update()
-        assert franka.get_robot_sim_id() == 1  # 0 is the ground plane
+        assert franka.get_agent_sim_id() == 1  # 0 is the ground plane
         print(franka.get_link_and_joint_names())
         observations += simulate(sim, 1.0, produce_debug_video)
 
@@ -587,7 +587,7 @@ def test_spot_robot_wrapper(fixed_base):
         spot = spot_robot.SpotRobot(robot_path, sim, fixed_base=fixed_base)
         spot.reconfigure()
         spot.update()
-        assert spot.get_robot_sim_id() == 1  # 0 is the ground plane
+        assert spot.get_agent_sim_id() == 1  # 0 is the ground plane
         print(spot.get_link_and_joint_names())
 
         # set the motor angles
@@ -727,7 +727,7 @@ def test_stretch_robot_wrapper(fixed_base):
         )
         stretch.reconfigure()
         stretch.update()
-        assert stretch.get_robot_sim_id() == 1  # 0 is the ground plane
+        assert stretch.get_agent_sim_id() == 1  # 0 is the ground plane
 
         # set base ground position from navmesh
         target_base_pos = sim.pathfinder.snap_point(

@@ -3,7 +3,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import torch
-
+import os.path as osp
 from habitat.tasks.rearrange.rearrange_sensors import (
     IsHoldingSensor,
     RelativeRestingPositionSensor,

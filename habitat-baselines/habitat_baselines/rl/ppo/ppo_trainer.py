@@ -911,7 +911,8 @@ class PPOTrainer(BaseRLTrainer):
         config = self._get_resume_state_config_or_new_config(
             ckpt_dict["config"]
         )
-
+        if config is None:
+            config = self.config
         ppo_cfg = config.habitat_baselines.rl.ppo
 
         with read_write(config):

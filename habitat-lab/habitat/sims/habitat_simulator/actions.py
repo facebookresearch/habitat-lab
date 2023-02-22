@@ -60,6 +60,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
         assert (
             name not in self._known_actions
         ), "Cannot register an action name twice"
+
         self._known_actions[name] = len(self._known_actions)
 
         return self._known_actions[name]
@@ -70,7 +71,6 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
         :param name: The name to check
         :return: Whether or not :p:`name` already exists
         """
-
         return name in self._known_actions
 
     def __getattr__(self, name):

@@ -51,7 +51,7 @@ class MarkerRelPosSensor(UsesRobotInterface, Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         marker = self._task.get_use_marker()
-        ee_trans = self._sim.get_robot_data(self.robot_id).robot.ee_transform
+        ee_trans = self._sim.get_agent_data(self.robot_id).robot.ee_transform
         rel_marker_pos = ee_trans.inverted().transform_point(
             marker.get_current_position()
         )
@@ -252,7 +252,7 @@ class EndEffectorDistToMarker(UsesRobotInterface, Measure):
 
     def update_metric(self, *args, task, **kwargs):
         marker = task.get_use_marker()
-        ee_trans = task._sim.get_robot_data(self.robot_id).robot.ee_transform
+        ee_trans = task._sim.get_agent_data(self.robot_id).robot.ee_transform
         rel_marker_pos = ee_trans.inverted().transform_point(
             marker.get_current_position()
         )

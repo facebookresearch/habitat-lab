@@ -23,6 +23,7 @@ class SkillPolicy(Policy):
         action_space: spaces.Space,
         batch_size,
         should_keep_hold_state: bool = False,
+        ignore_grip: bool = False,
     ):
         """
         :param action_space: The overall action space of the entire task, not task specific.
@@ -61,6 +62,7 @@ class SkillPolicy(Policy):
 
         self._grip_ac_idx = 0
         found_grip = False
+        self.ignore_grip = ignore_grip
         for k, space in action_space.items():
             if k != "arm_action":
                 self._grip_ac_idx += get_num_actions(space)
@@ -69,7 +71,7 @@ class SkillPolicy(Policy):
                 self._grip_ac_idx += get_num_actions(space) - 1
                 found_grip = True
                 break
-        if not found_grip:
+        if not found_grip and not ignore_grip:
             raise ValueError(f"Could not find grip action in {action_space}")
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
@@ -108,9 +110,11 @@ class SkillPolicy(Policy):
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         # If it is not holding (0) want to keep releasing -> output -1.
         # If it is holding (1) want to keep grasping -> output +1.
-        action_data.write_action(
-            self._grip_ac_idx, is_holding + (is_holding - 1.0)
-        )
+
+        if not self.ignore_grip:
+            action_data.write_action(
+                self._grip_ac_idx, is_holding + (is_holding - 1.0)
+            )
         return action_data
 
     def _apply_postcond(
@@ -156,7 +160,6 @@ class SkillPolicy(Policy):
         )
         apply_action = action.clone()
         apply_action.set_param_values(entities)
-
         log_info[env_i]["pddl_action"] = apply_action.compact_str
         return actions[idx]
 

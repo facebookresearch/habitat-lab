@@ -8,7 +8,9 @@ from typing import Optional
 
 import magnum as mn
 import numpy as np
+import quaternion
 from gym import spaces
+from scipy.spatial.transform import Rotation
 
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
@@ -23,6 +25,10 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     MagicGraspAction,
     SuctionGraspAction,
 )
+
+# TODO: HumanAction is very similar to RobotAction, can it be merged?
+from habitat.tasks.rearrange.actions.human_action import HumanAction
+from habitat.tasks.rearrange.actions.pddl_actions import PddlApplyAction
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
@@ -416,7 +422,7 @@ class ArmEEAction(RobotAction):
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.robot.arm_joint_pos)
+            np.array(self._sim.agent.arm_joint_pos)
         )
 
         self.ee_target = cur_ee
@@ -428,8 +434,8 @@ class ArmEEAction(RobotAction):
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
             self.ee_target,
-            self._sim.robot.params.ee_constraint[:, 0],
-            self._sim.robot.params.ee_constraint[:, 1],
+            self._sim.agent.params.ee_constraint[:, 0],
+            self._sim.agent.params.ee_constraint[:, 1],
         )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
@@ -437,14 +443,14 @@ class ArmEEAction(RobotAction):
 
         self.apply_ee_constraints()
 
-        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_pos = np.array(self._sim.agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
         des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
-        self._sim.robot.arm_motor_pos = des_joint_pos
+        self._sim.agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
@@ -452,9 +458,45 @@ class ArmEEAction(RobotAction):
         self.set_desired_ee_pos(ee_pos)
 
         if self._render_ee_target:
-            global_pos = self._sim.robot.base_transformation.transform_point(
+            global_pos = self._sim.agent.base_transformation.transform_point(
                 self.ee_target
             )
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
+
+
+@registry.register_task_action
+class HumanJointAction(HumanAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        self.ee_target: Optional[np.ndarray] = None
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+
+    @property
+    def action_space(self):
+        num_joints = 19
+
+        return spaces.Dict(
+            {
+                "human_joints_trans": spaces.Box(
+                    shape=(num_joints + 16,), low=-1, high=1, dtype=np.float32
+                )
+            }
+        )
+
+    def step(self, **kwargs):
+        new_pos_transform = kwargs["human_joints_trans"]
+        new_pos = new_pos_transform[:-16]
+        new_pos_transform = new_pos_transform[-16:]
+        if np.array(new_pos_transform).sum() != 0:
+            vecs = [
+                mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
+                for i in range(4)
+            ]
+            new_transform = mn.Matrix4(*vecs)
+            self.cur_human.set_joint_transform(new_pos, new_transform)
+        return self._sim.step(HabitatSimActions.changejoint_action)

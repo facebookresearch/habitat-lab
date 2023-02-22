@@ -130,10 +130,16 @@ def continuous_vector_action_to_hab_dict(
     action_name_to_lengths = {}
     for outer_k, act_dict in original_action_space.spaces.items():
         if isinstance(act_dict, EmptySpace):
+            assert (
+                outer_k not in action_name_to_lengths
+            ), f"Error: one or more actions in your action space have the same type: {outer_k}"
             action_name_to_lengths[outer_k] = 1
         else:
             for k, v in act_dict.items():
                 # The only element in the action
+                assert (
+                    k not in action_name_to_lengths
+                ), f"Error: one or more actions in your action space have the same type: {k}"
                 action_name_to_lengths[k] = v.shape[0]
 
     # Determine action arguments for root_action_name
@@ -148,7 +154,6 @@ def continuous_vector_action_to_hab_dict(
         "action": root_action_names,
         "action_args": action_args,
     }
-
     return action_dict
 
 

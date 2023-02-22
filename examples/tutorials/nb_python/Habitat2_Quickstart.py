@@ -447,8 +447,8 @@ habitat:
             width: 128
         start_position: [0, 0, 0]
         start_rotation: [0, 0, 0, 1]
-        robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-        robot_type: "FetchRobot"
+        agent_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        agent_type: "FetchRobot"
 
     # Agent setup
     # ARM_REST: [0.6, 0.0, 0.9]

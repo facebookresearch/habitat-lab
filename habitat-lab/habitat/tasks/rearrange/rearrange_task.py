@@ -44,7 +44,7 @@ class RearrangeTask(NavigationTask):
 
         task_new_sensors: Dict[str, Sensor] = {}
         task_obs_spaces = OrderedDict()
-        for robot_idx, agent_id in enumerate(self._sim.robots_mgr.agent_names):
+        for robot_idx, agent_id in enumerate(self._sim.agents_mgr.agent_names):
             for sensor_name, sensor in sensor_suite.sensors.items():
                 if isinstance(sensor, UsesRobotInterface):
                     new_sensor = copy.copy(sensor)
@@ -92,7 +92,7 @@ class RearrangeTask(NavigationTask):
         else:
             self._robot_pos_start = None
 
-        if len(self._sim.robots_mgr) > 1:
+        if len(self._sim.agents_mgr) > 1:
             # Duplicate sensors that handle robots. One for each robot.
             self._duplicate_sensor_suite(self.sensor_suite)
 
@@ -145,13 +145,13 @@ class RearrangeTask(NavigationTask):
     def _set_robot_start(self, agent_idx: int) -> None:
         robot_start = self._get_cached_robot_start(agent_idx)
         if robot_start is None:
-            robot_pos, robot_rot = self._sim.set_robot_base_to_random_point(
+            robot_pos, robot_rot = self._sim.set_agent_base_to_random_point(
                 agent_idx=agent_idx
             )
             self._cache_robot_start((robot_pos, robot_rot), agent_idx)
         else:
             robot_pos, robot_rot = robot_start
-        robot = self._sim.get_robot_data(agent_idx).robot
+        robot = self._sim.get_agent_data(agent_idx).agent
         robot.base_pos = robot_pos
         robot.base_rot = robot_rot
 
@@ -216,7 +216,7 @@ class RearrangeTask(NavigationTask):
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
         self._cur_episode_step += 1
-        for grasp_mgr in self._sim.robots_mgr.grasp_iter:
+        for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
                 and self._config.constraint_violation_drops_object
@@ -237,7 +237,7 @@ class RearrangeTask(NavigationTask):
             done = True
 
         # Check that none of the robots are violating the hold constraint
-        for grasp_mgr in self._sim.robots_mgr.grasp_iter:
+        for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
                 and self._config.constraint_violation_ends_episode
@@ -253,8 +253,8 @@ class RearrangeTask(NavigationTask):
         return not done
 
     def get_coll_forces(self, robot_id):
-        grasp_mgr = self._sim.get_robot_data(robot_id).grasp_mgr
-        robot = self._sim.get_robot_data(robot_id).robot
+        grasp_mgr = self._sim.get_agent_data(robot_id).grasp_mgr
+        robot = self._sim.get_agent_data(robot_id).agent
         snapped_obj = grasp_mgr.snap_idx
         robot_id = robot.sim_obj.object_id
         contact_points = self._sim.get_physics_contact_points()

@@ -22,6 +22,14 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     HighLevelPolicy,
     NeuralHighLevelPolicy,
 )
+from habitat_baselines.rl.hrl.human_skills import (  # noqa: F401.
+    HumanPickSkillPolicy,
+    HumanPlaceSkillPolicy,
+    HumanWaitSkillPolicy,
+    NoopHumanSkillPolicy,
+    OracleNavHumanPolicy,
+    ResetArmHumanSkill,
+)
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
     NavSkillPolicy,
@@ -58,7 +66,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         num_envs: int,
     ):
         super().__init__()
-
         self._action_space = action_space
         self._num_envs: int = num_envs
 
@@ -222,9 +229,23 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         call_high_level: torch.BoolTensor = torch.zeros(
             (self._num_envs,), dtype=torch.bool
-        )
+        ).to(masks.device)
         bad_should_terminate: torch.BoolTensor = torch.zeros(
             (self._num_envs,), dtype=torch.bool
+        ).to(masks.device)
+
+        hl_wants_skill_term = self._high_level_policy.get_termination(
+            observations,
+            rnn_hidden_states,
+            prev_actions,
+            masks,
+            self._cur_skills,
+            log_info,
+        )
+        # Initialize empty action set based on the overall action space.
+        actions = torch.zeros(
+            (self._num_envs, get_num_actions(self._action_space)),
+            device=masks.device,
         )
 
         hl_wants_skill_term = self._high_level_policy.get_termination(
@@ -349,8 +370,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             # Add actions from apply_postcond
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
         actions[:, self._stop_action_idx] = 0.0
-
-        should_terminate = bad_should_terminate | hl_terminate
+        should_terminate = bad_should_terminate | hl_terminate.to(masks.device)
         if should_terminate.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate):

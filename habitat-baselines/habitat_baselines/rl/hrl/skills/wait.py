@@ -13,12 +13,9 @@ from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 class WaitSkillPolicy(SkillPolicy):
     def __init__(
-        self,
-        config,
-        action_space: spaces.Space,
-        batch_size,
+        self, config, action_space: spaces.Space, batch_size, ignore_grip=False
     ):
-        super().__init__(config, action_space, batch_size, True)
+        super().__init__(config, action_space, batch_size, True, ignore_grip)
         self._wait_time = -1
 
     def _parse_skill_arg(self, skill_arg: str) -> Any:

@@ -327,15 +327,21 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             # These keys are only used by Hab-Lab
             ignore_keys={
                 "is_set_start_state",
+                "grasp_managers",
                 # This is the Sensor Config. Unpacked below
                 "sensors",
                 "sim_sensors",
                 "start_position",
                 "start_rotation",
-                "robot_urdf",
-                "robot_type",
+                "agent_urdf",
+                "agent_type",
                 "joint_start_noise",
                 "ik_arm_urdf",
+                "amass_path",
+                "body_model_path",
+                "agent_type",
+                "draw_fps_human",
+                "grab_path",
             },
         )
 

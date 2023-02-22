@@ -5,7 +5,7 @@
 import magnum as mn
 import numpy as np
 
-from habitat.robots.mobile_manipulator import (
+from habitat.agents.robots.mobile_manipulator import (
     MobileManipulator,
     MobileManipulatorParams,
     RobotCameraParams,

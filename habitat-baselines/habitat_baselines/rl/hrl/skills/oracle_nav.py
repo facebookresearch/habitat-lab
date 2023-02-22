@@ -129,7 +129,7 @@ class OracleNavPolicy(NnSkillPolicy):
 
     def _parse_skill_arg(self, skill_arg):
         if len(skill_arg) == 2:
-            search_target, _ = skill_arg
+            targ_obj, _ = skill_arg
         elif len(skill_arg) == 3:
             _, search_target, _ = skill_arg
         else:

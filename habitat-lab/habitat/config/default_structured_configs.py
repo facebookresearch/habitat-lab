@@ -244,6 +244,11 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class HumanJointActionConfig(ActionConfig):
+    type: str = "HumanJointAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class RearrangeStopActionConfig(ActionConfig):
     r"""
     In rearrangement tasks only, if the robot calls this action, the task will end.
@@ -276,6 +281,56 @@ class OracleNavActionConfig(ActionConfig):
     allow_back: bool = True
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HumanNavActionConfig(ActionConfig):
+    """
+    Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "HumanNavAction"
+    # turn_velocity: float = 1.0
+    # forward_velocity: float = 1.0
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+    spawn_max_dist_to_obj: float = 1.5
+    num_spawn_attempts: int = 200
+    # lin_speed: float = 10.0
+    # ang_speed: float = 10.0
+    # allow_dyn_slide: bool = True
+    # allow_back: bool = True
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HumanPickActionConfig(ActionConfig):
+    """
+    Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "HumanPickAction"
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HumanPlaceActionConfig(ActionConfig):
+    """
+    Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "HumanPlaceAction"
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
 
 
 # -----------------------------------------------------------------------------
@@ -376,6 +431,11 @@ class GPSSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class LocalizarionSensorConfig(LabSensorConfig):
+    type: str = "LocalizationSensor"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class ProximitySensorConfig(LabSensorConfig):
     type: str = "ProximitySensor"
     max_detection_radius: float = 2.0
@@ -388,6 +448,14 @@ class JointSensorConfig(LabSensorConfig):
     """
     type: str = "JointSensor"
     dimensionality: int = 7
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HumanJointSensorConfig(LabSensorConfig):
+    # TODO:(xavierpuig): can this ve modified in the config? Will be important for
+    # new humans/agents
+    type: str = "HumanJointSensor"
+    dimensionality: int = 19
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1246,9 +1314,19 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = [0, 0, 0]
     start_rotation: List[float] = [0, 0, 0, 1]
     joint_start_noise: float = 0.1
-    robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-    robot_type: str = "FetchRobot"
+    agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+    agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    grasp_managers: int = 1
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HumanAgentConfig(AgentConfig):
+    amass_path: str = ""
+    body_model_path: str = ""
+    agent_type: str = "AmassHuman"
+    draw_fps_human: int = 60
+    grab_path: str = ""
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1471,6 +1549,12 @@ cs.store(
 )
 
 cs.store(
+    group="habitat/simulator/agents",
+    name="humanoid_agent_base",
+    node=HumanAgentConfig,
+)
+
+cs.store(
     package="habitat.task.actions.stop",
     group="habitat/task/actions",
     name="stop",
@@ -1554,6 +1638,35 @@ cs.store(
     name="pddl_apply_action",
     node=PddlApplyActionConfig,
 )
+
+cs.store(
+    package="habitat.task.actions.human_nav_action",
+    group="habitat/task/actions",
+    name="human_nav_action",
+    node=HumanNavActionConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.human_place_action",
+    group="habitat/task/actions",
+    name="human_place_action",
+    node=HumanPlaceActionConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.human_pick_action",
+    group="habitat/task/actions",
+    name="human_pick_action",
+    node=HumanPickActionConfig,
+)
+
+cs.store(
+    package="habitat.task.actions.humanjoint_action",
+    group="habitat/task/actions",
+    name="humanjoint_action",
+    node=HumanJointActionConfig,
+)
+
 
 # Dataset Config Schema
 cs.store(
@@ -1640,6 +1753,13 @@ cs.store(
 
 # Task Sensors
 cs.store(
+    package="habitat.task.lab_sensors.localization_sensor",
+    group="habitat/task/lab_sensors",
+    name="localization_sensor",
+    node=LocalizationSensorConfig,
+)
+
+cs.store(
     package="habitat.task.lab_sensors.gps_sensor",
     group="habitat/task/lab_sensors",
     name="gps_sensor",
@@ -1717,6 +1837,14 @@ cs.store(
     name="joint_sensor",
     node=JointSensorConfig,
 )
+
+cs.store(
+    package="habitat.task.lab_sensors.humanjoint_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanjoint_sensor",
+    node=HumanJointSensorConfig,
+)
+
 cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
     group="habitat/task/lab_sensors",

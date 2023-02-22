@@ -89,7 +89,7 @@ def get_input_vel_ctlr(
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
-    multi_agent = len(env._sim.robots_mgr) > 1
+    multi_agent = len(env._sim.agents_mgr) > 1
 
     arm_action_name = "arm_action"
     base_action_name = "base_velocity"
@@ -395,7 +395,7 @@ def play_env(env, args, config):
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
-    is_multi_agent = len(env._sim.robots_mgr) > 1
+    is_multi_agent = len(env._sim.agents_mgr) > 1
 
     while True:
         if (
@@ -414,7 +414,7 @@ def play_env(env, args, config):
 
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
-            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            agent_to_control = agent_to_control % len(env._sim.agents_mgr)
             logger.info(
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )

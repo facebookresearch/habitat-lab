@@ -78,8 +78,10 @@ class PPO(nn.Module):
         self.max_grad_norm = max_grad_norm
         self.use_clipped_value_loss = use_clipped_value_loss
 
-        self.device = next(actor_critic.parameters()).device
-
+        try:
+            self.device = next(actor_critic.parameters()).device
+        except:
+            self.device = None
         if (
             use_adaptive_entropy_pen
             and hasattr(self.actor_critic, "num_actions")

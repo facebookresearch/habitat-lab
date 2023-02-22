@@ -35,8 +35,8 @@ habitat:
     agents:
       agent_0:
         radius: 0.3
-        robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-        robot_type: FetchSuctionRobot
+        agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        agent_type: FetchSuctionRobot
         ik_arm_urdf: ./data/robots/hab_fetch/robots/fetch_onlyarm.urdf
         joint_start_noise: 0.0
       agent_1:
@@ -48,8 +48,8 @@ habitat:
         # A new instance of the sensor is created. The agents do not share a
         # depth camera, but instead a different depth camera is created for
         # each agent.
-        robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-        robot_type: FetchSuctionRobot
+        agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        agent_type: FetchSuctionRobot
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
