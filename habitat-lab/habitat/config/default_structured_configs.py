@@ -200,7 +200,7 @@ class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     lin_vel_range: List[float] = [0.0, 0.25]  # meters/sec
     ang_vel_range: List[float] = [-10.0, 10.0]  # deg/sec
-    time_step: float = 0.2  # seconds
+    time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
     # Stop criteria
     min_abs_lin_speed: float = 0.025  # meters/sec
