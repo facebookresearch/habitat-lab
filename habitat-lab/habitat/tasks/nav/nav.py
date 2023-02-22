@@ -31,7 +31,7 @@ from habitat.core.simulator import (
     ShortestPathPoint,
     Simulator,
 )
-from habitat.core.spaces import ActionSpace
+from habitat.core.spaces import ActionSpace, EmptySpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
@@ -1607,8 +1607,8 @@ class MoveForwardWaypointAction(WaypointAction):
         )
 
     @property
-    def action_space(self) -> spaces.Dict:
-        return spaces.Dict({})
+    def action_space(self):
+        return EmptySpace()
 
 
 @registry.register_task_action
@@ -1625,8 +1625,8 @@ class TurnLeftWaypointAction(WaypointAction):
         )
 
     @property
-    def action_space(self) -> spaces.Dict:
-        return spaces.Dict({})
+    def action_space(self):
+        return EmptySpace()
 
 
 @registry.register_task_action
@@ -1643,8 +1643,8 @@ class TurnRightWaypointAction(WaypointAction):
         )
 
     @property
-    def action_space(self) -> spaces.Dict:
-        return spaces.Dict({})
+    def action_space(self):
+        return EmptySpace()
 
 
 @registry.register_task(name="Nav-v0")
