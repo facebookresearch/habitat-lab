@@ -1352,6 +1352,24 @@ cs.store(
     node=LookDownActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.move_forward_waypoint",
+    group="habitat/task/actions",
+    name="move_forward_waypoint",
+    node=MoveForwardWaypointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.turn_left_waypoint",
+    group="habitat/task/actions",
+    name="turn_left_waypoint",
+    node=TurnLeftWaypointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.turn_right_waypoint",
+    group="habitat/task/actions",
+    name="turn_right_waypoint",
+    node=TurnRightWaypointActionConfig,
+)
+cs.store(
     package="habitat.task.actions.arm_action",
     group="habitat/task/actions",
     name="arm_action",
