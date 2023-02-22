@@ -147,10 +147,10 @@ class SetArticulatedObjectTask(RearrangeTask):
             angle_to_obj, base_pos = self._sample_robot_start(T)
 
             noise = np.random.normal(0.0, self._config.base_angle_noise)
-            self._sim.agent.base_rot = angle_to_obj + noise
-            self._sim.agent.base_pos = base_pos
+            self._sim.articulated_agent.base_rot = angle_to_obj + noise
+            self._sim.articulated_agent.base_pos = base_pos
 
-            robot_T = self._sim.agent.base_transformation
+            robot_T = self._sim.articulated_agent.base_transformation
             rel_targ_pos = robot_T.inverted().transform_point(
                 marker.current_transform.translation
             )
@@ -161,7 +161,9 @@ class SetArticulatedObjectTask(RearrangeTask):
                 break
 
             eps = 1e-2
-            upper_bound = self._sim.agent.params.ee_constraint[:, 1] + eps
+            upper_bound = (
+                self._sim.articulated_agent.params.ee_constraint[0, :, 1] + eps
+            )
             is_within_bounds = (rel_targ_pos < upper_bound).all()
             if not is_within_bounds:
                 continue

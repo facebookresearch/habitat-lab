@@ -252,15 +252,20 @@ def get_input_vel_ctlr(
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the articulated agent, useful for debugging.
-        pos = [float("%.3f" % x) for x in env._sim.agent.sim_obj.translation]
-        rot = env._sim.agent.sim_obj.rotation
-        ee_pos = env._sim.agent.ee_transform.translation
+        pos = [
+            float("%.3f" % x)
+            for x in env._sim.articulated_agent.sim_obj.translation
+        ]
+        rot = env._sim.articulated_agent.sim_obj.rotation
+        ee_pos = env._sim.articulated_agent.ee_transform.translation
         logger.info(
             f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the articulated agent, useful for debugging.
-        joint_state = [float("%.3f" % x) for x in env._sim.agent.arm_joint_pos]
+        joint_state = [
+            float("%.3f" % x) for x in env._sim.articulated_agent.arm_joint_pos
+        ]
         logger.info(f"Agent arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}

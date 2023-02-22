@@ -408,6 +408,7 @@ class ArmEEAction(RobotAction):
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
+        self.ee_index: Optional[int] = 0
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._render_ee_target = self._config.get("render_ee_target", False)
@@ -416,7 +417,7 @@ class ArmEEAction(RobotAction):
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.agent.arm_joint_pos)
+            np.array(self._sim.articulated_agent.arm_joint_pos)
         )
 
         self.ee_target = cur_ee
@@ -428,8 +429,12 @@ class ArmEEAction(RobotAction):
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
             self.ee_target,
-            self._sim.agent.params.ee_constraint[:, 0],
-            self._sim.agent.params.ee_constraint[:, 1],
+            self._sim.articulated_agent.params.ee_constraint[
+                self.ee_index, :, 0
+            ],
+            self._sim.articulated_agent.params.ee_constraint[
+                self.ee_index, :, 1
+            ],
         )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
@@ -437,14 +442,14 @@ class ArmEEAction(RobotAction):
 
         self.apply_ee_constraints()
 
-        joint_pos = np.array(self._sim.agent.arm_joint_pos)
+        joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
         des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
-        self._sim.agent.arm_motor_pos = des_joint_pos
+        self._sim.articulated_agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
@@ -452,7 +457,7 @@ class ArmEEAction(RobotAction):
         self.set_desired_ee_pos(ee_pos)
 
         if self._render_ee_target:
-            global_pos = self._sim.agent.base_transformation.transform_point(
+            global_pos = self._sim.articulated_agent.base_transformation.transform_point(
                 self.ee_target
             )
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
