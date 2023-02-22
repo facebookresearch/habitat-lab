@@ -150,14 +150,14 @@ class HabitatSimDepthSensor(DepthSensor, HabitatSimSensor):
             self._obs_shape = spaces.Box(
                 low=0,
                 high=1,
-                shape=(self.config.height, self.config.width, 1),
+                shape=(config.height, config.width, 1),
                 dtype=np.float32,
             )
         else:
             self._obs_shape = spaces.Box(
                 low=self.min_depth_value,
                 high=self.max_depth_value,
-                shape=(self.config.height, self.config.width, 1),
+                shape=(config.height, config.width, 1),
                 dtype=np.float32,
             )
 
