@@ -229,7 +229,7 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Action space range
     waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
     waypoint_ang_range: List[float] = [-np.pi, 180]  # radians
-    max_max_duration: float = 10.0  # seconds
+    wait_duration_range: List[float] = [0.0, 10.0]  # seconds
     yaw_input_in_degrees: bool = False
     # Stop criteria
     min_abs_lin_diff: float = 0.01  # meters
