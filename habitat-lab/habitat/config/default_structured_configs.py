@@ -220,7 +220,7 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     action_duration: float = 1.0  # seconds
     # Action space range
     waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
-    waypoint_ang_range: List[float] = [-np.pi, 180]  # radians
+    waypoint_ang_range: List[float] = [-np.pi, np.pi]  # radians
     wait_duration_range: List[float] = [0.0, 10.0]  # seconds
     yaw_input_in_degrees: bool = False
     # Stop criteria
