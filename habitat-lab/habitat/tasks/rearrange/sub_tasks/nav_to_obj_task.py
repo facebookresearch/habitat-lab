@@ -42,7 +42,7 @@ class DynNavRLEnv(RearrangeTask):
             config=config,
             *args,
             dataset=dataset,
-            should_place_robot=False,
+            should_place_articulated_agent=False,
             **kwargs,
         )
         self.force_obj_to_idx = None

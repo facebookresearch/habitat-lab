@@ -220,7 +220,6 @@ class Manipulator(ArticulatedAgentInterface):
             )
         return self.params.ee_links[ee_index]
 
-    @property
     def ee_local_offset(self, ee_index: int = 0) -> mn.Vector3:
         """Gets the relative offset of the end-effector center from the
         end-effector link.
@@ -257,7 +256,7 @@ class Manipulator(ArticulatedAgentInterface):
 
         :param ee_index: the end effector index for which we want the link transform
         """
-        if ee_index <= len(self.params.ee_links):
+        if ee_index >= len(self.params.ee_links):
             raise ValueError(
                 "The current manipulator does not have enough end effectors"
             )
@@ -266,7 +265,7 @@ class Manipulator(ArticulatedAgentInterface):
             self.params.ee_links[ee_index]
         ).transformation
         ef_link_transform.translation = ef_link_transform.transform_point(
-            self.ee_local_offset[ee_index]
+            self.ee_local_offset(ee_index)
         )
         return ef_link_transform
 

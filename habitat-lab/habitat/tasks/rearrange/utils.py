@@ -95,7 +95,7 @@ def rearrange_collision(
     agent_idx: Optional[int] = None,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
-    agent_model = sim.get_agent_data(agent_idx).agent
+    agent_model = sim.get_agent_data(agent_idx).articulated_agent
     grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
     agent_id = agent_model.get_robot_sim_id()

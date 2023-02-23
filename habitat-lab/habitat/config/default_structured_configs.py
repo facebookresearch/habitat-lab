@@ -1241,6 +1241,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = dict()
     is_set_start_state: bool = False
     start_position: List[float] = [0, 0, 0]
