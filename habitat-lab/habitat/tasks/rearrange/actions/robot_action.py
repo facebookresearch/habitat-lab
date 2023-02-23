@@ -19,7 +19,7 @@ class RobotAction(SimulatorTaskAction):
             self._multi_agent = True
 
     @property
-    def _robot_mgr(self):
+    def _articulated_agent_mgr(self):
         """
         Underlying robot mananger for the robot instance the action is attached to.
         """
@@ -31,21 +31,21 @@ class RobotAction(SimulatorTaskAction):
         The IK helper for this robot instance.
         """
 
-        return self._robot_mgr.ik_helper
+        return self._articulated_agent_mgr.ik_helper
 
     @property
     def cur_robot(self):
         """
         The robot instance for this action.
         """
-        return self._robot_mgr.robot
+        return self._articulated_agent_mgr.articulated_agent
 
     @property
     def cur_grasp_mgr(self):
         """
         The grasp manager for the robot instance for this action.
         """
-        return self._robot_mgr.grasp_mgr
+        return self._articulated_agent_mgr.grasp_mgr
 
     @property
     def _action_arg_prefix(self) -> str:
