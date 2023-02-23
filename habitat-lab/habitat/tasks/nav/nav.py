@@ -1326,6 +1326,10 @@ class VelocityAction(SimulatorTaskAction):
         final_position = step_fn(
             agent_state.position, goal_rigid_state.translation
         )
+        final_rotation = [
+            *goal_rigid_state.rotation.vector,
+            goal_rigid_state.rotation.scalar,
+        ]
 
         # Check if a collision occured
         dist_moved_before_filter = (
@@ -1343,6 +1347,13 @@ class VelocityAction(SimulatorTaskAction):
 
         # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
+
+        # Update the state of the agent
+        agent_observations = self._sim.get_observations_at(
+            position=final_position,
+            rotation=final_rotation,
+            keep_agent_at_new_pose=True,
+        )
 
         final_agent_state = self._sim.get_agent_state()
         final_agent_state.position = final_position
@@ -1566,7 +1577,10 @@ class WaypointAction(VelocityAction):
                 linear_velocity, angular_velocity, time_step=self._time_step
             )
             xyt = self._agent_state_to_xyt(next_agent_state)
-
+            # Update the xyt of the controller
+            self.w2v_controller.set_goal(
+                xyt_waypoint, start=xyt, relative=True
+            )
             # Complete action early if commanded speed is low
             if (
                 abs(linear_velocity) < self._min_abs_lin_speed
