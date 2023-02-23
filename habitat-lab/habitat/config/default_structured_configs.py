@@ -118,7 +118,7 @@ class EnvironmentConfig(HabitatBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ActionConfig(HabitatBaseConfig):
     type: str = MISSING
-    agent_index: int = 0
+    agent_index: Optional[int] = None
 
 
 @attr.s(auto_attribs=True, slots=True)
