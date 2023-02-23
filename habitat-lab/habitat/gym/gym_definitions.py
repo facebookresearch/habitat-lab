@@ -11,7 +11,7 @@ import gym
 from gym.envs.registration import register, registry
 
 from habitat import get_config, read_write
-from habitat.config.default import _HABITAT_CFG_DIR
+from habitat.config.default import _HABITAT_CFG_DIR, register_configs
 from habitat.config.default_structured_configs import (
     SimulatorSensorConfig,
     ThirdRGBSensorConfig,
@@ -104,6 +104,7 @@ def _try_register(id_name, entry_point, kwargs):
 
 
 if "Habitat-v0" not in registry.env_specs:
+    register_configs()
     # Generic supporting general configs
     _try_register(
         id_name="Habitat-v0",
