@@ -257,7 +257,9 @@ class EndEffectorDistToMarker(UsesArticulatedAgentInterface, Measure):
 
     def update_metric(self, *args, task, **kwargs):
         marker = task.get_use_marker()
-        ee_trans = task._sim.get_agent_data(self.agent_id).robot.ee_transform()
+        ee_trans = task._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.ee_transform()
         rel_marker_pos = ee_trans.inverted().transform_point(
             marker.get_current_position()
         )
