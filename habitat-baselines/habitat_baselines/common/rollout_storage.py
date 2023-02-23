@@ -11,6 +11,7 @@ import numpy as np
 import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.storage import Storage
 from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
@@ -20,7 +21,7 @@ from habitat_baselines.utils.common import get_action_space_info
 
 
 @baseline_registry.register_storage
-class RolloutStorage:
+class RolloutStorage(Storage):
     r"""Class for storing rollout information for RL trainers."""
 
     def __init__(

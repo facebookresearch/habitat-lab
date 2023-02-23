@@ -67,13 +67,13 @@ class VERTrainer(PPOTrainer):
         return baseline_registry.get_agent(
             self.config.habitat_baselines.rl.agent.name
         )(
-            self.config,
-            self._env_spec,
-            self._is_distributed,
-            self.device,
-            resume_state,
-            len(self.environment_workers),
-            self.percent_done,
+            config=self.config,
+            env_spec=self._env_spec,
+            is_distrib=self._is_distributed,
+            device=self.device,
+            resume_state=resume_state,
+            num_envs=len(self.environment_workers),
+            percent_done_fn=self.percent_done,
             **kwargs,
         )
 

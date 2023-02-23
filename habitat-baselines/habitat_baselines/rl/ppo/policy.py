@@ -120,6 +120,11 @@ class Policy(abc.ABC):
         for c in self._get_policy_components():
             yield from c.buffers()
 
+    def get_value(
+        self, observations, rnn_hidden_states, prev_actions, masks
+    ) -> torch.Tensor:
+        raise NotImplementedError("Get value is not implemented.")
+
     def get_extra(
         self, action_data: PolicyActionData, infos, dones
     ) -> List[Dict[str, float]]:

@@ -11,6 +11,7 @@ from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.rollout_storage import (  # noqa: F401.
     RolloutStorage,
 )
+from habitat_baselines.common.storage import Storage
 from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
     PointNavResNetNet,
     PointNavResNetPolicy,
@@ -18,8 +19,8 @@ from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
-from habitat_baselines.rl.ppo import PPO  # noqa: F401.
-from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ppo.policy import NetPolicy, Policy
+from habitat_baselines.rl.ppo.updater import Updater
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -63,34 +64,38 @@ class TrainerAgent:
         self._is_static_encoder = (
             not config.habitat_baselines.rl.ddppo.train_encoder
         )
+        self._nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
+        self._percent_done_fn = percent_done_fn
+        if lr_schedule_fn is None:
+            lr_schedule_fn = linear_lr_schedule
+        self._init_policy_and_updater(lr_schedule_fn, resume_state)
+
+    def _init_policy_and_updater(self, lr_schedule_fn, resume_state):
+        """
+        Initialize the policy and updater.
+        """
+
         self._actor_critic = self._create_policy()
-        self._actor_critic.to(self._device)
-        self._policy_action_space = self._actor_critic.get_policy_action_space(
-            env_spec.action_space
-        )
         self._updater = self._create_updater(self._actor_critic)
+
+        self._lr_scheduler = LambdaLR(
+            optimizer=self._updater.optimizer,
+            lr_lambda=lambda _: lr_schedule_fn(
+                percent_done=self._percent_done_fn()
+            ),
+        )
         if resume_state is not None:
             self._updater.load_state_dict(resume_state["state_dict"])
             self._updater.optimizer.load_state_dict(
                 resume_state["optim_state"]
             )
-
-        logger.info(
-            "agent number of parameters: {}".format(
-                sum(param.numel() for param in self._updater.parameters())
-            )
+        self._policy_action_space = self._actor_critic.get_policy_action_space(
+            self._env_spec.action_space
         )
-        self.nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
-        if lr_schedule_fn is not None:
-            lr_schedule_fn = linear_lr_schedule
-        self._percent_done_fn = percent_done_fn
 
-        self._lr_scheduler = LambdaLR(
-            optimizer=self._updater.optimizer,
-            lr_lambda=lambda x: linear_lr_schedule(
-                percent_done=percent_done_fn()
-            ),
-        )
+    @property
+    def nbuffers(self):
+        return self._nbuffers
 
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
         """
@@ -100,13 +105,19 @@ class TrainerAgent:
             rollout storage. Default behavior for this and the call signature is
             `default_create_rollouts`.
         """
+
+        # Create the rollouts storage.
         if create_rollouts_fn is None:
             create_rollouts_fn = default_create_rollouts
+
+        policy_action_space = self._actor_critic.get_policy_action_space(
+            self._env_spec.action_space
+        )
         self._rollouts = create_rollouts_fn(
             num_envs=self._num_envs,
             env_spec=self._env_spec,
-            actor_critic=self.actor_critic,
-            policy_action_space=self.policy_action_space,
+            actor_critic=self._actor_critic,
+            policy_action_space=policy_action_space,
             config=self._config,
             device=self._device,
         )
@@ -123,7 +134,14 @@ class TrainerAgent:
             updater_cls = baseline_registry.get_updater(
                 self._config.habitat_baselines.updater_name
             )
-        return updater_cls.from_config(actor_critic, self._ppo_cfg)
+
+        updater = updater_cls.from_config(actor_critic, self._ppo_cfg)
+        logger.info(
+            "agent number of parameters: {}".format(
+                sum(param.numel() for param in updater.parameters())
+            )
+        )
+        return updater
 
     @property
     def policy_action_space(self):
@@ -200,18 +218,31 @@ class TrainerAgent:
             for param in actor_critic.net.visual_encoder.parameters():
                 param.requires_grad_(False)
 
+        actor_critic.to(self._device)
         return actor_critic
 
     @property
-    def rollouts(self) -> RolloutStorage:
+    def rollouts(self) -> Storage:
+        """
+        Gets the current rollout storage.
+        """
+
         return self._rollouts
 
     @property
-    def actor_critic(self) -> NetPolicy:
+    def actor_critic(self) -> Policy:
+        """
+        Gets the current policy
+        """
+
         return self._actor_critic
 
     @property
-    def updater(self) -> PPO:
+    def updater(self) -> Updater:
+        """
+        Gets the current policy updater.
+        """
+
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
@@ -305,7 +336,7 @@ def default_create_rollouts(
     policy_action_space: spaces.Space,
     config: "DictConfig",
     device,
-) -> RolloutStorage:
+) -> Storage:
     """
     Default behavior for setting up and initializing the rollout storage.
     """

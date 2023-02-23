@@ -16,6 +16,7 @@ import torch
 import tqdm
 from omegaconf import OmegaConf
 
+import habitat_baselines.rl.multi_agent
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
@@ -112,13 +113,13 @@ class PPOTrainer(BaseRLTrainer):
         return baseline_registry.get_agent(
             self.config.habitat_baselines.rl.agent.name
         )(
-            self.config,
-            self._env_spec,
-            self._is_distributed,
-            self.device,
-            resume_state,
-            self.envs.num_envs,
-            self.percent_done,
+            config=self.config,
+            env_spec=self._env_spec,
+            is_distrib=self._is_distributed,
+            device=self.device,
+            resume_state=resume_state,
+            num_envs=self.envs.num_envs,
+            percent_done_fn=self.percent_done,
             **kwargs,
         )
 
