@@ -253,14 +253,14 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
 
 
 def append_text_underneath_image(image: np.ndarray, text: str):
-    r"""Appends text underneath an image of size (height, width, channels).
+    """Appends text underneath an image of size (height, width, channels).
+
     The returned image has white text on a black background. Uses textwrap to
     split long text into multiple lines.
-    Args:
-        image: the image to put text underneath
-        text: a string to display
-    Returns:
-        A new image with text inserted underneath the input image
+
+    :param image: The image to appends text underneath.
+    :param text: The string to display.
+    :return: A new image with text appended underneath.
     """
     h, w, c = image.shape
     font_size = 0.5
@@ -291,15 +291,18 @@ def append_text_underneath_image(image: np.ndarray, text: str):
     return final
 
 
-def append_text_to_image(
+def overlay_text_to_image(
     image: np.ndarray, text: List[str], font_size: float = 0.5
 ):
-    r"""Appends lines of text on top of an image. First this will render to the
-    left-hand side of the image, once that column is full, it will render to
-    the right hand-side of the image.
-    :param image: the image to put text underneath
-    :param text: The list of strings which will be rendered, separated by new lines.
-    :returns: A new image with text inserted underneath the input image
+    r"""Overlays lines of text on top of an image.
+
+    First this will render to the left-hand side of the image, once that column is full,
+    it will render to the right hand-side of the image.
+
+    :param image: The image to put text on top.
+    :param text: The list of strings which will be rendered (separated by new lines).
+    :param font_size: Font size.
+    :return: A new image with text overlaid on top.
     """
     h, w, c = image.shape
     font_thickness = 1
@@ -359,6 +362,6 @@ def overlay_frame(frame, info, additional=None):
     if additional is not None:
         lines.extend(additional)
 
-    frame = append_text_to_image(frame, lines, font_size=0.25)
+    frame = overlay_text_to_image(frame, lines, font_size=0.25)
 
     return frame
