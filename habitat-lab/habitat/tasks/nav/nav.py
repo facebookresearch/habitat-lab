@@ -1416,6 +1416,11 @@ class WaypointAction(VelocityAction):
                         high=np.ones(3),
                         dtype=np.float32,
                     ),
+                    "max_duration": spaces.Box(
+                        low=np.array([self._wait_duration_range[0]]),
+                        high=np.array([self._wait_duration_range[1]]),
+                        dtype=np.float32,
+                    ),
                 }
             )
         else:
@@ -1536,10 +1541,9 @@ class WaypointAction(VelocityAction):
         )
 
         xyt = xyt_init.copy()
-        dt = self._time_step
 
         # Forward simulate
-        for _t in np.arange(0, max(max_wait_duration / dt, 1)) * dt:
+        for _t in np.arange(0.0, max_wait_duration, self._time_step):
             # Query velocity controller for control input
             linear_velocity, angular_velocity = self.w2v_controller.forward(
                 xyt
@@ -1547,7 +1551,7 @@ class WaypointAction(VelocityAction):
 
             # Apply action and step simulation
             next_agent_state = self._apply_velocity_action(
-                linear_velocity, angular_velocity, time_step=dt
+                linear_velocity, angular_velocity, time_step=self._time_step
             )
             xyt = self._agent_state_to_xyt(next_agent_state)
 
