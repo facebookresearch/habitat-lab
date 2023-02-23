@@ -15,13 +15,15 @@ from habitat.articulated_agents.mobile_manipulator import (
 class StretchRobot(MobileManipulator):
     def _get_fetch_params(self):
         return MobileManipulatorParams(
-            arm_joints=[28, 27, 26, 25, 23, 31, 33, 34, 7, 8],
+            arm_joints=[[28, 27, 26, 25, 23, 31, 33, 34, 7, 8]],
             gripper_joints=[36, 38],
             wheel_joints=[4, 42],
-            arm_init_params=np.array(
-                [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                dtype=np.float32,
-            ),
+            arm_init_params=[
+                np.array(
+                    [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+                    dtype=np.float32,
+                )
+            ],
             gripper_init_params=np.array([0.0, 0.0], dtype=np.float32),
             ee_offset=[mn.Vector3(0.08, 0, 0)],
             ee_links=[36],

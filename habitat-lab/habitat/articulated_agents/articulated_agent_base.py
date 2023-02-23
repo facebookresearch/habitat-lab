@@ -55,7 +55,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         # set the base fixed or not
         self._fixed_base = fixed_based
         # set the fixed joint values
-        self._fix_joint_values: Optional[np.ndarray] = None
+        self._fix_joint_values: Optional[List[np.ndarray]] = None
 
         # set the camera parameters if provided
         self._cameras = None

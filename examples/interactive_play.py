@@ -264,7 +264,8 @@ def get_input_vel_ctlr(
     elif keys[pygame.K_COMMA]:
         # Print the current arm state of the articulated agent, useful for debugging.
         joint_state = [
-            float("%.3f" % x) for x in env._sim.articulated_agent.arm_joint_pos
+            float("%.3f" % x)
+            for x in env._sim.articulated_agent.arm_joint_pos[0]
         ]
         logger.info(f"Agent arm joint state: {joint_state}")
 

@@ -38,7 +38,8 @@ class ArticulatedAgentCameraParams:
 @attr.s(auto_attribs=True, slots=True)
 class MobileManipulatorParams:
     """Data to configure a mobile manipulator.
-    :property arm_joints: The joint ids of the arm joints.
+    :property arm_joints: The joint ids of the arm joints, the outer list describes
+        different arms whereas the inner list describes the joints for each arm.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property wheel_joints: The joint ids of the wheels. If the wheels are not controlled, then this should be None
     :property arm_init_params: The starting joint angles of the arm. If None,
@@ -71,11 +72,11 @@ class MobileManipulatorParams:
     :property ee_count: how many end effectors
     """
 
-    arm_joints: List[int]
+    arm_joints: List[List[int]]
     gripper_joints: List[int]
     wheel_joints: Optional[List[int]]
 
-    arm_init_params: Optional[np.ndarray]
+    arm_init_params: Optional[List[np.ndarray]]
     gripper_init_params: Optional[np.ndarray]
 
     ee_offset: List[mn.Vector3]

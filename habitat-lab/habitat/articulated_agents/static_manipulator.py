@@ -15,7 +15,8 @@ from habitat_sim.simulator import Simulator
 @attr.s(auto_attribs=True, slots=True)
 class StaticManipulatorParams:
     """Data to configure a static manipulator.
-    :property arm_joints: The joint ids of the arm joints.
+    :property arm_joints: The joint ids of the arm joints, the outer list describes
+        different arms whereas the inner list describes the joints for each arm.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property arm_init_params: The starting joint angles of the arm. If None,
         resets to 0.
@@ -37,10 +38,10 @@ class StaticManipulatorParams:
     :property ee_count: how many end effectors
     """
 
-    arm_joints: List[int]
+    arm_joints: List[List[int]]
     gripper_joints: List[int]
 
-    arm_init_params: Optional[np.ndarray]
+    arm_init_params: Optional[List[np.ndarray]]
     gripper_init_params: Optional[np.ndarray]
 
     ee_offset: List[mn.Vector3]

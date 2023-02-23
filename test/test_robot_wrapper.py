@@ -321,8 +321,8 @@ def test_fetch_robot_wrapper(fixed_base):
         observations += fetch._interpolate_arm_control(
             [1.2299035787582397, 2.345386505126953],
             [
-                fetch.params.arm_joints[1],
-                fetch.params.arm_joints[3],
+                fetch.params.arm_joints[0][1],
+                fetch.params.arm_joints[0][3],
             ],
             1,
             30,
@@ -333,8 +333,8 @@ def test_fetch_robot_wrapper(fixed_base):
         observations += fetch._interpolate_arm_control(
             [-0.45, 0.1],
             [
-                fetch.params.arm_joints[1],
-                fetch.params.arm_joints[3],
+                fetch.params.arm_joints[0][1],
+                fetch.params.arm_joints[0][3],
             ],
             1,
             30,
@@ -342,7 +342,7 @@ def test_fetch_robot_wrapper(fixed_base):
         )
 
         # setting arm motor positions
-        fetch.arm_motor_pos = np.zeros(len(fetch.params.arm_joints))
+        fetch.arm_motor_pos = np.zeros(len(fetch.params.arm_joints[0]))
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # set base ground position from navmesh
@@ -358,10 +358,12 @@ def test_fetch_robot_wrapper(fixed_base):
 
         # arm joint queries and setters
         print(f" Arm joint velocities = {fetch.arm_velocity}")
-        fetch.arm_joint_pos = np.ones(len(fetch.params.arm_joints))
-        fetch.arm_motor_pos = np.ones(len(fetch.params.arm_joints))
-        print(f" Arm joint positions (should be ones) = {fetch.arm_joint_pos}")
-        print(f" Arm joint limits = {fetch.arm_joint_limits}")
+        fetch.arm_joint_pos = np.ones(len(fetch.params.arm_joints[0]))
+        fetch.arm_motor_pos = np.ones(len(fetch.params.arm_joints[0]))
+        print(
+            f" Arm joint positions (should be ones) = {fetch.arm_joint_pos[0]}"
+        )
+        print(f" Arm joint limits = {fetch.arm_joint_limits[0]}")
         fetch.arm_motor_pos = fetch.arm_motor_pos
         observations += simulate(sim, 1.0, produce_debug_video)
 
@@ -475,8 +477,8 @@ def test_franka_robot_wrapper():
         observations += franka._interpolate_arm_control(
             [1.2299035787582397, 2.345386505126953],
             [
-                franka.params.arm_joints[1],
-                franka.params.arm_joints[3],
+                franka.params.arm_joints[0][1],
+                franka.params.arm_joints[0][3],
             ],
             1,
             30,
@@ -487,8 +489,8 @@ def test_franka_robot_wrapper():
         observations += franka._interpolate_arm_control(
             [-0.45, 0.1],
             [
-                franka.params.arm_joints[1],
-                franka.params.arm_joints[3],
+                franka.params.arm_joints[0][1],
+                franka.params.arm_joints[0][3],
             ],
             1,
             30,
@@ -496,21 +498,21 @@ def test_franka_robot_wrapper():
         )
 
         # setting arm motor positions
-        franka.arm_motor_pos = np.zeros(len(franka.params.arm_joints))
+        franka.arm_motor_pos = np.zeros(len(franka.params.arm_joints[0]))
         observations += simulate(sim, 1.0, produce_debug_video)
         assert np.allclose(
             franka.arm_motor_pos,
-            np.zeros(len(franka.params.arm_joints)),
+            np.zeros(len(franka.params.arm_joints[0])),
         )
 
         # arm joint queries and setters
         print(f" Arm joint velocities = {franka.arm_velocity}")
-        franka.arm_joint_pos = np.ones(len(franka.params.arm_joints))
-        franka.arm_motor_pos = np.ones(len(franka.params.arm_joints))
+        franka.arm_joint_pos = [np.ones(len(franka.params.arm_joints[0]))]
+        franka.arm_motor_pos = [np.ones(len(franka.params.arm_joints[0]))]
         print(
-            f" Arm joint positions (should be ones) = {franka.arm_joint_pos}"
+            f" Arm joint positions (should be ones) = {franka.arm_joint_pos[0]}"
         )
-        print(f" Arm joint limits = {franka.arm_joint_limits}")
+        print(f" Arm joint limits = {franka.arm_joint_limits[0]}")
         franka.arm_motor_pos = franka.arm_motor_pos
         observations += simulate(sim, 1.0, produce_debug_video)
 
@@ -606,7 +608,7 @@ def test_spot_robot_wrapper(fixed_base):
         # ready the arm
         observations += spot._interpolate_arm_control(
             [0.0, 0.0],
-            [spot.params.arm_joints[1], spot.params.arm_joints[3]],
+            [spot.params.arm_joints[0][1], spot.params.arm_joints[0][3]],
             1,
             30,
             produce_debug_video,
@@ -615,14 +617,14 @@ def test_spot_robot_wrapper(fixed_base):
         # retract the arm
         observations += spot._interpolate_arm_control(
             [-3.14, 3.0],
-            [spot.params.arm_joints[1], spot.params.arm_joints[3]],
+            [spot.params.arm_joints[0][1], spot.params.arm_joints[0][3]],
             1,
             30,
             produce_debug_video,
         )
 
         # setting arm motor positions to fully extend
-        spot.arm_motor_pos = np.zeros(len(spot.params.arm_joints))
+        spot.arm_motor_pos = np.zeros(len(spot.params.arm_joints[0]))
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # test gripper state
@@ -744,10 +746,10 @@ def test_stretch_robot_wrapper(fixed_base):
         observations += stretch._interpolate_arm_control(
             [0.0],
             [
-                stretch.params.arm_joints[0],
-                stretch.params.arm_joints[1],
-                stretch.params.arm_joints[2],
-                stretch.params.arm_joints[3],
+                stretch.params.arm_joints[0][0],
+                stretch.params.arm_joints[0][1],
+                stretch.params.arm_joints[0][2],
+                stretch.params.arm_joints[0][3],
             ],
             1,
             30,
@@ -757,17 +759,17 @@ def test_stretch_robot_wrapper(fixed_base):
         observations += stretch._interpolate_arm_control(
             [0.15],
             [
-                stretch.params.arm_joints[0],
-                stretch.params.arm_joints[1],
-                stretch.params.arm_joints[2],
-                stretch.params.arm_joints[3],
+                stretch.params.arm_joints[0][0],
+                stretch.params.arm_joints[0][1],
+                stretch.params.arm_joints[0][2],
+                stretch.params.arm_joints[0][3],
             ],
             1,
             30,
             produce_debug_video,
         )
 
-        stretch.arm_motor_pos = np.zeros(len(stretch.params.arm_joints))
+        stretch.arm_motor_pos = np.zeros(len(stretch.params.arm_joints[0]))
         observations += simulate(sim, 1.0, produce_debug_video)
 
         # test gripper state

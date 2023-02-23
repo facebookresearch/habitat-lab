@@ -17,7 +17,8 @@ from habitat.articulated_agents.mobile_manipulator import (
 @attr.s(auto_attribs=True, slots=True)
 class SpotParams:
     """Data to configure a mobile manipulator.
-    :property arm_joints: The joint ids of the arm joints.
+    :property arm_joints: The joint ids of the arm joints, the outer list describes
+        different arms whereas the inner list describes the joints for each arm.
     :property gripper_joints: The habitat sim joint ids of any grippers.
     :property arm_init_params: The starting joint angles of the arm. If None,
         resets to 0.
@@ -53,10 +54,10 @@ class SpotParams:
     :property ee_count: how many end effectors
     """
 
-    arm_joints: List[int]
+    arm_joints: List[List[int]]
     gripper_joints: List[int]
 
-    arm_init_params: Optional[List[float]]
+    arm_init_params: Optional[List[List[float]]]
     gripper_init_params: Optional[List[float]]
 
     ee_offset: List[mn.Vector3]
@@ -88,10 +89,10 @@ class SpotParams:
 class SpotRobot(MobileManipulator):
     def _get_spot_params(self):
         return SpotParams(
-            arm_joints=list(range(0, 7)),
+            arm_joints=[list(range(0, 7))],
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
-            arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
+            arm_init_params=[[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0]],
             gripper_init_params=[0.00],
             leg_init_params=[
                 0.0,

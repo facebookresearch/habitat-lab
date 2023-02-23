@@ -202,6 +202,7 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
+        self.arm_index = 0
 
     def _get_uuid(self, *args, **kwargs):
         return "joint"
@@ -220,7 +221,7 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         joints_pos = self._sim.get_agent_data(
             self.agent_id
-        ).articulated_agent.arm_joint_pos
+        ).articulated_agent.arm_joint_pos[self.arm_index]
         return np.array(joints_pos, dtype=np.float32)
 
 

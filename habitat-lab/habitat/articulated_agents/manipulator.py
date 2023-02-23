@@ -50,7 +50,7 @@ class Manipulator(ArticulatedAgentInterface):
         # maps joint ids to velocity index
         self.joint_dof_indices: Dict[int, int] = {}
         # set the fixed joint values
-        self._fix_joint_values: Optional[np.ndarray] = None
+        self._fix_joint_values: Optional[List[np.ndarray]] = None
 
         # defaults for optional params
         if self.params.gripper_init_params is None:
@@ -58,9 +58,11 @@ class Manipulator(ArticulatedAgentInterface):
                 len(self.params.gripper_joints), dtype=np.float32
             )
         if self.params.arm_init_params is None:
-            self.params.arm_init_params = np.zeros(
-                len(self.params.arm_joints), dtype=np.float32
-            )
+            self.params.arm_init_params = []
+            for arm_joint in self.params.arm_joints:
+                self.params.arm_init_params.append(
+                    np.zeros(len(arm_joint), dtype=np.float32)
+                )
 
         # set the camera parameters if provided
         self._cameras = None
@@ -103,15 +105,18 @@ class Manipulator(ArticulatedAgentInterface):
 
         # set correct gains for arm joints
         if self.params.arm_joints is not None:
-            jms = JointMotorSettings(
-                0,  # position_target
-                self.params.arm_mtr_pos_gain,  # position_gain
-                0,  # velocity_target
-                self.params.arm_mtr_vel_gain,  # velocity_gain
-                self.params.arm_mtr_max_impulse,  # max_impulse
-            )
-            for i in self.params.arm_joints:
-                self.sim_obj.update_joint_motor(self.joint_motors[i][0], jms)
+            for arm_joint in self.params.arm_joints:
+                jms = JointMotorSettings(
+                    0,  # position_target
+                    self.params.arm_mtr_pos_gain,  # position_gain
+                    0,  # velocity_target
+                    self.params.arm_mtr_vel_gain,  # velocity_gain
+                    self.params.arm_mtr_max_impulse,  # max_impulse
+                )
+                for i in arm_joint:
+                    self.sim_obj.update_joint_motor(
+                        self.joint_motors[i][0], jms
+                    )
         self._update_motor_settings_cache()
 
         # set correct gains for grippers
@@ -352,14 +357,18 @@ class Manipulator(ArticulatedAgentInterface):
         """Get the current arm joint positions."""
 
         # deref self vars to cut access in half
+        list_arm_joint_pos = []
         joint_pos_indices = self.joint_pos_indices
-        arm_joints = self.params.arm_joints
-        sim_obj_joint_pos = self.sim_obj.joint_positions
-
-        arm_pos_indices = (joint_pos_indices[x] for x in arm_joints)
-        return np.array(
-            [sim_obj_joint_pos[i] for i in arm_pos_indices], dtype=np.float32
-        )
+        for arm_joints in self.params.arm_joints:
+            sim_obj_joint_pos = self.sim_obj.joint_positions
+            arm_pos_indices = (joint_pos_indices[x] for x in arm_joints)
+            list_arm_joint_pos.append(
+                np.array(
+                    [sim_obj_joint_pos[i] for i in arm_pos_indices],
+                    dtype=np.float32,
+                )
+            )
+        return list_arm_joint_pos
 
     @arm_joint_pos.setter
     def arm_joint_pos(self, ctrl: List[float]):

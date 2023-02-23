@@ -15,13 +15,15 @@ from habitat.articulated_agents.mobile_manipulator import (
 class FetchRobot(MobileManipulator):
     def _get_fetch_params(self):
         return MobileManipulatorParams(
-            arm_joints=list(range(15, 22)),
+            arm_joints=[list(range(15, 22))],
             gripper_joints=[23, 24],
             wheel_joints=[2, 4],
-            arm_init_params=np.array(
-                [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
-                dtype=np.float32,
-            ),
+            arm_init_params=[
+                np.array(
+                    [-0.45, -1.08, 0.1, 0.935, -0.001, 1.573, 0.005],
+                    dtype=np.float32,
+                )
+            ],
             gripper_init_params=np.array([0.00, 0.00], dtype=np.float32),
             ee_offset=[mn.Vector3(0.08, 0, 0)],
             ee_links=[22],
@@ -126,7 +128,7 @@ class FetchRobotNoWheels(FetchRobot):
     def _get_fetch_params(self):
         params = super()._get_fetch_params()
         # No wheel control
-        params.arm_joints = [x - 2 for x in params.arm_joints]
+        params.arm_joints = [[x - 2 for x in params.arm_joints[0]]]
         params.gripper_joints = [x - 2 for x in params.gripper_joints]
         params.wheel_joints = None
         params.ee_links = [params.ee_links[0] - 2]

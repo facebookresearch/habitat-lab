@@ -181,9 +181,9 @@ class ArmRelPosKinematicAction(RobotAction):
         delta_pos *= self._delta_pos_limit
         self._sim: RearrangeSim
 
-        set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos
-        self.cur_robot.arm_joint_pos = set_arm_pos
-        self.cur_robot.fix_joint_values = set_arm_pos
+        set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos[0]
+        self.cur_robot.arm_joint_pos = [set_arm_pos]
+        self.cur_robot.fix_joint_values = [set_arm_pos]
 
 
 @registry.register_task_action
@@ -245,6 +245,7 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
         self._delta_pos_limit = self._config.delta_pos_limit
         self._should_clip = self._config.get("should_clip", True)
         self._arm_joint_mask = self._config.arm_joint_mask
+        self.arm_index = 0
 
     def reset(self, *args, **kwargs):
         super().reset(*args, **kwargs)
@@ -280,8 +281,10 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
             tgt_idx += 1
             src_idx += 1
 
-        min_limit, max_limit = self.cur_robot.arm_joint_limits
-        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        min_limit, max_limit = self.cur_robot.arm_joint_limits[self.arm_index]
+        set_arm_pos = (
+            expanded_delta_pos + self.cur_robot.arm_motor_pos[self.arm_index]
+        )
         # Perform roll over to the joints so that the user cannot control
         # the motor 2, 3, 4 for the arm.
         if expanded_delta_pos[0] >= 0:
@@ -417,7 +420,7 @@ class ArmEEAction(RobotAction):
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.articulated_agent.arm_joint_pos)
+            np.array(self._sim.articulated_agent.arm_joint_pos[self.ee_index])
         )
 
         self.ee_target = cur_ee
