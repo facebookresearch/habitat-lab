@@ -1601,11 +1601,17 @@ class WaypointAction(VelocityAction):
 class MoveForwardWaypointAction(WaypointAction):
     name: str = "move_forward_waypoint"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._forward_step_size = self._config.forward_step_size
+        self._max_wait_duration = self._config.max_wait_duration
+
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array([self._config.forward_step_size, 0.0, 0.0])
+        xyt_waypoint = np.array([self._forward_step_size, 0.0, 0.0])
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
@@ -1619,11 +1625,17 @@ class MoveForwardWaypointAction(WaypointAction):
 class TurnLeftWaypointAction(WaypointAction):
     name: str = "turn_left_waypoint"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._turn_angle = self._config.turn_angle
+        self._max_wait_duration = self._config.max_wait_duration
+
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        xyt_waypoint = np.array([0.0, 0.0, self._config.turn_angle])
+        xyt_waypoint = np.array([0.0, 0.0, self._turn_angle])
         return self._step_rel_waypoint(
             xyt_waypoint, self._config.max_wait_duration, *args, **kwargs
         )
@@ -1636,6 +1648,12 @@ class TurnLeftWaypointAction(WaypointAction):
 @registry.register_task_action
 class TurnRightWaypointAction(WaypointAction):
     name: str = "turn_right_waypoint"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._turn_angle = self._config.turn_angle
+        self._max_wait_duration = self._config.max_wait_duration
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
