@@ -65,7 +65,7 @@ def shortest_path_example():
         )
 
         print("Environment creation successful")
-        for episode in range(3):
+        for episode in range(1):
             env.reset()
             dirname = os.path.join(
                 IMAGE_DIR, "shortest_path_example", "%02d" % episode
@@ -76,7 +76,16 @@ def shortest_path_example():
             print("Agent stepping around inside environment.")
             images = []
             while not env.habitat_env.episode_over:
-                action = env.action_space.sample()
+                if len(images) > 30:
+                    action = {'action': 'stop', 'action_args': None}
+                elif len(images) % 3 == 0:
+                    action = {'action': 'move_forward_waypoint', 'action_args': None}
+                elif len(images) % 3 == 1:
+                    action = {'action': 'turn_left_waypoint', 'action_args': None}
+                else:
+                    action = {'action': 'turn_right_waypoint', 'action_args': None}
+
+                print(f"action={action}")
 
                 observations, reward, done, info = env.step(action)
                 im = observations["rgb"]

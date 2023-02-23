@@ -1541,13 +1541,25 @@ class WaypointAction(VelocityAction):
         )
 
         xyt = xyt_init.copy()
+        import pdb
 
+        pdb.set_trace()
         # Forward simulate
+        print("===========[controller integration]===========")
+        print(
+            f"hab_goal={xyt_waypoint}, agent_goal={self.w2v_controller.controller.xyt_goal}"
+        )
         for _t in np.arange(0.0, max_wait_duration, self._time_step):
             # Query velocity controller for control input
             linear_velocity, angular_velocity = self.w2v_controller.forward(
                 xyt
             )
+
+            print(f"t={_t}")
+            print(
+                f"\thab_xyt={xyt}, agent_xyt={self.w2v_controller.controller.xyt_loc}"
+            )
+            print(f"\tvel_cmd={[linear_velocity, angular_velocity]}")
 
             # Apply action and step simulation
             next_agent_state = self._apply_velocity_action(
@@ -1561,6 +1573,7 @@ class WaypointAction(VelocityAction):
                 and abs(angular_velocity) < self._min_abs_ang_speed
             ):
                 break
+        print("======================")
 
         return self._get_agent_observation(next_agent_state)
 
