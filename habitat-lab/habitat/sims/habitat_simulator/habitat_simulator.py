@@ -331,7 +331,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "robot_type",
                 "joint_start_noise",
                 "ik_arm_urdf",
-                "grasp_managers"
+                "grasp_managers",
             },
         )
 

@@ -60,7 +60,12 @@ class RearrangeTask(NavigationTask):
         sensor_suite.observation_spaces = spaces.Dict(spaces=task_obs_spaces)
 
     def __init__(
-        self, *args, sim, dataset=None, should_place_articulated_agent=True, **kwargs
+        self,
+        *args,
+        sim,
+        dataset=None,
+        should_place_articulated_agent=True,
+        **kwargs,
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
 
@@ -88,7 +93,9 @@ class RearrangeTask(NavigationTask):
                 def_val={},
                 verbose=False,
             )
-            self._articulated_agent_pos_start = self._articulated_agent_init_cache.load()
+            self._articulated_agent_pos_start = (
+                self._articulated_agent_init_cache.load()
+            )
         else:
             self._articulated_agent_pos_start = None
 
@@ -140,10 +147,14 @@ class RearrangeTask(NavigationTask):
         ):
             start_ident = self._get_ep_init_ident(agent_idx)
             self._articulated_agent_pos_start[start_ident] = cache_data
-            self._articulated_agent_init_cache.save(self._articulated_agent_pos_start)
+            self._articulated_agent_init_cache.save(
+                self._articulated_agent_pos_start
+            )
 
     def _set_articulated_agent_start(self, agent_idx: int) -> None:
-        articulated_agent_start = self._get_cached_articulated_agent_start(agent_idx)
+        articulated_agent_start = self._get_cached_articulated_agent_start(
+            agent_idx
+        )
         if articulated_agent_start is None:
             (
                 articulated_agent_pos,
@@ -151,10 +162,17 @@ class RearrangeTask(NavigationTask):
             ) = self._sim.set_articulated_agent_base_to_random_point(
                 agent_idx=agent_idx
             )
-            self._cache_articulated_agent_start((articulated_agent_pos, articulated_agent_rot), agent_idx)
+            self._cache_articulated_agent_start(
+                (articulated_agent_pos, articulated_agent_rot), agent_idx
+            )
         else:
-            articulated_agent_pos, articulated_agent_rot = articulated_agent_start
-        articulated_agent = self._sim.get_agent_data(agent_idx).articulated_agent
+            (
+                articulated_agent_pos,
+                articulated_agent_rot,
+            ) = articulated_agent_start
+        articulated_agent = self._sim.get_agent_data(
+            agent_idx
+        ).articulated_agent
         articulated_agent.base_pos = articulated_agent_pos
         articulated_agent.base_rot = articulated_agent_rot
 
@@ -289,7 +307,9 @@ class RearrangeTask(NavigationTask):
         max_force = max(forces) if len(forces) > 0 else 0
 
         max_obj_force = get_max_force(contact_points, snapped_obj)
-        max_articulated_agent_force = get_max_force(contact_points, articulated_agent_id)
+        max_articulated_agent_force = get_max_force(
+            contact_points, articulated_agent_id
+        )
         return max_articulated_agent_force, max_obj_force, max_force
 
     def get_cur_collision_info(self, agent_idx) -> CollisionDetails:
