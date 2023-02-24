@@ -80,8 +80,10 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import RearrangeReward
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.utils.render_wrapper import overlay_frame
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import (
+    observations_to_image,
+    overlay_frame,
+)
 from habitat_sim.utils import viz_utils as vut
 
 # Quiet the Habitat simulator logging
