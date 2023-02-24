@@ -1086,6 +1086,34 @@ class StopAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
+class VelocityStopAction(SimulatorTaskAction):
+    name: str = "velocity_stop"
+
+    def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
+        task.is_stop_called = False  # type: ignore
+
+    def step(self, velocity_stop, task: EmbodiedTask, *args: Any,  **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        if velocity_stop[0] > 0.0:
+            task.is_stop_called = True  # type: ignore
+
+        return self._sim.get_observations_at()  # type: ignore
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                "velocity_stop": spaces.Box(
+                    low=np.array([-1]),
+                    high=np.array([1]),
+                    dtype=np.float32,
+                )
+            }
+        )
+
+@registry.register_task_action
 class LookUpAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
@@ -1171,14 +1199,13 @@ class VelocityAction(SimulatorTaskAction):
         self._ang_vel_range = self._config.ang_vel_range
         self._enable_scale_convert = self._config.enable_scale_convert
         self._time_step = self._config.time_step
-        self._use_stop_heuristic = self._config.use_stop_heuristic
         self._min_abs_lin_speed = self._config.min_abs_lin_speed
         self._min_abs_ang_speed = self._config.min_abs_ang_speed
 
     @property
     def action_space(self):
         if self._enable_scale_convert:
-            return ActionSpace(
+            return spaces.Dict(
                 {
                     "linear_velocity": spaces.Box(
                         low=np.array([-1]),
@@ -1193,7 +1220,7 @@ class VelocityAction(SimulatorTaskAction):
                 }
             )
         else:
-            return ActionSpace(
+            return spaces.Dict(
                 {
                     "linear_velocity": spaces.Box(
                         low=np.array([self._lin_vel_range[0]]),
@@ -1235,13 +1262,6 @@ class VelocityAction(SimulatorTaskAction):
             linear_velocity, angular_velocity
         )
 
-        # Check if the action is a stop action
-        if self._use_stop_heuristic and self._check_stop(
-            lin_vel_processed, ang_vel_processed
-        ):
-            task.is_stop_called = True  # type: ignore
-            return self._get_agent_observation()
-
         # Apply action and get next observation
         agent_state_result = self._apply_velocity_action(
             lin_vel_processed,
@@ -1250,12 +1270,6 @@ class VelocityAction(SimulatorTaskAction):
         )
 
         return self._get_agent_observation(agent_state_result)
-
-    def _check_stop(self, linear_velocity, angular_velocity) -> bool:
-        """Use a heuristic to determine if an action qualifies as a stop action"""
-        lin_check = abs(linear_velocity) < self._min_abs_lin_speed
-        ang_check = abs(angular_velocity) < self._min_abs_ang_speed
-        return lin_check and ang_check
 
     def _preprocess_action(self, linear_velocity, angular_velocity):
         """Perform scaling and clamping of input"""
@@ -1298,10 +1312,10 @@ class VelocityAction(SimulatorTaskAction):
             time_step = self._time_step
 
         # Map velocity actions
-        self.vel_control.linear_velocity = np.array(
+        self.vel_control.linear_velocity = mn.Vector3(
             [0.0, 0.0, -linear_velocity]
         )
-        self.vel_control.angular_velocity = np.array(
+        self.vel_control.angular_velocity = mn.Vector3(
             [0.0, angular_velocity, 0.0]
         )
         agent_state = self._sim.get_agent_state()
@@ -1472,13 +1486,6 @@ class WaypointAction(VelocityAction):
         assert len(xyt_waypoint) == 3, "Waypoint vector must be of length 3."
         xyt_waypoint_processed = self._preprocess_action(xyt_waypoint)
 
-        # Check if the action is a stop action
-        if self._use_stop_heuristic and self._check_stop(
-            xyt_waypoint_processed
-        ):
-            task.is_stop_called = True  # type: ignore
-            return self._get_agent_observation()
-
         # Execute waypoint
         return self._step_rel_waypoint(
             xyt_waypoint_processed,
@@ -1486,15 +1493,6 @@ class WaypointAction(VelocityAction):
             *args,
             **kwargs,
         )
-
-    def _check_stop(self, xyt_waypoint) -> bool:
-        """Use a heuristic to determine if an action qualifies as a stop action"""
-        linear_diff = np.linalg.norm([xyt_waypoint[:2]])
-        angular_diff = abs(xyt_waypoint[2])
-
-        lin_check = linear_diff < self._min_abs_lin_diff
-        ang_check = angular_diff < self._min_abs_ang_diff
-        return lin_check and ang_check
 
     def _preprocess_action(self, xyt_waypoint):
         """Perform scaling and clamping of input"""
