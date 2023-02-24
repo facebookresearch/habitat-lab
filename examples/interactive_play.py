@@ -108,15 +108,10 @@ def get_input_vel_ctlr(
     else:
         agent_k = ""
     arm_action_name = f"{agent_k}arm_action"
-
-    if control_humanoid:
-        base_action_name = f"{agent_k}humanoidjoint_action"
-        base_key = "human_joints_trans"
-    else:
-        base_action_name = f"{agent_k}base_velocity"
-        arm_key = "arm_action"
-        grip_key = "grip_action"
-        base_key = "base_vel"
+    base_action_name = f"{agent_k}base_velocity"
+    arm_key = "arm_action"
+    grip_key = "grip_action"
+    base_key = "base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
