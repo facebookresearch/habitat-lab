@@ -143,6 +143,14 @@ class RearrangeSim(HabitatSim):
             )
         return self.agents_mgr[0].grasp_mgr
 
+    @property
+    def grasp_mgrs(self):
+        if len(self.agents_mgr) > 1:
+            raise ValueError(
+                f"Cannot access `sim.grasp_mgr` with multiple articulated_agents"
+            )
+        return self.agents_mgr[0].grasp_mgrs
+
     def _get_target_trans(self):
         """
         This is how the target transforms should be accessed since
