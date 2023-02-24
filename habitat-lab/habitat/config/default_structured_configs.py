@@ -7,11 +7,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
-<<<<<<< HEAD
-=======
-import attr
 import numpy as np
->>>>>>> 9e3e90b1 (Unify inputs and configs to use radians)
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
 
@@ -142,6 +138,14 @@ class StopActionConfig(ActionConfig):
 
 
 @dataclass
+class VelocityStopActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the velocity stop action is an action that takes continuous space input.
+    """
+    type: str = "VelocityStopAction"
+
+
+@dataclass
 class EmptyActionConfig(ActionConfig):
     r"""
     In Navigation tasks only, the pass action. The robot will do nothing.
@@ -212,7 +216,6 @@ class VelocityControlActionConfig(ActionConfig):
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
     # Stop criteria
-    use_stop_heuristic: bool = False
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
 
@@ -1599,6 +1602,12 @@ cs.store(
     group="habitat/task/actions",
     name="stop",
     node=StopActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.velocity_stop",
+    group="habitat/task/actions",
+    name="velocity_stop",
+    node=VelocityStopActionConfig,
 )
 cs.store(
     package="habitat.task.actions.move_forward",
