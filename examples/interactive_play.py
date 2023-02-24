@@ -91,15 +91,15 @@ def get_input_vel_ctlr(
         return step_env(env, "empty", {}), None, False
     multi_agent = len(env._sim.robots_mgr) > 1
 
-    arm_action_name = "arm_action"
-    base_action_name = "base_velocity"
-    agent_k = f"agent_{agent_to_control}"
     if multi_agent:
-        arm_action_name = f"{agent_k}_{arm_action_name}"
-        base_action_name = f"{agent_k}_{base_action_name}"
-    arm_key = f"{agent_k}_arm_action"
-    grip_key = f"{agent_k}_grip_action"
-    base_key = f"{agent_k}_base_vel"
+        agent_k = f"agent_{agent_to_control}_"
+    else:
+        agent_k = ""
+    arm_action_name = f"{agent_k}arm_action"
+    base_action_name = f"{agent_k}base_velocity"
+    arm_key = "arm_action"
+    grip_key = "grip_action"
+    base_key = "base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
