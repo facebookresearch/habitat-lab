@@ -8,7 +8,7 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.robots.manipulator import Manipulator
+from habitat.articulated_agents.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 
@@ -23,8 +23,8 @@ class StaticManipulatorParams:
         resets to 0.
     :property ee_offset: The 3D offset from the end-effector link to the true
         end-effector position.
-    :property ee_link: The Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (2, N) shaped array specifying the upper and
+    :property ee_links: A list with the Habitat Sim link ID of the end-effector.
+    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and
         lower limits for each end-effector joint where N is the arm DOF.
     :property gripper_closed_state: All gripper joints must achieve this
         state for the gripper to be considered closed.
@@ -34,6 +34,7 @@ class StaticManipulatorParams:
     :property arm_mtr_pos_gain: The position gain of the arm motor.
     :property arm_mtr_vel_gain: The velocity gain of the arm motor.
     :property arm_mtr_max_impulse: The maximum impulse of the arm motor.
+    :property ee_count: how many end effectors
     """
 
     arm_joints: List[int]
@@ -42,8 +43,8 @@ class StaticManipulatorParams:
     arm_init_params: Optional[np.ndarray]
     gripper_init_params: Optional[np.ndarray]
 
-    ee_offset: mn.Vector3
-    ee_link: int
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
     ee_constraint: np.ndarray
 
     gripper_closed_state: np.ndarray
@@ -53,6 +54,8 @@ class StaticManipulatorParams:
     arm_mtr_pos_gain: float
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
+
+    ee_count: Optional[int] = 1
 
 
 class StaticManipulator(Manipulator):

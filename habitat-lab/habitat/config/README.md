@@ -129,7 +129,7 @@ habitat:
     step_physics: true
     concur_render: false
     needs_markers: true
-    update_robot: true
+    update_articulated_agent: true
     scene: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
     scene_dataset: default
     additional_object_paths: []

@@ -203,7 +203,7 @@ class NavPickTaskV1(RearrangeTask):
             0, self._sim.get_n_targets()
         )
         start_pos = self._sim.pathfinder.get_random_navigable_point()
-        self._sim.robot.base_pos = start_pos
+        self._sim.articulated_agent.base_pos = start_pos
 
         # Put any reset logic here.
         return super().reset(episode)
@@ -230,7 +230,7 @@ class DistanceToTargetObject(Measure):
         self.update_metric(*args, episode=episode, **kwargs)
 
     def update_metric(self, *args, task, episode, **kwargs):
-        ee_pos = self._sim.robot.ee_transform.translation
+        ee_pos = self._sim.articulated_agent.ee_transform().translation
 
         idxs, _ = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()[idxs[task.target_object_index]]

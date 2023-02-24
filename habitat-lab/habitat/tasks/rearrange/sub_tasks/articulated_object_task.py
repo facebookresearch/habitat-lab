@@ -147,10 +147,10 @@ class SetArticulatedObjectTask(RearrangeTask):
             angle_to_obj, base_pos = self._sample_robot_start(T)
 
             noise = np.random.normal(0.0, self._config.base_angle_noise)
-            self._sim.robot.base_rot = angle_to_obj + noise
-            self._sim.robot.base_pos = base_pos
+            self._sim.articulated_agent.base_rot = angle_to_obj + noise
+            self._sim.articulated_agent.base_pos = base_pos
 
-            robot_T = self._sim.robot.base_transformation
+            robot_T = self._sim.articulated_agent.base_transformation
             rel_targ_pos = robot_T.inverted().transform_point(
                 marker.current_transform.translation
             )
@@ -161,7 +161,9 @@ class SetArticulatedObjectTask(RearrangeTask):
                 break
 
             eps = 1e-2
-            upper_bound = self._sim.robot.params.ee_constraint[:, 1] + eps
+            upper_bound = (
+                self._sim.articulated_agent.params.ee_constraint[0, :, 1] + eps
+            )
             is_within_bounds = (rel_targ_pos < upper_bound).all()
             if not is_within_bounds:
                 continue
@@ -186,7 +188,7 @@ class SetArticulatedObjectTask(RearrangeTask):
         self.prev_dist_to_push = -1
 
         self.prev_snapped_marker_name = None
-        self._sim.maybe_update_robot()
+        self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)
 
     def _disable_art_sleep(self):

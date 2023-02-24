@@ -8,14 +8,16 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.robots.manipulator import Manipulator
-from habitat.robots.robot_base import RobotBase
+from habitat.articulated_agents.articulated_agent_base import (
+    ArticulatedAgentBase,
+)
+from habitat.articulated_agents.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 
 @attr.s(auto_attribs=True, slots=True)
-class RobotCameraParams:
-    """Data to configure a camera placement on the robot.
+class ArticulatedAgentCameraParams:
+    """Data to configure a camera placement on the articulated agent.
     :property attached_link_id: Which link ID this camera is attached to, -1
         for the base link.
     :property cam_offset_pos: The 3D position of the camera relative to the
@@ -45,8 +47,8 @@ class MobileManipulatorParams:
         resets to 0.
     :property ee_offset: The 3D offset from the end-effector link to the true
         end-effector position.
-    :property ee_link: The Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (2, N) shaped array specifying the upper and
+    :property ee_links: A list with the Habitat Sim link ID of the end-effector.
+    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and
         lower limits for each end-effector joint where N is the arm DOF.
     :property cameras: The cameras and where they should go. The key is the
         prefix to match in the sensor names. For example, a key of `"robot_head"`
@@ -66,6 +68,7 @@ class MobileManipulatorParams:
     :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
         there are wheels).
     :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    :property ee_count: how many end effectors
     """
 
     arm_joints: List[int]
@@ -75,11 +78,11 @@ class MobileManipulatorParams:
     arm_init_params: Optional[np.ndarray]
     gripper_init_params: Optional[np.ndarray]
 
-    ee_offset: mn.Vector3
-    ee_link: int
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams]
+    cameras: Dict[str, ArticulatedAgentCameraParams]
 
     gripper_closed_state: np.ndarray
     gripper_open_state: np.ndarray
@@ -96,8 +99,10 @@ class MobileManipulatorParams:
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
+    ee_count: Optional[int] = 1
 
-class MobileManipulator(Manipulator, RobotBase):
+
+class MobileManipulator(Manipulator, ArticulatedAgentBase):
     """Robot with a controllable base and arm."""
 
     def __init__(
@@ -127,7 +132,7 @@ class MobileManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
         )
         # instantiate a robotBase
-        RobotBase.__init__(
+        ArticulatedAgentBase.__init__(
             self,
             urdf_path=urdf_path,
             params=params,
@@ -141,18 +146,18 @@ class MobileManipulator(Manipulator, RobotBase):
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         Manipulator.reconfigure(self)
-        RobotBase.reconfigure(self)
+        ArticulatedAgentBase.reconfigure(self)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
         Manipulator.update(self)
-        RobotBase.update(self)
+        ArticulatedAgentBase.update(self)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes.
         """
         Manipulator.reset(self)
-        RobotBase.reset(self)
+        ArticulatedAgentBase.reset(self)
