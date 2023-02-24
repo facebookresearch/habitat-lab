@@ -215,9 +215,6 @@ class VelocityControlActionConfig(ActionConfig):
     ang_vel_range: List[float] = field(default_factory=lambda: [-0.45, 0.45])
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
-    # Stop criteria
-    min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
 
 
 @dataclass
@@ -234,9 +231,9 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     waypoint_ang_range: List[float] = [-np.pi, np.pi]  # radians
     wait_duration_range: List[float] = [0.0, 10.0]  # seconds
     yaw_input_in_degrees: bool = False
-    # Stop criteria
-    min_abs_lin_diff: float = 0.01  # meters
-    min_abs_ang_diff: float = 0.05  # rad (3 degrees)
+    # Early stopping criteria
+    min_abs_lin_speed: float = 0.025  # meters/sec
+    min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45

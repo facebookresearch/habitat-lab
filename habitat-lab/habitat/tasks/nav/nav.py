@@ -1092,7 +1092,9 @@ class VelocityStopAction(SimulatorTaskAction):
     def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         task.is_stop_called = False  # type: ignore
 
-    def step(self, velocity_stop, task: EmbodiedTask, *args: Any,  **kwargs: Any):
+    def step(
+        self, velocity_stop, task: EmbodiedTask, *args: Any, **kwargs: Any
+    ):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
@@ -1112,6 +1114,7 @@ class VelocityStopAction(SimulatorTaskAction):
                 )
             }
         )
+
 
 @registry.register_task_action
 class LookUpAction(SimulatorTaskAction):
@@ -1199,8 +1202,6 @@ class VelocityAction(SimulatorTaskAction):
         self._ang_vel_range = self._config.ang_vel_range
         self._enable_scale_convert = self._config.enable_scale_convert
         self._time_step = self._config.time_step
-        self._min_abs_lin_speed = self._config.min_abs_lin_speed
-        self._min_abs_ang_speed = self._config.min_abs_ang_speed
 
     @property
     def action_space(self):
@@ -1423,8 +1424,8 @@ class WaypointAction(VelocityAction):
         self._waypoint_ang_range = self._config.waypoint_ang_range
         self._wait_duration_range = self._config.wait_duration_range
         self._yaw_input_in_degrees = self._config.yaw_input_in_degrees
-        self._min_abs_lin_diff = self._config.min_abs_lin_diff
-        self._min_abs_ang_diff = self._config.min_abs_ang_diff
+        self._min_abs_lin_speed = self._config.min_abs_lin_speed
+        self._min_abs_ang_speed = self._config.min_abs_ang_speed
 
         if self._yaw_input_in_degrees:
             self._waypoint_ang_range = [
