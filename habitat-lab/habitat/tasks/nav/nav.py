@@ -1603,7 +1603,7 @@ class WaypointAction(VelocityAction):
             [
                 agent_state.position[0],
                 -agent_state.position[2],
-                agent_rotvec[1] + np.pi,
+                agent_rotvec[1] + np.pi / 2.0,
             ]
         )
 
