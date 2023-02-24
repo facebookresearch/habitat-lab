@@ -17,6 +17,8 @@ from habitat.articulated_agents.robots import (
     SpotRobot,
     StretchRobot,
 )
+
+from habitat.articulated_agents.humanoids.kinematic_humanoid import KinematicHumanoid
 from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
@@ -120,7 +122,6 @@ class ArticulatedAgentManager:
         """
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.
         """
-
         for agent_data in self._all_agent_data:
             agent_data.articulated_agent.params.arm_init_params = (
                 agent_data.start_js

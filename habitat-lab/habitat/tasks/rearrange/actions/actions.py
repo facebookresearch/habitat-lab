@@ -467,3 +467,40 @@ class ArmEEAction(RobotAction):
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
+
+
+@registry.register_task_action
+class HumanoidJointAction(RobotAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.num_joints = 19
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+
+    @property
+    def action_space(self):
+        num_joints = self.num_joints
+        num_dim_transform = 16
+        # The action space is the number of joints plus 16 for a 4x4 transformtion matrix for the base
+        return spaces.Dict(
+            {
+                "human_joints_trans": spaces.Box(
+                    shape=(num_joints + num_dim_transform,), low=-1, high=1, dtype=np.float32
+                )
+            }
+        )
+
+    def step(self, **kwargs):
+        new_pos_transform = kwargs["human_joints_trans"]
+        new_joints = new_pos_transform[:-16]
+        new_pos_transform = new_pos_transform[-16:]
+        if np.array(new_pos_transform).sum() != 0:
+            vecs = [
+                mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
+                for i in range(4)
+            ]
+            new_transform = mn.Matrix4(*vecs)
+            self.cur_human.set_joint_transform(new_joints, new_transform)
+        return self._sim.step(HabitatSimActions.changejoint_action)

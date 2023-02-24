@@ -92,9 +92,9 @@ class MobileManipulatorParams:
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
 
-    wheel_mtr_pos_gain: float
-    wheel_mtr_vel_gain: float
-    wheel_mtr_max_impulse: float
+    wheel_mtr_pos_gain: Optional[float]
+    wheel_mtr_vel_gain: Optional[float]
+    wheel_mtr_max_impulse: Optional[float]
 
     base_offset: mn.Vector3
     base_link_names: Set[str]
@@ -112,6 +112,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
+        maintain_link_order: bool = True,
         base_type="mobile",
     ):
         r"""Constructor
@@ -141,6 +142,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
             fixed_based=fixed_base,
             sim_obj=self.sim_obj,
             base_type=base_type,
+            maintain_link_order=maintain_link_order
         )
 
     def reconfigure(self) -> None:

@@ -27,6 +27,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         fixed_based: bool = True,
         base_type="mobile",
         sim_obj=None,
+        maintain_link_order=False,
         **kwargs,
     ):
         r"""Constructor"""
@@ -42,6 +43,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         self._limit_robo_joints = limit_robo_joints
         self._base_type = base_type
         self.sim_obj = sim_obj
+        self._maintain_link_order= maintain_link_order
 
         # NOTE: the follow members cache static info for improved efficiency over querying the API
         # maps joint ids to motor settings for convenience
@@ -71,7 +73,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-                self.urdf_path, fixed_base=self._fixed_base
+                self.urdf_path, fixed_base=self._fixed_base, maintain_link_order=self._maintain_link_order
             )
         # set correct gains for wheels
         if (
