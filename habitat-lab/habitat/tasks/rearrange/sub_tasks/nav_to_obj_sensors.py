@@ -55,7 +55,7 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, task, *args, **kwargs):
         robot_T = self._sim.get_agent_data(
             self.agent_id
-        ).robot.base_transformation
+        ).articulated_agent.base_transformation
 
         dir_vector = robot_T.inverted().transform_point(task.nav_goal_pos)
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
@@ -212,7 +212,7 @@ class RotDistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = task.nav_goal_pos
-        robot = self._sim.robot
+        robot = self._sim.articulated_agent
         T = robot.base_transformation
         angle = get_angle_to_pos(T.transform_vector(targ))
         self._metric = np.abs(float(angle))
