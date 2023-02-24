@@ -10,7 +10,6 @@ defaults:
 
 habitat:
   gym:
-    auto_name: RearrangeEasyMultiAgent
     obs_keys:
       - agent_0_robot_head_depth
       - agent_1_robot_head_depth

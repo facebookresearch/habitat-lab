@@ -284,7 +284,6 @@ habitat:
     - '*'
     data_path: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
   gym:
-    auto_name: ''
     obs_keys: null
     action_keys: null
     achieved_goal_keys: []

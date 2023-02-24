@@ -9,7 +9,6 @@ defaults:
 
 habitat:
   gym:
-    auto_name: RearrangeEasy
     obs_keys:
       - robot_head_depth
       - relative_resting_position

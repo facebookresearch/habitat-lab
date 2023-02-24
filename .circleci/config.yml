@@ -306,6 +306,8 @@ jobs:
               cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
               bash scripts/hab2_bench/bench_runner.sh
               python scripts/hab2_bench/plot_bench.py
+              # Assert the SPS number are up to standard
+              python scripts/hab2_bench/assert_bench.py
       - run:
           name: Build api documentation
           command: |
