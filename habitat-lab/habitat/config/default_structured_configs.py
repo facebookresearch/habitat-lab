@@ -136,6 +136,14 @@ class StopActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class VelocityStopActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the velocity stop action is an action that takes continuous space input.
+    """
+    type: str = "VelocityStopAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class EmptyActionConfig(ActionConfig):
     r"""
     In Navigation tasks only, the pass action. The robot will do nothing.
@@ -204,7 +212,6 @@ class VelocityControlActionConfig(ActionConfig):
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
     # Stop criteria
-    use_stop_heuristic: bool = False
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
 
@@ -1538,6 +1545,12 @@ cs.store(
     node=StopActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.velocity_stop",
+    group="habitat/task/actions",
+    name="velocity_stop",
+    node=VelocityStopActionConfig,
+)
+cs.store(
     package="habitat.task.actions.move_forward",
     group="habitat/task/actions",
     name="move_forward",
@@ -1608,12 +1621,6 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity",
     node=BaseVelocityActionConfig,
-)
-cs.store(
-    package="habitat.task.actions.velocity_control",
-    group="habitat/task/actions",
-    name="velocity_control",
-    node=VelocityControlActionConfig,
 )
 cs.store(
     package="habitat.task.actions.empty",
