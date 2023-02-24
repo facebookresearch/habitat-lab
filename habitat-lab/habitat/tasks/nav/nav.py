@@ -1349,7 +1349,7 @@ class VelocityAction(SimulatorTaskAction):
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
         # Update the state of the agent
-        agent_observations = self._sim.get_observations_at(
+        _ = self._sim.get_observations_at(
             position=final_position,
             rotation=final_rotation,
             keep_agent_at_new_pose=True,
@@ -1565,10 +1565,7 @@ class WaypointAction(VelocityAction):
                 linear_velocity, angular_velocity, time_step=self._time_step
             )
             xyt = self._agent_state_to_xyt(next_agent_state)
-            # Update the xyt of the controller
-            self.w2v_controller.set_goal(
-                xyt_waypoint, start=xyt, relative=True
-            )
+
             # Complete action early if commanded speed is low
             if (
                 abs(linear_velocity) < self._min_abs_lin_speed
@@ -1606,7 +1603,7 @@ class WaypointAction(VelocityAction):
             [
                 agent_state.position[0],
                 -agent_state.position[2],
-                agent_rotvec[1],
+                agent_rotvec[1] + np.pi,
             ]
         )
 
