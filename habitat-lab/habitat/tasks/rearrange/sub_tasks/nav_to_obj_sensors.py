@@ -150,10 +150,7 @@ class NavToObjReward(RearrangeReward):
         reward += self._dist_reward * dist_diff
         self._prev_dist = cur_dist
 
-        if (
-            self._should_reward_turn
-            and cur_dist < self._turn_reward_dist
-        ):
+        if self._should_reward_turn and cur_dist < self._turn_reward_dist:
             angle_dist = task.measurements.measures[
                 RotDistToGoal.cls_uuid
             ].get_metric()
@@ -282,14 +279,15 @@ class RotDistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         if len(task.nav_goal_pos.shape) == 2:
+            path = habitat_sim.MultiGoalShortestPath()
+            path.requested_start = self._sim.robot.base_pos
+            path.requested_ends = task.nav_goal_pos
+            self._sim.pathfinder.find_path(path)
+            assert (
+                path.closest_end_point_index != -1
+            ), f"None of the goals are reachable from current position for episode {episode.episode_id}"
             # RotDist to closest goal
-            closest_goal = np.argmin(
-                [
-                    self._sim.geodesic_distance(self._sim.robot.base_pos, goal)
-                    for goal in task.nav_goal_pos
-                ]
-            )
-            targ = task.nav_goal_pos[closest_goal]
+            targ = task.nav_goal_pos[path.closest_end_point_index]
         else:
             targ = task.nav_goal_pos
         robot = self._sim.robot

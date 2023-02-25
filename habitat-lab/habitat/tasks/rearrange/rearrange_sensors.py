@@ -73,7 +73,6 @@ class ObjectCategorySensor(Sensor):
         episode: ObjectRearrangeEpisode,
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
-
         category_name = getattr(episode, self._category_attribute)
         return np.array(
             [getattr(self._dataset, self._name_to_id_mapping)[category_name]],

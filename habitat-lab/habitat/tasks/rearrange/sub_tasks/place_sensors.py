@@ -42,14 +42,12 @@ class ObjAnywhereOnGoal(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-
         self._sim.perform_discrete_collision_detection()
         cps = self._sim.get_physics_contact_points()
 
         abs_obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
         for cp in cps:
             if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
-
                 if cp.contact_distance < -0.01:
                     self._metric = False
                 else:
@@ -228,7 +226,9 @@ class PlaceSuccess(Measure):
 
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
-        self._ee_resting_success_threshold = self._config.ee_resting_success_threshold
+        self._ee_resting_success_threshold = (
+            self._config.ee_resting_success_threshold
+        )
         self._place_anywhere = self._config.place_anywhere
         self._sim = sim
         super().__init__(**kwargs)
