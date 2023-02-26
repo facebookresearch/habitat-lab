@@ -60,8 +60,8 @@ class RearrangePickTaskV1(RearrangeTask):
 
         start_pos, angle_to_obj, was_fail = get_robot_spawns(
             targ_pos,
-            self._base_angle_noise,
-            self._spawn_max_dist_to_obj,
+            self._config.base_angle_noise,
+            self._config.spawn_max_dist_to_obj,
             sim,
             self._num_spawn_attempts,
             self._physics_stability_steps,

@@ -95,27 +95,15 @@ class Predicate:
     def is_true(self, sim_info: PddlSimInfo) -> bool:
         """
         Returns if the predicate is satisfied in the current simulator state.
-        Potentially returns the cached truth value of the predicate depending
-        on `sim_info`.
         """
-        self_repr = repr(self)
-        if (
-            sim_info.pred_truth_cache is not None
-            and self_repr in sim_info.pred_truth_cache
-        ):
-            # Return the cached value.
-            return sim_info.pred_truth_cache[self_repr]
 
-        # Recompute and potentially cache the result.
-        result = self._pddl_sim_state.is_true(sim_info)
-        if sim_info.pred_truth_cache is not None:
-            sim_info.pred_truth_cache[self_repr] = result
-        return result
+        return self._pddl_sim_state.is_true(sim_info)
 
     def set_state(self, sim_info: PddlSimInfo) -> None:
         """
         Sets the simulator state to satisfy the predicate.
         """
+
         return self._pddl_sim_state.set_state(sim_info)
 
     def clone(self):

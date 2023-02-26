@@ -6,35 +6,34 @@
 
 import itertools
 import os.path as osp
-import time
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    List,
-    Optional,
-    Tuple,
-    Union,
-    cast,
-)
+from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union, cast
 
 import yaml  # type: ignore[import]
+
 from habitat.config.default import get_full_habitat_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.pddl_action import (ActionTaskInfo,
-                                                            PddlAction)
+from habitat.tasks.rearrange.multi_task.pddl_action import (
+    ActionTaskInfo,
+    PddlAction,
+)
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
-    LogicalExpr, LogicalExprType, LogicalQuantifierType)
+    LogicalExpr,
+    LogicalExprType,
+    LogicalQuantifierType,
+)
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
-from habitat.tasks.rearrange.multi_task.pddl_sim_state import (ArtSampler,
-                                                               PddlRobotState,
-                                                               PddlSimState)
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import (ExprType,
-                                                               PddlEntity,
-                                                               PddlSimInfo,
-                                                               parse_func)
+from habitat.tasks.rearrange.multi_task.pddl_sim_state import (
+    ArtSampler,
+    PddlRobotState,
+    PddlSimState,
+)
+from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
+    ExprType,
+    PddlEntity,
+    PddlSimInfo,
+    parse_func,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
@@ -78,7 +77,9 @@ class PddlDomain:
 
         if not osp.isabs(domain_file_path):
             parent_dir = osp.dirname(__file__)
-            domain_file_path = osp.join(parent_dir, "domain_configs", domain_file_path)
+            domain_file_path = osp.join(
+                parent_dir, "domain_configs", domain_file_path
+            )
 
         if "." not in domain_file_path.split("/")[-1]:
             domain_file_path += ".yaml"
@@ -87,7 +88,6 @@ class PddlDomain:
             domain_def = yaml.safe_load(f)
 
         self._added_entities: Dict[str, PddlEntity] = {}
-        self._added_expr_types: Dict[str, ExprType] = {}
 
         self._parse_expr_types(domain_def)
         self._parse_constants(domain_def)
@@ -127,14 +127,12 @@ class PddlDomain:
                 self.parse_predicate(p, postcond_entities)
                 for p in action_d["postcondition"]
             ]
-            task_info_d = action_d.get("task_info", None)
-            task_info = None
-            if task_info_d is not None:
-                full_entities = {**self.all_entities, **name_to_param}
-                add_task_args = {
-                    k: full_entities[v]
-                    for k, v in task_info_d.get("add_task_args", {}).items()
-                }
+            task_info_d = action_d["task_info"]
+            full_entities = {**self.all_entities, **name_to_param}
+            add_task_args = {
+                k: full_entities[v]
+                for k, v in task_info_d.get("add_task_args", {}).items()
+            }
 
                 task_info = ActionTaskInfo(
                     task_config=self._config,
@@ -187,7 +185,6 @@ class PddlDomain:
             for k, v in robot_states.items():
                 use_k = all_entities[k]
 
-                # Sub in any referred entities.
                 v = {sub_k: fetch_entity(sub_v) for sub_k, sub_v in v.items()}
 
                 use_robot_states[use_k] = PddlRobotState(**v)
@@ -213,13 +210,14 @@ class PddlDomain:
 
     def register_type(self, expr_type: ExprType):
         """
-        Add a type to `self.expr_types`. Clears every episode
+        Add a type to `self.expr_types`.
         """
-        self._added_expr_types[expr_type.name] = expr_type
+
+        self._expr_types[expr_type.name] = expr_type
 
     def register_episode_entity(self, pddl_entity: PddlEntity) -> None:
         """
-        Add an entity to appear in `self.all_entities`. Clears every episode.
+        Add an entity to appear in `self.all_entities`.
         """
         self._added_entities[pddl_entity.name] = pddl_entity
 
@@ -228,31 +226,23 @@ class PddlDomain:
         Fetches the types from the domain into `self._expr_types`.
         """
 
-        # Always add the default `expr_types` from the simulator.
-        self._expr_types: Dict[str, ExprType] = {
-            obj_type.value: ExprType(obj_type.value, None)
-            for obj_type in SimulatorObjectType
-        }
-
+        self._expr_types: Dict[str, ExprType] = {}
+        in_parent = []
         for parent_type, sub_types in domain_def["types"].items():
             if parent_type not in self._expr_types:
                 self._expr_types[parent_type] = ExprType(parent_type, None)
+            in_parent.append(parent_type)
             for sub_type in sub_types:
-                if sub_type in self._expr_types:
-                    self._expr_types[sub_type].parent = self._expr_types[
-                        parent_type
-                    ]
-                else:
-                    self._expr_types[sub_type] = ExprType(
-                        sub_type, self._expr_types[parent_type]
-                    )
+                self._expr_types[sub_type] = ExprType(
+                    sub_type, self._expr_types[parent_type]
+                )
 
     @property
     def expr_types(self) -> Dict[str, ExprType]:
         """
         Mapping from the name of the type to the ExprType definition.
         """
-        return {**self._expr_types, **self._added_expr_types}
+        return self._expr_types
 
     def parse_predicate(
         self, pred_str: str, existing_entities: Dict[str, PddlEntity]
@@ -285,13 +275,8 @@ class PddlDomain:
         return pred
 
     def parse_only_logical_expr(
-        self, load_d: Dict[str, Any], existing_entities: Dict[str, PddlEntity]
+        self, load_d, existing_entities: Dict[str, PddlEntity]
     ) -> LogicalExpr:
-        """
-        Parse a dict config into a `LogicalExpr`. Will only populate the
-        `LogicalExpr` with the entities from `existing_entities`.
-        """
-
         ret = self._parse_expr(load_d, existing_entities)
         if not isinstance(ret, LogicalExpr):
             raise ValueError(f"Expected logical expr, got {ret}")
@@ -323,7 +308,8 @@ class PddlDomain:
 
         inputs = load_d.get("inputs", [])
         inputs = [
-            PddlEntity(x["name"], self.expr_types[x["expr_type"]]) for x in inputs
+            PddlEntity(x["name"], self.expr_types[x["expr_type"]])
+            for x in inputs
         ]
 
         sub_exprs = [
@@ -351,7 +337,6 @@ class PddlDomain:
         """
 
         self._added_entities = {}
-        self._added_expr_types = {}
 
         id_to_name = {}
         for k, i in sim.handle_to_object_id.items():
@@ -368,19 +353,19 @@ class PddlDomain:
             expr_types=self.expr_types,
             obj_ids=sim.handle_to_object_id,
             target_ids={
-                f"TARGET_{id_to_name[idx]}": idx for idx in sim.get_targets()[0]
+                f"TARGET_{id_to_name[idx]}": idx
+                for idx in sim.get_targets()[0]
             },
             art_handles={k.handle: i for i, k in enumerate(sim.art_objs)},
             marker_handles=sim.get_all_markers(),
             robot_ids={
-                f"robot_{robot_id}": robot_id for robot_id in range(sim.num_robots)
+                f"robot_{robot_id}": robot_id
+                for robot_id in range(sim.num_robots)
             },
             all_entities=self.all_entities,
             predicates=self.predicates,
-            num_spawn_attempts=self._num_spawn_attempts,
-            physics_stability_steps=self._physics_stability_steps,
-            receptacles=sim.receptacles,
-            recep_place_shrink_factor=self._recep_place_shrink_factor,
+            num_spawn_attempts=self._config.num_spawn_attempts,
+            physics_stability_steps=self._config.physics_stability_steps,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -436,7 +421,9 @@ class PddlDomain:
         all_entities = self.all_entities.values()
         true_preds: List[Predicate] = []
         for pred in self.predicates.values():
-            for entity_input in itertools.combinations(all_entities, pred.n_args):
+            for entity_input in itertools.combinations(
+                all_entities, pred.n_args
+            ):
                 if not pred.are_args_compatible(entity_input):
                     continue
 
@@ -457,7 +444,9 @@ class PddlDomain:
         all_entities = self.all_entities.values()
         poss_preds: List[Predicate] = []
         for pred in self.predicates.values():
-            for entity_input in itertools.combinations(all_entities, pred.n_args):
+            for entity_input in itertools.combinations(
+                all_entities, pred.n_args
+            ):
                 if not pred.are_args_compatible(entity_input):
                     continue
 
@@ -498,10 +487,13 @@ class PddlDomain:
             if action.name in restricted_action_names:
                 continue
 
-            for entity_input in itertools.combinations(all_entities, action.n_args):
+            for entity_input in itertools.combinations(
+                all_entities, action.n_args
+            ):
                 # Check that all the filter_entities are in entity_input
                 matches_filter = all(
-                    filter_entity in entity_input for filter_entity in filter_entities
+                    filter_entity in entity_input
+                    for filter_entity in filter_entities
                 )
                 if not matches_filter:
                     continue
@@ -538,6 +530,14 @@ class PddlDomain:
 
         return self.all_entities[k]
 
+    def find_entities(self, entity_type: ExprType) -> Iterable[PddlEntity]:
+        """
+        Returns the all entities that match the condition.
+        """
+        for entity in self.all_entities.values():
+            if entity.expr_type.is_subtype_of(entity_type):
+                yield entity
+
     def get_ordered_entities_list(self) -> List[PddlEntity]:
         """
         Gets all entities sorted alphabetically by name.
@@ -551,64 +551,6 @@ class PddlDomain:
     @property
     def all_entities(self) -> Dict[str, PddlEntity]:
         return {**self._constants, **self._added_entities}
-
-    def expand_quantifiers(
-        self, expr: LogicalExpr
-    ) -> Tuple[LogicalExpr, List[Dict[PddlEntity, PddlEntity]]]:
-        """
-        Expand out a logical expression that could involve a quantifier into
-        only logical expressions that don't involve any quantifier. Doesn't
-        require the simulation to be grounded and expands using the current
-        defined types.
-
-        :returns: The expanded expression and the list of substitutions in the
-            case of an EXISTS quantifier.
-        """
-
-        expr.sub_exprs = [
-            self.expand_quantifiers(subexpr)[0]
-            if isinstance(subexpr, LogicalExpr)
-            else subexpr
-            for subexpr in expr.sub_exprs
-        ]
-
-        if expr.quantifier == LogicalQuantifierType.FORALL:
-            combine_type = LogicalExprType.AND
-        elif expr.quantifier == LogicalQuantifierType.EXISTS:
-            combine_type = LogicalExprType.OR
-        elif expr.quantifier is None:
-            return expr, []
-        else:
-            raise ValueError(f"Unrecognized {expr.quantifier}")
-
-        t_start = time.time()
-        assigns: List[List[PddlEntity]] = [[]]
-        for expand_entity in expr.inputs:
-            entity_assigns = []
-            for e in self.all_entities.values():
-                if not e.expr_type.is_subtype_of(expand_entity.expr_type):
-                    continue
-                for cur_assign in assigns:
-                    if e in cur_assign:
-                        continue
-                    entity_assigns.append([*cur_assign, e])
-            assigns = entity_assigns
-        if self._sim_info is not None:
-            self.sim_info.sim.add_perf_timing("assigns_search", t_start)
-
-        t_start = time.time()
-        assigns = [dict(zip(expr.inputs, assign)) for assign in assigns]
-        expanded_exprs = []
-        for assign in assigns:
-            expanded_exprs.append(expr.sub_in_clone(assign))
-        if self._sim_info is not None:
-            self.sim_info.sim.add_perf_timing("expand_exprs_set", t_start)
-
-        inputs: List[PddlEntity] = []
-        return (
-            LogicalExpr(combine_type, expanded_exprs, inputs, None),
-            assigns,
-        )
 
 
 class PddlProblem(PddlDomain):
@@ -634,7 +576,8 @@ class PddlProblem(PddlDomain):
         }
 
         self.init = [
-            self.parse_predicate(p, self._objects) for p in problem_def.get("init", [])
+            self.parse_predicate(p, self._objects)
+            for p in problem_def.get("init", [])
         ]
         try:
             self.goal = self.parse_only_logical_expr(
@@ -642,11 +585,13 @@ class PddlProblem(PddlDomain):
             )
             self.goal, _ = self.expand_quantifiers(self.goal)
         except Exception as e:
-            raise ValueError(f"Could not parse goal cond {problem_def['goal']}") from e
+            raise ValueError(
+                f"Could not parse goal cond {problem_def['goal']}"
+            ) from e
         self.stage_goals = {}
         for stage_name, cond in problem_def["stage_goals"].items():
             expr = self.parse_only_logical_expr(cond, self.all_entities)
-            self.stage_goals[stage_name], _ = self.expand_quantifiers(expr)
+            self.stage_goals[stage_name] = self.expand_quantifiers(expr)
 
         self._solution: Optional[List[PddlAction]] = None
         if "solution" in problem_def:
@@ -686,7 +631,7 @@ class PddlProblem(PddlDomain):
 
     @property
     def all_entities(self) -> Dict[str, PddlEntity]:
-        return {**self._objects, **self._constants}
+        return {**self._objects, **super().all_entities}
 
     def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
         """
