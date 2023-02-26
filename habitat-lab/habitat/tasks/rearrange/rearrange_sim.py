@@ -62,6 +62,16 @@ if TYPE_CHECKING:
 
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
+    """
+    :property ref_handle_to_rigid_obj_id: maps a handle name to the relative position of an object in `self.scene_obj_ids`.
+    :property draw_bb_objs: Simulator object indices of objects to draw
+        bounding boxes around if debug render is enabled. By default, this is
+        populated with all target objects.
+    """
+
+    ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
+    draw_bb_objs: List[int]
+
     def __init__(self, config: "DictConfig"):
         if len(config.agents) > 1:
             with read_write(config):
@@ -111,7 +121,7 @@ class RearrangeSim(HabitatSim):
         self._viz_templates: Dict[str, Any] = {}
         self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
-        self._draw_bb_objs: List[int] = []
+        self.draw_bb_objs = []
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
@@ -356,7 +366,7 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-        self._draw_bb_objs = [
+        self.draw_bb_objs = [
             rom.get_object_by_handle(obj_handle).object_id
             for obj_handle in self._targets
         ]
@@ -592,14 +602,15 @@ class RearrangeSim(HabitatSim):
                 ro.collidable = False
 
             if should_add_objects:
-                self._scene_obj_ids.append(ro.object_id)
-            rel_idx = self._scene_obj_ids.index(ro.object_id)
-            self._handle_to_object_id[other_obj_handle] = rel_idx
+                self.scene_obj_ids.append(ro.object_id)
+            rel_idx = self.scene_obj_ids.index(ro.object_id)
+            self.ref_handle_to_rigid_obj_id[other_obj_handle] = rel_idx
 
-            if other_obj_handle in self._handle_to_goal_name:
-                ref_handle = self._handle_to_goal_name[other_obj_handle]
-                self._handle_to_object_id[ref_handle] = rel_idx
-
+            if other_obj_handle in self.instance_handle_to_ref_handle:
+                ref_handle = self.instance_handle_to_ref_handle[
+                    other_obj_handle
+                ]
+                self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
             obj_counts[obj_handle] += 1
 
         if new_scene:
@@ -660,7 +671,7 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
 
         # Enable BB render for the debug render call.
-        for obj_id in self._draw_bb_objs:
+        for obj_id in self.draw_bb_objs:
             self.set_object_bb_draw(True, obj_id)
 
         if self._debug_render_goal:
@@ -693,7 +704,7 @@ class RearrangeSim(HabitatSim):
 
                 self._viz_objs[target_handle] = ro
 
-    def capture_state(self, with_articulated_agent_js=False) -> Dict[str, Any]:
+    def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
         """
         Record and return a dict of state info.
 
@@ -822,7 +833,7 @@ class RearrangeSim(HabitatSim):
             self._try_acquire_context()
 
             # Disable BB drawing for observation render
-            for obj_id in self._draw_bb_objs:
+            for obj_id in self.draw_bb_objs:
                 self.set_object_bb_draw(False, obj_id)
 
             # Remove viz objects

@@ -396,7 +396,6 @@ def get_robot_spawns(
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
-    agent: Optional[MobileManipulator] = None,
 ) -> Tuple[np.ndarray, float, bool]:
     """
     Attempts to place the robot near the target position, facing towards it.

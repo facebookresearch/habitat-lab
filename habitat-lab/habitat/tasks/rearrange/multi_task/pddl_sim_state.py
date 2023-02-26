@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass, replace
+import dataclasses
 from typing import Any, Dict, Optional, cast
 
 import magnum as mn
@@ -18,10 +18,11 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
-
-CAB_TYPE = "cab_type"
-FRIDGE_TYPE = "fridge_type"
+from habitat.tasks.rearrange.utils import (
+    get_angle_to_pos,
+    get_robot_spawns,
+    rearrange_logger,
+)
 
 
 class ArtSampler:
@@ -49,47 +50,21 @@ class ArtSampler:
         return self.value
 
 
-@dataclass
+@dataclasses.dataclass
 class PddlRobotState:
     """
     Specifies the configuration of the robot.
 
-    :property place_at_pos_dist: If -1.0, this will place the robot as close
-        as possible to the entity. Otherwise, it will place the robot within X
-        meters of the entity. If unset, sets to task default.
-    :property base_angle_noise: How much noise to add to the robot base angle
-        when setting the robot base position. If not set, sets to task default.
-    :property place_at_angle_thresh: The required maximum angle to the target
-        entity in the robot's local frame. Specified in radains. If not specified,
-        no angle is considered.
-    :property physics_stability_steps: Number of physics checks for placing the
-        robot. If not set, sets to task default.
+    :property place_at_pos_thresh: If -1.0, this will place the robot as close
+    as possible to the entity. Otherwise, it will place the robot within X
+    meters of the entity.
     """
 
     holding: Optional[PddlEntity] = None
     should_drop: bool = False
     pos: Optional[Any] = None
-    place_at_pos_dist: Optional[float] = None
-    place_at_angle_thresh: Optional[float] = None
-    base_angle_noise: Optional[float] = None
-    physics_stability_steps: Optional[int] = None
-
-    def get_place_at_pos_dist(self, sim_info) -> float:
-        if self.place_at_pos_dist is None:
-            return sim_info.robot_at_thresh
-        else:
-            return self.place_at_pos_dist
-
-    def get_base_angle_noise(self, sim_info) -> float:
-        if self.base_angle_noise is None:
-            return 0.0
-        return self.base_angle_noise
-
-    def get_physics_stability_steps(self, sim_info) -> Optional[int]:
-        if self.physics_stability_steps is None:
-            return sim_info.physics_stability_steps
-        else:
-            return self.physics_stability_steps
+    place_at_pos_dist: float = -1.0
+    base_angle_noise: float = 0.0
 
     def sub_in(
         self, sub_dict: Dict[PddlEntity, PddlEntity]
@@ -110,7 +85,7 @@ class PddlRobotState:
         """
         Returns a shallow copy
         """
-        return replace(self)
+        return dataclasses.replace(self)
 
     def is_true(self, sim_info: PddlSimInfo, robot_entity: PddlEntity) -> bool:
         """
@@ -192,27 +167,31 @@ class PddlRobotState:
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
 
-            # Place some distance away from the object.
-            start_pos, start_rot, was_fail = get_robot_spawns(
-                target_position=targ_pos,
-                rotation_perturbation_noise=self.get_base_angle_noise(
-                    sim_info
-                ),
-                distance_threshold=self.get_place_at_pos_dist(sim_info),
-                sim=sim,
-                num_spawn_attempts=sim_info.num_spawn_attempts,
-                physics_stability_steps=self.get_physics_stability_steps(
-                    sim_info
-                ),
-                agent=agent_data.articulated_agent,
-            )
-            agent_data.articulated_agent.base_pos = start_pos
-            agent_data.articulated_agent.base_rot = start_rot
-            if was_fail:
-                rearrange_logger.error("Failed to place the robot.")
+            if self.place_at_pos_dist == -1.0:
+                if not sim_info.sim.is_point_within_bounds(targ_pos):
+                    rearrange_logger.error(
+                        f"Object {self.pos} is out of bounds but trying to set robot position"
+                    )
 
-            # We teleported the agent. We also need to teleport the object the agent was holding.
-            agent_data.grasp_mgr.update_object_to_grasp()
+                robo_pos = sim_info.sim.safe_snap_point(targ_pos)
+                robot = sim.get_robot_data(robot_id).robot
+                robot.base_pos = robo_pos
+                robot.base_rot = get_angle_to_pos(
+                    np.array(targ_pos - robo_pos)
+                )
+            else:
+                start_pos, start_rot, was_fail = get_robot_spawns(
+                    targ_pos,
+                    self.base_angle_noise,
+                    self.place_at_pos_dist,
+                    sim,
+                    sim_info.num_spawn_attempts,
+                    sim_info.physics_stability_steps,
+                )
+                sim.robot.base_pos = start_pos
+                sim.robot.base_rot = start_rot
+                if was_fail:
+                    rearrange_logger.error(f"Failed to place the robot.")
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")

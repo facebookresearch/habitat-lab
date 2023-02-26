@@ -151,6 +151,9 @@ class PddlSimInfo:
     def reset_pred_truth_cache(self):
         self.pred_truth_cache = {}
 
+    num_spawn_attempts: int
+    physics_stability_steps: int
+
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
 
