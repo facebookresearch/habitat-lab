@@ -169,7 +169,7 @@ class PddlRobotState:
                 sim.robot.base_pos = start_pos
                 sim.robot.base_rot = start_rot
                 if was_fail:
-                    rearrange_logger.error(f"Failed to place the robot.")
+                    rearrange_logger.error("Failed to place the robot.")
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")

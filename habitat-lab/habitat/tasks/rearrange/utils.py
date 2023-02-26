@@ -390,7 +390,7 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
 def get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
-    distance_threshold: int,
+    distance_threshold: float,
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
