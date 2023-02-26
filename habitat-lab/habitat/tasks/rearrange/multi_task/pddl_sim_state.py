@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
+import dataclasses
 from typing import Any, Dict, Optional, cast
 
 import magnum as mn
@@ -25,7 +25,11 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     robot_type,
 )
-from habitat.tasks.rearrange.utils import get_angle_to_pos, rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    get_angle_to_pos,
+    get_robot_spawns,
+    rearrange_logger,
+)
 
 
 class ArtSampler:
@@ -53,15 +57,21 @@ class ArtSampler:
         return self.value
 
 
-@dataclass
+@dataclasses.dataclass
 class PddlRobotState:
     """
-    Specifies the configuration of the robot. Only used as a data structure. Not used to set the simulator state.
+    Specifies the configuration of the robot.
+
+    :property place_at_pos_thresh: If -1.0, this will place the robot as close
+    as possible to the entity. Otherwise, it will place the robot within X
+    meters of the entity.
     """
 
     holding: Optional[PddlEntity] = None
     should_drop: bool = False
     pos: Optional[Any] = None
+    place_at_pos_dist: float = -1.0
+    base_angle_noise: float = 0.0
 
     def sub_in(
         self, sub_dict: Dict[PddlEntity, PddlEntity]
@@ -71,9 +81,10 @@ class PddlRobotState:
         return self
 
     def clone(self) -> "PddlRobotState":
-        return PddlRobotState(
-            holding=self.holding, should_drop=self.should_drop, pos=self.pos
-        )
+        """
+        Returns a shallow copy
+        """
+        return dataclasses.replace(self)
 
     def is_true(self, sim_info: PddlSimInfo, robot_entity: PddlEntity) -> bool:
         """
@@ -109,6 +120,9 @@ class PddlRobotState:
     def set_state(
         self, sim_info: PddlSimInfo, robot_entity: PddlEntity
     ) -> None:
+        """
+        Sets the robot state in the simulator.
+        """
         robot_id = cast(
             int, sim_info.search_for_entity(robot_entity, robot_type)
         )
@@ -130,15 +144,33 @@ class PddlRobotState:
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
-            if not sim_info.sim.is_point_within_bounds(targ_pos):
-                rearrange_logger.error(
-                    f"Object {self.pos} is out of bounds but trying to set robot position"
-                )
 
-            robo_pos = sim_info.sim.safe_snap_point(targ_pos)
-            robot = sim.get_robot_data(robot_id).robot
-            robot.base_pos = robo_pos
-            robot.base_rot = get_angle_to_pos(np.array(targ_pos - robo_pos))
+            if self.place_at_pos_dist == -1.0:
+                if not sim_info.sim.is_point_within_bounds(targ_pos):
+                    rearrange_logger.error(
+                        f"Object {self.pos} is out of bounds but trying to set robot position"
+                    )
+
+                robo_pos = sim_info.sim.safe_snap_point(targ_pos)
+                robot = sim.get_robot_data(robot_id).robot
+                robot.base_pos = robo_pos
+                robot.base_rot = get_angle_to_pos(
+                    np.array(targ_pos - robo_pos)
+                )
+            else:
+                start_pos, start_rot, was_fail = get_robot_spawns(
+                    targ_pos,
+                    self.base_angle_noise,
+                    self.place_at_pos_dist,
+                    sim,
+                    sim_info.num_spawn_attempts,
+                    sim_info.physics_stability_steps,
+                )
+                sim.robot.base_pos = start_pos
+                sim.robot.base_rot = start_rot
+                if was_fail:
+                    rearrange_logger.error(f"Failed to place the robot.")
+
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")
 

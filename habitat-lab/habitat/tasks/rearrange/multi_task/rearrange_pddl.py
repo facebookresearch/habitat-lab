@@ -140,6 +140,9 @@ class PddlSimInfo:
     predicates: Dict[str, Any]
     all_entities: Dict[str, Any]
 
+    num_spawn_attempts: int
+    physics_stability_steps: int
+
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
 

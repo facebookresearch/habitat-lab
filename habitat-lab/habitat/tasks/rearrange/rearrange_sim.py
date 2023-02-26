@@ -54,9 +54,13 @@ if TYPE_CHECKING:
 class RearrangeSim(HabitatSim):
     """
     :property ref_handle_to_rigid_obj_id: maps a handle name to the relative position of an object in `self.scene_obj_ids`.
+    :property draw_bb_objs: Simulator object indices of objects to draw
+        bounding boxes around if debug render is enabled. By default, this is
+        populated with all target objects.
     """
 
     ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
+    draw_bb_objs: List[int]
 
     def __init__(self, config: "DictConfig"):
         if len(config.agents) > 1:
@@ -102,6 +106,7 @@ class RearrangeSim(HabitatSim):
         self._viz_templates: Dict[str, Any] = {}
         self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
+        self.draw_bb_objs = []
 
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing (used in the sense phase of the sense-plan act
@@ -276,6 +281,11 @@ class RearrangeSim(HabitatSim):
                 for t_handle, _ in self._targets.items()
             ]
         )
+
+        self.draw_bb_objs = [
+            rom.get_object_by_handle(obj_handle).object_id
+            for obj_handle in self._targets
+        ]
 
         if self.first_setup:
             self.first_setup = False
@@ -467,12 +477,13 @@ class RearrangeSim(HabitatSim):
 
             if should_add_objects:
                 self.scene_obj_ids.append(ro.object_id)
+            rel_idx = self.scene_obj_ids.index(ro.object_id)
+            self.ref_handle_to_rigid_obj_id[other_obj_handle] = rel_idx
 
             if other_obj_handle in self.instance_handle_to_ref_handle:
                 ref_handle = self.instance_handle_to_ref_handle[
                     other_obj_handle
                 ]
-                rel_idx = self.scene_obj_ids.index(ro.object_id)
                 self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
             obj_counts[obj_handle] += 1
 
@@ -504,9 +515,14 @@ class RearrangeSim(HabitatSim):
 
         rom = self.get_rigid_object_manager()
         obj_attr_mgr = self.get_object_template_manager()
-        for target_handle, transform in self._targets.items():
-            # Visualize the goal of the object
-            if self._debug_render_goal:
+
+        # Enable BB render for the debug render call.
+        for obj_id in self.draw_bb_objs:
+            self.set_object_bb_draw(True, obj_id)
+
+        if self._debug_render_goal:
+            for target_handle, transform in self._targets.items():
+                # Visualize the goal of the object
                 new_target_handle = (
                     target_handle.split("_:")[0] + ".object_config.json"
                 )
@@ -533,11 +549,6 @@ class RearrangeSim(HabitatSim):
                 )
 
                 self._viz_objs[target_handle] = ro
-
-            # Draw a bounding box around the target object
-            self.set_object_bb_draw(
-                True, rom.get_object_by_handle(target_handle).object_id
-            )
 
     def capture_state(self, with_robot_js=False) -> Dict[str, Any]:
         """
@@ -655,11 +666,10 @@ class RearrangeSim(HabitatSim):
                 self.robots_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
-            # Don't draw bounding boxes over target objects.
-            for obj_handle, _ in self._targets.items():
-                self.set_object_bb_draw(
-                    False, rom.get_object_by_handle(obj_handle).object_id
-                )
+
+            # Disable BB drawing for observation render
+            for obj_id in self.draw_bb_objs:
+                self.set_object_bb_draw(False, obj_id)
 
             # Remove viz objects
             for obj in self._viz_objs.values():
