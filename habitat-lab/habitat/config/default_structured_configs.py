@@ -227,16 +227,20 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Action space range
     waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
     waypoint_ang_range: List[float] = [-np.pi, np.pi]  # radians
+    delta_camera_pitch_ang_range: List[float] = [-0.2, 0.2]  # radians
     wait_duration_range: List[float] = [0.0, 10.0]  # seconds
     yaw_input_in_degrees: bool = False
     # Early stopping criteria
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
+    min_abs_camera_pitch_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
+    w_camera_pitch_max: float = 0.45
     acc_lin: float = 0.2
     acc_ang: float = 0.6
+    acc_camera_pitch_ang: float = 0.6
     max_heading_ang: float = np.pi / 4  # rad
     lin_error_tol: float = 0.01
     ang_error_tol: float = 0.025

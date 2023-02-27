@@ -31,7 +31,7 @@ from habitat.core.simulator import (
     ShortestPathPoint,
     Simulator,
 )
-from habitat.core.spaces import ActionSpace, EmptySpace
+from habitat.core.spaces import EmptySpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
@@ -1530,10 +1530,18 @@ class WaypointAction(VelocityAction):
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range
         self._waypoint_ang_range = self._config.waypoint_ang_range
+        self._delta_camera_pitch_ang_range = (
+            self._config.delta_camera_pitch_ang_range
+        )
         self._wait_duration_range = self._config.wait_duration_range
         self._yaw_input_in_degrees = self._config.yaw_input_in_degrees
         self._min_abs_lin_speed = self._config.min_abs_lin_speed
         self._min_abs_ang_speed = self._config.min_abs_ang_speed
+        self._min_abs_camera_pitch_ang_speed = (
+            self._config.min_abs_camera_pitch_ang_speed
+        )
+        self._w_camera_pitch_max = self._config.w_camera_pitch_max
+        self._acc_camera_pitch_ang = self._config.acc_camera_pitch_ang
 
         if self._yaw_input_in_degrees:
             self._waypoint_ang_range = [
@@ -1548,6 +1556,11 @@ class WaypointAction(VelocityAction):
                     "xyt_waypoint": spaces.Box(
                         low=-np.ones(3),
                         high=np.ones(3),
+                        dtype=np.float32,
+                    ),
+                    "delta_camera_pitch_angle": spaces.Box(
+                        low=-np.array([1]),
+                        high=np.array([1]),
                         dtype=np.float32,
                     ),
                     "max_duration": spaces.Box(
@@ -1575,6 +1588,11 @@ class WaypointAction(VelocityAction):
                         high=np.array(hi),
                         dtype=np.float32,
                     ),
+                    "delta_camera_pitch_angle": spaces.Box(
+                        low=np.array([self._delta_camera_pitch_ang_range[0]]),
+                        high=np.array([self._delta_camera_pitch_ang_range[1]]),
+                        dtype=np.float32,
+                    ),
                     "max_duration": spaces.Box(
                         low=np.array([self._wait_duration_range[0]]),
                         high=np.array([self._wait_duration_range[1]]),
@@ -1587,23 +1605,33 @@ class WaypointAction(VelocityAction):
         self,
         task: EmbodiedTask,
         xyt_waypoint: List[float],
+        delta_camera_pitch_angle: float,
         max_duration: float,
         *args,
         **kwargs,
     ):
         # Preprocess waypoint input
         assert len(xyt_waypoint) == 3, "Waypoint vector must be of length 3."
-        xyt_waypoint_processed, max_duration_processed = self._preprocess_action(xyt_waypoint, max_duration)
+        (
+            xyt_waypoint_processed,
+            delta_camera_pitch_angle_processed,
+            max_duration_processed,
+        ) = self._preprocess_action(
+            xyt_waypoint, delta_camera_pitch_angle, max_duration
+        )
 
         # Execute waypoint
         return self._step_rel_waypoint(
             xyt_waypoint_processed,
+            delta_camera_pitch_angle_processed,
             max_duration_processed,
             *args,
             **kwargs,
         )
 
-    def _preprocess_action(self, xyt_waypoint, max_duration):
+    def _preprocess_action(
+        self, xyt_waypoint, delta_camera_pitch_angle, max_duration
+    ):
         """Perform scaling and clamping of input"""
         # Scale
         if self._enable_scale_convert:
@@ -1631,6 +1659,14 @@ class WaypointAction(VelocityAction):
                     self._waypoint_ang_range[1],
                 ],
             )
+            delta_camera_pitch_angle = self._scale_inputs(
+                delta_camera_pitch_angle,
+                [0, 1],
+                [
+                    self._delta_camera_pitch_ang_range[0],
+                    self._delta_camera_pitch_ang_range[1],
+                ],
+            )
             max_duration = self._scale_inputs(
                 max_duration,
                 [0, 1],
@@ -1640,7 +1676,6 @@ class WaypointAction(VelocityAction):
                 ],
             )
 
-
         # Clamp
         xyt_waypoint_clamped = np.array(
             [
@@ -1649,16 +1684,30 @@ class WaypointAction(VelocityAction):
                 np.clip(xyt_waypoint[2], *self._waypoint_ang_range),
             ]
         )
-        max_duration_clamped = np.clip(max_duration, *self._wait_duration_range)
+        delta_camera_pitch_angle_clamped = np.clip(
+            delta_camera_pitch_angle, *self._delta_camera_pitch_ang_range
+        )
+        max_duration_clamped = np.clip(
+            max_duration, *self._wait_duration_range
+        )
 
         # Convert deg to rad
         if self._yaw_input_in_degrees:
             xyt_waypoint_clamped[2] = np.deg2rad(xyt_waypoint_clamped[2])
 
-        return xyt_waypoint_clamped, max_duration_clamped
+        return (
+            xyt_waypoint_clamped,
+            delta_camera_pitch_angle_clamped,
+            max_duration_clamped,
+        )
 
     def _step_rel_waypoint(
-        self, xyt_waypoint, max_wait_duration, *args, **kwargs
+        self,
+        xyt_waypoint,
+        delta_camera_pitch_angle,
+        max_wait_duration,
+        *args,
+        **kwargs,
     ):
         """Use the waypoint-to-velocity controller to navigate to the waypoint"""
 
@@ -1670,6 +1719,11 @@ class WaypointAction(VelocityAction):
 
         xyt = xyt_init.copy()
 
+        # Get the current camera angle
+        goal_camera_pitch_ang = (
+            self.camera_pitch_ang + delta_camera_pitch_angle
+        )
+
         # Forward simulate
         max_duration = max(
             max_wait_duration, self._time_step
@@ -1680,7 +1734,21 @@ class WaypointAction(VelocityAction):
                 xyt
             )
 
+            # Query velocity controller for control input of pitch of camera
+            camera_pitch_angular_err = (
+                goal_camera_pitch_ang - self.camera_pitch_ang
+            )
+            camera_pitch_angular_velocity = self.w2v_controller.controller.control._velocity_feedback_control(
+                camera_pitch_angular_err,
+                self._acc_camera_pitch_ang,
+                self._w_camera_pitch_max,
+            )
+
             # Apply action and step simulation
+            next_agent_state = self._apply_camera_pitch_velocity_action(
+                camera_pitch_angular_velocity,
+                time_step=self._time_step,
+            )
             next_agent_state = self._apply_velocity_action(
                 linear_velocity, angular_velocity, time_step=self._time_step
             )
