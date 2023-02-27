@@ -47,7 +47,7 @@ class KinematicHumanoid(MobileManipulator):
             arm_mtr_pos_gain=0.3,
             arm_mtr_vel_gain=0.3,
             arm_mtr_max_impulse=10.0,
-            base_offset=mn.Vector3(0, 1.1, 0),
+            base_offset=mn.Vector3(0, -0.9, 0),
             base_link_names={
                 "base_link",
             },
