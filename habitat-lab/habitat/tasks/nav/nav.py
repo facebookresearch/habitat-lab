@@ -1553,7 +1553,10 @@ class WaypointAction(VelocityAction):
         xyt = xyt_init.copy()
 
         # Forward simulate
-        for _t in np.arange(0.0, max_wait_duration, self._time_step):
+        max_duration = max(
+            max_wait_duration, self._time_step
+        )  # always run for 1 step
+        for _t in np.arange(0.0, max_duration, self._time_step):
             # Query velocity controller for control input
             linear_velocity, angular_velocity = self.w2v_controller.forward(
                 xyt
