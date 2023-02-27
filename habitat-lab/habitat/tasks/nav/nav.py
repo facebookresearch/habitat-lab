@@ -1243,8 +1243,8 @@ class VelocityAction(SimulatorTaskAction):
         self,
         *args: Any,
         task: EmbodiedTask,
-        linear_velocity: float = None,
-        angular_velocity: float = None,
+        linear_velocity: float,
+        angular_velocity: float,
         time_step: Optional[float] = None,
         **kwargs: Any,
     ):
@@ -1435,7 +1435,7 @@ class WaypointAction(VelocityAction):
     @property
     def action_space(self):
         if self._enable_scale_convert:
-            return ActionSpace(
+            return spaces.Dict(
                 {
                     "xyt_waypoint": spaces.Box(
                         low=-np.ones(3),
@@ -1443,8 +1443,8 @@ class WaypointAction(VelocityAction):
                         dtype=np.float32,
                     ),
                     "max_duration": spaces.Box(
-                        low=np.array([self._wait_duration_range[0]]),
-                        high=np.array([self._wait_duration_range[1]]),
+                        low=np.array([0]),
+                        high=np.array([1]),
                         dtype=np.float32,
                     ),
                 }
@@ -1460,7 +1460,7 @@ class WaypointAction(VelocityAction):
                 self._waypoint_lin_range[1],
                 self._waypoint_ang_range[1],
             ]
-            return ActionSpace(
+            return spaces.Dict(
                 {
                     "xyt_waypoint": spaces.Box(
                         low=np.array(lo),
@@ -1479,23 +1479,23 @@ class WaypointAction(VelocityAction):
         self,
         task: EmbodiedTask,
         xyt_waypoint: List[float],
-        wait_duration: float,
+        max_duration: float,
         *args,
         **kwargs,
     ):
         # Preprocess waypoint input
         assert len(xyt_waypoint) == 3, "Waypoint vector must be of length 3."
-        xyt_waypoint_processed = self._preprocess_action(xyt_waypoint)
+        xyt_waypoint_processed, max_duration_processed = self._preprocess_action(xyt_waypoint, max_duration)
 
         # Execute waypoint
         return self._step_rel_waypoint(
             xyt_waypoint_processed,
-            wait_duration,
+            max_duration_processed,
             *args,
             **kwargs,
         )
 
-    def _preprocess_action(self, xyt_waypoint):
+    def _preprocess_action(self, xyt_waypoint, max_duration):
         """Perform scaling and clamping of input"""
         # Scale
         if self._enable_scale_convert:
@@ -1523,6 +1523,15 @@ class WaypointAction(VelocityAction):
                     self._waypoint_ang_range[1],
                 ],
             )
+            max_duration = self._scale_inputs(
+                max_duration,
+                [0, 1],
+                [
+                    self._wait_duration_range[0],
+                    self._wait_duration_range[1],
+                ],
+            )
+
 
         # Clamp
         xyt_waypoint_clamped = np.array(
@@ -1532,12 +1541,13 @@ class WaypointAction(VelocityAction):
                 np.clip(xyt_waypoint[2], *self._waypoint_ang_range),
             ]
         )
+        max_duration_clamped = np.clip(max_duration, *self._wait_duration_range)
 
         # Convert deg to rad
         if self._yaw_input_in_degrees:
             xyt_waypoint_clamped[2] = np.deg2rad(xyt_waypoint_clamped[2])
 
-        return xyt_waypoint_clamped
+        return xyt_waypoint_clamped, max_duration_clamped
 
     def _step_rel_waypoint(
         self, xyt_waypoint, max_wait_duration, *args, **kwargs

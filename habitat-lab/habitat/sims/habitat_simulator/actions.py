@@ -203,4 +203,19 @@ class HabitatSimVelocityCtrlActionSpaceConfiguration(ActionSpaceConfiguration):
             HabitatSimActions.VELOCITY_CTRL: habitat_sim.ActionSpec(
                 "velocity_control"
             ),
+            # The perfect actions are needed for the oracle planner
+            "_forward": habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.config.forward_step_size
+                ),
+            ),
+            "_left": habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
+            ),
+            "_right": habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
+            ),
         }
