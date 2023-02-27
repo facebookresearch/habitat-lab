@@ -150,7 +150,9 @@ class ArmRelPosAction(RobotAction):
         delta_pos *= self._delta_pos_limit
         # The actual joint positions
         self._sim: RearrangeSim
-        self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
+        self.cur_articulated_agent.arm_motor_pos = (
+            delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
 
 
 @registry.register_task_action
@@ -181,9 +183,9 @@ class ArmRelPosKinematicAction(RobotAction):
         delta_pos *= self._delta_pos_limit
         self._sim: RearrangeSim
 
-        set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos
-        self.cur_robot.arm_joint_pos = set_arm_pos
-        self.cur_robot.fix_joint_values = set_arm_pos
+        set_arm_pos = delta_pos + self.cur_articulated_agent.arm_joint_pos
+        self.cur_articulated_agent.arm_joint_pos = set_arm_pos
+        self.cur_articulated_agent.fix_joint_values = set_arm_pos
 
 
 @registry.register_task_action
@@ -206,7 +208,7 @@ class ArmAbsPosAction(RobotAction):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
         self._sim: RearrangeSim
-        self.cur_robot.arm_motor_pos = set_pos
+        self.cur_articulated_agent.arm_motor_pos = set_pos
 
 
 @registry.register_task_action
@@ -229,7 +231,7 @@ class ArmAbsPosKinematicAction(RobotAction):
         # No clipping because the arm is being set to exactly where it needs to
         # go.
         self._sim: RearrangeSim
-        self.cur_robot.arm_joint_pos = set_pos
+        self.cur_articulated_agent.arm_joint_pos = set_pos
 
 
 @registry.register_task_action
@@ -280,8 +282,10 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
             tgt_idx += 1
             src_idx += 1
 
-        min_limit, max_limit = self.cur_robot.arm_joint_limits
-        set_arm_pos = expanded_delta_pos + self.cur_robot.arm_motor_pos
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        set_arm_pos = (
+            expanded_delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
         # Perform roll over to the joints so that the user cannot control
         # the motor 2, 3, 4 for the arm.
         if expanded_delta_pos[0] >= 0:
@@ -296,13 +300,13 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
                     set_arm_pos[i] = min_limit[i]
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
 
-        self.cur_robot.arm_motor_pos = set_arm_pos
+        self.cur_articulated_agent.arm_motor_pos = set_arm_pos
 
 
 @registry.register_task_action
 class BaseVelAction(RobotAction):
     """
-    The robot base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
+    The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
     Optionally cull states with active collisions if config parameter `allow_dyn_slide` is True
     """
@@ -332,24 +336,24 @@ class BaseVelAction(RobotAction):
             }
         )
 
-    def _capture_robot_state(self):
+    def _capture_articulated_agent_state(self):
         return {
-            "forces": self.cur_robot.sim_obj.joint_forces,
-            "vel": self.cur_robot.sim_obj.joint_velocities,
-            "pos": self.cur_robot.sim_obj.joint_positions,
+            "forces": self.cur_articulated_agent.sim_obj.joint_forces,
+            "vel": self.cur_articulated_agent.sim_obj.joint_velocities,
+            "pos": self.cur_articulated_agent.sim_obj.joint_positions,
         }
 
-    def _set_robot_state(self, set_dat):
-        self.cur_robot.sim_obj.joint_positions = set_dat["forces"]
-        self.cur_robot.sim_obj.joint_velocities = set_dat["vel"]
-        self.cur_robot.sim_obj.joint_forces = set_dat["pos"]
+    def _set_articulated_agent_state(self, set_dat):
+        self.cur_articulated_agent.sim_obj.joint_positions = set_dat["forces"]
+        self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
+        self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
 
     def update_base(self):
         ctrl_freq = self._sim.ctrl_freq
 
-        before_trans_state = self._capture_robot_state()
+        before_trans_state = self._capture_articulated_agent_state()
 
-        trans = self.cur_robot.sim_obj.transformation
+        trans = self.cur_articulated_agent.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
@@ -364,10 +368,10 @@ class BaseVelAction(RobotAction):
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
-        self.cur_robot.sim_obj.transformation = target_trans
+        self.cur_articulated_agent.sim_obj.transformation = target_trans
 
         if not self._allow_dyn_slide:
-            # Check if in the new robot state the arm collides with anything.
+            # Check if in the new articulated_agent state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
             colls = self._sim.get_collisions()
@@ -376,8 +380,8 @@ class BaseVelAction(RobotAction):
             )
             if did_coll:
                 # Don't allow the step, revert back.
-                self._set_robot_state(before_trans_state)
-                self.cur_robot.sim_obj.transformation = trans
+                self._set_articulated_agent_state(before_trans_state)
+                self.cur_articulated_agent.sim_obj.transformation = trans
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
             # object.
@@ -404,10 +408,11 @@ class BaseVelAction(RobotAction):
 
 @registry.register_task_action
 class ArmEEAction(RobotAction):
-    """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the robot's arm."""
+    """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the articulated_agent's arm."""
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         self.ee_target: Optional[np.ndarray] = None
+        self.ee_index: Optional[int] = 0
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._render_ee_target = self._config.get("render_ee_target", False)
@@ -416,7 +421,7 @@ class ArmEEAction(RobotAction):
     def reset(self, *args, **kwargs):
         super().reset()
         cur_ee = self._ik_helper.calc_fk(
-            np.array(self._sim.robot.arm_joint_pos)
+            np.array(self._sim.articulated_agent.arm_joint_pos)
         )
 
         self.ee_target = cur_ee
@@ -428,8 +433,12 @@ class ArmEEAction(RobotAction):
     def apply_ee_constraints(self):
         self.ee_target = np.clip(
             self.ee_target,
-            self._sim.robot.params.ee_constraint[:, 0],
-            self._sim.robot.params.ee_constraint[:, 1],
+            self._sim.articulated_agent.params.ee_constraint[
+                self.ee_index, :, 0
+            ],
+            self._sim.articulated_agent.params.ee_constraint[
+                self.ee_index, :, 1
+            ],
         )
 
     def set_desired_ee_pos(self, ee_pos: np.ndarray) -> None:
@@ -437,14 +446,14 @@ class ArmEEAction(RobotAction):
 
         self.apply_ee_constraints()
 
-        joint_pos = np.array(self._sim.robot.arm_joint_pos)
+        joint_pos = np.array(self._sim.articulated_agent.arm_joint_pos)
         joint_vel = np.zeros(joint_pos.shape)
 
         self._ik_helper.set_arm_state(joint_pos, joint_vel)
 
         des_joint_pos = self._ik_helper.calc_ik(self.ee_target)
         des_joint_pos = list(des_joint_pos)
-        self._sim.robot.arm_motor_pos = des_joint_pos
+        self._sim.articulated_agent.arm_motor_pos = des_joint_pos
 
     def step(self, ee_pos, **kwargs):
         ee_pos = np.clip(ee_pos, -1, 1)
@@ -452,7 +461,7 @@ class ArmEEAction(RobotAction):
         self.set_desired_ee_pos(ee_pos)
 
         if self._render_ee_target:
-            global_pos = self._sim.robot.base_transformation.transform_point(
+            global_pos = self._sim.articulated_agent.base_transformation.transform_point(
                 self.ee_target
             )
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(

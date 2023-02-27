@@ -19,13 +19,13 @@ from habitat.tasks.rearrange.utils import rearrange_logger
 @dataclass
 class NavToInfo:
     """
-    :property nav_goal_pos: Where the robot should navigate to. This is likely
+    :property nav_goal_pos: Where the articulated_agent should navigate to. This is likely
     on a receptacle and not a navigable position.
     """
 
     nav_goal_pos: np.ndarray
-    robot_start_pos: np.ndarray
-    robot_start_angle: float
+    articulated_agent_start_pos: np.ndarray
+    articulated_agent_start_angle: float
     start_hold_obj_idx: Optional[int]
 
 
@@ -42,7 +42,7 @@ class DynNavRLEnv(RearrangeTask):
             config=config,
             *args,
             dataset=dataset,
-            should_place_robot=False,
+            should_place_articulated_agent=False,
             **kwargs,
         )
         self.force_obj_to_idx = None
@@ -61,7 +61,7 @@ class DynNavRLEnv(RearrangeTask):
             self.force_recep_to_name = kwargs["marker"]
 
     def _generate_snap_to_obj(self) -> int:
-        # Snap the target object to the robot hand.
+        # Snap the target object to the articulated_agent hand.
         target_idxs, _ = self._sim.get_targets()
         return self._sim.scene_obj_ids[target_idxs[0]]
 
@@ -97,14 +97,17 @@ class DynNavRLEnv(RearrangeTask):
                 > self._config.min_start_distance
             )
 
-        robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
+        (
+            articulated_agent_pos,
+            articulated_agent_angle,
+        ) = self._sim.set_articulated_agent_base_to_random_point(
             filter_func=filter_func
         )
 
         return NavToInfo(
             nav_goal_pos=nav_to_pos,
-            robot_start_pos=robot_pos,
-            robot_start_angle=robot_angle,
+            articulated_agent_start_pos=articulated_agent_pos,
+            articulated_agent_start_angle=articulated_agent_angle,
             start_hold_obj_idx=start_hold_obj_idx,
         )
 
@@ -115,8 +118,12 @@ class DynNavRLEnv(RearrangeTask):
             episode, force_idx=self.force_obj_to_idx
         )
 
-        self._sim.robot.base_pos = self._nav_to_info.robot_start_pos
-        self._sim.robot.base_rot = self._nav_to_info.robot_start_angle
+        self._sim.articulated_agent.base_pos = (
+            self._nav_to_info.articulated_agent_start_pos
+        )
+        self._sim.articulated_agent.base_rot = (
+            self._nav_to_info.articulated_agent_start_angle
+        )
 
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
@@ -137,5 +144,5 @@ class DynNavRLEnv(RearrangeTask):
                 self._sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
-        self._sim.maybe_update_robot()
+        self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)

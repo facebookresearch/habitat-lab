@@ -26,7 +26,7 @@ class RearrangePickTaskV1(RearrangeTask):
             config=config,
             *args,
             dataset=dataset,
-            should_place_robot=False,
+            should_place_articulated_agent=False,
             **kwargs,
         )
 
@@ -102,12 +102,12 @@ class RearrangePickTaskV1(RearrangeTask):
         sel_idx = self._sample_idx(sim)
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        sim.robot.base_pos = start_pos
-        sim.robot.base_rot = start_rot
+        sim.articulated_agent.base_pos = start_pos
+        sim.articulated_agent.base_rot = start_rot
 
         self._targ_idx = sel_idx
 
         if fetch_observations:
-            self._sim.maybe_update_robot()
+            self._sim.maybe_update_articulated_agent()
             return self._get_observations(episode)
         return None

@@ -9,7 +9,6 @@ defaults:
 
 habitat:
   gym:
-    auto_name: OpenFridge
     obs_keys:
       - robot_head_depth
       - joint

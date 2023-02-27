@@ -23,11 +23,19 @@ def extract_scalars_from_info(info: Dict[str, Any]) -> Dict[str, float]:
     for k, v in info.items():
         if not isinstance(k, str) or k in NON_SCALAR_METRICS:
             continue
-        if k.split(".")[0] in NON_SCALAR_METRICS:
-            continue
+
+        if isinstance(v, dict):
+            result.update(
+                {
+                    k + "." + subk: subv
+                    for subk, subv in extract_scalars_from_info(v).items()
+                    if isinstance(subk, str)
+                    and k + "." + subk not in NON_SCALAR_METRICS
+                }
+            )
         # Things that are scalar-like will have an np.size of 1.
         # Strings also have an np.size of 1, so explicitly ban those
-        if np.size(v) == 1 and not isinstance(v, str):
+        elif np.size(v) == 1 and not isinstance(v, str):
             result[k] = float(v)
 
     return result
@@ -41,7 +49,7 @@ def extract_scalars_from_infos(
     all non-scalar metrics.
 
         Args:
-            info: A list of gym.Env type info dict
+            infos: A list of gym.Env type info dict
 
         Returns:
             dict of list of scalar values

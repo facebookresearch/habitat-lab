@@ -37,7 +37,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()
-        ee_pos = self.cur_robot.ee_transform.translation
+        ee_pos = self.cur_articulated_agent.ee_transform().translation
         # Get objects we are close to.
         if len(scene_obj_pos) != 0:
             # Get the target the EE is closest to.
@@ -73,7 +73,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
             if to_target < self._config.grasp_thresh_dist:
-                self.cur_robot.open_gripper()
+                self.cur_articulated_agent.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
@@ -100,8 +100,14 @@ class SuctionGraspAction(MagicGraspAction):
         match_coll = None
         contacts = self._sim.get_physics_contact_points()
 
-        robot_id = self._sim.robot.sim_obj.object_id
-        all_gripper_links = list(self._sim.robot.params.gripper_joints)
+        # TODO: the two arguments below should be part of args
+        ee_index = 0
+        index_grasp_manager = 0
+
+        robot_id = self._sim.articulated_agent.sim_obj.object_id
+        all_gripper_links = list(
+            self._sim.articulated_agent.params.gripper_joints
+        )
         robot_contacts = [
             c
             for c in contacts
@@ -126,12 +132,12 @@ class SuctionGraspAction(MagicGraspAction):
             rom = self._sim.get_rigid_object_manager()
             ro = rom.get_object_by_id(attempt_snap_entity)
 
-            ee_T = self.cur_robot.ee_transform
+            ee_T = self.cur_articulated_agent.ee_transform()
             obj_in_ee_T = ee_T.inverted() @ ro.transformation
 
             # here we need the link T, not the EE T for the constraint frame
-            ee_link_T = self.cur_robot.sim_obj.get_link_scene_node(
-                self.cur_robot.params.ee_link
+            ee_link_T = self.cur_articulated_agent.sim_obj.get_link_scene_node(
+                self.cur_articulated_agent.params.ee_links[ee_index]
             ).absolute_transformation()
 
             self._sim.grasp_mgr.snap_to_obj(
@@ -157,4 +163,6 @@ class SuctionGraspAction(MagicGraspAction):
                 attempt_snap_entity = marker_name
 
         if attempt_snap_entity is not None:
-            self._sim.grasp_mgr.snap_to_marker(str(attempt_snap_entity))
+            self._sim.grasp_mgrs[index_grasp_manager].snap_to_marker(
+                str(attempt_snap_entity)
+            )

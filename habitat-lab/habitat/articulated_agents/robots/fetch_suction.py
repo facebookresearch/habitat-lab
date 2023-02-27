@@ -4,7 +4,7 @@
 
 import numpy as np
 
-from habitat.robots import FetchRobot
+from habitat.articulated_agents.robots import FetchRobot
 
 
 class FetchSuctionRobot(FetchRobot):
@@ -15,5 +15,5 @@ class FetchSuctionRobot(FetchRobot):
         params.gripper_open_state = np.array([0.0], dtype=np.float32)
         params.gripper_joints = [23]
 
-        params.ee_link = 23
+        params.ee_links = [23]
         return params

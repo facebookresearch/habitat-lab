@@ -402,12 +402,12 @@ class RLEnv(gym.Env):
         self._env.episodes = episodes
 
     def current_episode(self, all_info: bool = False) -> BaseEpisode:
-        """
-        Returns the current episode of the environment.
-        :param all_info: If true, all of the information in the episode
-        will be provided. Otherwise, only episode_id and scene_id will
-        be included
-        :return: The BaseEpisode object for the current episode
+        r"""Returns the current episode of the environment.
+
+        :param all_info: If true, all the information in the episode
+                         will be provided. Otherwise, only episode_id
+                         and scene_id will be included.
+        :return: The BaseEpisode object for the current episode.
         """
         if all_info:
             return self._env.current_episode
@@ -418,8 +418,14 @@ class RLEnv(gym.Env):
             )
 
     @profiling_wrapper.RangeContext("RLEnv.reset")
-    def reset(self) -> Observations:
-        return self._env.reset()
+    def reset(
+        self, *, return_info: bool = False, **kwargs
+    ) -> Union[Observations, Tuple[Observations, Dict]]:
+        observations = self._env.reset()
+        if return_info:
+            return observations, self.get_info(observations)
+        else:
+            return observations
 
     def get_reward_range(self):
         r"""Get min, max range of reward.

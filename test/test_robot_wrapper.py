@@ -9,10 +9,10 @@ from os import path as osp
 import numpy as np
 import pytest
 
-import habitat.robots.fetch_robot as fetch_robot
-import habitat.robots.franka_robot as franka_robot
-import habitat.robots.spot_robot as spot_robot
-import habitat.robots.stretch_robot as stretch_robot
+import habitat.articulated_agents.robots.fetch_robot as fetch_robot
+import habitat.articulated_agents.robots.franka_robot as franka_robot
+import habitat.articulated_agents.robots.spot_robot as spot_robot
+import habitat.articulated_agents.robots.stretch_robot as stretch_robot
 import habitat_sim
 import habitat_sim.agent
 

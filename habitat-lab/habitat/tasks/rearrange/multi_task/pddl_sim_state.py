@@ -82,7 +82,7 @@ class PddlRobotState:
         robot_id = cast(
             int, sim_info.search_for_entity(robot_entity, robot_type)
         )
-        grasp_mgr = sim_info.sim.get_robot_data(robot_id).grasp_mgr
+        grasp_mgr = sim_info.sim.get_agent_data(robot_id).grasp_mgr
 
         assert not (self.holding is not None and self.should_drop)
 
@@ -99,7 +99,7 @@ class PddlRobotState:
 
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
-            robot = sim_info.sim.get_robot_data(robot_id).robot
+            robot = sim_info.sim.get_agent_data(robot_id).articulated_agent
             dist = np.linalg.norm(robot.base_pos - targ_pos)
             if dist > sim_info.robot_at_thresh:
                 return False
@@ -113,7 +113,7 @@ class PddlRobotState:
             int, sim_info.search_for_entity(robot_entity, robot_type)
         )
         sim = sim_info.sim
-        grasp_mgr = sim.get_robot_data(robot_id).grasp_mgr
+        grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
         # Set the snapped object information
         if self.should_drop and grasp_mgr.is_grasped:
             grasp_mgr.desnap(True)
@@ -136,7 +136,7 @@ class PddlRobotState:
                 )
 
             robo_pos = sim_info.sim.safe_snap_point(targ_pos)
-            robot = sim.get_robot_data(robot_id).robot
+            robot = sim.get_agent_data(robot_id).articulated_agent
             robot.base_pos = robo_pos
             robot.base_rot = get_angle_to_pos(np.array(targ_pos - robo_pos))
         elif self.pos is not None:

@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 from habitat_sim.physics import ManagedBulletArticulatedObject
 
 
-class RobotInterface(ABC):
+class ArticulatedAgentInterface(ABC):
     """Generic robot interface defines standard API functions."""
 
     def __init__(self):

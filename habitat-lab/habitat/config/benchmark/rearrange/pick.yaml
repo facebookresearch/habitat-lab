@@ -9,7 +9,6 @@ defaults:
 
 habitat:
   gym:
-    auto_name: Pick
     obs_keys:
       - robot_head_depth
       - obj_start_sensor
