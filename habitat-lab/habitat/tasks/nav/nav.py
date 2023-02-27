@@ -1482,7 +1482,7 @@ class VelocityAction(SimulatorTaskAction):
                 sensor
             ].node.rotation = goal_rigid_state.rotation
 
-        return self._get_agent_observation()
+        return self._sim.get_agent_state()
 
     def _get_agent_observation(self, agent_state=None):
         position = None
