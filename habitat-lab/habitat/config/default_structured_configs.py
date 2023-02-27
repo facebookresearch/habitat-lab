@@ -209,6 +209,8 @@ class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     lin_vel_range: List[float] = [0.0, 0.3]  # meters/sec
     ang_vel_range: List[float] = [-0.45, 0.45]  # rad/sec
+    camera_ang_vel_range: List[float] = [-0.45, 0.45]  # rad/sec
+    camera_pitch_ang_range: List[float] = [-1.53, 0.79]  # rad
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
 
