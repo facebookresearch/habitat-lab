@@ -1243,8 +1243,8 @@ class VelocityAction(SimulatorTaskAction):
         self,
         *args: Any,
         task: EmbodiedTask,
-        linear_velocity: float = None,
-        angular_velocity: float = None,
+        linear_velocity: float,
+        angular_velocity: float,
         time_step: Optional[float] = None,
         **kwargs: Any,
     ):
