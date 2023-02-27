@@ -2,12 +2,12 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Dict, List, Optional, Set
+from typing import List
 
-import habitat_sim.physics as phy
 import magnum as mn
 import numpy as np
 
+import habitat_sim.physics as phy
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
@@ -18,7 +18,7 @@ from habitat.articulated_agents.mobile_manipulator import (
 class KinematicHumanoid(MobileManipulator):
     def _get_humanoid_params(self):
         return MobileManipulatorParams(
-            arm_joints=[], # For now we do not add arm_joints
+            arm_joints=[],  # For now we do not add arm_joints
             gripper_joints=[],
             wheel_joints=None,
             arm_init_params=None,
@@ -34,8 +34,8 @@ class KinematicHumanoid(MobileManipulator):
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "robot_head": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0., 0.5, 0.25),
-                    cam_look_at_pos=mn.Vector3(0., 0.5, 0.75),
+                    cam_offset_pos=mn.Vector3(0.0, 0.5, 0.25),
+                    cam_look_at_pos=mn.Vector3(0.0, 0.5, 0.75),
                     attached_link_id=-1,
                 ),
                 "robot_third": ArticulatedAgentCameraParams(
@@ -53,7 +53,7 @@ class KinematicHumanoid(MobileManipulator):
             },
             ee_count=2,
         )
-    
+
     def __init__(
         self, urdf_path, sim, limit_robo_joints=False, fixed_base=False
     ):
@@ -63,15 +63,17 @@ class KinematicHumanoid(MobileManipulator):
             sim,
             limit_robo_joints,
             fixed_base,
-            maintain_link_order=True
+            maintain_link_order=True,
         )
-    
+
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         super().reconfigure()
         self.sim_obj.motion_type = phy.MotionType.KINEMATIC
-        
-    def set_joint_transform(self, joint_list: List[float], transform: mn.Matrix4) -> None:
+
+    def set_joint_transform(
+        self, joint_list: List[float], transform: mn.Matrix4
+    ) -> None:
         """Sets the joints and base transform of the humanoid"""
         # TODO: should this go into articulated agent?
         self.sim_obj.joint_positions = joint_list

@@ -487,7 +487,10 @@ class HumanoidJointAction(RobotAction):
         return spaces.Dict(
             {
                 "human_joints_trans": spaces.Box(
-                    shape=(num_joints + num_dim_transform,), low=-1, high=1, dtype=np.float32
+                    shape=(4 * (num_joints + num_dim_transform),),
+                    low=-1,
+                    high=1,
+                    dtype=np.float32,
                 )
             }
         )
@@ -502,5 +505,7 @@ class HumanoidJointAction(RobotAction):
                 for i in range(4)
             ]
             new_transform = mn.Matrix4(*vecs)
-            self.cur_human.set_joint_transform(new_joints, new_transform)
+            self.cur_articulated_agent.set_joint_transform(
+                new_joints, new_transform
+            )
         return self._sim.step(HabitatSimActions.changejoint_action)

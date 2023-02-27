@@ -142,7 +142,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
             fixed_based=fixed_base,
             sim_obj=self.sim_obj,
             base_type=base_type,
-            maintain_link_order=maintain_link_order
+            maintain_link_order=maintain_link_order,
         )
 
     def reconfigure(self) -> None:
