@@ -109,6 +109,13 @@ class OracleNavigationActionSensor(Sensor):
 class NavToObjReward(RearrangeReward):
     cls_uuid: str = "nav_to_obj_reward"
 
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._dist_reward = config.dist_reward
+        self._should_reward_turn = config.should_reward_turn
+        self._turn_reward_dist = config.turn_reward_dist
+        self._angle_dist_reward = config.angle_dist_reward
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return NavToObjReward.cls_uuid
@@ -140,13 +147,10 @@ class NavToObjReward(RearrangeReward):
         else:
             dist_diff = self._prev_dist - cur_dist
 
-        reward += self._config.dist_reward * dist_diff
+        reward += self._dist_reward * dist_diff
         self._prev_dist = cur_dist
 
-        if (
-            self._config.should_reward_turn
-            and cur_dist < self._config.turn_reward_dist
-        ):
+        if self._should_reward_turn and cur_dist < self._turn_reward_dist:
             angle_dist = task.measurements.measures[
                 RotDistToGoal.cls_uuid
             ].get_metric()
@@ -156,7 +160,7 @@ class NavToObjReward(RearrangeReward):
             else:
                 angle_diff = self._cur_angle_dist - angle_dist
 
-            reward += self._config.angle_dist_reward * angle_diff
+            reward += self._angle_dist_reward * angle_diff
             self._cur_angle_dist = angle_dist
 
         self._metric = reward
@@ -275,14 +279,15 @@ class RotDistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         if len(task.nav_goal_pos.shape) == 2:
+            path = habitat_sim.MultiGoalShortestPath()
+            path.requested_start = self._sim.robot.base_pos
+            path.requested_ends = task.nav_goal_pos
+            self._sim.pathfinder.find_path(path)
+            assert (
+                path.closest_end_point_index != -1
+            ), f"None of the goals are reachable from current position for episode {episode.episode_id}"
             # RotDist to closest goal
-            closest_goal = np.argmin(
-                [
-                    self._sim.geodesic_distance(self._sim.robot.base_pos, goal)
-                    for goal in task.nav_goal_pos
-                ]
-            )
-            targ = task.nav_goal_pos[closest_goal]
+            targ = task.nav_goal_pos[path.closest_end_point_index]
         else:
             targ = task.nav_goal_pos
         robot = self._sim.robot
@@ -301,6 +306,7 @@ class NavToPosSucc(Measure):
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
+        self._success_distance = self._config.success_distance
         super().__init__(*args, config=config, **kwargs)
 
     def reset_metric(self, *args, task, **kwargs):
@@ -312,7 +318,7 @@ class NavToPosSucc(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
-        self._metric = dist < self._config.success_distance
+        self._metric = dist < self._success_distance
 
 
 @registry.register_measure
@@ -332,6 +338,9 @@ class NavToObjSuccess(Measure):
 
     def __init__(self, *args, config, **kwargs):
         self._config = config
+        self._must_look_at_targ = self._config.must_look_at_targ
+        self._success_angle_dist = self._config.success_angle_dist
+        self._must_call_stop = self._config.must_call_stop
         super().__init__(*args, config=config, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
@@ -347,14 +356,14 @@ class NavToObjSuccess(Measure):
             DoesWantTerminate.cls_uuid
         ].get_metric()
 
-        if self._config.must_look_at_targ:
+        if self._must_look_at_targ:
             self._metric = (
-                nav_pos_succ and angle_dist < self._config.success_angle_dist
+                nav_pos_succ and angle_dist < self._success_angle_dist
             )
         else:
             self._metric = nav_pos_succ
 
-        if self._config.must_call_stop:
+        if self._must_call_stop:
             if called_stop:
                 task.should_end = True
             else:
