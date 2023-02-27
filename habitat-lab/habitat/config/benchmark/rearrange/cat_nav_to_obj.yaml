@@ -3,29 +3,30 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_place
+  - /habitat/task/rearrange: cat_nav_to_obj
   - /habitat/dataset/rearrangement: floorplanner
   - _self_
 
 habitat:
   gym:
-    auto_name: Place
+    auto_name: NavToObj
     obs_keys:
       - robot_head_depth
       - robot_head_rgb
-      - goal_receptacle
+      - object_embedding
+      - start_receptacle
+      - robot_start_gps
+      - robot_start_compass
       - joint
-      - is_holding
-      - relative_resting_position
   environment:
-    max_episode_steps: 300
+    max_episode_steps: 400
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
-    - data/objects/ycb/configs/
-    - data/objects/amazon_berkeley/configs/
-    - data/objects/google_object_dataset/configs/
-    needs_markers: False
+      - data/objects/ycb/configs/
+      - data/objects/amazon_berkeley/configs/
+      - data/objects/google_object_dataset/configs/
+    debug_render_goal: False
     concur_render: True
     auto_sleep: True
     agents:
@@ -49,6 +50,7 @@ habitat:
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
+    needs_markers: false
   dataset:
     data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
     type: ObjectRearrangeDataset-v0

@@ -237,7 +237,9 @@ class RearrangePickSuccess(Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._config = config
-        self._ee_resting_success_threshold = self._config.ee_resting_success_threshold
+        self._ee_resting_success_threshold = (
+            self._config.ee_resting_success_threshold
+        )
         self._object_goal = self._config.object_goal
         self._prev_ee_pos = None
         super().__init__(**kwargs)

@@ -731,7 +731,6 @@ if __name__ == "__main__":
             enable_add_viewpoints=args.add_viewpoints,
             debug_viz=args.debug_viz,
         )
-
         episodes_json = DatasetFloatJSONEncoder().encode(episodes)
         os.makedirs(osp.join(target_data_dir, split), exist_ok=True)
         target_episodes_file = osp.join(

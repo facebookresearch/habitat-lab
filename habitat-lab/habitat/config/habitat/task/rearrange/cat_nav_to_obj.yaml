@@ -1,0 +1,49 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - base_velocity
+    - rearrange_stop
+  - /habitat/task/measurements:
+    - object_to_goal_distance
+    - robot_force
+    - force_terminate
+    - robot_colls
+    - rot_dist_to_goal
+    - dist_to_goal
+    - nav_to_pos_succ
+    - does_want_terminate
+    - rearrange_nav_to_obj_success
+    - bad_called_terminate
+    - rearrange_nav_to_obj_reward
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - joint_sensor
+    - joint_velocity_sensor
+    - object_category_sensor
+    - start_receptacle_sensor
+    - object_segmentation_sensor
+    - object_embedding_sensor
+    - robot_start_gps_sensor
+    - robot_start_compass_sensor
+  - _self_
+
+type: CatNavToObjTask-v0
+reward_measure: nav_to_obj_reward
+success_measure: nav_to_obj_success
+success_reward: 10.0
+slack_reward: -0.005
+end_on_success: True
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+object_in_hand_sample_prob: 0.0
+measurements:
+  force_terminate:
+    max_accum_force: 10_000.0
+    max_instant_force: 10_000.0
+lab_sensors:
+  joint_sensor:
+    dimensionality: 10
+  joint_velocity_sensor:
+    dimensionality: 10
