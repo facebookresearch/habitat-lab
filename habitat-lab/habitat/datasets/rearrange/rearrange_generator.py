@@ -39,6 +39,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
 from habitat_sim.nav import NavMeshSettings
+from habitat.utils.common import get_project_root
 
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
@@ -714,9 +715,7 @@ class RearrangeEpisodeGenerator:
         sampled_rigid_object_states = []
         for sampled_obj in self.ep_sampled_objects:
             creation_attrib = sampled_obj.creation_attributes
-            file_handle = creation_attrib.handle.split(
-                creation_attrib.file_directory
-            )[-1].split("/")[-1]
+            file_handle = osp.relpath(creation_attrib.handle, get_project_root())
             sampled_rigid_object_states.append(
                 (
                     file_handle,

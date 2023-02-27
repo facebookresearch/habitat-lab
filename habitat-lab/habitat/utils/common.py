@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 from os import makedirs
 from os import path as osp
 from typing import List
@@ -28,6 +29,13 @@ def check_make_dir(directory_path: str) -> bool:
             f"check_make_dir: directory_path did not exist and was created: {directory_path}"
         )
     return True
+
+
+def get_project_root() -> str:
+    """
+    Get the root directory of the project.
+    """
+    return os.sep.join(os.path.abspath(__file__).split(os.sep)[:-4])
 
 
 def cull_string_list_by_substrings(

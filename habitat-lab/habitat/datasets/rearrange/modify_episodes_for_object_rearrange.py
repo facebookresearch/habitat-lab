@@ -23,6 +23,7 @@ from habitat.tasks.utils import compute_pixel_coverage
 from habitat_sim.agent.agent import ActionSpec
 from habitat_sim.agent.controls import ActuationSpec
 from habitat_sim.utils.common import quat_to_coeffs
+from habitat.utils.common import get_project_root
 
 ISLAND_RADIUS_LIMIT = 3.5
 
@@ -282,6 +283,7 @@ def get_candidate_starts(
 ):
     obj_goals = []
     for i, (obj, pos) in enumerate(objects):
+        obj = osp.split(obj)[1]
         if (
             get_obj_category(
                 obj.split(".")[0], obj_category_mapping=obj_category_mapping
@@ -324,25 +326,7 @@ def load_objects(sim, objects):
     rom = sim.get_rigid_object_manager()
     obj_idx_to_name = {}
     for i, (obj_handle, transform) in enumerate(objects):
-        obj_attr_mgr = sim.get_object_template_manager()
-        matching_templates = obj_attr_mgr.get_templates_by_handle_substring(
-            obj_handle
-        )
-        if len(matching_templates.values()) > 1:
-            exactly_matching = list(
-                filter(
-                    lambda x: obj_handle == osp.basename(x),
-                    matching_templates.keys(),
-                )
-            )
-            if len(exactly_matching) == 1:
-                matching_template = exactly_matching[0]
-            else:
-                raise Exception(
-                    f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}."
-                )
-        else:
-            matching_template = list(matching_templates.keys())[0]
+        matching_template = osp.join(get_project_root(), obj_handle)
         ro = rom.add_object_by_template_handle(matching_template)
 
         # The saved matrices need to be flipped when reloading.
