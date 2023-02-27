@@ -1,18 +1,25 @@
-from typing import Dict
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import numpy as np
 
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.rl.multi_agent.pop_play_wrappers import (
     MultiPolicy,
     MultiStorage,
     MultiUpdater,
 )
-from habitat_baselines.rl.ppo.trainer_agent import TrainerAgent
+from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
+from habitat_baselines.rl.ppo.single_agent_access_mgr import (
+    SingleAgentAccessMgr,
+)
+
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
 
 
 @baseline_registry.register_agent
-class PopPlayTrainerAgent(TrainerAgent):
+class MultiAgentAccessMgr(AgentAccessMgr):
     """
     Maintains a population of agents. A subset of the overall of this
     population is maintained as active agents. The active agent population acts
@@ -22,46 +29,65 @@ class PopPlayTrainerAgent(TrainerAgent):
     pouplation is randomly re-sampled at a fixed interval.
     """
 
-    def __init__(self, *args, resume_state, **kwargs):
-        super().__init__(*args, resume_state=resume_state, **kwargs)
+    def __init__(
+        self,
+        config: "DictConfig",
+        env_spec: EnvironmentSpec,
+        is_distrib: bool,
+        device,
+        resume_state: Optional[Dict[str, Any]],
+        num_envs: int,
+        percent_done_fn: Callable[[], float],
+        lr_schedule_fn: Optional[Callable[[float], float]] = None,
+    ):
         self._agents = []
         self._all_agent_idxs = []
-        self._pop_config = self._config.habitat_baselines.rl.agent
+        self._pop_config = config.habitat_baselines.rl.agent
         for agent_i in range(self._pop_config.num_total_agents):
             self._all_agent_idxs.append(agent_i)
             use_resume_state = None
             if resume_state is not None:
                 use_resume_state = resume_state[agent_i]
             self._agents.append(
-                TrainerAgent(*args, resume_state=use_resume_state, **kwargs)
+                SingleAgentAccessMgr(
+                    config,
+                    env_spec,
+                    is_distrib,
+                    device,
+                    resume_state,
+                    num_envs,
+                    percent_done_fn,
+                    lr_schedule_fn,
+                )
             )
         self._multi_policy = MultiPolicy.from_config(
-            self._config,
-            self._env_spec.observation_space,
-            self._env_spec.action_space,
-            orig_action_space=self._env_spec.orig_action_space,
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
         )
         self._multi_updater = MultiUpdater.from_config(
-            self._config,
-            self._env_spec.observation_space,
-            self._env_spec.action_space,
-            orig_action_space=self._env_spec.orig_action_space,
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
         )
 
         self._multi_storage = MultiStorage.from_config(
-            self._config,
-            self._env_spec.observation_space,
-            self._env_spec.action_space,
-            orig_action_space=self._env_spec.orig_action_space,
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
         )
 
-        if self._nbuffers != 1:
+        if self.nbuffers != 1:
             raise ValueError(
                 "Multi-agent training does not support double buffered sampling"
             )
 
-    def _init_policy_and_updater(self, lr_schedule_fn, resume_state):
-        pass
+    @property
+    def nbuffers(self):
+        return self._agents[0].nbuffers
 
     def _sample_active(self):
         """

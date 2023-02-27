@@ -50,7 +50,10 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
     save_resume_state,
 )
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
-from habitat_baselines.rl.ppo.trainer_agent import TrainerAgent
+from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
+from habitat_baselines.rl.ppo.single_agent_access_mgr import (  # noqa: F401.
+    SingleAgentAccessMgr,
+)
 from habitat_baselines.utils.common import (
     batch_obs,
     generate_video,
@@ -104,9 +107,9 @@ class PPOTrainer(BaseRLTrainer):
 
         return t.to(device=orig_device)
 
-    def _create_agent(self, resume_state, **kwargs) -> TrainerAgent:
+    def _create_agent(self, resume_state, **kwargs) -> AgentAccessMgr:
         """
-        Sets up the TrainerAgent. You still must call `agent.post_init` after
+        Sets up the AgentAccessMgr. You still must call `agent.post_init` after
         this call. This only constructs the object.
         """
 
@@ -327,10 +330,9 @@ class PPOTrainer(BaseRLTrainer):
         # Sample actions
         with inference_mode():
             # TODO: Refactor this in the next multi-agent PR to maintain the current observation in the trainer rather than indexing into rollouts.
-            step_batch = self._agent.rollouts.buffers[
-                self._agent.rollouts.current_rollout_step_idxs[buffer_index],
-                env_slice,
-            ]
+            step_batch = self._agent.rollouts.get_current_step(
+                env_slice, buffer_index
+            )
 
             profiling_wrapper.range_push("compute actions")
             action_data = self._agent.actor_critic.act(

@@ -19,6 +19,7 @@ from habitat_baselines.rl.ddppo.policy import (  # noqa: F401.
 from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
     HierarchicalPolicy,
 )
+from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.policy import NetPolicy, Policy
 from habitat_baselines.rl.ppo.updater import Updater
 
@@ -27,14 +28,7 @@ if TYPE_CHECKING:
 
 
 @baseline_registry.register_agent
-class TrainerAgent:
-    """
-    A `TrainerAgent` consists of:
-    - Policy: How actions are selected from observations.
-    - Data Storage: How data collected from the environment is stored.
-    - Updater: How the Policy is updated.
-    """
-
+class SingleAgentAccessMgr(AgentAccessMgr):
     def __init__(
         self,
         config: "DictConfig",
@@ -71,10 +65,6 @@ class TrainerAgent:
         self._init_policy_and_updater(lr_schedule_fn, resume_state)
 
     def _init_policy_and_updater(self, lr_schedule_fn, resume_state):
-        """
-        Initialize the policy and updater.
-        """
-
         self._actor_critic = self._create_policy()
         self._updater = self._create_updater(self._actor_critic)
 
@@ -98,14 +88,6 @@ class TrainerAgent:
         return self._nbuffers
 
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
-        """
-        Called after the constructor. Sets up the rollout storage.
-
-        :param create_rollouts_fn: Override behavior for creating the
-            rollout storage. Default behavior for this and the call signature is
-            `default_create_rollouts`.
-        """
-
         # Create the rollouts storage.
         if create_rollouts_fn is None:
             create_rollouts_fn = default_create_rollouts
@@ -123,9 +105,6 @@ class TrainerAgent:
         )
 
     def _create_updater(self, actor_critic):
-        """
-        Setup and initialize the policy updater.
-        """
         if self._is_distributed:
             updater_cls = baseline_registry.get_updater(
                 self._config.habitat_baselines.distrib_updater_name
@@ -145,9 +124,6 @@ class TrainerAgent:
 
     @property
     def policy_action_space(self):
-        """
-        The action space the policy acts in. This can be different from the environment action space for hierarchical policies.
-        """
         return self._policy_action_space
 
     def _create_policy(self) -> NetPolicy:
@@ -223,26 +199,14 @@ class TrainerAgent:
 
     @property
     def rollouts(self) -> Storage:
-        """
-        Gets the current rollout storage.
-        """
-
         return self._rollouts
 
     @property
     def actor_critic(self) -> Policy:
-        """
-        Gets the current policy
-        """
-
         return self._actor_critic
 
     @property
     def updater(self) -> Updater:
-        """
-        Gets the current policy updater.
-        """
-
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
@@ -252,7 +216,7 @@ class TrainerAgent:
             lr_sched_state=self._lr_scheduler.state_dict(),
         )
 
-    def get_save_state(self) -> Dict:
+    def get_save_state(self):
         return dict(state_dict=self.actor_critic.state_dict())
 
     def eval(self):
@@ -263,11 +227,6 @@ class TrainerAgent:
         self.updater.train()
 
     def load_ckpt_state_dict(self, ckpt: Dict) -> None:
-        """
-        Loads a state dict for evaluation. The difference from
-        `load_state_dict` is that this will not load the policy state if the
-        policy does not request it.
-        """
         self.actor_critic.load_state_dict(ckpt["state_dict"])
 
     def load_state_dict(self, state: Dict) -> None:
@@ -280,27 +239,16 @@ class TrainerAgent:
 
     @property
     def hidden_state_shape(self):
-        """
-        The shape of the tensor to track the hidden state, such as the RNN hidden state.
-        """
-
         return (
             self.actor_critic.num_recurrent_layers,
             self._ppo_cfg.hidden_size,
         )
 
     def after_update(self):
-        """
-        Called after the updater has called `update` and the rollout `after_update` is called.
-        """
-
         if self._ppo_cfg.use_linear_lr_decay:
             self._lr_scheduler.step()  # type: ignore
 
     def pre_rollout(self):
-        """
-        Called before a rollout is collected.
-        """
         if self._ppo_cfg.use_linear_clip_decay:
             self._updater.clip_param = self._ppo_cfg.clip_param * (
                 1 - self._percent_done_fn()

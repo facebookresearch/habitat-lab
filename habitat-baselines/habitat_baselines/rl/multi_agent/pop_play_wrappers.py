@@ -1,6 +1,10 @@
+from collections import defaultdict
 from typing import Dict, List
 
+import torch
+
 from habitat_baselines.common.storage import Storage
+from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.rl.ppo.updater import Updater
 
@@ -56,10 +60,12 @@ class MultiStorage(Storage):
         pass
 
     def to(self, device):
+        # The active storages already need to be on the correct device.
         pass
 
     def insert_first(self, batch):
-        pass
+        breakpoint()
+        print("done")
 
     def advance_rollout(self, buffer_index=0):
         pass
@@ -69,6 +75,24 @@ class MultiStorage(Storage):
 
     def after_update(self):
         pass
+
+    def get_current_step(self, env_slice, buffer_index):
+        obs = {}
+        agent_step_data = defaultdict(list)
+        for agent_i, storage in enumerate(self._active_storages):
+            agent_step = storage.get_current_step(env_slice, buffer_index)
+            for k, v in agent_step["observations"]:
+                obs[f"agent_{agent_i}_{k}"] = v
+            for k, v in agent_step.items():
+                if k == "observations":
+                    continue
+                agent_step_data[k].append(v)
+        obs = TensorDict(obs)
+        for k in agent_step_data:
+            agent_step_data[k] = torch.cat(agent_step_data[k], dim=1)
+        agent_step_data = dict(agent_step_data)
+        agent_step_data["observations"] = obs
+        return TensorDict(obs)
 
     @classmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):

@@ -262,3 +262,9 @@ class RolloutStorage(Storage):
 
     def insert_first(self, batch):
         self.buffers["observations"][0] = batch  # type: ignore
+
+    def get_current_step(self, env_slice, buffer_index):
+        return self.buffers[
+            self.current_rollout_step_idxs[buffer_index],
+            env_slice,
+        ]

@@ -4,6 +4,10 @@ import torch
 
 
 class Storage(abc.ABC):
+    """
+    Storage interface.
+    """
+
     @abc.abstractmethod
     def insert(
         self,
