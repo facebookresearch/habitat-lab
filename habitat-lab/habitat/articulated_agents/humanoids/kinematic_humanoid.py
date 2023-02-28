@@ -79,9 +79,7 @@ class KinematicHumanoid(MobileManipulator):
         self.sim_obj.joint_positions = joint_list
         self.sim_obj.transformation = transform
 
-    def get_joint_transform(
-        self, joint_list: List[float], transform: mn.Matrix4
-    ):
+    def get_joint_transform(self):
         """Returns the joints and base transform of the humanoid"""
         # TODO: should this go into articulated agent?
         return self.sim_obj.joint_positions, self.sim_obj.transformation

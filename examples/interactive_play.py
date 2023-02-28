@@ -87,7 +87,12 @@ def step_env(env, action_name, action_args):
 
 
 def get_input_vel_ctlr(
-    skip_pygame, arm_action, env, not_block_input, agent_to_control
+    skip_pygame,
+    arm_action,
+    env,
+    not_block_input,
+    agent_to_control,
+    use_joint_control,
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
@@ -98,10 +103,15 @@ def get_input_vel_ctlr(
     else:
         agent_k = ""
     arm_action_name = f"{agent_k}arm_action"
-    base_action_name = f"{agent_k}base_velocity"
-    arm_key = "arm_action"
-    grip_key = "grip_action"
-    base_key = "base_vel"
+
+    if use_joint_control:
+        base_action_name = f"{agent_k}humanjoint_action"
+        base_key = "human_joints_trans"
+    else:
+        base_action_name = f"{agent_k}base_velocity"
+        arm_key = "arm_action"
+        grip_key = "grip_action"
+        base_key = "base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
@@ -251,6 +261,42 @@ def get_input_vel_ctlr(
             # Snap
             logger.info("[play.py]: Snapping")
             magic_grasp = 1
+
+    if use_joint_control:
+        # Add random noise to human arms but keep global transform
+        (
+            new_joints,
+            root_trans,
+        ) = env._sim.articulated_agent.get_joint_transform()
+        num_joints = len(new_joints) // 4
+        root_trans = np.array(root_trans)
+        new_joints_quat = [
+            mn.Quaternion(
+                mn.Vector3(new_joints[(4 * index) : (4 * index + 3)]),
+                new_joints[4 * index + 3],
+            )
+            for index in range(num_joints)
+        ]
+        rotated_joints_quat = []
+        for index, joint_quat in enumerate(new_joints_quat):
+            random_vec = np.random.rand(3)
+            random_angle = np.random.rand() * 360 / 60
+            rotation_quat = mn.Quaternion.rotation(
+                mn.Rad(random_angle), mn.Vector3(random_vec).normalized()
+            )
+            new_quat = joint_quat
+            if index > 10:
+                new_quat = joint_quat * rotation_quat
+            rotated_joints_quat.append(new_quat)
+        new_joints = np.concatenate(
+            [
+                np.array(list(quat.vector) + [quat.scalar])
+                for quat in rotated_joints_quat
+            ]
+        )
+        base_action = np.concatenate(
+            [new_joints.reshape(-1), root_trans.transpose().reshape(-1)]
+        )
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the articulated agent, useful for debugging.
@@ -434,6 +480,7 @@ def play_env(env, args, config):
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
+            args.use_joint_control,
         )
 
         if not args.no_render and keys[pygame.K_c]:
@@ -612,12 +659,21 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control.",
     )
+
+    parser.add_argument(
+        "--use-joint-control",
+        action="store_true",
+        default=False,
+        help="Control joints of articulated agent.",
+    )
+
     parser.add_argument(
         "--gfx",
         action="store_true",
         default=False,
         help="Save a GFX replay file.",
     )
+
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
