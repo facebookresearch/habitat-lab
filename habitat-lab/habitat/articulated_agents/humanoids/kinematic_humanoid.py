@@ -7,7 +7,7 @@ from typing import List
 import magnum as mn
 import numpy as np
 
-import habitat_sim.physics as phy
+import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (
     ArticulatedAgentCameraParams,
     MobileManipulator,
@@ -69,7 +69,7 @@ class KinematicHumanoid(MobileManipulator):
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         super().reconfigure()
-        self.sim_obj.motion_type = phy.MotionType.KINEMATIC
+        self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
 
     def set_joint_transform(
         self, joint_list: List[float], transform: mn.Matrix4

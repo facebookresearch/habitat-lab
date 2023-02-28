@@ -112,7 +112,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
-        maintain_link_order: bool = True,
+        maintain_link_order: bool = False,
         base_type="mobile",
     ):
         r"""Constructor
@@ -122,6 +122,9 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         :param limit_robo_joints: If true, joint limits of robot are always
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
+        :param maintain_link_order: Whether to to preserve the order of
+            links parsed from URDF files as link indices. Needed for
+            compatibility with PyBullet.
         :param base_type: The base type
         """
         # instantiate a manipulator
