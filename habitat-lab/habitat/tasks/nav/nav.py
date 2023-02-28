@@ -1263,7 +1263,7 @@ class VelocityAction(SimulatorTaskAction):
         task: EmbodiedTask,
         linear_velocity: float,
         angular_velocity: float,
-        camera_pitch_angular_velocity: float,
+        camera_pitch_angular_velocity: float = 0.0,
         time_step: Optional[float] = None,
         **kwargs: Any,
     ):
@@ -1873,8 +1873,8 @@ class TurnRightWaypointAction(WaypointAction):
 
 
 @registry.register_task_action
-class LookUpDownContinuousAction(WaypointAction):
-    name: str = "look_up_down_continuous"
+class CameraPitchContinuousAction(WaypointAction):
+    name: str = "camera_pitch_continuous"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

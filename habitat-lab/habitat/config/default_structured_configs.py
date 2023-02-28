@@ -30,7 +30,7 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
-    "LookUpDownContinuousActionConfig",
+    "CameraPitchContinuousActionConfig",
     # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
@@ -281,12 +281,12 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class LookUpDownContinuousActionConfig(WaypointControlActionConfig):
+class CameraPitchContinuousActionConfig(WaypointControlActionConfig):
     r"""
-    In Navigation tasks only, this discrete action will rotate the robot to the right
+    In Navigation tasks only, this discrete action will rotate the robot's camera pitch
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
-    type: str = "LookUpDownContinuousAction"
+    type: str = "CameraPitchContinuousAction"
     max_wait_duration: float = 3.0  # seconds
     turn_angle: float = np.pi / 12  # rad (30 degrees)
 
@@ -1596,10 +1596,10 @@ cs.store(
     node=LookDownActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.look_up_down_continuous",
+    package="habitat.task.actions.camera_pitch_continuous",
     group="habitat/task/actions",
-    name="look_up_down_continuous",
-    node=LookUpDownContinuousActionConfig,
+    name="camera_pitch_continuous",
+    node=CameraPitchContinuousActionConfig,
 )
 cs.store(
     package="habitat.task.actions.arm_action",
