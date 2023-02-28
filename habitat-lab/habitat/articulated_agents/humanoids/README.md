@@ -3,6 +3,14 @@ Humanoid Design
 
 Habitat also supports humanoid avatars. These avatars are represented as articulated objects connected via joints with rotational motion. The current version only includes a kinematic humanoid, which can be controlled by specifying the joint rotations and object transformation.
 
+You can download the humanoid avatar by running:
+
+```
+python -m habitat_sim.utils.datasets_download --uids humanoid_data  --data-path data/
+```
+
+From the home directory.
+
 ---
 
 ## Humanoid Component Design
