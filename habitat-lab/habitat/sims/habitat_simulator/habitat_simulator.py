@@ -286,6 +286,14 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
         self._current_scene = self.sim_config.sim_cfg.scene_id
+
+        # Configure sim for batch rendering.
+        # TODO: Should this be moved elsewhere?
+        self.sim_config.enable_batch_renderer = config.enable_batch_renderer
+        if self.sim_config.enable_batch_renderer:
+            self.sim_config.sim_cfg.create_renderer = False
+            self.sim_config.sim_cfg.enable_gfx_replay_save = True
+
         super().__init__(self.sim_config)
         # load additional object paths specified by the dataset
         # TODO: Should this be moved elsewhere?
