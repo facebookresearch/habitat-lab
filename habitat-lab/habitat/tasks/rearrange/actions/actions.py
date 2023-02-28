@@ -474,7 +474,7 @@ class HumanoidJointAction(RobotAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self.num_joints = 19
+        self.num_joints = 17
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -487,7 +487,7 @@ class HumanoidJointAction(RobotAction):
         return spaces.Dict(
             {
                 "human_joints_trans": spaces.Box(
-                    shape=(4 * (num_joints + num_dim_transform),),
+                    shape=(4 * num_joints + num_dim_transform,),
                     low=-1,
                     high=1,
                     dtype=np.float32,
@@ -496,6 +496,12 @@ class HumanoidJointAction(RobotAction):
         )
 
     def step(self, **kwargs):
+        """
+        Updates the humanoid joints and transform kinematically, according to human_joints_trans.
+        human_joints_trans is an array of num_joints * 4 + 16 dimensions, where the last 16 dimensions
+        correspond to a flattened matrix transform and the first num_joints * 4 dimensions correspond to
+        quaternions representing the joint rotations.
+        """
         new_pos_transform = kwargs["human_joints_trans"]
         new_joints = new_pos_transform[:-16]
         new_pos_transform = new_pos_transform[-16:]
