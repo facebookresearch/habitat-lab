@@ -24,3 +24,12 @@ From the home directory.
 1. **Humanoid Articulated Object**
 
 The humanoid is represented as an articulated object made out of capsules and spheres. It contains 20 links and 19 joints, and is designed to match the morphology of the SMPL skeleton, as referenced [here](https://files.is.tue.mpg.de/black/talks/SMPL-made-simple-FAQs.pdf). Note that the current model does not include the hand or foot joint, hence the 20 links instead of 24, and that the root joint is represented via the object transform, hence the 19 joints.
+
+
+## Testing the Humanoid
+
+You can test a simple demo where the humanoid moves their arms at random using:
+
+```
+python examples/interactive_play.py --never-end --disable-inverse-kinematics --use-joint-control --cfg benchmark/rearrange/play_human.yaml
+```
