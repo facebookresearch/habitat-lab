@@ -499,6 +499,9 @@ class HumanoidJointAction(RobotAction):
         new_pos_transform = kwargs["human_joints_trans"]
         new_joints = new_pos_transform[:-16]
         new_pos_transform = new_pos_transform[-16:]
+
+        # When the array is all 0, this indicates we are not setting 
+        # the human joint
         if np.array(new_pos_transform).sum() != 0:
             vecs = [
                 mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
