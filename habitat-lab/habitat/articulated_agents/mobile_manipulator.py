@@ -123,8 +123,8 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
         :param maintain_link_order: Whether to to preserve the order of
-            links parsed from URDF files as link indices. Needed for 
-            compatibility with PyBullet. 
+            links parsed from URDF files as link indices. Needed for
+            compatibility with PyBullet.
         :param base_type: The base type
         """
         # instantiate a manipulator
