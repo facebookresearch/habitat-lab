@@ -458,9 +458,7 @@ class PPOTrainer(BaseRLTrainer):
         t_update_model = time.time()
 
         with inference_mode():
-            step_batch = self._agent.rollouts.buffers[
-                self._agent.rollouts.current_rollout_step_idx
-            ]
+            step_batch = self._agent.rollouts.get_last_step()
 
             next_value = self._agent.actor_critic.get_value(
                 step_batch["observations"],

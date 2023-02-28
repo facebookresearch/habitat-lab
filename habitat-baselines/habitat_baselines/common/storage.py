@@ -44,3 +44,9 @@ class Storage(abc.ABC):
     @abc.abstractmethod
     def after_update(self) -> None:
         pass
+
+    def get_last_step(self):
+        pass
+
+    def get_current_step(self, env_slice, buffer_index):
+        pass

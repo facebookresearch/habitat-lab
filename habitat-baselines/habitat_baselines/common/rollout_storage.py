@@ -268,3 +268,6 @@ class RolloutStorage(Storage):
             self.current_rollout_step_idxs[buffer_index],
             env_slice,
         ]
+
+    def get_last_step(self):
+        return self.buffers[self.current_rollout_step_idx]
