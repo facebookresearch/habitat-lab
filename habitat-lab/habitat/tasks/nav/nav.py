@@ -1559,7 +1559,7 @@ class WaypointAction(VelocityAction):
                         dtype=np.float32,
                     ),
                     "delta_camera_pitch_angle": spaces.Box(
-                        low=-np.array([1]),
+                        low=np.array([-1]),
                         high=np.array([1]),
                         dtype=np.float32,
                     ),
@@ -1661,7 +1661,7 @@ class WaypointAction(VelocityAction):
             )
             delta_camera_pitch_angle = self._scale_inputs(
                 delta_camera_pitch_angle,
-                [0, 1],
+                [-1, 1],
                 [
                     self._delta_camera_pitch_ang_range[0],
                     self._delta_camera_pitch_ang_range[1],
@@ -1738,10 +1738,12 @@ class WaypointAction(VelocityAction):
             camera_pitch_angular_err = (
                 goal_camera_pitch_ang - self.camera_pitch_ang
             )
-            camera_pitch_angular_velocity = self.w2v_controller.controller.control._velocity_feedback_control(
-                camera_pitch_angular_err,
-                self._acc_camera_pitch_ang,
-                self._w_camera_pitch_max,
+            camera_pitch_angular_velocity = (
+                self.w2v_controller.velocity_feedback_control(
+                    camera_pitch_angular_err,
+                    self._acc_camera_pitch_ang,
+                    self._w_camera_pitch_max,
+                )
             )
 
             # Apply action and step simulation
