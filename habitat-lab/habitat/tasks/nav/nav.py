@@ -1530,18 +1530,18 @@ class WaypointAction(VelocityAction):
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range
         self._waypoint_ang_range = self._config.waypoint_ang_range
-        self._delta_camera_pitch_ang_range = (
-            self._config.delta_camera_pitch_ang_range
+        self._delta_ang_range_camera_pitch = (
+            self._config.delta_ang_range_camera_pitch
         )
         self._wait_duration_range = self._config.wait_duration_range
         self._yaw_input_in_degrees = self._config.yaw_input_in_degrees
         self._min_abs_lin_speed = self._config.min_abs_lin_speed
         self._min_abs_ang_speed = self._config.min_abs_ang_speed
-        self._min_abs_camera_pitch_ang_speed = (
-            self._config.min_abs_camera_pitch_ang_speed
+        self._min_abs_ang_speed_camera_pitch = (
+            self._config.min_abs_ang_speed_camera_pitch
         )
-        self._w_camera_pitch_max = self._config.w_camera_pitch_max
-        self._acc_camera_pitch_ang = self._config.acc_camera_pitch_ang
+        self._w_max_camera_pitch = self._config.w_max_camera_pitch
+        self._acc_ang_camera_pitch = self._config.acc_ang_camera_pitch
 
         if self._yaw_input_in_degrees:
             self._waypoint_ang_range = [
@@ -1589,8 +1589,8 @@ class WaypointAction(VelocityAction):
                         dtype=np.float32,
                     ),
                     "delta_camera_pitch_angle": spaces.Box(
-                        low=np.array([self._delta_camera_pitch_ang_range[0]]),
-                        high=np.array([self._delta_camera_pitch_ang_range[1]]),
+                        low=np.array([self._delta_ang_range_camera_pitch[0]]),
+                        high=np.array([self._delta_ang_range_camera_pitch[1]]),
                         dtype=np.float32,
                     ),
                     "max_duration": spaces.Box(
@@ -1663,8 +1663,8 @@ class WaypointAction(VelocityAction):
                 delta_camera_pitch_angle,
                 [-1, 1],
                 [
-                    self._delta_camera_pitch_ang_range[0],
-                    self._delta_camera_pitch_ang_range[1],
+                    self._delta_ang_range_camera_pitch[0],
+                    self._delta_ang_range_camera_pitch[1],
                 ],
             )
             max_duration = self._scale_inputs(
@@ -1685,7 +1685,7 @@ class WaypointAction(VelocityAction):
             ]
         )
         delta_camera_pitch_angle_clamped = np.clip(
-            delta_camera_pitch_angle, *self._delta_camera_pitch_ang_range
+            delta_camera_pitch_angle, *self._delta_ang_range_camera_pitch
         )
         max_duration_clamped = np.clip(
             max_duration, *self._wait_duration_range
@@ -1741,8 +1741,8 @@ class WaypointAction(VelocityAction):
             camera_pitch_angular_velocity = (
                 self.w2v_controller.velocity_feedback_control(
                     camera_pitch_angular_err,
-                    self._acc_camera_pitch_ang,
-                    self._w_camera_pitch_max,
+                    self._acc_ang_camera_pitch,
+                    self._w_max_camera_pitch,
                 )
             )
 
@@ -1761,7 +1761,7 @@ class WaypointAction(VelocityAction):
                 abs(linear_velocity) < self._min_abs_lin_speed
                 and abs(angular_velocity) < self._min_abs_ang_speed
                 and abs(camera_pitch_angular_velocity)
-                < self._min_abs_camera_pitch_ang_speed
+                < self._min_abs_ang_speed_camera_pitch
             ):
                 break
 
