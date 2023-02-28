@@ -1760,6 +1760,8 @@ class WaypointAction(VelocityAction):
             if (
                 abs(linear_velocity) < self._min_abs_lin_speed
                 and abs(angular_velocity) < self._min_abs_ang_speed
+                and abs(camera_pitch_angular_velocity)
+                < self._min_abs_camera_pitch_ang_speed
             ):
                 break
 

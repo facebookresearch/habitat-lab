@@ -238,7 +238,7 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
-    w_camera_pitch_max: float = 0.45
+    w_camera_pitch_max: float = 0.90
     acc_lin: float = 0.2
     acc_ang: float = 0.6
     acc_camera_pitch_ang: float = 0.6
