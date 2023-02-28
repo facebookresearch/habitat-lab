@@ -432,7 +432,7 @@ class VectorEnv:
 
     @profiling_wrapper.RangeContext("wait_step")
     def wait_step(self) -> List[Any]:
-        r"""Wait until all the asynchronized environments have synchronized."""
+        r"""Wait until all the asynchronous environments have synchronized."""
         return [
             self.wait_step_at(index_env) for index_env in range(self.num_envs)
         ]
@@ -447,6 +447,12 @@ class VectorEnv:
         """
         self.async_step(data)
         return self.wait_step()
+
+    def post_step(self, observations):
+        r"""Performs batch transformations on step outputs.
+
+        :param observations: list of observation dicts returned by step or reset.
+        """
 
     def close(self) -> None:
         if self._is_closed:
@@ -642,3 +648,23 @@ class ThreadedVectorEnv(VectorEnv):
             for q, read_wrapper in zip(parent_write_queues, read_fns)
         ]
         return read_fns, write_fns
+
+
+class BatchRenderVectorEnv(VectorEnv):
+    r""":ref:`VectorEnv` that batches rendering operations.
+
+    Instead of individually rendering their environment, the worker simulators include their render state into observations.
+    The BatchRenderVectorEnv then provides these observations to a batch renderer to produce all visual sensor observations simultaneously.
+
+    This allows all environments to share GPU memory, leading to considerable memory savings, loading time reduction and rendering speed increase.
+    """
+
+    _config: "DictConfig"
+
+    # TODO: Consider passing the root config as a constructor parameter to vector_env and removing this function
+    def initialize_batch_renderer(self, config: "DictConfig"):
+        r"""Initialize batch renderer."""
+        self._config = config
+
+    def post_step(self, observations):
+        pass
