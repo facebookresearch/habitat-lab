@@ -1870,6 +1870,48 @@ class TurnRightWaypointAction(WaypointAction):
         return EmptySpace()
 
 
+@registry.register_task_action
+class LookUpDownContinuousAction(WaypointAction):
+    name: str = "look_up_down_continuous"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._turn_angle = self._config.turn_angle
+        self._max_wait_duration = self._config.max_wait_duration
+
+    def step(self, look_up_down, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        xyt_waypoint = np.array([0.0, 0.0, 0.0])
+        if look_up_down > 0:
+            camera_delta_angle = self._turn_angle
+        elif look_up_down < 0:
+            camera_delta_angle = -self._turn_angle
+        else:
+            camera_delta_angle = 0.0
+        return self._step_rel_waypoint(
+            xyt_waypoint,
+            camera_delta_angle,
+            self._config.max_wait_duration,
+            *args,
+            **kwargs,
+        )
+
+    @property
+    def action_space(self):
+        return spaces.Dict(
+            {
+                "look_up_down": spaces.Box(
+                    low=np.array([-1]),
+                    high=np.array([1]),
+                    dtype=np.float32,
+                ),
+            }
+        )
+
+
 @registry.register_task(name="Nav-v0")
 class NavigationTask(EmbodiedTask):
     def __init__(
