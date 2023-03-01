@@ -16,7 +16,15 @@ We actively welcome your pull requests.
 7. We have adopted squash-and-merge as the policy for incorporating PRs into the `main` branch.
 8. We would rather have several smaller pull requests that a single large Pull Request since smaller self-contained changes are easier to review.
 
-We accept two types of Pull Requests. Make sure your Pull Requests are not a mix of these two types.
+We accept these types of Pull Requests. Make sure your Pull Requests are not a mix of different types since they have different review processes.
+
+**Docs change** which adds to or changes the documentation
+
+**Refactoring** that changes  the code to improve its functionality or performance
+
+**Dependency Upgrade** of one or several dependencies in habitat
+
+**Bug Fix** which are non-breaking change which fixes an issue
 
 **Development Pull Requests** that add new features to the [habitat-lab](/habitat-lab) task and environment codebase. Development Pull Requests must be small, have unit testing, very extensive documentation and examples. These are typically new tasks, environments, sensors, etc... The review process for these Pull Request is longer because these changes will be maintained by our core team of developers, so make sure your changes are easy to understand!
 
