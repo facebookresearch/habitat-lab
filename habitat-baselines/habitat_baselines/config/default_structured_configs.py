@@ -347,14 +347,6 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class TrainerAgentConfig(HabitatBaselinesBaseConfig):
     name: str = "SingleAgentAccessMgr"
-    ###############################
-    # Population play configuration
-    num_total_agents: int = 2
-    num_active_agents: int = 2
-    agent_sample_interval: int = 20
-    allow_self_play: bool = False
-    self_play_batched: bool = False
-    ###############################
 
 
 @attr.s(auto_attribs=True, slots=True)

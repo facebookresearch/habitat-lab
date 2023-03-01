@@ -16,7 +16,6 @@ import torch
 import tqdm
 from omegaconf import OmegaConf
 
-import habitat_baselines.rl.multi_agent  # noqa: F401.
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
