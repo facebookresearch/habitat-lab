@@ -56,8 +56,8 @@ class PddlRobotState:
     Specifies the configuration of the robot.
 
     :property place_at_pos_thresh: If -1.0, this will place the robot as close
-    as possible to the entity. Otherwise, it will place the robot within X
-    meters of the entity.
+        as possible to the entity. Otherwise, it will place the robot within X
+        meters of the entity.
     """
 
     holding: Optional[PddlEntity] = None
