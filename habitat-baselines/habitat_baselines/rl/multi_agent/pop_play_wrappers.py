@@ -15,6 +15,10 @@ from habitat_baselines.rl.ppo.updater import Updater
 
 
 class MultiPolicy(Policy):
+    """
+    Wraps a set of policies. Splits inputs and concatenates outputs.
+    """
+
     def __init__(self):
         self._active_policies = []
 
