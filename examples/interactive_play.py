@@ -676,7 +676,6 @@ if __name__ == "__main__":
         default=False,
         help="Save a GFX replay file.",
     )
-
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
