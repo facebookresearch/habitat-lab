@@ -5,7 +5,7 @@
 import os
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
-import attr
+import attrs
 import numpy as np
 from gym import Space, spaces
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class InstanceImageGoalNavEpisode(NavigationEpisode):
     """Instance ImageGoal Navigation Episode
 
@@ -46,8 +46,12 @@ class InstanceImageGoalNavEpisode(NavigationEpisode):
         goal_image_id: the image ID of which goal image to observe
     """
 
-    goal_object_id: str = attr.ib(default=None, validator=not_none_validator)
-    goal_image_id: int = attr.ib(default=None, validator=not_none_validator)
+    goal_object_id: str = attrs.field(
+        default=None, validator=not_none_validator
+    )
+    goal_image_id: int = attrs.field(
+        default=None, validator=not_none_validator
+    )
     object_category: Optional[str] = None
 
     @property
@@ -59,21 +63,25 @@ class InstanceImageGoalNavEpisode(NavigationEpisode):
         return f"{sid}_{self.goal_object_id}"
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class InstanceImageParameters:
-    position: List[float] = attr.ib(default=None, validator=not_none_validator)
-    rotation: List[float] = attr.ib(default=None, validator=not_none_validator)
-    hfov: Union[int, float] = attr.ib(
+    position: List[float] = attrs.field(
         default=None, validator=not_none_validator
     )
-    image_dimensions: Tuple[int, int] = attr.ib(
+    rotation: List[float] = attrs.field(
+        default=None, validator=not_none_validator
+    )
+    hfov: Union[int, float] = attrs.field(
+        default=None, validator=not_none_validator
+    )
+    image_dimensions: Tuple[int, int] = attrs.field(
         default=None, validator=not_none_validator
     )
     frame_coverage: Optional[float] = None
     object_coverage: Optional[float] = None
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class InstanceImageGoal(ObjectGoal):
     """An instance image goal is an ObjectGoal that also contains a collection
     of InstanceImageParameters.
@@ -83,7 +91,7 @@ class InstanceImageGoal(ObjectGoal):
         image goal.
     """
 
-    image_goals: List[InstanceImageParameters] = attr.ib(
+    image_goals: List[InstanceImageParameters] = attrs.field(
         default=None, validator=not_none_validator
     )
     object_surface_area: Optional[float] = None

@@ -11,7 +11,7 @@ import warnings
 from multiprocessing.context import BaseContext
 from typing import TYPE_CHECKING
 
-import attr
+import attrs
 import numpy as np
 import torch
 
@@ -33,7 +33,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class PreemptionDeciderProcess(ProcessBase):
     r"""Used to decide when to preempt GPU-worker stragglers when training with VER+DD-PPO.
 
@@ -59,13 +59,13 @@ class PreemptionDeciderProcess(ProcessBase):
     queues: WorkerQueues
     my_t_zero: float
     rollout_ends: RolloutEarlyEnds
-    opt_rollout_time_avg: WindowedRunningMean = attr.Factory(
+    opt_rollout_time_avg: WindowedRunningMean = attrs.Factory(
         lambda: WindowedRunningMean(1)
     )
-    preemption_error_time_avg: WindowedRunningMean = attr.Factory(
+    preemption_error_time_avg: WindowedRunningMean = attrs.Factory(
         lambda: WindowedRunningMean(16)
     )
-    learner_time_avg: WindowedRunningMean = attr.Factory(
+    learner_time_avg: WindowedRunningMean = attrs.Factory(
         lambda: WindowedRunningMean(5)
     )
     my_opt_rollout_steps: float = 0.0

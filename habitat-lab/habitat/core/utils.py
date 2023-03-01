@@ -10,7 +10,7 @@ import json
 import math
 from typing import Any, Dict, List, Optional
 
-import attr
+import attrs
 import numpy as np
 import quaternion  # noqa: F401
 from omegaconf import OmegaConf
@@ -63,7 +63,7 @@ def tile_images(images: List[np.ndarray]) -> np.ndarray:
 
 
 def not_none_validator(
-    self: Any, attribute: attr.Attribute, value: Optional[Any]
+    self: Any, attribute: attrs.Attribute, value: Optional[Any]
 ) -> None:
     if value is None:
         raise ValueError(f"Argument '{attribute.name}' must be set")

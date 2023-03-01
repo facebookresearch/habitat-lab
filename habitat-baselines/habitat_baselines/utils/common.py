@@ -23,7 +23,7 @@ from typing import (
     Union,
 )
 
-import attr
+import attrs
 import numpy as np
 import torch
 from gym import spaces
@@ -190,7 +190,7 @@ def linear_decay(epoch: int, total_num_updates: int) -> float:
     return 1 - (epoch / float(total_num_updates))
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class _ObservationBatchingCache(metaclass=Singleton):
     r"""Helper for batching observations that maintains a cpu-side tensor
     that is the right size and is pinned to cuda memory

@@ -25,7 +25,7 @@ from typing import (
     cast,
 )
 
-import attr
+import attrs
 import gym
 import numpy as np
 from gym import spaces
@@ -90,7 +90,7 @@ def _make_env_fn(
     return habitat_env
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class _ReadWrapper:
     r"""Convenience wrapper to track if a connection to a worker process
     should have something to read.
@@ -111,7 +111,7 @@ class _ReadWrapper:
         return res
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class _WriteWrapper:
     r"""Convenience wrapper to track if a connection to a worker process
     can be written to safely.  In other words, checks to make sure the

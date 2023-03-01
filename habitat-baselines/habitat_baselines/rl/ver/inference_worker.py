@@ -11,7 +11,7 @@ from multiprocessing import SimpleQueue
 from multiprocessing.context import BaseContext
 from typing import TYPE_CHECKING, List, Optional, Tuple
 
-import attr
+import attrs
 import numpy as np
 import torch
 
@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class InferenceWorkerProcess(ProcessBase):
     setup_queue: SimpleQueue
     inference_worker_idx: int
@@ -63,22 +63,26 @@ class InferenceWorkerProcess(ProcessBase):
     policy_args: Tuple
     device: torch.device
     rollout_ends: RolloutEarlyEnds
-    actor_critic_tensors: List[torch.Tensor] = attr.ib(None, init=False)
-    rollouts: VERRolloutStorage = attr.ib(None, init=False)
-    replay_reqs: List = attr.ib(factory=list, init=False)
-    new_reqs: List = attr.ib(factory=list, init=False)
-    _avg_step_time: WindowedRunningMean = attr.ib(
+    actor_critic_tensors: List[torch.Tensor] = attrs.field(
+        default=None, init=False
+    )
+    rollouts: VERRolloutStorage = attrs.field(default=None, init=False)
+    replay_reqs: List = attrs.field(factory=list, init=False)
+    new_reqs: List = attrs.field(factory=list, init=False)
+    _avg_step_time: WindowedRunningMean = attrs.field(
         factory=lambda: WindowedRunningMean(128), init=False
     )
-    timer: Timing = attr.Factory(Timing)
+    timer: Timing = attrs.Factory(Timing)
     _n_replay_steps: int = 0
-    actor_critic: NetPolicy = attr.ib(init=False)
-    visual_encoder: Optional[torch.nn.Module] = attr.ib(
+    actor_critic: NetPolicy = attrs.field(init=False)
+    visual_encoder: Optional[torch.nn.Module] = attrs.field(
         init=False, default=None
     )
-    _static_encoder: bool = attr.ib(init=False, default=False)
-    transfer_buffers: NDArrayDict = attr.ib(default=None, init=False)
-    incoming_transfer_buffers: NDArrayDict = attr.ib(default=None, init=False)
+    _static_encoder: bool = attrs.field(init=False, default=False)
+    transfer_buffers: NDArrayDict = attrs.field(default=None, init=False)
+    incoming_transfer_buffers: NDArrayDict = attrs.field(
+        default=None, init=False
+    )
 
     def __attrs_post_init__(self):
         if self.device.type == "cuda":

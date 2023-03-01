@@ -12,7 +12,7 @@ from collections import defaultdict
 from multiprocessing.context import BaseContext
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
-import attr
+import attrs
 import numpy as np
 import torch
 
@@ -41,7 +41,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class ReportWorkerProcess(ProcessBase):
     r"""Responsible for generating reports. Reports on system performance (timings),
     learning progress, and agent training progress.
@@ -56,21 +56,21 @@ class ReportWorkerProcess(ProcessBase):
     flush_secs: int = 30
     _world_size: Optional[int] = None
     _prev_time_taken: float = 0.0
-    timing_stats: Dict[str, Dict[str, WindowedRunningMean]] = attr.ib(
+    timing_stats: Dict[str, Dict[str, WindowedRunningMean]] = attrs.field(
         init=False, default=None
     )
-    stats_this_rollout: Dict[str, List[float]] = attr.ib(
+    stats_this_rollout: Dict[str, List[float]] = attrs.field(
         init=False, factory=lambda: defaultdict(list)
     )
     steps_delta: int = 0
     writer: Optional[Any] = None
     run_id: Optional[str] = None
-    preemption_decider_report: Dict[str, float] = attr.ib(
+    preemption_decider_report: Dict[str, float] = attrs.field(
         factory=dict, init=False
     )
-    window_episode_stats: Optional[Dict[str, WindowedRunningMean]] = attr.ib(
-        default=None, init=False
-    )
+    window_episode_stats: Optional[
+        Dict[str, WindowedRunningMean]
+    ] = attrs.field(default=None, init=False)
 
     def __attrs_post_init__(self):
         self.build_dispatch_table(ReportWorkerTasks)

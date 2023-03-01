@@ -19,7 +19,7 @@ from typing import (
     TypeVar,
 )
 
-import attr
+import attrs
 import numpy as np
 
 from habitat import RLEnv, logger, make_dataset
@@ -70,7 +70,7 @@ def infinite_shuffling_iterator(
         i += 1
 
 
-@attr.s(slots=True, init=False, auto_attribs=True)
+@attrs.define(init=False, auto_attribs=True)
 class DefaultActionPlugin:
     policy_action_space: Any
     is_continuous: bool
@@ -90,22 +90,22 @@ class DefaultActionPlugin:
             return action.item()
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class EnvironmentWorkerProcess(ProcessBase):
     env_idx: int
     env_config: Any
     auto_reset_done: bool
     queues: WorkerQueues
-    action_plugin: Callable[[np.ndarray], np.ndarray] = attr.ib(init=False)
-    env: RLEnv = attr.ib(default=None)
+    action_plugin: Callable[[np.ndarray], np.ndarray] = attrs.field(init=False)
+    env: RLEnv = attrs.field(default=None)
     total_reward: float = 0.0
     episode_length: int = 0
-    timer: Timing = attr.Factory(Timing)
+    timer: Timing = attrs.Factory(Timing)
     _episode_id: int = 0
     _step_id: int = 0
-    _torch_transfer_buffers: TensorDict = attr.ib(init=False)
-    send_transfer_buffers: NDArrayDict = attr.ib(init=False)
-    actions: np.ndarray = attr.ib(init=False)
+    _torch_transfer_buffers: TensorDict = attrs.field(init=False)
+    send_transfer_buffers: NDArrayDict = attrs.field(init=False)
+    actions: np.ndarray = attrs.field(init=False)
 
     def __attrs_post_init__(self):
         self.build_dispatch_table(EnvironmentWorkerTasks)

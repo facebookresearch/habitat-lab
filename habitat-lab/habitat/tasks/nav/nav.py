@@ -8,7 +8,7 @@
 
 from typing import TYPE_CHECKING, Any, List, Optional, Sequence, Tuple, Union
 
-import attr
+import attrs
 import numpy as np
 import quaternion
 from gym import spaces
@@ -63,23 +63,25 @@ cv2 = try_cv2_import()
 MAP_THICKNESS_SCALAR: int = 128
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class NavigationGoal:
     r"""Base class for a goal specification hierarchy."""
 
-    position: List[float] = attr.ib(default=None, validator=not_none_validator)
+    position: List[float] = attrs.field(
+        default=None, validator=not_none_validator
+    )
     radius: Optional[float] = None
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class RoomGoal(NavigationGoal):
     r"""Room goal that can be specified by room_id or position with radius."""
 
-    room_id: str = attr.ib(default=None, validator=not_none_validator)
+    room_id: str = attrs.field(default=None, validator=not_none_validator)
     room_name: Optional[str] = None
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class NavigationEpisode(Episode):
     r"""Class for episode specification that includes initial position and
     rotation of agent, scene name, goal and optional shortest paths. An
@@ -97,7 +99,7 @@ class NavigationEpisode(Episode):
         shortest_paths: list containing shortest paths to goals
     """
 
-    goals: List[NavigationGoal] = attr.ib(
+    goals: List[NavigationGoal] = attrs.field(
         default=None,
         validator=not_none_validator,
         on_setattr=Episode._reset_shortest_path_cache_hook,

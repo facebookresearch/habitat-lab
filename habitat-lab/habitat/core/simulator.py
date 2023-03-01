@@ -17,7 +17,7 @@ from typing import (
     Union,
 )
 
-import attr
+import attrs
 import numpy as np
 import quaternion
 from gym import Space, spaces
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 VisualObservation = Union[np.ndarray, "Tensor"]
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class ActionSpaceConfiguration(metaclass=abc.ABCMeta):
     config: "DictConfig"
 
@@ -229,13 +229,13 @@ class SensorSuite:
         return Observations(self.sensors, *args, **kwargs)
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class AgentState:
     position: Union[None, List[float], np.ndarray]
     rotation: Union[None, np.ndarray, quaternion.quaternion] = None
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class ShortestPathPoint:
     position: List[Any]
     rotation: List[Any]

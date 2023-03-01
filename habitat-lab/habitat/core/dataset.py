@@ -26,7 +26,7 @@ from typing import (
     Union,
 )
 
-import attr
+import attrs
 import numpy as np
 from numpy import ndarray
 
@@ -39,7 +39,7 @@ if TYPE_CHECKING:
 ALL_SCENES_MASK = "*"
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class BaseEpisode:
     """
     Base class for episode specification that includes only the episode_id
@@ -49,11 +49,11 @@ class BaseEpisode:
     :property scene_id: id of scene in dataset.
     """
 
-    episode_id: str = attr.ib(default=None, validator=not_none_validator)
-    scene_id: str = attr.ib(default=None, validator=not_none_validator)
+    episode_id: str = attrs.field(default=None, validator=not_none_validator)
+    scene_id: str = attrs.field(default=None, validator=not_none_validator)
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class Episode(BaseEpisode):
     r"""Base class for episode specification that includes initial position and
     rotation of agent, scene id, episode.
@@ -66,28 +66,28 @@ class Episode(BaseEpisode):
     This information is provided by a :ref:`Dataset` instance.
     """
     # path to the SceneDataset config file
-    scene_dataset_config: str = attr.ib(
+    scene_dataset_config: str = attrs.field(
         default="default", validator=not_none_validator
     )
     # list of paths to search for object config files in addition to the SceneDataset
-    additional_obj_config_paths: List[str] = attr.ib(
+    additional_obj_config_paths: List[str] = attrs.field(
         default=[], validator=not_none_validator
     )
-    start_position: List[float] = attr.ib(
+    start_position: List[float] = attrs.field(
         default=None, validator=not_none_validator
     )
-    start_rotation: List[float] = attr.ib(
+    start_rotation: List[float] = attrs.field(
         default=None, validator=not_none_validator
     )
     info: Optional[Dict[str, Any]] = None
-    _shortest_path_cache: Any = attr.ib(init=False, default=None)
+    _shortest_path_cache: Any = attrs.field(init=False, default=None)
 
     # NB: This method is marked static despite taking self so that
     # on_setattr=Episode._reset_shortest_path_cache_hook works as attrs
     # will pass the instance as the first argument!
     @staticmethod
     def _reset_shortest_path_cache_hook(
-        self: "Episode", attribute: attr.Attribute, value: Any
+        self: "Episode", attribute: attrs.Attribute, value: Any
     ) -> Any:
         self._shortest_path_cache = None
         return value

@@ -7,7 +7,7 @@
 from enum import Enum
 from typing import Dict
 
-import attr
+import attrs
 
 import habitat_sim
 from habitat.core.registry import registry
@@ -24,7 +24,7 @@ class _DefaultHabitatSimActions(Enum):
     look_down = 5
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HabitatSimActionsSingleton(metaclass=Singleton):
     r"""Implements an extendable Enum for the mapping of action names
     to their integer values.
@@ -36,7 +36,7 @@ class HabitatSimActionsSingleton(metaclass=Singleton):
     This accesible as the global singleton :ref:`HabitatSimActions`
     """
 
-    _known_actions: Dict[str, int] = attr.ib(init=False, factory=dict)
+    _known_actions: Dict[str, int] = attrs.field(init=False, factory=dict)
 
     def __attrs_post_init__(self):
         for action in _DefaultHabitatSimActions:

@@ -10,7 +10,7 @@
 
 from typing import Any, Dict, List, Optional
 
-import attr
+import attrs
 from gym import spaces
 
 from habitat.core.registry import registry
@@ -19,13 +19,13 @@ from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class InstructionData:
     instruction_text: str
     instruction_tokens: Optional[List[str]] = None
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class VLNEpisode(NavigationEpisode):
     r"""Specification of episode that includes initial position and rotation
     of agent, goal specifications, instruction specifications, reference path,
@@ -44,13 +44,15 @@ class VLNEpisode(NavigationEpisode):
         instruction: single natural language instruction guide to goal.
         trajectory_id: id of ground truth trajectory path.
     """
-    reference_path: List[List[float]] = attr.ib(
+    reference_path: List[List[float]] = attrs.field(
         default=None, validator=not_none_validator
     )
-    instruction: InstructionData = attr.ib(
+    instruction: InstructionData = attrs.field(
         default=None, validator=not_none_validator
     )
-    trajectory_id: int = attr.ib(default=None, validator=not_none_validator)
+    trajectory_id: int = attrs.field(
+        default=None, validator=not_none_validator
+    )
 
 
 @registry.register_sensor(name="InstructionSensor")

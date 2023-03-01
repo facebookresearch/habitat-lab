@@ -15,14 +15,14 @@ from multiprocessing.sharedctypes import Synchronized
 from multiprocessing.synchronize import Barrier, Event, Lock
 from typing import Any, Callable, Dict, List, Optional, Type
 
-import attr
+import attrs
 import threadpoolctl
 import torch
 
 from habitat_baselines.rl.ver.queue import BatchedQueue
 
 
-@attr.s(auto_attribs=True, init=False, slots=True)
+@attrs.define(auto_attribs=True, init=False)
 class WorkerQueues:
     environments: List[BatchedQueue]
     inference: BatchedQueue
@@ -38,7 +38,7 @@ class WorkerQueues:
         self.preemption_decider = BatchedQueue(1024 * 1024 * num_environments)
 
 
-@attr.s(auto_attribs=True, init=False, slots=True)
+@attrs.define(auto_attribs=True, init=False)
 class RolloutEarlyEnds:
     steps: Synchronized
     time: Synchronized
@@ -48,7 +48,7 @@ class RolloutEarlyEnds:
         self.time = mp_ctx.Value("d", -1.0, lock=False)
 
 
-@attr.s(auto_attribs=True, slots=True, init=False)
+@attrs.define(auto_attribs=True, init=False)
 class InferenceWorkerSync:
     lock: Lock
     all_workers: Barrier
@@ -68,11 +68,11 @@ class InferenceWorkerSync:
         self.rollout_done.clear()
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class ProcessBase:
     done_event: Event
     response_queue: SimpleQueue
-    _dispatch_table: Dict[enum.Enum, Callable[[Any], None]] = attr.ib(
+    _dispatch_table: Dict[enum.Enum, Callable[[Any], None]] = attrs.field(
         init=False, factory=dict
     )
 
@@ -139,7 +139,7 @@ class ProcessBase:
                     self.dispatch_task(task, data)
 
 
-@attr.s(auto_attribs=True, init=False, slots=True)
+@attrs.define(auto_attribs=True, init=False)
 class WorkerBase:
     _proc_done_event: Event
     response_queue: SimpleQueue

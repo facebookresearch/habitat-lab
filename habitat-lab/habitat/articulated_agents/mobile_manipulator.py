@@ -4,7 +4,7 @@
 
 from typing import Dict, List, Optional, Set
 
-import attr
+import attrs
 import magnum as mn
 import numpy as np
 
@@ -15,7 +15,7 @@ from habitat.articulated_agents.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class ArticulatedAgentCameraParams:
     """Data to configure a camera placement on the articulated agent.
     :property attached_link_id: Which link ID this camera is attached to, -1
@@ -35,7 +35,7 @@ class ArticulatedAgentCameraParams:
 
 
 # TODO: refactor this class to support spherical joints: multiple dofs per link and #dofs != #positions
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class MobileManipulatorParams:
     """Data to configure a mobile manipulator.
     :property arm_joints: The joint ids of the arm joints.

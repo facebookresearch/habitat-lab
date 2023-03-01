@@ -4,7 +4,7 @@
 
 from typing import Dict, List, Optional, Set
 
-import attr
+import attrs
 import magnum as mn
 import numpy as np
 
@@ -14,7 +14,7 @@ from habitat.articulated_agents.mobile_manipulator import (
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class SpotParams:
     """Data to configure a mobile manipulator.
     :property arm_joints: The joint ids of the arm joints.

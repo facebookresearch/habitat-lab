@@ -9,7 +9,7 @@ import os.path as osp
 import random
 from typing import TYPE_CHECKING, Any, List
 
-import attr
+import attrs
 import numpy as np
 from omegaconf import OmegaConf
 
@@ -26,20 +26,20 @@ if TYPE_CHECKING:
     from habitat.config import DictConfig
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class SceneSamplerParamsConfig:
     scene: str = "v3_sc1_staging_00"
     scene_sets: List[Any] = []
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class SceneSamplerConfig:
     type: str = "single"
     params: SceneSamplerParamsConfig = SceneSamplerParamsConfig()
     comment: str = ""
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
     min_dist_from_start_to_goal: float = 0.5

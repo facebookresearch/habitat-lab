@@ -12,7 +12,7 @@ This is an example of how to add new actions to habitat-lab
 We will use the strafe action outline in the habitat_sim example
 """
 
-import attr
+import attrs
 import numpy as np
 
 import habitat
@@ -25,7 +25,7 @@ from habitat.sims.habitat_simulator.actions import (
 from habitat.tasks.nav.nav import SimulatorTaskAction
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class NoisyStrafeActuationSpec:
     move_amount: float
     # Classic strafing is to move perpendicular (90 deg) to the forward direction

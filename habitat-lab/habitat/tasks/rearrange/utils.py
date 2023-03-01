@@ -11,7 +11,7 @@ import pickle
 import time
 from typing import List, Optional, Tuple
 
-import attr
+import attrs
 import magnum as mn
 import numpy as np
 import quaternion
@@ -59,7 +59,7 @@ def get_match_link(coll, name):
     return None
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class CollisionDetails:
     obj_scene_colls: int = 0
     robot_obj_colls: int = 0

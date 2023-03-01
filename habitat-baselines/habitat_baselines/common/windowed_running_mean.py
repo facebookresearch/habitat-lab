@@ -8,18 +8,18 @@ import math
 import numbers
 from typing import Optional, Sequence, Union
 
-import attr
+import attrs
 import numpy as np
 
 
-@attr.s(auto_attribs=True, slots=True, repr=False)
+@attrs.define(auto_attribs=True, repr=False)
 class WindowedRunningMean:
     r"""Efficient implementation of a windowed running mean. Supports an infinite window"""
     window_size: Union[int, float]
-    _sum: float = attr.ib(0.0, init=False)
-    _count: int = attr.ib(0, init=False)
-    _ptr: int = attr.ib(0, init=False)
-    _buffer: Optional[np.ndarray] = attr.ib(None, init=False)
+    _sum: float = attrs.field(default=0.0, init=False)
+    _count: int = attrs.field(default=0, init=False)
+    _ptr: int = attrs.field(default=0, init=False)
+    _buffer: Optional[np.ndarray] = attrs.field(default=None, init=False)
 
     def __attrs_post_init__(self):
         if not self.infinite_window:

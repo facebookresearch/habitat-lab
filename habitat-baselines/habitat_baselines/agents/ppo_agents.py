@@ -9,7 +9,7 @@ import argparse
 import random
 from typing import Dict, Optional
 
-import attr
+import attrs
 import numpy as np
 import torch
 from gym.spaces import Box
@@ -24,7 +24,7 @@ from habitat_baselines.rl.ddppo.policy import PointNavResNetPolicy
 from habitat_baselines.utils.common import batch_obs
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class PPOAgentConfig:
     INPUT_TYPE: str = "rgb"
     MODEL_PATH: str = "data/checkpoints/gibson-rgb-best.pth"

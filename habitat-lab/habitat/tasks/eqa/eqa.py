@@ -6,7 +6,7 @@
 
 from typing import Any, Dict, List, Optional
 
-import attr
+import attrs
 from gym import Space, spaces
 
 from habitat.core.embodied_task import Action, Measure
@@ -17,7 +17,7 @@ from habitat.core.utils import not_none_validator
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class QuestionData:
     question_text: str
     answer_text: str
@@ -26,7 +26,7 @@ class QuestionData:
     question_type: Optional[str] = None
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class EQAEpisode(NavigationEpisode):
     r"""Specification of episode that includes initial position and rotation of
     agent, goal, question specifications and optional shortest paths.
@@ -41,7 +41,7 @@ class EQAEpisode(NavigationEpisode):
         question: question related to goal object.
     """
 
-    question: QuestionData = attr.ib(
+    question: QuestionData = attrs.field(
         default=None, validator=not_none_validator
     )
 

@@ -4,7 +4,7 @@
 
 from typing import List, Optional
 
-import attr
+import attrs
 import magnum as mn
 import numpy as np
 
@@ -12,7 +12,7 @@ from habitat.articulated_agents.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class StaticManipulatorParams:
     """Data to configure a static manipulator.
     :property arm_joints: The joint ids of the arm joints.

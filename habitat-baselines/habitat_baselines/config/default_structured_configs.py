@@ -6,7 +6,7 @@
 
 from typing import Any, Dict, List, Optional, Tuple
 
-import attr
+import attrs
 from hydra.core.config_store import ConfigStore
 from omegaconf import MISSING
 
@@ -15,12 +15,12 @@ from habitat.config.default_structured_configs import SimulatorSensorConfig
 cs = ConfigStore.instance()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HabitatBaselinesBaseConfig:
     pass
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class WBConfig(HabitatBaselinesBaseConfig):
     """Weights and Biases config"""
 
@@ -35,7 +35,7 @@ class WBConfig(HabitatBaselinesBaseConfig):
     run_name: str = ""
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class EvalConfig(HabitatBaselinesBaseConfig):
     # The split to evaluate on
     split: str = "val"
@@ -50,7 +50,7 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     extra_sim_sensors: Dict[str, SimulatorSensorConfig] = dict()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class PreemptionConfig(HabitatBaselinesBaseConfig):
     # Append the slurm job ID to the resume state filename if running
     # a slurm job. This is useful when you want to have things from a different
@@ -63,7 +63,7 @@ class PreemptionConfig(HabitatBaselinesBaseConfig):
     save_state_batch_only: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class ActionDistributionConfig(HabitatBaselinesBaseConfig):
     use_log_std: bool = True
     use_softplus: bool = False
@@ -82,12 +82,12 @@ class ActionDistributionConfig(HabitatBaselinesBaseConfig):
     scheduled_std: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class ObsTransformConfig(HabitatBaselinesBaseConfig):
     type: str = MISSING
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class CenterCropperConfig(ObsTransformConfig):
     type: str = "CenterCropper"
     height: int = 256
@@ -108,7 +108,7 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class ResizeShortestEdgeConfig(ObsTransformConfig):
     type: str = "ResizeShortestEdge"
     size: int = 256
@@ -129,7 +129,7 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class Cube2EqConfig(ObsTransformConfig):
     type: str = "CubeMap2Equirect"
     height: int = 256
@@ -152,7 +152,7 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class Cube2FishConfig(ObsTransformConfig):
     type: str = "CubeMap2Fisheye"
     height: int = 256
@@ -177,7 +177,7 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class AddVirtualKeysConfig(ObsTransformConfig):
     type: str = "AddVirtualKeys"
     virtual_keys: Dict[str, int] = dict()
@@ -191,7 +191,7 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class Eq2CubeConfig(ObsTransformConfig):
     type: str = "Equirect2CubeMap"
     height: int = 256
@@ -214,7 +214,7 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     """
     Defines a low-level skill to be used in the hierarchical policy.
@@ -248,14 +248,14 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     pddl_action_names: Optional[List[str]] = None
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
     defined_skills: Dict[str, HrlDefinedSkillConfig] = dict()
     use_skills: Dict[str, str] = dict()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class PolicyConfig(HabitatBaselinesBaseConfig):
     name: str = "PointNavResNetPolicy"
     action_distribution_type: str = "categorical"  # or 'gaussian'
@@ -266,7 +266,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     hierarchical_policy: HierarchicalPolicyConfig = MISSING
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class PPOConfig(HabitatBaselinesBaseConfig):
     """Proximal policy optimization config"""
 
@@ -297,7 +297,7 @@ class PPOConfig(HabitatBaselinesBaseConfig):
     use_double_buffered_sampler: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class VERConfig(HabitatBaselinesBaseConfig):
     """Variable experience rollout config"""
 
@@ -306,12 +306,12 @@ class VERConfig(HabitatBaselinesBaseConfig):
     overlap_rollouts_and_learn: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class AuxLossConfig(HabitatBaselinesBaseConfig):
     pass
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class CPCALossConfig(AuxLossConfig):
     """Action-conditional contrastive predictive coding loss"""
 
@@ -321,7 +321,7 @@ class CPCALossConfig(AuxLossConfig):
     loss_scale: float = 0.1
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class DDPPOConfig(HabitatBaselinesBaseConfig):
     """Decentralized distributed proximal policy optimization config"""
 
@@ -344,7 +344,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     force_distributed: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
@@ -356,13 +356,13 @@ class RLConfig(HabitatBaselinesBaseConfig):
     auxiliary_losses: Dict[str, AuxLossConfig] = dict()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class ProfilingConfig(HabitatBaselinesBaseConfig):
     capture_start_step: int = -1
     num_steps_to_capture: int = -1
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     # If habitat_baselines.evaluate is true, the run will be in evaluation mode
@@ -411,17 +411,17 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     profiling: ProfilingConfig = ProfilingConfig()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
     rl: RLConfig = RLConfig()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HabitatBaselinesILConfig(HabitatBaselinesConfig):
     il: Dict[str, Any] = dict()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class HabitatBaselinesSPAConfig(HabitatBaselinesConfig):
     sense_plan_act: Any = MISSING
 

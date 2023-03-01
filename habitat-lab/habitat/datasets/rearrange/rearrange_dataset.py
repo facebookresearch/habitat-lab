@@ -7,7 +7,7 @@
 import json
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
-import attr
+import attrs
 import numpy as np
 
 import habitat_sim.utils.datasets_download as data_downloader
@@ -22,7 +22,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class RearrangeEpisode(Episode):
     r"""Specifies additional objects, targets, markers, and ArticulatedObject states for a particular instance of an object rearrangement task.
 

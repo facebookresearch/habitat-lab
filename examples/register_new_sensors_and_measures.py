@@ -6,7 +6,7 @@
 
 from typing import Any
 
-import attr
+import attrs
 import numpy as np
 from gym import spaces
 from omegaconf import MISSING
@@ -46,7 +46,7 @@ class EpisodeInfoExample(habitat.Measure):
 
 
 # define a configuration for this new measure
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class EpisodeInfoExampleConfig(MeasurementConfig):
     # Note that typing is required on all fields
     type: str = "EpisodeInfoExample"
@@ -89,7 +89,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 
 # define a configuration for this new sensor
-@attr.s(auto_attribs=True, slots=True)
+@attrs.define(auto_attribs=True)
 class AgentPositionSensorConfig(LabSensorConfig):
     # Note that typing is required on all fields
     type: str = "my_supercool_sensor"

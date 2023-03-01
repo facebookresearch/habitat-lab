@@ -5,7 +5,7 @@
 import os
 from typing import TYPE_CHECKING, Any, List, Optional
 
-import attr
+import attrs
 import numpy as np
 from gym import spaces
 
@@ -30,7 +30,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class ObjectGoalNavEpisode(NavigationEpisode):
     r"""ObjectGoal Navigation Episode
 
@@ -44,7 +44,7 @@ class ObjectGoalNavEpisode(NavigationEpisode):
         return f"{os.path.basename(self.scene_id)}_{self.object_category}"
 
 
-@attr.s(auto_attribs=True)
+@attrs.define(auto_attribs=True)
 class ObjectViewLocation:
     r"""ObjectViewLocation provides information about a position around an object goal
     usually that is navigable and the object is visible with specific agent
@@ -67,7 +67,7 @@ class ObjectViewLocation:
     iou: Optional[float]
 
 
-@attr.s(auto_attribs=True, kw_only=True)
+@attrs.define(auto_attribs=True, kw_only=True)
 class ObjectGoal(NavigationGoal):
     r"""Object goal provides information about an object that is target for
     navigation. That can be specify object_id, position and object
@@ -88,7 +88,7 @@ class ObjectGoal(NavigationGoal):
         The object is visible from these positions.
     """
 
-    object_id: str = attr.ib(default=None, validator=not_none_validator)
+    object_id: str = attrs.field(default=None, validator=not_none_validator)
     object_name: Optional[str] = None
     object_name_id: Optional[int] = None
     object_category: Optional[str] = None
