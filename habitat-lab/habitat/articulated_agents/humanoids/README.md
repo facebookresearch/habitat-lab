@@ -31,5 +31,5 @@ The humanoid is represented as an articulated object made out of capsules and sp
 You can test a simple demo where the humanoid moves their arms at random using:
 
 ```
-python examples/interactive_play.py --never-end --disable-inverse-kinematics --use-joint-control --cfg benchmark/rearrange/play_human.yaml
+python examples/interactive_play.py --never-end --disable-inverse-kinematics --control-humanoid --cfg benchmark/rearrange/play_human.yaml
 ```

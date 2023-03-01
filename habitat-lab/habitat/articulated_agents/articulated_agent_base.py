@@ -25,12 +25,23 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_based: bool = True,
+        maintain_link_order=False,
         base_type="mobile",
         sim_obj=None,
-        maintain_link_order=False,
         **kwargs,
     ):
-        r"""Constructor"""
+        r"""Constructor
+        :param params: The parameter of the base articulated agent.
+        :param urdf_path: The path to the articulated agent's URDF file.
+        :param sim: The simulator.
+        :param limit_robo_joints: If true, joint limits of articulated agent are always
+            enforced.
+        :param fixed_base: If the articulated agent's base is fixed or not.
+        :param maintain_link_order: Whether to to preserve the order of
+            links parsed from URDF files as link indices. Needed for
+            compatibility with PyBullet.
+        :param sim_obj: Pointer to the simulated object
+        """
         assert base_type in [
             "mobile",
             "leg",

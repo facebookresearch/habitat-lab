@@ -495,16 +495,16 @@ class HumanoidJointAction(RobotAction):
             }
         )
 
-    def step(self, **kwargs):
+    def step(self, human_joint_trans, **kwargs):
+        r"""
+        Updates the joint rotations and root transformation of the humanoid.
+        :param human_joint_trans: Array of size (num_joints*4)+16. The last 16
+            dimensions define the 4x4 root transformation matrix, the first elements
+            correspond to a flattened list of quaternions for each joint. When the array is all 0
+            it keeps the previous joint rotation and transform.
         """
-        Updates the humanoid joints and transform kinematically, according to human_joints_trans.
-        human_joints_trans is an array of num_joints * 4 + 16 dimensions, where the last 16 dimensions
-        correspond to a flattened matrix transform and the first num_joints * 4 dimensions correspond to
-        quaternions representing the joint rotations.
-        """
-        new_pos_transform = kwargs["human_joints_trans"]
-        new_joints = new_pos_transform[:-16]
-        new_pos_transform = new_pos_transform[-16:]
+        new_joints = human_joint_trans[:-16]
+        new_pos_transform = human_joint_trans[-16:]
 
         # When the array is all 0, this indicates we are not setting
         # the human joint

@@ -116,10 +116,10 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         base_type="mobile",
     ):
         r"""Constructor
-        :param params: The parameter of the manipulator robot.
-        :param urdf_path: The path to the robot's URDF file.
+        :param params: The parameter of the manipulator articulated agent.
+        :param urdf_path: The path to the agent's URDF file.
         :param sim: The simulator.
-        :param limit_robo_joints: If true, joint limits of robot are always
+        :param limit_robo_joints: If true, joint limits of agent are always
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
         :param maintain_link_order: Whether to to preserve the order of

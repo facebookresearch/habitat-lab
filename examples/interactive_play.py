@@ -92,7 +92,7 @@ def get_input_vel_ctlr(
     env,
     not_block_input,
     agent_to_control,
-    use_joint_control,
+    control_humanoid,
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
@@ -104,7 +104,7 @@ def get_input_vel_ctlr(
         agent_k = ""
     arm_action_name = f"{agent_k}arm_action"
 
-    if use_joint_control:
+    if control_humanoid:
         base_action_name = f"{agent_k}humanjoint_action"
         base_key = "human_joints_trans"
     else:
@@ -262,14 +262,17 @@ def get_input_vel_ctlr(
             logger.info("[play.py]: Snapping")
             magic_grasp = 1
 
-    if use_joint_control:
+    if control_humanoid:
         # Add random noise to human arms but keep global transform
         (
             new_joints,
             root_trans,
         ) = env._sim.articulated_agent.get_joint_transform()
+        # Divide new_joints by 4 since new_joints has flattened quaternions
+        # and the dimension of each quaternion is 4
         num_joints = len(new_joints) // 4
         root_trans = np.array(root_trans)
+        index_arms_start = 10
         new_joints_quat = [
             mn.Quaternion(
                 mn.Vector3(new_joints[(4 * index) : (4 * index + 3)]),
@@ -280,12 +283,13 @@ def get_input_vel_ctlr(
         rotated_joints_quat = []
         for index, joint_quat in enumerate(new_joints_quat):
             random_vec = np.random.rand(3)
-            random_angle = np.random.rand() * 360 / 60
+            # We allow for maximum 10 angles per step
+            random_angle = np.random.rand() * 10
             rotation_quat = mn.Quaternion.rotation(
                 mn.Rad(random_angle), mn.Vector3(random_vec).normalized()
             )
             new_quat = joint_quat
-            if index > 10:
+            if index > index_arms_start:
                 new_quat = joint_quat * rotation_quat
             rotated_joints_quat.append(new_quat)
         new_joints = np.concatenate(
@@ -480,7 +484,7 @@ def play_env(env, args, config):
             env,
             not free_cam.is_free_cam_mode,
             agent_to_control,
-            args.use_joint_control,
+            args.control_humanoid,
         )
 
         if not args.no_render and keys[pygame.K_c]:
@@ -661,10 +665,10 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "--use-joint-control",
+        "--control-humanoid",
         action="store_true",
         default=False,
-        help="Control joints of articulated agent.",
+        help="Control humanoid agent.",
     )
 
     parser.add_argument(
@@ -726,6 +730,9 @@ if __name__ == "__main__":
 
         if args.never_end:
             env_config.max_episode_steps = 0
+
+        if args.control_humanoid:
+            args.disable_inverse_kinematics = True
 
         if not args.disable_inverse_kinematics:
             if "arm_action" not in task_config.actions:
