@@ -467,3 +467,54 @@ class ArmEEAction(RobotAction):
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
+
+
+@registry.register_task_action
+class HumanoidJointAction(RobotAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.num_joints = 19
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+
+    @property
+    def action_space(self):
+        num_joints = self.num_joints
+        num_dim_transform = 16
+        # The action space is the number of joints plus 16 for a 4x4 transformtion matrix for the base
+        return spaces.Dict(
+            {
+                "human_joints_trans": spaces.Box(
+                    shape=(4 * (num_joints + num_dim_transform),),
+                    low=-1,
+                    high=1,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def step(self, human_joints_trans, **kwargs):
+        r"""
+        Updates the joint rotations and root transformation of the humanoid.
+        :param human_joint_trans: Array of size (num_joints*4)+16. The last 16
+            dimensions define the 4x4 root transformation matrix, the first elements
+            correspond to a flattened list of quaternions for each joint. When the array is all 0
+            it keeps the previous joint rotation and transform.
+        """
+        new_joints = human_joints_trans[:-16]
+        new_pos_transform = human_joints_trans[-16:]
+
+        # When the array is all 0, this indicates we are not setting
+        # the human joint
+        if np.array(new_pos_transform).sum() != 0:
+            vecs = [
+                mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
+                for i in range(4)
+            ]
+            new_transform = mn.Matrix4(*vecs)
+            self.cur_articulated_agent.set_joint_transform(
+                new_joints, new_transform
+            )
+        return self._sim.step(HabitatSimActions.changejoint_action)

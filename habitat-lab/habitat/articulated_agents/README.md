@@ -1,7 +1,7 @@
 Robot Design
 ==============================
 
-Habitat supports different kinds of agents that can interact in the environment, including robots or humanoids. These agents are represented as articulated objects, consisting of multiple rigid parts (links) connected by joints to perform rotational or translational motion. This readme file details the design of these articulated agent modules, which robots inherit from. We provide the implementation of different robots under the `robots` folder.
+Habitat supports different kinds of agents that can interact in the environment, including robots or humanoids. These agents are represented as articulated objects, consisting of multiple rigid parts (links) connected by joints to perform rotational or translational motion. This readme file details the design of these articulated agent modules, which robots and humanoids inherit from. We provide the implementation of different robots under the `robots` folder, and the implementation of different humanoids under `humanoids`.
 
 ---
 

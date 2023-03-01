@@ -92,9 +92,9 @@ class MobileManipulatorParams:
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
 
-    wheel_mtr_pos_gain: float
-    wheel_mtr_vel_gain: float
-    wheel_mtr_max_impulse: float
+    wheel_mtr_pos_gain: Optional[float]
+    wheel_mtr_vel_gain: Optional[float]
+    wheel_mtr_max_impulse: Optional[float]
 
     base_offset: mn.Vector3
     base_link_names: Set[str]
@@ -112,15 +112,19 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
+        maintain_link_order: bool = False,
         base_type="mobile",
     ):
         r"""Constructor
-        :param params: The parameter of the manipulator robot.
-        :param urdf_path: The path to the robot's URDF file.
+        :param params: The parameter of the manipulator articulated agent.
+        :param urdf_path: The path to the agent's URDF file.
         :param sim: The simulator.
-        :param limit_robo_joints: If true, joint limits of robot are always
+        :param limit_robo_joints: If true, joint limits of agent are always
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
+        :param maintain_link_order: Whether to to preserve the order of
+            links parsed from URDF files as link indices. Needed for
+            compatibility with PyBullet.
         :param base_type: The base type
         """
         # instantiate a manipulator
@@ -141,6 +145,7 @@ class MobileManipulator(Manipulator, ArticulatedAgentBase):
             fixed_based=fixed_base,
             sim_obj=self.sim_obj,
             base_type=base_type,
+            maintain_link_order=maintain_link_order,
         )
 
     def reconfigure(self) -> None:
