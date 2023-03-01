@@ -353,6 +353,7 @@ class TrainerAgentConfig(HabitatBaselinesBaseConfig):
     num_active_agents: int = 2
     agent_sample_interval: int = 20
     allow_self_play: bool = False
+    self_play_batched: bool = False
     ###############################
 
 

@@ -51,15 +51,34 @@ class MultiPolicy(Policy):
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
+        batch_size = masks.shape[0]
+        device = masks.device
+        # Action dim is split evenly between the agents.
+        action_dim = prev_actions.shape[-1] // n_agents
+
+        def _maybe_cat(get_dat, feature_dim, dtype):
+            all_dat = [get_dat(ac) for ac in agent_actions]
+            # Replace any None with dummy data.
+            all_dat = [
+                torch.zeros(
+                    (batch_size, feature_dim), device=device, dtype=dtype
+                )
+                if dat is None
+                else dat
+                for dat in all_dat
+            ]
+            return torch.cat(all_dat, -1)
 
         return PolicyActionData(
             rnn_hidden_states=torch.cat(
                 [ac.rnn_hidden_states for ac in agent_actions], -1
             ),
-            actions=torch.cat([ac.actions for ac in agent_actions], -1),
-            values=torch.cat([ac.values for ac in agent_actions], -1),
-            action_log_probs=torch.cat(
-                [ac.action_log_probs for ac in agent_actions], -1
+            actions=_maybe_cat(
+                lambda ac: ac.actions, action_dim, prev_actions.dtype
+            ),
+            values=_maybe_cat(lambda ac: ac.values, 1, torch.float32),
+            action_log_probs=_maybe_cat(
+                lambda ac: ac.action_log_probs, 1, torch.float32
             ),
             take_actions=torch.cat(
                 [ac.take_actions for ac in agent_actions], -1
@@ -139,7 +158,10 @@ class MultiStorage(Storage):
                 rewards=rewards,
                 buffer_index=buffer_index,
                 next_masks=next_masks,
-                **{k: v[agent_i] for k, v in insert_d.items()},
+                **{
+                    k: v[agent_i] if v is not None else v
+                    for k, v in insert_d.items()
+                },
             )
 
     def to(self, device):

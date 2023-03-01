@@ -10,6 +10,9 @@ from habitat_baselines.rl.multi_agent.pop_play_wrappers import (
     MultiPolicy,
     MultiStorage,
     MultiUpdater,
+    SelfBatchedPolicy,
+    SelfBatchedStorage,
+    SelfBatchedUpdater,
     filter_agent_names,
 )
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
@@ -83,24 +86,41 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                     lr_schedule_fn,
                 )
             )
-        self._multi_policy = MultiPolicy.from_config(
+
+        if self._pop_config.self_play_batched:
+            policy_cls = SelfBatchedPolicy
+            updater_cls = SelfBatchedUpdater
+            storage_cls = SelfBatchedStorage
+            self._active_agents = [0, 0]
+        else:
+            policy_cls = MultiPolicy
+            updater_cls = MultiUpdater
+            storage_cls = MultiStorage
+
+        self._multi_policy = policy_cls.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,
             orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=self._pop_config.num_active_agents,
         )
-        self._multi_updater = MultiUpdater.from_config(
+        self._multi_updater = updater_cls.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,
             orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=self._pop_config.num_active_agents,
         )
 
-        self._multi_storage = MultiStorage.from_config(
+        self._multi_storage = storage_cls.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,
             orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=self._pop_config.num_active_agents,
         )
 
         if self.nbuffers != 1:
@@ -116,11 +136,12 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         """
         Samples the set of agents currently active in the episode.
         """
+        assert not self._pop_config.self_play_batched
 
         # Random sample over which agents are active.
         self._active_agents = np.random.choice(
             self._all_agent_idxs,
-            size=2,
+            size=self._pop_config.num_active_agents,
             replace=self._pop_config.allow_self_play,
         )
 
@@ -139,7 +160,8 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent.post_init(create_rollouts_fn)
 
         self._num_updates = 0
-        self._sample_active()
+        if not self._pop_config.self_play_batched:
+            self._sample_active()
 
     def eval(self):
         for agent in self._agents:
@@ -185,7 +207,10 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         for agent in self._agents:
             agent.after_update()
         self._num_updates += 1
-        if self._num_updates % self._pop_config.agent_sample_interval == 0:
+        if (
+            self._num_updates % self._pop_config.agent_sample_interval == 0
+            and self._pop_config.agent_sample_interval != -1
+        ):
             self._sample_active()
 
     def pre_rollout(self):

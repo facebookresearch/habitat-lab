@@ -4,11 +4,11 @@
 # Supports different HL policy configurations and using a variety of LL policies.
 
 defaults:
-  #TODO MODIFIED TO BE MULTI-AGENT DONT COMMIT
-  - /benchmark/rearrange/multi_agent: tidy_house
+  - /benchmark/rearrange: rearrange_easy
+  #- /benchmark/rearrange/multi_agent: tidy_house
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
-  - /habitat_baselines/rl/agent: pop_play
+  - /habitat_baselines/rl/agent: single_agent
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy: hl_fixed
