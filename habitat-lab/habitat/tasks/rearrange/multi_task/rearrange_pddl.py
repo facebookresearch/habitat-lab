@@ -150,7 +150,7 @@ class PddlSimInfo:
         ename = entity.name
         if self.check_type_matches(entity, robot_type):
             robot_id = self.robot_ids[ename]
-            return self.sim.get_robot_data(robot_id).robot.base_pos
+            return self.sim.get_agent_data(robot_id).robot.base_pos
         elif self.check_type_matches(entity, ART_OBJ_TYPE):
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()

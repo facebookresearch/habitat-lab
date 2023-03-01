@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 """
-Manually control the robot to interact with the environment. Run as
+Manually control the articulated agent to interact with the environment. Run as
 ```
 python examples/interative_play.py
 ```
@@ -13,22 +13,22 @@ python examples/interative_play.py
 To Run you need PyGame installed (to install run `pip install pygame==2.0.1`).
 
 By default this controls with velocity control (which makes controlling the
-robot hard). To use IK control instead add the `--add-ik` command line argument.
+agent hard). To use IK control instead add the `--add-ik` command line argument.
 
 Controls:
 - For velocity control
-    - 1-7 to increase the motor target for the robot arm joints
-    - Q-U to decrease the motor target for the robot arm joints
+    - 1-7 to increase the motor target for the articulated agent arm joints
+    - Q-U to decrease the motor target for the articulated agent arm joints
 - For IK control
     - W,S,A,D to move side to side
     - E,Q to move up and down
-- I,J,K,L to move the robot base around
-- PERIOD to print the current world coordinates of the robot base.
+- I,J,K,L to move the articulated agent base around
+- PERIOD to print the current world coordinates of the articulated agent base.
 - Z to toggle the camera to free movement mode. When in free camera mode:
     - W,S,A,D,Q,E to translate the camera
     - I,J,K,L,U,O to rotate the camera
     - B to reset the camera position
-- X to change the robot that is being controlled (if there are multiple robots).
+- X to change the articulated agent that is being controlled (if there are multiple articulated agents).
 
 Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
 
@@ -65,8 +65,10 @@ from habitat.core.logging import logger
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
-from habitat.utils.render_wrapper import overlay_frame
-from habitat.utils.visualizations.utils import observations_to_image
+from habitat.utils.visualizations.utils import (
+    observations_to_image,
+    overlay_frame,
+)
 from habitat_sim.utils import viz_utils as vut
 
 try:
@@ -89,17 +91,17 @@ def get_input_vel_ctlr(
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
-    multi_agent = len(env._sim.robots_mgr) > 1
+    multi_agent = len(env._sim.agents_mgr) > 1
 
-    arm_action_name = "arm_action"
-    base_action_name = "base_velocity"
-    agent_k = f"agent_{agent_to_control}"
     if multi_agent:
-        arm_action_name = f"{agent_k}_{arm_action_name}"
-        base_action_name = f"{agent_k}_{base_action_name}"
-    arm_key = f"{agent_k}_arm_action"
-    grip_key = f"{agent_k}_grip_action"
-    base_key = f"{agent_k}_base_vel"
+        agent_k = f"agent_{agent_to_control}_"
+    else:
+        agent_k = ""
+    arm_action_name = f"{agent_k}arm_action"
+    base_action_name = f"{agent_k}base_velocity"
+    arm_key = "arm_action"
+    grip_key = "grip_action"
+    base_key = "base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
@@ -251,17 +253,22 @@ def get_input_vel_ctlr(
             magic_grasp = 1
 
     if keys[pygame.K_PERIOD]:
-        # Print the current position of the robot, useful for debugging.
-        pos = [float("%.3f" % x) for x in env._sim.robot.sim_obj.translation]
-        rot = env._sim.robot.sim_obj.rotation
-        ee_pos = env._sim.robot.ee_transform.translation
+        # Print the current position of the articulated agent, useful for debugging.
+        pos = [
+            float("%.3f" % x)
+            for x in env._sim.articulated_agent.sim_obj.translation
+        ]
+        rot = env._sim.articulated_agent.sim_obj.rotation
+        ee_pos = env._sim.articulated_agent.ee_transform().translation
         logger.info(
-            f"Robot state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
+            f"Agent state: pos = {pos}, rotation = {rot}, ee_pos = {ee_pos}"
         )
     elif keys[pygame.K_COMMA]:
-        # Print the current arm state of the robot, useful for debugging.
-        joint_state = [float("%.3f" % x) for x in env._sim.robot.arm_joint_pos]
-        logger.info(f"Robot arm joint state: {joint_state}")
+        # Print the current arm state of the articulated agent, useful for debugging.
+        joint_state = [
+            float("%.3f" % x) for x in env._sim.articulated_agent.arm_joint_pos
+        ]
+        logger.info(f"Agent arm joint state: {joint_state}")
 
     args: Dict[str, Any] = {}
     if base_action is not None and base_action_name in env.action_space.spaces:
@@ -395,7 +402,7 @@ def play_env(env, args, config):
     gfx_measure = env.task.measurements.measures.get(
         GfxReplayMeasure.cls_uuid, None
     )
-    is_multi_agent = len(env._sim.robots_mgr) > 1
+    is_multi_agent = len(env._sim.agents_mgr) > 1
 
     while True:
         if (
@@ -414,7 +421,7 @@ def play_env(env, args, config):
 
         if not args.no_render and is_multi_agent and keys[pygame.K_x]:
             agent_to_control += 1
-            agent_to_control = agent_to_control % len(env._sim.robots_mgr)
+            agent_to_control = agent_to_control % len(env._sim.agents_mgr)
             logger.info(
                 f"Controlled agent changed. Controlling agent {agent_to_control}."
             )

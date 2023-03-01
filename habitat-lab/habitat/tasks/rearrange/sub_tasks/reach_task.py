@@ -27,7 +27,7 @@ class RearrangeReachTaskV1(RearrangeTask):
 
         # Pick a random goal in the robot's workspace
 
-        ee_region = self._sim.robot.params.ee_constraint
+        ee_region = self._sim.articulated_agent.params.ee_constraint[0]
         full_range = mn.Range3D.from_size(
             mn.Vector3(ee_region[:, 0]),
             mn.Vector3(ee_region[:, 1] - ee_region[:, 0]),
@@ -54,12 +54,12 @@ class RearrangeReachTaskV1(RearrangeTask):
             )
 
         if self._config.render_target:
-            global_pos = self._sim.robot.base_transformation.transform_point(
+            global_pos = self._sim.articulated_agent.base_transformation.transform_point(
                 self._desired_resting
             )
             self._sim.viz_ids["reach_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["reach_target"]
             )
 
-        self._sim.maybe_update_robot()
+        self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)

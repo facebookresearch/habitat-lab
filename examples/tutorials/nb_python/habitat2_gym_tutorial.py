@@ -104,7 +104,7 @@ env.close()
 #     * `HabitatPrepareGroceries-v0`
 #     * `HabitatSetTable-v0`
 #
-# The Gym environments are automatically registered from the RL training configurations under ["habitat-lab/habitat/config/benchmark/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/benchmark/rearrange). The `habitat.gym.auto_name` key in the YAML file determines the `[Task Name]`. The observation keys in `habitat.gym.obs_keys` are what is returned in the observation space. If the the observations are a set of 1D arrays, then the observation space is automatically flattened. For example, in `HabitatReachState-v0` the observation space is `habitat.gym.obs_keys = ['joint', 'relative_resting_position']`. `joint` is a 7D array and `relative_resting_position` is a 3D array. These two arrays are concatenated automatically to give a `10D` observation space. On the other hand, in environments with image observations, the observation is returned as a dictionary.
+# The Gym environments are automatically registered from the RL training configurations under ["habitat-lab/habitat/config/benchmark/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/benchmark/rearrange). The observation keys in `habitat.gym.obs_keys` are what is returned in the observation space.
 #
 # An example of these different observation spaces is demonstrated below:
 

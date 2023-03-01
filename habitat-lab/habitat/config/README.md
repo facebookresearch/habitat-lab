@@ -2,6 +2,8 @@ Habitat-Lab Configuration System
 ================================
 ![Habitat with Hydra](/res/img/habitat_with_hydra.png)
 
+For a description of some of the most important configuration keys of the habitat benchmarks, refer to [this file](CONFIG_KEYS.md).
+
 Habitat-Lab's configuration system has been changed from [YACS](https://github.com/rbgirshick/yacs)
 to [Hydra](https://hydra.cc).
 
@@ -127,7 +129,7 @@ habitat:
     step_physics: true
     concur_render: false
     needs_markers: true
-    update_robot: true
+    update_articulated_agent: true
     scene: data/scene_datasets/habitat-test-scenes/van-gogh-room.glb
     scene_dataset: default
     additional_object_paths: []
@@ -282,7 +284,6 @@ habitat:
     - '*'
     data_path: data/datasets/pointnav/gibson/v1/{split}/{split}.json.gz
   gym:
-    auto_name: ''
     obs_keys: null
     action_keys: null
     achieved_goal_keys: []

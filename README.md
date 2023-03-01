@@ -101,49 +101,43 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
       ```
 
-1. **Non-interactive testing**: Test the PointNav task: Run the example pointnav script
-    ```bash
-    python examples/example_pointnav.py
-    ```
-
-    which instantiates a PointNav agent in the testing scenes and episodes. The agent takes random actions and you should see something like:
-
-    ```bash
-    [16:11:11:718584]:[Sim] Simulator.cpp(205)::reconfigure : CreateSceneInstance success == true for active scene name : data/scene_datasets/habitat-test-scenes/skokloster-castle.glb  with renderer.
-    2022-08-13 16:26:45,068 Initializing task Nav-v0
-    Environment creation successful
-    Agent stepping around inside environment.
-    Episode finished after 5 steps.
-    ```
-
 1. **Non-interactive testing**: Test the Pick task: Run the example pick task script
     <!--- Please, update `examples/example.py` if you update example. -->
     ```bash
     python examples/example.py
     ```
 
-    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent.
+    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent. The script roughly does this:
 
     ```python
-    import habitat
+    import gym
+    import habitat.gym
 
     # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
-    env = habitat.Env(config=habitat.get_config("benchmark/rearrange/pick.yaml"))
+    env = gym.make("HabitatRenderPick-v0")
     observations = env.reset()
 
+    terminal = False
+
     # Step through environment with random actions
-    while not env.episode_over:
-        observations = env.step(env.action_space.sample())
+    while not terminal:
+        observations, reward, terminal, info = env.step(env.action_space.sample())
     ```
 
-    This script instantiates a Pick agent in ReplicaCAD scenes. The agent takes random actions and you should see something like:
-    ```bash
-      Agent acting inside environment.
-      Renderer: AMD Radeon Pro 5500M OpenGL Engine by ATI Technologies Inc.
-      Episode finished after 200 steps.
+    To modify some of the configurations of the environment, you can also use the `habitat.gym.make_gym_from_config` method that allows you to create a habitat environment using a configuration.
+
+    ```python
+    config = habitat.get_config(
+      "benchmark/rearrange/pick.yaml",
+      overrides=["habitat.environment.max_episode_steps=20"]
+    )
+    env = habitat.gym.make_gym_from_config(config)
     ```
+
+    If you want to know more about what the different configuration keys overrides do, you can use [this reference](habitat-lab/habitat/config/CONFIG_KEYS.md).
 
     See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code.
+
 
 
 1. **Interactive testing**: Using you keyboard and mouse to control a Fetch robot in a ReplicaCAD environment:
@@ -177,7 +171,7 @@ We provide docker containers for Habitat, updated approximately once per year fo
 
 1. Activate the habitat conda environment: `conda init; source ~/.bashrc; source activate habitat`
 
-1. Run the testing scripts as above: `cd habitat-lab; python examples/example_pointnav.py`. This should print out an output like:
+1. Run the testing scripts as above: `cd habitat-lab; python examples/example.py`. This should print out an output like:
     ```bash
     Agent acting inside environment.
     Episode finished after 200 steps.

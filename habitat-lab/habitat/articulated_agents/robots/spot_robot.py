@@ -8,9 +8,9 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.robots.mobile_manipulator import (
+from habitat.articulated_agents.mobile_manipulator import (
+    ArticulatedAgentCameraParams,
     MobileManipulator,
-    RobotCameraParams,
 )
 
 
@@ -50,6 +50,7 @@ class SpotParams:
         there are legs).
     :property leg_mtr_max_impulse: The maximum impulse of the leg motor (if
         there are legs).
+    :property ee_count: how many end effectors
     """
 
     arm_joints: List[int]
@@ -58,11 +59,11 @@ class SpotParams:
     arm_init_params: Optional[List[float]]
     gripper_init_params: Optional[List[float]]
 
-    ee_offset: mn.Vector3
-    ee_link: int
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams]
+    cameras: Dict[str, ArticulatedAgentCameraParams]
 
     gripper_closed_state: List[float]
     gripper_open_state: List[float]
@@ -80,6 +81,8 @@ class SpotParams:
     leg_mtr_pos_gain: Optional[float] = None
     leg_mtr_vel_gain: Optional[float] = None
     leg_mtr_max_impulse: Optional[float] = None
+
+    ee_count: Optional[int] = 1
 
 
 class SpotRobot(MobileManipulator):
@@ -104,18 +107,18 @@ class SpotRobot(MobileManipulator):
                 0.7,
                 -1.5,
             ],
-            ee_offset=mn.Vector3(0.08, 0, 0),
-            ee_link=7,
-            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
+            ee_offset=[mn.Vector3(0.08, 0, 0)],
+            ee_links=[7],
+            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={
-                "robot_arm": RobotCameraParams(
+                "robot_arm": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
                     cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
                     attached_link_id=6,
                     relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
                     @ mn.Matrix4.rotation_z(mn.Deg(90)),
                 ),
-                "robot_head_stereo_right": RobotCameraParams(
+                "robot_head_stereo_right": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, 0.03614789234067159
                     ),
@@ -124,7 +127,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "robot_head_stereo_left": RobotCameraParams(
+                "robot_head_stereo_left": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, -0.03740343144695029
                     ),
@@ -133,7 +136,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "robot_third": RobotCameraParams(
+                "robot_third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,

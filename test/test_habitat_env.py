@@ -352,7 +352,7 @@ def _make_dummy_env_func(config, dataset=None, env_id=0, rank=0):
     """
     env = DummyRLEnv(config=config, dataset=dataset)
     env.seed(config.habitat.seed + rank)
-    env = HabGymWrapper(env)
+    env = HabGymWrapper(env=env)
     env = CallTestEnvWrapper(env, env_id)
     return env
 

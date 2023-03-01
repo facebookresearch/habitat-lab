@@ -16,8 +16,8 @@ export HABITAT_SIM_LOG=quiet
 
 NO_SLEEP="habitat.simulator.auto_sleep=False"
 NO_CONCUR="habitat.simulator.concur_render=False"
-#NO_PHYSICS=("habitat.simulator.step_physics" False) #disables simulation step and robot update
-#NO_ROBOT_UPDATE=("habitat.simulator.update_robot" False) #only disables robot update
+#NO_PHYSICS=("habitat.simulator.step_physics" False) #disables simulation step and articulated agent update
+#NO_ROBOT_UPDATE=("habitat.simulator.update_articulated_agent" False) #only disables articulated agent update
 
 #number of processes
 # shellcheck disable=SC2043

@@ -15,14 +15,17 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
+from habitat.tasks.rearrange.utils import (
+    UsesArticulatedAgentInterface,
+    get_angle_to_pos,
+)
 from habitat.tasks.utils import cartesian_to_polar
 
 BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_sensor
-class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
+class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -50,9 +53,9 @@ class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.get_robot_data(
-            self.robot_id
-        ).robot.base_transformation
+        robot_T = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.base_transformation
 
         dir_vector = robot_T.inverted().transform_point(task.nav_goal_pos)
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
@@ -83,7 +86,7 @@ class OracleNavigationActionSensor(Sensor):
         )
 
     def _path_to_point(self, point):
-        agent_pos = self._sim.robot.base_pos
+        agent_pos = self._sim.articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
@@ -177,7 +180,7 @@ class DistToGoal(Measure):
 
     def _get_cur_geo_dist(self, task):
         return np.linalg.norm(
-            np.array(self._sim.robot.base_pos)[[0, 2]]
+            np.array(self._sim.articulated_agent.base_pos)[[0, 2]]
             - task.nav_goal_pos[[0, 2]]
         )
 
@@ -209,7 +212,7 @@ class RotDistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = task.nav_goal_pos
-        robot = self._sim.robot
+        robot = self._sim.articulated_agent
         T = robot.base_transformation
         angle = get_angle_to_pos(T.transform_vector(targ))
         self._metric = np.abs(float(angle))

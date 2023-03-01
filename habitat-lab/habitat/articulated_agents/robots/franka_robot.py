@@ -5,7 +5,7 @@
 import magnum as mn
 import numpy as np
 
-from habitat.robots.static_manipulator import (
+from habitat.articulated_agents.static_manipulator import (
     StaticManipulator,
     StaticManipulatorParams,
 )
@@ -18,9 +18,9 @@ class FrankaRobot(StaticManipulator):
             gripper_joints=[],
             arm_init_params=np.zeros((7,)),
             gripper_init_params=np.zeros((2,)),
-            ee_offset=mn.Vector3(),  # zeroed
-            ee_link=1,
-            ee_constraint=np.array([[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]),
+            ee_offset=[mn.Vector3()],  # zeroed
+            ee_links=[1],
+            ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             gripper_closed_state=np.array(
                 [
                     0.0,

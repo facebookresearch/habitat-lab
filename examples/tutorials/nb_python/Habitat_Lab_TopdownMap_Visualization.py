@@ -64,11 +64,11 @@ from habitat.config.default_structured_configs import (
 from habitat.core.agent import Agent
 from habitat.tasks.nav.nav import NavigationEpisode, NavigationGoal
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
-from habitat.utils.render_wrapper import overlay_frame
 from habitat.utils.visualizations import maps
 from habitat.utils.visualizations.utils import (
     images_to_video,
     observations_to_image,
+    overlay_frame,
 )
 from habitat_sim.utils import viz_utils as vut
 

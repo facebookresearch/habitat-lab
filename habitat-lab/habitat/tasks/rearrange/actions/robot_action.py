@@ -4,7 +4,7 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 class RobotAction(SimulatorTaskAction):
     """
-    Handles which robot instance the action is applied to.
+    Handles which articulated_agent instance the action is applied to.
     """
 
     _sim: RearrangeSim
@@ -19,33 +19,33 @@ class RobotAction(SimulatorTaskAction):
             self._multi_agent = True
 
     @property
-    def _robot_mgr(self):
+    def _articulated_agent_mgr(self):
         """
-        Underlying robot mananger for the robot instance the action is attached to.
+        Underlying articulated_agent mananger for the articulated_agent instance the action is attached to.
         """
-        return self._sim.robots_mgr[self._agent_index]
+        return self._sim.agents_mgr[self._agent_index]
 
     @property
     def _ik_helper(self):
         """
-        The IK helper for this robot instance.
+        The IK helper for this articulated_agent instance.
         """
 
-        return self._robot_mgr.ik_helper
+        return self._articulated_agent_mgr.ik_helper
 
     @property
-    def cur_robot(self):
+    def cur_articulated_agent(self):
         """
-        The robot instance for this action.
+        The articulated_agent instance for this action.
         """
-        return self._robot_mgr.robot
+        return self._articulated_agent_mgr.articulated_agent
 
     @property
     def cur_grasp_mgr(self):
         """
-        The grasp manager for the robot instance for this action.
+        The grasp manager for the articulated_agent instance for this action.
         """
-        return self._robot_mgr.grasp_mgr
+        return self._articulated_agent_mgr.grasp_mgr
 
     @property
     def _action_arg_prefix(self) -> str:

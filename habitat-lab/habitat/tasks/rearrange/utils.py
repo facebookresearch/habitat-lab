@@ -95,17 +95,17 @@ def rearrange_collision(
     agent_idx: Optional[int] = None,
 ):
     """Defines what counts as a collision for the Rearrange environment execution"""
-    robot_model = sim.get_robot_data(agent_idx).robot
-    grasp_mgr = sim.get_robot_data(agent_idx).grasp_mgr
+    agent_model = sim.get_agent_data(agent_idx).articulated_agent
+    grasp_mgr = sim.get_agent_data(agent_idx).grasp_mgr
     colls = sim.get_physics_contact_points()
-    robot_id = robot_model.get_robot_sim_id()
+    agent_id = agent_model.get_robot_sim_id()
     added_objs = sim.scene_obj_ids
     snapped_obj_id = grasp_mgr.snap_idx
 
     def should_keep(x):
         if ignore_base:
-            match_link = get_match_link(x, robot_id)
-            if match_link is not None and robot_model.is_base_link(match_link):
+            match_link = get_match_link(x, agent_id)
+            if match_link is not None and agent_model.is_base_link(match_link):
                 return False
 
         if ignore_names is not None:
@@ -124,7 +124,7 @@ def rearrange_collision(
     # Check for robot collision
     robot_obj_colls = 0
     robot_scene_colls = 0
-    robot_scene_matches = [c for c in colls if coll_name_matches(c, robot_id)]
+    robot_scene_matches = [c for c in colls if coll_name_matches(c, agent_id)]
     for match in robot_scene_matches:
         reg_obj_coll = any(
             [coll_name_matches(match, obj_id) for obj_id in added_objs]
@@ -134,7 +134,7 @@ def rearrange_collision(
         else:
             robot_scene_colls += 1
 
-        if match.object_id_a == robot_id:
+        if match.object_id_a == agent_id:
             robot_coll_ids.append(match.object_id_b)
         else:
             robot_coll_ids.append(match.object_id_a)
@@ -144,7 +144,7 @@ def rearrange_collision(
     if count_obj_colls and snapped_obj_id is not None:
         matches = [c for c in colls if coll_name_matches(c, snapped_obj_id)]
         for match in matches:
-            if coll_name_matches(match, robot_id):
+            if coll_name_matches(match, agent_id):
                 continue
             obj_scene_colls += 1
 
@@ -358,16 +358,16 @@ class IkHelper:
         return js[: self._arm_len]
 
 
-class UsesRobotInterface:
+class UsesArticulatedAgentInterface:
     """
-    For sensors or actions that are robot specific. Used to split actions and
-    sensors between multiple robots.
+    For sensors or actions that are agent specific. Used to split actions and
+    sensors between multiple agents.
     """
 
     def __init__(self, *args, **kwargs):
         # This init call is necessary for using this class with `Measure`.
         super().__init__(*args, **kwargs)
-        self.robot_id = None
+        self.agent_id = None
 
 
 def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
@@ -434,8 +434,8 @@ def get_robot_spawns(
         if target_distance > distance_threshold or not is_navigable:
             continue
 
-        sim.robot.base_pos = start_position
-        sim.robot.base_rot = start_rotation
+        sim.articulated_agent.base_pos = start_position
+        sim.articulated_agent.base_rot = start_rotation
 
         # Make sure the robot is not colliding with anything in this
         # position.

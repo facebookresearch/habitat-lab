@@ -309,8 +309,8 @@ class PddlDomain:
             art_handles={k.handle: i for i, k in enumerate(sim.art_objs)},
             marker_handles=sim.get_all_markers(),
             robot_ids={
-                f"robot_{robot_id}": robot_id
-                for robot_id in range(sim.num_robots)
+                f"robot_{agent_id}": agent_id
+                for agent_id in range(sim.num_articulated_agents)
             },
             all_entities=self.all_entities,
             predicates=self.predicates,
