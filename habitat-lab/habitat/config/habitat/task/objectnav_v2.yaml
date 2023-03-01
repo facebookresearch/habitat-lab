@@ -1,8 +1,6 @@
 defaults:
   - task_config_base
-  - actions:
-    - velocity_stop
-    - velocity_control
+  - actions: velocity_controller
   - measurements:
     - distance_to_goal
     - success
@@ -18,7 +16,7 @@ defaults:
   - _self_
 
 
-type: ObjectNav-v1
+type: ObjectNav-v2
 end_on_success: True
 reward_measure: "distance_to_goal_reward"
 success_measure: "spl"

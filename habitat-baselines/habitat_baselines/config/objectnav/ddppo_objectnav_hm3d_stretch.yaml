@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /benchmark/nav/objectnav: objectnav_hm3d_stretch_discrete_waypoint_controller
+  - /benchmark/nav/objectnav: objectnav_hm3d_stretch
   - /habitat_baselines/rl/policy/obs_transforms:
     - center_cropper_base
     - resize_shortest_edge_base
