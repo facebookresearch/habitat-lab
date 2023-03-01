@@ -33,7 +33,9 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 )
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet  # noqa: F401.
 from habitat_baselines.rl.ppo.ppo_trainer import PPOTrainer
-from habitat_baselines.rl.ppo.trainer_agent import get_rollout_obs_space
+from habitat_baselines.rl.ppo.single_agent_access_mgr import (
+    get_rollout_obs_space,
+)
 from habitat_baselines.rl.ver.environment_worker import (
     build_action_plugin_from_policy_action_space,
     construct_environment_workers,
