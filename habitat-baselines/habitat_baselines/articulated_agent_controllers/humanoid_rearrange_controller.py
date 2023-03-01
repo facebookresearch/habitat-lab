@@ -104,6 +104,8 @@ class HumanoidRearrangeController:
         """
 
         forward_V = target_position
+        if forward_V.length() == 0.0:
+            return self.get_stop_pose()
         distance_to_walk = np.linalg.norm(forward_V)
         did_rotate = False
 
