@@ -448,7 +448,7 @@ class VectorEnv:
         self.async_step(data)
         return self.wait_step()
 
-    def post_step(self, observations):
+    def post_step(self, observations) -> None:
         r"""Performs batch transformations on step outputs.
 
         :param observations: list of observation dicts returned by step or reset.
@@ -662,9 +662,9 @@ class BatchRenderVectorEnv(VectorEnv):
     _config: "DictConfig"
 
     # TODO: Consider passing the root config as a constructor parameter to vector_env and removing this function
-    def initialize_batch_renderer(self, config: "DictConfig"):
+    def initialize_batch_renderer(self, config: "DictConfig") -> None:
         r"""Initialize batch renderer."""
         self._config = config
 
-    def post_step(self, observations):
+    def post_step(self, observations) -> None:
         pass
