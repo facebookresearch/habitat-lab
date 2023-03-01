@@ -265,41 +265,40 @@ def get_input_vel_ctlr(
     if control_humanoid:
         # Add random noise to human arms but keep global transform
         (
-            new_joints,
+            joint_trans,
             root_trans,
         ) = env._sim.articulated_agent.get_joint_transform()
-        # Divide new_joints by 4 since new_joints has flattened quaternions
+        # Divide joint_trans by 4 since joint_trans has flattened quaternions
         # and the dimension of each quaternion is 4
-        num_joints = len(new_joints) // 4
+        num_joints = len(joint_trans) // 4
         root_trans = np.array(root_trans)
         index_arms_start = 10
-        new_joints_quat = [
+        joint_trans_quat = [
             mn.Quaternion(
-                mn.Vector3(new_joints[(4 * index) : (4 * index + 3)]),
-                new_joints[4 * index + 3],
+                mn.Vector3(joint_trans[(4 * index) : (4 * index + 3)]),
+                joint_trans[4 * index + 3],
             )
             for index in range(num_joints)
         ]
         rotated_joints_quat = []
-        for index, joint_quat in enumerate(new_joints_quat):
+        for index, joint_quat in enumerate(joint_trans_quat):
             random_vec = np.random.rand(3)
             # We allow for maximum 10 angles per step
             random_angle = np.random.rand() * 10
             rotation_quat = mn.Quaternion.rotation(
                 mn.Rad(random_angle), mn.Vector3(random_vec).normalized()
             )
-            new_quat = joint_quat
             if index > index_arms_start:
-                new_quat = joint_quat * rotation_quat
-            rotated_joints_quat.append(new_quat)
-        new_joints = np.concatenate(
+                joint_quat *= rotation_quat
+            rotated_joints_quat.append(joint_quat)
+        joint_trans = np.concatenate(
             [
                 np.array(list(quat.vector) + [quat.scalar])
                 for quat in rotated_joints_quat
             ]
         )
         base_action = np.concatenate(
-            [new_joints.reshape(-1), root_trans.transpose().reshape(-1)]
+            [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
         )
 
     if keys[pygame.K_PERIOD]:
@@ -677,7 +676,6 @@ if __name__ == "__main__":
         default=False,
         help="Save a GFX replay file.",
     )
-
     parser.add_argument("--load-actions", type=str, default=None)
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
