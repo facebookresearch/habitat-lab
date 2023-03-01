@@ -69,6 +69,9 @@ from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
 )
+from habitat_baselines.articulated_agent_controllers import (
+    HumanoidRearrangeController,
+)
 from habitat_sim.utils import viz_utils as vut
 
 try:
@@ -76,6 +79,7 @@ try:
 except ImportError:
     pygame = None
 
+WALK_POSE_PATH = "data/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
@@ -93,6 +97,7 @@ def get_input_vel_ctlr(
     not_block_input,
     agent_to_control,
     control_humanoid,
+    humanoid_controller,
 ):
     if skip_pygame:
         return step_env(env, "empty", {}), None, False
@@ -263,43 +268,49 @@ def get_input_vel_ctlr(
             magic_grasp = 1
 
     if control_humanoid:
-        # Add random noise to human arms but keep global transform
-        (
-            joint_trans,
-            root_trans,
-        ) = env._sim.articulated_agent.get_joint_transform()
-        # Divide joint_trans by 4 since joint_trans has flattened quaternions
-        # and the dimension of each quaternion is 4
-        num_joints = len(joint_trans) // 4
-        root_trans = np.array(root_trans)
-        index_arms_start = 10
-        joint_trans_quat = [
-            mn.Quaternion(
-                mn.Vector3(joint_trans[(4 * index) : (4 * index + 3)]),
-                joint_trans[4 * index + 3],
-            )
-            for index in range(num_joints)
-        ]
-        rotated_joints_quat = []
-        for index, joint_quat in enumerate(joint_trans_quat):
-            random_vec = np.random.rand(3)
-            # We allow for maximum 10 angles per step
-            random_angle = np.random.rand() * 10
-            rotation_quat = mn.Quaternion.rotation(
-                mn.Rad(random_angle), mn.Vector3(random_vec).normalized()
-            )
-            if index > index_arms_start:
-                joint_quat *= rotation_quat
-            rotated_joints_quat.append(joint_quat)
-        joint_trans = np.concatenate(
-            [
-                np.array(list(quat.vector) + [quat.scalar])
-                for quat in rotated_joints_quat
+        if humanoid_controller is None:
+            # Add random noise to human arms but keep global transform
+            (
+                joint_trans,
+                root_trans,
+            ) = env._sim.articulated_agent.get_joint_transform()
+            # Divide joint_trans by 4 since joint_trans has flattened quaternions
+            # and the dimension of each quaternion is 4
+            num_joints = len(joint_trans) // 4
+            root_trans = np.array(root_trans)
+            index_arms_start = 10
+            joint_trans_quat = [
+                mn.Quaternion(
+                    mn.Vector3(joint_trans[(4 * index) : (4 * index + 3)]),
+                    joint_trans[4 * index + 3],
+                )
+                for index in range(num_joints)
             ]
-        )
-        base_action = np.concatenate(
-            [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
-        )
+            rotated_joints_quat = []
+            for index, joint_quat in enumerate(joint_trans_quat):
+                random_vec = np.random.rand(3)
+                # We allow for maximum 10 angles per step
+                random_angle = np.random.rand() * 10
+                rotation_quat = mn.Quaternion.rotation(
+                    mn.Rad(random_angle), mn.Vector3(random_vec).normalized()
+                )
+                if index > index_arms_start:
+                    joint_quat *= rotation_quat
+                rotated_joints_quat.append(joint_quat)
+            joint_trans = np.concatenate(
+                [
+                    np.array(list(quat.vector) + [quat.scalar])
+                    for quat in rotated_joints_quat
+                ]
+            )
+            base_action = np.concatenate(
+                [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
+            )
+        else:
+            pose, root_trans = humanoid_controller.get_walk_pose(
+                mn.Vector3(1.0, 0, 0)
+            )
+            base_action = humanoid_controller.VectorizePose(pose, root_trans)
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the articulated agent, useful for debugging.
@@ -453,6 +464,11 @@ def play_env(env, args, config):
     )
     is_multi_agent = len(env._sim.agents_mgr) > 1
 
+    humanoid_controller = None
+    if args.use_humanoid_controller:
+        humanoid_controller = HumanoidRearrangeController(WALK_POSE_PATH)
+        humanoid_controller.reset(env._sim.articulated_agent.base_pos)
+
     while True:
         if (
             args.save_actions
@@ -484,6 +500,7 @@ def play_env(env, args, config):
             not free_cam.is_free_cam_mode,
             agent_to_control,
             args.control_humanoid,
+            humanoid_controller=humanoid_controller,
         )
 
         if not args.no_render and keys[pygame.K_c]:
@@ -665,6 +682,13 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--control-humanoid",
+        action="store_true",
+        default=False,
+        help="Control humanoid agent.",
+    )
+
+    parser.add_argument(
+        "--use-humanoid-controller",
         action="store_true",
         default=False,
         help="Control humanoid agent.",

@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import pickle as pkl
 from typing import List
 
@@ -44,16 +45,17 @@ class HumanoidRearrangeController:
 
     def __init__(
         self,
-        walk_pose_path=None,
-        obj_translation=None,
+        walk_pose_path,
         draw_fps=60,
         base_offset=(0, 0.9, 0),
     ):
-        walk_pose_path = "path goes here"
         self.min_angle_turn = 0
         self.turning_step_amount = 20
         self.threshold_rotate_not_move = 120
         self.base_offset = mn.Vector3(base_offset)
+
+        if not os.path.isfile(walk_pose_path):
+            raise RuntimeError(f"Path does {walk_pose_path} not exist.")
 
         with open(walk_pose_path, "rb") as f:
             walk_data = pkl.load(f)
