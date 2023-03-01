@@ -505,6 +505,7 @@ class HumanoidJointAction(RobotAction):
         """
         new_joints = human_joints_trans[:-16]
         new_pos_transform = human_joints_trans[-16:]
+        is_last_action = kwargs["is_last_action"]
 
         # When the array is all 0, this indicates we are not setting
         # the human joint
@@ -517,4 +518,8 @@ class HumanoidJointAction(RobotAction):
             self.cur_articulated_agent.set_joint_transform(
                 new_joints, new_transform
             )
-        return self._sim.step(HabitatSimActions.changejoint_action)
+
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.changejoint_action)
+        else:
+            return {}
