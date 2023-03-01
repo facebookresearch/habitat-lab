@@ -31,6 +31,7 @@ import numpy as np
 from gym import spaces
 
 import habitat
+from habitat.core.batch_renderer import BatchRenderer
 from habitat.core.env import Env, RLEnv
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
@@ -660,11 +661,13 @@ class BatchRenderVectorEnv(VectorEnv):
     """
 
     _config: "DictConfig"
+    _batch_renderer: BatchRenderer
 
     # TODO: Consider passing the root config as a constructor parameter to vector_env and removing this function
     def initialize_batch_renderer(self, config: "DictConfig") -> None:
         r"""Initialize batch renderer."""
         self._config = config
+        self._batch_renderer = BatchRenderer(config, self.num_envs)
 
     def post_step(self, observations) -> None:
-        pass
+        self._batch_renderer.render(observations)
