@@ -291,14 +291,14 @@ def get_input_vel_ctlr(
             if index > index_arms_start:
                 joint_quat *= rotation_quat
             rotated_joints_quat.append(joint_quat)
-        new_joints = np.concatenate(
+        joint_trans = np.concatenate(
             [
                 np.array(list(quat.vector) + [quat.scalar])
                 for quat in rotated_joints_quat
             ]
         )
         base_action = np.concatenate(
-            [new_joints.reshape(-1), root_trans.transpose().reshape(-1)]
+            [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
         )
 
     if keys[pygame.K_PERIOD]:
