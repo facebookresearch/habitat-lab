@@ -30,7 +30,8 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
-    "CameraPitchContinuousActionConfig",
+    "LookUpContinuousActionConfig",
+    "LookDownContinuousActionConfig",
     # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
@@ -281,12 +282,23 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class CameraPitchContinuousActionConfig(WaypointControlActionConfig):
+class LookUpContinuousActionConfig(WaypointControlActionConfig):
     r"""
-    In Navigation tasks only, this discrete action will rotate the robot's camera pitch
+    In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
-    type: str = "CameraPitchContinuousAction"
+    type: str = "LookUpContinuousAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 12  # rad (30 degrees)
+
+
+@attr.s(auto_attribs=True, slots=True)
+class LookDownContinuousActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the right
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "LookDownContinuousAction"
     max_wait_duration: float = 3.0  # seconds
     turn_angle: float = np.pi / 12  # rad (30 degrees)
 
@@ -1596,10 +1608,16 @@ cs.store(
     node=LookDownActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.camera_pitch_continuous",
+    package="habitat.task.actions.look_up_continuous",
     group="habitat/task/actions",
-    name="camera_pitch_continuous",
-    node=CameraPitchContinuousActionConfig,
+    name="look_up_continuous",
+    node=LookUpContinuousActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.look_down_continuous",
+    group="habitat/task/actions",
+    name="look_down_continuous",
+    node=LookDownContinuousActionConfig,
 )
 cs.store(
     package="habitat.task.actions.arm_action",

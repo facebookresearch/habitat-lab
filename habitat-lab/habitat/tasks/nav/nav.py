@@ -1205,9 +1205,6 @@ class VelocityAction(SimulatorTaskAction):
         self._enable_scale_convert = self._config.enable_scale_convert
         self._time_step = self._config.time_step
 
-        # Cache camera pitch angle
-        self.camera_pitch_ang = 0.0
-
     @property
     def action_space(self):
         if self._enable_scale_convert:
@@ -1253,9 +1250,6 @@ class VelocityAction(SimulatorTaskAction):
 
     def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
         task.is_stop_called = False  # type: ignore
-
-        # Reset camera pitch angle
-        self.camera_pitch_ang = 0.0
 
     def step(
         self,
@@ -1462,19 +1456,20 @@ class VelocityAction(SimulatorTaskAction):
             - float(current_rigid_state.rotation.angle())
         )
 
+        # Get the camera pitch angle
+        camera_pitch_ang = self._get_camera_pitch_angle()
+
         # Handle the min and max pitch angles
-        if self.camera_pitch_ang + delta > self._camera_pitch_ang_range[1]:
-            self.camera_pitch_ang = self._camera_pitch_ang_range[1]
+        if camera_pitch_ang + delta > self._camera_pitch_ang_range[1]:
+            camera_pitch_ang = self._camera_pitch_ang_range[1]
             goal_rigid_state.rotation = mn.Quaternion.rotation(
                 mn.Rad(self._camera_pitch_ang_range[1]), mn.Vector3(1, 0, 0)
             )
-        elif self.camera_pitch_ang + delta < self._camera_pitch_ang_range[0]:
-            self.camera_pitch_ang = self._camera_pitch_ang_range[0]
+        elif camera_pitch_ang + delta < self._camera_pitch_ang_range[0]:
+            camera_pitch_ang = self._camera_pitch_ang_range[0]
             goal_rigid_state.rotation = mn.Quaternion.rotation(
                 mn.Rad(self._camera_pitch_ang_range[0]), mn.Vector3(1, 0, 0)
             )
-        else:
-            self.camera_pitch_ang += delta
 
         # Update all the sensors
         for sensor in sensor_states:
@@ -1500,6 +1495,25 @@ class VelocityAction(SimulatorTaskAction):
             rotation=rotation,
             keep_agent_at_new_pose=True,
         )
+
+    def _get_camera_pitch_angle(self):
+        """
+        Get the camera pitch angle
+        """
+        # Get the sensor node
+        sensor_name = list(self._sim.agents[0]._sensors.keys())[0]  # type: ignore
+        sensor_state = self._sim.agents[0]._sensors[sensor_name].node  # type: ignore
+
+        # Construct the sensor rigid state
+        camera_mn_quat = sensor_state.rotation
+
+        # Get the current camera pitch angle
+        camera_rotvec = quaternion.from_float_array(
+            np.array([camera_mn_quat.scalar] + list(camera_mn_quat.vector))
+        )
+        camera_rotvec = quaternion.as_rotation_vector(camera_rotvec)
+        camera_angle = camera_rotvec[0]
+        return camera_angle
 
     @staticmethod
     def _scale_inputs(
@@ -1704,8 +1718,8 @@ class WaypointAction(VelocityAction):
     def _step_rel_waypoint(
         self,
         xyt_waypoint,
-        delta_camera_pitch_angle,
         max_wait_duration,
+        delta_camera_pitch_angle=0.0,
         *args,
         **kwargs,
     ):
@@ -1719,10 +1733,9 @@ class WaypointAction(VelocityAction):
 
         xyt = xyt_init.copy()
 
-        # Get the current camera angle
-        goal_camera_pitch_ang = (
-            self.camera_pitch_ang + delta_camera_pitch_angle
-        )
+        # Get the goal camera angle
+        camera_pitch_ang = self._get_camera_pitch_angle()
+        goal_camera_pitch_ang = camera_pitch_ang + delta_camera_pitch_angle
 
         # Forward simulate
         max_duration = max(
@@ -1735,9 +1748,8 @@ class WaypointAction(VelocityAction):
             )
 
             # Query velocity controller for control input of pitch of camera
-            camera_pitch_angular_err = (
-                goal_camera_pitch_ang - self.camera_pitch_ang
-            )
+            camera_pitch_ang = self._get_camera_pitch_angle()
+            camera_pitch_angular_err = goal_camera_pitch_ang - camera_pitch_ang
             camera_pitch_angular_velocity = (
                 self.w2v_controller.velocity_feedback_control(
                     camera_pitch_angular_err,
@@ -1873,8 +1885,8 @@ class TurnRightWaypointAction(WaypointAction):
 
 
 @registry.register_task_action
-class CameraPitchContinuousAction(WaypointAction):
-    name: str = "camera_pitch_continuous"
+class LookUpContinuousAction(WaypointAction):
+    name: str = "look_up_continuous"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1882,36 +1894,52 @@ class CameraPitchContinuousAction(WaypointAction):
         self._turn_angle = self._config.turn_angle
         self._max_wait_duration = self._config.max_wait_duration
 
-    def step(self, look_up_down, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
         xyt_waypoint = np.array([0.0, 0.0, 0.0])
-        if look_up_down > 0:
-            camera_delta_angle = self._turn_angle
-        elif look_up_down < 0:
-            camera_delta_angle = -self._turn_angle
-        else:
-            camera_delta_angle = 0.0
+        delta_camera_pitch_angle = self._turn_angle
         return self._step_rel_waypoint(
             xyt_waypoint,
-            camera_delta_angle,
             self._config.max_wait_duration,
+            delta_camera_pitch_angle,
             *args,
             **kwargs,
         )
 
     @property
     def action_space(self):
-        return spaces.Dict(
-            {
-                "look_up_down": spaces.Box(
-                    low=np.array([-1]),
-                    high=np.array([1]),
-                    dtype=np.float32,
-                ),
-            }
+        return EmptySpace()
+
+
+@registry.register_task_action
+class LookDownContinuousAction(WaypointAction):
+    name: str = "look_down_continuous"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self._turn_angle = self._config.turn_angle
+        self._max_wait_duration = self._config.max_wait_duration
+
+    def step(self, *args: Any, **kwargs: Any):
+        r"""Update ``_metric``, this method is called from ``Env`` on each
+        ``step``.
+        """
+        xyt_waypoint = np.array([0.0, 0.0, 0.0])
+        delta_camera_pitch_angle = -self._turn_angle
+        return self._step_rel_waypoint(
+            xyt_waypoint,
+            self._config.max_wait_duration,
+            delta_camera_pitch_angle,
+            *args,
+            **kwargs,
         )
+
+    @property
+    def action_space(self):
+        return EmptySpace()
 
 
 @registry.register_task(name="Nav-v0")
