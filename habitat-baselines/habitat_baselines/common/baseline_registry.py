@@ -150,16 +150,20 @@ class BaselineRegistry(Registry):
         return cls._get_impl("storage", name)
 
     @classmethod
-    def register_agent(cls, to_register=None, *, name: Optional[str] = None):
+    def register_agent_access_mgr(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
         """
-        Registers data storage for storing data in the policy rollout in the
-        trainer and then for fetching data batches for the updater.
+        Registers an agent access manager for the trainer to interface with.
         """
+        from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 
-        return cls._register_impl("agent", to_register, name)
+        return cls._register_impl(
+            "agent", to_register, name, assert_type=AgentAccessMgr
+        )
 
     @classmethod
-    def get_agent(cls, name: str):
+    def get_agent_access_mgr(cls, name: str):
         return cls._get_impl("agent", name)
 
     @classmethod

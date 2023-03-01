@@ -28,7 +28,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@baseline_registry.register_agent
+@baseline_registry.register_agent_access_mgr
 class SingleAgentAccessMgr(AgentAccessMgr):
     def __init__(
         self,

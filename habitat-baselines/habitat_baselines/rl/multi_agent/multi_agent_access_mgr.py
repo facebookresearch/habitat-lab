@@ -26,7 +26,7 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-@baseline_registry.register_agent
+@baseline_registry.register_agent_access_mgr
 class MultiAgentAccessMgr(AgentAccessMgr):
     """
     Maintains a population of agents. A subset of the overall of this

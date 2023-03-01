@@ -116,7 +116,7 @@ class PPOTrainer(BaseRLTrainer):
         this call. This only constructs the object.
         """
 
-        return baseline_registry.get_agent(
+        return baseline_registry.get_agent_access_mgr(
             self.config.habitat_baselines.rl.agent.name
         )(
             config=self.config,
