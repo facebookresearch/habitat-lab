@@ -381,6 +381,8 @@ class BaseVelAction(ArticulatedAgentAction):
             rigid_state.translation, target_rigid_state.translation
         )
 
+        end_pos -= self.cur_articulated_agent.params.base_offset
+
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
@@ -402,6 +404,10 @@ class BaseVelAction(ArticulatedAgentAction):
             # Holding onto an object, also kinematically update the object.
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
+
+        if self.cur_articulated_agent._base_type == "leg":
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = [0.0, 0.7, -1.5] * 4
 
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
