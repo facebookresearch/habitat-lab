@@ -1,4 +1,4 @@
-# Version of tidy house that only has two target objects. 
+# Version of tidy house that only has two target objects.
 objects:
   - name: any_targets|0
     expr_type: rigid_obj_type

@@ -14,5 +14,3 @@ class Updater(abc.ABC):
         """
         Perform an update from data in the storage objet.
         """
-
-        pass

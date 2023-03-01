@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type
 
 import gym.spaces as spaces
 import numpy as np
@@ -10,10 +10,12 @@ from habitat_baselines.rl.multi_agent.pop_play_wrappers import (
     MultiPolicy,
     MultiStorage,
     MultiUpdater,
+    filter_agent_names,
+)
+from habitat_baselines.rl.multi_agent.self_play_wrappers import (
     SelfBatchedPolicy,
     SelfBatchedStorage,
     SelfBatchedUpdater,
-    filter_agent_names,
 )
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
@@ -60,7 +62,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             self._all_agent_idxs.append(agent_i)
             use_resume_state = None
             if resume_state is not None:
-                use_resume_state = resume_state[agent_i]
+                use_resume_state = resume_state[str(agent_i)]
 
             agent_obs_space = spaces.Dict(
                 filter_agent_names(env_spec.observation_space, agent_i)
@@ -80,7 +82,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                     agent_env_spec,
                     is_distrib,
                     device,
-                    resume_state,
+                    use_resume_state,
                     num_envs,
                     percent_done_fn,
                     lr_schedule_fn,
@@ -88,9 +90,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             )
 
         if self._pop_config.self_play_batched:
-            policy_cls = SelfBatchedPolicy
-            updater_cls = SelfBatchedUpdater
-            storage_cls = SelfBatchedStorage
+            policy_cls: Type = SelfBatchedPolicy
+            updater_cls: Type = SelfBatchedUpdater
+            storage_cls: Type = SelfBatchedStorage
             self._active_agents = [0, 0]
         else:
             policy_cls = MultiPolicy
@@ -196,7 +198,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                     for i in self._active_agents
                 ]
             ),
-            dim=0,
+            axis=0,
         )
 
     def after_update(self):
@@ -219,7 +221,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
 
     def get_resume_state(self):
         return {
-            agent_i: agent.get_resume_state()
+            str(agent_i): agent.get_resume_state()
             for agent_i, agent in enumerate(self._agents)
         }
 

@@ -21,6 +21,7 @@ from habitat_baselines.rl.hrl.hierarchical_policy import (  # noqa: F401.
 )
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 from habitat_baselines.rl.ppo.policy import NetPolicy, Policy
+from habitat_baselines.rl.ppo.ppo import PPO
 from habitat_baselines.rl.ppo.updater import Updater
 
 if TYPE_CHECKING:
@@ -104,7 +105,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             device=self._device,
         )
 
-    def _create_updater(self, actor_critic):
+    def _create_updater(self, actor_critic) -> PPO:
         if self._is_distributed:
             updater_cls = baseline_registry.get_updater(
                 self._config.habitat_baselines.distrib_updater_name
@@ -217,17 +218,17 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
 
     def get_save_state(self):
-        return dict(state_dict=self.actor_critic.state_dict())
+        return dict(state_dict=self._actor_critic.state_dict())
 
     def eval(self):
-        self.actor_critic.eval()
+        self._actor_critic.eval()
 
     def train(self):
-        self.actor_critic.train()
-        self.updater.train()
+        self._actor_critic.train()
+        self._updater.train()
 
     def load_ckpt_state_dict(self, ckpt: Dict) -> None:
-        self.actor_critic.load_state_dict(ckpt["state_dict"])
+        self._actor_critic.load_state_dict(ckpt["state_dict"])
 
     def load_state_dict(self, state: Dict) -> None:
         self._actor_critic.load_state_dict(state["state_dict"])

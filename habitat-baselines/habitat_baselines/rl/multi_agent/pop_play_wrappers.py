@@ -185,7 +185,7 @@ class MultiStorage(Storage):
             storage.after_update()
 
     def _merge_step_outputs(self, get_step):
-        obs = {}
+        obs: Dict[str, torch.Tensor] = {}
         agent_step_data = defaultdict(list)
         for agent_i, storage in enumerate(self._active_storages):
             agent_step = get_step(storage)
@@ -226,7 +226,7 @@ class MultiUpdater(Updater):
     def update(self, rollouts):
         assert isinstance(rollouts, MultiStorage)
 
-        losses = {}
+        losses: Dict[str, float] = {}
         for agent_i, (rollout, updater) in enumerate(
             zip(rollouts._active_storages, self._active_updaters)
         ):
@@ -240,7 +240,7 @@ class MultiUpdater(Updater):
 
 
 def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
-    ret = []
+    ret: List[Dict] = []
     for agent_i, ac in enumerate(inputs):
         for env_i, env_d in enumerate(ac):
             if len(ret) <= env_i:

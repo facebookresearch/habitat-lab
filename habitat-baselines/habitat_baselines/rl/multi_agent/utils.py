@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, Union
 
 from habitat_baselines.common.tensor_dict import TensorDict
 

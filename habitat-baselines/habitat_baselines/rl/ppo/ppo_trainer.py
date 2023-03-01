@@ -16,7 +16,7 @@ import torch
 import tqdm
 from omegaconf import OmegaConf
 
-import habitat_baselines.rl.multi_agent
+import habitat_baselines.rl.multi_agent  # noqa: F401.
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
@@ -53,6 +53,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 )
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
+from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (  # noqa: F401.
     SingleAgentAccessMgr,
 )
@@ -253,6 +254,7 @@ class PPOTrainer(BaseRLTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         if self._is_static_encoder:
+            assert isinstance(self._agent.actor_critic, NetPolicy)
             self._encoder = self._agent.actor_critic.net.visual_encoder
             with inference_mode():
                 batch[

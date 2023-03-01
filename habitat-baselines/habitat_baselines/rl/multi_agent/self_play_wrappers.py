@@ -1,15 +1,6 @@
-from collections import defaultdict
 from typing import Dict, List
 
-import torch
-
 from habitat_baselines.common.storage import Storage
-from habitat_baselines.common.tensor_dict import TensorDict
-from habitat_baselines.rl.multi_agent.utils import (
-    add_agent_names,
-    filter_agent_names,
-    get_agent_name,
-)
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
@@ -19,7 +10,7 @@ from habitat_baselines.rl.ppo.updater import Updater
 
 class SelfBatchedPolicy(Policy):
     def __init__(self, agent: SingleAgentAccessMgr, n_agents):
-        self._policy = agent.policy
+        self._policy = agent.actor_critic
         self._n_agents = n_agents
 
     def act(
@@ -55,7 +46,7 @@ class SelfBatchedPolicy(Policy):
 
 class SelfBatchedStorage(Storage):
     def __init__(self, agent: SingleAgentAccessMgr, n_agents: int):
-        self._storage = agent.storage
+        self._storage = agent.rollouts
         self._n_agents = n_agents
 
     def insert(
