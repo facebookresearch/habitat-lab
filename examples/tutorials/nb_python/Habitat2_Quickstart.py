@@ -27,7 +27,7 @@
 
 # %%
 # Play a teaser video
-from dataclasses import dataclass
+import attr
 
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
@@ -309,12 +309,12 @@ class NavPickSuccess(Measure):
         self._metric = abs_targ_obj_idx == self._sim.grasp_mgr.snap_idx
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class DistanceToTargetObjectMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToTargetObject"
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class NavPickRewardMeasurementConfig(MeasurementConfig):
     type: str = "NavPickReward"
     scaling_factor: float = 0.1
@@ -325,7 +325,7 @@ class NavPickRewardMeasurementConfig(MeasurementConfig):
     force_end_pen: float = 10.0
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class NavPickSuccessMeasurementConfig(MeasurementConfig):
     type: str = "NavPickSuccess"
 

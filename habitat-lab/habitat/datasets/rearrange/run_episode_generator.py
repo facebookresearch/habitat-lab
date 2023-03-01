@@ -7,9 +7,9 @@
 import os
 import os.path as osp
 import random
-from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List
 
+import attr
 import numpy as np
 from omegaconf import OmegaConf
 
@@ -26,20 +26,20 @@ if TYPE_CHECKING:
     from habitat.config import DictConfig
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class SceneSamplerParamsConfig:
     scene: str = "v3_sc1_staging_00"
-    scene_sets: List[Any] = field(default_factory=list)
+    scene_sets: List[Any] = []
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class SceneSamplerConfig:
     type: str = "single"
     params: SceneSamplerParamsConfig = SceneSamplerParamsConfig()
     comment: str = ""
 
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
     min_dist_from_start_to_goal: float = 0.5
@@ -47,56 +47,49 @@ class RearrangeEpisodeGeneratorConfig:
     # the scene dataset from which scenes and objects are sampled
     dataset_path: str = "data/replica_cad/replicaCAD.scene_dataset_config.json"
     # any additional object assets to load before defining object sets
-    additional_object_paths: List[str] = field(
-        default_factory=lambda: ["data/objects/ycb/"]
-    )
+    additional_object_paths: List[str] = ["data/objects/ycb/"]
     # ----- resource set definitions ------
     # Define the sets of scenes, objects, and receptacles which can be sampled from.
     # The SceneDataset will be searched for resources of each type with handles containing ANY "included" substrings and NO "excluded" substrings.
 
     # Define sets of scene instance handles which can be sampled from for initialization:
-    scene_sets: List[Any] = field(
-        default_factory=lambda: [
-            {
-                "name": "any",
-                "included_substrings": [""],
-                "excluded_substrings": [],
-                # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
-                "comment": "The empty substring acts like a wildcard, selecting all scenes.",
-            },
-        ]
-    )
+    scene_sets: List[Any] = [
+        {
+            "name": "any",
+            "included_substrings": [""],
+            "excluded_substrings": [],
+            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+            "comment": "The empty substring acts like a wildcard, selecting all scenes.",
+        },
+    ]
+
     # Define the sets of object handles which can be sampled from for placement and target sampling:
     # NOTE: Each set must have a unique name.
-    object_sets: List[Any] = field(
-        default_factory=lambda: [
-            {
-                "name": "any",
-                "included_substrings": [""],
-                "excluded_substrings": [],
-                # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
-                "comment": "The empty substring acts like a wildcard, selecting all objects.",
-            },
-        ]
-    )
+    object_sets: List[Any] = [
+        {
+            "name": "any",
+            "included_substrings": [""],
+            "excluded_substrings": [],
+            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+            "comment": "The empty substring acts like a wildcard, selecting all objects.",
+        },
+    ]
 
     # Define the sets of receptacles which can be sampled from for placing objects and targets:
     # The SceneDataset will be searched for objects containing receptacle metadata.
     # Receptacle name substrings are used to further constrain sets.
     # NOTE: Each set must have a unique name.
-    receptacle_sets: List[Any] = field(
-        default_factory=lambda: [
-            {
-                "name": "any",
-                "included_object_substrings": [""],
-                "excluded_object_substrings": [],
-                "included_receptacle_substrings": [""],
-                "excluded_receptacle_substrings": [],
-                # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
-                "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
-            },
-        ]
-    )
+    receptacle_sets: List[Any] = [
+        {
+            "name": "any",
+            "included_object_substrings": [""],
+            "excluded_object_substrings": [],
+            "included_receptacle_substrings": [""],
+            "excluded_receptacle_substrings": [],
+            # NOTE: The "comment" key is intended for notes and descriptions and not consumed by the generator.
+            "comment": "The empty substrings act like wildcards, selecting all receptacles for all objects.",
+        },
+    ]
     # ----- sampler definitions ------
     # Define the scene sampling configuration
     # NOTE: There must be exactly one scene sampler!
@@ -113,10 +106,10 @@ class RearrangeEpisodeGeneratorConfig:
     # Specify name of receptacle and maximum # of placemenets in
     # receptacle. To allow only two objects in the chair, specify:
     # - ["receptacle_aabb_Chr1_Top1_frl_apartment_chair_01", 2]
-    max_objects_per_receptacle: List[Any] = field(default_factory=list)
+    max_objects_per_receptacle: List[Any] = []
 
     # Define the object sampling configuration
-    object_samplers: List[Any] = field(default_factory=list)
+    object_samplers: List[Any] = []
     # {"name":str, "type:str", "params":{})
     # - uniform sampler params: {"object_sets":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
     # NOTE: "orientation_sampling" options: "none", "up", "all"
@@ -148,7 +141,7 @@ class RearrangeEpisodeGeneratorConfig:
     # }
 
     # Define the desired object target sampling (i.e., where should an existing object be moved to)
-    object_target_samplers: List[Any] = field(default_factory=list)
+    object_target_samplers: List[Any] = []
     # {"name":str, "type:str", "params":{})
     # - uniform target sampler params:
     # {"object_samplers":[str], "receptacle_sets":[str], "num_samples":[min, max], "orientation_sampling":str)
@@ -167,7 +160,7 @@ class RearrangeEpisodeGeneratorConfig:
     # }
 
     # define ArticulatedObject(AO) joint state sampling (when a scene is initialized, all samplers are run for all matching AOs)
-    ao_state_samplers: List[Any] = field(default_factory=list)
+    ao_state_samplers: List[Any] = []
     # TODO: the cupboard asset needs to be modified to remove self-collisions or have collision geometry not intersecting the wall.
     # TODO: does not support spherical joints (3 dof joints)
     # - uniform continuous range for a single joint. params: ("ao_handle", "link name", min, max)
@@ -192,7 +185,7 @@ class RearrangeEpisodeGeneratorConfig:
     #   "link": str (if "articulated_object")
     #   "offset": vec3 []
     #  }
-    markers: List[Any] = field(default_factory=list)
+    markers: List[Any] = []
 
 
 def get_config_defaults() -> "DictConfig":

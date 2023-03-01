@@ -320,9 +320,10 @@ defaults:
   For example, use the same seed value for `SimulatorConfig.seed` as in `HabitatConfig.seed` (see `SimulatorConfig`
   in the [habitat-lab/habitat/config/default.py](default.py)):
 ```python
+import attr
 from omegaconf import II
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class SimulatorConfig(HabitatBaseConfig):
     # Other SimulatorConfig keys are omitted in this code snippet
     seed: int = II("habitat.seed")
@@ -344,9 +345,10 @@ hydra/launcher=submitit_slurm --multirun
   set the `task` and the `dataset` in every Habitat-Lab benchmark config (see `HabitatConfig` Structured Config
  in the [habitat-lab/habitat/config/default.py](default.py)):
 ```python
+import attr
 from omegaconf import MISSING
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class HabitatConfig(HabitatBaseConfig):
     # Other HabitatConfig keys are omitted in this code snippet
     task: TaskConfig = MISSING
@@ -481,10 +483,10 @@ custom Structured Config just define and add the class to the ConfigStore in the
 [habitat-lab/habitat/config/default_structured_configs.py](default_structured_configs.py).
 
 ```python
-from dataclasses import dataclass
+import attr
 from hydra.core.config_store import ConfigStore
 
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class CustomStructuredConfig:
     custom_config_key: KeyType = DefaultValue
 

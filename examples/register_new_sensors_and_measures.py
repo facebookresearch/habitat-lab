@@ -4,9 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from dataclasses import dataclass
 from typing import Any
 
+import attr
 import numpy as np
 from gym import spaces
 from omegaconf import MISSING
@@ -46,7 +46,7 @@ class EpisodeInfoExample(habitat.Measure):
 
 
 # define a configuration for this new measure
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class EpisodeInfoExampleConfig(MeasurementConfig):
     # Note that typing is required on all fields
     type: str = "EpisodeInfoExample"
@@ -89,7 +89,7 @@ class AgentPositionSensor(habitat.Sensor):
 
 
 # define a configuration for this new sensor
-@dataclass
+@attr.s(auto_attribs=True, slots=True)
 class AgentPositionSensorConfig(LabSensorConfig):
     # Note that typing is required on all fields
     type: str = "my_supercool_sensor"
