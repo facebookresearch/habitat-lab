@@ -289,7 +289,7 @@ class LookUpContinuousActionConfig(WaypointControlActionConfig):
     """
     type: str = "LookUpContinuousAction"
     max_wait_duration: float = 3.0  # seconds
-    turn_angle: float = np.pi / 12  # rad (30 degrees)
+    turn_angle: float = np.pi / 12  # rad (15 degrees)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -300,7 +300,7 @@ class LookDownContinuousActionConfig(WaypointControlActionConfig):
     """
     type: str = "LookDownContinuousAction"
     max_wait_duration: float = 3.0  # seconds
-    turn_angle: float = np.pi / 12  # rad (30 degrees)
+    turn_angle: float = np.pi / 12  # rad (15 degrees)
 
 
 # -----------------------------------------------------------------------------
