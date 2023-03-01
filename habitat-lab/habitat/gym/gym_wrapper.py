@@ -287,6 +287,9 @@ class HabGymWrapper(gym.Wrapper):
                 [(k, obs[k]) for k in self._gym_achieved_goal_keys]
             )
 
+        if "render_state" in obs:
+            observation["render_state"] = obs["render_state"]
+
         for k, v in observation.items():
             if isinstance(self.observation_space, spaces.Box):
                 observation[k] = np.concatenate(list(v.values()))
