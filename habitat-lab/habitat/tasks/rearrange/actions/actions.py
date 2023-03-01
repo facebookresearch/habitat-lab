@@ -136,6 +136,7 @@ class ArmRelPosAction(ArticulatedAgentAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._delta_pos_limit = self._config.delta_pos_limit
+        self._arm_joint_mask = self._config.arm_joint_mask
 
     @property
     def action_space(self):
@@ -150,10 +151,23 @@ class ArmRelPosAction(ArticulatedAgentAction):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._delta_pos_limit
+
+        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
         # The actual joint positions
         self._sim: RearrangeSim
         self.cur_articulated_agent.arm_motor_pos = (
-            delta_pos + self.cur_articulated_agent.arm_motor_pos
+            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
         )
 
 
