@@ -446,7 +446,9 @@ class BaseVelAction(ArticulatedAgentAction):
 
         if self.cur_articulated_agent._base_type == "leg":
             # Fix the leg joints
-            self.cur_articulated_agent.leg_joint_pos = [0.0, 0.7, -1.5] * 4
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
 
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
