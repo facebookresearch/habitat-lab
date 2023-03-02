@@ -49,9 +49,9 @@ class Motion:
         self.displacement = displacement
 
 
-MIN_ANGLE_TURN = 0
-TURNING_STEP_AMOUNT = 20
-THRESHOLD_ROTATE_NOT_MOVE = 120
+MIN_ANGLE_TURN = 5 # If we turn less than this amount, we can just rotate and walk as if we had not rotated
+TURNING_STEP_AMOUNT = 20 # The maximum we should be turning at a time
+THRESHOLD_ROTATE_NOT_MOVE = 120 # The angle at which we should rotate without moving
 
 
 class HumanoidRearrangeController:
@@ -66,7 +66,7 @@ class HumanoidRearrangeController:
     def __init__(
         self,
         walk_pose_path,
-        draw_fps=60,
+        draw_fps=30,
         base_offset=(0, 0.9, 0),
     ):
         self.min_angle_turn = MIN_ANGLE_TURN
@@ -116,11 +116,16 @@ class HumanoidRearrangeController:
         )  # the object transform does not change
         return joint_pose, obj_transform
 
-    def get_walk_pose(self, target_position: mn.Vector3):
+    
+    def compute_turn(self, target_position: mn.Vector3):
+        return self.get_walk_pose(target_position, distance_multiplier=0)
+
+    def get_walk_pose(self, target_position: mn.Vector3, distance_multiplier: float = 1):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
 
         :param position: target position, relative to the character root translation
+        :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
 
         forward_V = target_position
@@ -159,7 +164,6 @@ class HumanoidRearrangeController:
 
         # Step size according to the FPS
         step_size = int(self.walk_motion.fps / self.draw_fps)
-
         if did_rotate:
             # When we rotate, we allow some movement
             distance_to_walk = self.dist_per_step_size * 2
@@ -169,10 +173,12 @@ class HumanoidRearrangeController:
         # Step size according to how much we moved, this is so that
         # we don't overshoot if the speed of the character would it make
         # it move further than what `position` indicates
-        step_size = max(
+        new_step_size = max(
             1, min(step_size, int(distance_to_walk / self.dist_per_step_size))
         )
-
+        if distance_multiplier == 0:
+            new_step_size = 0
+        step_size = new_step_size
         # Advance mocap frame
         prev_mocap_frame = self.walk_mocap_frame
         self.walk_mocap_frame = (
@@ -212,9 +218,8 @@ class HumanoidRearrangeController:
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         obj_transform = look_at_path_T @ obj_transform
 
-        obj_transform.translation += forward_V * dist_diff
+        obj_transform.translation += forward_V * dist_diff * distance_multiplier
         self.obj_transform = obj_transform
-
         return joint_pose, obj_transform
 
     @classmethod
