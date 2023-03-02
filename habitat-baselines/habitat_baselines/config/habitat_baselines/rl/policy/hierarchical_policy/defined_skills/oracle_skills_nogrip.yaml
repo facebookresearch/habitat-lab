@@ -59,13 +59,9 @@ wait:
   max_skill_steps: -1
   ignore_grip: True
 
-nav_to_obj:
+
+reset_arm:
   skill_name: "NoopSkillPolicy"
-  obs_skill_inputs: ["goal_to_agent_gps_compass"]
-  max_skill_steps: 1
-  apply_postconds: True
+  max_skill_steps: 50
+  ignore_grip: True
   force_end_on_timeout: False
-  obs_skill_input_dim: 2
-  pddl_action_names: ["nav", "nav_to_receptacle_by_name"]
-
-

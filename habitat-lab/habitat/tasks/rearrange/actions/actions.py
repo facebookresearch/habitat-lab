@@ -495,16 +495,17 @@ class HumanoidJointAction(RobotAction):
             }
         )
 
-    def step(self, human_joints_trans, is_last_action, **kwargs):
+    def step(self, is_last_action, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.
-        :param human_joint_trans: Array of size (num_joints*4)+16. The last 16
+        :param human_joints_trans: Array of size (num_joints*4)+16. The last 16
             dimensions define the 4x4 root transformation matrix, the first elements
             correspond to a flattened list of quaternions for each joint. When the array is all 0
             it keeps the previous joint rotation and transform.
         :param is_last_action: whether this is the last action before calling environment
           step
         """
+        human_joints_trans = kwargs[self._action_arg_prefix + "human_joints_trans"]
         new_joints = human_joints_trans[:-16]
         new_pos_transform = human_joints_trans[-16:]
 

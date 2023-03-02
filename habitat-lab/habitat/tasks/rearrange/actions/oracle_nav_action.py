@@ -5,6 +5,7 @@
 
 import numpy as np
 from gym import spaces
+import magnum as mn
 
 import habitat_sim
 from habitat.core.registry import registry
@@ -83,7 +84,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
                 self._config.num_spawn_attempts,
                 1,
             )
-
+            if self.motion_type == "human_joints":
+                if self.humanoid_controller is not None:
+                    self.humanoid_controller.reset(self.cur_articulated_agent.base_pos)
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
@@ -170,18 +173,18 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
                         new_pos, new_trans = self.humanoid_controller.compute_turn(
-                            rel_pos
+                            mn.Vector3([rel_pos[0], 0., rel_pos[1]])
                         )
                     else:
                         # Move towards the target
                         new_pos, new_trans = self.humanoid_controller.get_walk_pose(
-                            rel_targ
+                            mn.Vector3([rel_targ[0], 0., rel_targ[1]])
                         )
                 else:
-                    new_pos, new_trans = self.humanoid_controller.stop()
-                base_action = self.humanoid_controller.VectorizePose(
+                    new_pos, new_trans = self.humanoid_controller.get_stop_pose()
+                base_action = self.humanoid_controller.vectorize_pose(
                     new_pos, new_trans
                 )
-                kwargs[f"{self._action_arg_prefix}changejoints_trans"] = base_action
+                kwargs[f"{self._action_arg_prefix}human_joints_trans"] = base_action
                     
                 return HumanoidJointAction.step(self, *args, is_last_action=is_last_action, **kwargs)
