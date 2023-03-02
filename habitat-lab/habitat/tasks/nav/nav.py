@@ -1200,8 +1200,10 @@ class VelocityAction(SimulatorTaskAction):
         # Cache config
         self._lin_vel_range = self._config.lin_vel_range
         self._ang_vel_range = self._config.ang_vel_range
-        self._camera_ang_vel_range = self._config.camera_ang_vel_range
-        self._camera_pitch_ang_range = self._config.camera_pitch_ang_range
+        self._ang_vel_range_camera_pitch = (
+            self._config.ang_vel_range_camera_pitch
+        )
+        self._ang_range_camera_pitch = self._config.ang_range_camera_pitch
         self._enable_scale_convert = self._config.enable_scale_convert
         self._time_step = self._config.time_step
 
@@ -1241,8 +1243,8 @@ class VelocityAction(SimulatorTaskAction):
                         dtype=np.float32,
                     ),
                     "camera_pitch_velocity": spaces.Box(
-                        low=np.array([self._camera_ang_vel_range[0]]),
-                        high=np.array([self._camera_ang_vel_range[1]]),
+                        low=np.array([self._ang_vel_range_camera_pitch[0]]),
+                        high=np.array([self._ang_vel_range_camera_pitch[1]]),
                         dtype=np.float32,
                     ),
                 }
@@ -1330,8 +1332,8 @@ class VelocityAction(SimulatorTaskAction):
         )
         camera_pitch_angular_velocity_clamped = np.clip(
             camera_pitch_angular_velocity,
-            self._camera_ang_vel_range[0],
-            self._camera_ang_vel_range[1],
+            self._ang_vel_range_camera_pitch[0],
+            self._ang_vel_range_camera_pitch[1],
         )
 
         return (
@@ -1429,14 +1431,12 @@ class VelocityAction(SimulatorTaskAction):
             time_step = self._time_step
 
         # Map velocity actions
-        self.vel_control.linear_velocity = np.array([0.0, 0.0, 0.0])
-        self.vel_control.angular_velocity = np.array(
+        self.vel_control.linear_velocity = mn.Vector3([0.0, 0.0, 0.0])
+        self.vel_control.angular_velocity = mn.Vector3(
             [camera_pitch_angular_velocity, 0.0, 0.0]
         )
-        sensor_states = self._sim.agents[0]._sensors  # type: ignore
-        for sensor in sensor_states:
-            sensor_state = self._sim.agents[0]._sensors[sensor].node  # type: ignore
-            break
+        sensor_names = list(self._sim.agents[0]._sensors.keys())  # type: ignore
+        sensor_state = self._sim.agents[0]._sensors[sensor_names[0]].node  # type: ignore
 
         # Construct the sensor rigid state
         agent_mn_quat = sensor_state.rotation
@@ -1460,19 +1460,19 @@ class VelocityAction(SimulatorTaskAction):
         camera_pitch_ang = self._get_camera_pitch_angle()
 
         # Handle the min and max pitch angles
-        if camera_pitch_ang + delta > self._camera_pitch_ang_range[1]:
-            camera_pitch_ang = self._camera_pitch_ang_range[1]
+        if camera_pitch_ang + delta > self._ang_range_camera_pitch[1]:
+            next_camera_pitch_ang = self._ang_range_camera_pitch[1]
             goal_rigid_state.rotation = mn.Quaternion.rotation(
-                mn.Rad(self._camera_pitch_ang_range[1]), mn.Vector3(1, 0, 0)
+                mn.Rad(next_camera_pitch_ang), mn.Vector3(1, 0, 0)
             )
-        elif camera_pitch_ang + delta < self._camera_pitch_ang_range[0]:
-            camera_pitch_ang = self._camera_pitch_ang_range[0]
+        elif camera_pitch_ang + delta < self._ang_range_camera_pitch[0]:
+            next_camera_pitch_ang = self._ang_range_camera_pitch[0]
             goal_rigid_state.rotation = mn.Quaternion.rotation(
-                mn.Rad(self._camera_pitch_ang_range[0]), mn.Vector3(1, 0, 0)
+                mn.Rad(next_camera_pitch_ang), mn.Vector3(1, 0, 0)
             )
 
         # Update all the sensors
-        for sensor in sensor_states:
+        for sensor in sensor_names:
             self._sim.agents[0]._sensors[  # type: ignore
                 sensor
             ].node.rotation = goal_rigid_state.rotation

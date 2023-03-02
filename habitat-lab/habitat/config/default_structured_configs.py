@@ -211,8 +211,8 @@ class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     lin_vel_range: List[float] = [0.0, 0.3]  # meters/sec
     ang_vel_range: List[float] = [-0.45, 0.45]  # rad/sec
-    camera_ang_vel_range: List[float] = [-0.45, 0.45]  # rad/sec
-    camera_pitch_ang_range: List[float] = [-1.57, 0.43]  # rad
+    ang_vel_range_camera_pitch: List[float] = [-0.45, 0.45]  # rad/sec
+    ang_range_camera_pitch: List[float] = [-1.57, 0.43]  # rad
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
 
@@ -289,7 +289,7 @@ class LookUpContinuousActionConfig(WaypointControlActionConfig):
     """
     type: str = "LookUpContinuousAction"
     max_wait_duration: float = 3.0  # seconds
-    turn_angle: float = np.pi / 12  # rad (15 degrees)
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -300,7 +300,7 @@ class LookDownContinuousActionConfig(WaypointControlActionConfig):
     """
     type: str = "LookDownContinuousAction"
     max_wait_duration: float = 3.0  # seconds
-    turn_angle: float = np.pi / 12  # rad (15 degrees)
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
 # -----------------------------------------------------------------------------
