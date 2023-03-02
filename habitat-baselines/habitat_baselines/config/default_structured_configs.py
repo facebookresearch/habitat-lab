@@ -345,7 +345,7 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class TrainerAgentConfig(HabitatBaselinesBaseConfig):
+class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     name: str = "SingleAgentAccessMgr"
 
 
@@ -353,7 +353,7 @@ class TrainerAgentConfig(HabitatBaselinesBaseConfig):
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
-    agent: TrainerAgentConfig = TrainerAgentConfig()
+    agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()

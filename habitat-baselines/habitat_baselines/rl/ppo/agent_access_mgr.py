@@ -40,6 +40,7 @@ class AgentAccessMgr(ABC):
         """
         Number of storage buffers.
         """
+        raise NotImplementedError()
 
     @abstractmethod
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
@@ -50,6 +51,7 @@ class AgentAccessMgr(ABC):
             rollout storage. Default behavior for this and the call signature is
             `default_create_rollouts`.
         """
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -58,6 +60,7 @@ class AgentAccessMgr(ABC):
         The action space the policy acts in. This can be different from the
         environment action space for hierarchical policies.
         """
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -65,6 +68,7 @@ class AgentAccessMgr(ABC):
         """
         Gets the current rollout storage.
         """
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -72,6 +76,7 @@ class AgentAccessMgr(ABC):
         """
         Gets the current policy
         """
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -79,22 +84,23 @@ class AgentAccessMgr(ABC):
         """
         Gets the current policy updater.
         """
+        raise NotImplementedError()
 
     @abstractmethod
     def get_resume_state(self) -> Dict[str, Any]:
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def get_save_state(self) -> Dict[str, Any]:
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def eval(self) -> None:
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def train(self) -> None:
-        pass
+        raise NotImplementedError()
 
     @abstractmethod
     def load_ckpt_state_dict(self, ckpt: Dict) -> None:
@@ -103,10 +109,11 @@ class AgentAccessMgr(ABC):
         `load_state_dict` is that this will not load the policy state if the
         policy does not request it.
         """
+        raise NotImplementedError()
 
     @abstractmethod
     def load_state_dict(self, state: Dict) -> None:
-        pass
+        raise NotImplementedError()
 
     @property
     @abstractmethod
@@ -114,15 +121,19 @@ class AgentAccessMgr(ABC):
         """
         The shape of the tensor to track the hidden state, such as the RNN hidden state.
         """
+        raise NotImplementedError()
 
     @abstractmethod
     def after_update(self) -> None:
         """
-        Called after the updater has called `update` and the rollout `after_update` is called.
+        Must be called by the trainer after the updater has called `update` and
+        the rollout `after_update` is called.
         """
+        raise NotImplementedError()
 
     @abstractmethod
     def pre_rollout(self) -> None:
         """
         Called before a rollout is collected.
         """
+        raise NotImplementedError()

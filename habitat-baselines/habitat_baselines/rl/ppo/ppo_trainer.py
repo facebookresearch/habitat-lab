@@ -332,7 +332,6 @@ class PPOTrainer(BaseRLTrainer):
 
         # Sample actions
         with inference_mode():
-            # TODO: Refactor this in the next multi-agent PR to maintain the current observation in the trainer rather than indexing into rollouts.
             step_batch = self._agent.rollouts.get_current_step(
                 env_slice, buffer_index
             )
