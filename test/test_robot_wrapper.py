@@ -583,9 +583,7 @@ def test_spot_robot_wrapper(fixed_base):
         sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
-        robot_path = (
-            "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
-        )
+        robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
         spot = spot_robot.SpotRobot(robot_path, sim, fixed_base=fixed_base)
         spot.reconfigure()
         spot.update()
