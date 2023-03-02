@@ -79,7 +79,7 @@ try:
 except ImportError:
     pygame = None
 
-WALK_POSE_PATH = "data/humanoid_data/walking_motion_processed.pkl"
+DEFAULT_POSE_PATH = "data/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
@@ -110,7 +110,7 @@ def get_input_vel_ctlr(
     arm_action_name = f"{agent_k}arm_action"
 
     if control_humanoid:
-        base_action_name = f"{agent_k}humanjoint_action"
+        base_action_name = f"{agent_k}humanoidjoint_action"
         base_key = "human_joints_trans"
     else:
         base_action_name = f"{agent_k}base_velocity"
@@ -466,7 +466,7 @@ def play_env(env, args, config):
 
     humanoid_controller = None
     if args.use_humanoid_controller:
-        humanoid_controller = HumanoidRearrangeController(WALK_POSE_PATH)
+        humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
         humanoid_controller.reset(env._sim.articulated_agent.base_pos)
 
     while True:
@@ -708,6 +708,10 @@ if __name__ == "__main__":
         nargs=argparse.REMAINDER,
         help="Modify config options from command line",
     )
+    parser.add_argument(
+        "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
+    )
+
     args = parser.parse_args()
     if not has_pygame() and not args.no_render:
         raise ImportError(

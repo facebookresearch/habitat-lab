@@ -47,6 +47,7 @@ __all__ = [
     "EmptyActionConfig",
     "ArmActionConfig",
     "BaseVelocityActionConfig",
+    "HumanoidJointActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
     # REARRANGEMENT LAB SENSORS
@@ -241,6 +242,15 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+
+
+@attr.s(auto_attribs=True, slots=True)
+class HumanoidJointActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only.
+    """
+    type: str = "HumanoidJointAction"
+    num_joints: int = 17
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1517,6 +1527,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity",
     node=BaseVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.humanoidjoint_action",
+    group="habitat/task/actions",
+    name="humanoidjoint_action",
+    node=HumanoidJointActionConfig,
 )
 cs.store(
     package="habitat.task.actions.velocity_control",

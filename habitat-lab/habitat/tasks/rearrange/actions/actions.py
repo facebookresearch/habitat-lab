@@ -474,7 +474,7 @@ class HumanoidJointAction(RobotAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self.num_joints = 17
+        self.num_joints = self._config.num_joints
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -495,17 +495,18 @@ class HumanoidJointAction(RobotAction):
             }
         )
 
-    def step(self, human_joints_trans, **kwargs):
+    def step(self, human_joints_trans, is_last_action, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.
         :param human_joint_trans: Array of size (num_joints*4)+16. The last 16
             dimensions define the 4x4 root transformation matrix, the first elements
             correspond to a flattened list of quaternions for each joint. When the array is all 0
             it keeps the previous joint rotation and transform.
+        :param is_last_action: whether this is the last action before calling environment
+          step
         """
         new_joints = human_joints_trans[:-16]
         new_pos_transform = human_joints_trans[-16:]
-        is_last_action = kwargs["is_last_action"]
 
         # When the array is all 0, this indicates we are not setting
         # the human joint
@@ -520,6 +521,6 @@ class HumanoidJointAction(RobotAction):
             )
 
         if is_last_action:
-            return self._sim.step(HabitatSimActions.changejoint_action)
+            return self._sim.step(HabitatSimActions.humanoidjoint_action)
         else:
             return {}
