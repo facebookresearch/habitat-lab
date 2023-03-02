@@ -247,7 +247,7 @@ class BaseVelocityActionConfig(ActionConfig):
 @attr.s(auto_attribs=True, slots=True)
 class HumanoidJointActionConfig(ActionConfig):
     r"""
-    In Rearrangement only.
+    In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
     """
     type: str = "HumanoidJointAction"
     num_joints: int = 17
