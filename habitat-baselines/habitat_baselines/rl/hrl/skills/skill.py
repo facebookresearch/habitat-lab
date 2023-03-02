@@ -109,9 +109,11 @@ class SkillPolicy(Policy):
         is_holding = observations[IsHoldingSensor.cls_uuid].view(-1)
         # If it is not holding (0) want to keep releasing -> output -1.
         # If it is holding (1) want to keep grasping -> output +1.
-        action_data.write_action(
-            self._grip_ac_idx, is_holding + (is_holding - 1.0)
-        )
+
+        if not self.should_ignore_grip:
+            action_data.write_action(
+                self._grip_ac_idx, is_holding + (is_holding - 1.0)
+            )
         return action_data
 
     def _apply_postcond(
