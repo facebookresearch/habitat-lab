@@ -62,6 +62,6 @@ wait:
 
 reset_arm:
   skill_name: "NoopSkillPolicy"
-  max_skill_steps: 50
+  max_skill_steps: 1
   ignore_grip: True
   force_end_on_timeout: False

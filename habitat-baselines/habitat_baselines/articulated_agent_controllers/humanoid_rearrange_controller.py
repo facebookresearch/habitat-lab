@@ -116,11 +116,15 @@ class HumanoidRearrangeController:
         )  # the object transform does not change
         return joint_pose, obj_transform
 
-    
     def compute_turn(self, target_position: mn.Vector3):
+        """
+        Generate some motion without base transform, just turn
+        """
         return self.get_walk_pose(target_position, distance_multiplier=0)
 
-    def get_walk_pose(self, target_position: mn.Vector3, distance_multiplier: float = 1):
+    def get_walk_pose(
+        self, target_position: mn.Vector3, distance_multiplier=0
+    ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
 
@@ -173,12 +177,13 @@ class HumanoidRearrangeController:
         # Step size according to how much we moved, this is so that
         # we don't overshoot if the speed of the character would it make
         # it move further than what `position` indicates
-        new_step_size = max(
+        step_size = max(
             1, min(step_size, int(distance_to_walk / self.dist_per_step_size))
         )
-        if distance_multiplier == 0:
-            new_step_size = 0
-        step_size = new_step_size
+
+        if distance_multiplier == 0.0:
+            step_size = 0
+
         # Advance mocap frame
         prev_mocap_frame = self.walk_mocap_frame
         self.walk_mocap_frame = (
@@ -218,7 +223,9 @@ class HumanoidRearrangeController:
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         obj_transform = look_at_path_T @ obj_transform
 
-        obj_transform.translation += forward_V * dist_diff * distance_multiplier
+        obj_transform.translation += (
+            forward_V * dist_diff * distance_multiplier
+        )
         self.obj_transform = obj_transform
         return joint_pose, obj_transform
 
