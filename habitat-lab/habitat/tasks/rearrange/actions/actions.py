@@ -196,6 +196,8 @@ class ArmRelPosMaskAction(RobotAction):
             tgt_idx += 1
             src_idx += 1
 
+        # Although habitat_sim will prevent the motor from exceeding limits,
+        # clip the motor joints first here to prevent the arm from being unstable.
         min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
         target_arm_pos = (
             mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
