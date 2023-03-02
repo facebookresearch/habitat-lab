@@ -49,9 +49,11 @@ class Motion:
         self.displacement = displacement
 
 
-MIN_ANGLE_TURN = 0
-TURNING_STEP_AMOUNT = 20
-THRESHOLD_ROTATE_NOT_MOVE = 120
+MIN_ANGLE_TURN = 0  # If we turn less than this amount, we can just rotate and walk as if we had not rotated
+TURNING_STEP_AMOUNT = 20  # The maximum we should be turning at a time
+THRESHOLD_ROTATE_NOT_MOVE = (
+    120  # The angle at which we should rotate without moving
+)
 
 
 class HumanoidRearrangeController:
@@ -116,11 +118,20 @@ class HumanoidRearrangeController:
         )  # the object transform does not change
         return joint_pose, obj_transform
 
-    def get_walk_pose(self, target_position: mn.Vector3):
+    def compute_turn(self, target_position: mn.Vector3):
+        """
+        Generate some motion without base transform, just turn
+        """
+        return self.get_walk_pose(target_position, distance_multiplier=0)
+
+    def get_walk_pose(
+        self, target_position: mn.Vector3, distance_multiplier=0
+    ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
 
         :param position: target position, relative to the character root translation
+        :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
 
         forward_V = target_position
@@ -173,6 +184,9 @@ class HumanoidRearrangeController:
             1, min(step_size, int(distance_to_walk / self.dist_per_step_size))
         )
 
+        if distance_multiplier == 0.0:
+            step_size = 0
+
         # Advance mocap frame
         prev_mocap_frame = self.walk_mocap_frame
         self.walk_mocap_frame = (
@@ -212,7 +226,9 @@ class HumanoidRearrangeController:
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
         obj_transform = look_at_path_T @ obj_transform
 
-        obj_transform.translation += forward_V * dist_diff
+        obj_transform.translation += (
+            forward_V * dist_diff * distance_multiplier
+        )
         self.obj_transform = obj_transform
 
         return joint_pose, obj_transform
