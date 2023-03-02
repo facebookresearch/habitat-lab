@@ -1198,14 +1198,14 @@ class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
-    uuid: str = "articulated_agent_head_rgb"
+    uuid: str = "head_rgb"
     width: int = 256
     height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
-    uuid: str = "articulated_agent_head_depth"
+    uuid: str = "head_depth"
     width: int = 256
     height: int = 256
 
@@ -1226,14 +1226,14 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
-    uuid: str = "articulated_agent_third_rgb"
+    uuid: str = "third_rgb"
     width: int = 512
     height: int = 512
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
-    uuid: str = "articulated_agent_third_depth"  # TODO: articulated_agent_third_rgb on the main branch
+    uuid: str = "third_depth"  # TODO: third_rgb on the main branch
     #  check if it won't cause any errors
 
 

@@ -722,7 +722,7 @@ class RearrangeSim(HabitatSim):
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "articulated_agent_third_rgb" in obs and self._debug_render:
+        if "third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -735,9 +735,7 @@ class RearrangeSim(HabitatSim):
             self._create_obj_viz()
 
             debug_obs = self.get_sensor_observations()
-            obs["articulated_agent_third_rgb"] = debug_obs[
-                "articulated_agent_third_rgb"
-            ][:, :, :3]
+            obs["third_rgb"] = debug_obs["third_rgb"][:, :, :3]
 
         return obs
 

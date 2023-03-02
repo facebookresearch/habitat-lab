@@ -10,7 +10,7 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - articulated_agent_head_depth
+      - head_depth
       - obj_start_sensor
       - joint
       - is_holding
