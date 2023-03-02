@@ -120,6 +120,7 @@ class RearrangeSim(HabitatSim):
         self._needs_markers = self.habitat_config.needs_markers
         self._update_robot = self.habitat_config.update_robot
         self._step_physics = self.habitat_config.step_physics
+        self._additional_object_paths = self.habitat_config.additional_object_paths
 
     @property
     def robot(self):
@@ -439,7 +440,13 @@ class RearrangeSim(HabitatSim):
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
-                ro = rom.add_object_by_template_handle(obj_handle)
+                template = None
+                for obj_path in self._additional_object_paths:
+                    template = osp.join(obj_path, obj_handle)
+                    if osp.isfile(template):
+                        break
+                assert template is not None, f"Could not find config file for object {obj_handle}"
+                ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
 

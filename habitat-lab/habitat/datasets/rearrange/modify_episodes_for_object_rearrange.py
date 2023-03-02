@@ -23,7 +23,6 @@ from habitat.tasks.utils import compute_pixel_coverage
 from habitat_sim.agent.agent import ActionSpec
 from habitat_sim.agent.controls import ActuationSpec
 from habitat_sim.utils.common import quat_to_coeffs
-from habitat.utils.common import get_project_root
 
 ISLAND_RADIUS_LIMIT = 3.5
 
@@ -283,7 +282,6 @@ def get_candidate_starts(
 ):
     obj_goals = []
     for i, (obj, pos) in enumerate(objects):
-        obj = osp.split(obj)[1]
         if (
             get_obj_category(
                 obj.split(".")[0], obj_category_mapping=obj_category_mapping
@@ -322,12 +320,17 @@ def get_candidate_receptacles(recep_goals, goal_recep_category):
     ]
 
 
-def load_objects(sim, objects):
+def load_objects(sim, objects, additional_obj_config_paths):
     rom = sim.get_rigid_object_manager()
     obj_idx_to_name = {}
     for i, (obj_handle, transform) in enumerate(objects):
-        matching_template = osp.join(get_project_root(), obj_handle)
-        ro = rom.add_object_by_template_handle(matching_template)
+        template = None
+        for obj_path in additional_obj_config_paths:
+            template = osp.abspath(osp.join(obj_path, obj_handle))
+            if osp.isfile(template):
+                break
+        assert template is not None, f"Could not find config file for object {obj_handle}"
+        ro = rom.add_object_by_template_handle(template)
 
         # The saved matrices need to be flipped when reloading.
         ro.transformation = mn.Matrix4(
@@ -600,7 +603,7 @@ def add_cat_fields_to_episodes(
 
         rec = find_receptacles(sim)
         rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
-        obj_idx_to_name = load_objects(sim, episode["rigid_objs"])
+        obj_idx_to_name = load_objects(sim, episode["rigid_objs"], episode["additional_obj_config_paths"])
         populate_semantic_graph(sim)
         all_rec_goals = collect_receptacle_goals(
             sim, rec_category_mapping=rec_category_mapping
