@@ -30,6 +30,8 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
+    "LookUpDiscreteToVelocityActionConfig",
+    "LookDownDiscreteToVelocityActionConfig",
     # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
@@ -209,6 +211,8 @@ class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     lin_vel_range: List[float] = [0.0, 0.3]  # meters/sec
     ang_vel_range: List[float] = [-0.45, 0.45]  # rad/sec
+    ang_vel_range_camera_pitch: List[float] = [-0.45, 0.45]  # rad/sec
+    ang_range_camera_pitch: List[float] = [-1.57, 0.43]  # rad
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = False
 
@@ -225,16 +229,20 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     # Action space range
     waypoint_lin_range: List[float] = [-0.5, 0.5]  # meters
     waypoint_ang_range: List[float] = [-np.pi, np.pi]  # radians
+    delta_ang_range_camera_pitch: List[float] = [-0.2, 0.2]  # radians
     wait_duration_range: List[float] = [0.0, 10.0]  # seconds
     yaw_input_in_degrees: bool = False
     # Early stopping criteria
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
+    min_abs_ang_speed_camera_pitch: float = 0.018  # rad/sec (1 deg/sec)
     # Controller parameters
     v_max: float = 0.3
     w_max: float = 0.45
+    w_max_camera_pitch: float = 0.90
     acc_lin: float = 0.2
     acc_ang: float = 0.6
+    acc_ang_camera_pitch: float = 0.6
     max_heading_ang: float = np.pi / 4  # rad
     lin_error_tol: float = 0.01
     ang_error_tol: float = 0.025
@@ -269,6 +277,28 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
     type: str = "TurnRightWaypointAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
+
+
+@attr.s(auto_attribs=True, slots=True)
+class LookUpDiscreteToVelocityActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the left
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "LookUpDiscreteToVelocityAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
+
+
+@attr.s(auto_attribs=True, slots=True)
+class LookDownDiscreteToVelocityActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the right
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "LookDownDiscreteToVelocityAction"
     max_wait_duration: float = 3.0  # seconds
     turn_angle: float = np.pi / 6  # rad (30 degrees)
 
@@ -1576,6 +1606,18 @@ cs.store(
     group="habitat/task/actions",
     name="look_down",
     node=LookDownActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.look_up_discrete_to_velocity",
+    group="habitat/task/actions",
+    name="look_up_discrete_to_velocity",
+    node=LookUpDiscreteToVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.look_down_discrete_to_velocity",
+    group="habitat/task/actions",
+    name="look_down_discrete_to_velocity",
+    node=LookDownDiscreteToVelocityActionConfig,
 )
 cs.store(
     package="habitat.task.actions.arm_action",
