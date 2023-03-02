@@ -1407,10 +1407,8 @@ class VelocityAction(SimulatorTaskAction):
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
         # Update the state of the agent
-        _ = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
+        self._sim.set_agent_state(  # type: ignore
+            final_position, final_rotation, reset_sensors=False
         )
 
         final_agent_state = self._sim.get_agent_state()
