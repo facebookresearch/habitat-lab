@@ -31,6 +31,12 @@ class ContinuousController:
             self.controller.update_pose_feedback(start)
         self.controller.update_goal(goal, relative=relative)
 
+    def velocity_feedback_control(self, x_err, a, v_max):
+        """Wrapper for using function of _velocity_feedback_control"""
+        return self.controller.control._velocity_feedback_control(
+            x_err, a, v_max
+        )
+
     def forward(self, xyt, *args, **kwargs):
         """Query controller to compute velocity command
         xyt: Robot base current SE2 pose in global frame
