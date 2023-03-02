@@ -71,9 +71,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
         self._lr_scheduler = LambdaLR(
             optimizer=self._updater.optimizer,
-            lr_lambda=lambda _: lr_schedule_fn(
-                percent_done=self._percent_done_fn()
-            ),
+            lr_lambda=lambda _: lr_schedule_fn(self._percent_done_fn()),
         )
         if resume_state is not None:
             self._updater.load_state_dict(resume_state["state_dict"])
