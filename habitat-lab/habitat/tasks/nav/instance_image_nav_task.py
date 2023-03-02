@@ -263,3 +263,10 @@ class InstanceImageNavigationTask(ObjectNavigationTask):
     image. Built on top of ObjectNavigationTask. Used to explicitly state a
     type of the task in config.
     """
+
+
+@registry.register_task(name="InstanceImageNav-v2")
+class InstanceImageNavigationTaskV2(InstanceImageNavigationTask):
+    """A Continuous Control InstanceImageNav Navigation Task class for a task
+    specific methods. Used to explicitly state a type of the task in config.
+    """
