@@ -14,12 +14,24 @@ import numpy as np
 
 class Pose:
     def __init__(self, joints, obj_transform):
+        """
+        Contains a single humanoid pose
+            :param joints: list or array of num_joints * 4 elements, with the rotation quaternions
+            :pram obj_transform: Matrix4 with the root trasnform.
+        """
         self.joints = list(joints)
         self.root_transform = obj_transform
 
 
 class Motion:
-    """Contains a sequential motion"""
+    """
+    Contains a sequential motion, corresponding to a sequence of poses
+        :param pose_array: num_poses x num_joints x 4 array, containing the join orientations
+        :param transform_array: num_poses x 4 x 4 array, containing the root transform
+        :param displacement: on each pose, how much forward displacement was there?
+            Used to measure how many poses we should advance to move a cerain amount
+        :param fps: the FPS at which the motion was recorded
+    """
 
     def __init__(self, pose_array, transform_array, displacement, fps):
         num_poses = pose_array.shape[0]
@@ -37,10 +49,18 @@ class Motion:
         self.displacement = displacement
 
 
+MIN_ANGLE_TURN = 0
+TURNING_STEP_AMOUNT = 20
+THRESHOLD_ROTATE_NOT_MOVE = 120
+
+
 class HumanoidRearrangeController:
     """
     Humanoid Controller, converts high level actions such as walk, or reach into joints that
     control a URDF object.
+        :param walk_pose_path: file containing the walking poses we care about.
+        :param draw_fps: the FPS at which we should be advancing the pose.
+        :base_offset: what is the offset between the root of the character and their feet.
     """
 
     def __init__(
@@ -49,9 +69,9 @@ class HumanoidRearrangeController:
         draw_fps=60,
         base_offset=(0, 0.9, 0),
     ):
-        self.min_angle_turn = 0
-        self.turning_step_amount = 20
-        self.threshold_rotate_not_move = 120
+        self.min_angle_turn = MIN_ANGLE_TURN
+        self.turning_step_amount = TURNING_STEP_AMOUNT
+        self.threshold_rotate_not_move = THRESHOLD_ROTATE_NOT_MOVE
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
@@ -198,7 +218,7 @@ class HumanoidRearrangeController:
         return joint_pose, obj_transform
 
     @classmethod
-    def VectorizePose(cls, pose: List, transform: mn.Matrix4):
+    def vectorize_pose(cls, pose: List, transform: mn.Matrix4):
         """
         Transforms a pose so that it can be passed as an argument to HumanoidJointAction
 
