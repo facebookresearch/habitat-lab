@@ -30,7 +30,7 @@ We accept these types of Pull Requests. Make sure your Pull Requests are not a m
 
 **Experiments Pull Requests** that add new features to the [habitat-baselines](/habitat-baselines/) training codebase. Experiments Pull Requests can be any size, must have smoke/integration tests and be isolated from the rest of the code. Your code additions should not rely on other habitat-baselines code. This is to avoid dependencies between different parts of habitat-baselines. You must also include a README that will document how to use your new feature or trainer. **You** will be the maintainer of this code, if the code becomes stale and is not supported often enough, we will eventually remove it.
 
-__Note:__ Pull Requests are not the only way to share your work with habitat. You can extend the functionality of Habitat in your own code base by importing and using the Habitat Sim, Habitat Lab, and Habitat Baselines API. If you have a cool project that uses this API, let us know and we might link to your work in our documentation! We encourage using the Habitat-Lab API in your codebase instead of forking the entirety of Habitat-Lab. 
+__Note:__ Pull Requests are not the only way to share your work with habitat. You can extend the functionality of Habitat in your own code base by importing and using the Habitat Sim, Habitat Lab, and Habitat Baselines API. If you have a cool project that uses this API, let us know and we might link to your work in our documentation! We encourage using the Habitat-Lab API in your codebase instead of forking the entirety of Habitat-Lab.
 
 
 ## Contributor License Agreement ("CLA")
