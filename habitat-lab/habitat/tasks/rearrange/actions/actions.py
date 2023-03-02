@@ -381,6 +381,7 @@ class BaseVelAction(ArticulatedAgentAction):
             rigid_state.translation, target_rigid_state.translation
         )
 
+        # Offset the base
         end_pos -= self.cur_articulated_agent.params.base_offset
 
         target_trans = mn.Matrix4.from_(

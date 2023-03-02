@@ -15,7 +15,7 @@ habitat:
     actions:
       arm_action:
         type: "ArmAction"
-        arm_controller: "ArmRelPosAction"
+        arm_controller: "ArmRelPosAction" #ArmRelPosKinematicAction or ArmRelPosAction
         grip_controller: "MagicGraspAction"
         arm_joint_mask: [1,1,0,1,1,1,1]
         arm_joint_dimensionality: 7
@@ -35,13 +35,13 @@ habitat:
         robot_type: "SpotRobot"
         sim_sensors:
           arm_rgb_sensor:
-            height: 640
-            width: 480
-            hfov: 46
+            height: 480
+            width: 640
+            hfov: 47
           arm_depth_sensor:
-            height: 640
-            width: 480
-            hfov: 44
+            height: 224
+            width: 171
+            hfov: 55
     habitat_sim_v0:
       enable_physics: True
   dataset:
