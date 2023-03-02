@@ -110,7 +110,7 @@ def get_input_vel_ctlr(
     arm_action_name = f"{agent_k}arm_action"
 
     if control_humanoid:
-        base_action_name = f"{agent_k}humanjoint_action"
+        base_action_name = f"{agent_k}humanoidjoint_action"
         base_key = "human_joints_trans"
     else:
         base_action_name = f"{agent_k}base_velocity"

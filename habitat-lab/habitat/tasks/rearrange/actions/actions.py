@@ -474,7 +474,7 @@ class HumanoidJointAction(RobotAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self.num_joints = 17
+        self.num_joints = self._config.num_joints
 
     def reset(self, *args, **kwargs):
         super().reset()
@@ -521,6 +521,6 @@ class HumanoidJointAction(RobotAction):
             )
 
         if is_last_action:
-            return self._sim.step(HabitatSimActions.changejoint_action)
+            return self._sim.step(HabitatSimActions.humanoidjoint_action)
         else:
             return {}
