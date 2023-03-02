@@ -92,7 +92,7 @@ class SpotRobot(MobileManipulator):
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
             arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            gripper_init_params=[0.0],
+            gripper_init_params=[-1.56],
             leg_init_params=[
                 0.0,
                 0.7,
