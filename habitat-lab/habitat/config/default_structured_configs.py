@@ -276,6 +276,7 @@ class OracleNavActionConfig(ActionConfig):
     """
 
     type: str = "OracleNavAction"
+    motion_control: str = 'base_velocity'
     turn_velocity: float = 1.0
     forward_velocity: float = 1.0
     turn_thresh: float = 0.1

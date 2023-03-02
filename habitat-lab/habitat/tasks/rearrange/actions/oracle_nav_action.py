@@ -9,13 +9,14 @@ from gym import spaces
 import habitat_sim
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.actions.actions import HumanoidJointAction
 from habitat.tasks.rearrange.actions.actions import BaseVelAction
 from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
 
 
 @registry.register_task_action
-class OracleNavAction(BaseVelAction):
+class OracleNavAction(BaseVelAction, HumanoidJointAction):
     """
     An action that will convert the index of an entity (in the sense of
     `PddlEntity`) to navigate to and convert this to base control to move the
@@ -24,9 +25,12 @@ class OracleNavAction(BaseVelAction):
     """
 
     def __init__(self, *args, task, **kwargs):
-        super().__init__(*args, **kwargs)
+        self.motion_type = self._config.motion_type
+        if self.motion_type == 'base_velocity':
+            BaseVelAction.__init__(self, *args, **kwargs)
+        else:
+            HumanoidJointAction.__init__(self, *args, **kwargs)
         self._task = task
-
         self._poss_entities = (
             self._task.pddl_problem.get_ordered_entities_list()
         )

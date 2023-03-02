@@ -8,11 +8,14 @@
 
 defaults:
   - rl_hierarchical
-  - /habitat/task/actions:
-    - oracle_nav_humanoid_action
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills
   - _self_
 
 habitat:
+  task:
+    actions:
+      oracle_nav_human_action:
+        motion_control: human_joints
   gym:
     obs_keys:
       - robot_head_depth

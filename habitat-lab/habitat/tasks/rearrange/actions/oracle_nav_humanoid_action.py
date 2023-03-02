@@ -11,9 +11,7 @@ from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import HumanoidJointAction
 from habitat.tasks.rearrange.actions.oracle_nav_action import OracleNavAction
 from habitat.tasks.utils import get_angle
-from habitat_baselines.articulated_agent_controller.humanoid_rearrange_controller import (
-    HumanoidRearrangeController,
-)
+
 
 
 @registry.register_task_action
@@ -26,7 +24,7 @@ class OracleNavHumanoidAction(OracleNavAction, HumanoidJointAction):
     """
 
     def __init__(self, *args, task, **kwargs):
-        HumanoidJointAction.__init__(*args, **kwargs)
+        HumanoidJointAction.__init__(self, *args, **kwargs)
 
         self.humanoid_controller = None
         self._task = task
@@ -120,7 +118,7 @@ class OracleNavHumanoidAction(OracleNavAction, HumanoidJointAction):
             else:
                 new_pos, new_trans = self.humanoid_controller.stop()
 
-        base_action = HumanoidRearrangeController.VectorizePose(
+        base_action = self.humanoid_controller.VectorizePose(
             new_pos, new_trans
         )
 
