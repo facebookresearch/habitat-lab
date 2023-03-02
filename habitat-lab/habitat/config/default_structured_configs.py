@@ -142,7 +142,12 @@ class StopActionConfig(ActionConfig):
 @dataclass
 class VelocityStopActionConfig(ActionConfig):
     r"""
-    In Navigation tasks only, the velocity stop action is an action that takes continuous space input.
+    In Navigation tasks only, the velocity stop action takes in a continuous space input. When
+    the action is passed a value greater than 0.0, the Agent will request to stop the Navigation
+    task. Note that stopping is required to succeed in a Navigation task since the Success 
+    is determined by the Agent calling the stop action within range of the target.
+
+    The action is used along side the VelocityControlAction and WaypointControlAction. 
     """
     type: str = "VelocityStopAction"
 
