@@ -1885,8 +1885,8 @@ class TurnRightWaypointAction(WaypointAction):
 
 
 @registry.register_task_action
-class LookUpContinuousAction(WaypointAction):
-    name: str = "look_up_continuous"
+class LookUpDiscreteToVelocityAction(WaypointAction):
+    name: str = "look_up_discrete_to_velocity"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -1914,8 +1914,8 @@ class LookUpContinuousAction(WaypointAction):
 
 
 @registry.register_task_action
-class LookDownContinuousAction(WaypointAction):
-    name: str = "look_down_continuous"
+class LookDownDiscreteToVelocityAction(WaypointAction):
+    name: str = "look_down_discrete_to_velocity"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

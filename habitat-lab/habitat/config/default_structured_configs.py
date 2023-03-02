@@ -30,8 +30,8 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
-    "LookUpContinuousActionConfig",
-    "LookDownContinuousActionConfig",
+    "LookUpDiscreteToVelocityActionConfig",
+    "LookDownDiscreteToVelocityActionConfig",
     # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
@@ -282,23 +282,23 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class LookUpContinuousActionConfig(WaypointControlActionConfig):
+class LookUpDiscreteToVelocityActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
-    type: str = "LookUpContinuousAction"
+    type: str = "LookUpDiscreteToVelocityAction"
     max_wait_duration: float = 3.0  # seconds
     turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
 @attr.s(auto_attribs=True, slots=True)
-class LookDownContinuousActionConfig(WaypointControlActionConfig):
+class LookDownDiscreteToVelocityActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
     """
-    type: str = "LookDownContinuousAction"
+    type: str = "LookDownDiscreteToVelocityAction"
     max_wait_duration: float = 3.0  # seconds
     turn_angle: float = np.pi / 6  # rad (30 degrees)
 
@@ -1608,16 +1608,16 @@ cs.store(
     node=LookDownActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.look_up_continuous",
+    package="habitat.task.actions.look_up_discrete_to_velocity",
     group="habitat/task/actions",
-    name="look_up_continuous",
-    node=LookUpContinuousActionConfig,
+    name="look_up_discrete_to_velocity",
+    node=LookUpDiscreteToVelocityActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.look_down_continuous",
+    package="habitat.task.actions.look_down_discrete_to_velocity",
     group="habitat/task/actions",
-    name="look_down_continuous",
-    node=LookDownContinuousActionConfig,
+    name="look_down_discrete_to_velocity",
+    node=LookDownDiscreteToVelocityActionConfig,
 )
 cs.store(
     package="habitat.task.actions.arm_action",
