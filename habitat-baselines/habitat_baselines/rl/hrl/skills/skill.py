@@ -28,6 +28,7 @@ class SkillPolicy(Policy):
         :param action_space: The overall action space of the entire task, not task specific.
         """
         self._config = config
+        self.should_ignore_grip = config.ignore_grip
         self._batch_size = batch_size
         self._apply_postconds = self._config.apply_postconds
         self._force_end_on_timeout = self._config.force_end_on_timeout
@@ -69,7 +70,7 @@ class SkillPolicy(Policy):
                 self._grip_ac_idx += get_num_actions(space) - 1
                 found_grip = True
                 break
-        if not found_grip:
+        if not found_grip and not self.should_ignore_grip:
             raise ValueError(f"Could not find grip action in {action_space}")
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"

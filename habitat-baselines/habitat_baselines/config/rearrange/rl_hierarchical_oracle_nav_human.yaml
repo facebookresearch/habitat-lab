@@ -8,14 +8,16 @@
 
 defaults:
   - rl_hierarchical
-  - /habitat/task/actions@oracle_nav_human_action: oracle_nav_action
-  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills
+  - /habitat/task/actions:
+    - oracle_nav_action
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills_nogrip
+  - override /habitat/task/rearrange: rearrange_easy_humanoid
   - _self_
 
 habitat:
   task:
     actions:
-      oracle_nav_human_action:
+      oracle_nav_action:
         motion_control: human_joints
   gym:
     obs_keys:
@@ -49,3 +51,4 @@ habitat_baselines:
             skill_name: "OracleNavPolicy"
             obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
             max_skill_steps: 300
+            ignore_grip: True
