@@ -21,9 +21,11 @@ from habitat.tasks.utils import get_angle
 class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
     """
     An action that will convert the index of an entity (in the sense of
-    `PddlEntity`) to navigate to and convert this to base control to move the
+    `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
     robot to the closest navigable position to that entity. The entity index is
-    the index into the list of all available entities in the current scene.
+    the index into the list of all available entities in the current scene. The 
+    config flag motion_type indicates whether the low level action will be a base_velocity or
+    a joint control.
     """
 
     def __init__(self, *args, task, **kwargs):
