@@ -221,7 +221,7 @@ jobs:
               fi
               if [ ! -f ./habitat-sim/data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf ]
               then
-                python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/
+                python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/ --replace
               fi
               if [ ! -f ./habitat-sim/data/robots/hab_stretch/urdf/hab_stretch.urdf ]
               then

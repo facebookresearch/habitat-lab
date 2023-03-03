@@ -25,11 +25,23 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_based: bool = True,
+        maintain_link_order=False,
         base_type="mobile",
         sim_obj=None,
         **kwargs,
     ):
-        r"""Constructor"""
+        r"""Constructor
+        :param params: The parameter of the base articulated agent.
+        :param urdf_path: The path to the articulated agent's URDF file.
+        :param sim: The simulator.
+        :param limit_robo_joints: If true, joint limits of articulated agent are always
+            enforced.
+        :param fixed_base: If the articulated agent's base is fixed or not.
+        :param maintain_link_order: Whether to to preserve the order of
+            links parsed from URDF files as link indices. Needed for
+            compatibility with PyBullet.
+        :param sim_obj: Pointer to the simulated object
+        """
         assert base_type in [
             "mobile",
             "leg",
@@ -42,6 +54,7 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         self._limit_robo_joints = limit_robo_joints
         self._base_type = base_type
         self.sim_obj = sim_obj
+        self._maintain_link_order = maintain_link_order
 
         # NOTE: the follow members cache static info for improved efficiency over querying the API
         # maps joint ids to motor settings for convenience
@@ -71,7 +84,9 @@ class ArticulatedAgentBase(ArticulatedAgentInterface):
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-                self.urdf_path, fixed_base=self._fixed_base
+                self.urdf_path,
+                fixed_base=self._fixed_base,
+                maintain_link_order=self._maintain_link_order,
             )
         # set correct gains for wheels
         if (

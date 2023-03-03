@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING, Iterator, List, Optional
 import magnum as mn
 import numpy as np
 
+from habitat.articulated_agents.humanoids.kinematic_humanoid import (
+    KinematicHumanoid,
+)
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 
 # flake8: noqa
@@ -68,8 +71,8 @@ class ArticulatedAgentManager:
 
         for agent_name in cfg.agents_order:
             agent_cfg = cfg.agents[agent_name]
-            agent_cls = eval(agent_cfg.robot_type)
-            agent = agent_cls(agent_cfg.robot_urdf, sim)
+            agent_cls = eval(agent_cfg.articulated_agent_type)
+            agent = agent_cls(agent_cfg.articulated_agent_urdf, sim)
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):
                 graps_mgr = RearrangeGraspManager(
@@ -120,7 +123,6 @@ class ArticulatedAgentManager:
         """
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.
         """
-
         for agent_data in self._all_agent_data:
             agent_data.articulated_agent.params.arm_init_params = (
                 agent_data.start_js

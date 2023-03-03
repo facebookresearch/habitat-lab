@@ -23,7 +23,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     STATIC_OBJ_TYPE,
     PddlEntity,
     PddlSimInfo,
-    robot_type,
+    articulated_agent_type,
 )
 from habitat.tasks.rearrange.utils import get_angle_to_pos, rearrange_logger
 
@@ -80,7 +80,8 @@ class PddlRobotState:
         Returns if the desired robot state is currently true in the simulator state.
         """
         robot_id = cast(
-            int, sim_info.search_for_entity(robot_entity, robot_type)
+            int,
+            sim_info.search_for_entity(robot_entity, articulated_agent_type),
         )
         grasp_mgr = sim_info.sim.get_agent_data(robot_id).grasp_mgr
 
@@ -110,7 +111,8 @@ class PddlRobotState:
         self, sim_info: PddlSimInfo, robot_entity: PddlEntity
     ) -> None:
         robot_id = cast(
-            int, sim_info.search_for_entity(robot_entity, robot_type)
+            int,
+            sim_info.search_for_entity(robot_entity, articulated_agent_type),
         )
         sim = sim_info.sim
         grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr

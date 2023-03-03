@@ -10,7 +10,7 @@ defaults:
 habitat:
   gym:
     obs_keys:
-    - robot_head_depth
+    - head_depth
     - relative_resting_position
     - obj_start_sensor
     - obj_goal_sensor
