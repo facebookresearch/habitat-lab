@@ -22,7 +22,7 @@ habitat:
         spawn_max_dist_to_obj: 1.7
   gym:
     obs_keys:
-      - robot_head_depth
+      - head_depth
       - relative_resting_position
       - obj_start_sensor
       - obj_goal_sensor
@@ -38,8 +38,8 @@ habitat:
 
     agents:
       main_agent:
-        robot_urdf: 'data/humanoid_data/amass_male.urdf'
-        robot_type: KinematicHumanoid
+        articulated_agent_urdf: 'data/humanoid_data/amass_male.urdf'
+        articulated_agent_type: KinematicHumanoid
 
 
 habitat_baselines:
