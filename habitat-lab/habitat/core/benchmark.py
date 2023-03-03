@@ -24,14 +24,20 @@ class Benchmark:
     r"""Benchmark for evaluating agents in environments."""
 
     def __init__(
-        self, config_paths: Optional[str] = None, eval_remote: bool = False
+        self,
+        config_paths: Optional[str] = None,
+        eval_remote: bool = False,
+        action_space: Optional[str] = None,
     ) -> None:
         r"""..
 
         :param config_paths: file to be used for creating the environment
         :param eval_remote: boolean indicating whether evaluation should be run remotely or locally
         """
-        config_env = get_config(config_paths)
+        overrides = []
+        if action_space is not None:
+            overrides.append("habitat/task/actions=" + action_space)
+        config_env = get_config(config_paths, overrides)
         self._eval_remote = eval_remote
 
         if self._eval_remote is True:
