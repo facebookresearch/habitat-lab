@@ -76,7 +76,8 @@ class HumanoidRearrangeController:
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
-            raise RuntimeError(f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data.")
+            raise RuntimeError(f"Path does {walk_pose_path} not exist. 
+                               Reach out to the paper authors to obtain this data.")
 
         with open(walk_pose_path, "rb") as f:
             walk_data = pkl.load(f)
