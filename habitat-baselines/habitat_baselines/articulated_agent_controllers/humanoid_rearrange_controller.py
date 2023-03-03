@@ -170,6 +170,7 @@ class HumanoidRearrangeController:
 
         # Step size according to the FPS
         step_size = int(self.walk_motion.fps / self.draw_fps)
+
         if did_rotate:
             # When we rotate, we allow some movement
             distance_to_walk = self.dist_per_step_size * 2
@@ -229,6 +230,7 @@ class HumanoidRearrangeController:
             forward_V * dist_diff * distance_multiplier
         )
         self.obj_transform = obj_transform
+
         return joint_pose, obj_transform
 
     @classmethod
