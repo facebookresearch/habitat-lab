@@ -13,33 +13,33 @@ import numpy as np
 
 
 class Pose:
-    def __init__(self, joints, obj_transform):
+    def __init__(self, joints_quat, root_transform):
         """
         Contains a single humanoid pose
-            :param joints: list or array of num_joints * 4 elements, with the rotation quaternions
-            :pram obj_transform: Matrix4 with the root trasnform.
+            :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
+            :param root_transform: Matrix4 with the root trasnform.
         """
-        self.joints = list(joints)
-        self.root_transform = obj_transform
+        self.joints = list(joints_quat)
+        self.root_transform = root_transform
 
 
 class Motion:
     """
     Contains a sequential motion, corresponding to a sequence of poses
-        :param pose_array: num_poses x num_joints x 4 array, containing the join orientations
+        :param joints_quat_array: num_poses x num_joints x 4 array, containing the join orientations
         :param transform_array: num_poses x 4 x 4 array, containing the root transform
         :param displacement: on each pose, how much forward displacement was there?
             Used to measure how many poses we should advance to move a cerain amount
         :param fps: the FPS at which the motion was recorded
     """
 
-    def __init__(self, pose_array, transform_array, displacement, fps):
-        num_poses = pose_array.shape[0]
+    def __init__(self, joints_quat_array, transform_array, displacement, fps):
+        num_poses = joints_quat_array.shape[0]
         self.num_poses = num_poses
         poses = []
         for index in range(num_poses):
             pose = Pose(
-                pose_array[index].reshape(-1),
+                joints_quat_array[index].reshape(-1),
                 mn.Matrix4(transform_array[index]),
             )
             poses.append(pose)
@@ -49,17 +49,16 @@ class Motion:
         self.displacement = displacement
 
 
-MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate and walk as if we had not rotated
-TURNING_STEP_AMOUNT = 20  # The maximum we should be turning at a time
+MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
+TURNING_STEP_AMOUNT = 20  # The maximum angle we should be rotating at a given step
 THRESHOLD_ROTATE_NOT_MOVE = (
-    120  # The angle at which we should rotate without moving
+    120  # The rotation angle above which we should only walk as if rotating in place
 )
 
 
 class HumanoidRearrangeController:
     """
-    Humanoid Controller, converts high level actions such as walk, or reach into joints that
-    control a URDF object.
+    Humanoid Controller, converts high level actions such as walk, or reach into joints positions
         :param walk_pose_path: file containing the walking poses we care about.
         :param draw_fps: the FPS at which we should be advancing the pose.
         :base_offset: what is the offset between the root of the character and their feet.
@@ -77,7 +76,7 @@ class HumanoidRearrangeController:
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
-            raise RuntimeError(f"Path does {walk_pose_path} not exist.")
+            raise RuntimeError(f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data.")
 
         with open(walk_pose_path, "rb") as f:
             walk_data = pkl.load(f)

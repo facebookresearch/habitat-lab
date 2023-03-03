@@ -38,8 +38,8 @@ habitat:
 
     agents:
       main_agent:
-        robot_urdf: 'data/humanoid_data/amass_male.urdf'
-        robot_type: KinematicHumanoid
+        agent_urdf: 'data/humanoids/humanoid_data/amass_male.urdf'
+        agent_type: KinematicHumanoid
 
 
 habitat_baselines:
