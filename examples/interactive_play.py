@@ -79,6 +79,7 @@ try:
 except ImportError:
     pygame = None
 
+# Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
