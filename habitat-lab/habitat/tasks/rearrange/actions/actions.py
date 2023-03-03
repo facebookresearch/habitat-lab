@@ -14,6 +14,9 @@ import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.actions.articulated_agent_action import (
+    ArticulatedAgentAction,
+)
 
 # flake8: noqa
 # These actions need to be imported since there is a Python evaluation
@@ -23,13 +26,12 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     MagicGraspAction,
     SuctionGraspAction,
 )
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 
 @registry.register_task_action
-class EmptyAction(RobotAction):
+class EmptyAction(ArticulatedAgentAction):
     """A No-op action useful for testing and in some controllers where we want
     to wait before the next operation.
     """
@@ -72,7 +74,7 @@ class RearrangeStopAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmAction(RobotAction):
+class ArmAction(ArticulatedAgentAction):
     """An arm control and grip control into one action space."""
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
@@ -125,7 +127,7 @@ class ArmAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosAction(RobotAction):
+class ArmRelPosAction(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -156,7 +158,7 @@ class ArmRelPosAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosKinematicAction(RobotAction):
+class ArmRelPosKinematicAction(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -189,7 +191,7 @@ class ArmRelPosKinematicAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmAbsPosAction(RobotAction):
+class ArmAbsPosAction(ArticulatedAgentAction):
     """
     The arm motor targets are directly set to the joint configuration specified
     by the action.
@@ -212,7 +214,7 @@ class ArmAbsPosAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmAbsPosKinematicAction(RobotAction):
+class ArmAbsPosKinematicAction(ArticulatedAgentAction):
     """
     The arm is kinematically directly set to the joint configuration specified
     by the action.
@@ -235,7 +237,7 @@ class ArmAbsPosKinematicAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosKinematicReducedActionStretch(RobotAction):
+class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action and the mask. This function is used for Stretch.
@@ -304,7 +306,7 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
 
 
 @registry.register_task_action
-class BaseVelAction(RobotAction):
+class BaseVelAction(ArticulatedAgentAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
@@ -407,7 +409,7 @@ class BaseVelAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmEEAction(RobotAction):
+class ArmEEAction(ArticulatedAgentAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the articulated_agent's arm."""
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
@@ -470,7 +472,7 @@ class ArmEEAction(RobotAction):
 
 
 @registry.register_task_action
-class HumanoidJointAction(RobotAction):
+class HumanoidJointAction(ArticulatedAgentAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim

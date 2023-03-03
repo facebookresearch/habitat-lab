@@ -93,7 +93,7 @@ The way one would add a measure to a configuration file would be by adding to th
 ```
 defaults:
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
     - force_terminate
 ```
 
@@ -158,7 +158,7 @@ defaults:
 | Key | Description |
 | --- | --- |
 |habitat.task.measurements.end_effector_to_rest_distance | Rearrangement only. Distance between current end effector position  and the resting position of the end effector. Requires that the RelativeRestingPositionSensor is attached to the agent (see Rearrangement Sensors above to see how to attach sensors). |
-|habitat.task.measurements.robot_force |      The amount of force in newton's applied by the robot. It computes both the instantaneous and accumulated force during the episode. |
+|habitat.task.measurements.articulated_agent_force |      The amount of force in newton's applied by the robot. It computes both the instantaneous and accumulated force during the episode. |
 |habitat.task.measurements.does_want_terminate | Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.    |
 |habitat.task.measurements.force_terminate |    If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.   Note that if the measure is 1.0, the task will end as a result. |
 |habitat.task.measurements.force_terminate.max_accum_force |  The threshold for the accumulated force before calling termination. -1 is no threshold, i.e., force-based termination is never called.   |

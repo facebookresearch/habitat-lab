@@ -198,8 +198,8 @@ habitat:
         - 0.0
         - 1.0
         joint_start_noise: 0.0
-        robot_urdf: data/robots/hab_fetch/robots/hab_fetch.urdf
-        robot_type: FetchRobot
+        articulated_agent_urdf: data/robots/hab_fetch/robots/hab_fetch.urdf
+        articulated_agent_type: FetchRobot
         ik_arm_urdf: data/robots/hab_fetch/robots/fetch_onlyarm.urdf
     agents_order:
     - rgbd_agent
