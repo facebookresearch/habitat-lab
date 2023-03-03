@@ -32,7 +32,6 @@ habitat:
       main_agent:
         radius: 0.55
         robot_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
-        #robot_urdf: /Users/jimmytyyang/Downloads/hab_spot_arm_v2.0/urdf/hab_spot_arm.urdf
         robot_type: "SpotRobot"
         sim_sensors:
           arm_rgb_sensor:
