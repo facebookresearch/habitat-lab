@@ -159,7 +159,7 @@ class ArmRelPosAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
-class ArmRelPosMaskAction(RobotAction):
+class ArmRelPosMaskAction(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
