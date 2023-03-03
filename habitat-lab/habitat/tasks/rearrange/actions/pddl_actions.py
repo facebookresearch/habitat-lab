@@ -7,11 +7,11 @@ from gym import spaces
 
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.actions.grip_actions import RobotAction
+from habitat.tasks.rearrange.actions.grip_actions import ArticulatedAgentAction
 
 
 @registry.register_task_action
-class PddlApplyAction(RobotAction):
+class PddlApplyAction(ArticulatedAgentAction):
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task

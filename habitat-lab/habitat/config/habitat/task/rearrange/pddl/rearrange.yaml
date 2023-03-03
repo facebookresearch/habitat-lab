@@ -4,7 +4,7 @@ objects:
   - name: TARGET_goal0|0
     expr_type: goal_type
   - name: robot_0
-    expr_type: robot_type
+    expr_type: articulated_agent_type
 
 goal:
   expr_type: AND

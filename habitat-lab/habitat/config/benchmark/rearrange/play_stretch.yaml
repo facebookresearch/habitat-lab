@@ -31,8 +31,8 @@ habitat:
     agents:
       main_agent:
         radius: 0.3
-        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
-        robot_type: "StretchRobot"
+        articulated_agent_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        articulated_agent_type: "StretchRobot"
         sim_sensors:
           head_rgb_sensor:
             height: 640

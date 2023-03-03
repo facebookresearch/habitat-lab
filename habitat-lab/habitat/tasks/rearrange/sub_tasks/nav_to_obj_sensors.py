@@ -53,11 +53,13 @@ class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.get_agent_data(
+        articulated_agent_T = self._sim.get_agent_data(
             self.agent_id
         ).articulated_agent.base_transformation
 
-        dir_vector = robot_T.inverted().transform_point(task.nav_goal_pos)
+        dir_vector = articulated_agent_T.inverted().transform_point(
+            task.nav_goal_pos
+        )
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
         return np.array([rho, -phi], dtype=np.float32)
