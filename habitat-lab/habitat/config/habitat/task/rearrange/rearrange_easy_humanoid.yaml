@@ -23,7 +23,7 @@ defaults:
     - relative_resting_pos_sensor
     - target_start_sensor
     - goal_sensor
-    - joint_sensor
+    - humanoid_joint_sensor
     - is_holding_sensor
     - end_effector_sensor
     - target_start_gps_compass_sensor
