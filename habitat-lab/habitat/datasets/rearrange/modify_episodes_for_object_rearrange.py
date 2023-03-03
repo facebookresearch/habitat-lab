@@ -320,30 +320,17 @@ def get_candidate_receptacles(recep_goals, goal_recep_category):
     ]
 
 
-def load_objects(sim, objects):
+def load_objects(sim, objects, additional_obj_config_paths):
     rom = sim.get_rigid_object_manager()
     obj_idx_to_name = {}
     for i, (obj_handle, transform) in enumerate(objects):
-        obj_attr_mgr = sim.get_object_template_manager()
-        matching_templates = obj_attr_mgr.get_templates_by_handle_substring(
-            obj_handle
-        )
-        if len(matching_templates.values()) > 1:
-            exactly_matching = list(
-                filter(
-                    lambda x: obj_handle == osp.basename(x),
-                    matching_templates.keys(),
-                )
-            )
-            if len(exactly_matching) == 1:
-                matching_template = exactly_matching[0]
-            else:
-                raise Exception(
-                    f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}."
-                )
-        else:
-            matching_template = list(matching_templates.keys())[0]
-        ro = rom.add_object_by_template_handle(matching_template)
+        template = None
+        for obj_path in additional_obj_config_paths:
+            template = osp.abspath(osp.join(obj_path, obj_handle))
+            if osp.isfile(template):
+                break
+        assert template is not None, f"Could not find config file for object {obj_handle}"
+        ro = rom.add_object_by_template_handle(template)
 
         # The saved matrices need to be flipped when reloading.
         ro.transformation = mn.Matrix4(
@@ -616,7 +603,7 @@ def add_cat_fields_to_episodes(
 
         rec = find_receptacles(sim)
         rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
-        obj_idx_to_name = load_objects(sim, episode["rigid_objs"])
+        obj_idx_to_name = load_objects(sim, episode["rigid_objs"], episode["additional_obj_config_paths"])
         populate_semantic_graph(sim)
         all_rec_goals = collect_receptacle_goals(
             sim, rec_category_mapping=rec_category_mapping

@@ -122,6 +122,7 @@ class RearrangeSim(HabitatSim):
         self._needs_markers = self.habitat_config.needs_markers
         self._update_robot = self.habitat_config.update_robot
         self._step_physics = self.habitat_config.step_physics
+        self._additional_object_paths = self.habitat_config.additional_object_paths
 
     @property
     def robot(self):
@@ -465,27 +466,13 @@ class RearrangeSim(HabitatSim):
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
-                obj_attr_mgr = self.get_object_template_manager()
-                matching_templates = (
-                    obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
-                )
-                if len(matching_templates.values()) > 1:
-                    # handle collision in object handles. eg: 'Elephant.object_config.json', 'Sootheze_Cold_Therapy_Elephant.object_config.json'
-                    exactly_matching = list(
-                        filter(
-                            lambda x: obj_handle == osp.basename(x),
-                            matching_templates.keys(),
-                        )
-                    )
-                    if len(exactly_matching) == 1:
-                        matching_template = exactly_matching[0]
-                    else:
-                        raise Exception(
-                            f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. {len(exactly_matching)} templates exactly match the handle. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
-                        )
-                else:
-                    matching_template = list(matching_templates.keys())[0]
-                ro = rom.add_object_by_template_handle(matching_template)
+                template = None
+                for obj_path in self._additional_object_paths:
+                    template = osp.join(obj_path, obj_handle)
+                    if osp.isfile(template):
+                        break
+                assert template is not None, f"Could not find config file for object {obj_handle}"
+                ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
 
