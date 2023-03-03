@@ -14,13 +14,12 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
 
 
 @registry.register_task_action
-class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
+class OracleNavAction(BaseVelAction, HumanoidJointAction):
     """
     An action that will convert the index of an entity (in the sense of
     `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
