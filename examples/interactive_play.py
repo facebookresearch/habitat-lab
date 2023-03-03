@@ -79,7 +79,7 @@ try:
 except ImportError:
     pygame = None
 
-DEFAULT_POSE_PATH = "data/humanoid_data/walking_motion_processed.pkl"
+DEFAULT_POSE_PATH = "data/humanoid_data/humanoids/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"

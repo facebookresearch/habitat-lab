@@ -137,7 +137,9 @@ class Env:
             HumanoidRearrangeController,
         )
 
-        walk_pose_path = "data/humanoid_data/walking_motion_processed.pkl"
+        walk_pose_path = (
+            "data/humanoid_data/humanoids/walking_motion_processed.pkl"
+        )
         humanoid_controller = HumanoidRearrangeController(walk_pose_path)
         if (
             "oracle_nav_action" in self.task.actions

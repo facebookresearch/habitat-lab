@@ -38,7 +38,7 @@ habitat:
 
     agents:
       main_agent:
-        articulated_agent_urdf: 'data/humanoid_data/amass_male.urdf'
+        articulated_agent_urdf: 'data/humanoid_data/humanoids/amass_male.urdf'
         articulated_agent_type: KinematicHumanoid
 
 
