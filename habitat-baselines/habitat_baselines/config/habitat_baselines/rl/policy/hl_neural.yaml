@@ -23,5 +23,5 @@ hierarchical_policy:
     normalize_visual_inputs: False
     num_rnn_layers: 2
     policy_input_keys:
-      - "robot_head_depth"
+      - "head_depth"
   defined_skills: {}

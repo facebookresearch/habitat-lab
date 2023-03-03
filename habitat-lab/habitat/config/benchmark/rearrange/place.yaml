@@ -10,7 +10,7 @@ defaults:
 habitat:
   gym:
     obs_keys:
-      - robot_head_depth
+      - head_depth
       - obj_goal_sensor
       - joint
       - is_holding
@@ -27,8 +27,8 @@ habitat:
     agents:
       main_agent:
         radius: 0.3
-        robot_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-        robot_type: FetchSuctionRobot
+        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
+        articulated_agent_type: FetchSuctionRobot
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True

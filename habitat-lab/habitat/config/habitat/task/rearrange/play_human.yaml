@@ -3,7 +3,7 @@
 defaults:
   - /habitat/task: task_config_base
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
   - /habitat/task/lab_sensors:
     - joint_sensor
   - _self_

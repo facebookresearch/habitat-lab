@@ -33,12 +33,12 @@ class KinematicHumanoid(MobileManipulator):
             ee_links=[15, 9],
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
-                "robot_head": ArticulatedAgentCameraParams(
+                "head": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(0.0, 0.5, 0.25),
                     cam_look_at_pos=mn.Vector3(0.0, 0.5, 0.75),
                     attached_link_id=-1,
                 ),
-                "robot_third": ArticulatedAgentCameraParams(
+                "third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,

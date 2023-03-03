@@ -1198,42 +1198,42 @@ class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
-    uuid: str = "robot_head_rgb"
+    uuid: str = "head_rgb"
     width: int = 256
     height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
-    uuid: str = "robot_head_depth"
+    uuid: str = "head_depth"
     width: int = 256
     height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
-    uuid: str = "robot_arm_rgb"
+    uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
     height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
-    uuid: str = "robot_arm_depth"
+    uuid: str = "articulated_agent_arm_depth"
     width: int = 256
     height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
-    uuid: str = "robot_third_rgb"
+    uuid: str = "third_rgb"
     width: int = 512
     height: int = 512
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
-    uuid: str = "robot_third_depth"  # TODO: robot_third_rgb on the main branch
+    uuid: str = "third_depth"  # TODO: third_rgb on the main branch
     #  check if it won't cause any errors
 
 
@@ -1247,8 +1247,8 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = [0, 0, 0]
     start_rotation: List[float] = [0, 0, 0, 1]
     joint_start_noise: float = 0.1
-    robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
-    robot_type: str = "FetchRobot"
+    articulated_agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
+    articulated_agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 
 
@@ -1829,9 +1829,9 @@ cs.store(
     node=NumStepsMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.robot_force",
+    package="habitat.task.measurements.articulated_agent_force",
     group="habitat/task/measurements",
-    name="robot_force",
+    name="articulated_agent_force",
     node=RobotForceMeasurementConfig,
 )
 cs.store(
@@ -1901,9 +1901,9 @@ cs.store(
     node=CollisionsMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.robot_colls",
+    package="habitat.task.measurements.articulated_agent_colls",
     group="habitat/task/measurements",
-    name="robot_colls",
+    name="articulated_agent_colls",
     node=RobotCollisionsMeasurementConfig,
 )
 cs.store(

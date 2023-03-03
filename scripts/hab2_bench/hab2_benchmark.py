@@ -70,7 +70,7 @@ class HabDemoRunner:
             # TODO: setup an optional 3rd person render camera for debugging
             vut.make_video(
                 final_vid,
-                "robot_head_rgb",
+                "head_rgb",
                 "color",
                 "data/profile/benchmark_render_output",
                 open_vid=True,

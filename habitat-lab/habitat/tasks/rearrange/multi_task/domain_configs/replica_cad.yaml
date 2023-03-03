@@ -1,6 +1,6 @@
 types:
   object:
-    - robot_type
+    - articulated_agent_type
     - static_obj_type
   static_obj_type:
     - art_obj_type
@@ -41,7 +41,7 @@ predicates:
       - name: obj
         expr_type: rigid_obj_type
       - name: robot_id
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     set_state:
       robot_states:
         robot_id:
@@ -50,7 +50,7 @@ predicates:
   - name: not_holding
     args:
       - name: robot_id
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     set_state:
       robot_states:
         robot_id:
@@ -105,7 +105,7 @@ predicates:
       - name: Y
         expr_type: static_obj_type
       - name: robot_id
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     set_state:
       robot_states:
         robot_id:
@@ -127,7 +127,7 @@ actions:
       - name: obj
         expr_type: obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition: null
     postcondition:
       - robot_at(obj, robot)
@@ -145,7 +145,7 @@ actions:
       - name: obj
         expr_type: obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -164,7 +164,7 @@ actions:
       - name: obj
         expr_type: rigid_obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -196,7 +196,7 @@ actions:
       - name: obj
         expr_type: goal_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -222,7 +222,7 @@ actions:
       - name: obj
         expr_type: obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -247,7 +247,7 @@ actions:
       - name: obj
         expr_type: obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -272,7 +272,7 @@ actions:
       - name: obj
         expr_type: obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -295,7 +295,7 @@ actions:
       - name: obj
         expr_type: obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -320,7 +320,7 @@ actions:
       - name: marker
         expr_type: art_obj_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition: null
     postcondition:
       - robot_at(marker, robot)
@@ -336,7 +336,7 @@ actions:
       - name: fridge_id
         expr_type: fridge_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -358,7 +358,7 @@ actions:
       - name: fridge_id
         expr_type: fridge_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -380,7 +380,7 @@ actions:
       - name: marker
         expr_type: cab_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
@@ -400,7 +400,7 @@ actions:
       - name: marker
         expr_type: cab_type
       - name: robot
-        expr_type: robot_type
+        expr_type: articulated_agent_type
     precondition:
       expr_type: AND
       sub_exprs:
