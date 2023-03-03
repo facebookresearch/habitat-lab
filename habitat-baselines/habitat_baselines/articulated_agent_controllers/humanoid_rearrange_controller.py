@@ -124,7 +124,7 @@ class HumanoidRearrangeController:
         return self.get_walk_pose(target_position, distance_multiplier=0)
 
     def get_walk_pose(
-        self, target_position: mn.Vector3, distance_multiplier=0
+        self, target_position: mn.Vector3, distance_multiplier=1.0
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
@@ -132,7 +132,6 @@ class HumanoidRearrangeController:
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
-
         forward_V = target_position
         if forward_V.length() == 0.0:
             return self.get_stop_pose()
@@ -229,7 +228,6 @@ class HumanoidRearrangeController:
             forward_V * dist_diff * distance_multiplier
         )
         self.obj_transform = obj_transform
-
         return joint_pose, obj_transform
 
     @classmethod
