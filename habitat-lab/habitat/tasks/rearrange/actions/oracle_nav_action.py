@@ -3,16 +3,18 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
 import numpy as np
 from gym import spaces
-import magnum as mn
 
 import habitat_sim
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.actions.actions import HumanoidJointAction
-from habitat.tasks.rearrange.actions.actions import BaseVelAction
+from habitat.tasks.rearrange.actions.actions import (
+    BaseVelAction,
+    HumanoidJointAction,
+)
+from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.utils import get_robot_spawns
 from habitat.tasks.utils import get_angle
 
@@ -23,15 +25,15 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
     An action that will convert the index of an entity (in the sense of
     `PddlEntity`) to navigate to and convert this to base/humanoid joint control to move the
     robot to the closest navigable position to that entity. The entity index is
-    the index into the list of all available entities in the current scene. The 
+    the index into the list of all available entities in the current scene. The
     config flag motion_type indicates whether the low level action will be a base_velocity or
     a joint control.
     """
 
     def __init__(self, *args, task, **kwargs):
-        config = kwargs['config']
+        config = kwargs["config"]
         self.motion_type = config.motion_control
-        if self.motion_type == 'base_velocity':
+        if self.motion_type == "base_velocity":
             BaseVelAction.__init__(self, *args, **kwargs)
         else:
             self.humanoid_controller = None
@@ -87,8 +89,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
                 1,
             )
             if self.motion_type == "human_joints":
-                if self.humanoid_controller is not None:
-                    self.humanoid_controller.reset(self.cur_articulated_agent.base_pos)
+                self.humanoid_controller.reset(
+                    self.cur_articulated_agent.base_pos
+                )
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
@@ -120,7 +123,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
             nav_to_target_idx
         )
         curr_path_points = self._path_to_point(final_nav_targ)
-        
+
         if curr_path_points is None:
             raise Exception
         else:
@@ -167,26 +170,40 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction, RobotAction):
                 else:
                     vel = [0, 0]
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
-                return BaseVelAction.step(self, *args, is_last_action=is_last_action, **kwargs)
+                return BaseVelAction.step(
+                    self, *args, is_last_action=is_last_action, **kwargs
+                )
 
-        
             else:
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
-                        new_pos, new_trans = self.humanoid_controller.compute_turn(
-                            mn.Vector3([rel_pos[0], 0., rel_pos[1]])
+                        (
+                            new_pos,
+                            new_trans,
+                        ) = self.humanoid_controller.compute_turn(
+                            mn.Vector3([rel_pos[0], 0.0, rel_pos[1]])
                         )
                     else:
                         # Move towards the target
-                        new_pos, new_trans = self.humanoid_controller.get_walk_pose(
-                            mn.Vector3([rel_targ[0], 0., rel_targ[1]])
+                        (
+                            new_pos,
+                            new_trans,
+                        ) = self.humanoid_controller.get_walk_pose(
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
                         )
                 else:
-                    new_pos, new_trans = self.humanoid_controller.get_stop_pose()
+                    (
+                        new_pos,
+                        new_trans,
+                    ) = self.humanoid_controller.get_stop_pose()
                 base_action = self.humanoid_controller.vectorize_pose(
                     new_pos, new_trans
                 )
-                kwargs[f"{self._action_arg_prefix}human_joints_trans"] = base_action
-                    
-                return HumanoidJointAction.step(self, *args, is_last_action=is_last_action, **kwargs)
+                kwargs[
+                    f"{self._action_arg_prefix}human_joints_trans"
+                ] = base_action
+
+                return HumanoidJointAction.step(
+                    self, *args, is_last_action=is_last_action, **kwargs
+                )

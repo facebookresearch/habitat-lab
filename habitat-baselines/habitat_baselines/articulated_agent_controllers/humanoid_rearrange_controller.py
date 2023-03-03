@@ -49,9 +49,11 @@ class Motion:
         self.displacement = displacement
 
 
-MIN_ANGLE_TURN = 5 # If we turn less than this amount, we can just rotate and walk as if we had not rotated
-TURNING_STEP_AMOUNT = 20 # The maximum we should be turning at a time
-THRESHOLD_ROTATE_NOT_MOVE = 120 # The angle at which we should rotate without moving
+MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate and walk as if we had not rotated
+TURNING_STEP_AMOUNT = 20  # The maximum we should be turning at a time
+THRESHOLD_ROTATE_NOT_MOVE = (
+    120  # The angle at which we should rotate without moving
+)
 
 
 class HumanoidRearrangeController:

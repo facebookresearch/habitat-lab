@@ -497,7 +497,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
             }
         )
 
-    def step(self, is_last_action, **kwargs):
+    def step(self, *args, is_last_action, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.
         :param human_joints_trans: Array of size (num_joints*4)+16. The last 16
@@ -507,7 +507,9 @@ class HumanoidJointAction(ArticulatedAgentAction):
         :param is_last_action: whether this is the last action before calling environment
           step
         """
-        human_joints_trans = kwargs[self._action_arg_prefix + "human_joints_trans"]
+        human_joints_trans = kwargs[
+            self._action_arg_prefix + "human_joints_trans"
+        ]
         new_joints = human_joints_trans[:-16]
         new_pos_transform = human_joints_trans[-16:]
 

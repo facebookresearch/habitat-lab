@@ -277,7 +277,7 @@ class OracleNavActionConfig(ActionConfig):
 
     type: str = "OracleNavAction"
     # Whether the motion is in the form of base_velocity or human_joints
-    motion_control: str = 'base_velocity'
+    motion_control: str = "base_velocity"
     num_joints: int = 17
     turn_velocity: float = 1.0
     forward_velocity: float = 1.0
