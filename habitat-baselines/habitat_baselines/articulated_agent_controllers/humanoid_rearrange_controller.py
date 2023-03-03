@@ -50,10 +50,10 @@ class Motion:
 
 
 MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate the base and keep walking motion the same as if we had not rotated
-TURNING_STEP_AMOUNT = 20  # The maximum angle we should be rotating at a given step
-THRESHOLD_ROTATE_NOT_MOVE = (
-    120  # The rotation angle above which we should only walk as if rotating in place
+TURNING_STEP_AMOUNT = (
+    20  # The maximum angle we should be rotating at a given step
 )
+THRESHOLD_ROTATE_NOT_MOVE = 120  # The rotation angle above which we should only walk as if rotating in place
 
 
 class HumanoidRearrangeController:
@@ -76,8 +76,9 @@ class HumanoidRearrangeController:
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
-            raise RuntimeError(f"Path does {walk_pose_path} not exist. 
-                               Reach out to the paper authors to obtain this data.")
+            raise RuntimeError(
+                f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data."
+            )
 
         with open(walk_pose_path, "rb") as f:
             walk_data = pkl.load(f)
