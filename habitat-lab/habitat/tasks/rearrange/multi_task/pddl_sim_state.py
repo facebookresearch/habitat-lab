@@ -376,9 +376,7 @@ class PddlSimState:
             elif sim_info.check_type_matches(
                 target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
             ):
-                # TODO:
-                breakpoint()
-                set_T = None
+                raise NotImplementedError()
             else:
                 raise ValueError(f"Got unexpected target {target}")
 

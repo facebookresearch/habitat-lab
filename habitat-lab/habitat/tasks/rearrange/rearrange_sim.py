@@ -95,7 +95,7 @@ class RearrangeSim(HabitatSim):
             habitat_sim.physics.ManagedArticulatedObject, List[float]
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
-        self._scene_obj_ids = []
+        self._scene_obj_ids: List[int] = []
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)

@@ -14,7 +14,10 @@ import yaml  # type: ignore[import]
 from habitat.config.default import get_full_habitat_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
+from habitat.datasets.rearrange.samplers.receptacle import (
+    AABBReceptacle,
+    find_receptacles,
+)
 from habitat.tasks.rearrange.multi_task.pddl_action import (
     ActionTaskInfo,
     PddlAction,
@@ -327,6 +330,7 @@ class PddlDomain:
 
         receps: Dict[str, mn.Range3D] = {}
         for recep in find_receptacles(sim):
+            recep = cast(AABBReceptacle, recep)
             local_bounds = recep.bounds
             global_T = recep.get_global_transform(sim)
             receps[recep.name] = mn.Range3D(
