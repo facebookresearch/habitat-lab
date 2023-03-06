@@ -79,6 +79,12 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       cd habitat-lab
       pip install -e habitat-lab  # install habitat_lab
       ```
+
+      Note: To enable continuous robot base action spaces, install habitat-lab with the "continuous_control" option
+      ```
+      pip install -e "habitat-lab[continuous_control]"
+      ```
+
 1. **Install habitat-baselines**.
 
     The command above will install only core of Habitat-Lab. To include habitat_baselines along with all additional requirements, use the command below after installing habitat-lab:
