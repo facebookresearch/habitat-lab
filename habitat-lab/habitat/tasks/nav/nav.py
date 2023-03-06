@@ -1540,12 +1540,14 @@ class WaypointAction(VelocityAction):
             from habitat.utils.controller_wrapper import ContinuousController
 
             self.w2v_controller = ContinuousController(self._config)
-        except ModuleNotFoundError:
-            print(
-                "Missing dependencies for waypoint type actions. "
-                "Install habitat-lab with the 'continuous_control' option to enable this feature."
-            )
-            raise
+        except ModuleNotFoundError as exc:
+            additional_error_message = """
+            Missing dependencies for waypoint type actions. 
+            Install habitat-lab with the 'continuous_control' option to enable this feature.
+            pip install -e "habitat-lab[continuous_control]
+            """
+            exc.message += additional_error_message
+            raise exc
 
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range

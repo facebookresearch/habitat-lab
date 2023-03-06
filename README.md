@@ -80,9 +80,9 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       pip install -e habitat-lab  # install habitat_lab
       ```
 
-      Note: To enable continuous robot base action spaces, install habitat-lab with the "continuous_control" option
+      Note: To enable continuous robot base action spaces, install habitat-lab with the "home_robot" option
       ```
-      pip install -e "habitat-lab[continuous_control]"
+      pip install -e "habitat-lab[home_robot]"
       ```
 
 1. **Install habitat-baselines**.

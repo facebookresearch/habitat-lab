@@ -38,7 +38,7 @@ PROJECT_URLS = {
 
 EXTRA_DEPS = {
     # Home robot dependency for velocity controllers
-    "continuous_control": [
+    "home_robot": [
         "home-robot @ git+ssh://git@github.com/facebookresearch/home-robot.git@habitat-challenge-2023#subdirectory=src/home_robot",
     ]
 }
