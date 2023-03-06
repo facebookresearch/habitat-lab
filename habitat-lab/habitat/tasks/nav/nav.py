@@ -35,7 +35,6 @@ from habitat.core.spaces import EmptySpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
-from habitat.utils.controller_wrapper import ContinuousController
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
@@ -1537,7 +1536,16 @@ class WaypointAction(VelocityAction):
         super().__init__(*args, **kwargs)
 
         # Init goto velocity controller
-        self.w2v_controller = ContinuousController(self._config)
+        try:
+            from habitat.utils.controller_wrapper import ContinuousController
+
+            self.w2v_controller = ContinuousController(self._config)
+        except ModuleNotFoundError:
+            print(
+                "Missing dependencies for waypoint type actions. "
+                "Install habitat-lab with the 'continuous_control' option to enable this feature."
+            )
+            raise
 
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range
