@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
@@ -14,7 +13,10 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.rearrange_sim import (
+    RearrangeSim,
+    SimulatorObjectType,
+)
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 
@@ -144,15 +146,6 @@ class PddlSimInfo:
 
     num_spawn_attempts: int
     physics_stability_steps: int
-    recep_place_shrink_factor: float
-
-    pred_truth_cache: Optional[Dict[str, bool]] = None
-
-    def reset_pred_truth_cache(self):
-        self.pred_truth_cache = {}
-
-    num_spawn_attempts: int
-    physics_stability_steps: int
 
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
@@ -166,26 +159,23 @@ class PddlSimInfo:
             entity, SimulatorObjectType.ROBOT_ENTITY.value
         ):
             robot_id = self.robot_ids[ename]
-            return self.sim.get_agent_data(robot_id).articulated_agent.base_pos
-        if self.check_type_matches(
+            return self.sim.get_robot_data(robot_id).robot.base_pos
+        elif self.check_type_matches(
             entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
         ):
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()
-        if self.check_type_matches(
+        elif self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
             idx = self.target_ids[ename]
             targ_idxs, pos_targs = self.sim.get_targets()
             rel_idx = targ_idxs.tolist().index(idx)
             return pos_targs[rel_idx]
-        if self.check_type_matches(
-            entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
-        ):
-            recep = self.receptacles[ename]
-            return np.array(recep.center())
-        if self.check_type_matches(
+        elif self.check_type_matches(
             entity, SimulatorObjectType.MOVABLE_ENTITY.value
+        ) or self.check_type_matches(
+            entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
@@ -194,7 +184,8 @@ class PddlSimInfo:
                 abs_obj_id
             ).transformation.translation
             return cur_pos
-        raise ValueError()
+        else:
+            raise ValueError()
 
     def search_for_entity(
         self, entity: PddlEntity
@@ -221,6 +212,13 @@ class PddlSimInfo:
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
             asset_name = ename.split("_:")[0]
-            return self.receptacles[asset_name]
+            match = None
+            for match_name, recep_bounds in self.receptacles.items():
+                if asset_name in match_name:
+                    match = recep_bounds
+                    break
+            if match is None:
+                raise ValueError(f"Could not find matching recep for {entity}")
+            return match
         else:
             raise ValueError(f"No type match for {entity}")

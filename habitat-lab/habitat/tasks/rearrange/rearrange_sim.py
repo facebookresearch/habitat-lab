@@ -7,6 +7,7 @@
 import os.path as osp
 import time
 from collections import defaultdict
+from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -60,18 +61,16 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
+class SimulatorObjectType(Enum):
+    MOVABLE_ENTITY = "movable_entity_type"
+    STATIC_RECEPTACLE_ENTITY = "static_receptacle_entity_type"
+    ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
+    GOAL_ENTITY = "goal_entity_type"
+    ROBOT_ENTITY = "robot_entity_type"
+
+
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
-    """
-    :property ref_handle_to_rigid_obj_id: maps a handle name to the relative position of an object in `self.scene_obj_ids`.
-    :property draw_bb_objs: Simulator object indices of objects to draw
-        bounding boxes around if debug render is enabled. By default, this is
-        populated with all target objects.
-    """
-
-    ref_handle_to_rigid_obj_id: Optional[Dict[str, int]]
-    draw_bb_objs: List[int]
-
     def __init__(self, config: "DictConfig"):
         if len(config.agents) > 1:
             with read_write(config):
@@ -107,28 +106,25 @@ class RearrangeSim(HabitatSim):
             Tuple[List[float], mn.Matrix4],
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
-        self._scene_obj_ids: List[int] = []
-        # The receptacle information cached between all scenes.
-        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
-        # The per episode receptacle information.
-        self._receptacles: Dict[str, mn.Range3D] = {}
+        self._scene_obj_ids = []
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
         self._handle_to_object_id: Dict[str, int] = {}
+        self._obj_id_to_obj_type: Dict[str, SimulatorObjectType] = {}
         self._markers: Dict[str, MarkerInfo] = {}
 
         self._viz_templates: Dict[str, Any] = {}
         self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
-        self.draw_bb_objs = []
+        self._draw_bb_objs: List[int] = []
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
-        # Setup config options.
-        self._debug_render_articulated_agent = (
-            self.habitat_config.debug_render_articulated_agent
-        )
+        self.robots_mgr = RobotManager(self.habitat_config, self)
+
+        # Setup config properties.
+        self._debug_render_robot = self.habitat_config.debug_render_robot
         self._debug_render_goal = self.habitat_config.debug_render_goal
         self._debug_render = self.habitat_config.debug_render
         self._concur_render = self.habitat_config.concur_render
@@ -141,25 +137,30 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.update_articulated_agent
         )
         self._step_physics = self.habitat_config.step_physics
-        self._auto_sleep = self.habitat_config.auto_sleep
-        self._load_objs = self.habitat_config.load_objs
-        self._additional_object_paths = (
-            self.habitat_config.additional_object_paths
-        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
 
-        self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
-        self._perf_logging_enabled = False
-        self.cur_runtime_perf_scope: List[str] = []
-        self._should_setup_semantic_ids = (
-            self.habitat_config.should_setup_semantic_ids
-        )
+    @property
+    def handle_to_object_id(self) -> Dict[str, int]:
+        """
+        Maps a handle name to the relative position of an object in `self._scene_obj_ids`.
+        """
+        return self._handle_to_object_id
 
-    def enable_perf_logging(self):
+    @property
+    def draw_bb_objs(self) -> List[int]:
         """
-        Will turn on the performance logging (by default this is off).
+        Simulator object indices of objects to draw bounding boxes around if
+        debug render is enabled. By default, this is populated with all target
+        objects.
         """
-        self._perf_logging_enabled = True
+        return self._draw_bb_objs
+
+    @property
+    def scene_obj_ids(self) -> List[int]:
+        """
+        The simulator rigid body IDs of all objects in the scene.
+        """
+        return self._scene_obj_ids
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -232,7 +233,6 @@ class RearrangeSim(HabitatSim):
         if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
 
-    @add_perf_timing_func()
     def _sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
@@ -286,6 +286,11 @@ class RearrangeSim(HabitatSim):
     @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self._handle_to_goal_name = ep_info.info["object_labels"]
+
+        with read_write(config):
+            config["scene"] = ep_info.scene_id
+
+        super().reconfigure(config, should_close_on_new_scene=False)
 
         self.ep_info = ep_info
         new_scene = self.prev_scene_id != ep_info.scene_id
@@ -341,7 +346,7 @@ class RearrangeSim(HabitatSim):
         self._add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
-        if self._auto_sleep:
+        if self.habitat_config.auto_sleep:
             self._sleep_all_objects()
 
         rom = self.get_rigid_object_manager()
@@ -366,7 +371,7 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-        self.draw_bb_objs = [
+        self._draw_bb_objs = [
             rom.get_object_by_handle(obj_handle).object_id
             for obj_handle in self._targets
         ]
@@ -481,11 +486,19 @@ class RearrangeSim(HabitatSim):
 
         # Clear all the rigid objects.
         if should_add_objects:
+            remaining_scene_ids = []
             for scene_obj_id in self._scene_obj_ids:
                 if not rom.get_library_has_id(scene_obj_id):
                     continue
-                rom.remove_object_by_id(scene_obj_id)
-            self._scene_obj_ids = []
+                ro = rom.get_object_by_id(scene_obj_id)
+                if (
+                    self._obj_id_to_obj_type[ro.handle]
+                    == SimulatorObjectType.MOVABLE_ENTITY
+                ):
+                    rom.remove_object_by_id(scene_obj_id)
+                else:
+                    remaining_scene_ids.append(scene_obj_id)
+            self._scene_obj_ids = remaining_scene_ids
 
         # Reset all marker visualization points
         for obj_id in self.viz_ids.values():
@@ -555,7 +568,9 @@ class RearrangeSim(HabitatSim):
 
         return new_pos
 
-    @add_perf_timing_func()
+    def get_object_type(self, object_handle: str) -> SimulatorObjectType:
+        return self._obj_id_to_obj_type[object_handle]
+
     def _add_objs(
         self,
         ep_info: RearrangeEpisode,
@@ -567,8 +582,8 @@ class RearrangeSim(HabitatSim):
         obj_counts: Dict[str, int] = defaultdict(int)
 
         self._handle_to_object_id = {}
-        if should_add_objects:
-            self._scene_obj_ids = []
+        self._obj_id_to_obj_type = {}
+        self._scene_obj_ids = []
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             t_start = time.time()
@@ -585,7 +600,6 @@ class RearrangeSim(HabitatSim):
                 ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
-            self.add_perf_timing("create_asset", t_start)
 
             # The saved matrices need to be flipped when reloading.
             ro.transformation = mn.Matrix4(
@@ -601,58 +615,44 @@ class RearrangeSim(HabitatSim):
                 ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
                 ro.collidable = False
 
-            if should_add_objects:
-                self.scene_obj_ids.append(ro.object_id)
-            rel_idx = self.scene_obj_ids.index(ro.object_id)
-            self.ref_handle_to_rigid_obj_id[other_obj_handle] = rel_idx
+            rel_idx = len(self._scene_obj_ids)
+            self._scene_obj_ids.append(ro.object_id)
+            self._handle_to_object_id[other_obj_handle] = rel_idx
+            self._obj_id_to_obj_type[
+                other_obj_handle
+            ] = SimulatorObjectType.MOVABLE_ENTITY
 
-            if other_obj_handle in self.instance_handle_to_ref_handle:
-                ref_handle = self.instance_handle_to_ref_handle[
-                    other_obj_handle
-                ]
-                self.ref_handle_to_rigid_obj_id[ref_handle] = rel_idx
+            if other_obj_handle in self._handle_to_goal_name:
+                ref_handle = self._handle_to_goal_name[other_obj_handle]
+                self._handle_to_object_id[ref_handle] = rel_idx
+                self._obj_id_to_obj_type[
+                    ref_handle
+                ] = SimulatorObjectType.GOAL_ENTITY
+
             obj_counts[obj_handle] += 1
 
-        if new_scene:
-            self._receptacles = self._create_recep_info(
-                ep_info.scene_id, list(self._handle_to_object_id.keys())
-            )
+        # Track every non-added object.
+        for object_handle in rom.get_object_handles():
+            if object_handle in self._handle_to_object_id:
+                # This is a movable object.
+                continue
+            ro = rom.get_object_by_handle(object_handle)
+            rel_idx = len(self._scene_obj_ids)
+            self._scene_obj_ids.append(ro.object_id)
+            self._handle_to_object_id[object_handle] = rel_idx
+            self._obj_id_to_obj_type[
+                object_handle
+            ] = SimulatorObjectType.STATIC_RECEPTACLE_ENTITY
 
-            ao_mgr = self.get_articulated_object_manager()
-            # Make all articulated objects (including the robots) kinematic
-            for aoi_handle in ao_mgr.get_object_handles():
-                ao = ao_mgr.get_object_by_handle(aoi_handle)
-                if self._kinematic_mode:
-                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-                self.art_objs.append(ao)
-
-    def _create_recep_info(
-        self, scene_id: str, ignore_handles: List[str]
-    ) -> Dict[str, mn.Range3D]:
-        if scene_id not in self._receptacles_cache:
-            receps = {}
-            all_receps = find_receptacles(
-                self,
-                ignore_handles=ignore_handles,
-            )
-            for recep in all_receps:
-                recep = cast(AABBReceptacle, recep)
-                local_bounds = recep.bounds
-                global_T = recep.get_global_transform(self)
-                # Some coordinates may be flipped by the global transformation,
-                # mixing the minimum and maximum bound coordinates.
-                bounds = np.stack(
-                    [
-                        global_T.transform_point(local_bounds.min),
-                        global_T.transform_point(local_bounds.max),
-                    ],
-                    axis=0,
-                )
-                receps[recep.name] = mn.Range3D(
-                    np.min(bounds, axis=0), np.max(bounds, axis=0)
-                )
-            self._receptacles_cache[scene_id] = receps
-        return self._receptacles_cache[scene_id]
+        ao_mgr = self.get_articulated_object_manager()
+        robot_art_handles = [
+            robot.sim_obj.handle for robot in self.robots_mgr.robots_iter
+        ]
+        for aoi_handle in ao_mgr.get_object_handles():
+            ao = ao_mgr.get_object_by_handle(aoi_handle)
+            if self._kinematic_mode and ao.handle not in robot_art_handles:
+                ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+            self.art_objs.append(ao)
 
     def _create_obj_viz(self):
         """
@@ -671,7 +671,7 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
 
         # Enable BB render for the debug render call.
-        for obj_id in self.draw_bb_objs:
+        for obj_id in self._draw_bb_objs:
             self.set_object_bb_draw(True, obj_id)
 
         if self._debug_render_goal:
@@ -726,13 +726,9 @@ class RearrangeSim(HabitatSim):
         ]
         art_T = [ao.transformation for ao in self.art_objs]
         rom = self.get_rigid_object_manager()
-
-        rigid_T, rigid_V = [], []
-        for i in self._scene_obj_ids:
-            obj_i = rom.get_object_by_id(i)
-            rigid_T.append(obj_i.transformation)
-            rigid_V.append((obj_i.linear_velocity, obj_i.angular_velocity))
-
+        static_T = [
+            rom.get_object_by_id(i).transformation for i in self._scene_obj_ids
+        ]
         art_pos = [ao.joint_positions for ao in self.art_objs]
 
         articulated_agent_js = [
@@ -785,9 +781,7 @@ class RearrangeSim(HabitatSim):
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
 
-        for T, V, i in zip(
-            state["rigid_T"], state["rigid_V"], self._scene_obj_ids
-        ):
+        for T, i in zip(state["static_T"], self._scene_obj_ids):
             # reset object transform
             obj = rom.get_object_by_id(i)
             obj.transformation = T
@@ -833,7 +827,7 @@ class RearrangeSim(HabitatSim):
             self._try_acquire_context()
 
             # Disable BB drawing for observation render
-            for obj_id in self.draw_bb_objs:
+            for obj_id in self._draw_bb_objs:
                 self.set_object_bb_draw(False, obj_id)
 
             # Remove viz objects
