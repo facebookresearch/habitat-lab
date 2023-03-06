@@ -8,11 +8,13 @@ import itertools
 import os.path as osp
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union, cast
 
+import magnum as mn
 import yaml  # type: ignore[import]
 
 from habitat.config.default import get_full_habitat_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
+from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.tasks.rearrange.multi_task.pddl_action import (
     ActionTaskInfo,
     PddlAction,
@@ -34,7 +36,10 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     parse_func,
 )
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.rearrange_sim import (
+    RearrangeSim,
+    SimulatorObjectType,
+)
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 if TYPE_CHECKING:
@@ -73,6 +78,7 @@ class PddlDomain:
             domain_def = yaml.safe_load(f)
 
         self._added_entities: Dict[str, PddlEntity] = {}
+        self._added_expr_types: Dict[str, ExprType] = {}
 
         self._parse_expr_types(domain_def)
         self._parse_constants(domain_def)
@@ -179,14 +185,13 @@ class PddlDomain:
 
     def register_type(self, expr_type: ExprType):
         """
-        Add a type to `self.expr_types`.
+        Add a type to `self.expr_types`. Clears every episode
         """
-
-        self._expr_types[expr_type.name] = expr_type
+        self._added_expr_types[expr_type.name] = expr_type
 
     def register_episode_entity(self, pddl_entity: PddlEntity) -> None:
         """
-        Add an entity to appear in `self.all_entities`.
+        Add an entity to appear in `self.all_entities`. Clears every episode.
         """
         self._added_entities[pddl_entity.name] = pddl_entity
 
@@ -195,23 +200,31 @@ class PddlDomain:
         Fetches the types from the domain into `self._expr_types`.
         """
 
-        self._expr_types: Dict[str, ExprType] = {}
-        in_parent = []
+        # Always add the default `expr_types` from the simulator.
+        self._expr_types: Dict[str, ExprType] = {
+            obj_type.value: ExprType(obj_type.value, None)
+            for obj_type in SimulatorObjectType
+        }
+
         for parent_type, sub_types in domain_def["types"].items():
             if parent_type not in self._expr_types:
                 self._expr_types[parent_type] = ExprType(parent_type, None)
-            in_parent.append(parent_type)
             for sub_type in sub_types:
-                self._expr_types[sub_type] = ExprType(
-                    sub_type, self._expr_types[parent_type]
-                )
+                if sub_type in self._expr_types:
+                    self._expr_types[sub_type].parent = self._expr_types[
+                        parent_type
+                    ]
+                else:
+                    self._expr_types[sub_type] = ExprType(
+                        sub_type, self._expr_types[parent_type]
+                    )
 
     @property
     def expr_types(self) -> Dict[str, ExprType]:
         """
         Mapping from the name of the type to the ExprType definition.
         """
-        return self._expr_types
+        return {**self._expr_types, **self._added_expr_types}
 
     def parse_predicate(
         self, pred_str: str, existing_entities: Dict[str, PddlEntity]
@@ -306,10 +319,20 @@ class PddlDomain:
         """
 
         self._added_entities = {}
+        self._added_expr_types = {}
 
         id_to_name = {}
-        for k, i in sim.ref_handle_to_rigid_obj_id.items():
+        for k, i in sim.handle_to_object_id.items():
             id_to_name[i] = k
+
+        receps: Dict[str, mn.Range3D] = {}
+        for recep in find_receptacles(sim):
+            local_bounds = recep.bounds
+            global_T = recep.get_global_transform(sim)
+            receps[recep.name] = mn.Range3D(
+                global_T.transform_point(local_bounds.min),
+                global_T.transform_point(local_bounds.max),
+            )
 
         self._sim_info = PddlSimInfo(
             sim=sim,
@@ -320,7 +343,7 @@ class PddlDomain:
             art_thresh=self._config.art_succ_thresh,
             robot_at_thresh=self._config.robot_at_thresh,
             expr_types=self.expr_types,
-            obj_ids=sim.ref_handle_to_rigid_obj_id,
+            obj_ids=sim.handle_to_object_id,
             target_ids={
                 f"TARGET_{id_to_name[idx]}": idx
                 for idx in sim.get_targets()[0]
@@ -335,10 +358,11 @@ class PddlDomain:
             predicates=self.predicates,
             num_spawn_attempts=self._config.num_spawn_attempts,
             physics_stability_steps=self._config.physics_stability_steps,
+            receptacles=receps,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
-            self._sim_info.search_for_entity_any(entity)
+            self._sim_info.search_for_entity(entity)
 
     @property
     def sim_info(self) -> PddlSimInfo:
