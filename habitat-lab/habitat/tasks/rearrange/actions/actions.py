@@ -150,11 +150,63 @@ class ArmRelPosAction(ArticulatedAgentAction):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._delta_pos_limit
+
         # The actual joint positions
         self._sim: RearrangeSim
         self.cur_articulated_agent.arm_motor_pos = (
             delta_pos + self.cur_articulated_agent.arm_motor_pos
         )
+
+
+@registry.register_task_action
+class ArmRelPosMaskAction(ArticulatedAgentAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._arm_joint_mask = self._config.arm_joint_mask
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        # clip from -1 to 1
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._delta_pos_limit
+
+        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        # Although habitat_sim will prevent the motor from exceeding limits,
+        # clip the motor joints first here to prevent the arm from being unstable.
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        target_arm_pos = (
+            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
+        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self.cur_articulated_agent.arm_motor_pos = set_arm_pos
 
 
 @registry.register_task_action
@@ -367,6 +419,9 @@ class BaseVelAction(ArticulatedAgentAction):
             rigid_state.translation, target_rigid_state.translation
         )
 
+        # Offset the base
+        end_pos -= self.cur_articulated_agent.params.base_offset
+
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
@@ -388,6 +443,12 @@ class BaseVelAction(ArticulatedAgentAction):
             # Holding onto an object, also kinematically update the object.
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
+
+        if self.cur_articulated_agent._base_type == "leg":
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
 
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]

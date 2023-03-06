@@ -92,7 +92,7 @@ class SpotRobot(MobileManipulator):
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
             arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            gripper_init_params=[0.00],
+            gripper_init_params=[-1.56],
             leg_init_params=[
                 0.0,
                 0.7,
@@ -111,12 +111,17 @@ class SpotRobot(MobileManipulator):
             ee_links=[7],
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={
-                "articulated_agent_arm": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
-                    cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
+                "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     attached_link_id=6,
-                    relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
-                    @ mn.Matrix4.rotation_z(mn.Deg(90)),
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.023, 0.03),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=6,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
                 "head_stereo_right": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
@@ -151,7 +156,7 @@ class SpotRobot(MobileManipulator):
             leg_mtr_pos_gain=2.0,
             leg_mtr_vel_gain=1.3,
             leg_mtr_max_impulse=100.0,
-            base_offset=mn.Vector3(0.0, -0.5, 0.0),
+            base_offset=mn.Vector3(0.0, -0.48, 0.0),
             base_link_names={
                 "base",
             },
