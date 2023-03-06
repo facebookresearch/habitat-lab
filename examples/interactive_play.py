@@ -412,7 +412,7 @@ class FreeCamHelper:
                 quat.to_matrix(), mn.Vector3(*self._free_xyz)
             )
             env._sim._sensors[
-                "robot_third_rgb"
+                "third_rgb"
             ]._sensor_object.node.transformation = trans
             step_result = env._sim.get_sensor_observations()
             return step_result
@@ -547,7 +547,7 @@ def play_env(env, args, config):
         info["Total Reward"] = total_reward
 
         if free_cam.is_free_cam_mode:
-            cam = obs["robot_third_rgb"]
+            cam = obs["third_rgb"]
             use_ob = np.zeros(draw_obs.shape)
             use_ob[:, : cam.shape[1]] = cam[:, :, :3]
 

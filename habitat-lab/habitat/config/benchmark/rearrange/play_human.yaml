@@ -23,8 +23,8 @@ habitat:
     agents:
       main_agent:
         radius: 0.3
-        robot_urdf: 'data/humanoid_data/amass_male.urdf'
-        robot_type: 'KinematicHumanoid'
+        articulated_agent_urdf: 'data/humanoid_data/amass_male.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
         sim_sensors:
           head_rgb_sensor:
             height: 128

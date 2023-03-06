@@ -29,8 +29,8 @@ class SpotParams:
     :property ee_constraint: A (2, 3) shaped array specifying the upper and
         lower limits for the 3D end-effector position.
     :property cameras: The cameras and where they should go. The key is the
-        prefix to match in the sensor names. For example, a key of `"robot_head"`
-        will match sensors `"robot_head_rgb"` and `"robot_head_depth"`
+        prefix to match in the sensor names. For example, a key of `"head"`
+        will match sensors `"head_rgb"` and `"head_depth"`
     :property gripper_closed_state: All gripper joints must achieve this
         state for the gripper to be considered closed.
     :property gripper_open_state: All gripper joints must achieve this
@@ -92,7 +92,7 @@ class SpotRobot(MobileManipulator):
             gripper_joints=[7],
             leg_joints=list(range(8, 20)),
             arm_init_params=[0.0, -3.14, 0.0, 3.0, 0.0, 0.0, 0.0],
-            gripper_init_params=[0.00],
+            gripper_init_params=[-1.56],
             leg_init_params=[
                 0.0,
                 0.7,
@@ -111,14 +111,19 @@ class SpotRobot(MobileManipulator):
             ee_links=[7],
             ee_constraint=np.array([[[0.4, 1.2], [-0.7, 0.7], [0.25, 1.5]]]),
             cameras={
-                "robot_arm": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0, 0.0, 0.1),
-                    cam_look_at_pos=mn.Vector3(0.1, 0.0, 0.0),
+                "articulated_agent_arm_depth": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.0, 0.018),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
                     attached_link_id=6,
-                    relative_transform=mn.Matrix4.rotation_y(mn.Deg(-90))
-                    @ mn.Matrix4.rotation_z(mn.Deg(90)),
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
                 ),
-                "robot_head_stereo_right": ArticulatedAgentCameraParams(
+                "articulated_agent_arm_rgb": ArticulatedAgentCameraParams(
+                    cam_offset_pos=mn.Vector3(0.166, 0.023, 0.03),
+                    cam_orientation=mn.Vector3(0, -1.571, 0.0),
+                    attached_link_id=6,
+                    relative_transform=mn.Matrix4.rotation_z(mn.Deg(-90)),
+                ),
+                "head_stereo_right": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, 0.03614789234067159
                     ),
@@ -127,7 +132,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "robot_head_stereo_left": ArticulatedAgentCameraParams(
+                "head_stereo_left": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(
                         0.4164822634134684, 0.0, -0.03740343144695029
                     ),
@@ -136,7 +141,7 @@ class SpotRobot(MobileManipulator):
                     ),
                     attached_link_id=-1,
                 ),
-                "robot_third": ArticulatedAgentCameraParams(
+                "third": ArticulatedAgentCameraParams(
                     cam_offset_pos=mn.Vector3(-0.5, 1.7, -0.5),
                     cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
                     attached_link_id=-1,
@@ -151,7 +156,7 @@ class SpotRobot(MobileManipulator):
             leg_mtr_pos_gain=2.0,
             leg_mtr_vel_gain=1.3,
             leg_mtr_max_impulse=100.0,
-            base_offset=mn.Vector3(0.0, -0.5, 0.0),
+            base_offset=mn.Vector3(0.0, -0.48, 0.0),
             base_link_names={
                 "base",
             },

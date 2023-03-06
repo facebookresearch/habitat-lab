@@ -376,7 +376,7 @@ defaults:
     - arm_action
     - base_velocity
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
     - force_terminate
     - distance_to_target_object
     - nav_pick_reward
@@ -396,7 +396,7 @@ habitat:
     measurements:
       distance_to_target_object:
         type: "DistanceToTargetObject"
-      robot_force:
+      articulated_agent_force:
         type: "RobotForce"
         min_force: 20.0
       force_terminate:
@@ -449,8 +449,8 @@ habitat:
             width: 128
         start_position: [0, 0, 0]
         start_rotation: [0, 0, 0, 1]
-        robot_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
-        robot_type: "FetchRobot"
+        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_fetch.urdf
+        articulated_agent_type: "FetchRobot"
 
     # Agent setup
     # ARM_REST: [0.6, 0.0, 0.9]

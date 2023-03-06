@@ -2,7 +2,7 @@ from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 
-class RobotAction(SimulatorTaskAction):
+class ArticulatedAgentAction(SimulatorTaskAction):
     """
     Handles which articulated_agent instance the action is applied to.
     """
