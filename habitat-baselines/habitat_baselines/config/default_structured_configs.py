@@ -243,6 +243,7 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     # If true, this willapply the post-conditions of the skill after it
     # terminates.
     apply_postconds: bool = False
+    ignore_grip: bool = False
     obs_skill_inputs: List[str] = field(default_factory=list)
     obs_skill_input_dim: int = 3
     start_zone_radius: float = 0.3
