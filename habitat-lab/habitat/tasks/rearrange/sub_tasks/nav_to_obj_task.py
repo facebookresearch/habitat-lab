@@ -167,7 +167,7 @@ class DynNavRLEnv(RearrangeTask):
                 r=0.2,
             )
         # have the agent look down with its arm retracted (gripper down)
-        self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 0.4, 0, -1.57000005, 0, 0.0, -0.7125]
-        self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 0.4, 0, -1.57000005, 0, 0.0, -0.7125]
+        self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 0.4, 0, -1.57000005, 0, 0.0, 0.0]
+        self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 0.4, 0, -1.57000005, 0, 0.0, 0.0]
         self._sim.maybe_update_robot()
         return self._get_observations(episode)
