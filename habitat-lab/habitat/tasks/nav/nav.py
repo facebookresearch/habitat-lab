@@ -1545,8 +1545,8 @@ class WaypointAction(VelocityAction):
         except ModuleNotFoundError as exc:
             additional_error_message = """
             Missing dependencies for waypoint type actions.
-            Install habitat-lab with the 'continuous_control' option to enable this feature.
-            pip install -e "habitat-lab[continuous_control]
+            Install habitat-lab with the 'home_robot' option to enable this feature.
+            pip install -e "habitat-lab[home_robot]
             """
             raise ModuleNotFoundError(additional_error_message) from exc
 
