@@ -4,7 +4,7 @@ import numpy as np
 from home_robot.control.goto_controller import GotoVelocityController
 
 
-class ContinuousController:
+class DiffDriveVelocityController:
     """Wrapper around the velocity controller in home_robot"""
 
     def __init__(

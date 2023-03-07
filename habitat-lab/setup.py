@@ -36,6 +36,13 @@ PROJECT_URLS = {
     "Bug Tracker": "https://github.com/facebookresearch/habitat-lab/issues",
 }
 
+EXTRA_DEPS = {
+    # Home robot dependency for velocity controllers
+    "home_robot": [
+        "home-robot @ git+ssh://git@github.com/facebookresearch/home-robot.git@habitat-challenge-2023#subdirectory=src/home_robot",
+    ]
+}
+
 if __name__ == "__main__":
     # package data are the files and configurations included in the package
     package_data = [
@@ -60,6 +67,7 @@ if __name__ == "__main__":
             "pybullet==3.0.4",
             "mock",
         ],
+        extras_require=EXTRA_DEPS,
         include_package_data=True,
         cmdclass={
             "install": DefaultInstallCommand,

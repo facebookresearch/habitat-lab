@@ -35,7 +35,6 @@ from habitat.core.spaces import EmptySpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
-from habitat.utils.controller_wrapper import ContinuousController
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
     quaternion_rotate_vector,
@@ -1537,7 +1536,19 @@ class WaypointAction(VelocityAction):
         super().__init__(*args, **kwargs)
 
         # Init goto velocity controller
-        self.w2v_controller = ContinuousController(self._config)
+        try:
+            from habitat.utils.controller_wrapper import (
+                DiffDriveVelocityController,
+            )
+
+            self.w2v_controller = DiffDriveVelocityController(self._config)
+        except ModuleNotFoundError as exc:
+            additional_error_message = """
+            Missing dependencies for waypoint type actions.
+            Install habitat-lab with the 'home_robot' option to enable this feature.
+            pip install -e "habitat-lab[home_robot]
+            """
+            raise ModuleNotFoundError(additional_error_message) from exc
 
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range
