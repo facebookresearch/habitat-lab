@@ -24,6 +24,13 @@ def get_package_version():
     return VERSION
 
 
+EXTRA_DEPS = {
+    # Home robot dependency for velocity controllers
+    "home_robot": [
+        "home-robot @ git+ssh://git@github.com/facebookresearch/home-robot.git@habitat-challenge-2023#subdirectory=src/home_robot",
+    ]
+}
+
 if __name__ == "__main__":
     setup(
         name="habitat-lab",
@@ -31,6 +38,7 @@ if __name__ == "__main__":
         packages=find_packages(),
         version=get_package_version(),
         include_package_data=True,
+        extras_require=EXTRA_DEPS,
         description="Habitat-Lab: a modular high-level library for end-to-end development in Embodied AI.",
         long_description=read("../README.md", encoding="utf8"),
         long_description_content_type="text/markdown",
