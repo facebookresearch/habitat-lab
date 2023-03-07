@@ -1537,12 +1537,14 @@ class WaypointAction(VelocityAction):
 
         # Init goto velocity controller
         try:
-            from habitat.utils.controller_wrapper import ContinuousController
+            from habitat.utils.controller_wrapper import (
+                DiffDriveVelocityController,
+            )
 
-            self.w2v_controller = ContinuousController(self._config)
+            self.w2v_controller = DiffDriveVelocityController(self._config)
         except ModuleNotFoundError as exc:
             additional_error_message = """
-            Missing dependencies for waypoint type actions. 
+            Missing dependencies for waypoint type actions.
             Install habitat-lab with the 'continuous_control' option to enable this feature.
             pip install -e "habitat-lab[continuous_control]
             """
