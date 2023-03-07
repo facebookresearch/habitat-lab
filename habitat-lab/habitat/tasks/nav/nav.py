@@ -1548,8 +1548,7 @@ class WaypointAction(VelocityAction):
             Install habitat-lab with the 'continuous_control' option to enable this feature.
             pip install -e "habitat-lab[continuous_control]
             """
-            exc.message += additional_error_message
-            raise exc
+            raise ModuleNotFoundError(additional_error_message) from exc
 
         # Cache hydra configs
         self._waypoint_lin_range = self._config.waypoint_lin_range
