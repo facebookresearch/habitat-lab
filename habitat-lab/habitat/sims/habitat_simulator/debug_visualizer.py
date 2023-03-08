@@ -125,7 +125,9 @@ class DebugVisualizer:
         check_make_dir(output_path)
         from habitat_sim.utils import viz_utils as vut
 
-        image = vut.observation_to_image(obs_cache[0]["rgb"], "color")
+        image = vut.observation_to_image(
+            obs_cache[0][self.default_sensor_uuid], "color"
+        )
         from datetime import datetime
 
         # filename format "prefixmonth_day_year_hourminutesecondmicrosecond.png"
@@ -300,7 +302,9 @@ class DebugVisualizer:
         from habitat_sim.utils import viz_utils as vut
 
         for ix, obs in enumerate(axis_obs):
-            image = vut.observation_to_image(obs["rgb"], "color")
+            image = vut.observation_to_image(
+                obs[self.default_sensor_uuid], "color"
+            )
             if stitched_image is None:
                 stitched_image = Image.new(
                     image.mode, (image.size[0] * 3, image.size[1] * 2)
