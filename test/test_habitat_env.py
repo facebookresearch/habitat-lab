@@ -290,6 +290,75 @@ def test_rl_vectorized_envs(gpu2gpu):
                 ), "dones should be true after max_episode steps"
 
 
+# TODO: @pytest.mark.parametrize("gpu2gpu", [False, True])
+@pytest.mark.parametrize("gpu2gpu", [True])
+def test_rl_batch_render_envs(gpu2gpu):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
+    configs, datasets = _load_test_data()
+    for config in configs:
+        with habitat.config.read_write(config):
+            config.habitat.simulator.enable_batch_renderer = True
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
+                True  # TODO: Implicit
+            )
+            config.habitat.simulator.create_renderer = False  # TODO: Implicit
+            config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+            agent_config = get_agent_config(config.habitat.simulator)
+            # Only keep the rgb_sensor
+            agent_config.sim_sensors = {
+                "rgb_sensor": agent_config.sim_sensors["rgb_sensor"]
+            }
+
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.BatchRenderVectorEnv(
+        make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
+    ) as envs:
+        envs.initialize_batch_renderer(configs[0])
+        observations = envs.reset()
+        envs.post_step(observations)
+
+        for i in range(2 * configs[0].habitat.environment.max_episode_steps):
+            outputs = envs.step(
+                sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
+            )
+            observations, rewards, dones, infos = [
+                list(x) for x in zip(*outputs)
+            ]
+
+            for env_obs in observations:
+                assert "render_state" in env_obs
+
+            observations = envs.post_step(observations)
+
+            for env_obs in observations:
+                assert "render_state" not in env_obs
+
+            assert len(observations) == num_envs
+            assert len(rewards) == num_envs
+            assert len(dones) == num_envs
+            assert len(infos) == num_envs
+
+            tiled_img = envs.render(mode="rgb_array")
+            new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
+            new_width = int(np.ceil(float(NUM_ENVS) / new_height))
+            h, w, c = observations[0]["rgb"].shape
+            assert tiled_img.shape == (
+                h * new_height,
+                w * new_width,
+                c,
+            ), "vector env render is broken"
+
+            if (i + 1) % configs[0].habitat.environment.max_episode_steps == 0:
+                assert all(
+                    dones
+                ), "dones should be true after max_episode steps"
+
+
 @pytest.mark.parametrize("gpu2gpu", [False, True])
 def test_rl_env(gpu2gpu):
     import habitat_sim
