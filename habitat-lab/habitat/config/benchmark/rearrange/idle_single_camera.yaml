@@ -31,8 +31,8 @@ habitat:
         is_set_start_state: True
         start_position: [3.66997,0.0,3.5041]
         start_rotation: [0.0, 0.999657, 0.0, -0.0261769]
-        robot_type: FetchRobotNoWheels
-        robot_urdf: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
+        articulated_agent_type: FetchRobotNoWheels
+        articulated_agent_urdf: ./data/robots/hab_fetch/robots/fetch_no_base.urdf
     habitat_sim_v0:
       enable_physics: True
   dataset:

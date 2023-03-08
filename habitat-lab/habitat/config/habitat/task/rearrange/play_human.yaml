@@ -2,10 +2,6 @@
 
 defaults:
   - /habitat/task: task_config_base
-  - /habitat/task/actions:
-    - arm_action
-    - base_velocity
-    - empty
   - /habitat/task/measurements:
     - articulated_agent_force
   - /habitat/task/lab_sensors:
@@ -27,7 +23,3 @@ base_noise: 0.0
 constraint_violation_ends_episode: False
 
 force_regenerate: True
-
-actions:
-  arm_action:
-    grip_controller: "MagicGraspAction"

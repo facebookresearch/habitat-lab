@@ -11,7 +11,9 @@ import numpy as np
 from gym import spaces
 
 from habitat.core.registry import registry
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
+from habitat.tasks.rearrange.actions.articulated_agent_action import (
+    ArticulatedAgentAction,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
@@ -19,7 +21,7 @@ from habitat.tasks.rearrange.utils import (
 )
 
 
-class GripSimulatorTaskAction(RobotAction):
+class GripSimulatorTaskAction(ArticulatedAgentAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim

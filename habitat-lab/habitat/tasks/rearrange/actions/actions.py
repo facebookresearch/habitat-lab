@@ -14,6 +14,9 @@ import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.rearrange.actions.articulated_agent_action import (
+    ArticulatedAgentAction,
+)
 
 # flake8: noqa
 # These actions need to be imported since there is a Python evaluation
@@ -23,13 +26,12 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     MagicGraspAction,
     SuctionGraspAction,
 )
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
 
 
 @registry.register_task_action
-class EmptyAction(RobotAction):
+class EmptyAction(ArticulatedAgentAction):
     """A No-op action useful for testing and in some controllers where we want
     to wait before the next operation.
     """
@@ -72,7 +74,7 @@ class RearrangeStopAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class ArmAction(RobotAction):
+class ArmAction(ArticulatedAgentAction):
     """An arm control and grip control into one action space."""
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
@@ -125,7 +127,7 @@ class ArmAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosAction(RobotAction):
+class ArmRelPosAction(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -148,6 +150,7 @@ class ArmRelPosAction(RobotAction):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._delta_pos_limit
+
         # The actual joint positions
         self._sim: RearrangeSim
         self.cur_articulated_agent.arm_motor_pos = (
@@ -156,7 +159,58 @@ class ArmRelPosAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosKinematicAction(RobotAction):
+class ArmRelPosMaskAction(ArticulatedAgentAction):
+    """
+    The arm motor targets are offset by the delta joint values specified by the
+    action
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._delta_pos_limit = self._config.delta_pos_limit
+        self._arm_joint_mask = self._config.arm_joint_mask
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=-1,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, delta_pos, should_step=True, *args, **kwargs):
+        # clip from -1 to 1
+        delta_pos = np.clip(delta_pos, -1, 1)
+        delta_pos *= self._delta_pos_limit
+
+        mask_delta_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                src_idx += 1
+                continue
+            mask_delta_pos[tgt_idx] = delta_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        # Although habitat_sim will prevent the motor from exceeding limits,
+        # clip the motor joints first here to prevent the arm from being unstable.
+        min_limit, max_limit = self.cur_articulated_agent.arm_joint_limits
+        target_arm_pos = (
+            mask_delta_pos + self.cur_articulated_agent.arm_motor_pos
+        )
+        set_arm_pos = np.clip(target_arm_pos, min_limit, max_limit)
+
+        # The actual joint positions
+        self._sim: RearrangeSim
+        self.cur_articulated_agent.arm_motor_pos = set_arm_pos
+
+
+@registry.register_task_action
+class ArmRelPosKinematicAction(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action
@@ -189,7 +243,7 @@ class ArmRelPosKinematicAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmAbsPosAction(RobotAction):
+class ArmAbsPosAction(ArticulatedAgentAction):
     """
     The arm motor targets are directly set to the joint configuration specified
     by the action.
@@ -212,7 +266,7 @@ class ArmAbsPosAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmAbsPosKinematicAction(RobotAction):
+class ArmAbsPosKinematicAction(ArticulatedAgentAction):
     """
     The arm is kinematically directly set to the joint configuration specified
     by the action.
@@ -235,7 +289,7 @@ class ArmAbsPosKinematicAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmRelPosKinematicReducedActionStretch(RobotAction):
+class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
     action and the mask. This function is used for Stretch.
@@ -304,7 +358,7 @@ class ArmRelPosKinematicReducedActionStretch(RobotAction):
 
 
 @registry.register_task_action
-class BaseVelAction(RobotAction):
+class BaseVelAction(ArticulatedAgentAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
@@ -365,6 +419,9 @@ class BaseVelAction(RobotAction):
             rigid_state.translation, target_rigid_state.translation
         )
 
+        # Offset the base
+        end_pos -= self.cur_articulated_agent.params.base_offset
+
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
@@ -387,6 +444,12 @@ class BaseVelAction(RobotAction):
             # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
+        if self.cur_articulated_agent._base_type == "leg":
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
+
     def step(self, *args, is_last_action, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
@@ -407,7 +470,7 @@ class BaseVelAction(RobotAction):
 
 
 @registry.register_task_action
-class ArmEEAction(RobotAction):
+class ArmEEAction(ArticulatedAgentAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the articulated_agent's arm."""
 
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
@@ -467,3 +530,60 @@ class ArmEEAction(RobotAction):
             self._sim.viz_ids["ee_target"] = self._sim.visualize_position(
                 global_pos, self._sim.viz_ids["ee_target"]
             )
+
+
+@registry.register_task_action
+class HumanoidJointAction(ArticulatedAgentAction):
+    def __init__(self, *args, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.num_joints = self._config.num_joints
+
+    def reset(self, *args, **kwargs):
+        super().reset()
+
+    @property
+    def action_space(self):
+        num_joints = self.num_joints
+        num_dim_transform = 16
+        # The action space is the number of joints plus 16 for a 4x4 transformtion matrix for the base
+        return spaces.Dict(
+            {
+                "human_joints_trans": spaces.Box(
+                    shape=(4 * num_joints + num_dim_transform,),
+                    low=-1,
+                    high=1,
+                    dtype=np.float32,
+                )
+            }
+        )
+
+    def step(self, human_joints_trans, is_last_action, **kwargs):
+        r"""
+        Updates the joint rotations and root transformation of the humanoid.
+        :param human_joint_trans: Array of size (num_joints*4)+16. The last 16
+            dimensions define the 4x4 root transformation matrix, the first elements
+            correspond to a flattened list of quaternions for each joint. When the array is all 0
+            it keeps the previous joint rotation and transform.
+        :param is_last_action: whether this is the last action before calling environment
+          step
+        """
+        new_joints = human_joints_trans[:-16]
+        new_pos_transform = human_joints_trans[-16:]
+
+        # When the array is all 0, this indicates we are not setting
+        # the human joint
+        if np.array(new_pos_transform).sum() != 0:
+            vecs = [
+                mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
+                for i in range(4)
+            ]
+            new_transform = mn.Matrix4(*vecs)
+            self.cur_articulated_agent.set_joint_transform(
+                new_joints, new_transform
+            )
+
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.humanoidjoint_action)
+        else:
+            return {}

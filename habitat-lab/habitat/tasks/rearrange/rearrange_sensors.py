@@ -710,7 +710,7 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
     The amount of force in newton's accumulatively applied by the robot.
     """
 
-    cls_uuid: str = "robot_force"
+    cls_uuid: str = "articulated_agent_force"
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
@@ -742,13 +742,13 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
         return self._add_force
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        robot_force, _, overall_force = self._task.get_coll_forces(
+        articulated_agent_force, _, overall_force = self._task.get_coll_forces(
             self.agent_id
         )
         if self._count_obj_collisions:
             self._cur_force = overall_force
         else:
-            self._cur_force = robot_force
+            self._cur_force = articulated_agent_force
 
         if self._prev_force is not None:
             self._add_force = self._cur_force - self._prev_force

@@ -68,7 +68,7 @@ class ArticulatedAgentInterface(ABC):
             self.joint_motors[joint][0], self.joint_motors[joint][1]
         )
 
-    def _capture_robot_state(self):
+    def _capture_articulated_agent_state(self):
         return {
             "forces": self.sim_obj.joint_forces,
             "vel": self.sim_obj.joint_velocities,

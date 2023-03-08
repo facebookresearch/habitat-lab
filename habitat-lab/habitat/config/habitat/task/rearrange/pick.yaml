@@ -6,7 +6,7 @@ defaults:
     - arm_action
     - base_velocity
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
     - force_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance

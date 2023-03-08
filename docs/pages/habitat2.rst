@@ -3,8 +3,6 @@ Habitat 2.0 Overview
 
 :summary: An overview of Habitat 2.0 with documentation, quickstart code, and reproducing the benchmark results.
 
-*An overview of Habitat 2.0 with documentation, quickstart code, and reproducing the benchmark results.*
-
 `Quick Start`_
 ========================
 To get started with Habitat 2.0, see the `quick start Colab tutorial <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/Habitat2_Quickstart.ipynb>`__ and the `Gym API tutorial <https://colab.research.google.com/github/facebookresearch/habitat-lab/blob/main/examples/tutorials/colabs/habitat2_gym_tutorial.ipynb>`__.
