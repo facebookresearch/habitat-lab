@@ -81,7 +81,7 @@ class OracleNavAction(BaseVelAction):
         return self._targets[nav_to_target_idx]
 
     def _path_to_point(self, point):
-        agent_pos = self.cur_robot.base_pos
+        agent_pos = self.cur_articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
@@ -109,8 +109,8 @@ class OracleNavAction(BaseVelAction):
         )
         cur_nav_targ = self._path_to_point(final_nav_targ)[1]
 
-        robot_pos = np.array(self.cur_robot.base_pos)
-        base_T = self.cur_robot.base_transformation
+        robot_pos = np.array(self.cur_articulated_agent.base_pos)
+        base_T = self.cur_articulated_agent.base_transformation
         forward = np.array([1.0, 0, 0])
         robot_forward = np.array(base_T.transform_vector(forward))
 

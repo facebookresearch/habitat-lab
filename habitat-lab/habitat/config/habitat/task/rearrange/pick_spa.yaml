@@ -6,8 +6,8 @@ defaults:
     - arm_action
     - empty
   - /habitat/task/measurements:
-    - robot_force
-    - robot_colls
+    - articulated_agent_force
+    - articulated_agent_colls
     - force_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance

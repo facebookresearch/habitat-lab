@@ -29,3 +29,5 @@ goal_sensor_uuid: instance_imagegoal
 measurements:
   distance_to_goal:
     distance_to: VIEW_POINTS
+  success:
+    success_distance: 0.1

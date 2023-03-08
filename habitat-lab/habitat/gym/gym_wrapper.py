@@ -6,7 +6,7 @@
 
 from collections import OrderedDict
 from collections.abc import Mapping
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, cast
 
 import gym
 import numpy as np
@@ -16,6 +16,10 @@ from habitat.core.simulator import Observations
 from habitat.core.spaces import EmptySpace
 from habitat.utils.visualizations.utils import observations_to_image
 
+if TYPE_CHECKING:
+    from habitat.core.dataset import BaseEpisode
+    from habitat.core.env import RLEnv
+
 try:
     import pygame
 
@@ -23,16 +27,7 @@ except ImportError:
     pygame = None
 
 
-def flatten_dict(d, parent_key=""):
-    # From https://stackoverflow.com/questions/6027558/flatten-nested-dictionaries-compressing-keys
-    items = []
-    for k, v in d.items():
-        new_key = parent_key + "." + str(k) if parent_key else str(k)
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key).items())
-        else:
-            items.append((new_key, v))
-    return dict(items)
+HabGymWrapperObsType = Union[np.ndarray, Dict[str, np.ndarray]]
 
 
 def smash_observation_space(obs_space, limit_keys):
@@ -152,7 +147,7 @@ def continuous_vector_action_to_hab_dict(
     return action_dict
 
 
-class HabGymWrapper(gym.Env):
+class HabGymWrapper(gym.Wrapper):
     """
     Wraps a Habitat RLEnv into a format compatible with the standard OpenAI Gym
     interface. Currently does not support discrete actions. This wrapper
@@ -178,12 +173,18 @@ class HabGymWrapper(gym.Env):
     Example usage:
     """
 
-    def __init__(self, env, save_orig_obs: bool = False):
-        gym_config = env.config.gym
-        self._gym_goal_keys = gym_config.desired_goal_keys
-        self._gym_achieved_goal_keys = gym_config.achieved_goal_keys
-        self._gym_action_keys = gym_config.action_keys
-        self._gym_obs_keys = gym_config.obs_keys
+    def __init__(
+        self,
+        env: "RLEnv",
+        save_orig_obs: bool = False,
+    ):
+        super().__init__(env)
+
+        habitat_gym_config = env.config.gym
+        self._gym_goal_keys = habitat_gym_config.desired_goal_keys
+        self._gym_achieved_goal_keys = habitat_gym_config.achieved_goal_keys
+        self._gym_action_keys = habitat_gym_config.action_keys
+        self._gym_obs_keys = habitat_gym_config.obs_keys
 
         if self._gym_obs_keys is None:
             self._gym_obs_keys = list(env.observation_space.spaces.keys())
@@ -232,12 +233,14 @@ class HabGymWrapper(gym.Env):
             self.observation_space = spaces.Dict(dict_space)
 
         self._screen: Optional[pygame.surface.Surface] = None
-        self._env = env
 
-    def step(self, action: Union[np.ndarray, int]):
+    def step(
+        self, action: Union[np.ndarray, int]
+    ) -> Tuple[HabGymWrapperObsType, float, bool, dict]:
         assert self.action_space.contains(
             action
-        ), f"Unvalid action {action} for action space {self.action_space}"
+        ), f"Invalid action {action} for action space {self.action_space}"
+
         if isinstance(self.action_space, spaces.Box):
             assert isinstance(action, np.ndarray)
             hab_action = continuous_vector_action_to_hab_dict(
@@ -249,23 +252,15 @@ class HabGymWrapper(gym.Env):
 
     @property
     def number_of_episodes(self) -> int:
-        return self._env.number_of_episodes
+        return self.env.number_of_episodes
 
-    def current_episode(self, all_info: bool = False) -> int:
-        """
-        Returns the current episode of the environment.
-        :param all_info: If true, all of the information in the episode
-        will be provided. Otherwise, only episode_id and scene_id will
-        be included
-        :return: The BaseEpisode object for the current episode
-        """
-        return self._env.current_episode(all_info)
+    def current_episode(self, all_info: bool = False) -> "BaseEpisode":
+        return self.env.current_episode(all_info)
 
     def _direct_hab_step(self, action: Union[int, str, Dict[str, Any]]):
-        obs, reward, done, info = self._env.step(action=action)
+        obs, reward, done, info = self.env.step(action=action)
         self._last_obs = obs
         obs = self._transform_obs(obs)
-        info = flatten_dict(info)
         return obs, reward, done, info
 
     def _transform_obs(self, obs):
@@ -296,14 +291,20 @@ class HabGymWrapper(gym.Env):
 
         return observation
 
-    def reset(self) -> Union[np.ndarray, Dict[str, np.ndarray]]:
-        obs = self._env.reset()
-        self._last_obs = obs
-        return self._transform_obs(obs)
+    def reset(
+        self, *args, return_info: bool = False, **kwargs
+    ) -> Union[HabGymWrapperObsType, Tuple[HabGymWrapperObsType, dict]]:
+        obs = self.env.reset(*args, return_info=return_info, **kwargs)
+        if return_info:
+            obs, info = obs
+            self._last_obs = obs
+            return self._transform_obs(obs), info
+        else:
+            self._last_obs = obs
+            return self._transform_obs(obs)
 
-    def render(self, mode: str = "human") -> np.ndarray:
-        frame = None
-        last_infos = flatten_dict(self._env._env.get_metrics())
+    def render(self, mode: str = "human", **kwargs):
+        last_infos = self.env.get_info(observations=None)
         if mode == "rgb_array":
             frame = observations_to_image(self._last_obs, last_infos)
         elif mode == "human":
@@ -321,10 +322,10 @@ class HabGymWrapper(gym.Env):
                 frame, (1, 0, 2)
             )  # (H, W, C) -> (W, H, C)
             draw_frame = pygame.surfarray.make_surface(draw_frame)
-            BLACK_COLOR = (0, 0, 0)
-            self._screen.fill(BLACK_COLOR)  # type: ignore[attr-defined]
-            TOP_CORNER = (0, 0)
-            self._screen.blit(draw_frame, TOP_CORNER)  # type: ignore[attr-defined]
+            black_color = (0, 0, 0)
+            top_corner = (0, 0)
+            self._screen.fill(color=black_color)  # type: ignore[attr-defined]
+            self._screen.blit(draw_frame, dest=top_corner)  # type: ignore[attr-defined]
             pygame.display.update()
         else:
             raise ValueError(f"Render mode {mode} not currently supported.")
@@ -335,4 +336,8 @@ class HabGymWrapper(gym.Env):
         del self._last_obs
         if self._screen is not None:
             pygame.quit()  # type: ignore[unreachable]
-        self._env.close()
+        self.env.close()
+
+    @property
+    def unwrapped(self) -> "RLEnv":
+        return cast("RLEnv", self.env.unwrapped)
