@@ -30,6 +30,7 @@ if __name__ == "__main__":
         install_requires=read("requirements.txt").strip().split("\n"),
         packages=find_packages(),
         version=get_package_version(),
+        include_package_data=True,
         description="Habitat-Lab: a modular high-level library for end-to-end development in Embodied AI.",
         long_description=read("../README.md", encoding="utf8"),
         long_description_content_type="text/markdown",

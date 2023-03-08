@@ -43,6 +43,7 @@ if __name__ == "__main__":
         install_requires=collect_requirements(),
         packages=find_packages(),
         version=get_package_version(),
+        include_package_data=True,
         description="Habitat-Baselines: Embodied AI baselines.",
         long_description=read("habitat_baselines/README.md", encoding="utf8"),
         long_description_content_type="text/markdown",
