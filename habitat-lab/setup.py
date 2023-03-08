@@ -14,14 +14,22 @@ def read(file_path, *args, **kwargs):
     return content
 
 
-if __name__ == "__main__":
-    import habitat
+def get_package_version():
+    import os.path as osp
+    import sys
 
+    sys.path.insert(0, osp.join(osp.dirname(__file__), "habitat"))
+    from version import VERSION
+
+    return VERSION
+
+
+if __name__ == "__main__":
     setup(
         name="habitat-lab",
         install_requires=read("requirements.txt").strip().split("\n"),
         packages=find_packages(),
-        version=habitat.__version__,
+        version=get_package_version(),
         description="Habitat-Lab: a modular high-level library for end-to-end development in Embodied AI.",
         long_description=read("../README.md", encoding="utf8"),
         long_description_content_type="text/markdown",

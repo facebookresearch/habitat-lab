@@ -27,14 +27,22 @@ def collect_requirements():
     return list(requirements)
 
 
-if __name__ == "__main__":
-    import habitat_baselines
+def get_package_version():
+    import os.path as osp
+    import sys
 
+    sys.path.insert(0, osp.join(osp.dirname(__file__), "habitat_baselines"))
+    from version import VERSION
+
+    return VERSION
+
+
+if __name__ == "__main__":
     setup(
         name="habitat-baselines",
         install_requires=collect_requirements(),
         packages=find_packages(),
-        version=habitat_baselines.__version__,
+        version=get_package_version(),
         description="Habitat-Baselines: Embodied AI baselines.",
         long_description=read("habitat_baselines/README.md", encoding="utf8"),
         long_description_content_type="text/markdown",
