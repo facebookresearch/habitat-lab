@@ -17,9 +17,9 @@ import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat.datasets.rearrange.navmesh_utils import is_accessible
 
 
 class Receptacle(ABC):
@@ -266,7 +266,8 @@ class AABBReceptacle(Receptacle):
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
         scaled_region = mn.Range3D.from_center(
-            self._bounds.center(), sample_region_scale * self._bounds.size() / 2
+            self._bounds.center(),
+            sample_region_scale * self._bounds.size() / 2,
         )
 
         # NOTE: does not scale the "up" direction
@@ -501,7 +502,9 @@ class TriangleMeshReceptacle(Receptacle):
     ) -> bool:
         local_point = self.get_local_transform(sim).transform_point(point)
         return (
-            np.abs(trimesh.proximity.signed_distance(self.trimesh, [local_point]))
+            np.abs(
+                trimesh.proximity.signed_distance(self.trimesh, [local_point])
+            )
             < threshold
         )
 
@@ -756,16 +759,27 @@ def get_navigable_receptacles(
             obj_mgr = sim.get_articulated_object_manager()
         else:
             obj_mgr = sim.get_rigid_object_manager()
-        receptacle_obj = obj_mgr.get_object_by_handle(receptacle.parent_object_handle)
-        receptacle_bb = get_aabb(receptacle_obj.object_id, sim, transformed=True)
+        receptacle_obj = obj_mgr.get_object_by_handle(
+            receptacle.parent_object_handle
+        )
+        receptacle_bb = get_aabb(
+            receptacle_obj.object_id, sim, transformed=True
+        )
 
-        if receptacle_bb.size_y() > sim.pathfinder.nav_mesh_settings.agent_height - 0.2:
-            print(f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping.")
+        if (
+            receptacle_bb.size_y()
+            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
+        ):
+            print(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+            )
             continue
 
         bounds = receptacle.bounds
         if bounds.size_x() < 0.3 or bounds.size_z() < 0.3:
-            print(f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping.")
+            print(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping."
+            )
             continue
 
         # check if all 4 corners of the receptacle are accessible
@@ -778,15 +792,22 @@ def get_navigable_receptacles(
             global_bounds.back_bottom_left,
             global_bounds.back_bottom_right,
             global_bounds.front_bottom_left,
-            global_bounds.front_bottom_right
+            global_bounds.front_bottom_right,
         ]
-        is_navigable = all(is_accessible(sim, point, nav_to_min_distance) for point in recep_points)
+        is_accessible = all(
+            is_accessible(sim, point, nav_to_min_distance)
+            for point in recep_points
+        )
 
-        if is_navigable:
-            logger.info(f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is navigable.")
+        if is_accessible:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is accessible."
+            )
             navigable_receptacles.append(receptacle)
 
-    logger.info(f"Found {len(navigable_receptacles)}/{len(receptacles)} navigable receptacles.")
+    logger.info(
+        f"Found {len(navigable_receptacles)}/{len(receptacles)} accessible receptacles."
+    )
     return navigable_receptacles
 
 
