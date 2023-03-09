@@ -129,20 +129,19 @@ class HumanoidRearrangeController:
         When performing a walking motion the character rotation and translation get shifted.
         This function returns a base pose that accounts for that, to make sure that the nav path
         does not get stuck.
+        :param obj_transform: the transformation of the humanoid the we should undo
         """
+
         offset = self.transform_pose_offset
-
-        # base_correction = mn.Matrix4.from_(
-        #     obj_transform.rotation() @ self.transform_pose_offset.rotation().transposed(),
-        #     obj_transform.translation-offset)
-
         base_correction = mn.Matrix4.from_(
             offset.rotation().transposed(),
             -offset.rotation().transposed() * offset.translation,
         )
 
         base_T = obj_transform @ base_correction
-        base_pos = base_T.translation - self.base_offset
+        base_pos = base_T.translation - base_T.transform_vector(
+            self.base_offset
+        )
         return base_pos, base_T
 
     def get_stop_pose(self, obj_transform: mn.Matrix4 = None):
