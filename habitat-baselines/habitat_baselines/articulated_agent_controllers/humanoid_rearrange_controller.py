@@ -232,13 +232,13 @@ class HumanoidRearrangeController:
 
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform.translation,
-            self.obj_transform.translation - forward_V.normalized(),
+            self.obj_transform.translation + forward_V.normalized(),
             mn.Vector3.y_axis(),
         )
 
         # Remove the forward component, and orient according to forward_V
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
-        obj_transform = look_at_path_T  # @ obj_transform
+        obj_transform = look_at_path_T @ obj_transform
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform.translation += forward_V_dist
         v1 = self.obj_transform.translation + forward_V_dist
