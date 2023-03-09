@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbds_head_rgbds_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - /habitat/task/rearrange: play
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
@@ -41,10 +41,6 @@ habitat:
             width: 480
             hfov: 43
           head_depth_sensor:
-            height: 640
-            width: 480
-            hfov: 43
-          head_semantic_sensor:
             height: 640
             width: 480
             hfov: 43
