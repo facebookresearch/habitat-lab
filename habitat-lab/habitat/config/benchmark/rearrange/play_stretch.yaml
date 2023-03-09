@@ -24,7 +24,8 @@ habitat:
         delta_pos_limit: 0.0125
         ee_ctrl_lim: 0.015
         gaze_distance_range: [0.1, 3.0]
-        center_cone_angle: 20.0
+        center_cone_angle_threshold: 20.0
+        center_cone_vector: [0.0, 1.0, 0.0]
   simulator:
     type: RearrangeSim-v0
     seed: 100
