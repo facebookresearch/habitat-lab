@@ -36,8 +36,6 @@ class Motion:
     def __init__(self, joints_quat_array, transform_array, displacement, fps):
         num_poses = joints_quat_array.shape[0]
         self.num_poses = num_poses
-        # self.center_of_root_drift = transform_array[:, :3, -1].mean(0)
-
         poses = []
         for index in range(num_poses):
             pose = Pose(
@@ -167,16 +165,8 @@ class HumanoidRearrangeController:
         distance_to_walk = np.linalg.norm(forward_V)
         did_rotate = False
 
-        # current_pose = self.walk_motion.poses[self.walk_mocap_frame]
-        # current_joint_pose, current_obj_transform = (
-        #     current_pose.joints,
-        #     current_pose.root_transform,
-        # )
-
         # The angle we intially want to go to
         new_angle = np.arctan2(forward_V[0], forward_V[2]) * 180.0 / np.pi
-
-        curr_angle = new_angle
         if self.prev_orientation is not None:
             # If prev orrientation is None, transition to this position directly
             prev_orientation = self.prev_orientation
@@ -186,7 +176,7 @@ class HumanoidRearrangeController:
                 * 180.0
                 / np.pi
             )
-            forward_angle = curr_angle - prev_angle
+            forward_angle = new_angle - prev_angle
             if np.abs(forward_angle) > self.min_angle_turn:
                 actual_angle_move = self.turning_step_amount
                 if abs(forward_angle) < actual_angle_move:
@@ -197,7 +187,7 @@ class HumanoidRearrangeController:
                 new_angle *= np.pi / 180
                 did_rotate = True
             else:
-                new_angle = curr_angle * np.pi / 180
+                new_angle = new_angle * np.pi / 180
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
             new_angle = new_angle * 180 / np.pi
@@ -254,7 +244,6 @@ class HumanoidRearrangeController:
 
         # We correct the object transform
         obj_transform.translation *= 0
-
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform.translation,
             self.obj_transform.translation + forward_V.normalized(),
@@ -269,10 +258,6 @@ class HumanoidRearrangeController:
         obj_transform = look_at_path_T @ obj_transform
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform.translation += forward_V_dist
-        v1 = self.obj_transform.translation + forward_V_dist
-        v2 = obj_transform.translation
-        if v1 != v2:
-            print("ERROR ALIGNMENT")
         self.obj_transform = obj_transform
 
         return joint_pose, obj_transform
