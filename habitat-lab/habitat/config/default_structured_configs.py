@@ -233,7 +233,8 @@ class ArmActionConfig(ActionConfig):
     should_clip: bool = False
     render_ee_target: bool = False
     gaze_distance_range: Optional[List[float]] = None
-    center_cone_angle: float = 0.0
+    center_cone_angle_threshold: float = 0.0
+    center_cone_vector: Optional[List[float]] = None
 
 
 @dataclass
