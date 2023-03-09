@@ -44,6 +44,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self._prev_ep_id = None
         self._targets = {}
 
+        self.curr_ind_map = {"cont": 0}
+
     @staticmethod
     def _compute_turn(rel, turn_vel, robot_forward):
         is_left = np.cross(robot_forward, rel) > 0
@@ -73,6 +75,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
 
+        self.curr_ind_map = {"cont": self.curr_ind_map["cont"] + 1}
+
     def _get_target_for_idx(self, nav_to_target_idx: int):
         if nav_to_target_idx not in self._targets:
             nav_to_obj = self._poss_entities[nav_to_target_idx]
@@ -94,8 +98,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
-    def _path_to_point(self, point):
-        agent_pos = self.cur_articulated_agent.base_pos
+    def _path_to_point(self, point, agent_pos=None):
+        if agent_pos is None:
+            agent_pos = self.cur_articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
@@ -106,6 +111,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         return path.points
 
     def step(self, *args, is_last_action, **kwargs):
+        self.humanoid_controller._sim = self._sim
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_action"
         ]
@@ -121,7 +127,33 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
         )
-        curr_path_points = self._path_to_point(final_nav_targ)
+        if self.motion_type != "base_velocity":
+            base_T = self.cur_articulated_agent.base_transformation
+            base_pos, _ = self.humanoid_controller.get_corrected_base(base_T)
+            bpos = self.cur_articulated_agent.base_transformation.translation
+            # print("CORRECTED", base_pos, "BASEPOS", bpos)
+            # breakpoint()
+            curr_path_points = self._path_to_point(final_nav_targ, base_pos)
+        else:
+            curr_path_points = self._path_to_point(final_nav_targ)
+
+        colors = [mn.Color3.red(), mn.Color3.yellow(), mn.Color3.green()]
+
+        if "trajectory" in self.curr_ind_map:
+            # pass
+            # print(self.curr_ind_map)
+            self._sim.get_rigid_object_manager().remove_object_by_id(
+                self.curr_ind_map["trajectory"]
+            )
+        self.curr_ind_map[
+            "trajectory"
+        ] = self._sim.add_gradient_trajectory_object(
+            "current_path_{}".format(self.curr_ind_map["cont"]),
+            curr_path_points,
+            colors=colors,
+            radius=0.03,
+        )
+        self.curr_ind_map["cont"] += 1
 
         if curr_path_points is None:
             raise Exception
@@ -130,6 +162,25 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
             robot_pos = np.array(self.cur_articulated_agent.base_pos)
             base_T = self.cur_articulated_agent.base_transformation
+
+            if self.motion_type != "base_velocity":
+                # Need to correct base and robot_pos
+                # print(base_T)
+                (
+                    robot_pos2,
+                    base_T2,
+                ) = self.humanoid_controller.get_corrected_base(base_T)
+                # breakpoint()
+                forward = np.array([0.0, 0, 1.0])
+                fw1 = np.array(base_T.transform_vector(forward))
+                fw2 = np.array(base_T2.transform_vector(-forward))
+                self.humanoid_controller.gen_map(robot_pos, robot_pos + fw1)
+                self.humanoid_controller.gen_map(
+                    robot_pos2, robot_pos2 + fw2, c=2
+                )
+                print(robot_pos, robot_pos2)
+                robot_pos, base_T = robot_pos2, base_T2
+
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
 
@@ -139,6 +190,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             robot_forward = robot_forward[[0, 2]]
             rel_targ = rel_targ[[0, 2]]
             rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+
+            vec1 = mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+            # self.humanoid_controller.gen_map(robot_pos, robot_pos + vec1, c=2)
 
             angle_to_target = get_angle(robot_forward, rel_targ)
             angle_to_obj = get_angle(robot_forward, rel_pos)
@@ -150,7 +204,9 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 dist_to_final_nav_targ < self._config.dist_thresh
                 and angle_to_obj < self._config.turn_thresh
             )
-
+            if self.humanoid_controller.rotate_count > 30:
+                print("NAV TARGET", dist_to_final_nav_targ, angle_to_obj)
+                print("", self._config.dist_thresh, self._config.turn_thresh)
             if self.motion_type == "base_velocity":
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
@@ -176,6 +232,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             else:
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
+                        print("TURN to obj!!")
                         # Look at the object
                         (
                             new_pos,
@@ -196,6 +253,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                         new_pos,
                         new_trans,
                     ) = self.humanoid_controller.get_stop_pose()
+                if new_trans is None:
+                    breakpoint()
                 base_action = self.humanoid_controller.vectorize_pose(
                     new_pos, new_trans
                 )
