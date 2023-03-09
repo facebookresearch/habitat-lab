@@ -94,7 +94,14 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
-    def _path_to_point(self, point):
+    def _path_to_point(self, point, agent_pos=None):
+        """
+        Obtain path to reach the coordinate point. If agent_pos is not given
+        the path starts at the agent base pos, otherwise it starts at the agent_pos
+        value
+        :param point: Vector3 indicating the target point
+        :param agent_pos: Start location of the path, or None if using the agent_pos
+        """
         agent_pos = self.cur_articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
@@ -121,15 +128,24 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
         )
-        curr_path_points = self._path_to_point(final_nav_targ)
+
+        base_T = self.cur_articulated_agent.base_transformation
+        if self.motion_type != "base_velocity":
+            # The humanoid has a root rotation and translation when moving
+            # we need to correct it so taht the path is smooth
+            robot_pos, base_T = self.humanoid_controller.get_corrected_base(
+                base_T
+            )
+            curr_path_points = self._path_to_point(final_nav_targ, robot_pos)
+            robot_pos = np.array(robot_pos)
+        else:
+            curr_path_points = self._path_to_point(final_nav_targ)
+            robot_pos = np.array(self.cur_articulated_agent.base_pos)
 
         if curr_path_points is None:
             raise Exception
         else:
             cur_nav_targ = curr_path_points[1]
-
-            robot_pos = np.array(self.cur_articulated_agent.base_pos)
-            base_T = self.cur_articulated_agent.base_transformation
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
 

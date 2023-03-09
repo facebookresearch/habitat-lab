@@ -107,9 +107,34 @@ class HumanoidRearrangeController:
         self.prev_orientation = None
         self.walk_mocap_frame = 0
 
+        # We start with identity offset
+        self.transform_pose_offset = mn.Matrix4.from_(
+            mn.Matrix3.identity_init(), mn.Vector3()
+        )
+
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)"""
         self.obj_transform.translation = position + self.base_offset
+
+    def get_corrected_base(self, obj_transform: mn.Matrix4):
+        """
+        When performing a walking motion the character rotation and translation get shifted.
+        This function returns a base pose that accounts for that, to make sure that the nav path
+        does not get stuck.
+        :param obj_transform: the transformation of the humanoid the we should undo
+        """
+
+        offset = self.transform_pose_offset
+        base_correction = mn.Matrix4.from_(
+            offset.rotation().transposed(),
+            -offset.rotation().transposed() * offset.translation,
+        )
+
+        base_T = obj_transform @ base_correction
+        base_pos = base_T.translation - base_T.transform_vector(
+            self.base_offset
+        )
+        return base_pos, base_T
 
     def get_stop_pose(self):
         """
@@ -238,6 +263,9 @@ class HumanoidRearrangeController:
 
         # Remove the forward component, and orient according to forward_V
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
+
+        # This is the rotation and translation explained by the current pose
+        self.transform_pose_offset = obj_transform
         obj_transform = look_at_path_T @ obj_transform
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform.translation += forward_V_dist
