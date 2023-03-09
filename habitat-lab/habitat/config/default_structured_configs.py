@@ -1161,14 +1161,6 @@ class HabitatSimSemanticSensorConfig(SimulatorCameraSensorConfig):
 
 
 @dataclass
-class HeadSemanticSensorConfig(SimulatorCameraSensorConfig):
-    type: str = "HabitatSimSemanticSensor"
-    uuid: str = "head_semantic"
-    width: int = 256
-    height: int = 256
-
-
-@dataclass
 class HabitatSimEquirectangularRGBSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularRGBSensor"
 
@@ -1618,12 +1610,6 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="semantic_sensor",
     node=HabitatSimSemanticSensorConfig,
-)
-
-cs.store(
-    group="habitat/simulator/sim_sensors",
-    name="head_semantic_sensor",
-    node=HeadSemanticSensorConfig,
 )
 
 cs.store(
