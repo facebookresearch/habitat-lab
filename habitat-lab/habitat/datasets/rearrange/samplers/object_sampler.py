@@ -9,6 +9,7 @@ import random
 import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
+from habitat.tasks.rearrange.utils import get_aabb
 
 import magnum as mn
 import numpy as np
@@ -271,11 +272,8 @@ class ObjectSampler:
                         habitat_sim.utils.common.random_quaternion()
                     )
             if isinstance(receptacle, TriangleMeshReceptacle):
-                new_object_height = (
-                    new_object.root_scene_node.cumulative_bb.size()[1]
-                )
                 new_object.translation = new_object.translation + mn.Vector3(
-                    0, new_object_height / 2, 0
+                    0, 0.05, 0
                 )
 
             if isinstance(receptacle, OnTopOfReceptacle):
@@ -316,6 +314,18 @@ class ObjectSampler:
                     if not is_accessible(sim, new_object.translation, self.nav_to_min_distance):
                         logger.warning(
                             f"Failed to navigate to {object_handle} on {receptacle.name} in {num_placement_tries} tries."
+                        )
+                        continue
+                    object_aabb = get_aabb(new_object.object_id, sim, transformed=True)
+                    object_corners = [
+                        object_aabb.back_bottom_left,
+                        object_aabb.back_bottom_right,
+                        object_aabb.front_bottom_left,
+                        object_aabb.front_bottom_right
+                    ]
+                    if not all(receptacle.check_if_point_on_surface(sim, corner, threshold=0.1) for corner in object_corners):
+                        logger.warning(
+                            f"Failed to place {object_handle} within bounds of {receptacle.name} in {num_placement_tries} tries."
                         )
                         continue
                     return new_object

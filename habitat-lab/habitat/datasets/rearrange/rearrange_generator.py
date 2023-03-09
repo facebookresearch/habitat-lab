@@ -825,6 +825,7 @@ class RearrangeEpisodeGenerator:
                 aom = self.sim.get_articulated_object_manager()
                 for ao_handle in self.ao_states.keys():
                     aom.get_object_by_handle(ao_handle).clear_joint_states()
+                self.sim.reset()
             else:
                 self.sim.reconfigure(hab_cfg)
 

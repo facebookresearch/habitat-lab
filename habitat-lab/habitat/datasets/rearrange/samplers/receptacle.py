@@ -17,9 +17,9 @@ import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat.datasets.rearrange.navmesh_utils import is_accessible
 
 
 class Receptacle(ABC):
@@ -67,6 +67,13 @@ class Receptacle(ABC):
     def total_area(self) -> float:
         """
         Get total area of receptacle surface
+        """
+
+    @property
+    @abstractmethod
+    def bounds(self) -> mn.Range3D:
+        """
+        Get the bounds of the AABB of the receptacle
         """
 
     @abstractmethod
@@ -167,6 +174,10 @@ class OnTopOfReceptacle(Receptacle):
     def total_area(self) -> float:
         raise NotImplementedError
 
+    @property
+    def bounds(self) -> mn.Range3D:
+        raise NotImplementedError
+
     def set_episode_data(self, episode_data):
         self.episode_data = episode_data
 
@@ -235,12 +246,16 @@ class AABBReceptacle(Receptacle):
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
-        self.bounds = bounds
+        self._bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
 
     @property
     def total_area(self) -> float:
-        return self.bounds.size_x() * self.bounds.size_z()
+        return self._bounds.size_x() * self._bounds.size_z()
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        return self._bounds
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -251,13 +266,14 @@ class AABBReceptacle(Receptacle):
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
         scaled_region = mn.Range3D.from_center(
-            self.bounds.center(), sample_region_scale * self.bounds.size() / 2
+            self._bounds.center(),
+            sample_region_scale * self._bounds.size() / 2,
         )
 
         # NOTE: does not scale the "up" direction
         sample_range = [scaled_region.min, scaled_region.max]
-        sample_range[0][self.up_axis] = self.bounds.min[self.up_axis]
-        sample_range[1][self.up_axis] = self.bounds.max[self.up_axis]
+        sample_range[0][self.up_axis] = self._bounds.min[self.up_axis]
+        sample_range[1][self.up_axis] = self._bounds.max[self.up_axis]
 
         return np.random.uniform(sample_range[0], sample_range[1])
 
@@ -290,7 +306,7 @@ class AABBReceptacle(Receptacle):
             l2w4 = mn.Matrix4.from_(local_to_world.to_matrix(), mn.Vector3())
 
             # apply the receptacle rotation from the bb center
-            T = mn.Matrix4.from_(mn.Matrix3(), self.bounds.center())
+            T = mn.Matrix4.from_(mn.Matrix3(), self._bounds.center())
             R = mn.Matrix4.from_(self.rotation.to_matrix(), mn.Vector3())
             # translate frame to center, rotate, translate back
             l2w4 = l2w4.__matmul__(T.__matmul__(R).__matmul__(T.inverted()))
@@ -302,8 +318,8 @@ class AABBReceptacle(Receptacle):
     def get_local_surface_center(
         self, sim: habitat_sim.Simulator
     ) -> mn.Vector3:
-        local_center = self.bounds.center()
-        local_center[self.up_axis] = self.bounds.min[self.up_axis]
+        local_center = self._bounds.center()
+        local_center[self.up_axis] = self._bounds.min[self.up_axis]
         return local_center
 
     def check_if_point_on_surface(
@@ -316,7 +332,7 @@ class AABBReceptacle(Receptacle):
         Returns True if the point lies within the `threshold` distance of the lower bound along the "up" axis and within the bounds along other axes
         """
         local_point = self.get_local_transform(sim).transform_point(point)
-        bounds = self.bounds
+        bounds = self._bounds
         on_surface = True
         bounds_min = bounds.min
         bounds_max = bounds.max
@@ -440,6 +456,10 @@ class TriangleMeshReceptacle(Receptacle):
     def total_area(self) -> float:
         return self._total_area
 
+    @property
+    def bounds(self) -> mn.Range3D:
+        return mn.Range3D(self.trimesh.bounds)
+
     def get_face_verts(self, f_ix):
         verts = []
         for ix in range(3):
@@ -480,8 +500,11 @@ class TriangleMeshReceptacle(Receptacle):
         point: mn.Vector3,
         threshold: float = 0.05,
     ) -> bool:
+        local_point = self.get_local_transform(sim).transform_point(point)
         return (
-            np.abs(trimesh.proximity.signed_distance(self.trimesh, [point]))
+            np.abs(
+                trimesh.proximity.signed_distance(self.trimesh, [local_point])
+            )
             < threshold
         )
 
@@ -736,21 +759,55 @@ def get_navigable_receptacles(
             obj_mgr = sim.get_articulated_object_manager()
         else:
             obj_mgr = sim.get_rigid_object_manager()
-        receptacle_obj = obj_mgr.get_object_by_handle(receptacle.parent_object_handle)
-        receptacle_bb = get_aabb(receptacle_obj.object_id, sim, transformed=True)
-        recep_points = [
-            receptacle_bb.back_bottom_left,
-            receptacle_bb.back_bottom_right,
-            receptacle_bb.front_bottom_left,
-            receptacle_bb.front_bottom_right
-        ]
-        for point in recep_points:
-            if is_accessible(sim, point, nav_to_min_distance):
-                navigable_receptacles.append(receptacle)
-                logger.info(f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is navigable.")
-                break
+        receptacle_obj = obj_mgr.get_object_by_handle(
+            receptacle.parent_object_handle
+        )
+        receptacle_bb = get_aabb(
+            receptacle_obj.object_id, sim, transformed=True
+        )
 
-    logger.info(f"Found {len(navigable_receptacles)}/{len(receptacles)} navigable receptacles.")
+        if (
+            receptacle_bb.size_y()
+            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
+        ):
+            print(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+            )
+            continue
+
+        bounds = receptacle.bounds
+        if bounds.size_x() < 0.3 or bounds.size_z() < 0.3:
+            print(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping."
+            )
+            continue
+
+        # check if all 4 corners of the receptacle are accessible
+        gt = receptacle.get_global_transform(sim)
+        global_bounds = mn.Range3D(
+            gt.transform_point(bounds.min),
+            gt.transform_point(bounds.max),
+        )
+        recep_points = [
+            global_bounds.back_bottom_left,
+            global_bounds.back_bottom_right,
+            global_bounds.front_bottom_left,
+            global_bounds.front_bottom_right,
+        ]
+        is_accessible = all(
+            is_accessible(sim, point, nav_to_min_distance)
+            for point in recep_points
+        )
+
+        if is_accessible:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is accessible."
+            )
+            navigable_receptacles.append(receptacle)
+
+    logger.info(
+        f"Found {len(navigable_receptacles)}/{len(receptacles)} accessible receptacles."
+    )
     return navigable_receptacles
 
 

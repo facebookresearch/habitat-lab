@@ -69,9 +69,7 @@ class ObjectTargetSampler(ObjectSampler):
             self.object_instance_set, target_receptacles, goal_receptacles
         ):
             if object_to_containing_receptacle[use_target.handle] != use_recep:
-                raise ValueError(
-                    f"Object {use_target.handle}, contained {object_to_containing_receptacle[use_target.handle].name}, target receptacle {use_recep.name}"
-                )
+                return None
             new_object, receptacle = self.single_sample(
                 sim,
                 recep_tracker,
