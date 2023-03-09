@@ -102,6 +102,14 @@ class VelocityControlActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 @attr.s(auto_attribs=True, slots=True)
 class ArmActionConfig(ActionConfig):
+    r"""
+    In Rearrangement tasks only, the action that will move the robot arm around. The action represents to delta angle (in radians) of each joint.
+
+    :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
+    :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    :property gaze_distance_range: The gaze action will only work on the closet object ig its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
+    :property center_cone_angle: Only for `GazeGraspAction` grip_controller.
+    """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
     grip_controller: Optional[str] = None
@@ -113,6 +121,8 @@ class ArmActionConfig(ActionConfig):
     ee_ctrl_lim: float = 0.015
     should_clip: bool = False
     render_ee_target: bool = False
+    gaze_distance_range: Optional[List[float]] = None
+    center_cone_angle: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -861,6 +871,14 @@ class HabitatSimSemanticSensorConfig(SimulatorCameraSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class HeadSemanticSensorConfig(SimulatorCameraSensorConfig):
+    type: str = "HabitatSimSemanticSensor"
+    uuid: str = "head_semantic"
+    width: int = 256
+    height: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
 class HabitatSimEquirectangularRGBSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularRGBSensor"
 
@@ -1277,6 +1295,12 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="semantic_sensor",
     node=HabitatSimSemanticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_semantic_sensor",
+    node=HeadSemanticSensorConfig,
 )
 
 cs.store(
