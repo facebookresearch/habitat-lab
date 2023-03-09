@@ -102,7 +102,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         :param point: Vector3 indicating the target point
         :param agent_pos: Start location of the path, or None if using the agent_pos
         """
-        agent_pos = self.cur_articulated_agent.base_pos
+        if agent_pos is None:
+            agent_pos = self.cur_articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
