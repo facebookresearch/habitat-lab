@@ -830,12 +830,9 @@ class ForceTerminate(Measure):
         ].get_metric()
         accum_force = force_info["accum"]
         instant_force = force_info["instant"]
-        if (
-            self._max_instant_force > 0
-            and accum_force > self._max_instant_force
-        ):
+        if self._max_accum_force > 0 and accum_force > self._max_accum_force:
             rearrange_logger.debug(
-                f"Force threshold={self._max_instant_force} exceeded with {accum_force}, ending episode"
+                f"Force threshold={self._max_accum_force} exceeded with {accum_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True
