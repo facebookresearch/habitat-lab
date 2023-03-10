@@ -255,15 +255,15 @@ jobs:
           paths:
             - /home/circleci/.ccache
       - run:
-          name: Install api
+          name: Install api with baselines
           no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
               ln -s ../habitat-sim/data data
-              pip install -r habitat-lab/requirements.txt --progress-bar off
-              touch ~/miniconda/pip_deps_installed
+              while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
+              pip install -e habitat-lab
+              pip install -e habitat-baselines
       - save_cache:
           key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
           background: true
@@ -273,11 +273,8 @@ jobs:
           name: Run api tests
           no_output_timeout: 120m
           command: |
-
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              pip install -e habitat-lab
-              pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               python -m pytest --cov-report=xml --cov-report term  --cov=./
@@ -288,8 +285,6 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              pip install -e habitat-lab
-              pip install -e habitat-baselines
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               # This is a flag that enables test_test_baseline_training to work
@@ -313,8 +308,6 @@ jobs:
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-lab
-              pip install -e habitat-lab
-              pip install -e habitat-baselines
               # Download sim inventory for crosslinking (no need to build
               # the whole sim docs for that)
               # TODO: take it from github.com/facebookmicrosites/habitat-website
