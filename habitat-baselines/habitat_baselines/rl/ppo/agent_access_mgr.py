@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
 
 import gym.spaces as spaces
 
@@ -117,7 +117,7 @@ class AgentAccessMgr(ABC):
 
     @property
     @abstractmethod
-    def hidden_state_shape(self) -> None:
+    def hidden_state_shape(self) -> Tuple[int]:
         """
         The shape of the tensor to track the hidden state, such as the RNN hidden state.
         """

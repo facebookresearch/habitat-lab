@@ -811,11 +811,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config, is_eval=True)
 
+        self._agent = self._create_agent(None)
         action_shape, discrete_actions = get_action_space_info(
             self._agent.policy_action_space
         )
 
-        self._agent.load_state_dict(ckpt_dict["state_dict"])
+        if self._agent.actor_critic.should_load_agent_state:
+            self._agent.load_state_dict(ckpt_dict)
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
@@ -826,7 +828,7 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            shape=(
+            (
                 self.config.habitat_baselines.num_environments,
                 *self._agent.hidden_state_shape,
             ),
