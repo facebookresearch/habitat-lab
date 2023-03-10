@@ -52,29 +52,29 @@ def setup_function(test_trainers):
     "config_path,num_updates,overrides",
     [
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["benchmark/rearrange=open_cab"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             [
                 "benchmark/rearrange=open_fridge",
             ],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             [
                 "habitat.dataset.split=minival",
@@ -82,19 +82,19 @@ def setup_function(test_trainers):
             ],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             [
                 "benchmark/rearrange=close_fridge",
             ],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["benchmark/rearrange=close_cab"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            "imagenav/ddppo_imagenav_example.yaml",
             3,
             [],
         ),
@@ -155,8 +155,8 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     list(
         itertools.product(
             [
-                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
-                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
+                "habitat-baselines/src/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
+                "habitat-baselines/src/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
             ],
             [
                 "hl_neural",
@@ -237,7 +237,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
     "config_path,num_updates",
     [
         (
-            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            "habitat-baselines/src/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
             3,
         ),
     ],
@@ -305,12 +305,12 @@ def test_trainers_gym_registry(
     "config_path,num_updates,target_reward",
     [
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            "habitat-baselines/src/habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
             40,
             5.0,
         ),
         (
-            "habitat-baselines/habitat_baselines/config/pointnav/ddppo_pointnav.yaml",
+            "habitat-baselines/src/habitat_baselines/config/pointnav/ddppo_pointnav.yaml",
             1000,
             2.0,
         ),

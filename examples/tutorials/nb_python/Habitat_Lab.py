@@ -198,7 +198,7 @@ if __name__ == "__main__":
 # @markdown (double click to see the code)
 
 # example tensorboard visualization
-# for more details refer to [link](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines#additional-utilities).
+# for more details refer to [link](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/src/habitat_baselines#additional-utilities).
 
 try:
     from IPython import display
@@ -236,7 +236,7 @@ except ImportError:
 # Defines the metrics for embodied task, eg: [SPL](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/nav/nav.py#L565).
 #
 #
-# 7. [`habitat_baselines`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/habitat_baselines)
+# 7. [`habitat_baselines`](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-baselines/src/habitat_baselines)
 # RL, SLAM, heuristic baseline implementations for the different embodied tasks.
 
 # %% [markdown]

@@ -72,7 +72,7 @@ def test_rearrange_dataset():
     "test_cfg_path",
     list(
         glob(
-            "habitat-baselines/habitat_baselines/config/rearrange/**/*.yaml",
+            "habitat-baselines/src/habitat_baselines/config/rearrange/**/*.yaml",
             recursive=True,
         ),
     ),

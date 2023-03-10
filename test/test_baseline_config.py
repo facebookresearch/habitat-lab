@@ -16,14 +16,14 @@ from habitat_baselines.config.default import get_config
     "test_cfg_path",
     list(
         glob(
-            "habitat-baselines/habitat_baselines/config/**/*.yaml",
+            "habitat-baselines/src/habitat_baselines/config/**/*.yaml",
             recursive=True,
         ),
     ),
 )
 def test_baselines_configs(test_cfg_path):
     cleaned_path = test_cfg_path.replace(
-        "habitat-baselines/habitat_baselines/config/", ""
+        "habitat-baselines/src/habitat_baselines/config/", ""
     )
     if "habitat_baselines" in cleaned_path:
         # Do not test non-standalone config options that are

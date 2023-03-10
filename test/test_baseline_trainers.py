@@ -59,7 +59,7 @@ def download_data():
     "test_cfg_path,gpu2gpu,observation_transforms_overrides,mode",
     list(
         itertools.product(
-            glob("habitat-baselines/habitat_baselines/config/test/*"),
+            glob("habitat-baselines/src/habitat_baselines/config/test/*"),
             [False],
             [
                 [],
@@ -73,7 +73,7 @@ def download_data():
     + list(
         itertools.product(
             [
-                "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
+                "habitat-baselines/src/habitat_baselines/config/test/ppo_pointnav_test.yaml"
             ],
             [True],
             [
@@ -93,7 +93,7 @@ def test_trainers(
     os.environ["MAIN_PORT"] = str(find_free_port())
 
     test_cfg_cleaned_path = test_cfg_path.replace(
-        "habitat-baselines/habitat_baselines/config/", ""
+        "habitat-baselines/src/habitat_baselines/config/", ""
     )
 
     dataset_config = get_config(test_cfg_cleaned_path).habitat.dataset
