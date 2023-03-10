@@ -104,7 +104,7 @@ env.close()
 #     * `HabitatPrepareGroceries-v0`
 #     * `HabitatSetTable-v0`
 #
-# The Gym environments are automatically registered from the RL training configurations under ["habitat-lab/habitat/config/benchmark/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/benchmark/rearrange). The observation keys in `habitat.gym.obs_keys` are what is returned in the observation space.
+# The Gym environments are automatically registered from the RL training configurations under ["habitat-lab/src/habitat/config/benchmark/rearrange"](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/src/habitat/config/benchmark/rearrange). The observation keys in `habitat.gym.obs_keys` are what is returned in the observation space.
 #
 # An example of these different observation spaces is demonstrated below:
 

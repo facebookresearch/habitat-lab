@@ -187,7 +187,7 @@ if vut.is_notebook():
 # * Measurement definitions to define the reward, termination condition, and additional logging information.
 #
 # For other examples of task, sensor, and measurement definitions, [see here
-# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
+# for existing tasks](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/src/habitat/tasks/rearrange/sub_tasks). Tasks, sensors, and measurements are connected through a config file that defines the task.
 
 
 # %%
@@ -354,14 +354,14 @@ cs.store(
 # %% [markdown]
 # We now add all the previously defined task, sensor, and measurement
 # definitions to a config file to finish defining the new Habitat task. For
-# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/habitat/config/habitat/task/rearrange).
+# examples of more configs [see here](https://github.com/facebookresearch/habitat-lab/tree/main/habitat-lab/src/habitat/config/habitat/task/rearrange).
 #
 # This config also defines the action space through the `task.actions` key. You
 # can substitute different base control actions from
-# [here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/rearrange/actions/actions.py),
+# [here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/src/habitat/tasks/rearrange/actions/actions.py),
 # different arm control actions [from
-# here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/rearrange/actions/actions.py),
-# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/tasks/rearrange/actions/grip_actions.py).
+# here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/src/habitat/tasks/rearrange/actions/actions.py),
+# and different grip actions [from here](https://github.com/facebookresearch/habitat-lab/blob/main/habitat-lab/src/habitat/tasks/rearrange/actions/grip_actions.py).
 
 # %%
 cfg_txt = """

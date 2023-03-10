@@ -14,7 +14,7 @@ Habitat Lab Demo
 
 All the boilerplate code in the habitat-sim to set sensor config and agent
 config is abstracted out in the Habitat Lab config system. Default habitat structured configs are at
-:gh:`habitat-lab/habitat/config/default_structured_configs.py <facebookresearch/habitat-lab/blob/main/habitat-lab/habitat/config/default_structured_configs.py>`.
+:gh:`habitat-lab/src/habitat/config/default_structured_configs.py <facebookresearch/habitat-lab/blob/main/habitat-lab/src/habitat/config/default_structured_configs.py>`.
 You can override defaults by specifying them in a separate file and pass it to
 the :ref:`habitat.config.get_config()` function or use `read_write` to edit
 the config object.

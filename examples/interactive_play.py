@@ -30,7 +30,7 @@ Controls:
     - B to reset the camera position
 - X to change the articulated agent that is being controlled (if there are multiple articulated agents).
 
-Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/habitat/config/task/rearrange/` folder).
+Change the task with `--cfg benchmark/rearrange/close_cab.yaml` (choose any task under the `habitat-lab/src/habitat/config/task/rearrange/` folder).
 
 Change the grip type:
 - Suction gripper `task.actions.arm_action.grip_controller "SuctionGraspAction"`

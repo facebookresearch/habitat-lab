@@ -28,7 +28,7 @@ from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
-    "habitat-lab/habitat/datasets/rearrange/configs/test_config.yaml"
+    "habitat-lab/src/habitat/datasets/rearrange/configs/test_config.yaml"
 )
 EPISODES_LIMIT = 6
 
@@ -106,7 +106,7 @@ def test_rearrange_baseline_envs(test_cfg_path):
 @pytest.mark.parametrize(
     "test_cfg_path",
     list(
-        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
+        glob("habitat-lab/src/habitat/config/benchmark/rearrange/*"),
     ),
 )
 def test_composite_tasks(test_cfg_path):
