@@ -255,7 +255,7 @@ class DebugVisualizer:
         :param show: If True, open and display the image immediately.
         """
         obj_abs_transform = obj.root_scene_node.absolute_transformation()
-        look_at = obj_abs_transform.translation
+        look_at = obj_abs_transform.transform_point(obj_bb.center())
         bb_size = obj_bb.size()
         # TODO: query fov and aspect from the camera spec
         fov = 90

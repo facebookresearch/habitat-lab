@@ -520,7 +520,7 @@ def parse_receptacles_from_user_config(
     parent_template_directory: str = "",
     valid_link_names: Optional[List[str]] = None,
     ao_uniform_scaling: float = 1.0,
-) -> List[Union[Receptacle, AABBReceptacle]]:
+) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Parse receptacle metadata from the provided user subconfig object.
 
