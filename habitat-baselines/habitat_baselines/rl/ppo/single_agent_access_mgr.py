@@ -209,14 +209,14 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
-        return dict(
-            state_dict=self._actor_critic.state_dict(),
-            optim_state=self._updater.optimizer.state_dict(),
-            lr_sched_state=self._lr_scheduler.state_dict(),
-        )
+        return {
+            "state_dict": self._actor_critic.state_dict(),
+            "optim_state": self._updater.optimizer.state_dict(),
+            "lr_sched_state": self._lr_scheduler.state_dict(),
+        }
 
     def get_save_state(self):
-        return dict(state_dict=self._actor_critic.state_dict())
+        return {"state_dict": self._actor_critic.state_dict()}
 
     def eval(self):
         self._actor_critic.eval()

@@ -116,7 +116,7 @@ class PPOTrainer(BaseRLTrainer):
         """
 
         return baseline_registry.get_agent_access_mgr(
-            self.config.habitat_baselines.rl.agent.name
+            self.config.habitat_baselines.rl.agent.type
         )(
             config=self.config,
             env_spec=self._env_spec,
@@ -260,7 +260,7 @@ class PPOTrainer(BaseRLTrainer):
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
                 ] = self._encoder(batch)
 
-        self._agent.rollouts.insert_first(batch)
+        self._agent.rollouts.insert_first_observations(batch)
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(

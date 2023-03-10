@@ -260,7 +260,7 @@ class RolloutStorage(Storage):
     def __setstate__(self, state: Dict[str, Any]):
         self.__dict__.update(state)
 
-    def insert_first(self, batch):
+    def insert_first_observations(self, batch):
         self.buffers["observations"][0] = batch  # type: ignore
 
     def get_current_step(self, env_slice, buffer_index):

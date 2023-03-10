@@ -28,7 +28,7 @@ class Storage(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def insert_first(self, batch) -> None:
+    def insert_first_observations(self, batch) -> None:
         pass
 
     @abc.abstractmethod
