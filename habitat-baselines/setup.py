@@ -19,7 +19,7 @@ def collect_requirements():
     # collect requirements.txt file in all subdirectories
     requirements = set()
     for file_path in glob.glob(
-        "habitat_baselines/**/requirements.txt", recursive=True
+        "src/habitat_baselines/**/requirements.txt", recursive=True
     ):
         content = read(file_path)
         requirements.update(content.strip().split("\n"))
@@ -31,7 +31,9 @@ def get_package_version():
     import os.path as osp
     import sys
 
-    sys.path.insert(0, osp.join(osp.dirname(__file__), "habitat_baselines"))
+    sys.path.insert(
+        0, osp.join(osp.dirname(__file__), "src/habitat_baselines")
+    )
     from version import VERSION
 
     return VERSION
@@ -41,11 +43,12 @@ if __name__ == "__main__":
     setup(
         name="habitat-baselines",
         install_requires=collect_requirements(),
-        packages=find_packages(),
+        package_dir={"": "src"},
+        packages=find_packages("src"),
         version=get_package_version(),
         include_package_data=True,
         description="Habitat-Baselines: Embodied AI baselines.",
-        long_description=read("habitat_baselines/README.md", encoding="utf8"),
+        long_description=read("README.md", encoding="utf8"),
         long_description_content_type="text/markdown",
         author="Meta AI Research",
         license="MIT License",

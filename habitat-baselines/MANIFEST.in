@@ -1,1 +1,2 @@
-include habitat_baselines/py.typed
+include src/habitat_baselines/py.typed
+recursive-include src/habitat_baselines requirements.txt
