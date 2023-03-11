@@ -18,6 +18,7 @@ from typing import (
     Iterator,
     List,
     Optional,
+    OrderedDict,
     Sequence,
     Set,
     Tuple,
@@ -651,11 +652,11 @@ class ThreadedVectorEnv(VectorEnv):
         return read_fns, write_fns
 
 
-class BatchRenderVectorEnv(VectorEnv):
+class BatchRenderedVectorEnv(VectorEnv):
     r""":ref:`VectorEnv` that batches rendering operations.
 
     Instead of individually rendering their environment, the worker simulators include their render state into observations.
-    The BatchRenderVectorEnv then provides these observations to a batch renderer to produce all visual sensor observations simultaneously.
+    The BatchRenderedVectorEnv then provides these observations to a batch renderer to produce all visual sensor observations simultaneously.
 
     This allows all environments to share GPU memory, leading to considerable memory savings, loading time reduction and rendering speed increase.
     """
@@ -669,5 +670,24 @@ class BatchRenderVectorEnv(VectorEnv):
         self._config = config
         self._batch_renderer = BatchRenderer(config, self.num_envs)
 
-    def post_step(self, observations) -> None:
-        self._batch_renderer.render(observations)
+    def render(
+        self, mode: str = "human", *args, **kwargs
+    ) -> Optional[np.ndarray]:
+        r"""Creates a tiled image from observations rendered during the last post_step call.
+        Use for debugging and testing only."""
+        images = self._batch_renderer.copy_output_to_image()
+        tile = tile_images(images)
+        if mode == "human":
+            from habitat.core.utils import try_cv2_import
+
+            cv2 = try_cv2_import()
+            cv2.imshow("BatchRenderedVectorEnv", tile[:, :, ::-1])
+            cv2.waitKey(1)
+            return None
+        elif mode == "rgb_array":
+            return tile
+        else:
+            raise NotImplementedError
+
+    def post_step(self, observations) -> List[OrderedDict]:
+        return self._batch_renderer.post_step(observations)

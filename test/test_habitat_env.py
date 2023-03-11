@@ -315,7 +315,7 @@ def test_rl_batch_render_envs(gpu2gpu):
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    with habitat.BatchRenderVectorEnv(
+    with habitat.BatchRenderedVectorEnv(
         make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
     ) as envs:
         envs.initialize_batch_renderer(configs[0])

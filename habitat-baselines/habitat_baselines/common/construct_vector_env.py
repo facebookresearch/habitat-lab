@@ -7,7 +7,7 @@ import random
 from typing import TYPE_CHECKING, Any, List, Type, cast
 
 from habitat import (
-    BatchRenderVectorEnv,
+    BatchRenderedVectorEnv,
     ThreadedVectorEnv,
     VectorEnv,
     logger,
@@ -95,7 +95,7 @@ def construct_envs(
         )
         vector_env_cls = ThreadedVectorEnv
     elif config.habitat.simulator.enable_batch_renderer:
-        vector_env_cls = BatchRenderVectorEnv
+        vector_env_cls = BatchRenderedVectorEnv
     else:
         vector_env_cls = VectorEnv
 
@@ -106,7 +106,7 @@ def construct_envs(
     )
 
     if config.habitat.simulator.enable_batch_renderer:
-        batch_vector_env = cast(BatchRenderVectorEnv, vector_env_cls)
+        batch_vector_env = cast(BatchRenderedVectorEnv, vector_env_cls)
         batch_vector_env.initialize_batch_renderer(config)
 
     return envs
