@@ -143,7 +143,7 @@ class DebugVisualizer:
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
     ) -> None:
         """
-        Draw a set of debug lines with accomanying colors.
+        Draw a set of debug lines with accompanying colors.
 
         :param debug_lines: A set of debug line strips with accompanying colors. Each list entry contains a list of points and a color.
         """
@@ -160,6 +160,28 @@ class DebugVisualizer:
                         color,
                     )
 
+    def render_debug_circles(
+        self,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
+    ) -> None:
+        """
+        Draw a set of debug circles with accompanying colors.
+
+        :param debug_circles: A list of debug line render circle Tuples, each with (center, radius, normal, color).
+        """
+        # support None input to make useage easier elsewhere
+        if debug_circles is not None:
+            for center, radius, normal, color in debug_circles:
+                self.debug_line_render.draw_circle(
+                    translation=center,
+                    radius=radius,
+                    color=color,
+                    num_segments=12,
+                    normal=normal,
+                )
+
     def peek_rigid_object(
         self,
         obj: habitat_sim.physics.ManagedRigidObject,
@@ -167,6 +189,9 @@ class DebugVisualizer:
         peek_all_axis: bool = False,
         additional_savefile_prefix="",
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
         show: bool = False,
     ) -> str:
         """
@@ -179,6 +204,7 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
         :param show: If True, open and display the image immediately.
         """
 
@@ -189,6 +215,7 @@ class DebugVisualizer:
             peek_all_axis,
             additional_savefile_prefix,
             debug_lines,
+            debug_circles,
             show,
         )
 
@@ -199,6 +226,9 @@ class DebugVisualizer:
         peek_all_axis: bool = False,
         additional_savefile_prefix="",
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
         show: bool = False,
     ) -> str:
         """
@@ -211,6 +241,7 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
         :param show: If True, open and display the image immediately.
         """
         from habitat.sims.habitat_simulator.sim_utilities import (
@@ -226,6 +257,7 @@ class DebugVisualizer:
             peek_all_axis,
             additional_savefile_prefix,
             debug_lines,
+            debug_circles,
             show,
         )
 
@@ -240,6 +272,9 @@ class DebugVisualizer:
         peek_all_axis: bool = False,
         additional_savefile_prefix="",
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
         show: bool = False,
     ) -> str:
         """
@@ -252,6 +287,7 @@ class DebugVisualizer:
         :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
         :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
         :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
         :param show: If True, open and display the image immediately.
         """
         obj_abs_transform = obj.root_scene_node.absolute_transformation()
@@ -276,6 +312,7 @@ class DebugVisualizer:
                 + look_at
             )
             self.render_debug_lines(debug_lines)
+            self.render_debug_circles(debug_circles)
             return self.save_observation(
                 prefix=additional_savefile_prefix + "peek_" + obj.handle,
                 look_at=look_at,
@@ -294,6 +331,7 @@ class DebugVisualizer:
                 + look_at
             )
             self.render_debug_lines(debug_lines)
+            self.render_debug_circles(debug_circles)
             self.get_observation(look_at, look_from, axis_obs)
         # stitch images together
         stitched_image = None
