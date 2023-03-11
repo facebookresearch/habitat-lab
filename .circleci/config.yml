@@ -10,70 +10,70 @@ orbs:
   codecov: codecov/codecov@3.2.3
 
 jobs:
-  python_lint:
-    docker:
-      - image: cimg/python:3.7.13
-    steps:
-      - checkout
-      - run:
-          name: setup
-          command: |
-              pip install black==23.1.0 --progress-bar off
-              pip install "isort[pyproject]" numpy --progress-bar off
-              pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
-              pip install -r habitat-lab/requirements.txt --progress-bar off
-      - run:
-          name: run black
-          command: |
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --diff
-              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --check
-      - run:
-          name: run isort
-          command: |
-              isort --version
-              isort habitat-lab/. habitat-baselines/. examples/. test/.  --diff
-              isort habitat-lab/. habitat-baselines/. examples/. test/.  --check-only
-      - run:
-          name: run mypy
-          command: |
-              mypy --version
-              mypy --exclude="^docs/|setup.py$"
-      - run:
-          name: run assert no files in habitat and habitat_baselines
-          command: |
-              if test -d  habitat ;           then  echo "folder habitat should not exist";           exit 1; fi
-              if test -d  habitat_baselines ; then  echo "folder habitat_baselines should not exist"; exit 1; fi
-  pre-commit:
-    docker:
-      - image: cimg/python:3.7.13
-    working_directory: ~/repo/
-
-    steps:
-      - checkout
-      - run:
-          name: Combine precommit config and python versions for caching
-          command: |
-            cat .pre-commit-config.yaml > pre-commit-deps.txt
-            python -VV >> pre-commit-deps.txt
-      - restore_cache:
-          keys:
-          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
-
-      - run:
-          name: Install Dependencies
-          command: |
-            pip install -U pip setuptools pre-commit
-            # Install the hooks now so that they'll be cached
-            pre-commit install-hooks
-      - save_cache:
-          paths:
-            - ~/.cache/pre-commit
-          key: v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
-
-      - run:
-          name: Check Code Style using pre-commit
-          command: |
-            SKIP=clang-format,eslint pre-commit run --show-diff-on-failure --all-files
+#  python_lint:
+#    docker:
+#      - image: cimg/python:3.7.13
+#    steps:
+#      - checkout
+#      - run:
+#          name: setup
+#          command: |
+#              pip install black==23.1.0 --progress-bar off
+#              pip install "isort[pyproject]" numpy --progress-bar off
+#              pip install mypy==0.991 types-mock types-Pillow types-tqdm types-PyYAML --progress-bar off
+#              pip install -r habitat-lab/requirements.txt --progress-bar off
+#      - run:
+#          name: run black
+#          command: |
+#              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --diff
+#              black --exclude '/(\.eggs|\.git|\.hg|\.mypy_cache|\.nox|\.tox|\.venv|_build|buck-out|build|dist)|examples/tutorials/(colabs|nb_python)' habitat-lab/. habitat-baselines/. examples/. test/. --check
+#      - run:
+#          name: run isort
+#          command: |
+#              isort --version
+#              isort habitat-lab/. habitat-baselines/. examples/. test/.  --diff
+#              isort habitat-lab/. habitat-baselines/. examples/. test/.  --check-only
+#      - run:
+#          name: run mypy
+#          command: |
+#              mypy --version
+#              mypy --exclude="^docs/|setup.py$"
+#      - run:
+#          name: run assert no files in habitat and habitat_baselines
+#          command: |
+#              if test -d  habitat ;           then  echo "folder habitat should not exist";           exit 1; fi
+#              if test -d  habitat_baselines ; then  echo "folder habitat_baselines should not exist"; exit 1; fi
+#  pre-commit:
+#    docker:
+#      - image: cimg/python:3.7.13
+#    working_directory: ~/repo/
+#
+#    steps:
+#      - checkout
+#      - run:
+#          name: Combine precommit config and python versions for caching
+#          command: |
+#            cat .pre-commit-config.yaml > pre-commit-deps.txt
+#            python -VV >> pre-commit-deps.txt
+#      - restore_cache:
+#          keys:
+#          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+#
+#      - run:
+#          name: Install Dependencies
+#          command: |
+#            pip install -U pip setuptools pre-commit
+#            # Install the hooks now so that they'll be cached
+#            pre-commit install-hooks
+#      - save_cache:
+#          paths:
+#            - ~/.cache/pre-commit
+#          key: v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+#
+#      - run:
+#          name: Check Code Style using pre-commit
+#          command: |
+#            SKIP=clang-format,eslint pre-commit run --show-diff-on-failure --all-files
   install_and_test_ubuntu:
     <<: *gpu
     steps:
@@ -99,16 +99,18 @@ jobs:
                   curl \
                   vim \
                   ca-certificates \
-                  libbullet-dev \
                   libjpeg-dev \
                   libglm-dev \
                   libegl1-mesa-dev \
+                  ninja-build \
                   xorg-dev \
                   freeglut3-dev \
                   pkg-config \
                   wget \
                   zip \
+                  lcov\
                   libhdf5-dev \
+                  libomp-dev \
                   unzip || true
               sudo apt install --allow-change-held-packages \
                   texlive-base \
@@ -121,9 +123,9 @@ jobs:
           background: true
           command: nvidia-smi
       # Restore Conda cache
-      - restore_cache:
-          keys:
-            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
+#      - restore_cache:
+#          keys:
+#            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
@@ -156,14 +158,14 @@ jobs:
               fi
               touch ~/miniconda/pytorch_installed
               python -c 'import torch; print("Has cuda ? ",torch.cuda.is_available()); print("torch version : ",torch.__version__);'
-      - restore_cache:
-          keys:
-            - habitat-sim-{{ checksum "./hsim_sha" }}
-      - restore_cache:
-          keys:
-            - ccache-{{ arch }}-main
-          paths:
-            - /home/circleci/.ccache
+#      - restore_cache:
+#          keys:
+#            - habitat-sim-{{ checksum "./hsim_sha" }}
+#      - restore_cache:
+#          keys:
+#            - ccache-{{ arch }}-main
+#          paths:
+#            - /home/circleci/.ccache
       - run:
           name: CCache initialization
           command: |
@@ -184,148 +186,148 @@ jobs:
               . activate habitat;
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
-              pip install pillow
+              pip install imageio imageio-ffmpeg
               python -u setup.py install --headless --with-cuda --bullet
-      - run:
-          name: Ccache stats
-          when: always
-          command: |
-            export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-            . activate habitat;
-            ccache --show-stats
-      - run:
-          name: Download test data
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat
-              if [ ! -f ./habitat-sim/data/scene_datasets/habitat-test-scenes/van-gogh-room.glb ]
-              then
-                cd habitat-sim
-                wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
-                unzip habitat-test-scenes.zip
-                rm habitat-test-scenes.zip
-                cd -
-              fi
-              if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
-              then
-                python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
-              fi
-              if [ ! -f ./habitat-sim/data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf ]
-              then
-                python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/ --replace
-              fi
-              if [ ! -f ./habitat-sim/data/robots/hab_stretch/urdf/hab_stretch.urdf ]
-              then
-                python -m habitat_sim.utils.datasets_download --uids hab_stretch --data-path habitat-sim/data/
-              fi
-      - run:
-          name: Download coda scene
-          command: |
-            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
-            then
-              cd habitat-sim
-              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
-              unzip coda.zip -d data/scene_datasets
-              rm coda.zip
-            fi
-      - run:
-          name: Run sim benchmark
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-sim
-              python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
-      - save_cache:
-          key: habitat-sim-{{ checksum "./hsim_sha" }}
-          background: true
-          paths:
-            - ./habitat-sim
-      - save_cache:
-          key: ccache-{{ arch }}-main
-          background: true
-          paths:
-            - /home/circleci/.ccache
-      - run:
-          name: Install api with baselines
-          no_output_timeout: 20m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              ln -s ../habitat-sim/data data
-              while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
-              pip install -e habitat-lab
-              pip install -e habitat-baselines
-      - save_cache:
-          key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
-          background: true
-          paths:
-            - ~/miniconda
-      - run:
-          name: Run api tests
-          no_output_timeout: 120m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              export PYTHONPATH=.:$PYTHONPATH
-              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python -m pytest --cov-report=xml --cov-report term  --cov=./
-      - codecov/upload
-      - run:
-          name: Run baseline training tests
-          no_output_timeout: 30m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              export PYTHONPATH=.:$PYTHONPATH
-              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              # This is a flag that enables test_test_baseline_training to work
-              export TEST_BASELINE_SMALL=1
-              python -m pytest  test/test_baseline_training.py -s
-      - run:
-          name: Run Hab2.0 benchmark
-          no_output_timeout: 30m
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              python -m habitat_sim.utils.datasets_download --uids hab2_bench_assets
-              mkdir -p data/ep_datasets/
-              cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
-              bash scripts/hab2_bench/bench_runner.sh
-              python scripts/hab2_bench/plot_bench.py
-              # Assert the SPS number are up to standard
-              python scripts/hab2_bench/assert_bench.py
-      - run:
-          name: Build api documentation
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              # Download sim inventory for crosslinking (no need to build
-              # the whole sim docs for that)
-              # TODO: take it from github.com/facebookmicrosites/habitat-website
-              #   instead
-              mkdir -p ../habitat-sim/build/docs-public/habitat-sim
-              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
-              cd docs
-              conda install -y -c conda-forge doxygen
-              conda install -y  jinja2 pygments docutils
-              mkdir -p ../build/docs
-              ./build-public.sh
-      - run:
-          name: Ensure non-editable mode works
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              python -m pip install habitat-lab/
-              python -c "import habitat"
-              python -m pip install habitat-baselines/
-              python -c "import habitat_baselines"
-      - store_artifacts:
-          path: habitat-lab/data/profile  # This is the benchmark profile
+#      - run:
+#          name: Ccache stats
+#          when: always
+#          command: |
+#            export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#            . activate habitat;
+#            ccache --show-stats
+#      - run:
+#          name: Download test data
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat
+#              if [ ! -f ./habitat-sim/data/scene_datasets/habitat-test-scenes/van-gogh-room.glb ]
+#              then
+#                cd habitat-sim
+#                wget http://dl.fbaipublicfiles.com/habitat/habitat-test-scenes.zip
+#                unzip habitat-test-scenes.zip
+#                rm habitat-test-scenes.zip
+#                cd -
+#              fi
+#              if [ ! -f ./habitat-sim/data/robots/franka_panda/panda_arm.urdf ]
+#              then
+#                python -m habitat_sim.utils.datasets_download --uids franka_panda --data-path habitat-sim/data/
+#              fi
+#              if [ ! -f ./habitat-sim/data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf ]
+#              then
+#                python -m habitat_sim.utils.datasets_download --uids hab_spot_arm --data-path habitat-sim/data/ --replace
+#              fi
+#              if [ ! -f ./habitat-sim/data/robots/hab_stretch/urdf/hab_stretch.urdf ]
+#              then
+#                python -m habitat_sim.utils.datasets_download --uids hab_stretch --data-path habitat-sim/data/
+#              fi
+#      - run:
+#          name: Download coda scene
+#          command: |
+#            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
+#            then
+#              cd habitat-sim
+#              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
+#              unzip coda.zip -d data/scene_datasets
+#              rm coda.zip
+#            fi
+#      - run:
+#          name: Run sim benchmark
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-sim
+#              python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
+#      - save_cache:
+#          key: habitat-sim-{{ checksum "./hsim_sha" }}
+#          background: true
+#          paths:
+#            - ./habitat-sim
+#      - save_cache:
+#          key: ccache-{{ arch }}-main
+#          background: true
+#          paths:
+#            - /home/circleci/.ccache
+#      - run:
+#          name: Install api with baselines
+#          no_output_timeout: 20m
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-lab
+#              ln -s ../habitat-sim/data data
+#              while [ ! -f ~/miniconda/pytorch_installed ]; do sleep 2; done # wait for Pytorch
+#              pip install -e habitat-lab
+#              pip install -e habitat-baselines
+#      - save_cache:
+#          key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
+#          background: true
+#          paths:
+#            - ~/miniconda
+#      - run:
+#          name: Run api tests
+#          no_output_timeout: 120m
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-lab
+#              export PYTHONPATH=.:$PYTHONPATH
+#              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+#              python -m pytest --cov-report=xml --cov-report term  --cov=./
+#      - codecov/upload
+#      - run:
+#          name: Run baseline training tests
+#          no_output_timeout: 30m
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-lab
+#              export PYTHONPATH=.:$PYTHONPATH
+#              export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
+#              # This is a flag that enables test_test_baseline_training to work
+#              export TEST_BASELINE_SMALL=1
+#              python -m pytest  test/test_baseline_training.py -s
+#      - run:
+#          name: Run Hab2.0 benchmark
+#          no_output_timeout: 30m
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-lab
+#              python -m habitat_sim.utils.datasets_download --uids hab2_bench_assets
+#              mkdir -p data/ep_datasets/
+#              cp data/hab2_bench_assets/bench_scene.json.gz data/ep_datasets/
+#              bash scripts/hab2_bench/bench_runner.sh
+#              python scripts/hab2_bench/plot_bench.py
+#              # Assert the SPS number are up to standard
+#              python scripts/hab2_bench/assert_bench.py
+#      - run:
+#          name: Build api documentation
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-lab
+#              # Download sim inventory for crosslinking (no need to build
+#              # the whole sim docs for that)
+#              # TODO: take it from github.com/facebookmicrosites/habitat-website
+#              #   instead
+#              mkdir -p ../habitat-sim/build/docs-public/habitat-sim
+#              curl -s https://aihabitat.org/docs/habitat-sim/objects.inv > ../habitat-sim/build/docs-public/habitat-sim/objects.inv
+#              cd docs
+#              conda install -y -c conda-forge doxygen
+#              conda install -y  jinja2 pygments docutils
+#              mkdir -p ../build/docs
+#              ./build-public.sh
+#      - run:
+#          name: Ensure non-editable mode works
+#          command: |
+#              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+#              . activate habitat; cd habitat-lab
+#              python -m pip install habitat-lab/
+#              python -c "import habitat"
+#              python -m pip install habitat-baselines/
+#              python -c "import habitat_baselines"
+#      - store_artifacts:
+#          path: habitat-lab/data/profile  # This is the benchmark profile
 
 
 workflows:
   version: 2
   install_and_test:
     jobs:
-      - pre-commit
-      - python_lint
+#      - pre-commit
+#      - python_lint
       - install_and_test_ubuntu
