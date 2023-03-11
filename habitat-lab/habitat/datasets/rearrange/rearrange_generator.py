@@ -875,8 +875,10 @@ class RearrangeEpisodeGenerator:
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
 
-        # detailed receptacle stability report
-        logger.info("  Detailed sampling stats:")
+        # collect detailed receptacle stability report log
+        detailed_receptacle_stability_report = (
+            "  Detailed receptacle stability analysis:"
+        )
 
         # compute number of unstable objects for each receptacle
         rec_num_obj_vs_unstable: Dict[Receptacle, Dict[str, int]] = {}
@@ -890,15 +892,15 @@ class RearrangeEpisodeGenerator:
             if obj_name in unstable_placements:
                 rec_num_obj_vs_unstable[rec]["num_unstable_objects"] += 1
         for rec, obj_in_rec in rec_num_obj_vs_unstable.items():
-            logger.info(
-                f"      receptacle '{rec.name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
-            )
+            detailed_receptacle_stability_report += f"\n      receptacle '{rec.name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
 
         success = len(unstable_placements) == 0
 
         # optionally salvage the episode by removing unstable objects
         if self.cfg.correct_unstable_results and not success:
-            logger.info("  attempting to correct unstable placements...")
+            detailed_receptacle_stability_report += (
+                "\n  attempting to correct unstable placements..."
+            )
             for sampler_name, objects in self.episode_data[
                 "sampled_objects"
             ].items():
@@ -927,18 +929,20 @@ class RearrangeEpisodeGenerator:
                         if obj.handle not in unstable_subset
                     ]
                 else:
-                    logger.info(
-                        f"  ... could not remove all unstable placements without violating minimum object sampler requirements for {sampler_name}"
+                    detailed_receptacle_stability_report += f"\n  ... could not remove all unstable placements without violating minimum object sampler requirements for {sampler_name}"
+                    detailed_receptacle_stability_report += (
+                        "\n----------------------------------------"
                     )
-                    logger.info("----------------------------------------")
+                    logger.info(detailed_receptacle_stability_report)
                     return False
-            logger.info(
-                f"  ... corrected unstable placements successfully. Final object count = {len(self.ep_sampled_objects)}"
-            )
+            detailed_receptacle_stability_report += f"\n  ... corrected unstable placements successfully. Final object count = {len(self.ep_sampled_objects)}"
             # we removed all unstable placements
             success = True
 
-        logger.info("----------------------------------------")
+        detailed_receptacle_stability_report += (
+            "\n----------------------------------------"
+        )
+        logger.info(detailed_receptacle_stability_report)
 
         # generate debug images of all final object placements
         if self._render_debug_obs and success:
