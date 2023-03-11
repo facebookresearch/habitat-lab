@@ -7,7 +7,7 @@
 import numpy as np
 
 from habitat.utils.geometry_utils import (
-    point_in_triangle_test,
+    is_point_in_triangle,
     random_triangle_point,
 )
 
@@ -47,7 +47,7 @@ def test_point_in_triangle_test():
     ]
     for test_pair in test_pairs:
         assert (
-            point_in_triangle_test(
+            is_point_in_triangle(
                 test_pair[0], test_tri[0], test_tri[1], test_tri[2]
             )
             == test_pair[1]
@@ -63,7 +63,7 @@ def test_random_triangle_point():
         sample_centroid = np.zeros(3)
         for _samp in range(num_samples):
             tri_point = random_triangle_point(v[0], v[1], v[2])
-            assert point_in_triangle_test(tri_point, v[0], v[1], v[2])
+            assert is_point_in_triangle(tri_point, v[0], v[1], v[2])
             sample_centroid += tri_point
         # check uniformity of distribution by comparing sample centroid and triangle centroid
         sample_centroid /= num_samples

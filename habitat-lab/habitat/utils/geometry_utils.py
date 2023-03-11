@@ -135,7 +135,7 @@ def random_triangle_point(
     return v0 + coef1 * (v1 - v0) + coef2 * (v2 - v0)
 
 
-def point_in_triangle_test(
+def is_point_in_triangle(
     p: np.ndarray, v0: np.ndarray, v1: np.ndarray, v2: np.ndarray
 ) -> bool:
     """

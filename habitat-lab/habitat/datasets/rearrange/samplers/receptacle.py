@@ -7,9 +7,10 @@
 import os
 import random
 from abc import ABC, abstractmethod
+from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Union
 
 import magnum as mn
 import numpy as np
@@ -74,20 +75,24 @@ class Receptacle(ABC):
         """
         Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
         """
+        # handle global parent
         if self.parent_object_handle is None:
             # global identify by default
             return mn.Matrix4.identity_init()
-        elif not self.is_parent_object_articulated:
+
+        # handle RigidObject parent
+        if not self.is_parent_object_articulated:
             obj_mgr = sim.get_rigid_object_manager()
             obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
             # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
             return obj.visual_scene_nodes[1].absolute_transformation()
-        else:
-            ao_mgr = sim.get_articulated_object_manager()
-            obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
-            return obj.get_link_scene_node(
-                self.parent_link
-            ).absolute_transformation()
+
+        # handle ArticulatedObject parent
+        ao_mgr = sim.get_articulated_object_manager()
+        obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
+        return obj.get_link_scene_node(
+            self.parent_link
+        ).absolute_transformation()
 
     def sample_uniform_global(
         self, sim: habitat_sim.Simulator, sample_region_scale: float
@@ -119,6 +124,7 @@ class Receptacle(ABC):
         :param sim: Simulator must be provided.
         :param color: Optionally provide wireframe color, otherwise magenta.
         """
+        raise NotImplementedError
 
 
 class OnTopOfReceptacle(Receptacle):
@@ -294,6 +300,22 @@ class AABBReceptacle(Receptacle):
         # TODO: test this
 
 
+# TriangleMeshData "vertices":List[mn.Vector3] "indices":List[int]
+TriangleMeshData = namedtuple(
+    "TriangleMeshData",
+    "vertices indices",
+)
+
+
+def assert_triangles(indices: List[int]) -> None:
+    """
+    Assert that an index array is divisible by 3 as a heuristic for triangle-only faces.
+    """
+    assert (
+        len(indices) % 3 == 0
+    ), "TriangleMeshReceptacles must be exclusively composed of triangles. The provided mesh_data is not."
+
+
 class TriangleMeshReceptacle(Receptacle):
     """
     Defines a Receptacle surface as a triangle mesh.
@@ -303,7 +325,7 @@ class TriangleMeshReceptacle(Receptacle):
     def __init__(
         self,
         name: str,
-        mesh_data: Tuple[List[Any], List[Any]],  # vertices, indices
+        mesh_data: TriangleMeshData,  # vertices, indices
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
@@ -322,11 +344,11 @@ class TriangleMeshReceptacle(Receptacle):
         self.area_weighted_accumulator = (
             []
         )  # normalized float weights for each triangle for sampling
-        assert len(mesh_data[1]) % 3 == 0, "must be triangles"
+        assert_triangles(mesh_data.indices)
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0
-        for f_ix in range(int(len(mesh_data[1]) / 3)):
+        for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
@@ -353,7 +375,9 @@ class TriangleMeshReceptacle(Receptacle):
         for ix in range(3):
             verts.append(
                 np.array(
-                    self.mesh_data[0][self.mesh_data[1][int(f_ix * 3 + ix)]]
+                    self.mesh_data.vertices[
+                        self.mesh_data.indices[int(f_ix * 3 + ix)]
+                    ]
                 )
             )
         return verts
@@ -372,7 +396,9 @@ class TriangleMeshReceptacle(Receptacle):
             i = bisect_left(a, x)
             if i != len(a):
                 return i
-            raise ValueError
+            raise ValueError(
+                f"Value '{x}' is greater than all items in the list. Maximum value should be <1."
+            )
 
         # first area weighted sampling of a triangle
         sample_val = random.random()
@@ -417,8 +443,8 @@ class TriangleMeshReceptacle(Receptacle):
             color = mn.Color4.magenta()
         dblr = sim.get_debug_line_render()
         dblr.push_transform(self.get_global_transform(sim))
-        assert len(self.mesh_data[1]) % 3 == 0, "must be triangles"
-        for face in range(int(len(self.mesh_data[1]) / 3)):
+        assert_triangles(self.mesh_data.indices)
+        for face in range(int(len(self.mesh_data.indices) / 3)):
             verts = self.get_face_verts(f_ix=face)
             for edge in range(3):
                 dblr.draw_transformed_line(
@@ -451,9 +477,6 @@ def get_all_scenedataset_receptacles(
         stage_template = stm.get_template_by_handle(template_handle)
         for item in stage_template.get_user_config().get_subconfig_keys():
             if item.startswith("receptacle_"):
-                logger.info(
-                    f"template file_directory = {stage_template.file_directory}"
-                )
                 if template_handle not in receptacles["stage"]:
                     receptacles["stage"][template_handle] = []
                 receptacles["stage"][template_handle].append(item)
@@ -464,9 +487,6 @@ def get_all_scenedataset_receptacles(
         obj_template = rotm.get_template_by_handle(template_handle)
         for item in obj_template.get_user_config().get_subconfig_keys():
             if item.startswith("receptacle_"):
-                logger.info(
-                    f"template file_directory = {obj_template.file_directory}"
-                )
                 if template_handle not in receptacles["rigid"]:
                     receptacles["rigid"][template_handle] = []
                 receptacles["rigid"][template_handle].append(item)
@@ -485,7 +505,7 @@ def get_all_scenedataset_receptacles(
     return receptacles
 
 
-def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
+def import_tri_mesh_ply(ply_file: str) -> TriangleMeshData:
     """
     Returns a Tuple of (verts,indices) from a ply mesh using magnum trade importer.
 
@@ -495,9 +515,11 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     importer = manager.load_and_instantiate("AnySceneImporter")
     importer.open_file(ply_file)
 
-    # NOTE: We don't support mesh merging or multi-mesh parsing currently
+    # TODO: We don't support mesh merging or multi-mesh parsing currently
     if importer.mesh_count > 1:
-        raise NotImplementedError("TODO: multi-mesh receptacle support.")
+        raise NotImplementedError(
+            "Importing multi-mesh receptacles (mesh merging or multi-mesh parsing) is not supported."
+        )
 
     mesh_ix = 0
     mesh = importer.mesh(mesh_ix)
@@ -506,7 +528,7 @@ def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     ), "Must be a triangle mesh."
 
     # zero-copy reference to importer datastructures
-    mesh_data: Tuple[List[mn.Vector3], List[int]] = (
+    mesh_data = TriangleMeshData(
         mesh.attribute(mn.trade.MeshAttribute.POSITION),
         mesh.indices,
     )

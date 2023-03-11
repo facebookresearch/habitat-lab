@@ -33,7 +33,7 @@ from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
-from habitat.utils.geometry_utils import point_in_triangle_test
+from habitat.utils.geometry_utils import is_point_in_triangle
 from habitat_baselines.config.default import get_config as baselines_get_config
 
 CFG_TEST = "benchmark/rearrange/pick.yaml"
@@ -350,10 +350,10 @@ def test_receptacle_parsing():
                         # check that the local point is within a mesh triangle
                         in_mesh = False
                         for f_ix in range(
-                            int(len(receptacle.mesh_data[1]) / 3)
+                            int(len(receptacle.mesh_data.indices) / 3)
                         ):
                             verts = receptacle.get_face_verts(f_ix)
-                            if point_in_triangle_test(
+                            if is_point_in_triangle(
                                 expected_local_sample_point,
                                 verts[0],
                                 verts[1],
