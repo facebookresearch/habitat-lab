@@ -14,6 +14,7 @@ from omegaconf import DictConfig
 from torch import Tensor
 
 import habitat_sim.errors
+from habitat import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 from habitat.core.simulator import SensorSuite as CoreSensorSuite
@@ -29,10 +30,15 @@ class BatchRenderer:
     r"""
     Wrapper for batch rendering functionality, which renders visual sensors of N environments simultaneously.
 
-    The batch renderer pre-loads graphics data referenced by all simulators.
+    Batch rendering reduces multi-environment memory usage and loading time by pre-loading all graphics assets once.
+    This is accomplished by loading a composite GLTF file that contains all assets that will be used during a rollout.
+    It also increases rendering performance by batching, leveraging data locality, minimizing amount of contexts.
 
-    When batch rendering, simulators add their state via an observation ("render_state").
-    The batch renderer aggregates these observations and renders them all at once.
+    Internally, the system is a replay renderer, meaning that it renders gfx-replay keyframes emitted by simulators.
+    When batch rendering, simulators produce keyframes and add them to observations as "render_state".
+    In "post_step", the renderer aggregates these observations, reconstitutes each state then renders them simultaneously.
+
+    This feature is experimental and may change at any time.
     """
     _num_envs: int = 1
     _gpu_gpu: bool = False
@@ -43,9 +49,8 @@ class BatchRenderer:
     _replay_renderer_cfg: ReplayRendererConfiguration = None
     _replay_renderer: ReplayRenderer = None
 
-    # TODO: Rename
-    _transfer_images: List[mn.ImageView2D] = None
-    _transfer_buffers: List[np.ndarray] = None
+    _gpu_to_cpu_images: List[mn.ImageView2D] = None
+    _gpu_to_cpu_buffers: List[np.ndarray] = None
 
     def __init__(self, config: DictConfig, num_envs: int) -> None:
         r"""
@@ -55,17 +60,18 @@ class BatchRenderer:
         param num_envs: Number of concurrent environments to render.
         """
         assert config.habitat.simulator.enable_batch_renderer
+        logger.warn(
+            "Batch rendering enabled. This feature is experimental and may change at any time."
+        )
 
         self._num_envs = num_envs
         self._gpu_gpu = config.habitat.simulator.habitat_sim_v0.gpu_gpu
 
-        # TODO: GPU-GPU code path is not yet implemented.
+        # TODO: GPU-to-GPU code path is not yet implemented.
         if self._gpu_gpu:
             raise NotImplementedError
 
-        self._sensor_suite = BatchRenderer._create_visual_core_sensor_suite(
-            config
-        )
+        self._sensor_suite = BatchRenderer._create_core_sensor_suite(config)
         self._sensor_specifications = (
             BatchRenderer._create_sensor_specifications(
                 config, self._sensor_suite
@@ -82,9 +88,9 @@ class BatchRenderer:
             )
         )
 
-        # Pre-load dataset using composite GLTF file.
+        # Pre-load graphics assets using composite GLTF file.
         if os.path.isfile(config.habitat.dataset.composite_file):
-            print(
+            logger.info(
                 "Pre-loading composite file: "
                 + config.habitat.dataset.composite_file
             )
@@ -92,7 +98,7 @@ class BatchRenderer:
                 config.habitat.dataset.composite_file
             )
         else:
-            print(
+            logger.warn(
                 "No composite file pre-loaded. Batch rendering performance won't be optimal."
             )
 
@@ -103,10 +109,11 @@ class BatchRenderer:
 
         param observations: List of observations for each environment.
         """
-        # Pop render_state from observations and apply to replay renderer.
+        assert len(observations) == self._num_envs
+
+        # Pop "render_state" from observations and apply to replay renderer.
         # See HabitatSim.add_render_state_to_observations().
         sensor_user_prefix = "sensor_"
-        assert len(observations) == self._num_envs
         for env_index in range(self._num_envs):
             env_obs = observations[env_index]
             render_state = env_obs.pop("render_state")
@@ -118,7 +125,7 @@ class BatchRenderer:
             )
 
         # Render observations
-        batch_observations: Dict[Union[np.ndarray, Tensor]] = {}
+        batch_observations: Dict[str, Union[np.ndarray, Tensor]] = {}
         for sensor_spec in self._sensor_specifications:
             batch_observations[sensor_spec.uuid] = self.draw_observations(
                 sensor_spec
@@ -127,26 +134,29 @@ class BatchRenderer:
         # Process and format observations
         output: List[OrderedDict] = []
         for env_index in range(self._num_envs):
-            env_observations_dict = observations[env_index]["observation"]
+            env_observations = observations[env_index]["observation"]
             for sensor_spec in self._sensor_specifications:
-                env_observations_dict[sensor_spec.uuid] = batch_observations[
+                env_observations[sensor_spec.uuid] = batch_observations[
                     sensor_spec.uuid
                 ][env_index]
             # Post-process sim sensor output using lab sensor interface.
             # The same lab sensors are re-used for all environments.
             processed_obs: Observations = self._sensor_suite.get_observations(
-                env_observations_dict
+                env_observations
             )
             for key, value in processed_obs.items():
-                env_observations_dict[key] = value
-            output.append(env_observations_dict)
+                env_observations[key] = value
+            output.append(env_observations)
         return output
 
     def draw_observations(
         self, sensor_spec: BackendSensorSpec
     ) -> Union[np.ndarray, "Tensor"]:
         r"""
-        # TODO
+        Draw observations for all environments.
+        Returns a numpy ndarray in GPU-to-CPU mode or a torch tensor in GPU-to-GPU mode.
+
+        param sensor_spec: Habitat-sim sensor specifications.
         """
         draw_fn: Callable = (
             self.draw_observations_gpu_to_gpu
@@ -159,20 +169,20 @@ class BatchRenderer:
         self, sensor_spec: BackendSensorSpec
     ) -> np.ndarray:
         r"""
-        # Draw observations for all environments.
-        # Copies the sensor outputs from GPU memory into CPU ndarrays.
+        Draw observations for all environments.
+        Copies sensors output from GPU memory into CPU ndarrays, during which the thread is blocked.
+
+        param sensor_spec: Habitat-sim sensor specifications.
         """
-        # TODO: Only one color sensor supported.
+        # TODO: Currently only one color sensor is supported.
         if sensor_spec.sensor_type == habitat_sim.SensorType.COLOR:
-            if self._transfer_images is None:
-                # Allocate the image buffers
-                self._transfer_images = []
-                self._transfer_buffers = []
-                self._transfer_buffer_inverted_views = []
+            if self._gpu_to_cpu_images is None:
+                # Allocate the transfer buffers
+                self._gpu_to_cpu_images = []
+                self._gpu_to_cpu_buffers = []
                 storage = mn.PixelStorage()
                 storage.alignment = 2
                 for env_idx in range(self._num_envs):
-                    # Create color buffer
                     env_buffer = np.empty(
                         (
                             sensor_spec.resolution[0],
@@ -181,24 +191,26 @@ class BatchRenderer:
                         ),
                         dtype=np.uint8,
                     )
-                    self._transfer_buffers.append(env_buffer)
+                    self._gpu_to_cpu_buffers.append(env_buffer)
 
                     # Create image view for writing into buffer from Magnum
-                    env_img = mn.MutableImageView2D(
+                    env_img_view = mn.MutableImageView2D(
                         mn.PixelFormat.RGBA8_UNORM,
                         [sensor_spec.resolution[1], sensor_spec.resolution[0]],
                         env_buffer,
                     )
-                    self._transfer_images.append(env_img)
+                    self._gpu_to_cpu_images.append(env_img_view)
 
                     # Flip the transfer buffer view vertically for presentation
-                    self._transfer_buffers[env_idx] = np.flip(
-                        self._transfer_buffers[env_idx].view(), axis=0
+                    self._gpu_to_cpu_buffers[env_idx] = np.flip(
+                        self._gpu_to_cpu_buffers[env_idx].view(), axis=0
                     )
+        else:
+            raise NotImplementedError
 
-            # Render
-            self._replay_renderer.render_into_cpu_images(self._transfer_images)
-            return self._transfer_buffers
+        # Render
+        self._replay_renderer.render_into_cpu_images(self._gpu_to_cpu_images)
+        return np.stack(self._gpu_to_cpu_buffers)
 
     def draw_observations_gpu_to_gpu(
         self, sensor_spec: BackendSensorSpec
@@ -207,26 +219,27 @@ class BatchRenderer:
 
     def copy_output_to_image(self) -> List[np.ndarray]:
         r"""
-        Utility function that creates a list of RGB images (ndarray) for each
+        Utility function that creates a list of RGB images (as ndarrays) for each
         environment using unprocessed data that was rendered during the last
         post_step call. For testing and debugging only.
         """
-        sensor_spec: BackendSensorSpec = self._sensor_specifications[0]
+        # TODO: Only one color sensor supported.
         output: List[np.ndarray] = []
         if self._gpu_gpu:
             raise NotImplementedError
         else:
-            # TODO: Only one color sensor supported
             for env_idx in range(self._num_envs):
-                output.append(self._transfer_buffers[env_idx][..., 0:3])
+                output.append(self._gpu_to_cpu_buffers[env_idx][..., 0:3])
         return output
 
     @staticmethod
-    def _create_visual_core_sensor_suite(
+    def _create_core_sensor_suite(
         config: DictConfig,
     ) -> CoreSensorSuite:
         r"""
         Instantiates a core sensor suite from configuration that only contains visual sensors.
+
+        param config: Base configuration.
         """
         sim_sensors = []
         for agent_cfg in config.habitat.simulator.agents.values():
@@ -245,7 +258,11 @@ class BatchRenderer:
     ) -> List[BackendSensorSpec]:
         r"""
         Creates a list of Habitat-Sim sensor specifications from a specified core sensor suite.
+
+        param config: Base configuration.
+        param sensor_suite: Core sensor suite that only contains visual sensors. See _create_core_sensor_suite().
         """
+        # Note: Copied from habitat_simulator.create_sim_config().
         sensor_specifications: list = []
         for sensor in sensor_suite.sensors.values():
             assert isinstance(sensor, HabitatSimSensor)
@@ -285,6 +302,10 @@ class BatchRenderer:
     ) -> ReplayRendererConfiguration:
         r"""
         Creates the configuration info for creating a replay renderer.
+
+        param config: Base configuration.
+        param num_env: Number of environments.
+        param sensor_specifications: Habitat-Sim visual sensor specifications. See _create_sensor_specifications().
         """
         replay_renderer_cfg: ReplayRendererConfiguration = (
             ReplayRendererConfiguration()
