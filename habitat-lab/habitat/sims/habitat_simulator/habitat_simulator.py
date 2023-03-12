@@ -676,24 +676,19 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         return self._prev_sim_obs.get("collided", False)
 
     def add_render_state_to_observations(self, observations):
-        r"""Adds an item to observations ("render_state") that contains the latest keyframe
-        and sensor transforms for batch renderer consumption.
-        This is used to communicate the state of concurrent simulators to the batch renderer
-        between processes.
+        r"""Adds an item to observations that contains the latest gfx-replay keyframe.
+        This is used to communicate the state of concurrent simulators to the batch renderer between processes.
 
-        :param observations: Original observations upon which the render_state element is added.
+        :param observations: Original observations upon which the render state is added.
         """
         if self.config.enable_batch_renderer:
             assert "render_state" not in observations
-            sensor_user_prefix = (
-                "sensor_"  # temp: hard-coded to match BatchRenderer
-            )
             for _sensor_uuid, sensor in self._sensors.items():
                 node = sensor._sensor_object.node
                 transform = node.absolute_transformation()
                 rotation = mn.Quaternion.from_matrix(transform.rotation())
                 self.gfx_replay_manager.add_user_transform_to_keyframe(
-                    sensor_user_prefix + _sensor_uuid,
+                    "sensor_" + _sensor_uuid,
                     transform.translation,
                     rotation,
                 )

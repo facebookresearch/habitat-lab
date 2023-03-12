@@ -13,8 +13,8 @@ import numpy as np
 from omegaconf import DictConfig
 from torch import Tensor
 
-import habitat_sim.errors
-from habitat import logger
+import habitat_sim
+from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
 from habitat.core.simulator import SensorSuite as CoreSensorSuite
@@ -35,7 +35,7 @@ class BatchRenderer:
     It also increases rendering performance by batching, leveraging data locality, minimizing amount of contexts.
 
     Internally, the system is a replay renderer, meaning that it renders gfx-replay keyframes emitted by simulators.
-    When batch rendering, simulators produce keyframes and add them to observations as "render_state".
+    When batch rendering, simulators produce keyframes and add them to observations as RENDER_STATE_OBSERVATION_KEY.
     In "post_step", the renderer aggregates these observations, reconstitutes each state then renders them simultaneously.
 
     This feature is experimental and may change at any time.
@@ -113,7 +113,6 @@ class BatchRenderer:
 
         # Pop "render_state" from observations and apply to replay renderer.
         # See HabitatSim.add_render_state_to_observations().
-        sensor_user_prefix = "sensor_"
         for env_index in range(self._num_envs):
             env_obs = observations[env_index]
             render_state = env_obs.pop("render_state")
@@ -121,7 +120,7 @@ class BatchRenderer:
                 env_index, render_state
             )
             self._replay_renderer.set_sensor_transforms_from_keyframe(
-                env_index, sensor_user_prefix
+                env_index, "sensor_"
             )
 
         # Render observations
