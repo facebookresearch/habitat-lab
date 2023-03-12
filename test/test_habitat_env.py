@@ -290,8 +290,7 @@ def test_rl_vectorized_envs(gpu2gpu):
                 ), "dones should be true after max_episode steps"
 
 
-# TODO: @pytest.mark.parametrize("gpu2gpu", [False, True])
-@pytest.mark.parametrize("gpu2gpu", [True])
+@pytest.mark.parametrize("gpu2gpu", [False])
 def test_rl_batch_render_envs(gpu2gpu):
     import habitat_sim
 
