@@ -143,7 +143,7 @@ jobs:
                 bash ~/miniconda.sh -b -p $HOME/miniconda
                 rm ~/miniconda.sh
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-                conda create -y -n habitat python=3.7
+                conda create -y -n habitat python=3.9
                 . activate habitat
                 pip install -U pip
 
