@@ -171,7 +171,6 @@ class HumanoidRearrangeController:
                 new_angle = new_angle * np.pi / 180
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
-            new_angle = new_angle * 180 / np.pi
 
         forward_V = mn.Vector3(forward_V)
         forward_V = forward_V.normalized()
@@ -235,9 +234,12 @@ class HumanoidRearrangeController:
 
         obj_transform_offset = obj_transform
 
-        # This is the rotation and translation explained by the current pose
+        # This is the rotation and translation caused by the current motion pose
+        # we still need to apply the base_transform to obtain the full transform
         self.obj_transform_offset = obj_transform
 
+        # The base_transform here is independent of transforms caused by the current
+        # motion pose.
         obj_transform_base = look_at_path_T
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
