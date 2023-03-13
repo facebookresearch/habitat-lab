@@ -24,6 +24,7 @@ habitat:
       - start_recep_segmentation
       - goal_recep_segmentation
       - object_category
+      - camera_pose
   environment:
     max_episode_steps: 400
   simulator:
@@ -44,15 +45,15 @@ habitat:
            head_rgb_sensor:
              height: 640
              width: 480
-             hfov: 43
+             hfov: 42
            head_depth_sensor:
              height: 640
              width: 480
-             hfov: 43
+             hfov: 42
            head_panoptic_sensor:
              height: 640
              width: 480
-             hfov: 43
+             hfov: 42
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
@@ -61,4 +62,4 @@ habitat:
     data_path: data/datasets/floorplanner/v1/train/cat_indoor_10.json.gz
     type: ObjectRearrangeDataset-v0
   task:
-    goal_type: 'object_on_recep'
+    goal_type: 'recep'

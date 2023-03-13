@@ -1194,3 +1194,44 @@ class BadCalledTerminate(Measure):
         ].get_metric()
 
         self._metric = (not is_succ) and does_action_want_stop
+
+
+@registry.register_sensor
+class CameraPoseSensor(Sensor):
+    cls_uuid: str = "camera_pose"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        task,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max, 
+            shape=(4, 4), 
+            dtype=np.float32
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[np.ndarray]:
+        return self._sim._sensors["robot_head_rgb"]._sensor_object.node.transformation

@@ -390,7 +390,9 @@ class StartRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
 class GoalRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
     type: str = "GoalRecepSegmentationSensor"
 
-
+@dataclass
+class CameraPoseSensorConfig(LabSensorConfig):
+    type: str = "CameraPoseSensor"
 
 @dataclass
 class LocalizationSensorConfig(LabSensorConfig):
@@ -1605,6 +1607,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="goal_recep_segmentation_sensor",
     node=GoalRecepSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.camera_pose_sensor",
+    group="habitat/task/lab_sensors",
+    name="camera_pose_sensor",
+    node=CameraPoseSensorConfig,
 )
 
 # Task Measurements

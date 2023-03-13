@@ -30,6 +30,7 @@ defaults:
     - goal_recep_segmentation_sensor
     - robot_start_gps_sensor
     - robot_start_compass_sensor
+    - camera_pose_sensor
   - _self_
 
 type: CatNavToObjTask-v0
