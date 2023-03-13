@@ -171,27 +171,27 @@ class PPOTrainer(BaseRLTrainer):
             self.config.habitat_baselines.rl.ddppo.pretrained_encoder
             or self.config.habitat_baselines.rl.ddppo.pretrained
         ):
-            pretrained_state = torch.load(
+            pretrained_state = self.load_checkpoint(
                 self.config.habitat_baselines.rl.ddppo.pretrained_weights,
                 map_location="cpu",
             )
-
-        if self.config.habitat_baselines.rl.ddppo.pretrained:
-            self.actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                }
-            )
-        elif self.config.habitat_baselines.rl.ddppo.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            self.actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
-                }
-            )
+            if self.config.habitat_baselines.rl.ddppo.pretrained:
+                prefix = "actor_critic."
+                self.actor_critic.load_state_dict(
+                    {  # type: ignore
+                        k[len(prefix) :]: v
+                        for k, v in pretrained_state["state_dict"].items()
+                    }
+                )
+            else:
+                prefix = "actor_critic.net.visual_encoder."
+                self.actor_critic.net.visual_encoder.load_state_dict(
+                    {
+                        k[len(prefix) :]: v
+                        for k, v in pretrained_state["state_dict"].items()
+                        if k.startswith(prefix)
+                    }
+                )
 
         if not self.config.habitat_baselines.rl.ddppo.train_encoder:
             self._static_encoder = True
