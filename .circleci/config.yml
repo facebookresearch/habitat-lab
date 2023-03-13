@@ -14,7 +14,7 @@ orbs:
 jobs:
   python_lint:
     docker:
-      - image: cimg/python:3.7.13
+      - image: cimg/python:3.9.16
     steps:
       - checkout
       - run:
@@ -47,7 +47,7 @@ jobs:
               if test -d  habitat_baselines ; then  echo "folder habitat_baselines should not exist"; exit 1; fi
   pre-commit:
     docker:
-      - image: cimg/python:3.7.13
+      - image: cimg/python:3.9.16
     working_directory: ~/repo/
 
     steps:
