@@ -1,9 +1,7 @@
-
-
 version: 2.1
 gpu: &gpu
   machine:
-    image: ubuntu-1604-cuda-10.1:201909-23
+    image: ubuntu-2004-cuda-11.4:202110-01
   resource_class: gpu.nvidia.medium
   environment:
     FPS_THRESHOLD: 900
@@ -101,16 +99,18 @@ jobs:
                   curl \
                   vim \
                   ca-certificates \
-                  libbullet-dev \
                   libjpeg-dev \
                   libglm-dev \
                   libegl1-mesa-dev \
+                  ninja-build \
                   xorg-dev \
                   freeglut3-dev \
                   pkg-config \
                   wget \
                   zip \
+                  lcov\
                   libhdf5-dev \
+                  libomp-dev \
                   unzip || true
               sudo apt install --allow-change-held-packages \
                   texlive-base \
@@ -121,13 +121,7 @@ jobs:
           name: Check CUDA
           no_output_timeout: 20m
           background: true
-          command: |
-              # wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
-              # sudo dpkg -i cuda-repo-ubuntu1604_8.0.44-1_amd64.deb
-              # sudo apt-get update || true
-              # sudo apt-get --yes --force-yes install cuda
-              # touch ./cuda_installed
-              nvidia-smi
+          command: nvidia-smi
       # Restore Conda cache
       - restore_cache:
           keys:
@@ -145,9 +139,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.7
                 . activate habitat
-                pip install -U pip
-
-                conda install -q -y -c conda-forge ninja ccache numpy
+                conda install -q -y -c conda-forge ninja ccache
                 pip install pytest-sugar>=0.9.6 mock cython pygame flaky pytest pytest-mock pytest-cov psutil
               fi
       - run:
@@ -159,14 +151,16 @@ jobs:
               . activate habitat;
               if [ ! -f ~/miniconda/pytorch_installed ]
               then
+                # For whatever reason we have to install pytorch first. If it isn't
+                # it installs the 1.4 cpuonly version. Which is no good.
                 echo "Installing pytorch"
-                conda install -y pytorch==1.4.0 torchvision cudatoolkit=10.0 -c pytorch
+                conda install -y pytorch==1.12.1=py3.7_cuda11.3_cudnn8.3.2_0 torchvision==0.13.1=py37_cu113 cudatoolkit=11.3 -c pytorch -c nvidia
               fi
               touch ~/miniconda/pytorch_installed
               python -c 'import torch; print("Has cuda ? ",torch.cuda.is_available()); print("torch version : ",torch.__version__);'
       - restore_cache:
           keys:
-            - habitat-sim-{{ checksum "./hsim_sha" }}
+            - v1-habitat-sim-{{ checksum "./hsim_sha" }}
       - restore_cache:
           keys:
             - ccache-{{ arch }}-main
@@ -188,12 +182,11 @@ jobs:
               then
                 git clone https://github.com/facebookresearch/habitat-sim.git --recursive
               fi
-              # while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
               pip install -r requirements.txt --progress-bar off
-              pip install pillow
+              pip install imageio imageio-ffmpeg
               python -u setup.py install --headless --with-cuda --bullet
       - run:
           name: Ccache stats
@@ -240,12 +233,11 @@ jobs:
       - run:
           name: Run sim benchmark
           command: |
-              # while [ ! -f ./cuda_installed ]; do sleep 2; done # wait for CUDA
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat; cd habitat-sim
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
       - save_cache:
-          key: habitat-sim-{{ checksum "./hsim_sha" }}
+          key: v1-habitat-sim-{{ checksum "./hsim_sha" }}
           background: true
           paths:
             - ./habitat-sim
