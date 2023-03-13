@@ -291,8 +291,85 @@ class DebugVisualizer:
         :param show: If True, open and display the image immediately.
         """
         obj_abs_transform = obj.root_scene_node.absolute_transformation()
-        look_at = obj_abs_transform.transform_point(obj_bb.center())
-        bb_size = obj_bb.size()
+        return self._peek_bb(
+            bb_name=obj.handle,
+            bb=obj_bb,
+            world_transform=obj_abs_transform,
+            cam_local_pos=cam_local_pos,
+            peek_all_axis=peek_all_axis,
+            additional_savefile_prefix=additional_savefile_prefix,
+            debug_lines=debug_lines,
+            debug_circles=debug_circles,
+            show=show,
+        )
+
+    def peek_scene(
+        self,
+        cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
+        show: bool = False,
+    ) -> str:
+        """
+        Helper function to generate image(s) of the scene for contextual debugging purposes.
+        Specialization to peek a scene. See _peek_bb.
+        Compute a camera placement to view the scene. Show/save an observation. Return the filepath.
+
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
+        """
+        return self._peek_bb(
+            bb_name=self.sim.curr_scene_name,
+            bb=self.sim.get_active_scene_graph().get_root_node().cumulative_bb,
+            world_transform=mn.Matrix4.identity_init(),
+            cam_local_pos=cam_local_pos,
+            peek_all_axis=peek_all_axis,
+            additional_savefile_prefix=additional_savefile_prefix,
+            debug_lines=debug_lines,
+            debug_circles=debug_circles,
+            show=show,
+        )
+
+    def _peek_bb(
+        self,
+        bb_name: str,
+        bb: mn.Range3D,
+        world_transform: Optional[mn.Matrix4] = None,
+        cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
+        show: bool = False,
+    ) -> str:
+        """
+        Internal helper function to generate image(s) of any bb for contextual debugging purposes.
+        Compute a camera placement to view the bb. Show/save an observation. Return the filepath.
+
+        :param bb_name: The name of the entity we're peeking for filepath naming.
+        :param bb: The entity's bounding box (provided by consumer functions.)
+        :param world_transform: The entity's world transform provided by consumer functions, default identity.
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
+        """
+        if world_transform is None:
+            world_transform = mn.Matrix4.identity_init()
+        look_at = world_transform.transform_point(bb.center())
+        bb_size = bb.size()
         # TODO: query fov and aspect from the camera spec
         fov = 90
         aspect = 0.75
@@ -307,14 +384,14 @@ class DebugVisualizer:
             cam_local_pos = mn.Vector3(0, 0, -1)
         if not peek_all_axis:
             look_from = (
-                obj_abs_transform.transform_vector(cam_local_pos).normalized()
+                world_transform.transform_vector(cam_local_pos).normalized()
                 * distance
                 + look_at
             )
             self.render_debug_lines(debug_lines)
             self.render_debug_circles(debug_circles)
             return self.save_observation(
-                prefix=additional_savefile_prefix + "peek_" + obj.handle,
+                prefix=additional_savefile_prefix + "peek_" + bb_name,
                 look_at=look_at,
                 look_from=look_from,
                 show=show,
@@ -326,7 +403,7 @@ class DebugVisualizer:
             axis_vec = mn.Vector3()
             axis_vec[axis % 3] = 1 if axis // 3 == 0 else -1
             look_from = (
-                obj_abs_transform.transform_vector(axis_vec).normalized()
+                world_transform.transform_vector(axis_vec).normalized()
                 * distance
                 + look_at
             )
@@ -356,7 +433,7 @@ class DebugVisualizer:
             stitched_image.show()
         save_path = os.path.join(
             self.output_path,
-            additional_savefile_prefix + "peek_6x_" + obj.handle + ".png",
+            additional_savefile_prefix + "peek_6x_" + bb_name + ".png",
         )
         stitched_image.save(save_path)
         return save_path
