@@ -34,9 +34,10 @@ class Benchmark:
         :param config_paths: file to be used for creating the environment
         :param eval_remote: boolean indicating whether evaluation should be run remotely or locally
         """
+        self.action_space = action_space
         overrides = []
         if action_space is not None:
-            overrides.append("habitat/task/actions=" + action_space)
+            overrides.append("habitat/task/actions=" + self.action_space)
         config_env = get_config(config_paths, overrides)
         self._eval_remote = eval_remote
 
@@ -75,6 +76,12 @@ class Benchmark:
         env_address_port = os.environ.get("EVALENV_ADDPORT", "localhost:8085")
         channel = grpc.insecure_channel(env_address_port)
         stub = evaluation_pb2_grpc.EnvironmentStub(channel)
+
+        stub.set_action_space(
+            evaluation_pb2.Package(
+                SerializedEntity=pack_for_grpc(self.action_space)
+            )
+        )
 
         base_num_episodes = unpack_for_grpc(
             stub.num_episodes(evaluation_pb2.Package()).SerializedEntity
