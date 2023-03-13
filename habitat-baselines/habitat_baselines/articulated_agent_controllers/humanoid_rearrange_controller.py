@@ -101,7 +101,9 @@ class HumanoidRearrangeController:
         )
 
         # State variables
-        self.obj_transform = mn.Matrix4()
+        self.obj_transform_offset = mn.Matrix4()
+        self.obj_transform_base = mn.Matrix4()
+
         self.prev_orientation = None
         self.walk_mocap_frame = 0
 
@@ -112,37 +114,16 @@ class HumanoidRearrangeController:
 
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)"""
-        self.obj_transform.translation = position + self.base_offset
-
-    def get_corrected_base(self, obj_transform: mn.Matrix4):
-        """
-        When performing a walking motion the character rotation and translation get shifted.
-        This function returns a base pose that accounts for that, to make sure that the nav path
-        does not get stuck.
-        :param obj_transform: the transformation of the humanoid the we should undo
-        """
-
-        offset = self.transform_pose_offset
-        base_correction = mn.Matrix4.from_(
-            offset.rotation().transposed(),
-            -offset.rotation().transposed() * offset.translation,
-        )
-
-        base_T = obj_transform @ base_correction
-        base_pos = base_T.translation - base_T.transform_vector(
-            self.base_offset
-        )
-        return base_pos, base_T
+        self.obj_transform_offset = mn.Matrix4()
+        self.obj_transform_base.translation = position + self.base_offset
 
     def get_stop_pose(self):
         """
         Returns a stop, standing pose
         """
         joint_pose = self.stop_pose.joints
-        obj_transform = (
-            self.obj_transform
-        )  # the object transform does not change
-        return joint_pose, obj_transform
+        # the object transform does not change
+        return joint_pose, self.obj_transform_offset, self.obj_transform_base
 
     def compute_turn(self, target_position: mn.Vector3):
         """
@@ -243,31 +224,44 @@ class HumanoidRearrangeController:
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # We correct the object transform
-        obj_transform.translation *= 0
         look_at_path_T = mn.Matrix4.look_at(
-            self.obj_transform.translation,
-            self.obj_transform.translation + forward_V.normalized(),
+            self.obj_transform_base.translation,
+            self.obj_transform_base.translation + forward_V.normalized(),
             mn.Vector3.y_axis(),
         )
 
         # Remove the forward component, and orient according to forward_V
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
-        # This is the rotation and translation explained by the current pose
-        self.transform_pose_offset = obj_transform
-        obj_transform = look_at_path_T @ obj_transform
-        forward_V_dist = forward_V * dist_diff * distance_multiplier
-        obj_transform.translation += forward_V_dist
-        self.obj_transform = obj_transform
+        obj_transform_offset = obj_transform
 
-        return joint_pose, obj_transform
+        # This is the rotation and translation explained by the current pose
+        self.obj_transform_offset = obj_transform
+
+        obj_transform_base = look_at_path_T
+        forward_V_dist = forward_V * dist_diff * distance_multiplier
+        obj_transform_base.translation += forward_V_dist
+
+        self.obj_transform_base = obj_transform_base
+
+        return joint_pose, obj_transform_offset, obj_transform_base
 
     @classmethod
-    def vectorize_pose(cls, pose: List, transform: mn.Matrix4):
+    def vectorize_pose(
+        cls,
+        pose: List,
+        transform_offset: mn.Matrix4,
+        transform_base: mn.Matrix4,
+    ):
         """
         Transforms a pose so that it can be passed as an argument to HumanoidJointAction
 
         :param pose: a list of 17*4 elements, corresponding to the flattened quaternions
-        :param transform: an object transform
+        :param transform_offset: an object transform indicating the offset from the agent position
+        :param transform_base: a transform that indicates the global rotation and position of the character
         """
-        return pose + list(np.asarray(transform.transposed()).flatten())
+        return (
+            pose
+            + list(np.asarray(transform_offset.transposed()).flatten())
+            + list(np.asarray(transform_base.transposed()).flatten())
+        )

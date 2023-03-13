@@ -310,8 +310,14 @@ def get_input_vel_ctlr(
         else:
             # Use the controller
             relative_pos = mn.Vector3(base_action[0], 0, base_action[1])
-            pose, root_trans = humanoid_controller.get_walk_pose(relative_pos)
-            base_action = humanoid_controller.vectorize_pose(pose, root_trans)
+            (
+                pose,
+                root_trans_offset,
+                root_trans_base,
+            ) = humanoid_controller.get_walk_pose(relative_pos)
+            base_action = humanoid_controller.vectorize_pose(
+                pose, root_trans_offset, root_trans_base
+            )
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the articulated agent, useful for debugging.
