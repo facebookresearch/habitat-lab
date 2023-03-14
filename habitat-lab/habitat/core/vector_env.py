@@ -658,15 +658,16 @@ class BatchRenderedVectorEnv(VectorEnv):
     Instead of individually rendering their environment, the worker simulators include their render state into observations.
     The BatchRenderedVectorEnv then provides these observations to a batch renderer to produce all visual sensor observations simultaneously.
 
-    This allows all environments to share GPU memory, leading to considerable memory savings, loading time reduction and rendering speed increase.
+    Refer to the BatchRenderer class.
     """
 
     _config: "DictConfig"
     _batch_renderer: BatchRenderer
 
-    # TODO: Consider passing the root config as a constructor parameter to vector_env and removing this function
     def initialize_batch_renderer(self, config: "DictConfig") -> None:
-        r"""Initialize batch renderer."""
+        r"""Initialize batch renderer.
+
+        :param config: Base configuration."""
         self._config = config
         self._batch_renderer = BatchRenderer(config, self.num_envs)
 
@@ -690,4 +691,10 @@ class BatchRenderedVectorEnv(VectorEnv):
             raise NotImplementedError
 
     def post_step(self, observations) -> List[OrderedDict]:
+        r"""
+        Renders observations for all environments by consuming "render_state" observations.
+
+        :param observations: List of observations for each environment.
+        :return: List of rendered observations for each environment.
+        """
         return self._batch_renderer.post_step(observations)

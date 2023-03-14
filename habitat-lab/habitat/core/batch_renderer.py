@@ -56,8 +56,8 @@ class BatchRenderer:
         r"""
         Initialize the batch renderer.
 
-        param config: Base configuration.
-        param num_envs: Number of concurrent environments to render.
+        :param config: Base configuration.
+        :param num_envs: Number of concurrent environments to render.
         """
         assert config.habitat.simulator.enable_batch_renderer
         logger.warn(
@@ -104,10 +104,10 @@ class BatchRenderer:
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""
-        Renders observations for all environments.
-        This consumes "render_state" observations and adds results the observations.
+        Renders observations for all environments by consuming "render_state" observations.
 
-        param observations: List of observations for each environment.
+        :param observations: List of observations for each environment.
+        :return: List of rendered observations for each environment.
         """
         assert len(observations) == self._num_envs
 
@@ -153,9 +153,9 @@ class BatchRenderer:
     ) -> Union[np.ndarray, "Tensor"]:
         r"""
         Draw observations for all environments.
-        Returns a numpy ndarray in GPU-to-CPU mode or a torch tensor in GPU-to-GPU mode.
 
-        param sensor_spec: Habitat-sim sensor specifications.
+        :param sensor_spec: Habitat-sim sensor specifications.
+        :return: A numpy ndarray in GPU-to-CPU mode, or a torch tensor in GPU-to-GPU mode.
         """
         draw_fn: Callable = (
             self.draw_observations_gpu_to_gpu
@@ -171,7 +171,8 @@ class BatchRenderer:
         Draw observations for all environments.
         Copies sensors output from GPU memory into CPU ndarrays, during which the thread is blocked.
 
-        param sensor_spec: Habitat-sim sensor specifications.
+        :param sensor_spec: Habitat-sim sensor specifications.
+        :return: ndarray containing renders.
         """
         # TODO: Currently only one color sensor is supported.
         if sensor_spec.sensor_type == habitat_sim.SensorType.COLOR:
@@ -220,6 +221,8 @@ class BatchRenderer:
         Utility function that creates a list of RGB images (as ndarrays) for each
         environment using unprocessed data that was rendered during the last
         post_step call. For testing and debugging only.
+
+        :return: List of RGB images as ndarrays.
         """
         # TODO: Only one color sensor supported.
         output: List[np.ndarray] = []
@@ -237,7 +240,7 @@ class BatchRenderer:
         r"""
         Instantiates a core sensor suite from configuration that only contains visual sensors.
 
-        param config: Base configuration.
+        :param config: Base configuration.
         """
         sim_sensors = []
         for agent_cfg in config.habitat.simulator.agents.values():
@@ -257,8 +260,10 @@ class BatchRenderer:
         r"""
         Creates a list of Habitat-Sim sensor specifications from a specified core sensor suite.
 
-        param config: Base configuration.
-        param sensor_suite: Core sensor suite that only contains visual sensors. See _create_core_sensor_suite().
+        :param config: Base configuration.
+        :param sensor_suite: Core sensor suite that only contains visual sensors. See _create_core_sensor_suite().
+
+        :return: List of Habitat-Sim sensor specifications
         """
         # Note: Copied from habitat_simulator.create_sim_config().
         sensor_specifications: list = []
@@ -301,9 +306,10 @@ class BatchRenderer:
         r"""
         Creates the configuration info for creating a replay renderer.
 
-        param config: Base configuration.
-        param num_env: Number of environments.
-        param sensor_specifications: Habitat-Sim visual sensor specifications. See _create_sensor_specifications().
+        :param config: Base configuration.
+        :param num_env: Number of environments.
+        :param sensor_specifications: Habitat-Sim visual sensor specifications. See _create_sensor_specifications().
+        :return: Replay renderer configuration.
         """
         replay_renderer_cfg: ReplayRendererConfiguration = (
             ReplayRendererConfiguration()
