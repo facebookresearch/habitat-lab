@@ -14,6 +14,7 @@ import tqdm
 
 from habitat.core.logging import logger
 from habitat.core.utils import try_cv2_import
+from habitat.utils.common import flatten_dict
 from habitat.utils.visualizations import maps
 
 cv2 = try_cv2_import()
@@ -238,31 +239,28 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
         render_frame = np.concatenate(render_obs_images, axis=1)
 
     # draw collision
-    if info.get("collisions.is_collision", False):
+    collisions_key = "collisions"
+    if collisions_key in info and info[collisions_key]["is_collision"]:
         render_frame = draw_collision(render_frame)
 
-    if "top_down_map.map" in info:
-        map_info = {
-            k[len("top_down_map.") :]: v
-            for k, v in info.items()
-            if k.startswith("top_down_map.")
-        }
+    top_down_map_key = "top_down_map"
+    if top_down_map_key in info:
         top_down_map = maps.colorize_draw_agent_and_fit_to_height(
-            map_info, render_frame.shape[0]
+            info[top_down_map_key], render_frame.shape[0]
         )
         render_frame = np.concatenate((render_frame, top_down_map), axis=1)
     return render_frame
 
 
-def append_text_to_image(image: np.ndarray, text: str):
-    r"""Appends text underneath an image of size (height, width, channels).
+def append_text_underneath_image(image: np.ndarray, text: str):
+    """Appends text underneath an image of size (height, width, channels).
+
     The returned image has white text on a black background. Uses textwrap to
     split long text into multiple lines.
-    Args:
-        image: the image to put text underneath
-        text: a string to display
-    Returns:
-        A new image with text inserted underneath the input image
+
+    :param image: The image to appends text underneath.
+    :param text: The string to display.
+    :return: A new image with text appended underneath.
     """
     h, w, c = image.shape
     font_size = 0.5
@@ -291,3 +289,79 @@ def append_text_to_image(image: np.ndarray, text: str):
     text_image = blank_image[0 : y + 10, 0:w]
     final = np.concatenate((image, text_image), axis=0)
     return final
+
+
+def overlay_text_to_image(
+    image: np.ndarray, text: List[str], font_size: float = 0.5
+):
+    r"""Overlays lines of text on top of an image.
+
+    First this will render to the left-hand side of the image, once that column is full,
+    it will render to the right hand-side of the image.
+
+    :param image: The image to put text on top.
+    :param text: The list of strings which will be rendered (separated by new lines).
+    :param font_size: Font size.
+    :return: A new image with text overlaid on top.
+    """
+    h, w, c = image.shape
+    font_thickness = 1
+    font = cv2.FONT_HERSHEY_SIMPLEX
+
+    y = 0
+    left_aligned = True
+    for line in text:
+        textsize = cv2.getTextSize(line, font, font_size, font_thickness)[0]
+        y += textsize[1] + 10
+        if y > h:
+            left_aligned = False
+            y = textsize[1] + 10
+
+        if left_aligned:
+            x = 10
+        else:
+            x = w - (textsize[0] + 10)
+
+        cv2.putText(
+            image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (0, 0, 0),
+            font_thickness * 2,
+            lineType=cv2.LINE_AA,
+        )
+
+        cv2.putText(
+            image,
+            line,
+            (x, y),
+            font,
+            font_size,
+            (255, 255, 255, 255),
+            font_thickness,
+            lineType=cv2.LINE_AA,
+        )
+
+    return np.clip(image, 0, 255)
+
+
+def overlay_frame(frame, info, additional=None):
+    """
+    Renders text from the `info` dictionary to the `frame` image.
+    """
+
+    lines = []
+    flattened_info = flatten_dict(info)
+    for k, v in flattened_info.items():
+        if isinstance(v, str):
+            lines.append(f"{k}: {v}")
+        else:
+            lines.append(f"{k}: {v:.2f}")
+    if additional is not None:
+        lines.extend(additional)
+
+    frame = overlay_text_to_image(frame, lines, font_size=0.25)
+
+    return frame

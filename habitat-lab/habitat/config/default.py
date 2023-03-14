@@ -103,6 +103,13 @@ def patch_config(cfg: DictConfig) -> DictConfig:
     return cfg
 
 
+def register_configs():
+    """
+    This method will register the Habitat-lab benchmark configurations.
+    """
+    register_hydra_plugin(HabitatConfigPlugin)
+
+
 def get_config(
     config_path: str,
     overrides: Optional[List[str]] = None,
@@ -115,8 +122,7 @@ def get_config(
     :param configs_dir: path to the config files root directory (defaults to :ref:`_HABITAT_CFG_DIR`).
     :return: composed config object.
     """
-    register_hydra_plugin(HabitatConfigPlugin)
-
+    register_configs()
     config_path = get_full_config_path(config_path, configs_dir)
     # If get_config is called from different threads, Hydra might
     # get initialized twice leading to issues. This lock fixes it.

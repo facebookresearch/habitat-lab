@@ -164,7 +164,7 @@ class EnvironmentWorkerProcess(ProcessBase):
                 self._episode_id += 1
                 self._step_id = 0
                 if self.auto_reset_done:
-                    obs = self.env.reset()
+                    obs = self.env.reset()  # type: ignore [assignment]
 
         return obs, reward, done, info
 

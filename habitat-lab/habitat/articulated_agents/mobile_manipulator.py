@@ -8,14 +8,16 @@ import attr
 import magnum as mn
 import numpy as np
 
-from habitat.robots.manipulator import Manipulator
-from habitat.robots.robot_base import RobotBase
+from habitat.articulated_agents.articulated_agent_base import (
+    ArticulatedAgentBase,
+)
+from habitat.articulated_agents.manipulator import Manipulator
 from habitat_sim.simulator import Simulator
 
 
 @attr.s(auto_attribs=True, slots=True)
-class RobotCameraParams:
-    """Data to configure a camera placement on the robot.
+class ArticulatedAgentCameraParams:
+    """Data to configure a camera placement on the articulated agent.
     :property attached_link_id: Which link ID this camera is attached to, -1
         for the base link.
     :property cam_offset_pos: The 3D position of the camera relative to the
@@ -45,12 +47,12 @@ class MobileManipulatorParams:
         resets to 0.
     :property ee_offset: The 3D offset from the end-effector link to the true
         end-effector position.
-    :property ee_link: The Habitat Sim link ID of the end-effector.
-    :property ee_constraint: A (2, N) shaped array specifying the upper and
+    :property ee_links: A list with the Habitat Sim link ID of the end-effector.
+    :property ee_constraint: A (ee_count, 2, N) shaped array specifying the upper and
         lower limits for each end-effector joint where N is the arm DOF.
     :property cameras: The cameras and where they should go. The key is the
-        prefix to match in the sensor names. For example, a key of `"robot_head"`
-        will match sensors `"robot_head_rgb"` and `"robot_head_depth"`
+        prefix to match in the sensor names. For example, a key of `"head"`
+        will match sensors `"head_rgb"` and `"head_depth"`
     :property gripper_closed_state: All gripper joints must achieve this
         state for the gripper to be considered closed.
     :property gripper_open_state: All gripper joints must achieve this
@@ -66,6 +68,7 @@ class MobileManipulatorParams:
     :property wheel_mtr_max_impulse: The maximum impulse of the wheel motor (if
         there are wheels).
     :property base_offset: The offset of the root transform from the center ground point for navmesh kinematic control.
+    :property ee_count: how many end effectors
     """
 
     arm_joints: List[int]
@@ -75,11 +78,11 @@ class MobileManipulatorParams:
     arm_init_params: Optional[np.ndarray]
     gripper_init_params: Optional[np.ndarray]
 
-    ee_offset: mn.Vector3
-    ee_link: int
+    ee_offset: List[mn.Vector3]
+    ee_links: List[int]
     ee_constraint: np.ndarray
 
-    cameras: Dict[str, RobotCameraParams]
+    cameras: Dict[str, ArticulatedAgentCameraParams]
 
     gripper_closed_state: np.ndarray
     gripper_open_state: np.ndarray
@@ -89,15 +92,17 @@ class MobileManipulatorParams:
     arm_mtr_vel_gain: float
     arm_mtr_max_impulse: float
 
-    wheel_mtr_pos_gain: float
-    wheel_mtr_vel_gain: float
-    wheel_mtr_max_impulse: float
+    wheel_mtr_pos_gain: Optional[float]
+    wheel_mtr_vel_gain: Optional[float]
+    wheel_mtr_max_impulse: Optional[float]
 
     base_offset: mn.Vector3
     base_link_names: Set[str]
 
+    ee_count: Optional[int] = 1
 
-class MobileManipulator(Manipulator, RobotBase):
+
+class MobileManipulator(Manipulator, ArticulatedAgentBase):
     """Robot with a controllable base and arm."""
 
     def __init__(
@@ -107,15 +112,19 @@ class MobileManipulator(Manipulator, RobotBase):
         sim: Simulator,
         limit_robo_joints: bool = True,
         fixed_base: bool = True,
+        maintain_link_order: bool = False,
         base_type="mobile",
     ):
         r"""Constructor
-        :param params: The parameter of the manipulator robot.
-        :param urdf_path: The path to the robot's URDF file.
+        :param params: The parameter of the manipulator articulated agent.
+        :param urdf_path: The path to the agent's URDF file.
         :param sim: The simulator.
-        :param limit_robo_joints: If true, joint limits of robot are always
+        :param limit_robo_joints: If true, joint limits of agent are always
             enforced.
         :param fixed_base: If the robot's base is fixed or not.
+        :param maintain_link_order: Whether to to preserve the order of
+            links parsed from URDF files as link indices. Needed for
+            compatibility with PyBullet.
         :param base_type: The base type
         """
         # instantiate a manipulator
@@ -127,7 +136,7 @@ class MobileManipulator(Manipulator, RobotBase):
             limit_robo_joints=limit_robo_joints,
         )
         # instantiate a robotBase
-        RobotBase.__init__(
+        ArticulatedAgentBase.__init__(
             self,
             urdf_path=urdf_path,
             params=params,
@@ -136,23 +145,24 @@ class MobileManipulator(Manipulator, RobotBase):
             fixed_based=fixed_base,
             sim_obj=self.sim_obj,
             base_type=base_type,
+            maintain_link_order=maintain_link_order,
         )
 
     def reconfigure(self) -> None:
         """Instantiates the robot the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         Manipulator.reconfigure(self)
-        RobotBase.reconfigure(self)
+        ArticulatedAgentBase.reconfigure(self)
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
         joint limits and sleep states.
         """
         Manipulator.update(self)
-        RobotBase.update(self)
+        ArticulatedAgentBase.update(self)
 
     def reset(self) -> None:
         """Reset the joints on the existing robot.
         NOTE: only arm and gripper joint motors (not gains) are reset by default, derived class should handle any other changes.
         """
         Manipulator.reset(self)
-        RobotBase.reset(self)
+        ArticulatedAgentBase.reset(self)

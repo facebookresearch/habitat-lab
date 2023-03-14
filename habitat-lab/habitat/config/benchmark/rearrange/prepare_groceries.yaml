@@ -9,9 +9,8 @@ defaults:
 
 habitat:
   gym:
-    auto_name: PrepareGroceries
     obs_keys:
-      - robot_head_depth
+      - head_depth
       - relative_resting_position
       - obj_start_sensor
       - obj_goal_sensor

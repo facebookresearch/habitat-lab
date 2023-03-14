@@ -11,7 +11,7 @@ in habitat. Customized environments should be registered using
 """
 
 import importlib
-from typing import TYPE_CHECKING, Optional, Type
+from typing import TYPE_CHECKING, Dict, Optional, Tuple, Type, Union
 
 import gym
 import numpy as np
@@ -22,6 +22,9 @@ from habitat.gym.gym_wrapper import HabGymWrapper
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+
+RLTaskEnvObsType = Union[np.ndarray, Dict[str, np.ndarray]]
 
 
 def get_env_class(env_name: str) -> Type[habitat.RLEnv]:
@@ -50,11 +53,14 @@ class RLTaskEnv(habitat.RLEnv):
             self._success_measure_name is not None
         ), "The key task.success_measure cannot be None"
 
-    def reset(self):
-        observations = super().reset()
-        return observations
+    def reset(
+        self, *args, return_info: bool = False, **kwargs
+    ) -> Union[RLTaskEnvObsType, Tuple[RLTaskEnvObsType, Dict]]:
+        return super().reset(*args, return_info=return_info, **kwargs)
 
-    def step(self, *args, **kwargs):
+    def step(
+        self, *args, **kwargs
+    ) -> Tuple[RLTaskEnvObsType, float, bool, dict]:
         return super().step(*args, **kwargs)
 
     def get_reward_range(self):
@@ -84,7 +90,7 @@ class RLTaskEnv(habitat.RLEnv):
         return done
 
     def get_info(self, observations):
-        return self.habitat_env.get_metrics()
+        return self._env.get_metrics()
 
 
 @habitat.registry.register_env(name="GymRegistryEnv")
@@ -115,5 +121,5 @@ class GymHabitatEnv(gym.Wrapper):
         self, config: "DictConfig", dataset: Optional[Dataset] = None
     ):
         base_env = RLTaskEnv(config=config, dataset=dataset)
-        env = HabGymWrapper(base_env)
+        env = HabGymWrapper(env=base_env)
         super().__init__(env)

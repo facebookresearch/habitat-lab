@@ -67,5 +67,5 @@ class CompositeTask(RearrangeTask):
         if self._cur_node_idx >= 0:
             self.jump_to_node(self._cur_node_idx, episode)
 
-        self._sim.maybe_update_robot()
+        self._sim.maybe_update_articulated_agent()
         return self._get_observations(episode)

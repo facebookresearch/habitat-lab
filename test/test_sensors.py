@@ -350,7 +350,6 @@ def test_imagegoal_sensor():
             )
 
 
-@pytest.mark.flaky(max_runs=3, min_passes=1)
 def test_get_observations_at():
     config = get_test_config()
     if not os.path.exists(config.habitat.simulator.scene):
@@ -393,9 +392,14 @@ def test_get_observations_at():
             new_obs = env.step(sample_non_stop_action(env.action_space))
             for key, val in new_obs.items():
                 agent_state = env.sim.get_agent_state()
-                if not (
-                    np.allclose(agent_state.position, start_state.position)
-                    and np.allclose(agent_state.rotation, start_state.rotation)
+                if (
+                    not (
+                        np.allclose(agent_state.position, start_state.position)
+                        and np.allclose(
+                            agent_state.rotation, start_state.rotation
+                        )
+                    )
+                    and "rgb" in key
                 ):
                     assert not np.allclose(val, obs[key])
             obs_at_point = env.sim.get_observations_at(
