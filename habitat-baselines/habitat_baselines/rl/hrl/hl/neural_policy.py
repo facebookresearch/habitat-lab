@@ -81,6 +81,9 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
 
+    def create_hl_info(self):
+        return {"actions": None}
+
     def _setup_actions(self) -> List[PddlAction]:
         all_actions = self._pddl_prob.get_possible_actions()
         all_actions = [

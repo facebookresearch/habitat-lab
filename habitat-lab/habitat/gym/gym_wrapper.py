@@ -30,6 +30,12 @@ except ImportError:
 HabGymWrapperObsType = Union[np.ndarray, Dict[str, np.ndarray]]
 
 
+def filter_observation_space(obs_space, limit_keys):
+    return spaces.Dict(
+        {k: v for k, v in obs_space.spaces.items() if k in limit_keys}
+    )
+
+
 def smash_observation_space(obs_space, limit_keys):
     obs_shapes = [obs_space.spaces[k].shape for k in limit_keys]
 
@@ -47,9 +53,7 @@ def smash_observation_space(obs_space, limit_keys):
         return spaces.Box(
             shape=(total_dim,), low=-1.0, high=1.0, dtype=np.float32
         )
-    return spaces.Dict(
-        {k: v for k, v in obs_space.spaces.items() if k in limit_keys}
-    )
+    return filter_observation_space(obs_space, limit_keys)
 
 
 def _is_continuous(original_space: gym.Space) -> bool:
@@ -211,7 +215,7 @@ class HabGymWrapper(gym.Wrapper):
 
         self.action_space = create_action_space(action_space)
 
-        self.observation_space = smash_observation_space(
+        self.observation_space = filter_observation_space(
             env.observation_space, self._gym_obs_keys
         )
 
