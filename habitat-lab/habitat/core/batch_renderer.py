@@ -14,6 +14,10 @@ from omegaconf import DictConfig
 from torch import Tensor
 
 import habitat_sim
+from habitat.core.batch_renderer_constants import (
+    RENDER_STATE_OBSERVATION_KEY,
+    RENDER_STATE_SENSOR_PREFIX,
+)
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
@@ -104,23 +108,23 @@ class BatchRenderer:
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""
-        Renders observations for all environments by consuming "render_state" observations.
+        Renders observations for all environments by consuming render state observations.
 
         :param observations: List of observations for each environment.
         :return: List of rendered observations for each environment.
         """
         assert len(observations) == self._num_envs
 
-        # Pop "render_state" from observations and apply to replay renderer.
+        # Pop RENDER_STATE_OBSERVATION_KEY from observations and apply to replay renderer.
         # See HabitatSim.add_render_state_to_observations().
         for env_index in range(self._num_envs):
             env_obs = observations[env_index]
-            render_state = env_obs.pop("render_state")
+            render_state = env_obs.pop(RENDER_STATE_OBSERVATION_KEY)
             self._replay_renderer.set_environment_keyframe(
                 env_index, render_state
             )
             self._replay_renderer.set_sensor_transforms_from_keyframe(
-                env_index, "sensor_"
+                env_index, RENDER_STATE_SENSOR_PREFIX
             )
 
         # Render observations

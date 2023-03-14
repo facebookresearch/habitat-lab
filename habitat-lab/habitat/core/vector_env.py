@@ -692,7 +692,7 @@ class BatchRenderedVectorEnv(VectorEnv):
 
     def post_step(self, observations) -> List[OrderedDict]:
         r"""
-        Renders observations for all environments by consuming "render_state" observations.
+        Renders observations for all environments by consuming render state observations.
 
         :param observations: List of observations for each environment.
         :return: List of rendered observations for each environment.

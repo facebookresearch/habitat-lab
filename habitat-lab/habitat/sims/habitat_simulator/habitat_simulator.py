@@ -25,6 +25,10 @@ from omegaconf import DictConfig
 
 import habitat_sim
 from habitat.config.default import get_agent_config
+from habitat.core.batch_renderer_constants import (
+    RENDER_STATE_OBSERVATION_KEY,
+    RENDER_STATE_SENSOR_PREFIX,
+)
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -682,16 +686,16 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         :param observations: Original observations upon which the render state is added.
         """
         if self.config.enable_batch_renderer:
-            assert "render_state" not in observations
+            assert RENDER_STATE_OBSERVATION_KEY not in observations
             for _sensor_uuid, sensor in self._sensors.items():
                 node = sensor._sensor_object.node
                 transform = node.absolute_transformation()
                 rotation = mn.Quaternion.from_matrix(transform.rotation())
                 self.gfx_replay_manager.add_user_transform_to_keyframe(
-                    "sensor_" + _sensor_uuid,
+                    RENDER_STATE_SENSOR_PREFIX + _sensor_uuid,
                     transform.translation,
                     rotation,
                 )
             observations[
-                "render_state"
+                RENDER_STATE_OBSERVATION_KEY
             ] = self.gfx_replay_manager.extract_keyframe()

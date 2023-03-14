@@ -12,6 +12,7 @@ import gym
 import numpy as np
 from gym import spaces
 
+from habitat.core.batch_renderer_constants import RENDER_STATE_OBSERVATION_KEY
 from habitat.core.simulator import Observations
 from habitat.core.spaces import EmptySpace
 from habitat.utils.visualizations.utils import observations_to_image
@@ -286,8 +287,10 @@ class HabGymWrapper(gym.Wrapper):
                 [(k, obs[k]) for k in self._gym_achieved_goal_keys]
             )
 
-        if "render_state" in obs:
-            observation["render_state"] = obs["render_state"]
+        if RENDER_STATE_OBSERVATION_KEY in obs:
+            observation[RENDER_STATE_OBSERVATION_KEY] = obs[
+                RENDER_STATE_OBSERVATION_KEY
+            ]
 
         for k, v in observation.items():
             if isinstance(self.observation_space, spaces.Box):
