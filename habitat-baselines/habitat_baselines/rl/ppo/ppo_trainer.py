@@ -109,12 +109,19 @@ class PPOTrainer(BaseRLTrainer):
 
         return t.to(device=orig_device)
 
+    def _create_obs_transforms(self):
+        self.obs_transforms = get_active_obs_transforms(self.config)
+        self._env_spec.observation_space = apply_obs_transforms_obs_space(
+            self._env_spec.observation_space, self.obs_transforms
+        )
+
     def _create_agent(self, resume_state, **kwargs) -> AgentAccessMgr:
         """
         Sets up the AgentAccessMgr. You still must call `agent.post_init` after
         this call. This only constructs the object.
         """
 
+        self._create_obs_transforms()
         return baseline_registry.get_agent_access_mgr(
             self.config.habitat_baselines.rl.agent.type
         )(
@@ -232,11 +239,6 @@ class PPOTrainer(BaseRLTrainer):
             os.makedirs(self.config.habitat_baselines.checkpoint_folder)
 
         logger.add_filehandler(self.config.habitat_baselines.log_file)
-
-        self.obs_transforms = get_active_obs_transforms(self.config)
-        self._env_spec.observation_space = apply_obs_transforms_obs_space(
-            self._env_spec.observation_space, self.obs_transforms
-        )
 
         self._agent = self._create_agent(resume_state)
         if self._is_distributed:

@@ -66,6 +66,7 @@ except AttributeError:
 @baseline_registry.register_trainer(name="ver")
 class VERTrainer(PPOTrainer):
     def _create_agent(self, resume_state, **kwargs):
+        self._create_obs_transforms()
         return baseline_registry.get_agent_access_mgr(
             self.config.habitat_baselines.rl.agent.type
         )(
