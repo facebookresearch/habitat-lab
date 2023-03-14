@@ -21,7 +21,7 @@ habitat:
     agents:
       main_agent:
         radius: 0.3
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/amass_male.urdf'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
         articulated_agent_type: 'KinematicHumanoid'
         sim_sensors:
           head_rgb_sensor:
