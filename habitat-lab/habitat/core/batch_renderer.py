@@ -50,7 +50,7 @@ class BatchRenderer:
     _replay_renderer: ReplayRenderer = None
 
     _gpu_to_cpu_images: List[mn.ImageView2D] = None
-    _gpu_to_cpu_buffers: List[np.ndarray] = None
+    _gpu_to_cpu_buffer: np.ndarray = None
 
     def __init__(self, config: DictConfig, num_envs: int) -> None:
         r"""
@@ -178,38 +178,37 @@ class BatchRenderer:
             if self._gpu_to_cpu_images is None:
                 # Allocate the transfer buffers
                 self._gpu_to_cpu_images = []
-                self._gpu_to_cpu_buffers = []
                 storage = mn.PixelStorage()
                 storage.alignment = 2
-                for env_idx in range(self._num_envs):
-                    env_buffer = np.empty(
-                        (
-                            sensor_spec.resolution[0],
-                            sensor_spec.resolution[1],
-                            sensor_spec.channels,
-                        ),
-                        dtype=np.uint8,
-                    )
-                    self._gpu_to_cpu_buffers.append(env_buffer)
+                self._gpu_to_cpu_buffer = np.empty(
+                    (
+                        self._num_envs,
+                        sensor_spec.resolution[0],
+                        sensor_spec.resolution[1],
+                        sensor_spec.channels,
+                    ),
+                    dtype=np.uint8,
+                )
 
+                for env_idx in range(self._num_envs):
                     # Create image view for writing into buffer from Magnum
                     env_img_view = mn.MutableImageView2D(
                         mn.PixelFormat.RGBA8_UNORM,
                         [sensor_spec.resolution[1], sensor_spec.resolution[0]],
-                        env_buffer,
+                        self._gpu_to_cpu_buffer[env_idx],
                     )
                     self._gpu_to_cpu_images.append(env_img_view)
 
-                    # Flip the transfer buffer view vertically for presentation
-                    self._gpu_to_cpu_buffers[env_idx] = np.flip(
-                        self._gpu_to_cpu_buffers[env_idx].view(), axis=0
-                    )
+                # Flip the transfer buffer view vertically for presentation
+                self._gpu_to_cpu_buffer = np.flip(
+                    self._gpu_to_cpu_buffer.view(), axis=1
+                )
         else:
             raise NotImplementedError
 
         # Render
         self._replay_renderer.render_into_cpu_images(self._gpu_to_cpu_images)
-        return np.stack(self._gpu_to_cpu_buffers)
+        return self._gpu_to_cpu_buffer
 
     def draw_observations_gpu_to_gpu(
         self, sensor_spec: BackendSensorSpec
@@ -228,7 +227,7 @@ class BatchRenderer:
             raise NotImplementedError
         else:
             for env_idx in range(self._num_envs):
-                output.append(self._gpu_to_cpu_buffers[env_idx][..., 0:3])
+                output.append(self._gpu_to_cpu_buffer[env_idx][..., 0:3])
         return output
 
     @staticmethod
