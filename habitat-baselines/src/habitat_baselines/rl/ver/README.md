@@ -27,7 +27,7 @@ There are two components that serve auxiliary functions:
 To use VER, simply change the `trainer_name` to `"ver"` in either the config or via the command line:
 
 ```bash
-python -u habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=pointnav/ppo_pointnav_example.yaml \
   habitat_baselines.trainer_name=ver
 ```
