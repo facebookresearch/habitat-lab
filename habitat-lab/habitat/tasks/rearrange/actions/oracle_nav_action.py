@@ -34,9 +34,13 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self.motion_type = config.motion_control
         if self.motion_type == "base_velocity":
             BaseVelAction.__init__(self, *args, **kwargs)
-        else:
+
+        elif self.motion_type == "human_joints":
             self.humanoid_controller = None
             HumanoidJointAction.__init__(self, *args, **kwargs)
+        else:
+            raise ValueError("Unrecognized motion type for oracle nav  action")
+
         self._task = task
         self._poss_entities = (
             self._task.pddl_problem.get_ordered_entities_list()
@@ -134,6 +138,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         if curr_path_points is None:
             raise Exception
         else:
+            # Compute distance and angle to target
             cur_nav_targ = curr_path_points[1]
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))
@@ -178,7 +183,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                     self, *args, is_last_action=is_last_action, **kwargs
                 )
 
-            else:
+            elif self.motion_type == "human_joints":
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
@@ -213,4 +218,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
                 return HumanoidJointAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
+                )
+            else:
+                raise ValueError(
+                    "Unrecognized motion type for oracle nav action"
                 )
