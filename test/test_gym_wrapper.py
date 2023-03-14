@@ -30,7 +30,7 @@ importlib.reload(habitat.gym.gym_wrapper)
             "benchmark/rearrange/reach_state.yaml",
             [],
             7,
-            np.ndarray,
+            dict,
         ),
         (
             "benchmark/rearrange/pick.yaml",
