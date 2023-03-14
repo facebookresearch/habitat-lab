@@ -44,6 +44,8 @@ habitat:
       main_agent:
         articulated_agent_urdf: 'data/humanoids/humanoid_data/amass_male.urdf'
         articulated_agent_type: KinematicHumanoid
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+
 
 
 habitat_baselines:

@@ -138,7 +138,7 @@ class Env:
         )
 
         walk_pose_path = (
-            "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+            self._config.simulator.agents.main_agent.motion_data_path
         )
         humanoid_controller = HumanoidRearrangeController(walk_pose_path)
         if (
