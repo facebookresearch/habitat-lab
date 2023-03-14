@@ -11,6 +11,7 @@ import numpy as np
 import torch
 
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.storage import Storage
 from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_pack_info_from_dones,
@@ -20,7 +21,7 @@ from habitat_baselines.utils.common import get_action_space_info
 
 
 @baseline_registry.register_storage
-class RolloutStorage:
+class RolloutStorage(Storage):
     r"""Class for storing rollout information for RL trainers."""
 
     def __init__(
@@ -258,3 +259,15 @@ class RolloutStorage:
 
     def __setstate__(self, state: Dict[str, Any]):
         self.__dict__.update(state)
+
+    def insert_first_observations(self, batch):
+        self.buffers["observations"][0] = batch  # type: ignore
+
+    def get_current_step(self, env_slice, buffer_index):
+        return self.buffers[
+            self.current_rollout_step_idxs[buffer_index],
+            env_slice,
+        ]
+
+    def get_last_step(self):
+        return self.buffers[self.current_rollout_step_idx]
