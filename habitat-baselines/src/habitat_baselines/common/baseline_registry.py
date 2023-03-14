@@ -150,6 +150,34 @@ class BaselineRegistry(Registry):
         return cls._get_impl("storage", name)
 
     @classmethod
+    def register_agent_access_mgr(
+        cls, to_register=None, *, name: Optional[str] = None
+    ):
+        """
+        Registers an agent access manager for the trainer to interface with. Usage:
+        ```
+        @baseline_registry.register_agent_access_mgr
+        class ExampleAgentAccessMgr:
+            pass
+        ```
+        or override the name with `name`.
+        ```
+        @baseline_registry.register_agent_access_mgr(name="MyAgentAccessMgr")
+        class ExampleAgentAccessMgr:
+            pass
+        ```
+        """
+        from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
+
+        return cls._register_impl(
+            "agent", to_register, name, assert_type=AgentAccessMgr
+        )
+
+    @classmethod
+    def get_agent_access_mgr(cls, name: str):
+        return cls._get_impl("agent", name)
+
+    @classmethod
     def register_updater(cls, to_register=None, *, name: Optional[str] = None):
         """
         Registers a policy updater.
