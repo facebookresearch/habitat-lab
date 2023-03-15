@@ -225,7 +225,7 @@ class VelocityControlActionConfig(ActionConfig):
     # rad
     ang_range_camera_pitch: List[float] = field(default_factory=lambda: [-1.57, 0.43])
     time_step: float = 0.1  # seconds
-    enable_scale_convert: bool = False
+    enable_scale_convert: bool = True
 
 
 @dataclass
