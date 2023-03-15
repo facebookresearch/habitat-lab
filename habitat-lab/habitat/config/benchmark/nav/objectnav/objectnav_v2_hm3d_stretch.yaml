@@ -30,6 +30,8 @@ habitat:
             position: [0, 1.31, 0]
         height: 1.41
         radius: 0.17
+        max_climb: 0.1
+        cell_height: 0.05
     habitat_sim_v0:
       gpu_device_id: 0
       allow_sliding: False

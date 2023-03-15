@@ -142,10 +142,10 @@ class VelocityStopActionConfig(ActionConfig):
     r"""
     In Navigation tasks only, the velocity stop action takes in a continuous space input. When
     the action is passed a value greater than 0.0, the Agent will request to stop the Navigation
-    task. Note that stopping is required to succeed in a Navigation task since the Success 
+    task. Note that stopping is required to succeed in a Navigation task since the Success
     is determined by the Agent calling the stop action within range of the target.
 
-    The action is used along side the VelocityControlAction and WaypointControlAction. 
+    The action is used along side the VelocityControlAction and WaypointControlAction.
     """
     type: str = "VelocityStopAction"
 
@@ -1342,6 +1342,8 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    cell_height: float = 0.2
+    max_climb: float = 0.2
     sim_sensors: Dict[str, SimulatorSensorConfig] = dict()
     is_set_start_state: bool = False
     start_position: List[float] = [0, 0, 0]
