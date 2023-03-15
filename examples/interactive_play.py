@@ -601,7 +601,7 @@ def play_env(env, args, config):
             raise ValueError(
                 f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
             )
-        all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
+        all_arm_actions = all_arm_actions[: args.save_actions_count]
         os.makedirs(SAVE_ACTIONS_DIR, exist_ok=True)
         save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
