@@ -38,9 +38,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
         elif self.motion_type == "human_joints":
             HumanoidJointAction.__init__(self, *args, **kwargs)
-            self.humanoid_controller = self.lazy_inst_humanoid_controller(
-                config, task
-            )
+            self.humanoid_controller = self.lazy_inst_humanoid_controller(task)
 
         else:
             raise ValueError("Unrecognized motion type for oracle nav  action")
@@ -61,19 +59,23 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             vel = [0, turn_vel]
         return vel
 
-    def lazy_inst_humanoid_controller(self, config, task):
+    def lazy_inst_humanoid_controller(self, task):
         # Lazy instantiation of humanoid controller
         # We assign the task with the humanoid controller, so that multiple actions can
         # use it.
+
         if (
             not hasattr(task, "humanoid_controller")
             or task.humanoid_controller is None
         ):
             # Initialize humanoid controller
-            # TODO: Where do we put this config variable
-            walk_pose_path = (
-                "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-            )
+            agent_name = self._sim.habitat_config.agents_order[
+                self._agent_index
+            ]
+            walk_pose_path = self._sim.habitat_config.agents[
+                agent_name
+            ].motion_data_path
+
             humanoid_controller = HumanoidRearrangeController(walk_pose_path)
             task.humanoid_controller = humanoid_controller
         return task.humanoid_controller
