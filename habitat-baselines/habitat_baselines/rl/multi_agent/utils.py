@@ -3,20 +3,20 @@ from typing import Any, Dict, Union
 from habitat_baselines.common.tensor_dict import TensorDict
 
 
-def _get_agent_k(name: str, agent_s: str) -> str:
+def _remove_agent_prefix(name: str, agent_s: str) -> str:
     if name.startswith(agent_s):
         return name[len(agent_s) :]
     else:
         return name
 
 
-def filter_agent_names(
+def update_dict_with_agent_prefix(
     names: Union[Dict[str, Any], TensorDict], agent_idx: int
 ) -> Union[Dict[str, Any], TensorDict]:
     was_td_dict = isinstance(names, TensorDict)
     agent_s = f"agent_{agent_idx}_"
     ret = {
-        _get_agent_k(k, agent_s): v
+        _remove_agent_prefix(k, agent_s): v
         for k, v in names.items()
         if agent_s in k or not k.startswith("agent_")
     }
@@ -26,7 +26,7 @@ def filter_agent_names(
         return ret
 
 
-def get_agent_name(k, agent_i):
+def add_agent_prefix(k, agent_i):
     return f"agent_{agent_i}_{k}"
 
 

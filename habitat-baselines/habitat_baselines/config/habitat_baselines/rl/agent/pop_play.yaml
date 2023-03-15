@@ -1,1 +1,3 @@
-name: "MultiAgentAccessMgr"
+type: "MultiAgentAccessMgr"
+num_total_agents: int = 2
+num_active_agents: int = 2

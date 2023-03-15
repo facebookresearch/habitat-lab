@@ -10,7 +10,7 @@ from habitat_baselines.rl.multi_agent.pop_play_wrappers import (
     MultiPolicy,
     MultiStorage,
     MultiUpdater,
-    filter_agent_names,
+    update_dict_with_agent_prefix,
 )
 from habitat_baselines.rl.multi_agent.self_play_wrappers import (
     SelfBatchedPolicy,
@@ -57,37 +57,16 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 raise ValueError(
                     f"Multi-agent training requires splitting the action space between the agents. Shared actions are not supported yet {k}"
                 )
-
-        for agent_i in range(self._pop_config.num_total_agents):
-            self._all_agent_idxs.append(agent_i)
-            use_resume_state = None
-            if resume_state is not None:
-                use_resume_state = resume_state[str(agent_i)]
-
-            agent_obs_space = spaces.Dict(
-                filter_agent_names(env_spec.observation_space, agent_i)
-            )
-            agent_orig_action_space = spaces.Dict(
-                filter_agent_names(env_spec.orig_action_space.spaces, agent_i)
-            )
-            agent_action_space = create_action_space(agent_orig_action_space)
-            agent_env_spec = EnvironmentSpec(
-                observation_space=agent_obs_space,
-                action_space=agent_action_space,
-                orig_action_space=agent_orig_action_space,
-            )
-            self._agents.append(
-                SingleAgentAccessMgr(
-                    config,
-                    agent_env_spec,
-                    is_distrib,
-                    device,
-                    use_resume_state,
-                    num_envs,
-                    percent_done_fn,
-                    lr_schedule_fn,
-                )
-            )
+        self._agents, self._all_agent_idxs = self._get_agents(
+            config,
+            env_spec,
+            is_distrib,
+            device,
+            resume_state,
+            num_envs,
+            percent_done_fn,
+            lr_schedule_fn,
+        )
 
         if self._pop_config.self_play_batched:
             policy_cls: Type = SelfBatchedPolicy
@@ -129,6 +108,55 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             raise ValueError(
                 "Multi-agent training does not support double buffered sampling"
             )
+
+    def _get_agents(
+        self,
+        config: "DictConfig",
+        env_spec: EnvironmentSpec,
+        is_distrib: bool,
+        device,
+        resume_state: Optional[Dict[str, Any]],
+        num_envs: int,
+        percent_done_fn: Callable[[], float],
+        lr_schedule_fn: Optional[Callable[[float], float]] = None,
+    ):
+        all_agent_idxs = []
+        agents = []
+        for agent_i in range(self._pop_config.num_total_agents):
+            all_agent_idxs.append(agent_i)
+            use_resume_state = None
+            if resume_state is not None:
+                use_resume_state = resume_state[str(agent_i)]
+
+            agent_obs_space = spaces.Dict(
+                update_dict_with_agent_prefix(
+                    env_spec.observation_space, agent_i
+                )
+            )
+            agent_orig_action_space = spaces.Dict(
+                update_dict_with_agent_prefix(
+                    env_spec.orig_action_space.spaces, agent_i
+                )
+            )
+            agent_action_space = create_action_space(agent_orig_action_space)
+            agent_env_spec = EnvironmentSpec(
+                observation_space=agent_obs_space,
+                action_space=agent_action_space,
+                orig_action_space=agent_orig_action_space,
+            )
+            agents.append(
+                SingleAgentAccessMgr(
+                    config,
+                    agent_env_spec,
+                    is_distrib,
+                    device,
+                    use_resume_state,
+                    num_envs,
+                    percent_done_fn,
+                    lr_schedule_fn,
+                )
+            )
+        return agents, all_agent_idxs
 
     @property
     def nbuffers(self):
@@ -245,4 +273,4 @@ class MultiAgentAccessMgr(AgentAccessMgr):
 
     @property
     def policy_action_space(self):
-        return self._agents[0].policy_action_space
+        return self.actor_critic.policy_action_space

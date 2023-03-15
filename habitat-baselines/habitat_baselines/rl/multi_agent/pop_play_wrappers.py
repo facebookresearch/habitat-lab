@@ -7,8 +7,8 @@ from habitat_baselines.common.storage import Storage
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.rl.multi_agent.utils import (
     add_agent_names,
-    filter_agent_names,
-    get_agent_name,
+    add_agent_prefix,
+    update_dict_with_agent_prefix,
 )
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.rl.ppo.updater import Updater
@@ -41,7 +41,7 @@ class MultiPolicy(Policy):
 
         agent_actions = []
         for agent_i, policy in enumerate(self._active_policies):
-            agent_obs = filter_agent_names(observations, agent_i)
+            agent_obs = update_dict_with_agent_prefix(observations, agent_i)
             agent_actions.append(
                 policy.act(
                     agent_obs,
@@ -100,7 +100,7 @@ class MultiPolicy(Policy):
         agent_masks = masks.chunk(n_agents, -1)
         all_value = []
         for agent_i, policy in enumerate(self._active_policies):
-            agent_obs = filter_agent_names(observations, agent_i)
+            agent_obs = update_dict_with_agent_prefix(observations, agent_i)
             all_value.append(
                 policy.get_value(
                     agent_obs,
@@ -152,7 +152,7 @@ class MultiStorage(Storage):
         insert_d = {k: _maybe_chunk(v) for k, v in kwargs.items()}
         for agent_i, storage in enumerate(self._active_storages):
             if next_observations is not None:
-                agent_next_observations = filter_agent_names(
+                agent_next_observations = update_dict_with_agent_prefix(
                     next_observations, agent_i
                 )
             else:
@@ -174,7 +174,7 @@ class MultiStorage(Storage):
 
     def insert_first(self, batch):
         for agent_i, storage in enumerate(self._active_storages):
-            storage.insert_first(filter_agent_names(batch, agent_i))
+            storage.insert_first(update_dict_with_agent_prefix(batch, agent_i))
 
     def advance_rollout(self, buffer_index=0):
         for storage in self._active_storages:
@@ -249,9 +249,9 @@ def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
         for env_i, env_d in enumerate(ac):
             if len(ret) <= env_i:
                 ret.append(
-                    {get_agent_name(k, agent_i): v for k, v in env_d.items()}
+                    {add_agent_prefix(k, agent_i): v for k, v in env_d.items()}
                 )
         else:
             for k, v in env_d.items():
-                ret[env_i][get_agent_name(k, agent_i)] = v
+                ret[env_i][add_agent_prefix(k, agent_i)] = v
     return ret
