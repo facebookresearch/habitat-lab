@@ -219,7 +219,7 @@ class VelocityControlActionConfig(ActionConfig):
     ang_vel_range_camera_pitch: List[float] = [-0.45, 0.45]  # rad/sec
     ang_range_camera_pitch: List[float] = [-1.57, 0.43]  # rad
     time_step: float = 0.1  # seconds
-    enable_scale_convert: bool = False
+    enable_scale_convert: bool = True
 
 
 @attr.s(auto_attribs=True, slots=True)
