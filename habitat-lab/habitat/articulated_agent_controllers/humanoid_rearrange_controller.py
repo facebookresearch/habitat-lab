@@ -241,8 +241,6 @@ class HumanoidRearrangeController:
         forward_V_dist = forward_V * dist_diff * distance_multiplier
         obj_transform_base.translation += forward_V_dist
 
-        obj_transform_base.translation += forward_V_dist
-
         self.obj_transform_base = obj_transform_base
 
         return joint_pose, obj_transform_offset, obj_transform_base
