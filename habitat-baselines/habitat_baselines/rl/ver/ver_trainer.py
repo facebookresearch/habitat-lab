@@ -66,8 +66,9 @@ except AttributeError:
 @baseline_registry.register_trainer(name="ver")
 class VERTrainer(PPOTrainer):
     def _create_agent(self, resume_state, **kwargs):
+        self._create_obs_transforms()
         return baseline_registry.get_agent_access_mgr(
-            self.config.habitat_baselines.rl.agent.name
+            self.config.habitat_baselines.rl.agent.type
         )(
             config=self.config,
             env_spec=self._env_spec,
@@ -232,15 +233,15 @@ class VERTrainer(PPOTrainer):
             self._agent.actor_critic,
             self.config,
         )
-        storage_kwargs = dict(
-            variable_experience=self.ver_config.variable_experience,
-            numsteps=ppo_cfg.num_steps,
-            num_envs=len(self.environment_workers),
-            action_space=self._env_spec.action_space,
-            recurrent_hidden_state_size=ppo_cfg.hidden_size,
-            num_recurrent_layers=self._agent.actor_critic.net.num_recurrent_layers,
-            observation_space=rollouts_obs_space,
-        )
+        storage_kwargs = {
+            "variable_experience": self.ver_config.variable_experience,
+            "numsteps": ppo_cfg.num_steps,
+            "num_envs": len(self.environment_workers),
+            "action_space": self._env_spec.action_space,
+            "recurrent_hidden_state_size": ppo_cfg.hidden_size,
+            "num_recurrent_layers": self._agent.actor_critic.net.num_recurrent_layers,
+            "observation_space": rollouts_obs_space,
+        }
 
         def create_ver_rollouts_fn(
             device,
@@ -474,11 +475,11 @@ class VERTrainer(PPOTrainer):
                     _last_checkpoint_percent=self._last_checkpoint_percent,
                     report_worker_state=self.report_worker.state_dict(),
                 )
-                resume_state = dict(
+                resume_state = {
                     **self._agent.get_resume_state(),
-                    config=self.config,
-                    requeue_stats=requeue_stats,
-                )
+                    "config": self.config,
+                    "requeue_stats": requeue_stats,
+                }
 
                 save_resume_state(
                     resume_state,

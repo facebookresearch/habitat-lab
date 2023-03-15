@@ -27,6 +27,7 @@ class Manipulator(ArticulatedAgentInterface):
         limit_robo_joints: bool = True,
         fixed_based: bool = True,
         sim_obj=None,
+        maintain_link_order=False,
         **kwargs,
     ):
         r"""Constructor"""
@@ -38,6 +39,7 @@ class Manipulator(ArticulatedAgentInterface):
         self._limit_robo_joints = limit_robo_joints
         self._fixed_base = fixed_based
         self.sim_obj = sim_obj
+        self._maintain_link_order = maintain_link_order
 
         # Adapt Manipulator params to support multiple end effector indices
         # NOTE: the follow members cache static info for improved efficiency over querying the API
@@ -78,7 +80,9 @@ class Manipulator(ArticulatedAgentInterface):
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
-                self.urdf_path, fixed_base=self._fixed_base
+                self.urdf_path,
+                fixed_base=self._fixed_base,
+                maintain_link_order=self._maintain_link_order,
             )
         if self._limit_robo_joints:
             # automatic joint limit clamping after each call to sim.step_physics()
@@ -177,6 +181,7 @@ class Manipulator(ArticulatedAgentInterface):
                     sens_obj.node.transformation = (
                         orthonormalize_rotation_shear(cam_transform)
                     )
+
         if self._fix_joint_values is not None:
             self.arm_joint_pos = self._fix_joint_values
 

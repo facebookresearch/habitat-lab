@@ -710,7 +710,7 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
     The amount of force in newton's accumulatively applied by the robot.
     """
 
-    cls_uuid: str = "robot_force"
+    cls_uuid: str = "articulated_agent_force"
 
     def __init__(self, *args, sim, config, task, **kwargs):
         self._sim = sim
@@ -742,13 +742,13 @@ class RobotForce(UsesArticulatedAgentInterface, Measure):
         return self._add_force
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        robot_force, _, overall_force = self._task.get_coll_forces(
+        articulated_agent_force, _, overall_force = self._task.get_coll_forces(
             self.agent_id
         )
         if self._count_obj_collisions:
             self._cur_force = overall_force
         else:
-            self._cur_force = robot_force
+            self._cur_force = articulated_agent_force
 
         if self._prev_force is not None:
             self._add_force = self._cur_force - self._prev_force
@@ -830,12 +830,9 @@ class ForceTerminate(Measure):
         ].get_metric()
         accum_force = force_info["accum"]
         instant_force = force_info["instant"]
-        if (
-            self._max_instant_force > 0
-            and accum_force > self._max_instant_force
-        ):
+        if self._max_accum_force > 0 and accum_force > self._max_accum_force:
             rearrange_logger.debug(
-                f"Force threshold={self._max_instant_force} exceeded with {accum_force}, ending episode"
+                f"Force threshold={self._max_accum_force} exceeded with {accum_force}, ending episode"
             )
             self._task.should_end = True
             self._metric = True

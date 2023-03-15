@@ -154,7 +154,18 @@ class BaselineRegistry(Registry):
         cls, to_register=None, *, name: Optional[str] = None
     ):
         """
-        Registers an agent access manager for the trainer to interface with.
+        Registers an agent access manager for the trainer to interface with. Usage:
+        ```
+        @baseline_registry.register_agent_access_mgr
+        class ExampleAgentAccessMgr:
+            pass
+        ```
+        or override the name with `name`.
+        ```
+        @baseline_registry.register_agent_access_mgr(name="MyAgentAccessMgr")
+        class ExampleAgentAccessMgr:
+            pass
+        ```
         """
         from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
 

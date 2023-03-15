@@ -123,7 +123,9 @@ class Policy(abc.ABC):
     def get_value(
         self, observations, rnn_hidden_states, prev_actions, masks
     ) -> torch.Tensor:
-        raise NotImplementedError("Get value is not implemented.")
+        raise NotImplementedError(
+            "Get value is supported in non-neural network policies."
+        )
 
     def get_extra(
         self, action_data: PolicyActionData, infos, dones

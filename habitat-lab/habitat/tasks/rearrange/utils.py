@@ -127,7 +127,7 @@ def rearrange_collision(
     robot_scene_matches = [c for c in colls if coll_name_matches(c, agent_id)]
     for match in robot_scene_matches:
         reg_obj_coll = any(
-            [coll_name_matches(match, obj_id) for obj_id in added_objs]
+            coll_name_matches(match, obj_id) for obj_id in added_objs
         )
         if reg_obj_coll:
             robot_obj_colls += 1

@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 import gym.spaces as spaces
 import numpy as np
 import torch
+import torch.nn as nn
 from torch.optim.lr_scheduler import LambdaLR
 
 from habitat import logger
@@ -69,12 +70,13 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         self._actor_critic = self._create_policy()
         self._updater = self._create_updater(self._actor_critic)
 
-        self._lr_scheduler = LambdaLR(
-            optimizer=self._updater.optimizer,
-            lr_lambda=lambda _: lr_schedule_fn(
-                percent_done=self._percent_done_fn()
-            ),
-        )
+        if self._updater.optimizer is None:
+            self._lr_scheduler = None
+        else:
+            self._lr_scheduler = LambdaLR(
+                optimizer=self._updater.optimizer,
+                lr_lambda=lambda _: lr_schedule_fn(self._percent_done_fn()),
+            )
         if resume_state is not None:
             self._updater.load_state_dict(resume_state["state_dict"])
             self._updater.optimizer.load_state_dict(
@@ -166,34 +168,13 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                     if k.startswith(prefix)
                 }
             )
-        if (
-            self._config.habitat_baselines.rl.ddppo.pretrained_encoder
-            or self._config.habitat_baselines.rl.ddppo.pretrained
-        ):
-            pretrained_state = torch.load(
-                self._config.habitat_baselines.rl.ddppo.pretrained_weights,
-                map_location="cpu",
-            )
-
-        if self._config.habitat_baselines.rl.ddppo.pretrained:
-            actor_critic.load_state_dict(
-                {  # type: ignore
-                    k[len("actor_critic.") :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                }
-            )
-        elif self._config.habitat_baselines.rl.ddppo.pretrained_encoder:
-            prefix = "actor_critic.net.visual_encoder."
-            actor_critic.net.visual_encoder.load_state_dict(
-                {
-                    k[len(prefix) :]: v
-                    for k, v in pretrained_state["state_dict"].items()
-                    if k.startswith(prefix)
-                }
-            )
         if self._is_static_encoder:
             for param in actor_critic.net.visual_encoder.parameters():
                 param.requires_grad_(False)
+
+        if self._config.habitat_baselines.rl.ddppo.reset_critic:
+            nn.init.orthogonal_(actor_critic.critic.fc.weight)
+            nn.init.constant_(actor_critic.critic.fc.bias, 0)
 
         actor_critic.to(self._device)
         return actor_critic
@@ -211,14 +192,16 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
-        return dict(
-            state_dict=self._actor_critic.state_dict(),
-            optim_state=self._updater.optimizer.state_dict(),
-            lr_sched_state=self._lr_scheduler.state_dict(),
-        )
+        ret = {
+            "state_dict": self._actor_critic.state_dict(),
+            "optim_state": self._updater.optimizer.state_dict(),
+        }
+        if self._lr_scheduler is not None:
+            ret["lr_sched_state"] = (self._lr_scheduler.state_dict(),)
+        return ret
 
     def get_save_state(self):
-        return dict(state_dict=self._actor_critic.state_dict())
+        return {"state_dict": self._actor_critic.state_dict()}
 
     def eval(self):
         self._actor_critic.eval()
@@ -246,7 +229,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         )
 
     def after_update(self):
-        if self._ppo_cfg.use_linear_lr_decay:
+        if (
+            self._ppo_cfg.use_linear_lr_decay
+            and self._lr_scheduler is not None
+        ):
             self._lr_scheduler.step()  # type: ignore
 
     def pre_rollout(self):

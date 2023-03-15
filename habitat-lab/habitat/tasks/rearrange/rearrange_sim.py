@@ -589,7 +589,7 @@ class RearrangeSim(HabitatSim):
         ]
 
         ret = {
-            "robot_T": articulated_agent_T,
+            "articulated_agent_T": articulated_agent_T,
             "art_T": art_T,
             "static_T": static_T,
             "art_pos": art_pos,
@@ -598,7 +598,7 @@ class RearrangeSim(HabitatSim):
             ],
         }
         if with_articulated_agent_js:
-            ret["robot_js"] = articulated_agent_js
+            ret["articulated_agent_js"] = articulated_agent_js
         return ret
 
     def set_state(self, state: Dict[str, Any], set_hold=False) -> None:
@@ -612,20 +612,22 @@ class RearrangeSim(HabitatSim):
         """
         rom = self.get_rigid_object_manager()
 
-        if state["robot_T"] is not None:
-            for robot_T, robot in zip(
-                state["robot_T"], self.agents_mgr.articulated_agents_iter
+        if state["articulated_agent_T"] is not None:
+            for articulated_agent_T, robot in zip(
+                state["articulated_agent_T"],
+                self.agents_mgr.articulated_agents_iter,
             ):
-                robot.sim_obj.transformation = robot_T
+                robot.sim_obj.transformation = articulated_agent_T
                 n_dof = len(robot.sim_obj.joint_forces)
                 robot.sim_obj.joint_forces = np.zeros(n_dof)
                 robot.sim_obj.joint_velocities = np.zeros(n_dof)
 
-        if "robot_js" in state:
-            for robot_js, robot in zip(
-                state["robot_js"], self.agents_mgr.articulated_agents_iter
+        if "articulated_agent_js" in state:
+            for articulated_agent_js, robot in zip(
+                state["articulated_agent_js"],
+                self.agents_mgr.articulated_agents_iter,
             ):
-                robot.sim_obj.joint_positions = robot_js
+                robot.sim_obj.joint_positions = articulated_agent_js
 
         for T, ao in zip(state["art_T"], self.art_objs):
             ao.transformation = T
@@ -720,7 +722,7 @@ class RearrangeSim(HabitatSim):
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs and self._debug_render:
+        if "third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -733,7 +735,7 @@ class RearrangeSim(HabitatSim):
             self._create_obj_viz()
 
             debug_obs = self.get_sensor_observations()
-            obs["robot_third_rgb"] = debug_obs["robot_third_rgb"][:, :, :3]
+            obs["third_rgb"] = debug_obs["third_rgb"][:, :, :3]
 
         return obs
 

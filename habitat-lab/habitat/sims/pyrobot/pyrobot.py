@@ -220,10 +220,12 @@ class PyRobot(Simulator):
     def camera(self):
         return self._robot.camera
 
-    def _robot_action_space(self, robot_type, robot_config):
+    def _robot_action_space(self, articulated_agent_type, robot_config):
         action_spaces_dict = {}
         for action in robot_config.actions:
-            action_spaces_dict[action] = ACTION_SPACES[robot_type][action]
+            action_spaces_dict[action] = ACTION_SPACES[articulated_agent_type][
+                action
+            ]
         return spaces.Dict(action_spaces_dict)
 
     @property

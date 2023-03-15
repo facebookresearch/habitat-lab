@@ -81,7 +81,13 @@ def test_rearrange_baseline_envs(test_cfg_path):
     """
     Test the Habitat Baseline environments
     """
-    config = baselines_get_config(test_cfg_path)
+    config = baselines_get_config(
+        test_cfg_path,
+        [
+            "habitat.dataset.split=val",
+            "habitat_baselines.eval.split=val",
+        ],
+    )
     with habitat.config.read_write(config):
         config.habitat.gym.obs_keys = None
         config.habitat.gym.desired_goal_keys = []
@@ -117,7 +123,11 @@ def test_composite_tasks(test_cfg_path):
         return
 
     config = get_config(
-        test_cfg_path, ["habitat.simulator.concur_render=False"]
+        test_cfg_path,
+        [
+            "habitat.simulator.concur_render=False",
+            "habitat.dataset.split=val",
+        ],
     )
     if "task_spec" not in config.habitat.task:
         return

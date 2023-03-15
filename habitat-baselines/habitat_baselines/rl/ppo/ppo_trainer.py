@@ -110,14 +110,21 @@ class PPOTrainer(BaseRLTrainer):
 
         return t.to(device=orig_device)
 
+    def _create_obs_transforms(self):
+        self.obs_transforms = get_active_obs_transforms(self.config)
+        self._env_spec.observation_space = apply_obs_transforms_obs_space(
+            self._env_spec.observation_space, self.obs_transforms
+        )
+
     def _create_agent(self, resume_state, **kwargs) -> AgentAccessMgr:
         """
         Sets up the AgentAccessMgr. You still must call `agent.post_init` after
         this call. This only constructs the object.
         """
 
+        self._create_obs_transforms()
         return baseline_registry.get_agent_access_mgr(
-            self.config.habitat_baselines.rl.agent.name
+            self.config.habitat_baselines.rl.agent.type
         )(
             config=self.config,
             env_spec=self._env_spec,
@@ -234,11 +241,6 @@ class PPOTrainer(BaseRLTrainer):
 
         logger.add_filehandler(self.config.habitat_baselines.log_file)
 
-        self.obs_transforms = get_active_obs_transforms(self.config)
-        self._env_spec.observation_space = apply_obs_transforms_obs_space(
-            self._env_spec.observation_space, self.obs_transforms
-        )
-
         self._agent = self._create_agent(resume_state)
         if self._is_distributed:
             self._agent.updater.init_distributed(find_unused_params=False)  # type: ignore
@@ -261,7 +263,7 @@ class PPOTrainer(BaseRLTrainer):
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
                 ] = self._encoder(batch)
 
-        self._agent.rollouts.insert_first(batch)
+        self._agent.rollouts.insert_first_observations(batch)
 
         self.current_episode_reward = torch.zeros(self.envs.num_envs, 1)
         self.running_episode_stats = dict(
@@ -333,7 +335,6 @@ class PPOTrainer(BaseRLTrainer):
 
         # Sample actions
         with inference_mode():
-            # TODO: Refactor this in the next multi-agent PR to maintain the current observation in the trainer rather than indexing into rollouts.
             step_batch = self._agent.rollouts.get_current_step(
                 env_slice, buffer_index
             )
@@ -813,11 +814,13 @@ class PPOTrainer(BaseRLTrainer):
 
         self._init_envs(config, is_eval=True)
 
+        self._agent = self._create_agent(None)
         action_shape, discrete_actions = get_action_space_info(
             self._agent.policy_action_space
         )
 
-        self._agent.load_state_dict(ckpt_dict["state_dict"])
+        if self._agent.actor_critic.should_load_agent_state:
+            self._agent.load_state_dict(ckpt_dict)
 
         observations = self.envs.reset()
         batch = batch_obs(observations, device=self.device)
@@ -828,7 +831,7 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         test_recurrent_hidden_states = torch.zeros(
-            shape=(
+            (
                 self.config.habitat_baselines.num_environments,
                 *self._agent.hidden_state_shape,
             ),

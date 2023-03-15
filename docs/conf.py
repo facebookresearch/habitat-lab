@@ -43,7 +43,6 @@ INPUT_DOCS = ["docs.rst"]
 INPUT_PAGES = [
     "pages/index.rst",
     "pages/quickstart.rst",
-    "pages/habitat-sim-demo.rst",
     "pages/habitat-lab-demo.rst",
     "pages/habitat-lab-tdmap-viz.rst",
     "pages/habitat2.rst",
@@ -78,7 +77,6 @@ LINKS_NAVBAR1 = [
         "pages",
         [
             ("Quickstart", "quickstart"),
-            ("Habitat Sim Demo", "habitat-sim-demo"),
             ("Habitat Lab Demo", "habitat-lab-demo"),
             ("Habitat Lab TopdownMap Visualization", "habitat-lab-tdmap-viz"),
             ("Habitat 2.0 Overview", "habitat2"),
