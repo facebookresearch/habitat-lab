@@ -119,7 +119,6 @@ class HumanoidRearrangeController:
         Returns a stop, standing pose
         """
         joint_pose = self.stop_pose.joints
-        self.obj_transform_offset = mn.Matrix4()
         # the object transform does not change
         return joint_pose, self.obj_transform_offset, self.obj_transform_base
 
