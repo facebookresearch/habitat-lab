@@ -655,7 +655,7 @@ class ThreadedVectorEnv(VectorEnv):
 class BatchRenderedVectorEnv(VectorEnv):
     r""":ref:`VectorEnv` that batches rendering operations.
 
-    Instead of individually rendering their environment, the worker simulators include their render state into observations.
+    Instead of individually rendering their environment, the worker simulators include their keyframe into observations.
     The BatchRenderedVectorEnv then provides these observations to a batch renderer to produce all visual sensor observations simultaneously.
 
     Refer to the BatchRenderer class.
@@ -671,7 +671,7 @@ class BatchRenderedVectorEnv(VectorEnv):
         self._config = config
         self._batch_renderer = BatchRenderer(config, self.num_envs)
 
-    def render(
+    def debug_render(
         self, mode: str = "human", *args, **kwargs
     ) -> Optional[np.ndarray]:
         r"""Creates a tiled image from observations rendered during the last post_step call.
@@ -692,7 +692,7 @@ class BatchRenderedVectorEnv(VectorEnv):
 
     def post_step(self, observations) -> List[OrderedDict]:
         r"""
-        Renders observations for all environments by consuming render state observations.
+        Renders observations for all environments by consuming keyframe observations.
 
         :param observations: List of observations for each environment.
         :return: List of rendered observations for each environment.

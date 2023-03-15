@@ -7,5 +7,5 @@
 
 from typing_extensions import Final
 
-RENDER_STATE_OBSERVATION_KEY: Final[str] = "render_state"
-RENDER_STATE_SENSOR_PREFIX: Final[str] = "sensor_"
+KEYFRAME_OBSERVATION_KEY: Final[str] = "keyframe"
+KEYFRAME_SENSOR_PREFIX: Final[str] = "sensor_"

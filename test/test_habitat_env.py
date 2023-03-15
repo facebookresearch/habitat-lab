@@ -15,7 +15,7 @@ from gym import Wrapper
 
 import habitat
 from habitat.config.default import get_agent_config, get_config
-from habitat.core.batch_renderer_constants import RENDER_STATE_OBSERVATION_KEY
+from habitat.core.batch_renderer_constants import KEYFRAME_OBSERVATION_KEY
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.gym.gym_definitions import make_gym_from_config
@@ -331,19 +331,19 @@ def test_rl_batch_render_envs(gpu2gpu):
             ]
 
             for env_obs in observations:
-                assert RENDER_STATE_OBSERVATION_KEY in env_obs
+                assert KEYFRAME_OBSERVATION_KEY in env_obs
 
             observations = envs.post_step(observations)
 
             for env_obs in observations:
-                assert RENDER_STATE_OBSERVATION_KEY not in env_obs
+                assert KEYFRAME_OBSERVATION_KEY not in env_obs
 
             assert len(observations) == num_envs
             assert len(rewards) == num_envs
             assert len(dones) == num_envs
             assert len(infos) == num_envs
 
-            tiled_img = envs.render(mode="rgb_array")
+            tiled_img = envs.debug_render(mode="rgb_array")
             new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
             new_width = int(np.ceil(float(NUM_ENVS) / new_height))
             h, w, c = observations[0]["rgb"].shape

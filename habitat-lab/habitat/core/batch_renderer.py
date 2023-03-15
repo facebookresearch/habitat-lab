@@ -15,8 +15,8 @@ from torch import Tensor
 
 import habitat_sim
 from habitat.core.batch_renderer_constants import (
-    RENDER_STATE_OBSERVATION_KEY,
-    RENDER_STATE_SENSOR_PREFIX,
+    KEYFRAME_OBSERVATION_KEY,
+    KEYFRAME_SENSOR_PREFIX,
 )
 from habitat.core.logging import logger
 from habitat.core.registry import registry
@@ -39,7 +39,7 @@ class BatchRenderer:
     It also increases rendering performance by batching, leveraging data locality, minimizing amount of contexts.
 
     Internally, the system is a replay renderer, meaning that it renders gfx-replay keyframes emitted by simulators.
-    When batch rendering, simulators produce keyframes and add them to observations as RENDER_STATE_OBSERVATION_KEY.
+    When batch rendering, simulators produce keyframes and add them to observations as KEYFRAME_OBSERVATION_KEY.
     In "post_step", the renderer aggregates these observations, reconstitutes each state then renders them simultaneously.
 
     This feature is experimental and may change at any time.
@@ -108,23 +108,23 @@ class BatchRenderer:
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""
-        Renders observations for all environments by consuming render state observations.
+        Renders observations for all environments by consuming keyframe observations.
 
         :param observations: List of observations for each environment.
         :return: List of rendered observations for each environment.
         """
         assert len(observations) == self._num_envs
 
-        # Pop RENDER_STATE_OBSERVATION_KEY from observations and apply to replay renderer.
-        # See HabitatSim.add_render_state_to_observations().
+        # Pop KEYFRAME_OBSERVATION_KEY from observations and apply to replay renderer.
+        # See HabitatSim.add_keyframe_to_observations().
         for env_index in range(self._num_envs):
             env_obs = observations[env_index]
-            render_state = env_obs.pop(RENDER_STATE_OBSERVATION_KEY)
+            keyframe = env_obs.pop(KEYFRAME_OBSERVATION_KEY)
             self._replay_renderer.set_environment_keyframe(
-                env_index, render_state
+                env_index, keyframe
             )
             self._replay_renderer.set_sensor_transforms_from_keyframe(
-                env_index, RENDER_STATE_SENSOR_PREFIX
+                env_index, KEYFRAME_SENSOR_PREFIX
             )
 
         # Render observations

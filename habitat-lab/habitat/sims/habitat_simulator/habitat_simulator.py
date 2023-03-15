@@ -26,8 +26,8 @@ from omegaconf import DictConfig
 import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.core.batch_renderer_constants import (
-    RENDER_STATE_OBSERVATION_KEY,
-    RENDER_STATE_SENSOR_PREFIX,
+    KEYFRAME_OBSERVATION_KEY,
+    KEYFRAME_SENSOR_PREFIX,
 )
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
@@ -426,7 +426,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         self._prev_sim_obs = sim_obs
         if self.config.enable_batch_renderer:
-            self.add_render_state_to_observations(sim_obs)
+            self.add_keyframe_to_observations(sim_obs)
             return sim_obs
         else:
             return self._sensor_suite.get_observations(sim_obs)
@@ -435,7 +435,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         if self.config.enable_batch_renderer:
-            self.add_render_state_to_observations(sim_obs)
+            self.add_keyframe_to_observations(sim_obs)
             return sim_obs
         else:
             return self._sensor_suite.get_observations(sim_obs)
@@ -679,23 +679,23 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         """
         return self._prev_sim_obs.get("collided", False)
 
-    def add_render_state_to_observations(self, observations):
+    def add_keyframe_to_observations(self, observations):
         r"""Adds an item to observations that contains the latest gfx-replay keyframe.
         This is used to communicate the state of concurrent simulators to the batch renderer between processes.
 
-        :param observations: Original observations upon which the render state is added.
+        :param observations: Original observations upon which the keyframe is added.
         """
         if self.config.enable_batch_renderer:
-            assert RENDER_STATE_OBSERVATION_KEY not in observations
+            assert KEYFRAME_OBSERVATION_KEY not in observations
             for _sensor_uuid, sensor in self._sensors.items():
                 node = sensor._sensor_object.node
                 transform = node.absolute_transformation()
                 rotation = mn.Quaternion.from_matrix(transform.rotation())
                 self.gfx_replay_manager.add_user_transform_to_keyframe(
-                    RENDER_STATE_SENSOR_PREFIX + _sensor_uuid,
+                    KEYFRAME_SENSOR_PREFIX + _sensor_uuid,
                     transform.translation,
                     rotation,
                 )
             observations[
-                RENDER_STATE_OBSERVATION_KEY
+                KEYFRAME_OBSERVATION_KEY
             ] = self.gfx_replay_manager.extract_keyframe()
