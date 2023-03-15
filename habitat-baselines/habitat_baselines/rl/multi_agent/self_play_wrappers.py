@@ -62,7 +62,7 @@ class SelfBatchedStorage(Storage):
     def to(self, device):
         raise NotImplementedError()
 
-    def insert_first(self, batch):
+    def insert_first_observations(self, batch):
         raise NotImplementedError()
 
     def advance_rollout(self, buffer_index=0):

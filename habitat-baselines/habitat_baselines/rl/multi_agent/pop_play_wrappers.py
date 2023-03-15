@@ -172,7 +172,7 @@ class MultiStorage(Storage):
         # The active storages already need to be on the correct device.
         pass
 
-    def insert_first(self, batch):
+    def insert_first_observations(self, batch):
         for agent_i, storage in enumerate(self._active_storages):
             storage.insert_first(update_dict_with_agent_prefix(batch, agent_i))
 
