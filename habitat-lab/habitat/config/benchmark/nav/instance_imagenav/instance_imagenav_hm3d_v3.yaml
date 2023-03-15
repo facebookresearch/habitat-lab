@@ -23,7 +23,7 @@ habitat:
           depth_sensor:
             width: 480
             height: 640
-            hfov: 58
+            hfov: 42
             min_depth: 0.5
             max_depth: 5.0
             position: [0, 1.31, 0]
