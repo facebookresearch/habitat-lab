@@ -50,6 +50,9 @@ class RearrangeEpisodeGeneratorConfig:
     additional_object_paths: List[str] = field(
         default_factory=lambda: ["data/objects/ycb/"]
     )
+    # optionally correct unstable states by removing extra unstable objects (within minimum samples limitations)
+    # TODO: This option is off by default for backwards compatibility and because it does not yet work with target sampling.
+    correct_unstable_results: bool = False
     # ----- resource set definitions ------
     # Define the sets of scenes, objects, and receptacles which can be sampled from.
     # The SceneDataset will be searched for resources of each type with handles containing ANY "included" substrings and NO "excluded" substrings.

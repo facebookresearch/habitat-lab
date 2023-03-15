@@ -18,6 +18,7 @@ from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ppo.updater import Updater
 from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.utils.common import (
     LagrangeInequalityCoefficient,
@@ -28,7 +29,7 @@ EPS_PPO = 1e-5
 
 
 @baseline_registry.register_updater
-class PPO(nn.Module):
+class PPO(nn.Module, Updater):
     entropy_coef: Union[float, LagrangeInequalityCoefficient]
 
     @classmethod

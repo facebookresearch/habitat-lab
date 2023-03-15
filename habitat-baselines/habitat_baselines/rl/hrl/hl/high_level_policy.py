@@ -90,6 +90,9 @@ class HighLevelPolicy(nn.Module):
         """
         raise NotImplementedError()
 
+    def create_hl_info(self) -> Dict[str, Any]:
+        return {}
+
     def apply_mask(self, mask: torch.Tensor) -> None:
         """
         Called before every step with the mask information at the current step.
