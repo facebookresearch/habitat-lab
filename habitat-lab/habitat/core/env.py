@@ -128,7 +128,6 @@ class Env:
             }
         )
         self.action_space = self._task.action_space
-
         self._max_episode_seconds = (
             self._config.environment.max_episode_seconds
         )
