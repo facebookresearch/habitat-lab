@@ -4,16 +4,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import gc
-import itertools
+import ctypes
 import json
 import os
 import os.path as osp
+import sys
 import time
 from glob import glob
 from typing import List
 
+flags = sys.getdlopenflags()
+sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
+
 import magnum as mn
+import numpy as np
 import pytest
 import torch
 import yaml
@@ -32,6 +36,7 @@ from habitat.core.environments import get_env_class
 from habitat.core.logging import logger
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
+from habitat.utils.geometry_utils import is_point_in_triangle
 from habitat_baselines.config.default import get_config as baselines_get_config
 from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
 from habitat_baselines.run import run_exp
@@ -216,219 +221,20 @@ def test_rearrange_episode_generator(
     )
 
 
-@pytest.mark.parametrize(
-    "test_cfg_path,mode",
-    list(
-        itertools.product(
-            glob("habitat-baselines/habitat_baselines/config/tp_srl_test/*"),
-            ["eval"],
-        )
-    ),
-)
-def test_tp_srl(test_cfg_path, mode):
-    # For testing with world_size=1
-    os.environ["MAIN_PORT"] = str(find_free_port())
-
-    run_exp(
-        test_cfg_path.replace(
-            "habitat-baselines/habitat_baselines/config/", ""
-        ),
-        mode,
-        ["habitat_baselines.eval.split=train"],
-    )
-
-    # Needed to destroy the trainer
-    gc.collect()
-
-    # Deinit processes group
-    if torch.distributed.is_initialized():
-        torch.distributed.destroy_process_group()
-
-
-def place_scene_topdown_camera(sim):
-    """
-    Place the camera in the scene center looking down.
-    """
-    scene_bb = sim.get_active_scene_graph().get_root_node().cumulative_bb
-    look_down = mn.Quaternion.rotation(mn.Deg(-90), mn.Vector3.x_axis())
-    max_dim = max(scene_bb.size_x(), scene_bb.size_z())
-    cam_pos = scene_bb.center()
-    cam_pos[1] += 0.52 * max_dim + scene_bb.size_y() / 2.0
-    sim.agents[0].scene_node.translation = cam_pos
-    sim.agents[0].scene_node.rotation = look_down
-
-
-def place_scene_isometric_camera(sim):
-    """
-    Place the camera in the scene center looking down.
-    """
-    scene_bb = sim.get_active_scene_graph().get_root_node().cumulative_bb
-    cam_pos = scene_bb.center()
-    max_dim = max(scene_bb.size_x(), scene_bb.size_z())
-    cam_pos[1] += 0.52 * max_dim + scene_bb.size_y() / 2.0
-    cam_pos[0] = scene_bb.left
-    look_at_center = mn.Quaternion.from_matrix(
-        mn.Matrix4.look_at(
-            eye=cam_pos, target=scene_bb.center(), up=mn.Vector3(0, 1, 0)
-        ).rotation()
-    )
-    sim.agents[0].scene_node.translation = cam_pos
-    sim.agents[0].scene_node.rotation = look_at_center
-
-
-# NOTE: set 'debug_visualization' = True to produce images showing receptacles
-@pytest.mark.parametrize("debug_visualization", [True])
-@pytest.mark.parametrize(
-    "scene_asset",
-    [
-        "GLAQ4DNUx5U",
-        # "NBg5UqG3di3",
-        # "CFVBbU9Rsyb"
-    ],
-)
-def test_mesh_receptacles(debug_visualization, scene_asset):
-    hm3d_data_path = "data/scene_datasets/hm3d/example/hm3d_example_basis.scene_dataset_config.json"
-
-    mm = habitat_sim.metadata.MetadataMediator()
-    mm.active_dataset = hm3d_data_path
-    # print(mm.summary)
-    # print(mm.dataset_report())
-    # print(mm.get_scene_handles())
-
-    ##########################
-    # Test Mesh Receptacles
-    ##########################
-    # 1. Load the parameterized scene
-    sim_settings = habitat_sim.utils.settings.default_sim_settings.copy()
-    sim_settings["scene"] = scene_asset
-    sim_settings["scene_dataset_config_file"] = hm3d_data_path
-    sim_settings["sensor_height"] = 0
-    cfg = habitat_sim.utils.settings.make_cfg(sim_settings)
-    with habitat_sim.Simulator(cfg) as sim:
-        place_scene_topdown_camera(sim)
-
-        # 2. Compute a navmesh
-        if not sim.pathfinder.is_loaded:
-            # compute a navmesh on the ground plane
-            navmesh_settings = habitat_sim.NavMeshSettings()
-            navmesh_settings.set_defaults()
-            sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
-
-        # 3. Create receptacles from navmesh data
-        #   a) global receptacles
-        receptacles = []
-        # get navmesh data per-island, convert to lists, create Receptacles
-        for isl_ix in range(sim.pathfinder.num_islands):
-            island_verts = sim.pathfinder.build_navmesh_vertices(isl_ix)
-            island_ixs = sim.pathfinder.build_navmesh_vertex_indices(isl_ix)
-            mesh_receptacle = hab_receptacle.TriangleMeshReceptacle(
-                name=str(isl_ix), mesh_data=(island_verts, island_ixs)
-            )
-            receptacles.append(mesh_receptacle)
-
-        # 4. render receptacle debug (vs. navmesh vis)
-        observations = []
-        if debug_visualization:
-            sim.navmesh_visualization = True
-            observations.append(sim.get_sensor_observations())
-            sim.navmesh_visualization = False
-            for isl_ix, mesh_rec in enumerate(receptacles):
-                isl_color = mn.Color4.from_srgb(
-                    int(d3_40_colors_hex[isl_ix], base=16)
-                )
-                # print(f"isl_color = {isl_color}")
-                mesh_rec.debug_draw(sim, color=isl_color)
-            observations.append(sim.get_sensor_observations())
-
-        # 5. sample from receptacles
-        samples_per_unit_area = 50
-
-        rec_samples: List[List[mn.Vector3]] = []
-        for isl_ix, mesh_rec in enumerate(receptacles):
-            rec_samples.append([])
-            num_samples = max(
-                1, int(mesh_rec.total_area * samples_per_unit_area)
-            )
-            # print(f"isl {isl_ix} num samples = {num_samples}")
-            for _samp_ix in range(num_samples):
-                rec_samples[-1].append(
-                    mesh_rec.sample_uniform_global(
-                        sim, sample_region_scale=1.0
-                    )
-                )
-                # test that the samples are on the source NavMesh
-                assert (
-                    sim.pathfinder.snap_point(
-                        rec_samples[-1][-1], island_index=isl_ix
-                    )
-                    - rec_samples[-1][-1]
-                ).length() < 0.01, "Sample is not on the island."
-
-        if debug_visualization:
-            dblr = sim.get_debug_line_render()
-            # draw the samples
-            for isl_ix, samples in enumerate(rec_samples):
-                isl_color = mn.Color4.from_srgb(
-                    int(d3_40_colors_hex[isl_ix], base=16)
-                )
-                for sample in samples:
-                    dblr.draw_circle(sample, 0.05, isl_color)
-                observations.append(sim.get_sensor_observations())
-
-        # 6. test sampling is correct (percent in each triangle equivalent to area weight)
-        samples_per_unit_area = 10000
-        for mesh_rec in receptacles:
-            num_samples = max(
-                1, int(mesh_rec.total_area * samples_per_unit_area)
-            )
-            tri_samples: List[int] = [
-                mesh_rec.sample_area_weighted_triangle()
-                for samp_ix in range(num_samples)
-            ]
-            for tri_ix in range(len(mesh_rec.area_weighted_accumulator)):
-                # compute the weight from weight accumulator
-                weight = mesh_rec.area_weighted_accumulator[tri_ix]
-                if tri_ix > 0:
-                    weight -= mesh_rec.area_weighted_accumulator[tri_ix - 1]
-                num_tri = tri_samples.count(tri_ix)
-                # print(f"got {num_tri/num_samples} expected {weight}, diff = {abs(weight - num_tri/num_samples)}")
-                assert (
-                    abs(weight - num_tri / num_samples) < 0.005
-                ), "area weighting may be off"
-
-    # show observations
-    if debug_visualization:
-        from habitat_sim.utils import viz_utils as vut
-
-        for obs in observations:
-            vut.observation_to_image(obs["color_sensor"], "color").show()
-
-
-# NOTE: set 'debug_visualization' = True to produce images showing receptacles
 @pytest.mark.skipif(
     not osp.exists("data/test_assets/"),
     reason="This test requires habitat-sim test assets.",
 )
-@pytest.mark.parametrize("debug_visualization", [True])
-def test_receptacle_parsing(debug_visualization):
-    observations = []
-
-    ##########################
-    # Test Mesh Receptacles
-    ##########################
+def test_receptacle_parsing():
     # 1. Load the parameterized scene
     sim_settings = habitat_sim.utils.settings.default_sim_settings.copy()
-    # sim_settings["scene"] = "data/test_assets/scenes/simple_room.stage_config.json"
     sim_settings[
         "scene"
-    ] = "/home/alexclegg/Documents/dev/habitat-lab/mesh_receptacle_out/105515541_173104641.stage_config.json"
+    ] = "data/test_assets/scenes/simple_room.stage_config.json"
     sim_settings["sensor_height"] = 0
+    sim_settings["enable_physics"] = True
     cfg = habitat_sim.utils.settings.make_cfg(sim_settings)
-    cfg.sim_cfg.scene_light_setup = ""
-    cfg.sim_cfg.override_scene_light_defaults = True
     with habitat_sim.Simulator(cfg) as sim:
-        place_scene_isometric_camera(sim)
-
         # load test assets
         sim.metadata_mediator.object_template_manager.load_configs(
             "data/test_assets/objects/chair.object_config.json"
@@ -439,46 +245,155 @@ def test_receptacle_parsing(debug_visualization):
         list_receptacles = hab_receptacle.get_all_scenedataset_receptacles(sim)
         print(f"list_receptacles = {list_receptacles}")
         # receptacles from stage configs:
-        # assert "receptacle_aabb_simpleroom_test" in list_receptacles["stage"]['data/test_assets/scenes/simple_room.stage_config.json']
-        # assert "receptacle_mesh_simpleroom_test" in list_receptacles["stage"]['data/test_assets/scenes/simple_room.stage_config.json']
+        assert (
+            "receptacle_aabb_simpleroom_test"
+            in list_receptacles["stage"][
+                "data/test_assets/scenes/simple_room.stage_config.json"
+            ]
+        )
+        assert (
+            "receptacle_mesh_simpleroom_test"
+            in list_receptacles["stage"][
+                "data/test_assets/scenes/simple_room.stage_config.json"
+            ]
+        )
         # receptacles from rigid object configs:
-        # assert "receptacle_aabb_chair_test" in list_receptacles["rigid"]['data/test_assets/objects/chair.object_config.json']
-        # assert "receptacle_mesh_chair_test" in list_receptacles["rigid"]['data/test_assets/objects/chair.object_config.json']
+        assert (
+            "receptacle_aabb_chair_test"
+            in list_receptacles["rigid"][
+                "data/test_assets/objects/chair.object_config.json"
+            ]
+        )
+        assert (
+            "receptacle_mesh_chair_test"
+            in list_receptacles["rigid"][
+                "data/test_assets/objects/chair.object_config.json"
+            ]
+        )
         # TODO: receptacles from articulated object configs:
         # assert "" in list_receptacles["articulated"]
 
-        # parse the metadata into Receptacle objects and test them
+        # add the chair to the scene
+        chair_template_handle = (
+            sim.metadata_mediator.object_template_manager.get_template_handles(
+                "chair"
+            )[0]
+        )
+        chair_obj = (
+            sim.get_rigid_object_manager().add_object_by_template_handle(
+                chair_template_handle
+            )
+        )
+
+        def randomize_obj_state():
+            chair_obj.translation = np.random.random(3)
+            chair_obj.rotation = habitat_sim.utils.common.random_quaternion()
+            # TODO: also randomize AO state here
+
+        # parse the metadata into Receptacle objects
         test_receptacles = hab_receptacle.find_receptacles(sim)
 
-        # visualize all receptacles and test debug_draw
-        for rec in test_receptacles:
-            rec.debug_draw(sim)
-            observations.append(sim.get_sensor_observations())
-            # then sample and draw:
-            # TODO: necessary here?
-            # 5. sample from receptacles
-            rec_samples = []
-            num_samples = 50
-            for _samp_ix in range(num_samples):
-                rec_samples.append(
-                    rec.sample_uniform_global(sim, sample_region_scale=1.0)
+        # test the Receptacle instances
+        num_test_samples = 10
+        for receptacle in test_receptacles:
+            # check for contents and correct type parsing
+            if receptacle.name == "receptacle_aabb_chair_test":
+                assert type(receptacle) is hab_receptacle.AABBReceptacle
+            elif receptacle.name == "receptacle_mesh_chair_test":
+                assert (
+                    type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+                )
+            elif receptacle.name == "receptacle_aabb_simpleroom_test":
+                assert type(receptacle) is hab_receptacle.AABBReceptacle
+            elif receptacle.name == "receptacle_mesh_simpleroom_test":
+                assert (
+                    type(receptacle) is hab_receptacle.TriangleMeshReceptacle
+                )
+            else:
+                # TODO: add AO receptacles
+                raise AssertionError(
+                    f"Unknown Receptacle '{receptacle.name}' detected. Update unit test golden values if this is expected."
                 )
 
-            if debug_visualization:
-                dblr = sim.get_debug_line_render()
-                # draw the samples
-                for sample in rec_samples:
-                    print(sample)
-                    dblr.draw_circle(
-                        translation=mn.Vector3(sample),
-                        radius=0.05,
-                        color=mn.Color4.magenta(),
+            for _six in range(num_test_samples):
+                randomize_obj_state()
+                # check that parenting and global transforms are as expected:
+                parent_object = None
+                expected_global_transform = mn.Matrix4.identity_init()
+                global_transform = receptacle.get_global_transform(sim)
+                if receptacle.parent_object_handle is not None:
+                    parent_object = None
+                    if receptacle.parent_link is not None:
+                        # articulated object
+                        assert receptacle.is_parent_object_articulated
+                        parent_object = sim.get_articulated_object_manager().get_object_by_handle(
+                            receptacle.parent_object_handle
+                        )
+                        expected_global_transform = (
+                            parent_object.get_link_scene_node(
+                                receptacle.parent_link
+                            ).absolute_transformation()
+                        )
+                    else:
+                        # rigid object
+                        assert not receptacle.is_parent_object_articulated
+                        parent_object = sim.get_rigid_object_manager().get_object_by_handle(
+                            receptacle.parent_object_handle
+                        )
+                        # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
+                        expected_global_transform = (
+                            parent_object.visual_scene_nodes[
+                                1
+                            ].absolute_transformation()
+                        )
+                    assert parent_object is not None
+                    assert np.allclose(
+                        global_transform, expected_global_transform, atol=1e-06
                     )
-                observations.append(sim.get_sensor_observations())
+                else:
+                    # this is a stage Receptacle (global transform)
+                    if type(receptacle) is not hab_receptacle.AABBReceptacle:
+                        assert np.allclose(
+                            global_transform,
+                            expected_global_transform,
+                            atol=1e-06,
+                        )
+                    else:
+                        # NOTE: global AABB Receptacles have special handling here which is not explicitly tested. See AABBReceptacle.get_global_transform()
+                        expected_global_transform = global_transform
 
-    # show observations
-    if debug_visualization:
-        from habitat_sim.utils import viz_utils as vut
-
-        for obs in observations:
-            vut.observation_to_image(obs["color_sensor"], "color").show()
+                for _six2 in range(num_test_samples):
+                    sample_point = receptacle.sample_uniform_global(
+                        sim, sample_region_scale=1.0
+                    )
+                    expected_local_sample_point = (
+                        expected_global_transform.inverted().transform_point(
+                            sample_point
+                        )
+                    )
+                    if type(receptacle) is hab_receptacle.AABBReceptacle:
+                        # check that the world->local sample point is contained in the local AABB
+                        assert receptacle.bounds.contains(
+                            expected_local_sample_point
+                        )
+                    elif (
+                        type(receptacle)
+                        is hab_receptacle.TriangleMeshReceptacle
+                    ):
+                        # check that the local point is within a mesh triangle
+                        in_mesh = False
+                        for f_ix in range(
+                            int(len(receptacle.mesh_data.indices) / 3)
+                        ):
+                            verts = receptacle.get_face_verts(f_ix)
+                            if is_point_in_triangle(
+                                expected_local_sample_point,
+                                verts[0],
+                                verts[1],
+                                verts[2],
+                            ):
+                                in_mesh = True
+                                break
+                        assert (
+                            in_mesh
+                        ), "The point must belong to a triangle of the local mesh to be valid."

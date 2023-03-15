@@ -7,7 +7,10 @@
 import itertools
 import os
 import os.path as osp
+<<<<<<< HEAD
 import pickle
+=======
+>>>>>>> 0ef0de29... TriangleMeshReceptacles and RearrangeGenerator Improvements (#1108)
 import time
 from collections import defaultdict
 
@@ -439,7 +442,11 @@ class RearrangeEpisodeGenerator:
         for receptacle in receptacles:
             logger.info("receptacle processing")
             receptacle.debug_draw(self.sim)
-            self.vdb.look_at(receptacle.sample_uniform_global(self.sim, 1.0))
+            # Receptacle does not have a position cached relative to the object it is attached to, so sample a position from it instead
+            sampled_look_target = receptacle.sample_uniform_global(
+                self.sim, 1.0
+            )
+            self.vdb.look_at(sampled_look_target)
             self.vdb.get_observation()
 
     def generate_episodes(
@@ -602,7 +609,7 @@ class RearrangeEpisodeGenerator:
             self.vdb.make_debug_video(prefix="receptacles_")
 
         # sample object placements
-        self.object_to_containing_receptacle = {}
+        self.object_to_containing_receptacle: Dict[str, Receptacle] = {}
         for sampler_name, obj_sampler in self._obj_samplers.items():
             object_sample_data = obj_sampler.sample(
                 self.sim,
@@ -631,13 +638,15 @@ class RearrangeEpisodeGenerator:
             )
             # debug visualization showing each newly added object
             if self._render_debug_obs:
-                logger.info(
+                logger.debug(
                     f"Generating debug images for {len(new_objects)} objects..."
                 )
                 for new_object in new_objects:
                     self.vdb.look_at(new_object.translation)
                     self.vdb.get_observation()
-                logger.info("   ... done")
+                logger.debug(
+                    f"... done generating the debug images for {len(new_objects)} objects."
+                )
 
         # simulate the world for a few seconds to validate the placements
         if not self.settle_sim():
@@ -907,10 +916,13 @@ class RearrangeEpisodeGenerator:
             if self._render_debug_obs:
                 self.vdb.get_observation(obs_cache=settle_db_obs)
 
-        logger.info(f"   ...done in {time.time()-settle_start_time} seconds.")
+        logger.info(
+            f"   ...done with placement stability analysis in {time.time()-settle_start_time} seconds."
+        )
         # check stability of placements
-        logger.info("Computing placement stability report:")
-        logger.info("----------------------------------------")
+        logger.info(
+            "Computing placement stability report:\n----------------------------------------"
+        )
         max_settle_displacement = 0
         error_eps = 0.1
         unstable_placements: List[str] = []  # list of unstable object handles
@@ -952,27 +964,32 @@ class RearrangeEpisodeGenerator:
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
 
-        # detailed receptacle stability report
-        logger.info("  Detailed sampling stats:")
+        # collect detailed receptacle stability report log
+        detailed_receptacle_stability_report = (
+            "  Detailed receptacle stability analysis:"
+        )
 
-        # receptacle: [num_objects, num_unstable_objects]
-        rec_num_obj_vs_unstable: Dict[Receptacle, List[int]] = {}
+        # compute number of unstable objects for each receptacle
+        rec_num_obj_vs_unstable: Dict[Receptacle, Dict[str, int]] = {}
         for obj_name, rec in self.object_to_containing_receptacle.items():
             if rec not in rec_num_obj_vs_unstable:
-                rec_num_obj_vs_unstable[rec] = [0, 0]
-            rec_num_obj_vs_unstable[rec][0] += 1
+                rec_num_obj_vs_unstable[rec] = {
+                    "num_objects": 0,
+                    "num_unstable_objects": 0,
+                }
+            rec_num_obj_vs_unstable[rec]["num_objects"] += 1
             if obj_name in unstable_placements:
-                rec_num_obj_vs_unstable[rec][1] += 1
-        for rec, details in rec_num_obj_vs_unstable.items():
-            logger.info(
-                f"      receptacle '{rec.name}': ({details[1]}/{details[0]}) (unstable/total) objects."
-            )
+                rec_num_obj_vs_unstable[rec]["num_unstable_objects"] += 1
+        for rec, obj_in_rec in rec_num_obj_vs_unstable.items():
+            detailed_receptacle_stability_report += f"\n      receptacle '{rec.name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
 
         success = len(unstable_placements) == 0
 
         # optionally salvage the episode by removing unstable objects
         if self.cfg.correct_unstable_results and not success:
-            logger.info("  attempting to correct unstable placements...")
+            detailed_receptacle_stability_report += (
+                "\n  attempting to correct unstable placements..."
+            )
             for sampler_name, objects in self.episode_data[
                 "sampled_objects"
             ].items():
@@ -984,10 +1001,9 @@ class RearrangeEpisodeGenerator:
                     if obj_name in obj_names
                 ]
                 # check that we have freedom to reject some objects
-                if (
-                    len(objects) - len(unstable_subset)
-                    >= sampler.num_objects[0]
-                ):
+                num_required_objects = sampler.num_objects[0]
+                num_stable_objects = len(objects) - len(unstable_subset)
+                if num_stable_objects >= num_required_objects:
                     # remove the unstable objects from datastructures
                     self.episode_data["sampled_objects"][sampler_name] = [
                         obj
@@ -1002,19 +1018,22 @@ class RearrangeEpisodeGenerator:
                         if obj.handle not in unstable_subset
                     ]
                 else:
-                    logger.info(
-                        f"  ... could not remove all unstable placements without violating minimum object sampler requirements for {sampler_name}"
+                    detailed_receptacle_stability_report += f"\n  ... could not remove all unstable placements without violating minimum object sampler requirements for {sampler_name}"
+                    detailed_receptacle_stability_report += (
+                        "\n----------------------------------------"
                     )
-                    logger.info("----------------------------------------")
+                    logger.info(detailed_receptacle_stability_report)
                     return False
-            logger.info(
-                f"  ... corrected unstable placements successfully. Final object count = {len(self.ep_sampled_objects)}"
-            )
+            detailed_receptacle_stability_report += f"\n  ... corrected unstable placements successfully. Final object count = {len(self.ep_sampled_objects)}"
             # we removed all unstable placements
             success = True
 
-        logger.info("----------------------------------------")
+        detailed_receptacle_stability_report += (
+            "\n----------------------------------------"
+        )
+        logger.info(detailed_receptacle_stability_report)
 
+        # generate debug images of all final object placements
         if self._render_debug_obs and success:
             for obj in self.ep_sampled_objects:
                 self.vdb.peek_rigid_object(obj, peek_all_axis=True)
