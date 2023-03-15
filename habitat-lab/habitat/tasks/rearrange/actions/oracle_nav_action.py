@@ -8,6 +8,7 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import (
@@ -36,8 +37,11 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             BaseVelAction.__init__(self, *args, **kwargs)
 
         elif self.motion_type == "human_joints":
-            self.humanoid_controller = None
             HumanoidJointAction.__init__(self, *args, **kwargs)
+            self.humanoid_controller = self.lazy_inst_humanoid_controller(
+                config, task
+            )
+
         else:
             raise ValueError("Unrecognized motion type for oracle nav  action")
 
@@ -56,6 +60,23 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         else:
             vel = [0, turn_vel]
         return vel
+
+    def lazy_inst_humanoid_controller(self, config, task):
+        # Lazy instantiation of humanoid controller
+        # We assign the task with the humanoid controller, so that multiple actions can
+        # use it.
+        if (
+            not hasattr(task, "humanoid_controller")
+            or task.humanoid_controller is None
+        ):
+            # Initialize humanoid controller
+            # TODO: Where do we put this config variable
+            walk_pose_path = (
+                "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+            )
+            humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+            task.humanoid_controller = humanoid_controller
+        return task.humanoid_controller
 
     @property
     def action_space(self):

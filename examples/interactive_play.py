@@ -56,6 +56,7 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
@@ -68,9 +69,6 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
-)
-from habitat_baselines.articulated_agent_controllers import (
-    HumanoidRearrangeController,
 )
 from habitat_sim.utils import viz_utils as vut
 

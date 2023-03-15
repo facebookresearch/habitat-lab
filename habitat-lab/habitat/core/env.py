@@ -129,27 +129,6 @@ class Env:
         )
         self.action_space = self._task.action_space
 
-        # Sharing controller between actions
-        # This should go somewhere else, but it is unclear where
-        # we want to share a controller across actions since the controller
-        # is stateful
-        from habitat_baselines.articulated_agent_controllers import (
-            HumanoidRearrangeController,
-        )
-
-        walk_pose_path = (
-            self._config.simulator.agents.main_agent.motion_data_path
-        )
-        humanoid_controller = HumanoidRearrangeController(walk_pose_path)
-        if (
-            "oracle_nav_action" in self.task.actions
-            and self.task.actions["oracle_nav_action"].motion_type
-            == "human_joints"
-        ):
-            self.task.actions[
-                "oracle_nav_action"
-            ].humanoid_controller = humanoid_controller
-
         self._max_episode_seconds = (
             self._config.environment.max_episode_seconds
         )

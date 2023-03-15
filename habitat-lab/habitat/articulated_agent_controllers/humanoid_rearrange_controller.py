@@ -100,7 +100,9 @@ class HumanoidRearrangeController:
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
 
-        # State variables
+        # These two matrices store the global transformation of the base
+        # as well as the transformation caused by the walking gait
+        # We initialize them to identity
         self.obj_transform_offset = mn.Matrix4()
         self.obj_transform_base = mn.Matrix4()
 
@@ -146,7 +148,7 @@ class HumanoidRearrangeController:
         distance_to_walk = np.linalg.norm(forward_V)
         did_rotate = False
 
-        # The angle we intially want to go to
+        # The angle we initially want to go to
         new_angle = np.arctan2(forward_V[0], forward_V[2]) * 180.0 / np.pi
         if self.prev_orientation is not None:
             # If prev orrientation is None, transition to this position directly
@@ -231,11 +233,10 @@ class HumanoidRearrangeController:
 
         # Remove the forward component, and orient according to forward_V
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
-
         obj_transform_offset = obj_transform
 
         # This is the rotation and translation caused by the current motion pose
-        # we still need to apply the base_transform to obtain the full transform
+        #  we still need to apply the base_transform to obtain the full transform
         self.obj_transform_offset = obj_transform
 
         # The base_transform here is independent of transforms caused by the current
