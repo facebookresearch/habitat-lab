@@ -137,7 +137,7 @@ class HumanoidRearrangeController:
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
-
+        deg_per_rads = 180.0 / np.pi
         forward_V = target_position
         if forward_V.length() == 0.0:
             return self.get_stop_pose()
@@ -145,14 +145,13 @@ class HumanoidRearrangeController:
         did_rotate = False
 
         # The angle we initially want to go to
-        new_angle = np.arctan2(forward_V[0], forward_V[2]) * 180.0 / np.pi
+        new_angle = np.arctan2(forward_V[0], forward_V[2]) * deg_per_rads
         if self.prev_orientation is not None:
             # If prev orrientation is None, transition to this position directly
             prev_orientation = self.prev_orientation
             prev_angle = (
                 np.arctan2(prev_orientation[0], prev_orientation[2])
-                * 180.0
-                / np.pi
+                * deg_per_rads
             )
             forward_angle = new_angle - prev_angle
             if np.abs(forward_angle) > self.min_angle_turn:
@@ -162,10 +161,10 @@ class HumanoidRearrangeController:
                 new_angle = prev_angle + actual_angle_move * np.sign(
                     forward_angle
                 )
-                new_angle *= np.pi / 180
+                new_angle /= deg_per_rads
                 did_rotate = True
             else:
-                new_angle = new_angle * np.pi / 180
+                new_angle = new_angle / deg_per_rads
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
