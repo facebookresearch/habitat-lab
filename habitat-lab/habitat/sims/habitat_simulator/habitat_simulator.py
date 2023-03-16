@@ -313,7 +313,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         overwrite_config(
             config_from=self.habitat_config.habitat_sim_v0,
             config_to=sim_config,
-            # Ignore key as it gets propogated to sensor below
+            # Ignore key as it gets propagated to sensor below
             ignore_keys={"gpu_gpu"},
         )
         sim_config.scene_dataset_config_file = (
