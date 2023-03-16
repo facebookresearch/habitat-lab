@@ -4,7 +4,7 @@
 
 import os
 import random
-from typing import Any, List, TYPE_CHECKING, Type
+from typing import TYPE_CHECKING, Any, List, Type
 
 from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.config import read_write
