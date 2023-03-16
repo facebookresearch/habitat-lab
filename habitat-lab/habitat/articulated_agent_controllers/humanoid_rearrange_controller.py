@@ -239,7 +239,7 @@ class HumanoidRearrangeController:
         obj_transform_base.translation += forward_V_dist
 
         self.obj_transform_base = obj_transform_base
-        self.curr_pose = joint_pose
+        self.joint_pose = joint_pose
 
     def get_pose(self):
         """
@@ -252,4 +252,4 @@ class HumanoidRearrangeController:
         obj_trans_base = np.asarray(
             self.obj_transform_base.transposed()
         ).flatten()
-        return self.curr_pose + list(obj_trans_offset) + list(obj_trans_base)
+        return self.joint_pose + list(obj_trans_offset) + list(obj_trans_base)
