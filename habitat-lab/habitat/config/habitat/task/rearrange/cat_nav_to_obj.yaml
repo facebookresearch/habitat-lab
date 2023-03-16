@@ -3,8 +3,12 @@
 defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
-    - base_velocity
-    - rearrange_stop
+    # - base_velocity
+    # - rearrange_stop
+    - move_forward
+    - turn_left
+    - turn_right
+    - stop
   - /habitat/task/measurements:
     - object_to_goal_distance
     - robot_force
@@ -24,6 +28,7 @@ defaults:
     - object_category_sensor
     - start_receptacle_sensor
     - object_segmentation_sensor
+    - receptacle_segmentation_sensor
     - object_embedding_sensor
     - robot_start_gps_sensor
     - robot_start_compass_sensor
