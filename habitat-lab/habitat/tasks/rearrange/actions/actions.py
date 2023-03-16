@@ -561,9 +561,10 @@ class HumanoidJointAction(ArticulatedAgentAction):
     def step(self, *args, is_last_action, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.
-        :param human_joints_trans: Array of size (num_joints*4)+32. The last 32
-            dimensions define two 4x4 root transformation matrices, a base transform
-            that controls the base of the character, and an offset transform, that controls
+        :param self._action_arg_prefix+human_joints_trans: Array of size
+            (num_joints*4)+32. The last 32 dimensions define two 4x4 root
+            transformation matrices, a base transform that controls the base
+            of the character, and an offset transform, that controls
             a transformation offset that comes from the MOCAP pose.
             The first elements correspond to a flattened list of quaternions for each joint.
             When the array is all 0 it keeps the previous joint rotation and transform.
