@@ -37,12 +37,10 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ExprType,
     PddlEntity,
     PddlSimInfo,
+    SimulatorObjectType,
     parse_func,
 )
-from habitat.tasks.rearrange.rearrange_sim import (
-    RearrangeSim,
-    SimulatorObjectType,
-)
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 if TYPE_CHECKING:
@@ -328,16 +326,6 @@ class PddlDomain:
         for k, i in sim.handle_to_object_id.items():
             id_to_name[i] = k
 
-        receps: Dict[str, mn.Range3D] = {}
-        for recep in find_receptacles(sim):
-            recep = cast(AABBReceptacle, recep)
-            local_bounds = recep.bounds
-            global_T = recep.get_global_transform(sim)
-            receps[recep.name] = mn.Range3D(
-                global_T.transform_point(local_bounds.min),
-                global_T.transform_point(local_bounds.max),
-            )
-
         self._sim_info = PddlSimInfo(
             sim=sim,
             dataset=dataset,
@@ -362,7 +350,7 @@ class PddlDomain:
             predicates=self.predicates,
             num_spawn_attempts=self._config.num_spawn_attempts,
             physics_stability_steps=self._config.physics_stability_steps,
-            receptacles=receps,
+            receptacles=sim.receptacles,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -533,6 +521,51 @@ class PddlDomain:
     def all_entities(self) -> Dict[str, PddlEntity]:
         return {**self._constants, **self._added_entities}
 
+    def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
+        """
+        Expand out a logical expression that could involve a quantifier into
+        only logical expressions that don't involve any quantifier.
+        """
+
+        expr.sub_exprs = [
+            self.expand_quantifiers(subexpr)
+            if isinstance(subexpr, LogicalExpr)
+            else subexpr
+            for subexpr in expr.sub_exprs
+        ]
+
+        if expr.quantifier == LogicalQuantifierType.FORALL:
+            combine_type = LogicalExprType.AND
+        elif expr.quantifier == LogicalQuantifierType.EXISTS:
+            combine_type = LogicalExprType.OR
+        elif expr.quantifier is None:
+            return expr
+        else:
+            raise ValueError(f"Unrecongized {expr.quantifier}")
+
+        all_matching_entities = []
+        for expand_entity in expr.inputs:
+            all_matching_entities.append(
+                [
+                    e
+                    for e in self.all_entities.values()
+                    if e.expr_type.is_subtype_of(expand_entity.expr_type)
+                ]
+            )
+
+        expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
+        for poss_input in itertools.product(*all_matching_entities):
+            assert len(poss_input) == len(expr.inputs)
+            sub_dict = {
+                expand_entity: sub_entity
+                for expand_entity, sub_entity in zip(expr.inputs, poss_input)
+            }
+
+            expanded_exprs.append(expr.clone().sub_in(sub_dict))
+
+        inputs: List[PddlEntity] = []
+        return LogicalExpr(combine_type, expanded_exprs, inputs, None)
+
 
 class PddlProblem(PddlDomain):
     stage_goals: Dict[str, LogicalExpr]
@@ -545,6 +578,8 @@ class PddlProblem(PddlDomain):
         problem_file_path: str,
         cur_task_config: Optional["DictConfig"] = None,
     ):
+        self._objects = {}
+
         super().__init__(domain_file_path, cur_task_config)
         with open(get_full_habitat_config_path(problem_file_path), "r") as f:
             problem_def = yaml.safe_load(f)
@@ -612,48 +647,3 @@ class PddlProblem(PddlDomain):
     @property
     def all_entities(self) -> Dict[str, PddlEntity]:
         return {**self._objects, **super().all_entities}
-
-    def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
-        """
-        Expand out a logical expression that could involve a quantifier into
-        only logical expressions that don't involve any quantifier.
-        """
-
-        expr.sub_exprs = [
-            self.expand_quantifiers(subexpr)
-            if isinstance(subexpr, LogicalExpr)
-            else subexpr
-            for subexpr in expr.sub_exprs
-        ]
-
-        if expr.quantifier == LogicalQuantifierType.FORALL:
-            combine_type = LogicalExprType.AND
-        elif expr.quantifier == LogicalQuantifierType.EXISTS:
-            combine_type = LogicalExprType.OR
-        elif expr.quantifier is None:
-            return expr
-        else:
-            raise ValueError(f"Unrecongized {expr.quantifier}")
-
-        all_matching_entities = []
-        for expand_entity in expr.inputs:
-            all_matching_entities.append(
-                [
-                    e
-                    for e in self.all_entities.values()
-                    if e.expr_type.is_subtype_of(expand_entity.expr_type)
-                ]
-            )
-
-        expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
-        for poss_input in itertools.product(*all_matching_entities):
-            assert len(poss_input) == len(expr.inputs)
-            sub_dict = {
-                expand_entity: sub_entity
-                for expand_entity, sub_entity in zip(expr.inputs, poss_input)
-            }
-
-            expanded_exprs.append(expr.clone().sub_in(sub_dict))
-
-        inputs: List[PddlEntity] = []
-        return LogicalExpr(combine_type, expanded_exprs, inputs, None)
