@@ -207,6 +207,8 @@ class RearrangeTask(NavigationTask):
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
+        if "action_args" not in action or action["action_args"] is None:
+            action["action_args"] = {}
         action_args = action["action_args"]
         if self._config.enable_safe_drop and self._is_violating_safe_drop(
             action_args
