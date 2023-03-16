@@ -184,6 +184,7 @@ class ObjectNavigationTask(NavigationTask):
     Used to explicitly state a type of the task in config.
     """
 
+
 @registry.register_task(name="ObjectNav-v2")
 class ObjectNavigationTaskV2(ObjectNavigationTask):
     r"""A Continuous Control Object Navigation Task class for a task specific methods.
