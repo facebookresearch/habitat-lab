@@ -358,6 +358,14 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     type: str = "SingleAgentAccessMgr"
+    ###############################
+    # Population play configuration
+    num_total_agents: int = 1
+    num_active_agents: int = 1
+    agent_sample_interval: int = 20
+    allow_self_play: bool = False
+    self_play_batched: bool = False
+    ###############################
 
 
 @dataclass
