@@ -8,16 +8,11 @@ import itertools
 import os.path as osp
 from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union, cast
 
-import magnum as mn
 import yaml  # type: ignore[import]
 
 from habitat.config.default import get_full_habitat_config_path
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.datasets.rearrange.samplers.receptacle import (
-    AABBReceptacle,
-    find_receptacles,
-)
 from habitat.tasks.rearrange.multi_task.pddl_action import (
     ActionTaskInfo,
     PddlAction,
