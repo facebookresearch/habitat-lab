@@ -3,7 +3,6 @@
 defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
-    - arm_action
     - base_velocity
     - rearrange_stop
   - /habitat/task/measurements:
@@ -41,9 +40,6 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 task_spec: rearrange_easy
-actions:
-  arm_action:
-    grip_controller: SuctionGraspAction
 measurements:
   move_objects_reward:
     force_pen: 0.0
