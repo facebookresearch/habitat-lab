@@ -168,6 +168,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
             # Compute relative target.
             rel_targ = cur_nav_targ - robot_pos
+
             # Compute heading angle (2D calculation)
             robot_forward = robot_forward[[0, 2]]
             rel_targ = rel_targ[[0, 2]]
@@ -207,6 +208,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 )
 
             elif self.motion_type == "human_joints":
+                # Update the humanoid base
+                self.humanoid_controller.obj_transform_base = base_T
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
