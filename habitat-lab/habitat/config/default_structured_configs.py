@@ -1488,8 +1488,14 @@ class DatasetConfig(HabitatBaseConfig):
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
-    composite_file: str = ""
 
+@dataclass
+class BatchRendererConfig(HabitatBaseConfig):
+    r"""Configuration for the batch renderer.
+
+    :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
+    """
+    composite_files: Optional[List[str]] = None
 
 @dataclass
 class GymConfig(HabitatBaseConfig):
@@ -1525,6 +1531,7 @@ class HabitatConfig(HabitatBaseConfig):
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
+    batch_renderer: BatchRendererConfig = BatchRendererConfig()
 
 
 # -----------------------------------------------------------------------------

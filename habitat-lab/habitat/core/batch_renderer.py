@@ -99,18 +99,26 @@ class BatchRenderer:
             )
         )
 
-        # Pre-load graphics assets using composite GLTF file.
-        if os.path.isfile(config.habitat.dataset.composite_file):
-            logger.info(
-                "Pre-loading composite file: "
-                + config.habitat.dataset.composite_file
-            )
-            self._replay_renderer.preload_file(
-                config.habitat.dataset.composite_file
-            )
-        else:
+        # Pre-load graphics assets using composite GLTF files.
+        loaded_composite_file_count: int = 0
+        if config.habitat.batch_renderer.composite_files is not None:
+            for composite_file in config.habitat.batch_renderer.composite_files:
+                if os.path.isfile(composite_file):
+                    logger.info(
+                        "Pre-loading composite file: "
+                        + config.habitat.dataset.composite_file
+                    )
+                    self._replay_renderer.preload_file(
+                        config.habitat.dataset.composite_file
+                    )
+                    loaded_composite_file_count += 1
+                else:
+                    logger.warn(
+                        "Failed to load composite file: " + composite_file
+                    )
+        if loaded_composite_file_count == 0:
             logger.warn(
-                "No composite file pre-loaded. Batch rendering performance won't be optimal."
+                "No composite file was pre-loaded. Batch rendering performance won't be optimal."
             )
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
