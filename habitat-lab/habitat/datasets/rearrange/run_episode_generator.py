@@ -205,7 +205,6 @@ def get_config_defaults() -> "DictConfig":
 def print_metadata_mediator(ep_gen):
     mm = ep_gen.sim.metadata_mediator
     receptacles = get_all_scenedataset_receptacles(ep_gen.sim)
-    list_sep = "\n    "
     logger.info("==================================")
     logger.info("Listing SceneDataset Summary")
     logger.info("==================================")

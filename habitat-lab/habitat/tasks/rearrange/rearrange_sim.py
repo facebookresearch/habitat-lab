@@ -487,7 +487,7 @@ class RearrangeSim(HabitatSim):
 
         self._handle_to_object_id = {}
         self._scene_obj_ids = []
-        self._receptacles: Dict[str, mn.Range3D] = {}
+        self._receptacles = {}
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
