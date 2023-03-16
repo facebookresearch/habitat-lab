@@ -4,15 +4,9 @@
 
 import os
 import random
-from typing import TYPE_CHECKING, Any, List, Type, cast
+from typing import Any, List, TYPE_CHECKING, Type
 
-from habitat import (
-    BatchRenderedVectorEnv,
-    ThreadedVectorEnv,
-    VectorEnv,
-    logger,
-    make_dataset,
-)
+from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
 from habitat.config import read_write
 from habitat.gym import make_gym_from_config
 
@@ -94,8 +88,6 @@ def construct_envs(
             "Using the debug Vector environment interface. Expect slower performance."
         )
         vector_env_cls = ThreadedVectorEnv
-    elif config.habitat.simulator.enable_batch_renderer:
-        vector_env_cls = BatchRenderedVectorEnv
     else:
         vector_env_cls = VectorEnv
 
@@ -106,7 +98,6 @@ def construct_envs(
     )
 
     if config.habitat.simulator.enable_batch_renderer:
-        batch_vector_env = cast(BatchRenderedVectorEnv, vector_env_cls)
-        batch_vector_env.initialize_batch_renderer(config)
+        envs.initialize_batch_renderer(config)
 
     return envs

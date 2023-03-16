@@ -64,8 +64,12 @@ class BatchRenderer:
         :param num_envs: Number of concurrent environments to render.
         """
         assert config.habitat.simulator.enable_batch_renderer
-        assert config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save, "Batch renderer requires enable_gfx_replay_save to be enabled in config."
-        assert not config.habitat.simulator.create_renderer, "Batch renderer requires create_renderer to be disabled in config."
+        assert (
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save
+        ), "Batch renderer requires enable_gfx_replay_save to be enabled in config."
+        assert (
+            not config.habitat.simulator.create_renderer
+        ), "Batch renderer requires create_renderer to be disabled in config."
 
         logger.warn(
             "Batch rendering enabled. This feature is experimental and may change at any time."
@@ -123,9 +127,7 @@ class BatchRenderer:
         for env_index in range(self._num_envs):
             env_obs = observations[env_index]
             keyframe = env_obs.pop(KEYFRAME_OBSERVATION_KEY)
-            self._replay_renderer.set_environment_keyframe(
-                env_index, keyframe
-            )
+            self._replay_renderer.set_environment_keyframe(env_index, keyframe)
             self._replay_renderer.set_sensor_transforms_from_keyframe(
                 env_index, KEYFRAME_SENSOR_PREFIX
             )

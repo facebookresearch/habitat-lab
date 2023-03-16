@@ -292,7 +292,7 @@ def test_rl_vectorized_envs(gpu2gpu):
 
 
 @pytest.mark.parametrize("gpu2gpu", [False])
-def test_rl_batch_render_envs(gpu2gpu):
+def test_rl_vectorized_envs_batch_renderer(gpu2gpu):
     import habitat_sim
 
     if gpu2gpu and not habitat_sim.cuda_enabled:
@@ -303,9 +303,9 @@ def test_rl_batch_render_envs(gpu2gpu):
         with habitat.config.read_write(config):
             config.habitat.simulator.enable_batch_renderer = True
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
-                True  # TODO: Implicit
+                True
             )
-            config.habitat.simulator.create_renderer = False  # TODO: Implicit
+            config.habitat.simulator.create_renderer = False
             config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
             agent_config = get_agent_config(config.habitat.simulator)
             # Only keep the rgb_sensor
@@ -315,7 +315,7 @@ def test_rl_batch_render_envs(gpu2gpu):
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    with habitat.BatchRenderedVectorEnv(
+    with habitat.VectorEnv(
         make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
     ) as envs:
         envs.initialize_batch_renderer(configs[0])
@@ -343,7 +343,7 @@ def test_rl_batch_render_envs(gpu2gpu):
             assert len(dones) == num_envs
             assert len(infos) == num_envs
 
-            tiled_img = envs.debug_render(mode="rgb_array")
+            tiled_img = envs.render(mode="rgb_array")
             new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
             new_width = int(np.ceil(float(NUM_ENVS) / new_height))
             h, w, c = observations[0]["rgb"].shape

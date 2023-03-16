@@ -150,6 +150,7 @@ class VectorEnv:
     _mp_ctx: BaseContext
     _connection_read_fns: List[_ReadWrapper]
     _connection_write_fns: List[_WriteWrapper]
+    _batch_renderer: Optional[BatchRenderer] = None
 
     def __init__(
         self,
@@ -450,11 +451,15 @@ class VectorEnv:
         self.async_step(data)
         return self.wait_step()
 
-    def post_step(self, observations) -> None:
+    def post_step(self, observations) -> List[OrderedDict]:
         r"""Performs batch transformations on step outputs.
 
-        :param observations: list of observation dicts returned by step or reset.
+        :param observations: Observation dicts for each environment.
+        :return: Processed observation dicts for each environment.
         """
+        if self._batch_renderer is not None:
+            observations = self._batch_renderer.post_step(observations)
+        return observations
 
     def close(self) -> None:
         if self._is_closed:
@@ -554,9 +559,14 @@ class VectorEnv:
         self, mode: str = "human", *args, **kwargs
     ) -> Optional[np.ndarray]:
         r"""Render observations from all environments in a tiled image."""
-        for write_fn in self._connection_write_fns:
-            write_fn((RENDER_COMMAND, (args, {"mode": "rgb_array", **kwargs})))
-        images = [read_fn() for read_fn in self._connection_read_fns]
+        if self._batch_renderer is not None:
+            images = self._batch_renderer.copy_output_to_image()
+        else:
+            for write_fn in self._connection_write_fns:
+                write_fn(
+                    (RENDER_COMMAND, (args, {"mode": "rgb_array", **kwargs}))
+                )
+            images = [read_fn() for read_fn in self._connection_read_fns]
         tile = tile_images(images)
         if mode == "human":
             from habitat.core.utils import try_cv2_import
@@ -570,6 +580,13 @@ class VectorEnv:
             return tile
         else:
             raise NotImplementedError
+
+    def initialize_batch_renderer(self, config: "DictConfig") -> None:
+        r"""Provides VectorEnv with batch rendering capability.
+        Refer to the BatchRenderer class.
+
+        :param config: Base configuration."""
+        self._batch_renderer = BatchRenderer(config, self.num_envs)
 
     @property
     def _valid_start_methods(self) -> Set[str]:
@@ -650,51 +667,3 @@ class ThreadedVectorEnv(VectorEnv):
             for q, read_wrapper in zip(parent_write_queues, read_fns)
         ]
         return read_fns, write_fns
-
-
-class BatchRenderedVectorEnv(VectorEnv):
-    r""":ref:`VectorEnv` that batches rendering operations.
-
-    Instead of individually rendering their environment, the worker simulators include their keyframe into observations.
-    The BatchRenderedVectorEnv then provides these observations to a batch renderer to produce all visual sensor observations simultaneously.
-
-    Refer to the BatchRenderer class.
-    """
-
-    _config: "DictConfig"
-    _batch_renderer: BatchRenderer
-
-    def initialize_batch_renderer(self, config: "DictConfig") -> None:
-        r"""Initialize batch renderer.
-
-        :param config: Base configuration."""
-        self._config = config
-        self._batch_renderer = BatchRenderer(config, self.num_envs)
-
-    def debug_render(
-        self, mode: str = "human", *args, **kwargs
-    ) -> Optional[np.ndarray]:
-        r"""Creates a tiled image from observations rendered during the last post_step call.
-        Use for debugging and testing only."""
-        images = self._batch_renderer.copy_output_to_image()
-        tile = tile_images(images)
-        if mode == "human":
-            from habitat.core.utils import try_cv2_import
-
-            cv2 = try_cv2_import()
-            cv2.imshow("BatchRenderedVectorEnv", tile[:, :, ::-1])
-            cv2.waitKey(1)
-            return None
-        elif mode == "rgb_array":
-            return tile
-        else:
-            raise NotImplementedError
-
-    def post_step(self, observations) -> List[OrderedDict]:
-        r"""
-        Renders observations for all environments by consuming keyframe observations.
-
-        :param observations: List of observations for each environment.
-        :return: List of rendered observations for each environment.
-        """
-        return self._batch_renderer.post_step(observations)
