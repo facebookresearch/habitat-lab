@@ -1489,6 +1489,7 @@ class DatasetConfig(HabitatBaseConfig):
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
 
+
 @dataclass
 class BatchRendererConfig(HabitatBaseConfig):
     r"""Configuration for the batch renderer.
@@ -1496,6 +1497,7 @@ class BatchRendererConfig(HabitatBaseConfig):
     :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
     """
     composite_files: Optional[List[str]] = None
+
 
 @dataclass
 class GymConfig(HabitatBaseConfig):

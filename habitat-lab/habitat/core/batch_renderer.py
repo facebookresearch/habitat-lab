@@ -102,7 +102,9 @@ class BatchRenderer:
         # Pre-load graphics assets using composite GLTF files.
         loaded_composite_file_count: int = 0
         if config.habitat.batch_renderer.composite_files is not None:
-            for composite_file in config.habitat.batch_renderer.composite_files:
+            for (
+                composite_file
+            ) in config.habitat.batch_renderer.composite_files:
                 if os.path.isfile(composite_file):
                     logger.info(
                         "Pre-loading composite file: "
