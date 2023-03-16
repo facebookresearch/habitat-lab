@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
 import magnum as mn
@@ -13,10 +14,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
-from habitat.tasks.rearrange.rearrange_sim import (
-    RearrangeSim,
-    SimulatorObjectType,
-)
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 
 
@@ -212,13 +210,13 @@ class PddlSimInfo:
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
         ):
             asset_name = ename.split("_:")[0]
-            match = None
-            for match_name, recep_bounds in self.receptacles.items():
-                if asset_name in match_name:
-                    match = recep_bounds
-                    break
-            if match is None:
-                raise ValueError(f"Could not find matching recep for {entity}")
-            return match
+            return self.receptacles[asset_name]
+            # for match_name, recep_bounds in self.receptacles.items():
+            #     if asset_name in match_name:
+            #         match = recep_bounds
+            #         break
+            # if match is None:
+            #     raise ValueError(f"Could not find matching recep for {entity}")
+            # return match
         else:
             raise ValueError(f"No type match for {entity}")

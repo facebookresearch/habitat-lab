@@ -16,8 +16,8 @@ from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlEntity,
     PddlSimInfo,
+    SimulatorObjectType,
 )
-from habitat.tasks.rearrange.rearrange_sim import SimulatorObjectType
 from habitat.tasks.rearrange.utils import (
     get_angle_to_pos,
     get_robot_spawns,
@@ -176,11 +176,11 @@ class PddlRobotState:
                         f"Object {self.pos} is out of bounds but trying to set robot position"
                     )
 
-                robo_pos = sim_info.sim.safe_snap_point(targ_pos)
-                robot = sim.get_robot_data(robot_id).robot
-                robot.base_pos = robo_pos
-                robot.base_rot = get_angle_to_pos(
-                    np.array(targ_pos - robo_pos)
+                agent_pos = sim_info.sim.safe_snap_point(targ_pos)
+                agent = sim.get_agent_data(robot_id).robot
+                agent.base_pos = agent_pos
+                agent.base_rot = get_angle_to_pos(
+                    np.array(targ_pos - agent_pos)
                 )
             else:
                 start_pos, start_rot, was_fail = get_robot_spawns(
@@ -191,8 +191,8 @@ class PddlRobotState:
                     sim_info.num_spawn_attempts,
                     sim_info.physics_stability_steps,
                 )
-                sim.robot.base_pos = start_pos
-                sim.robot.base_rot = start_rot
+                sim.articulated_agent.base_pos = start_pos
+                sim.articulated_agent.base_rot = start_rot
                 if was_fail:
                     rearrange_logger.error("Failed to place the robot.")
 
