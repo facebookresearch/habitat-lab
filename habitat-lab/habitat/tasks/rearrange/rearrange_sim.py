@@ -7,7 +7,6 @@
 import os.path as osp
 import time
 from collections import defaultdict
-from enum import Enum
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -61,14 +60,6 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
-class SimulatorObjectType(Enum):
-    MOVABLE_ENTITY = "movable_entity_type"
-    STATIC_RECEPTACLE_ENTITY = "static_receptacle_entity_type"
-    ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
-    GOAL_ENTITY = "goal_entity_type"
-    ROBOT_ENTITY = "robot_entity_type"
-
-
 @registry.register_simulator(name="RearrangeSim-v0")
 class RearrangeSim(HabitatSim):
     def __init__(self, config: "DictConfig"):
@@ -107,11 +98,11 @@ class RearrangeSim(HabitatSim):
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
+        self._receptacles: Dict[str, mn.Range3D] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
         self._handle_to_object_id: Dict[str, int] = {}
-        self._obj_id_to_obj_type: Dict[str, SimulatorObjectType] = {}
         self._markers: Dict[str, MarkerInfo] = {}
 
         self._viz_templates: Dict[str, Any] = {}
@@ -138,6 +129,10 @@ class RearrangeSim(HabitatSim):
         )
         self._step_physics = self.habitat_config.step_physics
         self._kinematic_mode = self.habitat_config.kinematic_mode
+
+    @property
+    def receptacles(self) -> Dict[str, AABBReceptacle]:
+        return self._receptacles
 
     @property
     def handle_to_object_id(self) -> Dict[str, int]:
@@ -486,19 +481,11 @@ class RearrangeSim(HabitatSim):
 
         # Clear all the rigid objects.
         if should_add_objects:
-            remaining_scene_ids = []
             for scene_obj_id in self._scene_obj_ids:
                 if not rom.get_library_has_id(scene_obj_id):
                     continue
-                ro = rom.get_object_by_id(scene_obj_id)
-                if (
-                    self._obj_id_to_obj_type[ro.handle]
-                    == SimulatorObjectType.MOVABLE_ENTITY
-                ):
-                    rom.remove_object_by_id(scene_obj_id)
-                else:
-                    remaining_scene_ids.append(scene_obj_id)
-            self._scene_obj_ids = remaining_scene_ids
+                rom.remove_object_by_id(scene_obj_id)
+            self._scene_obj_ids = []
 
         # Reset all marker visualization points
         for obj_id in self.viz_ids.values():
@@ -568,9 +555,6 @@ class RearrangeSim(HabitatSim):
 
         return new_pos
 
-    def get_object_type(self, object_handle: str) -> SimulatorObjectType:
-        return self._obj_id_to_obj_type[object_handle]
-
     def _add_objs(
         self,
         ep_info: RearrangeEpisode,
@@ -582,8 +566,8 @@ class RearrangeSim(HabitatSim):
         obj_counts: Dict[str, int] = defaultdict(int)
 
         self._handle_to_object_id = {}
-        self._obj_id_to_obj_type = {}
         self._scene_obj_ids = []
+        self._receptacles: Dict[str, mn.Range3D] = {}
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             t_start = time.time()
@@ -618,31 +602,22 @@ class RearrangeSim(HabitatSim):
             rel_idx = len(self._scene_obj_ids)
             self._scene_obj_ids.append(ro.object_id)
             self._handle_to_object_id[other_obj_handle] = rel_idx
-            self._obj_id_to_obj_type[
-                other_obj_handle
-            ] = SimulatorObjectType.MOVABLE_ENTITY
 
             if other_obj_handle in self._handle_to_goal_name:
                 ref_handle = self._handle_to_goal_name[other_obj_handle]
                 self._handle_to_object_id[ref_handle] = rel_idx
-                self._obj_id_to_obj_type[
-                    ref_handle
-                ] = SimulatorObjectType.GOAL_ENTITY
 
             obj_counts[obj_handle] += 1
 
-        # Track every non-added object.
-        for object_handle in rom.get_object_handles():
-            if object_handle in self._handle_to_object_id:
-                # This is a movable object.
-                continue
-            ro = rom.get_object_by_handle(object_handle)
-            rel_idx = len(self._scene_obj_ids)
-            self._scene_obj_ids.append(ro.object_id)
-            self._handle_to_object_id[object_handle] = rel_idx
-            self._obj_id_to_obj_type[
-                object_handle
-            ] = SimulatorObjectType.STATIC_RECEPTACLE_ENTITY
+        all_receps = find_receptacles(self)
+        for recep in all_receps:
+            recep = cast(AABBReceptacle, recep)
+            local_bounds = recep.bounds
+            global_T = recep.get_global_transform(self)
+            self._receptacles[recep.name] = mn.Range3D(
+                global_T.transform_point(local_bounds.min),
+                global_T.transform_point(local_bounds.max),
+            )
 
         ao_mgr = self.get_articulated_object_manager()
         robot_art_handles = [
