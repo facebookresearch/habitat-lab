@@ -558,29 +558,41 @@ class HumanoidJointAction(ArticulatedAgentAction):
             }
         )
 
-    def step(self, human_joints_trans, is_last_action, **kwargs):
+    def step(self, *args, is_last_action, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.
-        :param human_joint_trans: Array of size (num_joints*4)+16. The last 16
-            dimensions define the 4x4 root transformation matrix, the first elements
-            correspond to a flattened list of quaternions for each joint. When the array is all 0
-            it keeps the previous joint rotation and transform.
+        :param self._action_arg_prefix+human_joints_trans: Array of size
+            (num_joints*4)+32. The last 32 dimensions define two 4x4 root
+            transformation matrices, a base transform that controls the base
+            of the character, and an offset transform, that controls
+            a transformation offset that comes from the MOCAP pose.
+            The first elements correspond to a flattened list of quaternions for each joint.
+            When the array is all 0 it keeps the previous joint rotation and transform.
         :param is_last_action: whether this is the last action before calling environment
           step
         """
+        human_joints_trans = kwargs[
+            self._action_arg_prefix + "human_joints_trans"
+        ]
         new_joints = human_joints_trans[:-16]
-        new_pos_transform = human_joints_trans[-16:]
+        new_pos_transform_base = human_joints_trans[-16:]
+        new_pos_transform_offset = human_joints_trans[-32:-16]
 
         # When the array is all 0, this indicates we are not setting
         # the human joint
-        if np.array(new_pos_transform).sum() != 0:
-            vecs = [
-                mn.Vector4(new_pos_transform[i * 4 : (i + 1) * 4])
+        if np.array(new_pos_transform_offset).sum() != 0:
+            vecs_base = [
+                mn.Vector4(new_pos_transform_base[i * 4 : (i + 1) * 4])
                 for i in range(4)
             ]
-            new_transform = mn.Matrix4(*vecs)
+            vecs_offset = [
+                mn.Vector4(new_pos_transform_offset[i * 4 : (i + 1) * 4])
+                for i in range(4)
+            ]
+            new_transform_offset = mn.Matrix4(*vecs_offset)
+            new_transform_base = mn.Matrix4(*vecs_base)
             self.cur_articulated_agent.set_joint_transform(
-                new_joints, new_transform
+                new_joints, new_transform_offset, new_transform_base
             )
 
         if is_last_action:

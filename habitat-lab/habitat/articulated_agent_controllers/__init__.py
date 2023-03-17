@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from habitat_baselines.articulated_agent_controllers.humanoid_rearrange_controller import (
+from habitat.articulated_agent_controllers.humanoid_rearrange_controller import (
     HumanoidRearrangeController,
 )
 
