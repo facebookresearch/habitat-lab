@@ -1,4 +1,5 @@
 #!/bin/bash
+### Copyright (c) Meta Platforms, Inc. All Rights Reserved
 #SBATCH --job-name=gala_kinematic
 #SBATCH --output=/checkpoint/%u/jobs/gala_kinematic_job.%j.out
 #SBATCH --error=/checkpoint/%u/jobs/gala_kinematic_job.%j.err

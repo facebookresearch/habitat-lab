@@ -1,3 +1,5 @@
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
+
 LOAD_CONFIG_FROM_CHECKPOINT: True
 TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
 CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
@@ -117,7 +119,7 @@ SIMULATOR:
 WRITER_TYPE: "wb"
 WB:
   PROJECT_NAME: "gala"
-  ENTITY: "vincentpierre"
+  ENTITY: "galactic"
   GROUP: ""
   RUN_NAME: ""
 RL:

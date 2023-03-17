@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# Copyright (c) Meta Platforms, Inc. All Rights Reserved
 module load anaconda3
 module load cuda/10.2
 module load cudnn/v7.6.5.32-cuda.10.2
