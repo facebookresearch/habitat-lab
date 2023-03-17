@@ -171,6 +171,7 @@ class PddlRobotState:
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
+            agent = sim.get_agent_data(robot_id).articulated_agent
 
             if self.place_at_pos_dist == -1.0:
                 if not sim_info.sim.is_point_within_bounds(targ_pos):
@@ -179,7 +180,6 @@ class PddlRobotState:
                     )
 
                 agent_pos = sim_info.sim.safe_snap_point(targ_pos)
-                agent = sim.get_agent_data(robot_id).articulated_agent
                 agent.base_pos = agent_pos
                 agent.base_rot = get_angle_to_pos(
                     np.array(targ_pos - agent_pos)
@@ -197,6 +197,11 @@ class PddlRobotState:
                 sim.articulated_agent.base_rot = start_rot
                 if was_fail:
                     rearrange_logger.error("Failed to place the robot.")
+
+            # We teleported the agent. We also need to teleport the object the agent was holding.
+            grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
+            if grasp_mgr.is_grasped:
+                grasp_mgr.update_object_to_grasp()
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")
