@@ -390,22 +390,25 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
 def get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
-    distance_threshold: int,
+    distance_threshold: float,
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
-):
+) -> Tuple[np.ndarray, float, bool]:
     """
-    Attempts to place the robot near the target position, facing towards it
+    Attempts to place the robot near the target position, facing towards it.
+    This does NOT set the position or angle of the robot, even if a place is
+    successful.
 
-    :param target_position: The position of the target.
+    :param target_position: The position of the target. This point is not
+        necessarily on the navmesh.
     :param rotation_perturbation_noise: The amount of noise to add to the robot's rotation.
     :param distance_threshold: The maximum distance from the target.
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check.
 
-    :return: The robot's start position, rotation, and whether the placement was successful.
+    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
     """
 
     state = sim.capture_state()
