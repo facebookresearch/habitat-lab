@@ -20,7 +20,7 @@ _BASELINES_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 # Habitat baselines config directory inside the installed package.
 # Used to access default predefined configs.
 # This is equivalent to doing osp.dirname(osp.abspath(__file__))
-DEFAULT_CONFIG_DIR = "habitat-lab/src/habitat/config/"
+DEFAULT_CONFIG_DIR = "habitat-lab/habitat/config/"
 CONFIG_FILE_SEPARATOR = ","
 
 

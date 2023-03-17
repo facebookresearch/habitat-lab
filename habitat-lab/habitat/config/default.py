@@ -23,7 +23,7 @@ _HABITAT_CFG_DIR = osp.dirname(inspect.getabsfile(inspect.currentframe()))
 # Habitat config directory inside the installed package.
 # Used to access default predefined configs.
 # This is equivalent to doing osp.dirname(osp.abspath(__file__))
-# in editable install, this is pwd/habitat-lab/src/habitat/config
+# in editable install, this is pwd/habitat-lab/habitat/config
 CONFIG_FILE_SEPARATOR = ","
 
 

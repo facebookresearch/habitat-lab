@@ -155,8 +155,8 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     list(
         itertools.product(
             [
-                "habitat-baselines/src/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
-                "habitat-baselines/src/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
+                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
             ],
             [
                 "hl_neural",
@@ -237,7 +237,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
     "config_path,num_updates",
     [
         (
-            "habitat-baselines/src/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
             3,
         ),
     ],
@@ -305,12 +305,12 @@ def test_trainers_gym_registry(
     "config_path,num_updates,target_reward",
     [
         (
-            "habitat-baselines/src/habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
+            "habitat-baselines/habitat_baselines/config/rearrange/ddppo_reach_state.yaml",
             40,
             5.0,
         ),
         (
-            "habitat-baselines/src/habitat_baselines/config/pointnav/ddppo_pointnav.yaml",
+            "habitat-baselines/habitat_baselines/config/pointnav/ddppo_pointnav.yaml",
             1000,
             2.0,
         ),

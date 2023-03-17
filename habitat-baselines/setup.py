@@ -19,7 +19,7 @@ def collect_requirements():
     # collect requirements.txt file in all subdirectories
     requirements = set()
     for file_path in glob.glob(
-        "src/habitat_baselines/**/requirements.txt", recursive=True
+        "habitat_baselines/**/requirements.txt", recursive=True
     ):
         content = read(file_path)
         requirements.update(content.strip().split("\n"))
@@ -31,9 +31,7 @@ def get_package_version():
     import os.path as osp
     import sys
 
-    sys.path.insert(
-        0, osp.join(osp.dirname(__file__), "src/habitat_baselines")
-    )
+    sys.path.insert(0, osp.join(osp.dirname(__file__), "habitat_baselines"))
     from version import VERSION
 
     return VERSION
@@ -43,8 +41,7 @@ if __name__ == "__main__":
     setup(
         name="habitat-baselines",
         install_requires=collect_requirements(),
-        package_dir={"": "src"},
-        packages=find_packages("src"),
+        packages=find_packages(),
         version=get_package_version(),
         include_package_data=True,
         description="Habitat-Baselines: Embodied AI baselines.",

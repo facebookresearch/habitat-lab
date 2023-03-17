@@ -18,7 +18,7 @@ def get_package_version():
     import os.path as osp
     import sys
 
-    sys.path.insert(0, osp.join(osp.dirname(__file__), "src/habitat"))
+    sys.path.insert(0, osp.join(osp.dirname(__file__), "habitat"))
     from version import VERSION
 
     return VERSION
@@ -57,8 +57,7 @@ if __name__ == "__main__":
     setup(
         name="habitat-lab",
         install_requires=read("requirements.txt").strip().split("\n"),
-        package_dir={"": "src"},
-        packages=find_packages("src"),
+        packages=find_packages(),
         version=get_package_version(),
         include_package_data=True,
         description="Habitat-Lab: a modular high-level library for end-to-end development in Embodied AI.",
