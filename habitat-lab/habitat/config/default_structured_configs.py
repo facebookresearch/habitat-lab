@@ -81,8 +81,6 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
-    # PROFILING MEASURES
-    "RuntimePerfStatsMeasurementConfig",
 ]
 
 
