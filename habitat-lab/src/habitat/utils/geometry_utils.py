@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import random
 from typing import List, Tuple, Union
 
 import numpy as np
@@ -115,3 +116,53 @@ def agent_state_target2ref(
     )
 
     return (rotation_in_ref_coordinate, position_in_ref_coordinate)
+
+
+def random_triangle_point(
+    v0: np.ndarray, v1: np.ndarray, v2: np.ndarray
+) -> np.ndarray:
+    """
+    Sample a random point from a triangle given its vertices.
+    """
+
+    # reference: https://mathworld.wolfram.com/TrianglePointPicking.html
+    coef1 = random.random()
+    coef2 = random.random()
+    if coef1 + coef2 >= 1:
+        # transform "outside" points back inside
+        coef1 = 1 - coef1
+        coef2 = 1 - coef2
+    return v0 + coef1 * (v1 - v0) + coef2 * (v2 - v0)
+
+
+def is_point_in_triangle(
+    p: np.ndarray, v0: np.ndarray, v1: np.ndarray, v2: np.ndarray
+) -> bool:
+    """
+    Return True if the point, p, is in the triangle defined by vertices v0,v1,v2.
+    Algorithm: https://gdbooks.gitbooks.io/3dcollisions/content/Chapter4/point_in_triangle.html
+    """
+    # 1. move the triangle such that point is the origin
+    a = v0 - p
+    b = v1 - p
+    c = v2 - p
+
+    # 2. check that the origin is planar
+    tri_norm = np.cross(c - a, b - a)
+    # NOTE: small epsilon error allowed here empirically
+    if abs(np.dot(a, tri_norm)) > 1e-7:
+        return False
+
+    # 3. create 3 triangles with origin + pairs of vertices and compute the normals
+    u = np.cross(b, c)
+    v = np.cross(c, a)
+    w = np.cross(a, b)
+
+    # 4. check that all new triangle normals are aligned
+    if np.dot(u, v) < 0.0:
+        return False
+    if np.dot(u, w) < 0.0:
+        return False
+    if np.dot(v, w) < 0.0:
+        return False
+    return True

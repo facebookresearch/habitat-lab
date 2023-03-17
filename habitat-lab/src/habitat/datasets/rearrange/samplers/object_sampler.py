@@ -6,6 +6,7 @@
 
 import math
 import random
+import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -388,6 +389,8 @@ class ObjectSampler:
             f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
         )
 
+        sampling_start_time = time.time()
+        pairing_start_time = sampling_start_time
         while (
             len(new_objects) < self.target_objects_number
             and num_pairing_tries < self.max_sample_attempts
@@ -415,7 +418,17 @@ class ObjectSampler:
                     self.receptacle_candidates = None
 
             if new_object is not None:
+                # when an object placement is successful, reset the try counter.
+                logger.info(
+                    f"    found obj|receptacle pairing ({len(new_objects)}/{self.target_objects_number}) in {num_pairing_tries} attempts ({time.time()-pairing_start_time}sec)."
+                )
+                num_pairing_tries = 0
+                pairing_start_time = time.time()
                 new_objects.append((new_object, receptacle))
+
+        logger.info(
+            f"    Sampling process completed in ({time.time()-sampling_start_time}sec)."
+        )
 
         if len(new_objects) >= self.num_objects[0]:
             return new_objects
