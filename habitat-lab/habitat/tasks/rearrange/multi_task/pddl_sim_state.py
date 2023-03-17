@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import dataclasses
+from dataclasses import dataclass, replace
 from typing import Any, Dict, Optional, cast
 
 import magnum as mn
@@ -53,14 +53,16 @@ class ArtSampler:
         return self.value
 
 
-@dataclasses.dataclass
+@dataclass
 class PddlRobotState:
     """
     Specifies the configuration of the robot.
 
-    :property place_at_pos_thresh: If -1.0, this will place the robot as close
+    :property place_at_pos_dist: If -1.0, this will place the robot as close
         as possible to the entity. Otherwise, it will place the robot within X
         meters of the entity.
+    :property base_angle_noise: How much noise to add to the robot base angle
+        when setting the robot base position.
     """
 
     holding: Optional[PddlEntity] = None
@@ -80,7 +82,7 @@ class PddlRobotState:
         """
         Returns a shallow copy
         """
-        return dataclasses.replace(self)
+        return replace(self)
 
     def is_true(self, sim_info: PddlSimInfo, robot_entity: PddlEntity) -> bool:
         """
@@ -353,6 +355,7 @@ class PddlSimState:
         Set this state in the simulator. Warning, this steps the simulator.
         """
         sim = sim_info.sim
+        # Set all desired object states.
         for entity, target in self._obj_states.items():
             if not sim_info.check_type_matches(
                 entity, SimulatorObjectType.MOVABLE_ENTITY.value
@@ -393,6 +396,7 @@ class PddlSimState:
             set_obj.angular_velocity = mn.Vector3.zero_init()
             set_obj.linear_velocity = mn.Vector3.zero_init()
 
+        # Set all desired articulated object states.
         for art_entity, set_art in self._art_states.items():
             sim = sim_info.sim
             rom = sim.get_rigid_object_manager()
@@ -440,5 +444,6 @@ class PddlSimState:
                 for move_obj in move_objs:
                     move_obj.translation += diff_pos
 
+        # Set all desired robot states.
         for robot_entity, robot_state in self._robot_states.items():
             robot_state.set_state(sim_info, robot_entity)
