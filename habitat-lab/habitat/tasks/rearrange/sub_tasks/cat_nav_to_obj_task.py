@@ -21,7 +21,6 @@ class CatDynNavRLEnv(DynNavRLEnv):
             config=config,
             *args,
             dataset=dataset,
-            should_place_robot=False,
             **kwargs,
         )
         self._receptacle_semantic_ids: Dict[int, int] = {}
@@ -31,8 +30,9 @@ class CatDynNavRLEnv(DynNavRLEnv):
         return self._receptacle_semantic_ids
 
     def reset(self, episode: Episode):
-        super().reset(episode)
+        obs = super().reset(episode)
         self._cache_receptacles()
+        return obs
 
     def _cache_receptacles(self):
         # TODO: potentially this is slow, get receptacle list from episode instead
