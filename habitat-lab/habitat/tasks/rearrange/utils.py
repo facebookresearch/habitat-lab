@@ -17,6 +17,7 @@ import numpy as np
 import quaternion
 
 import habitat_sim
+from habitat.articulated_agents.mobile_manipulator import MobileManipulator
 from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
@@ -394,6 +395,7 @@ def get_robot_spawns(
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
+    agent: Optional[MobileManipulator] = None,
 ) -> Tuple[np.ndarray, float, bool]:
     """
     Attempts to place the robot near the target position, facing towards it.
@@ -412,6 +414,8 @@ def get_robot_spawns(
     """
 
     state = sim.capture_state()
+    if agent is None:
+        agent = sim.articulated_agent
 
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
@@ -437,8 +441,8 @@ def get_robot_spawns(
         if target_distance > distance_threshold or not is_navigable:
             continue
 
-        sim.articulated_agent.base_pos = start_position
-        sim.articulated_agent.base_rot = start_rotation
+        agent.base_pos = start_position
+        agent.base_rot = start_rotation
 
         # Make sure the robot is not colliding with anything in this
         # position.
