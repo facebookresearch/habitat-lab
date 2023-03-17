@@ -600,9 +600,9 @@ class RearrangeSim(HabitatSim):
                 ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
                 ro.collidable = False
 
-            rel_idx = len(self._scene_obj_ids)
             if should_add_objects:
                 self._scene_obj_ids.append(ro.object_id)
+            rel_idx = self._scene_obj_ids.index(ro.object_id)
             self._handle_to_object_id[other_obj_handle] = rel_idx
 
             if other_obj_handle in self._handle_to_goal_name:
