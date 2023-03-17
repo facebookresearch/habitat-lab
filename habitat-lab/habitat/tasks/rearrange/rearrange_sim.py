@@ -486,8 +486,9 @@ class RearrangeSim(HabitatSim):
         obj_counts: Dict[str, int] = defaultdict(int)
 
         self._handle_to_object_id = {}
-        self._scene_obj_ids = []
         self._receptacles = {}
+        if should_add_objects:
+            self._scene_obj_ids = []
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
@@ -519,7 +520,8 @@ class RearrangeSim(HabitatSim):
                 ro.collidable = False
 
             rel_idx = len(self._scene_obj_ids)
-            self._scene_obj_ids.append(ro.object_id)
+            if should_add_objects:
+                self._scene_obj_ids.append(ro.object_id)
             self._handle_to_object_id[other_obj_handle] = rel_idx
 
             if other_obj_handle in self._handle_to_goal_name:
