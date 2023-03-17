@@ -109,11 +109,6 @@ class HumanoidRearrangeController:
         self.prev_orientation = None
         self.walk_mocap_frame = 0
 
-        # We start with identity offset
-        self.transform_pose_offset = mn.Matrix4.from_(
-            mn.Matrix3.identity_init(), mn.Vector3()
-        )
-
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)"""
         self.obj_transform_offset = mn.Matrix4()
@@ -154,7 +149,6 @@ class HumanoidRearrangeController:
         if self.prev_orientation is not None:
             # If prev orrientation is None, transition to this position directly
             prev_orientation = self.prev_orientation
-
             prev_angle = (
                 np.arctan2(prev_orientation[0], prev_orientation[2])
                 * deg_per_rads
