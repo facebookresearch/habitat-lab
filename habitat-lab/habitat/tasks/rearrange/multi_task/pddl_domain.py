@@ -6,7 +6,16 @@
 
 import itertools
 import os.path as osp
-from typing import TYPE_CHECKING, Dict, Iterable, List, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 
 import yaml  # type: ignore[import]
 
@@ -284,8 +293,13 @@ class PddlDomain:
         return pred
 
     def parse_only_logical_expr(
-        self, load_d, existing_entities: Dict[str, PddlEntity]
+        self, load_d: Dict[str, Any], existing_entities: Dict[str, PddlEntity]
     ) -> LogicalExpr:
+        """
+        Parse a dict config into a `LogicalExpr`. Will only populate the
+        `LogicalExpr` with the entities from `existing_entities`.
+        """
+
         ret = self._parse_expr(load_d, existing_entities)
         if not isinstance(ret, LogicalExpr):
             raise ValueError(f"Expected logical expr, got {ret}")
@@ -510,7 +524,10 @@ class PddlDomain:
 
     def get_ordered_actions(self) -> List[PddlAction]:
         """
-        Gets an ordered list of PDDL actions.
+        Gets an ordered list of all possible PDDL actions in the environment
+        based on the entities in the environment. Note that this is different
+        from the agent actions. These are the PDDL actions as defined in the
+        domain file.
         """
         return sorted(
             self.actions.values(),
@@ -526,7 +543,7 @@ class PddlDomain:
 
     def find_entities(self, entity_type: ExprType) -> Iterable[PddlEntity]:
         """
-        Returns the all entities that match the condition.
+        Returns all the entities that match the condition.
         """
         for entity in self.all_entities.values():
             if entity.expr_type.is_subtype_of(entity_type):
