@@ -169,8 +169,7 @@ class PddlRobotState:
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
             grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
-            if grasp_mgr.is_grasped:
-                grasp_mgr.update_object_to_grasp()
+            grasp_mgr.update_object_to_grasp()
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")
