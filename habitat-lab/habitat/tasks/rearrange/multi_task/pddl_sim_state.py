@@ -148,7 +148,7 @@ class PddlRobotState:
                     )
 
                 agent_pos = sim_info.sim.safe_snap_point(targ_pos)
-                agent = sim.get_agent_data(robot_id).robot
+                agent = sim.get_agent_data(robot_id).articulated_agent
                 agent.base_pos = agent_pos
                 agent.base_rot = get_angle_to_pos(
                     np.array(targ_pos - agent_pos)
