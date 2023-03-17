@@ -1,14 +1,14 @@
 #!/bin/bash
 ### Copyright (c) Meta Platforms, Inc. All Rights Reserved
-#SBATCH --job-name=gala_kinematic
-#SBATCH --output=/checkpoint/%u/jobs/gala_kinematic_job.%j.out
-#SBATCH --error=/checkpoint/%u/jobs/gala_kinematic_job.%j.err
+#SBATCH --job-name=galactic
+#SBATCH --output=***
+#SBATCH --error=***
 #SBATCH --gpus-per-task 1
 #SBATCH --nodes 1
 #SBATCH --cpus-per-task 10
 #SBATCH --ntasks-per-node 8
 #SBATCH --mem-per-cpu=5GB
-#SBATCH --partition=devlab
+#SBATCH --partition=***
 #SBATCH --time=20
 #SBATCH --open-mode=append
 export GLOG_minloglevel=2

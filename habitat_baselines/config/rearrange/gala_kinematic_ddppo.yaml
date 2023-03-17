@@ -1,8 +1,8 @@
 # Copyright (c) Meta Platforms, Inc. All Rights Reserved
 
 LOAD_CONFIG_FROM_CHECKPOINT: True
-TENSORBOARD_DIR: "/checkpoint/eundersander/gala_kinematic/tb/gala_kinematic_ddppo"
-CHECKPOINT_FOLDER: "/checkpoint/eundersander/gala_kinematic/ckpt/gala_kinematic_ddppo"
+TENSORBOARD_DIR: '***'
+CHECKPOINT_FOLDER: '***'
 VIDEO_DIR: "../videos2"
 VIDEO_OPTION: []
 REWARD_SCALE: 1.0 # 0.01
