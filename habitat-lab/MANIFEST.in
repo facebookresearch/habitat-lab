@@ -1,4 +1,4 @@
-graft src/habitat/config
-graft src/habitat/utils/visualizations/assets
-include src/habitat/py.typed
+graft habitat/config
+graft habitat/utils/visualizations/assets
+include habitat/py.typed
 include requirements.txt
