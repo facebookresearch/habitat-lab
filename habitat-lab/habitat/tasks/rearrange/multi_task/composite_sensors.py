@@ -247,3 +247,41 @@ class CompositeStageGoals(Measure):
                     self._stage_succ.append(stage_name)
                 else:
                     self._metric[succ_k] = 0.0
+
+
+@registry.register_measure
+class CompositeSubgoalReward(Measure):
+    """
+    Reward that gives a sparse reward on completing a PDDL stage-goal.
+    """
+
+    cls_uuid: str = "composite_subgoal_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CompositeSubgoalReward.cls_uuid
+
+    def __init__(self, *args, config, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        self._config = config
+
+    def reset_metric(self, *args, **kwargs):
+        self._stage_succ = []
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def _get_stage_reward(self, name):
+        return self._config.stage_sparse_reward
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = 0.0
+
+        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
+            if stage_name in self._stage_succ:
+                continue
+
+            if task.pddl_problem.is_expr_true(logical_expr):
+                self._metric += self._get_stage_reward(stage_name)
+                self._stage_succ.append(stage_name)

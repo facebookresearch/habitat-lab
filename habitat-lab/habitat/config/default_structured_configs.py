@@ -80,7 +80,6 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
-    "CompositeRewardMeasurementConfig",
 ]
 
 
@@ -973,10 +972,9 @@ class CompositeSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
-class CompositeRewardMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeReward"
-    must_call_stop: bool = True
-    success_reward: float = 10.0
+class CompositeSubgoalReward(MeasurementConfig):
+    type: str = "CompositeSubgoalReward"
+    stage_sparse_reward: float = 1.0
 
 
 @dataclass
@@ -1966,6 +1964,12 @@ cs.store(
     group="habitat/task/measurements",
     name="does_want_terminate",
     node=DoesWantTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.composite_subgoal_reward",
+    group="habitat/task/measurements",
+    name="composite_subgoal_reward",
+    node=CompositeSubgoalReward,
 )
 cs.store(
     package="habitat.task.measurements.composite_success",

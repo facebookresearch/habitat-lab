@@ -11,8 +11,18 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy: hl_fixed
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: nn_skills
+  - /habitat/task/measurements:
+    - composite_subgoal_reward
   - _self_
 
+habitat:
+  task:
+    measurements:
+      composite_subgoal_reward:
+        stage_sparse_reward: 1.0
+    reward_measure: composite_subgoal_reward
+    slack_reward: 0.0
+    success_reward: 5.0
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
