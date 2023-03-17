@@ -174,13 +174,11 @@ class PddlAction:
     def get_task_kwargs(self, sim_info: PddlSimInfo) -> Dict[str, Any]:
         task_kwargs: Dict[str, Any] = {"orig_applied_args": {}}
         for param, param_value in zip(self._params, self.param_values):
-            task_kwargs[param.name] = sim_info.search_for_entity_any(
-                param_value
-            )
+            task_kwargs[param.name] = sim_info.search_for_entity(param_value)
             task_kwargs["orig_applied_args"][param.name] = param_value.name
         task_kwargs.update(
             **{
-                k: sim_info.search_for_entity_any(v)
+                k: sim_info.search_for_entity(v)
                 for k, v in self._task_info.add_task_args.items()
             }
         )

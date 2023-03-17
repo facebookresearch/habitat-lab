@@ -5,8 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 from dataclasses import dataclass
-from typing import Any, Dict, List, Tuple, Union
+from enum import Enum
+from typing import Any, Dict, List, Optional, Tuple, Union
 
+import magnum as mn
 import numpy as np
 
 from habitat.core.dataset import Episode
@@ -14,6 +16,14 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.marker_info import MarkerInfo
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+
+
+class SimulatorObjectType(Enum):
+    MOVABLE_ENTITY = "movable_entity_type"
+    STATIC_RECEPTACLE_ENTITY = "static_receptacle_entity_type"
+    ARTICULATED_RECEPTACLE_ENTITY = "art_receptacle_entity_type"
+    GOAL_ENTITY = "goal_entity_type"
+    ROBOT_ENTITY = "robot_entity_type"
 
 
 def parse_func(x: str) -> Tuple[str, List[str]]:
@@ -36,7 +46,9 @@ def parse_func(x: str) -> Tuple[str, List[str]]:
 
 
 class ExprType:
-    def __init__(self, name: str, parent: "ExprType"):
+    def __init__(self, name: str, parent: Optional["ExprType"]):
+        assert isinstance(name, str)
+        assert parent is None or isinstance(parent, ExprType)
         self.name = name
         self.parent = parent
 
@@ -110,17 +122,6 @@ def ensure_entity_lists_match(
             )
 
 
-# Hardcoded pddl types needed for setting simulator states.
-articulated_agent_type = "articulated_agent_type"
-STATIC_OBJ_TYPE = "static_obj_type"
-ART_OBJ_TYPE = "art_obj_type"
-OBJ_TYPE = "obj_type"
-CAB_TYPE = "cab_type"
-FRIDGE_TYPE = "fridge_type"
-GOAL_TYPE = "goal_type"
-RIGID_OBJ_TYPE = "rigid_obj_type"
-
-
 @dataclass
 class PddlSimInfo:
     obj_ids: Dict[str, int]
@@ -139,6 +140,10 @@ class PddlSimInfo:
     expr_types: Dict[str, ExprType]
     predicates: Dict[str, Any]
     all_entities: Dict[str, Any]
+    receptacles: Dict[str, mn.Range3D]
+
+    num_spawn_attempts: int
+    physics_stability_steps: int
 
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
@@ -148,18 +153,28 @@ class PddlSimInfo:
 
     def get_entity_pos(self, entity: PddlEntity) -> np.ndarray:
         ename = entity.name
-        if self.check_type_matches(entity, articulated_agent_type):
+        if self.check_type_matches(
+            entity, SimulatorObjectType.ROBOT_ENTITY.value
+        ):
             robot_id = self.robot_ids[ename]
             return self.sim.get_agent_data(robot_id).robot.base_pos
-        elif self.check_type_matches(entity, ART_OBJ_TYPE):
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
+        ):
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()
-        elif self.check_type_matches(entity, GOAL_TYPE):
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.GOAL_ENTITY.value
+        ):
             idx = self.target_ids[ename]
             targ_idxs, pos_targs = self.sim.get_targets()
             rel_idx = targ_idxs.tolist().index(idx)
             return pos_targs[rel_idx]
-        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.MOVABLE_ENTITY.value
+        ) or self.check_type_matches(
+            entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
+        ):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
             abs_obj_id = self.sim.scene_obj_ids[idx]
@@ -170,36 +185,31 @@ class PddlSimInfo:
         else:
             raise ValueError()
 
-    def search_for_entity_any(self, entity: PddlEntity):
-        ename = entity.name
-        if self.check_type_matches(entity, articulated_agent_type):
-            return self.robot_ids[ename]
-        elif self.check_type_matches(entity, ART_OBJ_TYPE):
-            return self.marker_handles[ename]
-        elif self.check_type_matches(entity, GOAL_TYPE):
-            return self.target_ids[ename]
-        elif self.check_type_matches(entity, RIGID_OBJ_TYPE):
-            return self.obj_ids[ename]
-        else:
-            raise ValueError()
-
     def search_for_entity(
-        self, entity: PddlEntity, expected_type: str
-    ) -> Union[int, str, MarkerInfo]:
-        if not self.check_type_matches(entity, expected_type):
-            raise ValueError(
-                f"Type mismatch {entity} but expected {expected_type}"
-            )
-
+        self, entity: PddlEntity
+    ) -> Union[int, str, MarkerInfo, mn.Range3D]:
         ename = entity.name
 
-        if expected_type == articulated_agent_type:
+        if self.check_type_matches(
+            entity, SimulatorObjectType.ROBOT_ENTITY.value
+        ):
             return self.robot_ids[ename]
-        elif expected_type == ART_OBJ_TYPE:
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
+        ):
             return self.marker_handles[ename]
-        elif expected_type == GOAL_TYPE:
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.GOAL_ENTITY.value
+        ):
             return self.target_ids[ename]
-        elif expected_type == RIGID_OBJ_TYPE:
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.MOVABLE_ENTITY.value
+        ):
             return self.obj_ids[ename]
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
+        ):
+            asset_name = ename.split("_:")[0]
+            return self.receptacles[asset_name]
         else:
-            raise ValueError()
+            raise ValueError(f"No type match for {entity}")
