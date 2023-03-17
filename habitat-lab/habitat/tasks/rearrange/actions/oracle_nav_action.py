@@ -211,16 +211,15 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 # Update the humanoid base
                 self.humanoid_controller.obj_transform_base = base_T
                 if not at_goal:
-                    rel_pos_vec = mn.Vector3([rel_pos[0], 0.0, rel_pos[1]])
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
                         self.humanoid_controller.calculate_turn_pose(
-                            rel_pos_vec
+                            mn.Vector3([rel_pos[0], 0.0, rel_pos[1]])
                         )
                     else:
                         # Move towards the target
                         self.humanoid_controller.calculate_walk_pose(
-                            rel_pos_vec
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
                         )
                 else:
                     self.humanoid_controller.calculate_stop_pose()
