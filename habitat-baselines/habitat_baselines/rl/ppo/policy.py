@@ -165,18 +165,6 @@ class Policy(abc.ABC):
         else:
             return action_data.policy_info
 
-    def evaluate_actions(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        action,
-        rnn_build_seq_info: Dict[str, torch.Tensor],
-    ) -> Tuple[Tensor, Tensor, Tensor, Tensor, Dict[str, Tensor]]:
-        """
-        Only necessary to implement if performing RL training with the policy.
-
         :returns: Tuple containing
             - Predicted value.
             - Log probabilities of actions.
