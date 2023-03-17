@@ -211,12 +211,5 @@ class PddlSimInfo:
         ):
             asset_name = ename.split("_:")[0]
             return self.receptacles[asset_name]
-            # for match_name, recep_bounds in self.receptacles.items():
-            #     if asset_name in match_name:
-            #         match = recep_bounds
-            #         break
-            # if match is None:
-            #     raise ValueError(f"Could not find matching recep for {entity}")
-            # return match
         else:
             raise ValueError(f"No type match for {entity}")
