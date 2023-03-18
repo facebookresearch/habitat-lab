@@ -264,7 +264,7 @@ class GazeGraspAction(MagicGraspAction):
             obj_angle = self.get_camera_object_angle(obj_pos)
             if abs(obj_angle) > self.center_cone_angle_threshold:
                 return None, None
-            return obj_idx, obj_pos
+            return center_obj_id, obj_pos
 
         return None, None
 
@@ -279,7 +279,7 @@ class GazeGraspAction(MagicGraspAction):
         keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
 
         self.cur_grasp_mgr.snap_to_obj(
-            self._sim.scene_obj_ids[center_obj_idx],
+            center_obj_id,
             force=False,
             rel_pos=mn.Vector3(0.1, 0.0, 0.0),
             keep_T=keep_T,
