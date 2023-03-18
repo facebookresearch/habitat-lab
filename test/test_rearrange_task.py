@@ -98,6 +98,16 @@ def test_rearrange_baseline_envs(test_cfg_path):
             "habitat_baselines.eval.split=val",
         ],
     )
+    if (
+        config.habitat.simulator.main_agent.articulated_agent_type
+        == "KinematicHumanoid"
+        and not osp.exists(
+            "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        )
+    ):
+        pytest.skip(
+            "This test should only be run if we have the motion data files."
+        )
     with habitat.config.read_write(config):
         config.habitat.gym.obs_keys = None
         config.habitat.gym.desired_goal_keys = []
