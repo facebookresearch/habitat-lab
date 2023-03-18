@@ -174,6 +174,7 @@ class GazeGraspAction(MagicGraspAction):
         self.center_cone_vector = mn.Vector3(
             config.center_cone_vector
         ).normalized()
+        self._instance_ids_start = sim.habitat_config.instance_ids_start
 
     @property
     def action_space(self):
@@ -252,17 +253,19 @@ class GazeGraspAction(MagicGraspAction):
                 "This robot dose not have GazeGraspAction."
         )
         height, width = panoptic_img.shape[:2]
-        center_obj_id = panoptic_img[width // 2,  height // 2]
+        center_obj_id = panoptic_img[height // 2,  width // 2] - self._instance_ids_start
         if center_obj_id in self._sim.scene_obj_ids:
             rom = self._sim.get_rigid_object_manager()
             # Skip if not in distance range
             obj_pos = rom.get_object_by_id(center_obj_id).translation
             dist = np.linalg.norm(obj_pos - cam_pos)
             if dist < self.min_dist or dist > self.max_dist:
+                print('dist: ', dist, self.min_dist, self.max_dist)
                 return None, None
             # Skip if not in the central cone
             obj_angle = self.get_camera_object_angle(obj_pos)
             if abs(obj_angle) > self.center_cone_angle_threshold:
+                print('obj angle: ', obj_angle, self.center_cone_angle_threshold)
                 return None, None
             return center_obj_id, obj_pos
 
@@ -277,16 +280,22 @@ class GazeGraspAction(MagicGraspAction):
             return
 
         keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
-
+        # here we need the link T, not the EE T for the constraint frame
+        ee_link_T = self.cur_robot.sim_obj.get_link_scene_node(
+            self.cur_robot.params.ee_link
+        ).absolute_transformation()
         self.cur_grasp_mgr.snap_to_obj(
-            center_obj_id,
-            force=False,
+            center_obj_idx,
+            force=True,
             rel_pos=mn.Vector3(0.1, 0.0, 0.0),
             keep_T=keep_T,
         )
+        
+        print('snapped succesfully')
         return
 
     def _ungrasp(self):
+        import pdb; pdb.set_trace()
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
@@ -295,5 +304,7 @@ class GazeGraspAction(MagicGraspAction):
 
         if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
+        elif grip_action < 0:
+            import pdb; pdb.set_trace()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
