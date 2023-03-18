@@ -11,8 +11,8 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
-from habitat.articulated_agents.robots.spot_robot import SpotRobot
-from habitat.articulated_agents.robots.stretch_robot import StretchRobot
+from habitat.robots.spot_robot import SpotRobot
+from habitat.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -190,7 +190,6 @@ class GazeGraspAction(MagicGraspAction):
 
         # Get the camera transformation
         cam_T = self.get_camera_transform()
-
         # Get object location in camera frame
         cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
 
@@ -201,19 +200,19 @@ class GazeGraspAction(MagicGraspAction):
         return obj_angle
 
     def get_camera_transform(self):
-        if isinstance(self.cur_articulated_agent, SpotRobot):
-            cam_info = self.cur_articulated_agent.params.cameras[
+        if isinstance(self._sim.robot, SpotRobot):
+            cam_info = self._sim.robot.params.cameras[
                 "articulated_agent_arm_depth"
             ]
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
-            cam_info = self.cur_articulated_agent.params.cameras["robot_head_depth"]
+        elif isinstance(self._sim.robot, StretchRobot):
+            cam_info = self._sim.robot.params.cameras["robot_head"]
         else:
             raise NotImplementedError(
                 "This robot does not have GazeGraspAction."
             )
 
         # Get the camera's attached link
-        link_trans = self.cur_articulated_agent.sim_obj.get_link_scene_node(
+        link_trans = self._sim.robot.sim_obj.get_link_scene_node(
             cam_info.attached_link_id
         ).transformation
         # Get the camera offset transformation
@@ -222,74 +221,16 @@ class GazeGraspAction(MagicGraspAction):
 
         return cam_trans
 
-    def get_grasp_object_mask(self, abs_obj_idx):
-        # Save object translation before sinking the object beneath the floor
-        orig_target_obj_trans = np.array(
-            self._sim.get_rigid_object_manager()
-            .get_object_by_id(abs_obj_idx)
-            .translation
-        )
-
-        # Get the depth image
-        if isinstance(self.cur_articulated_agent, SpotRobot):
-            depth_img = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["articulated_agent_arm_depth"]
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
-            depth_img = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["robot_head_depth"]
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
-
-        # Sink the object beneath the floor where it will not be seen
-        self._sim.get_rigid_object_manager().get_object_by_id(
-            abs_obj_idx
-        ).translation = np.array([0.0, -15.0, 0.0])
-        self._sim.internal_step(0)
-
-        # Get new depth image
-        if isinstance(self.cur_articulated_agent, SpotRobot):
-            depth_img_no_target_obj = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["articulated_agent_arm_depth"]
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
-            depth_img_no_target_obj = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["robot_head_depth"]
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
-
-        # Return the object to its original transformation
-        self._sim.get_rigid_object_manager().get_object_by_id(
-            abs_obj_idx
-        ).translation = orig_target_obj_trans
-        self._sim.internal_step(0)
-
-        # Get binary absolute difference mask
-        abs_diff = np.uint8(np.abs(depth_img - depth_img_no_target_obj) * 255)
-        abs_diff[abs_diff > 0] = 255  # type: ignore
-
-        # Denoise mask
-        abs_diff_denoised = cv2.blur(abs_diff, (5, 5))
-        abs_diff_denoised[abs_diff_denoised < 255] = 0  # type: ignore
-
-        return abs_diff_denoised
-
     def determine_center_object(self):
         """Determine if an object is at the center of the frame and in range"""
-        if isinstance(self.cur_articulated_agent, SpotRobot):
+        if isinstance(self._sim.robot, SpotRobot):
             cam_pos = (
                 self._sim.agents[0]
                 .get_state()
                 .sensor_states["articulated_agent_arm_rgb"]
                 .position
             )
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
+        elif isinstance(self._sim.robot, StretchRobot):
             cam_pos = (
                 self._sim.agents[0]
                 .get_state()
@@ -301,33 +242,29 @@ class GazeGraspAction(MagicGraspAction):
                 "This robot does not have GazeGraspAction."
             )
 
-        rom = self._sim.get_rigid_object_manager()
-        for obj_idx, abs_obj_idx in enumerate(self._sim.scene_obj_ids):
-            obj_pos = rom.get_object_by_id(abs_obj_idx).translation
-
+        # Check if center pixel corresponds to a pickable object
+        if isinstance(self._sim.robot, StretchRobot):
+            panoptic_img = self._sim._sensor_suite.get_observations(
+                self._sim.get_sensor_observations()
+            )['robot_head_panoptic']
+        else:
+            raise NotImplementedError(
+                "This robot dose not have GazeGraspAction."
+        )
+        height, width = panoptic_img.shape[:2]
+        center_obj_id = panoptic_img[width // 2,  height // 2]
+        if center_obj_id in self._sim.scene_obj_ids:
+            rom = self._sim.get_rigid_object_manager()
             # Skip if not in distance range
+            obj_pos = rom.get_object_by_id(center_obj_id).translation
             dist = np.linalg.norm(obj_pos - cam_pos)
             if dist < self.min_dist or dist > self.max_dist:
-                continue
-
+                return None, None
             # Skip if not in the central cone
             obj_angle = self.get_camera_object_angle(obj_pos)
             if abs(obj_angle) > self.center_cone_angle_threshold:
-                continue
-
-            # Check if the object is blocking the center pixel
-            abs_diff_denoised = self.get_grasp_object_mask(abs_obj_idx)
-            # Get the bounding box
-            x, y, w, h = cv2.boundingRect(abs_diff_denoised)
-            height, width = abs_diff_denoised.shape
-            if (
-                x <= width // 2
-                and width // 2 <= x + w
-                and y <= height // 2
-                and height // 2 <= y + h
-            ):
-                # At this point, there should be an object at the center pixel
-                return obj_idx, obj_pos
+                return None, None
+            return obj_idx, obj_pos
 
         return None, None
 
