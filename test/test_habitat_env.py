@@ -301,7 +301,7 @@ def test_rl_vectorized_envs_batch_renderer(gpu2gpu):
     configs, datasets = _load_test_data()
     for config in configs:
         with habitat.config.read_write(config):
-            config.habitat.simulator.enable_batch_renderer = True
+            config.habitat.simulator.renderer.enable_batch_renderer = True
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
                 True
             )

@@ -1322,6 +1322,17 @@ class AgentConfig(HabitatBaseConfig):
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
 
+@dataclass
+class RendererConfig(HabitatBaseConfig):
+    r"""Configuration for the renderer.
+
+    :property enable_batch_renderer: [Experimental] Enables batch rendering, which accelerates rendering for concurrent environments. See env_batch_renderer.py for details.
+    :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
+    """
+
+    enable_batch_renderer: bool = False
+    composite_files: Optional[List[str]] = None
+
 
 @dataclass
 class HabitatSimV0Config(HabitatBaseConfig):
@@ -1355,7 +1366,6 @@ class SimulatorConfig(HabitatBaseConfig):
     auto_sleep: bool = False
     step_physics: bool = True
     concur_render: bool = False
-    enable_batch_renderer: bool = False
     # If markers should be updated at every step:
     needs_markers: bool = True
     # If the articulated_agent camera positions should be updated at every step:
@@ -1403,6 +1413,8 @@ class SimulatorConfig(HabitatBaseConfig):
     ep_info: Optional[Any] = None
     # The offset id values for the object
     object_ids_start: int = 100
+    # Configuration for rendering
+    renderer: RendererConfig = RendererConfig()
 
 
 @dataclass
@@ -1488,15 +1500,6 @@ class DatasetConfig(HabitatBaseConfig):
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
-
-
-@dataclass
-class RendererConfig(HabitatBaseConfig):
-    r"""Configuration for the renderer.
-
-    :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
-    """
-    composite_files: Optional[List[str]] = None
 
 
 @dataclass

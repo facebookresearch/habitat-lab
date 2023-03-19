@@ -63,7 +63,7 @@ class EnvBatchRenderer:
         :param config: Base configuration.
         :param num_envs: Number of concurrent environments to render.
         """
-        assert config.habitat.simulator.enable_batch_renderer
+        assert config.habitat.simulator.renderer.enable_batch_renderer
         assert (
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save
         ), "Batch renderer requires enable_gfx_replay_save to be enabled in config."
