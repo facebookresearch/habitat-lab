@@ -1537,7 +1537,6 @@ class HabitatConfig(HabitatBaseConfig):
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
-    renderer: RendererConfig = RendererConfig()
 
 
 # -----------------------------------------------------------------------------

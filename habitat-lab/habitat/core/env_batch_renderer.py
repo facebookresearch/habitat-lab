@@ -106,16 +106,15 @@ class EnvBatchRenderer:
 
         # Pre-load graphics assets using composite GLTF files.
         loaded_composite_file_count: int = 0
-        if config.habitat.renderer.composite_files is not None:
-            for composite_file in config.habitat.renderer.composite_files:
+        if config.habitat.simulator.renderer.composite_files is not None:
+            for (
+                composite_file
+            ) in config.habitat.simulator.renderer.composite_files:
                 if os.path.isfile(composite_file):
                     logger.info(
-                        "Pre-loading composite file: "
-                        + config.habitat.dataset.composite_file
+                        "Pre-loading composite file: " + composite_file
                     )
-                    self._replay_renderer.preload_file(
-                        config.habitat.dataset.composite_file
-                    )
+                    self._replay_renderer.preload_file(composite_file)
                     loaded_composite_file_count += 1
                 else:
                     logger.warn(
