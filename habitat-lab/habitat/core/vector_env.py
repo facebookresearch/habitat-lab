@@ -32,8 +32,8 @@ import numpy as np
 from gym import spaces
 
 import habitat
-from habitat.core.batch_renderer import BatchRenderer
 from habitat.core.env import Env, RLEnv
+from habitat.core.env_batch_renderer import EnvBatchRenderer
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.gym.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
@@ -150,7 +150,7 @@ class VectorEnv:
     _mp_ctx: BaseContext
     _connection_read_fns: List[_ReadWrapper]
     _connection_write_fns: List[_WriteWrapper]
-    _batch_renderer: Optional[BatchRenderer] = None
+    _batch_renderer: Optional[EnvBatchRenderer] = None
 
     def __init__(
         self,
@@ -583,10 +583,10 @@ class VectorEnv:
 
     def initialize_batch_renderer(self, config: "DictConfig") -> None:
         r"""Provides VectorEnv with batch rendering capability.
-        Refer to the BatchRenderer class.
+        Refer to the EnvBatchRenderer class.
 
         :param config: Base configuration."""
-        self._batch_renderer = BatchRenderer(config, self.num_envs)
+        self._batch_renderer = EnvBatchRenderer(config, self.num_envs)
 
     @property
     def _valid_start_methods(self) -> Set[str]:

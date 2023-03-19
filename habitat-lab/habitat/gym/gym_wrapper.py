@@ -12,7 +12,7 @@ import gym
 import numpy as np
 from gym import spaces
 
-from habitat.core.batch_renderer_constants import KEYFRAME_OBSERVATION_KEY
+from habitat.core.env_batch_renderer_constants import KEYFRAME_OBSERVATION_KEY
 from habitat.core.simulator import Observations
 from habitat.core.spaces import EmptySpace
 from habitat.utils.visualizations.utils import observations_to_image

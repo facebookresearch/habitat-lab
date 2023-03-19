@@ -1491,8 +1491,8 @@ class DatasetConfig(HabitatBaseConfig):
 
 
 @dataclass
-class BatchRendererConfig(HabitatBaseConfig):
-    r"""Configuration for the batch renderer.
+class RendererConfig(HabitatBaseConfig):
+    r"""Configuration for the renderer.
 
     :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
     """
@@ -1533,7 +1533,7 @@ class HabitatConfig(HabitatBaseConfig):
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
-    batch_renderer: BatchRendererConfig = BatchRendererConfig()
+    renderer: RendererConfig = RendererConfig()
 
 
 # -----------------------------------------------------------------------------

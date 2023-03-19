@@ -15,7 +15,7 @@ from gym import Wrapper
 
 import habitat
 from habitat.config.default import get_agent_config, get_config
-from habitat.core.batch_renderer_constants import KEYFRAME_OBSERVATION_KEY
+from habitat.core.env_batch_renderer_constants import KEYFRAME_OBSERVATION_KEY
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.gym.gym_definitions import make_gym_from_config

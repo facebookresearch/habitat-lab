@@ -14,7 +14,7 @@ from omegaconf import DictConfig
 from torch import Tensor
 
 import habitat_sim
-from habitat.core.batch_renderer_constants import (
+from habitat.core.env_batch_renderer_constants import (
     KEYFRAME_OBSERVATION_KEY,
     KEYFRAME_SENSOR_PREFIX,
 )
@@ -30,7 +30,7 @@ from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 from habitat_sim.sensor import SensorSpec as BackendSensorSpec
 
 
-class BatchRenderer:
+class EnvBatchRenderer:
     r"""
     Wrapper for batch rendering functionality, which renders visual sensors of N environments simultaneously.
 
@@ -82,16 +82,21 @@ class BatchRenderer:
         if self._gpu_gpu:
             raise NotImplementedError
 
-        self._sensor_suite = BatchRenderer._create_core_sensor_suite(config)
+        self._sensor_suite = EnvBatchRenderer._create_core_sensor_suite(config)
         self._sensor_specifications = (
-            BatchRenderer._create_sensor_specifications(
+            EnvBatchRenderer._create_sensor_specifications(
                 config, self._sensor_suite
             )
         )
-        self._replay_renderer_cfg = BatchRenderer._create_replay_renderer_cfg(
-            config,
-            self._num_envs,
-            self._sensor_specifications,
+        assert (
+            len(self._sensor_specifications) == 1
+        ), "Batch renderer only supports one sensor."
+        self._replay_renderer_cfg = (
+            EnvBatchRenderer._create_replay_renderer_cfg(
+                config,
+                self._num_envs,
+                self._sensor_specifications,
+            )
         )
         self._replay_renderer: ReplayRenderer = (
             ReplayRenderer.create_batch_replay_renderer(
@@ -101,10 +106,8 @@ class BatchRenderer:
 
         # Pre-load graphics assets using composite GLTF files.
         loaded_composite_file_count: int = 0
-        if config.habitat.batch_renderer.composite_files is not None:
-            for (
-                composite_file
-            ) in config.habitat.batch_renderer.composite_files:
+        if config.habitat.renderer.composite_files is not None:
+            for composite_file in config.habitat.renderer.composite_files:
                 if os.path.isfile(composite_file):
                     logger.info(
                         "Pre-loading composite file: "
@@ -136,6 +139,9 @@ class BatchRenderer:
         # See HabitatSim.add_keyframe_to_observations().
         for env_index in range(self._num_envs):
             env_obs = observations[env_index]
+            assert (
+                KEYFRAME_OBSERVATION_KEY in env_obs
+            ), "Keyframe missing from environment observations. Batch rendering cannot proceed."
             keyframe = env_obs.pop(KEYFRAME_OBSERVATION_KEY)
             self._replay_renderer.set_environment_keyframe(env_index, keyframe)
             self._replay_renderer.set_sensor_transforms_from_keyframe(
@@ -313,6 +319,12 @@ class BatchRenderer:
             sim_sensor_cfg.gpu2gpu_transfer = (
                 config.habitat.simulator.habitat_sim_v0.gpu_gpu
             )
+            if sim_sensor_cfg.noise_model != "None":
+                logger.warn(
+                    "The batch renderer currently doesn't support sensor noise modeling. Noise model for sensor '"
+                    + sim_sensor_cfg.uuid
+                    + "' will be ignored."
+                )
             sensor_specifications.append(sim_sensor_cfg)
         return sensor_specifications
 

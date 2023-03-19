@@ -25,11 +25,11 @@ from omegaconf import DictConfig
 
 import habitat_sim
 from habitat.config.default import get_agent_config
-from habitat.core.batch_renderer_constants import (
+from habitat.core.dataset import Episode
+from habitat.core.env_batch_renderer_constants import (
     KEYFRAME_OBSERVATION_KEY,
     KEYFRAME_SENSOR_PREFIX,
 )
-from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
