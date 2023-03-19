@@ -1322,6 +1322,7 @@ class AgentConfig(HabitatBaseConfig):
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
 
+
 @dataclass
 class RendererConfig(HabitatBaseConfig):
     r"""Configuration for the renderer.
