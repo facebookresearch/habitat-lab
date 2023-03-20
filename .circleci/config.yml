@@ -333,8 +333,8 @@ jobs:
               conda create -y -n build-env python=3.9
               . activate build-env
               pip install --upgrade build
-              python -m build habitat-lab/
-              python -m build habitat-baselines/
+              python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
+              python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
 
               conda create -y -n bdist-install python=3.9
               . activate bdist-install
@@ -357,7 +357,20 @@ jobs:
 
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
-
+  testpypi_deploy:
+    <<: *gpu
+    steps:
+      - checkout:
+          path: ./habitat-lab
+      - run:
+          name: Deploy Habitat-Lab and Habitat-Baselines to TestPyPI
+          command: |
+              cd habitat-lab
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate build-env
+              pip install --upgrade twine
+              twine upload --repository testpypi habitat-lab/dist/*
+              twine upload --repository testpypi habitat-baselines/dist/*
 
 workflows:
   version: 2
@@ -366,3 +379,19 @@ workflows:
       - pre-commit
       - python_lint
       - install_and_test_ubuntu
+  testpypi_nightly:
+    triggers:
+      - schedule:
+          cron: "0 7 * * *"
+          filters:
+            branches:
+              only: main
+    jobs:
+      - pre-commit
+      - python_lint
+      - install_and_test_ubuntu
+      - testpypi_deploy:
+          requires:
+            - pre-commit
+            - python_lint
+            - install_and_test_ubuntu
