@@ -6,7 +6,6 @@
 
 import os
 import pickle as pkl
-from typing import List
 
 import magnum as mn
 import numpy as np
@@ -53,7 +52,7 @@ MIN_ANGLE_TURN = 5  # If we turn less than this amount, we can just rotate the b
 TURNING_STEP_AMOUNT = (
     20  # The maximum angle we should be rotating at a given step
 )
-THRESHOLD_ROTATE_NOT_MOVE = 120  # The rotation angle above which we should only walk as if rotating in place
+THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
 
 
 class HumanoidRearrangeController:
@@ -86,7 +85,7 @@ class HumanoidRearrangeController:
 
         self.walk_motion = Motion(
             walk_info["joints_array"],
-            walk_info["transform_array2"],
+            walk_info["transform_array"],
             walk_info["displacement"],
             walk_info["fps"],
         )
@@ -100,33 +99,36 @@ class HumanoidRearrangeController:
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
 
-        # State variables
-        self.obj_transform = mn.Matrix4()
+        # These two matrices store the global transformation of the base
+        # as well as the transformation caused by the walking gait
+        # We initialize them to identity
+        self.obj_transform_offset = mn.Matrix4()
+        self.obj_transform_base = mn.Matrix4()
+        self.joint_pose = []
+
         self.prev_orientation = None
         self.walk_mocap_frame = 0
 
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)"""
-        self.obj_transform.translation = position + self.base_offset
+        self.obj_transform_offset = mn.Matrix4()
+        self.obj_transform_base.translation = position + self.base_offset
 
-    def get_stop_pose(self):
+    def calculate_stop_pose(self):
         """
-        Returns a stop, standing pose
+        Calculates a stop, standing pose
         """
-        joint_pose = self.stop_pose.joints
-        obj_transform = (
-            self.obj_transform
-        )  # the object transform does not change
-        return joint_pose, obj_transform
+        # the object transform does not change
+        self.joint_pose = self.stop_pose.joints
 
-    def compute_turn(self, target_position: mn.Vector3):
+    def calculate_turn_pose(self, target_position: mn.Vector3):
         """
         Generate some motion without base transform, just turn
         """
-        return self.get_walk_pose(target_position, distance_multiplier=0)
+        self.calculate_walk_pose(target_position, distance_multiplier=0)
 
-    def get_walk_pose(
-        self, target_position: mn.Vector3, distance_multiplier=0
+    def calculate_walk_pose(
+        self, target_position: mn.Vector3, distance_multiplier=1.0
     ):
         """
         Computes a walking pose and transform, so that the humanoid moves to the relative position
@@ -134,23 +136,24 @@ class HumanoidRearrangeController:
         :param position: target position, relative to the character root translation
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
-
+        deg_per_rads = 180.0 / np.pi
         forward_V = target_position
         if forward_V.length() == 0.0:
-            return self.get_stop_pose()
+            self.calculate_stop_pose()
+            return
         distance_to_walk = np.linalg.norm(forward_V)
         did_rotate = False
 
+        # The angle we initially want to go to
+        new_angle = np.arctan2(forward_V[0], forward_V[2]) * deg_per_rads
         if self.prev_orientation is not None:
             # If prev orrientation is None, transition to this position directly
-            curr_angle = np.arctan2(forward_V[0], forward_V[2]) * 180.0 / np.pi
             prev_orientation = self.prev_orientation
             prev_angle = (
                 np.arctan2(prev_orientation[0], prev_orientation[2])
-                * 180.0
-                / np.pi
+                * deg_per_rads
             )
-            forward_angle = curr_angle - prev_angle
+            forward_angle = new_angle - prev_angle
             if np.abs(forward_angle) > self.min_angle_turn:
                 actual_angle_move = self.turning_step_amount
                 if abs(forward_angle) < actual_angle_move:
@@ -158,10 +161,10 @@ class HumanoidRearrangeController:
                 new_angle = prev_angle + actual_angle_move * np.sign(
                     forward_angle
                 )
-                new_angle *= np.pi / 180
+                new_angle /= deg_per_rads
                 did_rotate = True
             else:
-                new_angle = curr_angle * np.pi / 180
+                new_angle = new_angle / deg_per_rads
 
             forward_V = mn.Vector3(np.sin(new_angle), 0, np.cos(new_angle))
 
@@ -216,30 +219,37 @@ class HumanoidRearrangeController:
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # We correct the object transform
-        obj_transform.translation *= 0
         look_at_path_T = mn.Matrix4.look_at(
-            self.obj_transform.translation,
-            self.obj_transform.translation + forward_V.normalized(),
+            self.obj_transform_base.translation,
+            self.obj_transform_base.translation + forward_V.normalized(),
             mn.Vector3.y_axis(),
         )
 
         # Remove the forward component, and orient according to forward_V
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
-        obj_transform = look_at_path_T @ obj_transform
 
-        obj_transform.translation += (
-            forward_V * dist_diff * distance_multiplier
-        )
-        self.obj_transform = obj_transform
+        # This is the rotation and translation caused by the current motion pose
+        #  we still need to apply the base_transform to obtain the full transform
+        self.obj_transform_offset = obj_transform
 
-        return joint_pose, obj_transform
+        # The base_transform here is independent of transforms caused by the current
+        # motion pose.
+        obj_transform_base = look_at_path_T
+        forward_V_dist = forward_V * dist_diff * distance_multiplier
+        obj_transform_base.translation += forward_V_dist
 
-    @classmethod
-    def vectorize_pose(cls, pose: List, transform: mn.Matrix4):
+        self.obj_transform_base = obj_transform_base
+        self.joint_pose = joint_pose
+
+    def get_pose(self):
         """
-        Transforms a pose so that it can be passed as an argument to HumanoidJointAction
-
-        :param pose: a list of 17*4 elements, corresponding to the flattened quaternions
-        :param transform: an object transform
+        Obtains the controller joints, offset and base transform in a vectorized form so that it can be passed
+        as an argument to HumanoidJointAction
         """
-        return pose + list(np.asarray(transform.transposed()).flatten())
+        obj_trans_offset = np.asarray(
+            self.obj_transform_offset.transposed()
+        ).flatten()
+        obj_trans_base = np.asarray(
+            self.obj_transform_base.transposed()
+        ).flatten()
+        return self.joint_pose + list(obj_trans_offset) + list(obj_trans_base)
