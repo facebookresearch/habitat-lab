@@ -470,6 +470,163 @@ class BaseVelAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
+class BaseVelSpotAction(ArticulatedAgentAction):
+    """
+    The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
+
+    Optionally cull states with active collisions if config parameter `allow_dyn_slide` is True
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
+        self.base_vel_ctrl.controlling_lin_vel = True
+        self.base_vel_ctrl.lin_vel_is_local = True
+        self.base_vel_ctrl.controlling_ang_vel = True
+        self.base_vel_ctrl.ang_vel_is_local = True
+        self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
+        self._lin_speed = self._config.lin_speed
+        self._ang_speed = self._config.ang_speed
+        self._allow_back = self._config.allow_back
+        self._cylinder_deviate = self._config.cylinder_deviate
+        self._lin_collision_threshold = self._config.lin_collision_threshold
+        self._ang_collision_threshold = self._config.ang_collision_threshold
+
+    @property
+    def action_space(self):
+        lim = 20
+        return spaces.Dict(
+            {
+                self._action_arg_prefix
+                + "base_vel": spaces.Box(
+                    shape=(2,), low=-lim, high=lim, dtype=np.float32
+                )
+            }
+        )
+
+    def _capture_articulated_agent_state(self):
+        return {
+            "forces": self.cur_articulated_agent.sim_obj.joint_forces,
+            "vel": self.cur_articulated_agent.sim_obj.joint_velocities,
+            "pos": self.cur_articulated_agent.sim_obj.joint_positions,
+        }
+
+    def _set_articulated_agent_state(self, set_dat):
+        self.cur_articulated_agent.sim_obj.joint_positions = set_dat["forces"]
+        self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
+        self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
+
+    def spot_collison_check(self, trans, target_trans, end_pos):
+        # Get the front and rear positions
+        front_cur_pos = trans.transform_point(
+            np.array([self._cylinder_deviate, 0, 0])
+        )
+        front_goal_pos = target_trans.transform_point(
+            np.array([self._cylinder_deviate, 0, 0])
+        )
+        rear_cur_pos = trans.transform_point(
+            np.array([-self._cylinder_deviate, 0, 0])
+        )
+        rear_goal_pos = target_trans.transform_point(
+            np.array([-self._cylinder_deviate, 0, 0])
+        )
+
+        # For step filter of the front pos
+        end_front_pos = self._sim.step_filter(front_cur_pos, front_goal_pos)
+        end_front_pos[1] = front_cur_pos[1]
+        front_goal_pos[1] = front_cur_pos[1]
+        # For step filter of the rear pos
+        end_rear_pos = self._sim.step_filter(rear_cur_pos, rear_goal_pos)
+        end_rear_pos[1] = front_cur_pos[1]
+        rear_goal_pos[1] = front_cur_pos[1]
+        # For step filter of the center pos
+        end_pos[1] = trans.translation[1]
+
+        # Robot moving distance
+        front_move = (end_front_pos - front_goal_pos).length()
+        rear_move = (end_rear_pos - rear_goal_pos).length()
+
+        # For detection of linear or angualr velocity
+        center_move = (end_pos - trans.translation).length()
+
+        # If the acutal target and the resulting moving position
+        # is too samll, then there is a collision
+        if (
+            front_move > self._lin_collision_threshold
+            or rear_move > self._lin_collision_threshold
+        ) and center_move != 0:
+            return True
+        elif (
+            front_move > self._ang_collision_threshold
+            or rear_move > self._ang_collision_threshold
+        ) and center_move == 0:
+            return True
+        else:
+            return False
+
+    def update_base(self):
+        ctrl_freq = self._sim.ctrl_freq
+
+        # before_trans_state = self._capture_articulated_agent_state()
+
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+
+        target_rigid_state = self.base_vel_ctrl.integrate_transform(
+            1 / ctrl_freq, rigid_state
+        )
+        end_pos = self._sim.step_filter(
+            rigid_state.translation, target_rigid_state.translation
+        )
+
+        end_pos -= self.cur_articulated_agent.params.base_offset
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(), end_pos
+        )
+        self.cur_articulated_agent.sim_obj.transformation = target_trans
+
+        did_coll = self.spot_collison_check(trans, target_trans, end_pos)
+
+        if not self._allow_dyn_slide:
+            # Check if in the new articulated_agent state the arm collides with anything.
+            # If so we have to revert back to the previous transform
+            self._sim.internal_step(-1)
+            if did_coll:
+                self.cur_articulated_agent.sim_obj.transformation = trans
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            # object.
+            self.cur_grasp_mgr.update_object_to_grasp()
+
+        if self.cur_articulated_agent._base_type == "leg":
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
+
+    def step(self, *args, is_last_action, **kwargs):
+        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            lin_vel = np.maximum(lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        if lin_vel != 0.0 or ang_vel != 0.0:
+            self.update_base()
+
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.base_velocity)
+        else:
+            return {}
+
+
+@registry.register_task_action
 class ArmEEAction(ArticulatedAgentAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the articulated_agent's arm."""
 

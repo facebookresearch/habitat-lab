@@ -245,6 +245,21 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @dataclass
+class BaseVelocitySpotActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelSpotAction"
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = False
+    allow_back: bool = True
+    cylinder_deviate: float = 0.0
+    lin_collision_threshold: float = 0.0
+    ang_collision_threshold: float = 0.0
+
+
+@dataclass
 class HumanoidJointActionConfig(ActionConfig):
     r"""
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
@@ -1536,6 +1551,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity",
     node=BaseVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_velocity_spot",
+    group="habitat/task/actions",
+    name="base_velocity_spot",
+    node=BaseVelocitySpotActionConfig,
 )
 cs.store(
     package="habitat.task.actions.humanoidjoint_action",
