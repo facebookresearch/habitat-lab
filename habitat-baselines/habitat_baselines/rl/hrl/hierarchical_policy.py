@@ -284,7 +284,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
         hl_terminate = torch.zeros(self._num_envs, dtype=torch.bool)
-        hl_info: Dict[str, Any] = {}
+        hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
         if call_high_level.sum() > 0:
             (
                 new_skills,

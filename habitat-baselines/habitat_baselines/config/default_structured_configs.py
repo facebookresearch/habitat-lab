@@ -356,9 +356,15 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
+    type: str = "SingleAgentAccessMgr"
+
+
+@dataclass
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
+    agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()
