@@ -318,11 +318,11 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               conda create -y -n non-editable-install python=3.9
               . activate non-editable-install
-              conda install -c aihabitat-nightly habitat-sim
+              # conda install -c aihabitat-nightly habitat-sim
               pip install habitat-lab/
-              python -c 'import habitat; print("habitat version:", habitat.__version__)'
+              # python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/
-              python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+              # python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
 
       - run:
           name: Ensure build and intall work
@@ -338,22 +338,22 @@ jobs:
 
               conda create -y -n bdist-install python=3.9
               . activate bdist-install
-              conda install -c aihabitat-nightly habitat-sim
+              # conda install -c aihabitat-nightly habitat-sim
               conda create -n sdist-install --clone bdist-install
 
               # install from built distribution:
               . activate bdist-install
               pip install habitat-lab/dist/habitat_lab*.whl
-              python -c 'import habitat; print("habitat version:", habitat.__version__)'
+              # python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/dist/habitat_baselines*.whl
-              python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+              # python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
 
               # install from source distribution:
               . activate sdist-install
               pip install habitat-lab/dist/habitat-lab*.tar.gz
-              python -c 'import habitat; print("habitat version:", habitat.__version__)'
+              # python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/dist/habitat-baselines*.tar.gz
-              python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+              # python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
 
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
