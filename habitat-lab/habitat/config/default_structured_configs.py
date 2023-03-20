@@ -1229,6 +1229,20 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "head_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "arm_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
@@ -1654,6 +1668,18 @@ cs.store(
     group="habitat/simulator/sim_sensors",
     name="head_rgb_sensor",
     node=HeadRGBSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="head_panoptic_sensor",
+    node=HeadPanopticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="arm_panoptic_sensor",
+    node=ArmPanopticSensorConfig,
 )
 
 cs.store(

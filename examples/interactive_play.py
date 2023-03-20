@@ -48,6 +48,9 @@ import sys
 
 sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
 sys.path.append("/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-lab")
+sys.path.append(
+    "/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-baselines"
+)
 
 import argparse
 import os
