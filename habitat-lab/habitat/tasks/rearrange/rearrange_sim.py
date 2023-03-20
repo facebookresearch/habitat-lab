@@ -106,6 +106,8 @@ class RearrangeSim(HabitatSim):
         self._viz_objs: Dict[str, Any] = {}
         self._draw_bb_objs: List[int] = []
 
+        self._obj_orig_motion_types: Dict[str, MotionType] = {}
+
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing (used in the sense phase of the sense-plan act
         # architecture).
@@ -198,6 +200,23 @@ class RearrangeSim(HabitatSim):
     def _try_acquire_context(self):
         if self._concur_render:
             self.renderer.acquire_gl_context()
+
+    def _auto_sleep(self):
+        all_agent_pos = [
+            agent.base_pos for agent in self.agents_mgr.articulated_agents_iter
+        ]
+        rom = self.get_rigid_object_manager()
+        for handle, ro in rom.get_objects_by_handle_substring().items():
+            is_far = all(
+                (robo_pos - ro.translation).length()
+                > self.habitat_config.sleep_dist
+                for robo_pos in all_agent_pos
+            )
+            if is_far and ro.motion_type != MotionType.STATIC:
+                self._obj_orig_motion_types[handle] = ro.motion_type
+                ro.motion_type = habitat_sim.physics.MotionType.STATIC
+            elif not is_far:
+                ro.motion_type = self._obj_orig_motion_types[handle]
 
     def _sleep_all_objects(self):
         """
@@ -296,6 +315,12 @@ class RearrangeSim(HabitatSim):
         # auto-sleep rigid objects as optimization
         if self.habitat_config.auto_sleep:
             self._sleep_all_objects()
+
+        rom = self.get_rigid_object_manager()
+        self._obj_orig_motion_types = {
+            handle: ro.motion_type
+            for handle, ro in rom.get_objects_by_handle_substring().items()
+        }
 
         rom = self.get_rigid_object_manager()
         self._obj_orig_motion_types = {
@@ -747,6 +772,8 @@ class RearrangeSim(HabitatSim):
             self.viz_ids = defaultdict(lambda: None)
 
         self.maybe_update_articulated_agent()
+        if self.habitat_config.sleep_dist > 0.0:
+            self._auto_sleep()
 
         if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
@@ -836,7 +863,7 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
-        # optionally step physics and update the articulated_agent for benchmarking purposes
+        # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
             self.step_world(dt)
 
