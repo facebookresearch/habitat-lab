@@ -1237,7 +1237,7 @@ class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
 
 @dataclass
 class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
-    uuid: str = "arm_panoptic"
+    uuid: str = "articulated_agent_arm_panoptic"
     width: int = 256
     height: int = 256
 

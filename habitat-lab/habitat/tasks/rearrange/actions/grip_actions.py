@@ -366,6 +366,10 @@ class GazeGraspAction(MagicGraspAction):
         if grip_action is None:
             return
 
+        # panoptic_img = self._sim._sensor_suite.get_observations(self._sim.get_sensor_observations())["articulated_agent_arm_panoptic"]
+        # height, width = panoptic_img.shape[:2]
+        # center_obj_id = panoptic_img[height // 2,  width // 2]
+
         if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
