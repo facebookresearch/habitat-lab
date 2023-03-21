@@ -259,8 +259,6 @@ class RearrangeSim(HabitatSim):
         new_scene = self.prev_scene_id != ep_info.scene_id
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
-        # new_scene = True
-        # should_add_objects = True
 
         if new_scene:
             self._prev_obj_names = None
