@@ -6,7 +6,6 @@
 
 from typing import Optional, Union
 
-import cv2
 import magnum as mn
 import numpy as np
 from gym import spaces
