@@ -112,7 +112,7 @@ class KinematicHumanoid(MobileManipulator):
 
     @property
     def base_rot(self) -> float:
-        return self.base_transform.rotation.angle()
+        return self.base_transformation.rotation.angle()
 
     @base_rot.setter
     def base_rot(self, rotation_y_rad: float):
@@ -137,7 +137,6 @@ class KinematicHumanoid(MobileManipulator):
         """Sets the joints, base and offset transform of the humanoid"""
         # TODO: should this go into articulated agent?
         self.sim_obj.joint_positions = joint_list
-        self.base_transform = base_transform
         self.offset_transform = offset_transform
         final_transform = base_transform @ offset_transform
 

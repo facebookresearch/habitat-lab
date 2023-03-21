@@ -6,6 +6,7 @@
 
 from os import path as osp
 
+import gym
 import magnum as mn
 import numpy as np
 import pytest
@@ -141,7 +142,7 @@ def simulate(sim, dt, get_observations=False):
     observations = []
     target_time = sim.get_world_time() + dt
     while sim.get_world_time() < target_time:
-        sim.step_physics(1.0 / 60.0)
+        sim.step_physics(0.1 / 60.0)
         if get_observations:
             observations.append(sim.get_sensor_observations())
     return observations
@@ -266,3 +267,53 @@ def test_humanoid_controller():
                 "test_humanoid_wrapper",
                 open_vid=True,
             )
+
+
+@pytest.mark.skipif(
+    not osp.exists(
+        "data/humanoids/humanoid_data/armatures/human_armature.urdf"
+    ),
+    reason="Test requires a human armature.",
+)
+@pytest.mark.skipif(
+    not osp.exists(
+        "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+    ),
+    reason="Test requires motion files.",
+)
+def test_gym_humanoid():
+    """Test Gym with the humanoid"""
+    config_file = "benchmark/rearrange/pick.yaml"
+    overrides = [
+        "~habitat.task.actions.arm_action",
+        "~habitat.task.actions.base_velocity",
+        "++habitat.task.actions={humanoidjoint_action:{type:HumanoidJointAction}}",
+        "++habitat.task.actions.humanoidjoint_action.num_joints=17",
+        "habitat.simulator.agents.main_agent.articulated_agent_urdf=data/humanoids/humanoid_data/amass_male.urdf",
+        "habitat.simulator.agents.main_agent.articulated_agent_type=KinematicHumanoid",
+        "habitat.simulator.agents.main_agent.motion_data_path=data/humanoids/humanoid_data/walking_motion_processed.pkl",
+        "habitat.simulator.ac_freq_ratio=1",
+        "habitat.task.measurements.force_terminate.max_accum_force=-1.0",
+        "habitat.task.measurements.force_terminate.max_instant_force=-1.0",
+        "habitat.simulator.kinematic_mode=True",
+        "habitat.simulator.ac_freq_ratio=1",
+    ]
+
+    hab_gym = gym.make(
+        "Habitat-v0",
+        cfg_file_path=config_file,
+        override_options=overrides,
+        use_render_mode=True,
+    )
+    hab_gym.reset()
+    hab_gym.step(hab_gym.action_space.sample())
+    hab_gym.close()
+
+    hab_gym = gym.make(
+        "HabitatRender-v0",
+        cfg_file_path=config_file,
+    )
+    hab_gym.reset()
+    hab_gym.step(hab_gym.action_space.sample())
+    hab_gym.render("rgb_array")
+    hab_gym.close()

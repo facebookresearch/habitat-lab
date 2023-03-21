@@ -98,6 +98,14 @@ def test_rearrange_baseline_envs(test_cfg_path):
             "habitat_baselines.eval.split=val",
         ],
     )
+    for _, agent_config in config.habitat.simulator.agents.items():
+        if (
+            agent_config.articulated_agent_type == "KinematicHumanoid"
+            and not osp.exists(agent_config.motion_data_path)
+        ):
+            pytest.skip(
+                "This test should only be run if we have the motion data files."
+            )
     with habitat.config.read_write(config):
         config.habitat.gym.obs_keys = None
         config.habitat.gym.desired_goal_keys = []

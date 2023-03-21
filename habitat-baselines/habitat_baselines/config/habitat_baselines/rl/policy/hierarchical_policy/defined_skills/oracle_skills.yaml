@@ -23,6 +23,7 @@ close_cab:
   skill_name: "NoopSkillPolicy"
   obs_skill_inputs: ["obj_start_sensor"]
   max_skill_steps: 1
+  apply_postconds: True
   force_end_on_timeout: False
   pddl_action_names: ["close_cab_by_name"]
 
