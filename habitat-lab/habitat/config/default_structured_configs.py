@@ -1293,7 +1293,6 @@ class SimulatorConfig(HabitatBaseConfig):
     requires_textures: bool = True
     # Sleep options
     auto_sleep: bool = False
-    sleep_dist: float = -1.0
     step_physics: bool = True
     concur_render: bool = False
     # If markers should be updated at every step:
@@ -1324,7 +1323,7 @@ class SimulatorConfig(HabitatBaseConfig):
     # Rearrange agent setup
     ctrl_freq: float = 120.0
     ac_freq_ratio: int = 4
-    load_objs: bool = False
+    load_objs: bool = True
     # Rearrange agent grasping
     hold_thresh: float = 0.15
     grasp_impulse: float = 10000.0

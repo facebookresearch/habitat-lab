@@ -21,7 +21,7 @@ habitat:
       composite_subgoal_reward:
         stage_sparse_reward: 1.0
     reward_measure: composite_subgoal_reward
-    slack_reward: 0.0
+    slack_reward: -0.01
     success_reward: 5.0
 habitat_baselines:
   verbose: False
@@ -51,7 +51,7 @@ habitat_baselines:
     ppo:
       # ppo params
       clip_param: 0.2
-      ppo_epoch: 2
+      ppo_epoch: 1
       num_mini_batch: 2
       value_loss_coef: 0.5
       entropy_coef: 0.0001
