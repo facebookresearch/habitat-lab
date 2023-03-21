@@ -441,7 +441,7 @@ class RearrangeEpisodeGenerator:
 
         # Reset the number of allowed objects per receptacle.
         recep_tracker = ReceptacleTracker(
-            {k: v for k, v in self.cfg.max_objects_per_receptacle},
+            dict(self.cfg.max_objects_per_receptacle),
             self._receptacle_sets,
         )
 
