@@ -311,33 +311,40 @@ class GazeGraspAction(MagicGraspAction):
                 "This robot does not have GazeGraspAction."
             )
 
+        if isinstance(self.cur_articulated_agent, SpotRobot):
+            panoptic_img = self._sim._sensor_suite.get_observations(
+                self._sim.get_sensor_observations()
+            )["articulated_agent_arm_panoptic"]
+        elif isinstance(self.cur_articulated_agent, StretchRobot):
+            panoptic_img = self._sim._sensor_suite.get_observations(
+                self._sim.get_sensor_observations()
+            )["head_panoptic"]
+        else:
+            raise NotImplementedError(
+                "This robot does not have GazeGraspAction."
+            )
+
+        height, width = panoptic_img.shape[:2]
+        center_obj_id = (
+            panoptic_img[height // 2, width // 2]
+            - self._sim.habitat_config.object_ids_start
+        )
+
         rom = self._sim.get_rigid_object_manager()
-        for obj_idx, abs_obj_idx in enumerate(self._sim.scene_obj_ids):
-            obj_pos = rom.get_object_by_id(abs_obj_idx).translation
+        if center_obj_id in self._sim.scene_obj_ids:
+            obj_pos = rom.get_object_by_id(center_obj_id).translation
 
             # Skip if not in distance range
             dist = np.linalg.norm(obj_pos - cam_pos)
             if dist < self.min_dist or dist > self.max_dist:
-                continue
+                return None, None
 
             # Skip if not in the central cone
             obj_angle = self.get_camera_object_angle(obj_pos)
             if abs(obj_angle) > self.center_cone_angle_threshold:
-                continue
+                return None, None
 
-            # Check if the object is blocking the center pixel
-            abs_diff_denoised = self.get_grasp_object_mask(abs_obj_idx)
-            # Get the bounding box
-            x, y, w, h = cv2.boundingRect(abs_diff_denoised)
-            height, width = abs_diff_denoised.shape
-            if (
-                x <= width // 2
-                and width // 2 <= x + w
-                and y <= height // 2
-                and height // 2 <= y + h
-            ):
-                # At this point, there should be an object at the center pixel
-                return obj_idx, obj_pos
+            return center_obj_id, obj_pos
 
         return None, None
 
@@ -352,8 +359,8 @@ class GazeGraspAction(MagicGraspAction):
         keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
 
         self.cur_grasp_mgr.snap_to_obj(
-            self._sim.scene_obj_ids[center_obj_idx],
-            force=False,
+            center_obj_idx,
+            force=True,
             rel_pos=mn.Vector3(0.1, 0.0, 0.0),
             keep_T=keep_T,
         )
@@ -365,10 +372,6 @@ class GazeGraspAction(MagicGraspAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-
-        # panoptic_img = self._sim._sensor_suite.get_observations(self._sim.get_sensor_observations())["articulated_agent_arm_panoptic"]
-        # height, width = panoptic_img.shape[:2]
-        # center_obj_id = panoptic_img[height // 2,  width // 2]
 
         if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()

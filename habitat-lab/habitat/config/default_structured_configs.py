@@ -1361,6 +1361,8 @@ class SimulatorConfig(HabitatBaseConfig):
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
+    # The offset id values for the object
+    object_ids_start: int = 100
 
 
 @dataclass
