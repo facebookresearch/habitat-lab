@@ -44,14 +44,6 @@ Record and play back trajectories:
 - Play the trajectories back with `--load-actions data/interactive_play_replays/play_actions.txt`
 """
 
-import sys
-
-sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
-sys.path.append("/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-lab")
-sys.path.append(
-    "/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-baselines"
-)
-
 import argparse
 import os
 import os.path as osp
@@ -89,7 +81,7 @@ except ImportError:
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
-DEFAULT_CFG = "benchmark/rearrange/play_spot.yaml"
+DEFAULT_CFG = "benchmark/rearrange/play.yaml"
 DEFAULT_RENDER_STEPS_LIMIT = 60
 SAVE_VIDEO_DIR = "./data/vids"
 SAVE_ACTIONS_DIR = "./data/interactive_play_replays"
