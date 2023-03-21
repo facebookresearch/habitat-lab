@@ -769,7 +769,8 @@ if __name__ == "__main__":
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
-        task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
+        if task_config.type == "RearrangeCompositeTask-v0":
+            task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)
