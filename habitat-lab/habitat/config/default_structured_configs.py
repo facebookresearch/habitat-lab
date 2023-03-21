@@ -1329,10 +1329,12 @@ class RendererConfig(HabitatBaseConfig):
 
     :property enable_batch_renderer: [Experimental] Enables batch rendering, which accelerates rendering for concurrent environments. See env_batch_renderer.py for details.
     :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
+    :property classic_replay_renderer: For debugging. Create a ClassicReplayRenderer instead of BatchReplayRenderer when enable_batch_renderer is active.
     """
 
     enable_batch_renderer: bool = False
     composite_files: Optional[List[str]] = None
+    classic_replay_renderer: bool = False
 
 
 @dataclass

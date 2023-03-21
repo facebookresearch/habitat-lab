@@ -291,8 +291,11 @@ def test_rl_vectorized_envs(gpu2gpu):
                 ), "dones should be true after max_episode steps"
 
 
+@pytest.mark.parametrize("classic_replay_renderer", [False])
 @pytest.mark.parametrize("gpu2gpu", [False])
-def test_rl_vectorized_envs_batch_renderer(gpu2gpu):
+def test_rl_vectorized_envs_batch_renderer(
+    gpu2gpu: bool, classic_replay_renderer: bool
+):
     import habitat_sim
 
     if gpu2gpu and not habitat_sim.cuda_enabled:
@@ -302,6 +305,9 @@ def test_rl_vectorized_envs_batch_renderer(gpu2gpu):
     for config in configs:
         with habitat.config.read_write(config):
             config.habitat.simulator.renderer.enable_batch_renderer = True
+            config.habitat.simulator.renderer.classic_replay_renderer = (
+                classic_replay_renderer
+            )
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
                 True
             )
@@ -325,7 +331,7 @@ def test_rl_vectorized_envs_batch_renderer(gpu2gpu):
 
         observations = envs.post_step(observations)
         for env_obs in observations:
-            assert KEYFRAME_OBSERVATION_KEY in env_obs
+            assert KEYFRAME_OBSERVATION_KEY not in env_obs
 
         assert len(observations) == num_envs
 

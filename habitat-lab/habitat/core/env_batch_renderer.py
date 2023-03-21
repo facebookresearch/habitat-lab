@@ -91,6 +91,7 @@ class EnvBatchRenderer:
         assert (
             len(self._sensor_specifications) == 1
         ), "Batch renderer only supports one sensor."
+
         self._replay_renderer_cfg = (
             EnvBatchRenderer._create_replay_renderer_cfg(
                 config,
@@ -98,10 +99,17 @@ class EnvBatchRenderer:
                 self._sensor_specifications,
             )
         )
-        self._replay_renderer: ReplayRenderer = (
-            ReplayRenderer.create_batch_replay_renderer(
-                self._replay_renderer_cfg
-            )
+
+        replay_renderer_creation_fn: Callable[
+            [ReplayRendererConfiguration], ReplayRenderer
+        ] = (
+            ReplayRenderer.create_batch_replay_renderer
+            if not config.habitat.simulator.renderer.classic_replay_renderer
+            else ReplayRenderer.create_classic_replay_renderer
+        )
+
+        self._replay_renderer = replay_renderer_creation_fn(
+            self._replay_renderer_cfg
         )
 
         # Pre-load graphics assets using composite GLTF files.
