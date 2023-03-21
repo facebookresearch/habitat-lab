@@ -592,9 +592,15 @@ class HumanoidJointAction(ArticulatedAgentAction):
             ]
             new_transform_offset = mn.Matrix4(*vecs_offset)
             new_transform_base = mn.Matrix4(*vecs_base)
-            self.cur_articulated_agent.set_joint_transform(
-                new_joints, new_transform_offset, new_transform_base
-            )
+            if (
+                new_transform_offset.is_rigid_transformation()
+                and new_transform_base.is_rigid_transformation()
+            ):
+                # TODO: this will cause many sampled actions to be invalid
+                # Maybe we should update the sampling mechanism
+                self.cur_articulated_agent.set_joint_transform(
+                    new_joints, new_transform_offset, new_transform_base
+                )
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.humanoidjoint_action)

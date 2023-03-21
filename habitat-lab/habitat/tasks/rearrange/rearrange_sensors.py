@@ -225,6 +225,33 @@ class JointSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class HumanoidJointSensor(UsesArticulatedAgentInterface, Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return "humanoid_joint_sensor"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(
+            shape=(config.dimensionality,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        joints_pos = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.get_joint_transform()[0]
+        return np.array(joints_pos, dtype=np.float32)
+
+
+@registry.register_sensor
 class JointVelocitySensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
