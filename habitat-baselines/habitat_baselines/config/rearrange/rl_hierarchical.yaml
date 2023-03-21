@@ -23,7 +23,7 @@ habitat:
       composite_subgoal_reward:
         stage_sparse_reward: 1.0
     reward_measure: composite_subgoal_reward
-    slack_reward: 0.0
+    slack_reward: -0.01
     success_reward: 5.0
 habitat_baselines:
   verbose: False

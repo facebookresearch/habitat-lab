@@ -110,14 +110,7 @@ class RearrangeSim(HabitatSim):
         self._viz_objs: Dict[str, Any] = {}
         self._draw_bb_objs: List[int] = []
 
-        self._obj_orig_motion_types: Dict[str, MotionType] = {}
-
-        # Disables arm control. Useful if you are hiding the arm to perform
-        # some scene sensing (used in the sense phase of the sense-plan act
-        # architecture).
-        self.ctrl_arm = True
-
-        self.robots_mgr = RobotManager(self.habitat_config, self)
+        self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
         # Setup config properties.
         self._debug_render_robot = self.habitat_config.debug_render_robot
@@ -233,24 +226,7 @@ class RearrangeSim(HabitatSim):
         if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
 
-    def _auto_sleep(self):
-        all_robo_pos = [
-            robot.base_pos for robot in self.robots_mgr.robots_iter
-        ]
-        rom = self.get_rigid_object_manager()
-        for handle, ro in rom.get_objects_by_handle_substring().items():
-            is_far = all(
-                (robo_pos - ro.translation).length()
-                > self.habitat_config.sleep_dist
-                for robo_pos in all_robo_pos
-            )
-            if is_far and ro.motion_type != MotionType.STATIC:
-                self._obj_orig_motion_types[handle] = ro.motion_type
-                ro.motion_type = habitat_sim.physics.MotionType.STATIC
-            elif not is_far:
-                ro.motion_type = self._obj_orig_motion_types[handle]
-
-    def sleep_all_objects(self):
+    def _sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
         """
@@ -310,31 +286,22 @@ class RearrangeSim(HabitatSim):
         super().reconfigure(config, should_close_on_new_scene=False)
 
         self.ep_info = ep_info
+        self._try_acquire_context()
+
+        # Only remove and re-add objects if we have a new set of objects.
+        obj_names = [x[0] for x in ep_info.rigid_objs]
         new_scene = self.prev_scene_id != ep_info.scene_id
+        should_add_objects = self._prev_obj_names != obj_names
+        self._prev_obj_names = obj_names
+        # new_scene = True
+        # should_add_objects = True
+
         if new_scene:
             self._prev_obj_names = None
 
-        # Only remove and re-add objects if we have a new set of objects.
-        ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
-        obj_names = [x[0] for x in ep_info.rigid_objs]
-        # Only remove and re-add objects if we have a new set of objects.
-        should_add_objects = self._prev_obj_names != obj_names
-        self._prev_obj_names = obj_names
+        self.agents_mgr.reconfigure(new_scene)
 
-        self.agents_mgr.pre_obj_clear()
-        self._clear_objects(should_add_objects, new_scene)
-
-        is_hard_reset = new_scene or should_add_objects
-
-        if is_hard_reset:
-            with read_write(config):
-                config["scene"] = ep_info.scene_id
-            t_start = time.time()
-            super().reconfigure(config, should_close_on_new_scene=False)
-            self.add_perf_timing("super_reconfigure", t_start)
-
-        if new_scene:
-            self.agents_mgr.on_new_scene()
+        self._clear_objects(should_add_objects)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -356,8 +323,8 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.post_obj_load_reconfigure()
 
         # add episode clutter objects additional to base scene objects
-        if self._load_objs:
-            self._add_objs(ep_info, should_add_objects, new_scene)
+        if self.habitat_config.load_objs:
+            self._add_objs(ep_info, should_add_objects)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
@@ -367,11 +334,6 @@ class RearrangeSim(HabitatSim):
             self.sleep_all_objects()
 
         rom = self.get_rigid_object_manager()
-        self._obj_orig_motion_types = {
-            handle: ro.motion_type
-            for handle, ro in rom.get_objects_by_handle_substring().items()
-        }
-
         if new_scene:
             self._load_navmesh(ep_info)
 
@@ -847,9 +809,7 @@ class RearrangeSim(HabitatSim):
                 add_back_viz_objs[name] = (before_pos, r)
             self.viz_ids = defaultdict(lambda: None)
 
-        self.maybe_update_robot()
-        if self.habitat_config.sleep_dist > 0.0:
-            self._auto_sleep()
+        self.maybe_update_articulated_agent()
 
         if self._batch_render:
             for _ in range(self.ac_freq_ratio):
