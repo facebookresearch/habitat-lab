@@ -320,7 +320,24 @@ def test_rl_vectorized_envs_batch_renderer(gpu2gpu):
     ) as envs:
         envs.initialize_batch_renderer(configs[0])
         observations = envs.reset()
-        envs.post_step(observations)
+        for env_obs in observations:
+            assert KEYFRAME_OBSERVATION_KEY in env_obs
+
+        observations = envs.post_step(observations)
+        for env_obs in observations:
+            assert KEYFRAME_OBSERVATION_KEY in env_obs
+
+        assert len(observations) == num_envs
+
+        # TODO: Add screenshot tests. Image stats are compared until then.
+        reset_image_mean: List[float] = [126.23, 126.84, 126.62, 125.63]
+        reset_image_std_dev: List[float] = [26.54, 26.16, 25.80, 26.56]
+        tiled_img = envs.render(mode="rgb_array")
+        for env_idx in range(num_envs):
+            mean = float(np.mean(tiled_img[env_idx]))
+            std_dev = float(np.std(tiled_img[env_idx]))
+            assert abs(reset_image_mean[env_idx] - mean) < 0.01
+            assert abs(reset_image_std_dev[env_idx] - std_dev) < 0.01
 
         for i in range(2 * configs[0].habitat.environment.max_episode_steps):
             outputs = envs.step(
