@@ -232,64 +232,6 @@ class GazeGraspAction(MagicGraspAction):
 
         return cam_trans
 
-    def get_grasp_object_mask(self, abs_obj_idx):
-        # Save object translation before sinking the object beneath the floor
-        orig_target_obj_trans = np.array(
-            self._sim.get_rigid_object_manager()
-            .get_object_by_id(abs_obj_idx)
-            .translation
-        )
-
-        # Get the depth image
-        if isinstance(self.cur_articulated_agent, SpotRobot):
-            depth_img = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["articulated_agent_arm_depth"]
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
-            depth_img = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["head_depth"]
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
-
-        # Sink the object beneath the floor where it will not be seen
-        self._sim.get_rigid_object_manager().get_object_by_id(
-            abs_obj_idx
-        ).translation = np.array([0.0, -15.0, 0.0])
-        self._sim.internal_step(0)
-
-        # Get new depth image
-        if isinstance(self.cur_articulated_agent, SpotRobot):
-            depth_img_no_target_obj = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["articulated_agent_arm_depth"]
-        elif isinstance(self.cur_articulated_agent, StretchRobot):
-            depth_img_no_target_obj = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )["head_depth"]
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
-
-        # Return the object to its original transformation
-        self._sim.get_rigid_object_manager().get_object_by_id(
-            abs_obj_idx
-        ).translation = orig_target_obj_trans
-        self._sim.internal_step(0)
-
-        # Get binary absolute difference mask
-        abs_diff = np.uint8(np.abs(depth_img - depth_img_no_target_obj) * 255)
-        abs_diff[abs_diff > 0] = 255  # type: ignore
-
-        # Denoise mask
-        abs_diff_denoised = cv2.blur(abs_diff, (5, 5))
-        abs_diff_denoised[abs_diff_denoised < 255] = 0  # type: ignore
-
-        return abs_diff_denoised
-
     def determine_center_object(self):
         """Determine if an object is at the center of the frame and in range"""
         if isinstance(self.cur_articulated_agent, SpotRobot):
