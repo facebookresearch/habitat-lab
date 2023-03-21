@@ -22,6 +22,7 @@ from habitat.tasks.rearrange.actions.articulated_agent_action import (
 # These actions need to be imported since there is a Python evaluation
 # statement which dynamically creates the desired grip controller.
 from habitat.tasks.rearrange.actions.grip_actions import (
+    GazeGraspAction,
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,

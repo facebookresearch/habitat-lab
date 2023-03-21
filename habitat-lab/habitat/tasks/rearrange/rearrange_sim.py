@@ -333,6 +333,15 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
+        # Add the rigid object id for the semantic map
+        rom = self.get_rigid_object_manager()
+        for i, handle in enumerate(rom.get_object_handles()):
+            obj = rom.get_object_by_handle(handle)
+            for node in obj.visual_scene_nodes:
+                node.semantic_id = (
+                    obj.object_id + self.habitat_config.object_ids_start
+                )
+
     def get_agent_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
             return self.agents_mgr[0]
