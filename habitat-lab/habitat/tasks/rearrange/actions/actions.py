@@ -470,7 +470,7 @@ class BaseVelAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
-class BaseVelNonCylinderAction(ArticulatedAgentAction):
+class BaseVelNonCylinderAction(BaseVelAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
@@ -479,37 +479,44 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._sim: RearrangeSim = sim
-        self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
-        self.base_vel_ctrl.controlling_lin_vel = True
-        self.base_vel_ctrl.lin_vel_is_local = True
-        self.base_vel_ctrl.controlling_ang_vel = True
-        self.base_vel_ctrl.ang_vel_is_local = True
-        self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
-        self._lin_speed = self._config.lin_speed
-        self._ang_speed = self._config.ang_speed
-        self._allow_back = self._config.allow_back
         self._lin_collision_threshold = self._config.lin_collision_threshold
         self._ang_collision_threshold = self._config.ang_collision_threshold
         self._x_offset = self._config.x_offset
         self._y_offset = self._config.y_offset
+        self._enable_lateral_move = self._config.enable_lateral_move
         assert len(self._x_offset) == len(self._y_offset)
 
     @property
     def action_space(self):
         lim = 20
-        return spaces.Dict(
-            {
-                self._action_arg_prefix
-                + "base_vel": spaces.Box(
-                    shape=(2,), low=-lim, high=lim, dtype=np.float32
-                )
-            }
-        )
+        if self._enable_lateral_move:
+            return spaces.Dict(
+                {
+                    self._action_arg_prefix
+                    + "base_vel": spaces.Box(
+                        shape=(3,), low=-lim, high=lim, dtype=np.float32
+                    )
+                }
+            )
+        else:
+            return spaces.Dict(
+                {
+                    self._action_arg_prefix
+                    + "base_vel": spaces.Box(
+                        shape=(2,), low=-lim, high=lim, dtype=np.float32
+                    )
+                }
+            )
 
     def collision_check(
         self, trans, target_trans, center_end_pos, target_rigid_state
     ):
+        """
+        trans: the transformation of the current location of the robot
+        target_trans: the transformation of the target location of the robot given the center original Navmesh
+        center_end_pos: the original center end position of the robot
+        target_rigid_state: the target state of the robot given the center original Navmesh
+        """
         num_check_cylinder = len(self._x_offset)
         # Get the offset positions
         cur_pos = []
@@ -606,16 +613,26 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             )
 
     def step(self, *args, is_last_action, **kwargs):
-        lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+        lateral_lin_vel = 0.0
+        if self._enable_lateral_move:
+            lin_vel, lateral_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+        else:
+            lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
+        lateral_lin_vel = np.clip(lateral_lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
         if not self._allow_back:
             lin_vel = np.maximum(lin_vel, 0)
 
-        self.base_vel_ctrl.linear_velocity = mn.Vector3(lin_vel, 0, 0)
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(
+            lin_vel, 0, -lateral_lin_vel
+        )
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
-        if lin_vel != 0.0 or ang_vel != 0.0:
+        if lin_vel != 0.0 or lateral_lin_vel != 0.0 or ang_vel != 0.0:
             self.update_base()
 
         if is_last_action:

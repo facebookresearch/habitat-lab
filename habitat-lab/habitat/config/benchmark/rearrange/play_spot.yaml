@@ -27,10 +27,15 @@ habitat:
         ee_ctrl_lim: 0.015
       base_velocity_non_cylinder:
         allow_dyn_slide: False
+        # There is a collision if the difference between the clamped NavMesh position and target position
+        # is too great than lin_collision_threshold/ang_collision_threshold for any point
         lin_collision_threshold: 1e-5
         ang_collision_threshold: 1e-5
+        # The x and y locations of the clamped NavMesh position
         x_offset: [0.3, -0.3]
         y_offset: [0.0, 0.0]
+        # If we allow the robot to move laterally
+        enable_lateral_move: True
   simulator:
     type: RearrangeSim-v0
     seed: 100
@@ -38,7 +43,7 @@ habitat:
       - "data/objects/ycb/configs/"
     agents:
       main_agent:
-        radius: 0.55
+        radius: 0.3
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:

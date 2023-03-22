@@ -247,17 +247,26 @@ class BaseVelocityActionConfig(ActionConfig):
 @dataclass
 class BaseVelocityNonCylinderActionConfig(ActionConfig):
     r"""
-    In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
     type: str = "BaseVelNonCylinderAction"
+    # The max linear speed of the robot
     lin_speed: float = 10.0
+    # The max angular speed of the robot
     ang_speed: float = 10.0
+    # If we want to do sliding or not
     allow_dyn_slide: bool = False
+    # If we allow the robot to move back or not
     allow_back: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is too great than lin_collision_threshold/ang_collision_threshold for any point.
     lin_collision_threshold: float = 1e-5
     ang_collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
     x_offset: Optional[List[float]] = None
     y_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
 
 
 @dataclass
