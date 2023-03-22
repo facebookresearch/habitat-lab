@@ -538,20 +538,19 @@ class BaseVelSpotAction(ArticulatedAgentAction):
         front_goal_pos[1] = front_cur_pos[1]
         # For step filter of the rear pos
         end_rear_pos = self._sim.step_filter(rear_cur_pos, rear_goal_pos)
-        end_rear_pos[1] = front_cur_pos[1]
-        rear_goal_pos[1] = front_cur_pos[1]
+        end_rear_pos[1] = rear_cur_pos[1]
+        rear_goal_pos[1] = rear_cur_pos[1]
         # For step filter of the center pos
         end_pos[1] = trans.translation[1]
 
-        # Robot moving distance
+        # Planar move distance clamped by NavMesh
         front_move = (end_front_pos - front_goal_pos).length()
         rear_move = (end_rear_pos - rear_goal_pos).length()
 
         # For detection of linear or angualr velocity
         center_move = (end_pos - trans.translation).length()
 
-        # If the acutal target and the resulting moving position
-        # is too samll, then there is a collision
+        # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
         if (
             front_move > self._lin_collision_threshold
             or rear_move > self._lin_collision_threshold
@@ -567,8 +566,6 @@ class BaseVelSpotAction(ArticulatedAgentAction):
 
     def update_base(self):
         ctrl_freq = self._sim.ctrl_freq
-
-        # before_trans_state = self._capture_articulated_agent_state()
 
         trans = self.cur_articulated_agent.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
@@ -591,9 +588,6 @@ class BaseVelSpotAction(ArticulatedAgentAction):
         did_coll = self.spot_collison_check(trans, target_trans, end_pos)
 
         if not self._allow_dyn_slide:
-            # Check if in the new articulated_agent state the arm collides with anything.
-            # If so we have to revert back to the previous transform
-            self._sim.internal_step(-1)
             if did_coll:
                 self.cur_articulated_agent.sim_obj.transformation = trans
         if self.cur_grasp_mgr.snap_idx is not None:

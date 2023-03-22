@@ -28,8 +28,8 @@ habitat:
       base_velocity_spot:
         allow_dyn_slide: False
         cylinder_deviate: 0.3
-        lin_collision_threshold: 0.04
-        ang_collision_threshold: 0.01
+        lin_collision_threshold: 1e-5
+        ang_collision_threshold: 1e-5
   simulator:
     type: RearrangeSim-v0
     seed: 100
