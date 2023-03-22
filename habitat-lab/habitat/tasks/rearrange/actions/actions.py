@@ -517,7 +517,9 @@ class BaseVelSpotAction(ArticulatedAgentAction):
         self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
         self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
 
-    def spot_collison_check(self, trans, target_trans, end_pos):
+    def spot_collison_check(
+        self, trans, target_trans, end_pos, target_rigid_state
+    ):
         # Get the front and rear positions
         front_cur_pos = trans.transform_point(
             np.array([self._cylinder_deviate, 0, 0])
@@ -533,36 +535,51 @@ class BaseVelSpotAction(ArticulatedAgentAction):
         )
 
         # For step filter of the front pos
-        end_front_pos = self._sim.step_filter(front_cur_pos, front_goal_pos)
-        end_front_pos[1] = front_cur_pos[1]
+        front_end_pos = self._sim.step_filter(front_cur_pos, front_goal_pos)
+        front_end_pos[1] = front_cur_pos[1]
         front_goal_pos[1] = front_cur_pos[1]
         # For step filter of the rear pos
-        end_rear_pos = self._sim.step_filter(rear_cur_pos, rear_goal_pos)
-        end_rear_pos[1] = rear_cur_pos[1]
+        rear_end_pos = self._sim.step_filter(rear_cur_pos, rear_goal_pos)
+        rear_end_pos[1] = rear_cur_pos[1]
         rear_goal_pos[1] = rear_cur_pos[1]
         # For step filter of the center pos
         end_pos[1] = trans.translation[1]
 
         # Planar move distance clamped by NavMesh
-        front_move = (end_front_pos - front_goal_pos).length()
-        rear_move = (end_rear_pos - rear_goal_pos).length()
+        front_move = (front_end_pos - front_goal_pos).length()
+        rear_move = (rear_end_pos - rear_goal_pos).length()
 
         # For detection of linear or angualr velocity
         center_move = (end_pos - trans.translation).length()
+
+        # Wrap the move direction if we use sliding
+        # Find the smallest moving direction, which means that there is a collision in that place
+        move_list = [front_move, center_move, rear_move]
+        min_idx = np.argmax(move_list)
+        if min_idx == 0:
+            move_vec = front_end_pos - front_goal_pos
+        elif min_idx == 1:
+            move_vec = end_pos - trans.translation
+        else:
+            move_vec = rear_end_pos - rear_goal_pos
+        new_end_pos = trans.translation + move_vec
+        new_target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(), new_end_pos
+        )
 
         # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
         if (
             front_move > self._lin_collision_threshold
             or rear_move > self._lin_collision_threshold
         ) and center_move != 0:
-            return True
+            return True, new_target_trans
         elif (
             front_move > self._ang_collision_threshold
             or rear_move > self._ang_collision_threshold
         ) and center_move == 0:
-            return True
+            return True, new_target_trans
         else:
-            return False
+            return False, new_target_trans
 
     def update_base(self):
         ctrl_freq = self._sim.ctrl_freq
@@ -583,9 +600,11 @@ class BaseVelSpotAction(ArticulatedAgentAction):
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), end_pos
         )
-        self.cur_articulated_agent.sim_obj.transformation = target_trans
 
-        did_coll = self.spot_collison_check(trans, target_trans, end_pos)
+        did_coll, new_target_trans = self.spot_collison_check(
+            trans, target_trans, end_pos, target_rigid_state
+        )
+        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
 
         if not self._allow_dyn_slide:
             if did_coll:
