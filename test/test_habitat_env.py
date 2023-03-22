@@ -291,7 +291,7 @@ def test_rl_vectorized_envs(gpu2gpu):
                 ), "dones should be true after max_episode steps"
 
 
-@pytest.mark.parametrize("classic_replay_renderer", [False])
+@pytest.mark.parametrize("classic_replay_renderer", [False, True])
 @pytest.mark.parametrize("gpu2gpu", [False])
 def test_rl_vectorized_envs_batch_renderer(
     gpu2gpu: bool, classic_replay_renderer: bool
