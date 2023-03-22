@@ -165,12 +165,13 @@ class SuctionGraspAction(MagicGraspAction):
 
 @registry.register_task_action
 class GazeGraspAction(MagicGraspAction):
-    def __init__(self, *args, config, sim, **kwargs):
+    def __init__(self, *args, config, sim, task, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self.min_dist, self.max_dist = config.gaze_distance_range
         self.center_cone_angle_threshold = np.deg2rad(
             config.center_cone_angle_threshold
         )
+        self._task = task
         self.center_cone_vector = mn.Vector3(
             config.center_cone_vector
         ).normalized()
@@ -275,6 +276,7 @@ class GazeGraspAction(MagicGraspAction):
 
         # If there is nothing to grasp, then we return
         if center_obj_idx is None:
+            self._task._should_end = True
             return
 
         keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
