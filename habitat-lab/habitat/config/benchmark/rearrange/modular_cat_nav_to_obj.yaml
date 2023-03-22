@@ -8,7 +8,7 @@ defaults:
   - _self_
 
 habitat:
-  env_task: MLEnv
+  seed: 7
   gym:
     auto_name: NavToObj
     obs_keys:
@@ -59,7 +59,7 @@ habitat:
       enable_physics: True
     needs_markers: false
   dataset:
-    data_path: data/datasets/floorplanner/v1/train/cat_indoor_10.json.gz
+    data_path: data/datasets/new_episodes/val_cat_rearrange_floorplanner.json.gz
     type: ObjectRearrangeDataset-v0
   task:
-    goal_type: 'recep'
+    goal_type: 'ovmm'

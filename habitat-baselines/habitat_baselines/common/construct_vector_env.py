@@ -18,6 +18,7 @@ def construct_envs(
     config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
+    make_env_fn = make_gym_from_config
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -93,7 +94,7 @@ def construct_envs(
         vector_env_cls = VectorEnv
 
     envs = vector_env_cls(
-        make_env_fn=make_gym_from_config,
+        make_env_fn=make_env_fn,
         env_fn_args=tuple((c,) for c in configs),
         workers_ignore_signals=workers_ignore_signals,
     )

@@ -71,6 +71,7 @@ from habitat_baselines.utils.common import (
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+from habitat.utils.gym_definitions import make_gym_from_config
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -202,7 +203,7 @@ class PPOTrainer(BaseRLTrainer):
             self.actor_critic, ppo_cfg
         )
 
-    def _init_envs(self, config=None, is_eval: bool = False):
+    def _init_envs(self, config=None, is_eval: bool = False, make_env_fn = make_gym_from_config):
         if config is None:
             config = self.config
 
@@ -210,6 +211,7 @@ class PPOTrainer(BaseRLTrainer):
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
+            make_env_fn=make_env_fn
         )
 
     def _init_train(self, resume_state=None):
