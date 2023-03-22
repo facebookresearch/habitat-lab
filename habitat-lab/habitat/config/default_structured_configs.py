@@ -255,8 +255,8 @@ class BaseVelocitySpotActionConfig(ActionConfig):
     allow_dyn_slide: bool = False
     allow_back: bool = True
     cylinder_deviate: float = 0.0
-    lin_collision_threshold: float = 0.0
-    ang_collision_threshold: float = 0.0
+    lin_collision_threshold: float = 1e-5
+    ang_collision_threshold: float = 1e-5
 
 
 @dataclass
