@@ -470,7 +470,7 @@ class BaseVelAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
-class BaseVelSpotAction(ArticulatedAgentAction):
+class BaseVelNonCylinderAction(ArticulatedAgentAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
@@ -489,9 +489,11 @@ class BaseVelSpotAction(ArticulatedAgentAction):
         self._lin_speed = self._config.lin_speed
         self._ang_speed = self._config.ang_speed
         self._allow_back = self._config.allow_back
-        self._cylinder_deviate = self._config.cylinder_deviate
         self._lin_collision_threshold = self._config.lin_collision_threshold
         self._ang_collision_threshold = self._config.ang_collision_threshold
+        self._x_offset = self._config.x_offset
+        self._y_offset = self._config.y_offset
+        assert len(self._x_offset) == len(self._y_offset)
 
     @property
     def action_space(self):
@@ -505,78 +507,61 @@ class BaseVelSpotAction(ArticulatedAgentAction):
             }
         )
 
-    def _capture_articulated_agent_state(self):
-        return {
-            "forces": self.cur_articulated_agent.sim_obj.joint_forces,
-            "vel": self.cur_articulated_agent.sim_obj.joint_velocities,
-            "pos": self.cur_articulated_agent.sim_obj.joint_positions,
-        }
-
-    def _set_articulated_agent_state(self, set_dat):
-        self.cur_articulated_agent.sim_obj.joint_positions = set_dat["forces"]
-        self.cur_articulated_agent.sim_obj.joint_velocities = set_dat["vel"]
-        self.cur_articulated_agent.sim_obj.joint_forces = set_dat["pos"]
-
-    def spot_collison_check(
-        self, trans, target_trans, end_pos, target_rigid_state
+    def collision_check(
+        self, trans, target_trans, center_end_pos, target_rigid_state
     ):
-        # Get the front and rear positions
-        front_cur_pos = trans.transform_point(
-            np.array([self._cylinder_deviate, 0, 0])
-        )
-        front_goal_pos = target_trans.transform_point(
-            np.array([self._cylinder_deviate, 0, 0])
-        )
-        rear_cur_pos = trans.transform_point(
-            np.array([-self._cylinder_deviate, 0, 0])
-        )
-        rear_goal_pos = target_trans.transform_point(
-            np.array([-self._cylinder_deviate, 0, 0])
-        )
+        num_check_cylinder = len(self._x_offset)
+        # Get the offset positions
+        cur_pos = []
+        goal_pos = []
+        for i in range(num_check_cylinder):
+            cur_pos.append(
+                trans.transform_point(
+                    np.array([self._x_offset[i], 0, self._y_offset[i]])
+                )
+            )
+            goal_pos.append(
+                target_trans.transform_point(
+                    np.array([self._x_offset[i], 0, self._y_offset[i]])
+                )
+            )
 
-        # For step filter of the front pos
-        front_end_pos = self._sim.step_filter(front_cur_pos, front_goal_pos)
-        front_end_pos[1] = front_cur_pos[1]
-        front_goal_pos[1] = front_cur_pos[1]
-        # For step filter of the rear pos
-        rear_end_pos = self._sim.step_filter(rear_cur_pos, rear_goal_pos)
-        rear_end_pos[1] = rear_cur_pos[1]
-        rear_goal_pos[1] = rear_cur_pos[1]
-        # For step filter of the center pos
-        end_pos[1] = trans.translation[1]
+        # For step filter of offset positions
+        end_pos = []
+        for i in range(num_check_cylinder):
+            pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
+            # Sanitize the height
+            pos[1] = cur_pos[i][1]
+            end_pos.append(pos)
+
+        # For step filter of the center original pos
+        center_end_pos[1] = trans.translation[1]
 
         # Planar move distance clamped by NavMesh
-        front_move = (front_end_pos - front_goal_pos).length()
-        rear_move = (rear_end_pos - rear_goal_pos).length()
-
-        # For detection of linear or angualr velocity
-        center_move = (end_pos - trans.translation).length()
+        move = []
+        for i in range(num_check_cylinder):
+            move.append((end_pos[i] - goal_pos[i]).length())
+        center_move = (center_end_pos - trans.translation).length()
 
         # Wrap the move direction if we use sliding
-        # Find the smallest moving direction, which means that there is a collision in that place
-        move_list = [front_move, center_move, rear_move]
-        min_idx = np.argmax(move_list)
-        if min_idx == 0:
-            move_vec = front_end_pos - front_goal_pos
-        elif min_idx == 1:
-            move_vec = end_pos - trans.translation
-        else:
-            move_vec = rear_end_pos - rear_goal_pos
+        # Find the largest diff moving direction, which means that there is a collision in that cylinder
+        max_idx = np.argmax(move + [center_move])
+        move_vec = (end_pos + [center_end_pos])[max_idx] - (
+            cur_pos + [trans.translation]
+        )[max_idx]
         new_end_pos = trans.translation + move_vec
         new_target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(), new_end_pos
         )
 
+        # For detection of linear or angualr velocities
         # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
-        if (
-            front_move > self._lin_collision_threshold
-            or rear_move > self._lin_collision_threshold
-        ) and center_move != 0:
+        lin_diff = len([v for v in move if v > self._lin_collision_threshold])
+        ang_diff = len([v for v in move if v > self._ang_collision_threshold])
+
+        if (lin_diff > 0) and center_move != 0:
             return True, new_target_trans
-        elif (
-            front_move > self._ang_collision_threshold
-            or rear_move > self._ang_collision_threshold
-        ) and center_move == 0:
+        elif (ang_diff > 0) and center_move == 0:
             return True, new_target_trans
         else:
             return False, new_target_trans
@@ -601,7 +586,7 @@ class BaseVelSpotAction(ArticulatedAgentAction):
             target_rigid_state.rotation.to_matrix(), end_pos
         )
 
-        did_coll, new_target_trans = self.spot_collison_check(
+        did_coll, new_target_trans = self.collision_check(
             trans, target_trans, end_pos, target_rigid_state
         )
         self.cur_articulated_agent.sim_obj.transformation = new_target_trans

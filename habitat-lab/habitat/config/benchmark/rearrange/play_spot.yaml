@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/task/actions:
-    - base_velocity_spot
+    - base_velocity_non_cylinder
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - /habitat/task/rearrange: play
   - /habitat/dataset/rearrangement: replica_cad
@@ -25,11 +25,13 @@ habitat:
         disable_grip: False
         delta_pos_limit: 0.0125
         ee_ctrl_lim: 0.015
-      base_velocity_spot:
+      base_velocity_non_cylinder:
         allow_dyn_slide: False
         cylinder_deviate: 0.3
         lin_collision_threshold: 1e-5
         ang_collision_threshold: 1e-5
+        x_offset: [0.3, -0.3]
+        y_offset: [0.0, 0.0]
   simulator:
     type: RearrangeSim-v0
     seed: 100

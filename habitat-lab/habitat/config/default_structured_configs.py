@@ -245,18 +245,19 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @dataclass
-class BaseVelocitySpotActionConfig(ActionConfig):
+class BaseVelocityNonCylinderActionConfig(ActionConfig):
     r"""
     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
     """
-    type: str = "BaseVelSpotAction"
+    type: str = "BaseVelNonCylinderAction"
     lin_speed: float = 10.0
     ang_speed: float = 10.0
     allow_dyn_slide: bool = False
     allow_back: bool = True
-    cylinder_deviate: float = 0.0
     lin_collision_threshold: float = 1e-5
     ang_collision_threshold: float = 1e-5
+    x_offset: Optional[List[float]] = None
+    y_offset: Optional[List[float]] = None
 
 
 @dataclass
@@ -1553,10 +1554,10 @@ cs.store(
     node=BaseVelocityActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.base_velocity_spot",
+    package="habitat.task.actions.base_velocity_non_cylinder",
     group="habitat/task/actions",
-    name="base_velocity_spot",
-    node=BaseVelocitySpotActionConfig,
+    name="base_velocity_non_cylinder",
+    node=BaseVelocityNonCylinderActionConfig,
 )
 cs.store(
     package="habitat.task.actions.humanoidjoint_action",
