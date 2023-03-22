@@ -27,7 +27,6 @@ habitat:
         ee_ctrl_lim: 0.015
       base_velocity_non_cylinder:
         allow_dyn_slide: False
-        cylinder_deviate: 0.3
         lin_collision_threshold: 1e-5
         ang_collision_threshold: 1e-5
         x_offset: [0.3, -0.3]
