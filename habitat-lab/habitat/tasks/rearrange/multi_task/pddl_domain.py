@@ -6,7 +6,16 @@
 
 import itertools
 import os.path as osp
-from typing import TYPE_CHECKING, Dict, List, Optional, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+    Union,
+    cast,
+)
 
 import yaml  # type: ignore[import]
 
@@ -32,6 +41,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     ExprType,
     PddlEntity,
     PddlSimInfo,
+    SimulatorObjectType,
     parse_func,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -72,6 +82,9 @@ class PddlDomain:
         with open(get_full_habitat_config_path(domain_file_path), "r") as f:
             domain_def = yaml.safe_load(f)
 
+        self._added_entities: Dict[str, PddlEntity] = {}
+        self._added_expr_types: Dict[str, ExprType] = {}
+
         self._parse_expr_types(domain_def)
         self._parse_constants(domain_def)
         self._parse_predicates(domain_def)
@@ -90,7 +103,7 @@ class PddlDomain:
             ]
             name_to_param = {p.name: p for p in parameters}
 
-            pre_cond = self._parse_only_logical_expr(
+            pre_cond = self.parse_only_logical_expr(
                 action_d["precondition"], name_to_param
             )
             post_cond = [
@@ -98,7 +111,7 @@ class PddlDomain:
                 for p in action_d["postcondition"]
             ]
             task_info_d = action_d["task_info"]
-            full_entities = {**self._constants, **name_to_param}
+            full_entities = {**self.all_entities, **name_to_param}
             add_task_args = {
                 k: full_entities[v]
                 for k, v in task_info_d.get("add_task_args", {}).items()
@@ -132,7 +145,7 @@ class PddlDomain:
             obj_states = pred_d["set_state"].get("obj_states", {})
             robot_states = pred_d["set_state"].get("robot_states", {})
 
-            all_entities = {**self._constants, **pred_entities}
+            all_entities = {**self.all_entities, **pred_entities}
 
             art_states = {
                 all_entities[k]: ArtSampler(**v) for k, v in art_states.items()
@@ -142,16 +155,21 @@ class PddlDomain:
             }
 
             use_robot_states = {}
+
+            def fetch_entity(s):
+                # Fetches the corresponding entity if the argument is a string
+                # referring to an entity.
+                if isinstance(s, str):
+                    return all_entities.get(s, s)
+                else:
+                    return s
+
             for k, v in robot_states.items():
                 use_k = all_entities[k]
-                robot_pos = v.get("pos", None)
-                holding = v.get("holding", None)
 
-                use_robot_states[use_k] = PddlRobotState(
-                    holding=all_entities.get(holding, holding),
-                    should_drop=v.get("should_drop", False),
-                    pos=all_entities.get(robot_pos, robot_pos),
-                )
+                v = {sub_k: fetch_entity(sub_v) for sub_k, sub_v in v.items()}
+
+                use_robot_states[use_k] = PddlRobotState(**v)
 
             set_state = PddlSimState(art_states, obj_states, use_robot_states)
 
@@ -170,31 +188,48 @@ class PddlDomain:
                 self.expr_types[c["expr_type"]],
             )
 
+    def register_type(self, expr_type: ExprType):
+        """
+        Add a type to `self.expr_types`. Clears every episode
+        """
+        self._added_expr_types[expr_type.name] = expr_type
+
+    def register_episode_entity(self, pddl_entity: PddlEntity) -> None:
+        """
+        Add an entity to appear in `self.all_entities`. Clears every episode.
+        """
+        self._added_entities[pddl_entity.name] = pddl_entity
+
     def _parse_expr_types(self, domain_def):
         """
-        Fetches the types from the domain into `self.expr_types`.
+        Fetches the types from the domain into `self._expr_types`.
         """
 
-        self.expr_types: Dict[str, ExprType] = {}
-        self._leaf_exprs = []
-        in_parent = []
+        # Always add the default `expr_types` from the simulator.
+        self._expr_types: Dict[str, ExprType] = {
+            obj_type.value: ExprType(obj_type.value, None)
+            for obj_type in SimulatorObjectType
+        }
+
         for parent_type, sub_types in domain_def["types"].items():
-            if parent_type not in self.expr_types:
-                self.expr_types[parent_type] = ExprType(parent_type, None)
-            in_parent.append(parent_type)
+            if parent_type not in self._expr_types:
+                self._expr_types[parent_type] = ExprType(parent_type, None)
             for sub_type in sub_types:
-                self.expr_types[sub_type] = ExprType(
-                    sub_type, self.expr_types[parent_type]
-                )
-        self._leaf_exprs = [
-            expr_type
-            for expr_type in self.expr_types.values()
-            if expr_type.name not in in_parent
-        ]
+                if sub_type in self._expr_types:
+                    self._expr_types[sub_type].parent = self._expr_types[
+                        parent_type
+                    ]
+                else:
+                    self._expr_types[sub_type] = ExprType(
+                        sub_type, self._expr_types[parent_type]
+                    )
 
     @property
-    def leaf_expr_types(self) -> List[ExprType]:
-        return self._leaf_exprs
+    def expr_types(self) -> Dict[str, ExprType]:
+        """
+        Mapping from the name of the type to the ExprType definition.
+        """
+        return {**self._expr_types, **self._added_expr_types}
 
     def parse_predicate(
         self, pred_str: str, existing_entities: Dict[str, PddlEntity]
@@ -209,8 +244,8 @@ class PddlDomain:
         pred = self.predicates[func_name].clone()
         arg_values = []
         for func_arg in func_args:
-            if func_arg in self._constants:
-                v = self._constants[func_arg]
+            if func_arg in self.all_entities:
+                v = self.all_entities[func_arg]
             elif func_arg in existing_entities:
                 v = existing_entities[func_arg]
             else:
@@ -226,15 +261,20 @@ class PddlDomain:
             ) from e
         return pred
 
-    def _parse_only_logical_expr(
-        self, load_d, existing_entities: Dict[str, PddlEntity]
+    def parse_only_logical_expr(
+        self, load_d: Dict[str, Any], existing_entities: Dict[str, PddlEntity]
     ) -> LogicalExpr:
-        ret = self._parse_logical_expr(load_d, existing_entities)
+        """
+        Parse a dict config into a `LogicalExpr`. Will only populate the
+        `LogicalExpr` with the entities from `existing_entities`.
+        """
+
+        ret = self._parse_expr(load_d, existing_entities)
         if not isinstance(ret, LogicalExpr):
             raise ValueError(f"Expected logical expr, got {ret}")
         return ret
 
-    def _parse_logical_expr(
+    def _parse_expr(
         self, load_d, existing_entities: Dict[str, PddlEntity]
     ) -> Union[LogicalExpr, Predicate]:
         """
@@ -265,7 +305,7 @@ class PddlDomain:
         ]
 
         sub_exprs = [
-            self._parse_logical_expr(
+            self._parse_expr(
                 sub_expr, {**existing_entities, **{x.name: x for x in inputs}}
             )
             for sub_expr in load_d["sub_exprs"]
@@ -288,8 +328,11 @@ class PddlDomain:
         backed values (like truth values of predicates).
         """
 
+        self._added_entities = {}
+        self._added_expr_types = {}
+
         id_to_name = {}
-        for k, i in sim.ref_handle_to_rigid_obj_id.items():
+        for k, i in sim.handle_to_object_id.items():
             id_to_name[i] = k
 
         self._sim_info = PddlSimInfo(
@@ -301,7 +344,7 @@ class PddlDomain:
             art_thresh=self._config.art_succ_thresh,
             robot_at_thresh=self._config.robot_at_thresh,
             expr_types=self.expr_types,
-            obj_ids=sim.ref_handle_to_rigid_obj_id,
+            obj_ids=sim.handle_to_object_id,
             target_ids={
                 f"TARGET_{id_to_name[idx]}": idx
                 for idx in sim.get_targets()[0]
@@ -314,10 +357,13 @@ class PddlDomain:
             },
             all_entities=self.all_entities,
             predicates=self.predicates,
+            num_spawn_attempts=self._config.num_spawn_attempts,
+            physics_stability_steps=self._config.physics_stability_steps,
+            receptacles=sim.receptacles,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
-            self._sim_info.search_for_entity_any(entity)
+            self._sim_info.search_for_entity(entity)
 
     @property
     def sim_info(self) -> PddlSimInfo:
@@ -446,104 +492,46 @@ class PddlDomain:
                     matching_actions.append(new_action)
         return matching_actions
 
-    @property
-    def all_entities(self) -> Dict[str, PddlEntity]:
-        return self._constants
-
-
-class PddlProblem(PddlDomain):
-    stage_goals: Dict[str, LogicalExpr]
-    init: List[Predicate]
-    goal: LogicalExpr
-
-    def __init__(
-        self,
-        domain_file_path: str,
-        problem_file_path: str,
-        cur_task_config: Optional["DictConfig"] = None,
-    ):
-        super().__init__(domain_file_path, cur_task_config)
-        with open(get_full_habitat_config_path(problem_file_path), "r") as f:
-            problem_def = yaml.safe_load(f)
-        self._objects = {
-            o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])
-            for o in problem_def["objects"]
-        }
-
-        self.init = [
-            self.parse_predicate(p, self._objects)
-            for p in problem_def.get("init", [])
-        ]
-        try:
-            self.goal = self._parse_only_logical_expr(
-                problem_def["goal"], self.all_entities
-            )
-            self.goal = self.expand_quantifiers(self.goal)
-        except Exception as e:
-            raise ValueError(
-                f"Could not parse goal cond {problem_def['goal']}"
-            ) from e
-        self.stage_goals = {}
-        for stage_name, cond in problem_def["stage_goals"].items():
-            expr = self._parse_only_logical_expr(cond, self.all_entities)
-            self.stage_goals[stage_name] = self.expand_quantifiers(expr)
-
-        self._solution: Optional[List[PddlAction]] = None
-        if "solution" in problem_def:
-            self._solution = []
-            for sol in problem_def["solution"]:
-                action_name, action_args = parse_func(sol)
-                action = self.actions[action_name].clone()
-                arg_values = []
-                for action_arg in action_args:
-                    if action_arg in self.all_entities:
-                        v = self.all_entities[action_arg]
-                    elif action_arg in action.name_to_param:
-                        v = action.name_to_param[action_arg]
-                    else:
-                        raise ValueError(f"Could not find entity {action_arg}")
-                    arg_values.append(v)
-
-                try:
-                    action.set_param_values(arg_values)
-                except Exception as e:
-                    raise ValueError(
-                        f"Problem setting action {action} with {arg_values} in solution list"
-                    ) from e
-
-                self._solution.append(action)
-
-        for action in self.actions.values():
-            action.set_precond(self.expand_quantifiers(action.precond))
-
-    @property
-    def solution(self):
+    def get_ordered_actions(self) -> List[PddlAction]:
         """
-        Sequence of actions to solve the task specified in the problem file.
+        Gets an ordered list of all possible PDDL actions in the environment
+        based on the entities in the environment. Note that this is different
+        from the agent actions. These are the PDDL actions as defined in the
+        domain file.
         """
-
-        if self._solution is None:
-            raise ValueError("Solution is not supported by this PDDL")
-        return self._solution
-
-    @property
-    def all_entities(self) -> Dict[str, PddlEntity]:
-        return {**self._objects, **self._constants}
+        return sorted(
+            self.actions.values(),
+            key=lambda x: x.name,
+        )
 
     def get_entity(self, k: str) -> PddlEntity:
+        """
+        Gets an entity from the `all_entities` dictionary by key name.
+        """
+
         return self.all_entities[k]
 
+    def find_entities(self, entity_type: ExprType) -> Iterable[PddlEntity]:
+        """
+        Returns all the entities that match the condition.
+        """
+        for entity in self.all_entities.values():
+            if entity.expr_type.is_subtype_of(entity_type):
+                yield entity
+
     def get_ordered_entities_list(self) -> List[PddlEntity]:
+        """
+        Gets all entities sorted alphabetically by name.
+        """
+
         return sorted(
             self.all_entities.values(),
             key=lambda x: x.name,
         )
 
-    def get_ordered_actions(self) -> List[PddlAction]:
-        return sorted(
-            self.actions.values(),
-            key=lambda x: x.name,
-        )
+    @property
+    def all_entities(self) -> Dict[str, PddlEntity]:
+        return {**self._constants, **self._added_entities}
 
     def expand_quantifiers(self, expr: LogicalExpr) -> LogicalExpr:
         """
@@ -589,3 +577,85 @@ class PddlProblem(PddlDomain):
 
         inputs: List[PddlEntity] = []
         return LogicalExpr(combine_type, expanded_exprs, inputs, None)
+
+
+class PddlProblem(PddlDomain):
+    stage_goals: Dict[str, LogicalExpr]
+    init: List[Predicate]
+    goal: LogicalExpr
+
+    def __init__(
+        self,
+        domain_file_path: str,
+        problem_file_path: str,
+        cur_task_config: Optional["DictConfig"] = None,
+    ):
+        self._objects = {}
+
+        super().__init__(domain_file_path, cur_task_config)
+        with open(get_full_habitat_config_path(problem_file_path), "r") as f:
+            problem_def = yaml.safe_load(f)
+        self._objects = {
+            o["name"]: PddlEntity(o["name"], self.expr_types[o["expr_type"]])
+            for o in problem_def["objects"]
+        }
+
+        self.init = [
+            self.parse_predicate(p, self._objects)
+            for p in problem_def.get("init", [])
+        ]
+        try:
+            self.goal = self.parse_only_logical_expr(
+                problem_def["goal"], self.all_entities
+            )
+            self.goal = self.expand_quantifiers(self.goal)
+        except Exception as e:
+            raise ValueError(
+                f"Could not parse goal cond {problem_def['goal']}"
+            ) from e
+        self.stage_goals = {}
+        for stage_name, cond in problem_def["stage_goals"].items():
+            expr = self.parse_only_logical_expr(cond, self.all_entities)
+            self.stage_goals[stage_name] = self.expand_quantifiers(expr)
+
+        self._solution: Optional[List[PddlAction]] = None
+        if "solution" in problem_def:
+            self._solution = []
+            for sol in problem_def["solution"]:
+                action_name, action_args = parse_func(sol)
+                action = self.actions[action_name].clone()
+                arg_values = []
+                for action_arg in action_args:
+                    if action_arg in self.all_entities:
+                        v = self.all_entities[action_arg]
+                    elif action_arg in action.name_to_param:
+                        v = action.name_to_param[action_arg]
+                    else:
+                        raise ValueError(f"Could not find entity {action_arg}")
+                    arg_values.append(v)
+
+                try:
+                    action.set_param_values(arg_values)
+                except Exception as e:
+                    raise ValueError(
+                        f"Problem setting action {action} with {arg_values} in solution list"
+                    ) from e
+
+                self._solution.append(action)
+
+        for action in self.actions.values():
+            action.set_precond(self.expand_quantifiers(action.precond))
+
+    @property
+    def solution(self):
+        """
+        Sequence of actions to solve the task specified in the problem file.
+        """
+
+        if self._solution is None:
+            raise ValueError("Solution is not supported by this PDDL")
+        return self._solution
+
+    @property
+    def all_entities(self) -> Dict[str, PddlEntity]:
+        return {**self._objects, **super().all_entities}

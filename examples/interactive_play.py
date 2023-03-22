@@ -56,9 +56,11 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     GfxReplayMeasureMeasurementConfig,
+    PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
 from habitat.core.logging import logger
@@ -68,9 +70,6 @@ from habitat.tasks.rearrange.utils import euler_to_quat, write_gfx_replay
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
-)
-from habitat_baselines.articulated_agent_controllers import (
-    HumanoidRearrangeController,
 )
 from habitat_sim.utils import viz_utils as vut
 
@@ -310,8 +309,8 @@ def get_input_vel_ctlr(
         else:
             # Use the controller
             relative_pos = mn.Vector3(base_action[0], 0, base_action[1])
-            pose, root_trans = humanoid_controller.get_walk_pose(relative_pos)
-            base_action = humanoid_controller.vectorize_pose(pose, root_trans)
+            humanoid_controller.calculate_walk_pose(relative_pos)
+            base_action = humanoid_controller.get_pose()
 
     if keys[pygame.K_PERIOD]:
         # Print the current position of the articulated agent, useful for debugging.
@@ -505,7 +504,7 @@ def play_env(env, args, config):
         )
 
         if not args.no_render and keys[pygame.K_c]:
-            pddl_action = env.task.actions["PDDL_APPLY_ACTION"]
+            pddl_action = env.task.actions["pddl_apply_action"]
             logger.info("Actions:")
             actions = pddl_action._action_ordering
             for i, action in enumerate(actions):
@@ -522,7 +521,7 @@ def play_env(env, args, config):
             ac_start = pddl_action.get_pddl_action_start(action_sel)
             ac[ac_start : ac_start + len(entity_sel)] = entity_sel
 
-            step_env(env, "PDDL_APPLY_ACTION", {"pddl_action": ac})
+            step_env(env, "pddl_apply_action", {"pddl_action": ac})
 
         if not args.no_render and keys[pygame.K_g]:
             pred_list = env.task.sensor_suite.sensors[
@@ -601,7 +600,7 @@ def play_env(env, args, config):
             raise ValueError(
                 f"Only did {len(all_arm_actions)} actions but {args.save_actions_count} are required"
             )
-        all_arm_actions = np.array(all_arm_actions)[: args.save_actions_count]
+        all_arm_actions = all_arm_actions[: args.save_actions_count]
         os.makedirs(SAVE_ACTIONS_DIR, exist_ok=True)
         save_path = osp.join(SAVE_ACTIONS_DIR, args.save_actions_fname)
         with open(save_path, "wb") as f:
@@ -770,6 +769,8 @@ if __name__ == "__main__":
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
+        if task_config.type == "RearrangeCompositeTask-v0":
+            task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
 
     with habitat.Env(config=config) as env:
         play_env(env, args, config)

@@ -1,10 +1,10 @@
 objects:
   - name: goal0|0
-    expr_type: rigid_obj_type
+    expr_type: movable_entity_type
   - name: TARGET_goal0|0
-    expr_type: goal_type
+    expr_type: goal_entity_type
   - name: robot_0
-    expr_type: articulated_agent_type
+    expr_type: robot_entity_type
 
 goal:
   expr_type: AND

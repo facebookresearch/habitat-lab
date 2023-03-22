@@ -313,7 +313,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         overwrite_config(
             config_from=self.habitat_config.habitat_sim_v0,
             config_to=sim_config,
-            # Ignore key as it gets propogated to sensor below
+            # Ignore key as it gets propagated to sensor below
             ignore_keys={"gpu_gpu"},
         )
         sim_config.scene_dataset_config_file = (
@@ -335,6 +335,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "articulated_agent_urdf",
                 "articulated_agent_type",
                 "joint_start_noise",
+                "motion_data_path",
                 "ik_arm_urdf",
                 "grasp_managers",
             },

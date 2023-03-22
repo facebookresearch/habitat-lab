@@ -136,8 +136,10 @@ class Policy(abc.ABC):
         empty for no logging or a list of size equal to the number of
         environments.
         """
-
-        return []
+        if action_data.policy_info is None:
+            return []
+        else:
+            return action_data.policy_info
 
     def act(
         self,

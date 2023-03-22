@@ -1,14 +1,14 @@
 objects:
   - name: bowl_target|0
-    expr_type: rigid_obj_type
+    expr_type: movable_entity_type
   - name: TARGET_bowl_target|0
-    expr_type: goal_type
+    expr_type: goal_entity_type
   - name: fruit_target|1
-    expr_type: rigid_obj_type
+    expr_type: movable_entity_type
   - name: TARGET_fruit_target|1
-    expr_type: goal_type
+    expr_type: goal_entity_type
   - name: robot_0
-    expr_type: articulated_agent_type
+    expr_type: robot_entity_type
 
 init:
   - closed_fridge(fridge_push_point)

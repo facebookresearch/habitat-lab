@@ -193,9 +193,11 @@ class HrlRolloutStorage(RolloutStorage):
                 .repeat(1, len(inds), 1)
             )
             for i, env_i in enumerate(inds):
-                # The -1 is to throw out the last transition.
+                # Stricly less than is so we throw out the last transition. We
+                # need to throw out the last transition because we were not
+                # able to accumulate rewards for it.
                 batch["loss_mask"][:, i] = (
-                    batch["loss_mask"][:, i] < self._cur_step_idxs[env_i] - 1
+                    batch["loss_mask"][:, i] < self._cur_step_idxs[env_i]
                 )
 
             batch.map_in_place(lambda v: v.flatten(0, 1))
