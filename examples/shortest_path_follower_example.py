@@ -78,9 +78,7 @@ def shortest_path_example():
 
                 observations, reward, done, info = env.step(best_action)
                 im = observations["rgb"]
-
                 top_down_map = draw_top_down_map(info, im.shape[0])
-
                 output_im = np.concatenate((im, top_down_map), axis=1)
                 images.append(output_im)
             images_to_video(images, dirname, "trajectory")

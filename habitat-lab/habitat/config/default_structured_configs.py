@@ -292,7 +292,7 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class LookUpDiscreteToVelocityActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
@@ -303,7 +303,7 @@ class LookUpDiscreteToVelocityActionConfig(WaypointControlActionConfig):
     turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class LookDownDiscreteToVelocityActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
