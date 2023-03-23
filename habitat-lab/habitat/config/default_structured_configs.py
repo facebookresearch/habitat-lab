@@ -396,6 +396,12 @@ class ObjectSegmentationSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class ReceptacleSegmentationSensorConfig(LabSensorConfig):
+    type: str = "ReceptacleSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
@@ -1533,6 +1539,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="object_segmentation_sensor",
     node=ObjectSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.receptacle_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="receptacle_segmentation_sensor",
+    node=ReceptacleSegmentationSensorConfig,
 )
 
 # Task Measurements
