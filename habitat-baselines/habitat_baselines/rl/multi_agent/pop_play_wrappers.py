@@ -174,7 +174,9 @@ class MultiStorage(Storage):
 
     def insert_first_observations(self, batch):
         for agent_i, storage in enumerate(self._active_storages):
-            storage.insert_first(update_dict_with_agent_prefix(batch, agent_i))
+            storage.insert_first_observations(
+                update_dict_with_agent_prefix(batch, agent_i)
+            )
 
     def advance_rollout(self, buffer_index=0):
         for storage in self._active_storages:
