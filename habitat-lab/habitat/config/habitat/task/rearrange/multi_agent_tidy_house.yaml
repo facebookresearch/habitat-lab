@@ -12,9 +12,9 @@ defaults:
   - /habitat/task/actions@actions.agent_1_pddl_apply_action: pddl_apply_action
   - /habitat/task/measurements:
     - object_to_goal_distance
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - composite_success
     - num_steps
   - /habitat/task/lab_sensors:
