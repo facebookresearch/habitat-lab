@@ -6,8 +6,8 @@
 
 import os
 import os.path as osp
-from collections import defaultdict
 import pickle
+from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -27,6 +27,9 @@ import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+from habitat.datasets.rearrange.navmesh_utils import (
+    compute_navmesh_island_classifications,
+)
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
@@ -47,7 +50,6 @@ from habitat.tasks.rearrange.utils import (
 from habitat_sim.nav import NavMeshSettings
 from habitat_sim.physics import CollisionGroups, JointMotorSettings, MotionType
 from habitat_sim.sim import SimulatorBackend
-from habitat.datasets.rearrange.navmesh_utils import compute_navmesh_island_classifications
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -125,7 +127,9 @@ class RearrangeSim(HabitatSim):
         self._needs_markers = self.habitat_config.needs_markers
         self._update_robot = self.habitat_config.update_robot
         self._step_physics = self.habitat_config.step_physics
-        self._additional_object_paths = self.habitat_config.additional_object_paths
+        self._additional_object_paths = (
+            self.habitat_config.additional_object_paths
+        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
         self._sleep_dist = self.habitat_config.sleep_dist
         self._instance_ids_start = self.habitat_config.instance_ids_start
@@ -170,8 +174,7 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         for handle, ro in rom.get_objects_by_handle_substring().items():
             is_far = all(
-                (robo_pos - ro.translation).length()
-                > self._sleep_dist
+                (robo_pos - ro.translation).length() > self._sleep_dist
                 for robo_pos in all_robo_pos
             )
             if is_far and ro.motion_type != MotionType.STATIC:
@@ -315,9 +318,7 @@ class RearrangeSim(HabitatSim):
         for i, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
-                node.semantic_id = (
-                    obj.object_id + self._instance_ids_start
-                )
+                node.semantic_id = obj.object_id + self._instance_ids_start
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -341,7 +342,11 @@ class RearrangeSim(HabitatSim):
         robot = self.get_robot_data(agent_idx).robot
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point(island_index=self.navmesh_classification_results["active_island"])
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self.navmesh_classification_results[
+                    "active_island"
+                ]
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -394,7 +399,9 @@ class RearrangeSim(HabitatSim):
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.pathfinder.save_nav_mesh(navmesh_path)
 
-        island_classes_path = osp.join(base_dir, "navmeshes", scene_name + ".pkl")
+        island_classes_path = osp.join(
+            base_dir, "navmeshes", scene_name + ".pkl"
+        )
         if osp.exists(island_classes_path):
             with open(island_classes_path, "rb") as f:
                 self.navmesh_classification_results = pickle.load(f)
@@ -460,12 +467,20 @@ class RearrangeSim(HabitatSim):
         """
         snap_point can return nan which produces hard to catch errors.
         """
-        new_pos = self.pathfinder.snap_point(pos, island_index=self.navmesh_classification_results["active_island"])
+        new_pos = self.pathfinder.snap_point(
+            pos,
+            island_index=self.navmesh_classification_results["active_island"],
+        )
 
         if np.isnan(new_pos[0]):
             # The point is not valid. Find a different point nearby that is valid.
             new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000, island_index=self.navmesh_classification_results["active_island"]
+                pos,
+                1.5,
+                1000,
+                island_index=self.navmesh_classification_results[
+                    "active_island"
+                ],
             )
 
         if np.isnan(new_pos[0]):
@@ -497,7 +512,9 @@ class RearrangeSim(HabitatSim):
                     template = osp.join(obj_path, obj_handle)
                     if osp.isfile(template):
                         break
-                assert template is not None, f"Could not find config file for object {obj_handle}"
+                assert (
+                    template is not None
+                ), f"Could not find config file for object {obj_handle}"
                 ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
@@ -533,10 +550,7 @@ class RearrangeSim(HabitatSim):
         ]
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
-            if (
-                self._kinematic_mode
-                and ao.handle not in robot_art_handles
-            ):
+            if self._kinematic_mode and ao.handle not in robot_art_handles:
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
 
@@ -718,7 +732,11 @@ class RearrangeSim(HabitatSim):
             self.viz_ids = defaultdict(lambda: None)
 
         self.maybe_update_robot()
-        if self.habitat_config.sleep_dist > 0.0 and self.habitat_config.habitat_sim_v0.enable_physics:
+        if (
+            self.habitat_config.sleep_dist > 0.0
+            and self.habitat_config.habitat_sim_v0.enable_physics
+            and not self.habitat_config.kinematic_mode
+        ):
             self._auto_sleep()
 
         if self._concur_render:
