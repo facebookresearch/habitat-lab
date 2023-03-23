@@ -481,6 +481,8 @@ class BaseVelNonCylinderAction(BaseVelAction):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._lin_collision_threshold = self._config.lin_collision_threshold
         self._ang_collision_threshold = self._config.ang_collision_threshold
+        self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
+        self._lateral_lin_speed = self._config.lateral_lin_speed
         self._x_offset = self._config.x_offset
         self._y_offset = self._config.y_offset
         self._enable_lateral_move = self._config.enable_lateral_move
@@ -615,24 +617,34 @@ class BaseVelNonCylinderAction(BaseVelAction):
     def step(self, *args, is_last_action, **kwargs):
         lateral_lin_vel = 0.0
         if self._enable_lateral_move:
-            lin_vel, lateral_lin_vel, ang_vel = kwargs[
+            longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[
                 self._action_arg_prefix + "base_vel"
             ]
         else:
-            lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
+            longitudinal_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
 
-        lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
-        lateral_lin_vel = np.clip(lateral_lin_vel, -1, 1) * self._lin_speed
+        longitudinal_lin_vel = (
+            np.clip(longitudinal_lin_vel, -1, 1) * self._longitudinal_lin_speed
+        )
+        lateral_lin_vel = (
+            np.clip(lateral_lin_vel, -1, 1) * self._lateral_lin_speed
+        )
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
         if not self._allow_back:
-            lin_vel = np.maximum(lin_vel, 0)
+            longitudinal_lin_vel = np.maximum(longitudinal_lin_vel, 0)
 
         self.base_vel_ctrl.linear_velocity = mn.Vector3(
-            lin_vel, 0, -lateral_lin_vel
+            longitudinal_lin_vel, 0, -lateral_lin_vel
         )
         self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
 
-        if lin_vel != 0.0 or lateral_lin_vel != 0.0 or ang_vel != 0.0:
+        if (
+            longitudinal_lin_vel != 0.0
+            or lateral_lin_vel != 0.0
+            or ang_vel != 0.0
+        ):
             self.update_base()
 
         if is_last_action:
