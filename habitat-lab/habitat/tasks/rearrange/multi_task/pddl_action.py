@@ -133,10 +133,7 @@ class PddlAction:
         ensure_entity_lists_match(self._params, param_values)
         self._param_values = param_values
 
-        sub_dict = {
-            from_entity: to_entity
-            for from_entity, to_entity in zip(self._params, self._param_values)
-        }
+        sub_dict = dict(zip(self._params, self._param_values))
 
         # Substitute into the post and pre conditions
         self._param_values = [sub_dict.get(p, p) for p in self._param_values]
