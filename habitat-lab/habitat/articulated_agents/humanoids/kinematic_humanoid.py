@@ -212,8 +212,6 @@ class KinematicHumanoid(MobileManipulator):
         self.set_joint_transform(
             joint_list, offset_transform, self.base_transformation
         )
-        
-        
 
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
@@ -221,14 +219,12 @@ class KinematicHumanoid(MobileManipulator):
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
         self.update()
         self.set_rest_position()
-        
-        
+
     def reset(self) -> None:
         super().reset()
         self.update()
         self.set_rest_position()
-            
-    
+
     def set_joint_transform(
         self,
         joint_list: List[float],
