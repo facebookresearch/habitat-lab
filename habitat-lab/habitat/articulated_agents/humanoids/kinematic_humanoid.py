@@ -148,9 +148,9 @@ class KinematicHumanoid(MobileManipulator):
         self.rest_matrix = mn.Matrix4(
             np.array(
                 [
-                    [-0.9993708, -0.03505326, 0.00530393, -0.1829719],
-                    [-0.03499541, 0.9993309, 0.01063382, 0.06235776],
-                    [-0.00567313, 0.01044152, -0.99992883, 2.0034642],
+                    [-0.9993708, -0.03505326, 0.00530393, 0],
+                    [-0.03499541, 0.9993309, 0.01063382, 0],
+                    [-0.00567313, 0.01044152, -0.99992883, 0],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
             )
@@ -220,14 +220,12 @@ class KinematicHumanoid(MobileManipulator):
         super().reconfigure()
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
         self.update()
+        self.set_rest_position()
         
         
     def reset(self) -> None:
         super().reset()
         self.update()
-    
-    def update(self):
-        super().update()
         self.set_rest_position()
             
     
