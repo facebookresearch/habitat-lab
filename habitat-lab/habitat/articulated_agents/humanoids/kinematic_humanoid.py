@@ -149,7 +149,7 @@ class KinematicHumanoid(MobileManipulator):
             np.array(
                 [
                     [-0.9993708, -0.03505326, 0.00530393, -0.1829719],
-                    [-0.03499541, 0.9993309, 0.01063382, 0.96235776],
+                    [-0.03499541, 0.9993309, 0.01063382, 0.06235776],
                     [-0.00567313, 0.01044152, -0.99992883, 2.0034642],
                     [0.0, 0.0, 0.0, 1.0],
                 ]
@@ -210,15 +210,27 @@ class KinematicHumanoid(MobileManipulator):
         joint_list = self.rest_joints
         offset_transform = self.rest_matrix
         self.set_joint_transform(
-            joint_list, offset_transform, self.sim_obj.transformation
+            joint_list, offset_transform, self.base_transformation
         )
+        
+        
 
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         super().reconfigure()
-        self.set_rest_position()
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-
+        self.update()
+        
+        
+    def reset(self) -> None:
+        super().reset()
+        self.update()
+    
+    def update(self):
+        super().update()
+        self.set_rest_position()
+            
+    
     def set_joint_transform(
         self,
         joint_list: List[float],
