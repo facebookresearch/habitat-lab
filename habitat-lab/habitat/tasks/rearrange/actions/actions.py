@@ -470,7 +470,7 @@ class BaseVelAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
-class BaseVelNonCylinderAction(BaseVelAction):
+class BaseVelNonCylinderAction(ArticulatedAgentAction):
     """
     The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
 
@@ -479,10 +479,19 @@ class BaseVelNonCylinderAction(BaseVelAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
+        self.base_vel_ctrl.controlling_lin_vel = True
+        self.base_vel_ctrl.lin_vel_is_local = True
+        self.base_vel_ctrl.controlling_ang_vel = True
+        self.base_vel_ctrl.ang_vel_is_local = True
+        self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
+        self._allow_back = self._config.allow_back
         self._lin_collision_threshold = self._config.lin_collision_threshold
         self._ang_collision_threshold = self._config.ang_collision_threshold
         self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
         self._lateral_lin_speed = self._config.lateral_lin_speed
+        self._ang_speed = self._config.ang_speed
         self._x_offset = self._config.x_offset
         self._y_offset = self._config.y_offset
         self._enable_lateral_move = self._config.enable_lateral_move
