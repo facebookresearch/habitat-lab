@@ -74,6 +74,88 @@ class KinematicHumanoid(MobileManipulator):
         # to simulate different gaits
         self.offset_transform = mn.Matrix4()
 
+        # TODO: make this part of reset skill
+        self.rest_joints = [
+            0.01580232,
+            0.00312952,
+            0.00987611,
+            0.99982146,
+            0.04868594,
+            -0.06787038,
+            -0.00789235,
+            0.99647429,
+            -0.11562324,
+            0.09068378,
+            0.02232343,
+            0.98889301,
+            -0.03059093,
+            0.0022178,
+            0.03425224,
+            0.99894247,
+            0.11757437,
+            -0.0052593,
+            0.00770549,
+            0.99302026,
+            -0.10860021,
+            -0.06826786,
+            -0.00304792,
+            0.99173394,
+            0.06766052,
+            -0.01406872,
+            0.01672267,
+            0.99746904,
+            -0.05634359,
+            -0.01199805,
+            0.0221017,
+            0.99809467,
+            0.01740856,
+            -0.03378484,
+            0.00277393,
+            0.99927365,
+            -0.0625657,
+            -0.08138424,
+            0.02090534,
+            0.99449741,
+            0.09520805,
+            -0.13450076,
+            -0.01502134,
+            0.98621465,
+            0.02049966,
+            0.10848507,
+            -0.24204067,
+            0.96396425,
+            0.05280473,
+            -0.07628868,
+            -0.49520045,
+            0.86381029,
+            0.08596348,
+            -0.22918482,
+            0.10918048,
+            0.9634128,
+            -0.02809719,
+            -0.06218687,
+            0.24364708,
+            0.9674603,
+            0.10582447,
+            0.06064448,
+            0.47002208,
+            0.87418686,
+            -0.02126049,
+            0.17058167,
+            -0.09252438,
+            0.98075946,
+        ]
+        self.rest_matrix = mn.Matrix4(
+            np.array(
+                [
+                    [-0.9993708, -0.03505326, 0.00530393, 0],
+                    [-0.03499541, 0.9993309, 0.01063382, 0],
+                    [-0.00567313, 0.01044152, -0.99992883, 0],
+                    [0.0, 0.0, 0.0, 1.0],
+                ]
+            )
+        )
+
     @property
     def inverse_offset_transform(self):
         rot = self.offset_transform.rotation().transposed()
@@ -123,10 +205,25 @@ class KinematicHumanoid(MobileManipulator):
         else:
             raise NotImplementedError("The base type is not implemented.")
 
+    def set_rest_position(self) -> None:
+        """Sets the agents in a resting position"""
+        joint_list = self.rest_joints
+        offset_transform = self.rest_matrix
+        self.set_joint_transform(
+            joint_list, offset_transform, self.base_transformation
+        )
+
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
         super().reconfigure()
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+        self.update()
+        self.set_rest_position()
+
+    def reset(self) -> None:
+        super().reset()
+        self.update()
+        self.set_rest_position()
 
     def set_joint_transform(
         self,
