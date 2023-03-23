@@ -48,7 +48,7 @@ Training checkpoints are by default stored in `data/eqa/eqa_cnn_pretrain/checkpo
 ### Eval:
 
 ```
-python -u habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=eqa/il_eqa_cnn_pretrain.yaml \
   habitat_baselines.evaluate=True
 ```
