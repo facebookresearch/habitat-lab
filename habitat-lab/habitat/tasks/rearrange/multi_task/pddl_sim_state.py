@@ -143,6 +143,7 @@ class PddlRobotState:
             agent = sim.get_agent_data(robot_id).articulated_agent
 
             if self.place_at_pos_dist == -1.0:
+                # Place as close to the object as possible.
                 if not sim_info.sim.is_point_within_bounds(targ_pos):
                     rearrange_logger.error(
                         f"Object {self.pos} is out of bounds but trying to set robot position"
@@ -154,6 +155,7 @@ class PddlRobotState:
                     np.array(targ_pos - agent_pos)
                 )
             else:
+                # Place some distance away from the object.
                 start_pos, start_rot, was_fail = get_robot_spawns(
                     targ_pos,
                     self.base_angle_noise,

@@ -171,9 +171,12 @@ class PddlSimInfo:
             rel_idx = targ_idxs.tolist().index(idx)
             return pos_targs[rel_idx]
         elif self.check_type_matches(
-            entity, SimulatorObjectType.MOVABLE_ENTITY.value
-        ) or self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
+        ):
+            recep = self.receptacles[ename]
+            return np.array(recep.center())
+        elif self.check_type_matches(
+            entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
