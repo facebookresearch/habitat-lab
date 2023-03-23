@@ -28,12 +28,10 @@ habitat:
       base_velocity_non_cylinder:
         allow_dyn_slide: False
         # There is a collision if the difference between the clamped NavMesh position and target position
-        # is more than than lin_collision_threshold/ang_collision_threshold for any point
-        lin_collision_threshold: 1e-5
-        ang_collision_threshold: 1e-5
+        # is more than than collision_threshold for any point
+        collision_threshold: 1e-5
         # The x and y locations of the clamped NavMesh position
-        x_offset: [0.3, -0.3]
-        y_offset: [0.0, 0.0]
+        navmesh_offset: [[0.3, 0], [-0.3, 0]]
         # If we allow the robot to move laterally
         enable_lateral_move: True
   simulator:
@@ -41,6 +39,8 @@ habitat:
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"
+      # - "/Users/jimmytyyang/Downloads/test_scene_dataset/object_datasets/amazon_berkeley/configs/"
+      # - "/Users/jimmytyyang/Downloads/test_scene_dataset/object_datasets/google_object_dataset/configs/"
     agents:
       main_agent:
         radius: 0.3
@@ -59,3 +59,7 @@ habitat:
       enable_physics: True
   dataset:
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    # data_path: /Users/jimmytyyang/floor_planner/habitat-lab/data/datasets/rearrange_floorplanner/train/rearrange_floorplanner_5_0303.json.gz
+    # data_path: /Users/jimmytyyang/habitat_lab_0301/habitat-lab/data/datasets/rearrange_floorplanner/train/rearrange_floorplanner_1_0303_102344307.json.gz
+    # data_path: /Users/jimmytyyang/habitat_lab_0301/habitat-lab/data/datasets/rearrange_floorplanner/train/rearrange_floorplanner_scene3_obj10_en10.json.gz
+    # data_path: /Users/jimmytyyang/habitat_lab_0301/habitat-lab/data/datasets/fp_episodes/rearrange/microtrain/rearrange_floorplanner.json.gz

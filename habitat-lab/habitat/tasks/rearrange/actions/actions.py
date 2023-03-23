@@ -487,15 +487,12 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         self.base_vel_ctrl.ang_vel_is_local = True
         self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
         self._allow_back = self._config.allow_back
-        self._lin_collision_threshold = self._config.lin_collision_threshold
-        self._ang_collision_threshold = self._config.ang_collision_threshold
+        self._collision_threshold = self._config.collision_threshold
         self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
         self._lateral_lin_speed = self._config.lateral_lin_speed
         self._ang_speed = self._config.ang_speed
-        self._x_offset = self._config.x_offset
-        self._y_offset = self._config.y_offset
+        self._navmesh_offset = self._config.navmesh_offset
         self._enable_lateral_move = self._config.enable_lateral_move
-        assert len(self._x_offset) == len(self._y_offset)
 
     @property
     def action_space(self):
@@ -528,19 +525,31 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         center_end_pos: the original center end position of the robot
         target_rigid_state: the target state of the robot given the center original Navmesh
         """
-        num_check_cylinder = len(self._x_offset)
+        num_check_cylinder = len(self._navmesh_offset)
         # Get the offset positions
         cur_pos = []
         goal_pos = []
         for i in range(num_check_cylinder):
             cur_pos.append(
                 trans.transform_point(
-                    np.array([self._x_offset[i], 0, self._y_offset[i]])
+                    np.array(
+                        [
+                            self._navmesh_offset[i][0],
+                            0,
+                            self._navmesh_offset[i][1],
+                        ]
+                    )
                 )
             )
             goal_pos.append(
                 target_trans.transform_point(
-                    np.array([self._x_offset[i], 0, self._y_offset[i]])
+                    np.array(
+                        [
+                            self._navmesh_offset[i][0],
+                            0,
+                            self._navmesh_offset[i][1],
+                        ]
+                    )
                 )
             )
 
@@ -574,12 +583,9 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
 
         # For detection of linear or angualr velocities
         # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
-        lin_diff = len([v for v in move if v > self._lin_collision_threshold])
-        ang_diff = len([v for v in move if v > self._ang_collision_threshold])
+        diff = len([v for v in move if v > self._collision_threshold])
 
-        if (lin_diff > 0) and center_move != 0:
-            return True, new_target_trans
-        elif (ang_diff > 0) and center_move == 0:
+        if diff > 0:
             return True, new_target_trans
         else:
             return False, new_target_trans

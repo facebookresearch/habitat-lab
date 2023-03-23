@@ -260,12 +260,10 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     # If we allow the robot to move back or not
     allow_back: bool = True
     # There is a collision if the difference between the clamped NavMesh position and target position
-    # is more than lin_collision_threshold/ang_collision_threshold for any point.
-    lin_collision_threshold: float = 1e-5
-    ang_collision_threshold: float = 1e-5
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
     # The x and y locations of the clamped NavMesh position
-    x_offset: Optional[List[float]] = None
-    y_offset: Optional[List[float]] = None
+    navmesh_offset: Optional[List[float]] = None
     # If we allow the robot to move laterally.
     enable_lateral_move: bool = False
 
