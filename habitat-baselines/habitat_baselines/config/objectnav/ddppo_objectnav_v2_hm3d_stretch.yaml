@@ -1,7 +1,10 @@
 # @package _global_
 
 defaults:
-  - /objectnav: ddppo_objectnav_hm3d
+  - /objectnav: ddppo_objectnav
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - center_cropper_base
+    - resize_shortest_edge_base
   - override /benchmark/nav/objectnav: objectnav_v2_hm3d_stretch
   - _self_
 
