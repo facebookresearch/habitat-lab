@@ -45,7 +45,6 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   eval:
-    use_ckpt_config: False
     should_load_ckpt: False
     video_option: ["disk"]
 
