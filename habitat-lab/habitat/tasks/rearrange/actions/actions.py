@@ -526,33 +526,13 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         target_rigid_state: the target state of the robot given the center original Navmesh
         compute_sliding: if we want to compute sliding or not
         """
-        num_check_cylinder = len(self._navmesh_offset)
         # Get the offset positions
-        cur_pos = []
-        goal_pos = []
-        for i in range(num_check_cylinder):
-            cur_pos.append(
-                trans.transform_point(
-                    np.array(
-                        [
-                            self._navmesh_offset[i][0],
-                            0,
-                            self._navmesh_offset[i][1],
-                        ]
-                    )
-                )
-            )
-            goal_pos.append(
-                target_trans.transform_point(
-                    np.array(
-                        [
-                            self._navmesh_offset[i][0],
-                            0,
-                            self._navmesh_offset[i][1],
-                        ]
-                    )
-                )
-            )
+        num_check_cylinder = len(self._navmesh_offset)
+        nav_pos_3d = [
+            np.array([xz[0], 0.0, xz[1]]) for xz in self._navmesh_offset
+        ]
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+        goal_pos = [target_trans.transform_point(xyz) for xyz in nav_pos_3d]
 
         # For step filter of offset positions
         end_pos = []
@@ -569,26 +549,23 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         for i in range(num_check_cylinder):
             move.append((end_pos[i] - goal_pos[i]).length())
 
-        # Wrap the move direction if we use sliding
-        # Find the largest diff moving direction, which means that there is a collision in that cylinder
-        if compute_sliding:
-            max_idx = np.argmax(move)
-            move_vec = end_pos[max_idx] - cur_pos[max_idx]
-            new_end_pos = trans.translation + move_vec
-            new_target_trans = mn.Matrix4.from_(
-                target_rigid_state.rotation.to_matrix(), new_end_pos
-            )
-        else:
-            new_target_trans = None
-
         # For detection of linear or angualr velocities
         # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
         diff = len([v for v in move if v > self._collision_threshold])
 
         if diff > 0:
-            return True, new_target_trans
+            # Wrap the move direction if we use sliding
+            # Find the largest diff moving direction, which means that there is a collision in that cylinder
+            if compute_sliding:
+                max_idx = np.argmax(move)
+                move_vec = end_pos[max_idx] - cur_pos[max_idx]
+                new_end_pos = trans.translation + move_vec
+                return True, mn.Matrix4.from_(
+                    target_rigid_state.rotation.to_matrix(), new_end_pos
+                )
+            return True, trans
         else:
-            return False, new_target_trans
+            return False, target_trans
 
     def update_base(self, if_rotation):
         """
@@ -620,17 +597,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             trans, target_trans, target_rigid_state, compute_sliding
         )
         # Update the base
-        if new_target_trans is not None:
-            self.cur_articulated_agent.sim_obj.transformation = (
-                new_target_trans
-            )
-        else:
-            if did_coll:
-                self.cur_articulated_agent.sim_obj.transformation = trans
-            else:
-                self.cur_articulated_agent.sim_obj.transformation = (
-                    target_trans
-                )
+        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
 
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
