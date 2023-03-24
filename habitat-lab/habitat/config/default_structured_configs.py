@@ -293,6 +293,7 @@ class OracleNavActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    # A value of -1.0 means we will get as close to the object as possible.
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
 

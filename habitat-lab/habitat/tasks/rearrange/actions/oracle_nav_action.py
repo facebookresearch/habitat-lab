@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.utils import get_robot_spawns
+from habitat.tasks.rearrange.utils import place_agent_at_dist
 from habitat.tasks.utils import get_angle
 
 
@@ -106,7 +106,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            start_pos, _, _ = get_robot_spawns(
+            start_pos, _, _ = place_agent_at_dist(
                 np.array(obj_pos),
                 0.0,
                 self._config.spawn_max_dist_to_obj,
@@ -114,6 +114,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 self._config.num_spawn_attempts,
                 1,
             )
+
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
                     self.cur_articulated_agent.base_pos
