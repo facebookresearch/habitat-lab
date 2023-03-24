@@ -12,6 +12,10 @@ class DiffDriveVelocityController:
         cfg,
         track_yaw=True,
     ):
+        """Initilize the controller
+        cfg: velocity control spec
+        track_yaw: if we want to track yaw or not
+        """
         self.controller = GotoVelocityController(cfg)
         self.controller.set_yaw_tracking(track_yaw)
 
@@ -23,6 +27,8 @@ class DiffDriveVelocityController:
     ):
         """Update controller goal
         goal: Desired robot base SE2 pose in global frame
+        start: starting positon of the robot
+        relative: if the starting position is relative or not
         """
         if relative:
             assert (
