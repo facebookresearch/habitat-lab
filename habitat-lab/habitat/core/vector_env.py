@@ -32,8 +32,8 @@ import numpy as np
 from gym import spaces
 
 import habitat
+from habitat.core.batch_rendering.env_batch_renderer import EnvBatchRenderer
 from habitat.core.env import Env, RLEnv
-from habitat.core.env_batch_renderer import EnvBatchRenderer
 from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.gym.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
@@ -586,6 +586,7 @@ class VectorEnv:
         Refer to the EnvBatchRenderer class.
 
         :param config: Base configuration."""
+        assert config.habitat.simulator.renderer.enable_batch_renderer
         self._batch_renderer = EnvBatchRenderer(config, self.num_envs)
 
     @property

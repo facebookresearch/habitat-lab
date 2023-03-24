@@ -14,7 +14,7 @@ from omegaconf import DictConfig
 from torch import Tensor
 
 import habitat_sim
-from habitat.core.env_batch_renderer_constants import (
+from habitat.core.batch_rendering.env_batch_renderer_constants import (
     KEYFRAME_OBSERVATION_KEY,
     KEYFRAME_SENSOR_PREFIX,
 )
@@ -41,8 +41,6 @@ class EnvBatchRenderer:
     Internally, the system is a replay renderer, meaning that it renders gfx-replay keyframes emitted by simulators.
     When batch rendering, simulators produce keyframes and add them to observations as KEYFRAME_OBSERVATION_KEY.
     In "post_step", the renderer aggregates these observations, reconstitutes each state then renders them simultaneously.
-
-    This feature is experimental and may change at any time.
     """
     _num_envs: int = 1
     _gpu_gpu: bool = False
@@ -90,7 +88,7 @@ class EnvBatchRenderer:
         )
         assert (
             len(self._sensor_specifications) == 1
-        ), "Batch renderer only supports one sensor."
+        ), f"Batch renderer only supports one sensor but configuration specifies {len(self._sensor_specifications)} sensors. Either remove sensors or disable batch rendering."
 
         self._replay_renderer_cfg = (
             EnvBatchRenderer._create_replay_renderer_cfg(
@@ -113,25 +111,7 @@ class EnvBatchRenderer:
         )
 
         # Pre-load graphics assets using composite GLTF files.
-        loaded_composite_file_count: int = 0
-        if config.habitat.simulator.renderer.composite_files is not None:
-            for (
-                composite_file
-            ) in config.habitat.simulator.renderer.composite_files:
-                if os.path.isfile(composite_file):
-                    logger.info(
-                        "Pre-loading composite file: " + composite_file
-                    )
-                    self._replay_renderer.preload_file(composite_file)
-                    loaded_composite_file_count += 1
-                else:
-                    logger.warn(
-                        "Failed to load composite file: " + composite_file
-                    )
-        if loaded_composite_file_count == 0:
-            logger.warn(
-                "No composite file was pre-loaded. Batch rendering performance won't be optimal."
-            )
+        EnvBatchRenderer._load_composite_files(config, self._replay_renderer)
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""
@@ -158,7 +138,7 @@ class EnvBatchRenderer:
         # Render observations
         batch_observations: Dict[str, Union[np.ndarray, Tensor]] = {}
         for sensor_spec in self._sensor_specifications:
-            batch_observations[sensor_spec.uuid] = self.draw_observations(
+            batch_observations[sensor_spec.uuid] = self._draw_observations(
                 sensor_spec
             )
 
@@ -180,7 +160,7 @@ class EnvBatchRenderer:
             output.append(env_observations)
         return output
 
-    def draw_observations(
+    def _draw_observations(
         self, sensor_spec: BackendSensorSpec
     ) -> Union[np.ndarray, "Tensor"]:
         r"""
@@ -190,13 +170,13 @@ class EnvBatchRenderer:
         :return: A numpy ndarray in GPU-to-CPU mode, or a torch tensor in GPU-to-GPU mode.
         """
         draw_fn: Callable = (
-            self.draw_observations_gpu_to_gpu
+            self._draw_observations_gpu_to_gpu
             if self._gpu_gpu
-            else self.draw_observations_gpu_to_cpu
+            else self._draw_observations_gpu_to_cpu
         )
         return draw_fn(sensor_spec)
 
-    def draw_observations_gpu_to_cpu(
+    def _draw_observations_gpu_to_cpu(
         self, sensor_spec: BackendSensorSpec
     ) -> np.ndarray:
         r"""
@@ -240,10 +220,10 @@ class EnvBatchRenderer:
             raise NotImplementedError
 
         # Render
-        self._replay_renderer.render(self._gpu_to_cpu_images)
+        self._replay_renderer.render(self._gpu_to_cpu_images, [])
         return self._gpu_to_cpu_buffer
 
-    def draw_observations_gpu_to_gpu(
+    def _draw_observations_gpu_to_gpu(
         self, sensor_spec: BackendSensorSpec
     ) -> "Tensor":
         raise NotImplementedError
@@ -361,3 +341,28 @@ class EnvBatchRenderer:
         replay_renderer_cfg.force_separate_semantic_scene_graph = False
         replay_renderer_cfg.leave_context_with_background_renderer = False
         return replay_renderer_cfg
+
+    @staticmethod
+    def _load_composite_files(
+        config: DictConfig, replay_renderer: ReplayRenderer
+    ):
+        # Pre-load graphics assets using composite GLTF files.
+        loaded_composite_file_count: int = 0
+        if config.habitat.simulator.renderer.composite_files is not None:
+            for (
+                composite_file
+            ) in config.habitat.simulator.renderer.composite_files:
+                if os.path.isfile(composite_file):
+                    logger.info(
+                        "Pre-loading composite file: " + composite_file
+                    )
+                    replay_renderer.preload_file(composite_file)
+                    loaded_composite_file_count += 1
+                else:
+                    logger.error(
+                        "Failed to load composite file: " + composite_file
+                    )
+        if loaded_composite_file_count == 0:
+            logger.warn(
+                "No composite file was pre-loaded. Expect lower batch rendering performance."
+            )

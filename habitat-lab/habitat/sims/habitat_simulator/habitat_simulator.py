@@ -25,11 +25,11 @@ from omegaconf import DictConfig
 
 import habitat_sim
 from habitat.config.default import get_agent_config
-from habitat.core.dataset import Episode
-from habitat.core.env_batch_renderer_constants import (
+from habitat.core.batch_rendering.env_batch_renderer_constants import (
     KEYFRAME_OBSERVATION_KEY,
     KEYFRAME_SENSOR_PREFIX,
 )
+from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
     AgentState,
@@ -680,17 +680,19 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         :param observations: Original observations upon which the keyframe is added.
         """
-        if self.config.enable_batch_renderer:
-            assert KEYFRAME_OBSERVATION_KEY not in observations
-            for _sensor_uuid, sensor in self._sensors.items():
-                node = sensor._sensor_object.node
-                transform = node.absolute_transformation()
-                rotation = mn.Quaternion.from_matrix(transform.rotation())
-                self.gfx_replay_manager.add_user_transform_to_keyframe(
-                    KEYFRAME_SENSOR_PREFIX + _sensor_uuid,
-                    transform.translation,
-                    rotation,
-                )
-            observations[
-                KEYFRAME_OBSERVATION_KEY
-            ] = self.gfx_replay_manager.extract_keyframe()
+        if not self.config.enable_batch_renderer:
+            return
+
+        assert KEYFRAME_OBSERVATION_KEY not in observations
+        for _sensor_uuid, sensor in self._sensors.items():
+            node = sensor._sensor_object.node
+            transform = node.absolute_transformation()
+            rotation = mn.Quaternion.from_matrix(transform.rotation())
+            self.gfx_replay_manager.add_user_transform_to_keyframe(
+                KEYFRAME_SENSOR_PREFIX + _sensor_uuid,
+                transform.translation,
+                rotation,
+            )
+        observations[
+            KEYFRAME_OBSERVATION_KEY
+        ] = self.gfx_replay_manager.extract_keyframe()
