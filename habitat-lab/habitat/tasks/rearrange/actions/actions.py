@@ -471,6 +471,185 @@ class BaseVelAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
+class BaseVelNonCylinderAction(ArticulatedAgentAction):
+    """
+    The articulated agent base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
+
+    Optionally cull states with active collisions if config parameter `allow_dyn_slide` is True
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
+        self.base_vel_ctrl.controlling_lin_vel = True
+        self.base_vel_ctrl.lin_vel_is_local = True
+        self.base_vel_ctrl.controlling_ang_vel = True
+        self.base_vel_ctrl.ang_vel_is_local = True
+        self._allow_dyn_slide = self._config.get("allow_dyn_slide", True)
+        self._allow_back = self._config.allow_back
+        self._collision_threshold = self._config.collision_threshold
+        self._longitudinal_lin_speed = self._config.longitudinal_lin_speed
+        self._lateral_lin_speed = self._config.lateral_lin_speed
+        self._ang_speed = self._config.ang_speed
+        self._navmesh_offset = self._config.navmesh_offset
+        self._enable_lateral_move = self._config.enable_lateral_move
+
+    @property
+    def action_space(self):
+        lim = 20
+        if self._enable_lateral_move:
+            return spaces.Dict(
+                {
+                    self._action_arg_prefix
+                    + "base_vel": spaces.Box(
+                        shape=(3,), low=-lim, high=lim, dtype=np.float32
+                    )
+                }
+            )
+        else:
+            return spaces.Dict(
+                {
+                    self._action_arg_prefix
+                    + "base_vel": spaces.Box(
+                        shape=(2,), low=-lim, high=lim, dtype=np.float32
+                    )
+                }
+            )
+
+    def collision_check(
+        self, trans, target_trans, target_rigid_state, compute_sliding
+    ):
+        """
+        trans: the transformation of the current location of the robot
+        target_trans: the transformation of the target location of the robot given the center original Navmesh
+        target_rigid_state: the target state of the robot given the center original Navmesh
+        compute_sliding: if we want to compute sliding or not
+        """
+        # Get the offset positions
+        num_check_cylinder = len(self._navmesh_offset)
+        nav_pos_3d = [
+            np.array([xz[0], 0.0, xz[1]]) for xz in self._navmesh_offset
+        ]
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+        goal_pos = [target_trans.transform_point(xyz) for xyz in nav_pos_3d]
+
+        # For step filter of offset positions
+        end_pos = []
+        for i in range(num_check_cylinder):
+            pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
+            # Sanitize the height
+            pos[1] = 0.0
+            cur_pos[i][1] = 0.0
+            goal_pos[i][1] = 0.0
+            end_pos.append(pos)
+
+        # Planar move distance clamped by NavMesh
+        move = []
+        for i in range(num_check_cylinder):
+            move.append((end_pos[i] - goal_pos[i]).length())
+
+        # For detection of linear or angualr velocities
+        # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
+        diff = len([v for v in move if v > self._collision_threshold])
+
+        if diff > 0:
+            # Wrap the move direction if we use sliding
+            # Find the largest diff moving direction, which means that there is a collision in that cylinder
+            if compute_sliding:
+                max_idx = np.argmax(move)
+                move_vec = end_pos[max_idx] - cur_pos[max_idx]
+                new_end_pos = trans.translation + move_vec
+                return True, mn.Matrix4.from_(
+                    target_rigid_state.rotation.to_matrix(), new_end_pos
+                )
+            return True, trans
+        else:
+            return False, target_trans
+
+    def update_base(self, if_rotation):
+        """
+        Update the base of the robot
+        if_rotation: if the robot is rotating or not
+        """
+        # Get the control frequency
+        ctrl_freq = self._sim.ctrl_freq
+        # Get the current transformation
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        # Get the current rigid state
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        # Integrate to get target rigid state
+        target_rigid_state = self.base_vel_ctrl.integrate_transform(
+            1 / ctrl_freq, rigid_state
+        )
+        # Get the traget transformation based on the target rigid state
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
+        )
+        # We do sliding only if we allow the robot to do sliding and current
+        # robot is not rotating
+        compute_sliding = self._allow_dyn_slide and not if_rotation
+        # Check if there is a collision
+        did_coll, new_target_trans = self.collision_check(
+            trans, target_trans, target_rigid_state, compute_sliding
+        )
+        # Update the base
+        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
+
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            # object.
+            self.cur_grasp_mgr.update_object_to_grasp()
+
+        if self.cur_articulated_agent._base_type == "leg":
+            # Fix the leg joints
+            self.cur_articulated_agent.leg_joint_pos = (
+                self.cur_articulated_agent.params.leg_init_params
+            )
+
+    def step(self, *args, is_last_action, **kwargs):
+        lateral_lin_vel = 0.0
+        if self._enable_lateral_move:
+            longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+        else:
+            longitudinal_lin_vel, ang_vel = kwargs[
+                self._action_arg_prefix + "base_vel"
+            ]
+
+        longitudinal_lin_vel = (
+            np.clip(longitudinal_lin_vel, -1, 1) * self._longitudinal_lin_speed
+        )
+        lateral_lin_vel = (
+            np.clip(lateral_lin_vel, -1, 1) * self._lateral_lin_speed
+        )
+        ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
+        if not self._allow_back:
+            longitudinal_lin_vel = np.maximum(longitudinal_lin_vel, 0)
+
+        self.base_vel_ctrl.linear_velocity = mn.Vector3(
+            longitudinal_lin_vel, 0, -lateral_lin_vel
+        )
+        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, ang_vel, 0)
+
+        if (
+            longitudinal_lin_vel != 0.0
+            or lateral_lin_vel != 0.0
+            or ang_vel != 0.0
+        ):
+            self.update_base(ang_vel != 0.0)
+
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.base_velocity)
+        else:
+            return {}
+
+
+@registry.register_task_action
 class ArmEEAction(ArticulatedAgentAction):
     """Uses inverse kinematics (requires pybullet) to apply end-effector position control for the articulated_agent's arm."""
 

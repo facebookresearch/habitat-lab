@@ -252,6 +252,30 @@ class BaseVelocityActionConfig(ActionConfig):
 
 
 @dataclass
+class BaseVelocityNonCylinderActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelNonCylinderAction"
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
+    # The max angular speed of the robot
+    ang_speed: float = 10.0
+    # If we want to do sliding or not
+    allow_dyn_slide: bool = False
+    # If we allow the robot to move back or not
+    allow_back: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
+
+
+@dataclass
 class HumanoidJointActionConfig(ActionConfig):
     r"""
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
@@ -1573,6 +1597,12 @@ cs.store(
     group="habitat/task/actions",
     name="base_velocity",
     node=BaseVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.base_velocity_non_cylinder",
+    group="habitat/task/actions",
+    name="base_velocity_non_cylinder",
+    node=BaseVelocityNonCylinderActionConfig,
 )
 cs.store(
     package="habitat.task.actions.humanoidjoint_action",
