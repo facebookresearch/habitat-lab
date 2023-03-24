@@ -34,7 +34,7 @@ habitat:
         # is more than than collision_threshold for any point
         collision_threshold: 1e-5
         # The x and y locations of the clamped NavMesh position
-        navmesh_offset: [[0.3, 0], [-0.3, 0]]
+        navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
         # If we allow the robot to move laterally
         enable_lateral_move: True
   simulator:

@@ -518,13 +518,13 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             )
 
     def collision_check(
-        self, trans, target_trans, center_end_pos, target_rigid_state
+        self, trans, target_trans, target_rigid_state, compute_sliding
     ):
         """
         trans: the transformation of the current location of the robot
         target_trans: the transformation of the target location of the robot given the center original Navmesh
-        center_end_pos: the original center end position of the robot
         target_rigid_state: the target state of the robot given the center original Navmesh
+        compute_sliding: if we want to compute sliding or not
         """
         num_check_cylinder = len(self._navmesh_offset)
         # Get the offset positions
@@ -559,28 +559,27 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         for i in range(num_check_cylinder):
             pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
             # Sanitize the height
-            pos[1] = cur_pos[i][1]
+            pos[1] = 0.0
+            cur_pos[i][1] = 0.0
+            goal_pos[i][1] = 0.0
             end_pos.append(pos)
-
-        # For step filter of the center original pos
-        center_end_pos[1] = trans.translation[1]
 
         # Planar move distance clamped by NavMesh
         move = []
         for i in range(num_check_cylinder):
             move.append((end_pos[i] - goal_pos[i]).length())
-        center_move = (center_end_pos - trans.translation).length()
 
         # Wrap the move direction if we use sliding
         # Find the largest diff moving direction, which means that there is a collision in that cylinder
-        max_idx = np.argmax(move + [center_move])
-        move_vec = (end_pos + [center_end_pos])[max_idx] - (
-            cur_pos + [trans.translation]
-        )[max_idx]
-        new_end_pos = trans.translation + move_vec
-        new_target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(), new_end_pos
-        )
+        if compute_sliding:
+            max_idx = np.argmax(move)
+            move_vec = end_pos[max_idx] - cur_pos[max_idx]
+            new_end_pos = trans.translation + move_vec
+            new_target_trans = mn.Matrix4.from_(
+                target_rigid_state.rotation.to_matrix(), new_end_pos
+            )
+        else:
+            new_target_trans = None
 
         # For detection of linear or angualr velocities
         # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
@@ -591,34 +590,48 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
         else:
             return False, new_target_trans
 
-    def update_base(self):
+    def update_base(self, if_rotation):
+        """
+        Update the base of the robot
+        if_rotation: if the robot is rotating or not
+        """
+        # Get the control frequency
         ctrl_freq = self._sim.ctrl_freq
-
+        # Get the current transformation
         trans = self.cur_articulated_agent.sim_obj.transformation
+        # Get the current rigid state
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
-
+        # Integrate to get target rigid state
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
         )
-        end_pos = self._sim.step_filter(
-            rigid_state.translation, target_rigid_state.translation
-        )
-
-        end_pos -= self.cur_articulated_agent.params.base_offset
+        # Get the traget transformation based on the target rigid state
         target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(), end_pos
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
         )
-
+        # We do sliding only if we allow the robot to do sliding and current
+        # robot is not rotating
+        compute_sliding = self._allow_dyn_slide and not if_rotation
+        # Check if there is a collision
         did_coll, new_target_trans = self.collision_check(
-            trans, target_trans, end_pos, target_rigid_state
+            trans, target_trans, target_rigid_state, compute_sliding
         )
-        self.cur_articulated_agent.sim_obj.transformation = new_target_trans
-
-        if not self._allow_dyn_slide:
+        # Update the base
+        if new_target_trans is not None:
+            self.cur_articulated_agent.sim_obj.transformation = (
+                new_target_trans
+            )
+        else:
             if did_coll:
                 self.cur_articulated_agent.sim_obj.transformation = trans
+            else:
+                self.cur_articulated_agent.sim_obj.transformation = (
+                    target_trans
+                )
+
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
             # object.
@@ -661,7 +674,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             or lateral_lin_vel != 0.0
             or ang_vel != 0.0
         ):
-            self.update_base()
+            self.update_base(ang_vel != 0.0)
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)
