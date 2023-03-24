@@ -221,9 +221,13 @@ class VelocityControlActionConfig(ActionConfig):
     # rad/sec
     ang_vel_range: List[float] = field(default_factory=lambda: [-0.45, 0.45])
     # rad/sec
-    ang_vel_range_camera_pitch: List[float] = field(default_factory=lambda: [-0.45, 0.45])
+    ang_vel_range_camera_pitch: List[float] = field(
+        default_factory=lambda: [-0.45, 0.45]
+    )
     # rad
-    ang_range_camera_pitch: List[float] = field(default_factory=lambda: [-1.57, 0.43])
+    ang_range_camera_pitch: List[float] = field(
+        default_factory=lambda: [-1.57, 0.43]
+    )
     time_step: float = 0.1  # seconds
     enable_scale_convert: bool = True
 
