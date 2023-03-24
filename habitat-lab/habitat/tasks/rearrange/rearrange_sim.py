@@ -298,12 +298,10 @@ class RearrangeSim(HabitatSim):
             for handle, ro in rom.get_objects_by_handle_substring().items()
         }
 
-        rom = self.get_rigid_object_manager()
         if new_scene:
             self._load_navmesh(ep_info)
 
         # Get the starting positions of the target objects.
-        rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
             [
