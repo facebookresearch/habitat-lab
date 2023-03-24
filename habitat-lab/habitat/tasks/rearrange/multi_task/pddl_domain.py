@@ -568,10 +568,7 @@ class PddlDomain:
         expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
         for poss_input in itertools.product(*all_matching_entities):
             assert len(poss_input) == len(expr.inputs)
-            sub_dict = {
-                expand_entity: sub_entity
-                for expand_entity, sub_entity in zip(expr.inputs, poss_input)
-            }
+            sub_dict = dict(zip(expr.inputs, poss_input))
 
             expanded_exprs.append(expr.clone().sub_in(sub_dict))
 
