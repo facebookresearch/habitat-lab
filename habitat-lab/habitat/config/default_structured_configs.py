@@ -238,11 +238,18 @@ class WaypointControlActionConfig(VelocityControlActionConfig):
     type: str = "WaypointAction"
     action_duration: float = 1.0  # seconds
     # Action space range
-
-    waypoint_lin_range: List[float] = field(default_factory=lambda: [-0.5, 0.5])  # meters
-    waypoint_ang_range: List[float] = field(default_factory=lambda: [-np.pi, np.pi])  # radians
-    delta_ang_range_camera_pitch: List[float] = field(default_factory=lambda: [-0.2, 0.2])  # radians
-    wait_duration_range: List[float] = field(default_factory=lambda: [0.0, 10.0])  # seconds
+    waypoint_lin_range: List[float] = field(
+        default_factory=lambda: [-0.5, 0.5]
+    )  # meters
+    waypoint_ang_range: List[float] = field(
+        default_factory=lambda: [-np.pi, np.pi]
+    )  # radians
+    delta_ang_range_camera_pitch: List[float] = field(
+        default_factory=lambda: [-0.2, 0.2]
+    )  # radians
+    wait_duration_range: List[float] = field(
+        default_factory=lambda: [0.0, 10.0]
+    )  # seconds
     yaw_input_in_degrees: bool = False
     # Early stopping criteria
     min_abs_lin_speed: float = 0.025  # meters/sec
