@@ -55,6 +55,7 @@ __all__ = [
     "IsHoldingSensorConfig",
     "EEPositionSensorConfig",
     "JointSensorConfig",
+    "HumanoidJointSensorConfig",
     "TargetStartSensorConfig",
     "GoalSensorConfig",
     "TargetStartGpsCompassSensorConfig",
@@ -218,6 +219,9 @@ class ArmActionConfig(ActionConfig):
 
     :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
     :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
+    :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
+    :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
     """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
@@ -230,6 +234,9 @@ class ArmActionConfig(ActionConfig):
     ee_ctrl_lim: float = 0.015
     should_clip: bool = False
     render_ee_target: bool = False
+    gaze_distance_range: Optional[List[float]] = None
+    center_cone_angle_threshold: float = 0.0
+    center_cone_vector: Optional[List[float]] = None
 
 
 @dataclass
@@ -300,6 +307,9 @@ class OracleNavActionConfig(ActionConfig):
     """
 
     type: str = "OracleNavAction"
+    # Whether the motion is in the form of base_velocity or human_joints
+    motion_control: str = "base_velocity"
+    num_joints: int = 17
     turn_velocity: float = 1.0
     forward_velocity: float = 1.0
     turn_thresh: float = 0.1
@@ -422,6 +432,15 @@ class JointSensorConfig(LabSensorConfig):
     """
     type: str = "JointSensor"
     dimensionality: int = 7
+
+
+@dataclass
+class HumanoidJointSensorConfig(LabSensorConfig):
+    r"""
+    Rearrangement only. Returns the joint positions of the robot.
+    """
+    type: str = "HumanoidJointSensor"
+    dimensionality: int = 17 * 4
 
 
 @dataclass
@@ -1247,6 +1266,20 @@ class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
 
 
 @dataclass
+class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "head_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "articulated_agent_arm_panoptic"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
@@ -1286,6 +1319,8 @@ class AgentConfig(HabitatBaseConfig):
     articulated_agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     articulated_agent_type: str = "FetchRobot"
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    # File to motion data, used to play pre-recorded motions
+    motion_data_path: str = ""
 
 
 @dataclass
@@ -1365,6 +1400,8 @@ class SimulatorConfig(HabitatBaseConfig):
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
     ep_info: Optional[Any] = None
+    # The offset id values for the object
+    object_ids_start: int = 100
 
 
 @dataclass
@@ -1682,6 +1719,18 @@ cs.store(
 
 cs.store(
     group="habitat/simulator/sim_sensors",
+    name="head_panoptic_sensor",
+    node=HeadPanopticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
+    name="arm_panoptic_sensor",
+    node=ArmPanopticSensorConfig,
+)
+
+cs.store(
+    group="habitat/simulator/sim_sensors",
     name="third_depth_sensor",
     node=ThirdDepthSensorConfig,
 )
@@ -1771,6 +1820,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="joint_sensor",
     node=JointSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.humanoid_joint_sensor",
+    group="habitat/task/lab_sensors",
+    name="humanoid_joint_sensor",
+    node=HumanoidJointSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.end_effector_sensor",
