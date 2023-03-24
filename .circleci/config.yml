@@ -357,20 +357,41 @@ jobs:
 
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
-  testpypi_deploy:
+  pypi_deploy:
     <<: *gpu
+    parameters:
+      username_env_var:
+        description: "Twine username environment variable name"
+        type: env_var_name
+        default: TESTPYPI_USERNAME
+      password_env_var:
+        description: "Twine password environment variable name"
+        type: env_var_name
+        default: TESTPYPI_PASSWORD
+      repository:
+        description: "Twine repository name (possible options: testpypi or pypi)"
+        type: string
+        default: "testpypi"
     steps:
       - checkout:
           path: ./habitat-lab
       - run:
-          name: Deploy Habitat-Lab and Habitat-Baselines to TestPyPI
+          name: Deploy Habitat-Lab and Habitat-Baselines to PyPI
           command: |
               cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate build-env
               pip install --upgrade twine
-              twine upload --repository testpypi habitat-lab/dist/*
-              twine upload --repository testpypi habitat-baselines/dist/*
+              twine upload \\
+                --username ${<< parameters.username_env_var >>} \\
+                --password ${<< parameters.password_env_var >>} \\
+                --repository ${<< parameters.repository >>} \\
+                habitat-lab/dist/*
+              twine upload \\
+                --username ${<< parameters.username_env_var >>} \\
+                --password ${<< parameters.password_env_var >>} \\
+                --repository ${<< parameters.repository >>} \\
+                habitat-baselines/dist/*
 
 workflows:
   version: 2
@@ -390,7 +411,28 @@ workflows:
       - pre-commit
       - python_lint
       - install_and_test_ubuntu
-      - testpypi_deploy:
+      - pypi_deploy:
+          requires:
+            - pre-commit
+            - python_lint
+            - install_and_test_ubuntu
+  version_pipy_release:
+    jobs:
+      - pre-commit:
+          filters: &version_filter
+            tags:
+              only: /^v[0-9]+(\.[0-9]+)*.*/ # v0.1.5-rc1
+            branches:
+              ignore: /.*/
+      - python_lint:
+          filters: *version_filter
+      - install_and_test_ubuntu:
+          filters: *version_filter
+      - pypi_deploy:
+          filters: *version_filter
+          username_env_var: PYPI_USERNAME
+          password_env_var: PYPI_PASSWORD
+          repository: "pypi"
           requires:
             - pre-commit
             - python_lint
