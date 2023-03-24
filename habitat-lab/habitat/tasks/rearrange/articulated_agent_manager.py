@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING, Iterator, List, Optional
 import magnum as mn
 import numpy as np
 
+from habitat.articulated_agents.humanoids.dynamic_humanoid import (
+    DynamicHumanoid,
+)
 from habitat.articulated_agents.humanoids.kinematic_humanoid import (
     KinematicHumanoid,
 )
