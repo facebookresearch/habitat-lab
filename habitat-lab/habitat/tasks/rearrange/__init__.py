@@ -50,3 +50,9 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("empty")
     if not HabitatSimActions.has_action("rearrange_stop"):
         HabitatSimActions.extend_action_space("rearrange_stop")
+    if not HabitatSimActions.has_action("extend_arm"):
+        HabitatSimActions.extend_action_space("extend_arm")
+    if not HabitatSimActions.has_action("face_arm"):
+        HabitatSimActions.extend_action_space("face_arm")
+    if not HabitatSimActions.has_action("reset_joints"):
+        HabitatSimActions.extend_action_space("reset_joints")

@@ -25,6 +25,9 @@ habitat:
       - goal_recep_segmentation
       - object_category
       - camera_pose
+      - object_embedding
+      - is_holding
+      - relative_resting_position
   environment:
     max_episode_steps: 400
   simulator:
@@ -36,6 +39,7 @@ habitat:
     debug_render_goal: False
     concur_render: True
     auto_sleep: True
+    kinematic_mode: True
     agents:
       main_agent:
         radius: 0.25

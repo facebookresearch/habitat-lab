@@ -128,6 +128,17 @@ class BaseVelocityActionConfig(ActionConfig):
 class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
 
+@dataclass
+class ExtendArmActionConfig(ActionConfig):
+    type: str = "ExtendArmAction"
+
+@dataclass
+class ResetJointsActionConfig(ActionConfig):
+    type: str = "ResetJointsAction"
+
+@dataclass
+class FaceArmActionConfig(ActionConfig):
+    type: str = "FaceArmAction"
 
 @dataclass
 class OracleNavActionConfig(ActionConfig):
@@ -1312,6 +1323,24 @@ cs.store(
     group="habitat/task/actions",
     name="rearrange_stop",
     node=RearrangeStopActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.extend_arm",
+    group="habitat/task/actions",
+    name="extend_arm",
+    node=ExtendArmActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.reset_joints",
+    group="habitat/task/actions",
+    name="reset_joints",
+    node=ResetJointsActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.face_arm",
+    group="habitat/task/actions",
+    name="face_arm",
+    node=FaceArmActionConfig,
 )
 cs.store(
     package="habitat.task.actions.answer",

@@ -22,6 +22,7 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
+    OracleGraspAction
 )
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -118,6 +119,49 @@ class ArmAction(RobotAction):
         if self.grip_ctrlr is not None and not self.disable_grip:
             grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.arm_action)
+        else:
+            return {}
+
+
+@registry.register_task_action
+class ExtendArmAction(RobotAction):
+
+    def step(self, *args, is_last_action, **kwargs):
+        extend = kwargs.get("extend_arm", [-1.0])
+        if extend[0] > 0:
+            self._sim.robot.arm_motor_pos = [0.13] * 4 + self._sim.robot.arm_motor_pos[4:].tolist()
+            self._sim.robot.arm_joint_pos = [0.13] * 4 + self._sim.robot.arm_motor_pos[4:].tolist()
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.arm_action)
+        else:
+            return {}
+
+@registry.register_task_action
+class FaceArmAction(RobotAction):
+
+    def step(self, *args, is_last_action, **kwargs):
+        face = kwargs.get("face_arm", [-1.0])
+        if face[0] > 0:
+            motor_pos = self._sim.robot.arm_motor_pos.tolist()
+            joint_pos = self._sim.robot.arm_motor_pos.tolist()
+            motor_pos[8] = -1.7375
+            joint_pos[8] = -1.7375
+            self._sim.robot.arm_motor_pos = motor_pos
+            self._sim.robot.arm_joint_pos = joint_pos
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.arm_action)
+        else:
+            return {}
+
+@registry.register_task_action
+class ResetJointsAction(RobotAction):
+    def step(self, *args, is_last_action, **kwargs):
+        reset = kwargs.get("reset_joints", [-1.0])
+        if reset[0] > 0:
+            self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 1.0, 0, -1.57000005, 0, 0.0, -0.7125]
+            self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 1.0, 0, -1.57000005, 0, 0.0, -0.7125]
         if is_last_action:
             return self._sim.step(HabitatSimActions.arm_action)
         else:
@@ -641,9 +685,8 @@ class BaseWaypointVelAction(RobotAction):
             # Check if in the new robot state the arm collides with anything.
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
-            colls = self._sim.get_collisions()
             did_coll, _ = rearrange_collision(
-                colls, self._sim.snapped_obj_id, False
+                self._sim, count_obj_colls=False
             )
             if did_coll:
                 # Don't allow the step, revert back.
