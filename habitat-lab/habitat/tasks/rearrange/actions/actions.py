@@ -131,8 +131,8 @@ class ExtendArmAction(RobotAction):
     def step(self, *args, is_last_action, **kwargs):
         extend = kwargs.get("extend_arm", [-1.0])
         if extend[0] > 0:
-            self._sim.robot.arm_motor_pos = [0.13] * 4 + self._sim.robot.arm_motor_pos[4:].tolist()
-            self._sim.robot.arm_joint_pos = [0.13] * 4 + self._sim.robot.arm_motor_pos[4:].tolist()
+            self._sim.robot.arm_motor_pos = [0.13] * 4 + [1.0] + self._sim.robot.arm_motor_pos[5:].tolist()
+            self._sim.robot.arm_joint_pos = [0.13] * 4 + [1.0] + self._sim.robot.arm_motor_pos[5:].tolist()
         if is_last_action:
             return self._sim.step(HabitatSimActions.arm_action)
         else:
@@ -160,8 +160,8 @@ class ResetJointsAction(RobotAction):
     def step(self, *args, is_last_action, **kwargs):
         reset = kwargs.get("reset_joints", [-1.0])
         if reset[0] > 0:
-            self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 1.0, 0, -1.57000005, 0, 0.0, -0.7125]
-            self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 1.0, 0, -1.57000005, 0, 0.0, -0.7125]
+            self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 0.775, 0, -1.57000005, 0, 0.0, -0.7125]
+            self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 0.775, 0, -1.57000005, 0, 0.0, -0.7125]
         if is_last_action:
             return self._sim.step(HabitatSimActions.arm_action)
         else:
