@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - /instance_imagenav: ddppo_instance_imagenav
+  - override /benchmark/nav/instance_imagenav: instance_imagenav_hm3d_v3
+  - _self_
+
+habitat_baselines:
+  rl:
+    policy:
+      action_distribution_type: gaussian

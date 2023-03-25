@@ -197,8 +197,25 @@ class HabitatSimPyRobotActionSpaceConfiguration(ActionSpaceConfiguration):
 @registry.register_action_space_configuration(name="velocitycontrol")
 class HabitatSimVelocityCtrlActionSpaceConfiguration(ActionSpaceConfiguration):
     def get(self):
+        if not HabitatSimActions.has_action("VELOCITY_CTRL"):
+            HabitatSimActions.extend_action_space("VELOCITY_CTRL")
         return {
             HabitatSimActions.VELOCITY_CTRL: habitat_sim.ActionSpec(
                 "velocity_control"
+            ),
+            # The perfect actions are needed for the oracle planner
+            "_forward": habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.config.forward_step_size
+                ),
+            ),
+            "_left": habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
+            ),
+            "_right": habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(amount=self.config.turn_angle),
             ),
         }

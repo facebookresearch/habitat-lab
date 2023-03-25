@@ -1,0 +1,5 @@
+# @package habitat.task.actions
+
+defaults:
+  - velocity_stop
+  - waypoint_control

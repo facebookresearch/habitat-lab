@@ -1,0 +1,9 @@
+# @package habitat.task.actions
+
+defaults:
+  - stop
+  - move_forward_waypoint
+  - turn_left_waypoint
+  - turn_right_waypoint
+  - look_up_discrete_to_velocity
+  - look_down_discrete_to_velocity

@@ -7,6 +7,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+import numpy as np
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
 
@@ -29,6 +30,8 @@ __all__ = [
     "TurnRightActionConfig",
     "LookUpActionConfig",
     "LookDownActionConfig",
+    "LookUpDiscreteToVelocityActionConfig",
+    "LookDownDiscreteToVelocityActionConfig",
     # NAVIGATION MEASURES
     "NumStepsMeasurementConfig",
     "DistanceToGoalMeasurementConfig",
@@ -137,6 +140,19 @@ class StopActionConfig(ActionConfig):
 
 
 @dataclass
+class VelocityStopActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, the velocity stop action takes in a continuous space input. When
+    the action is passed a value greater than 0.0, the Agent will request to stop the Navigation
+    task. Note that stopping is required to succeed in a Navigation task since the Success
+    is determined by the Agent calling the stop action within range of the target.
+
+    The action is used along side the VelocityControlAction and WaypointControlAction.
+    """
+    type: str = "VelocityStopAction"
+
+
+@dataclass
 class EmptyActionConfig(ActionConfig):
     r"""
     In Navigation tasks only, the pass action. The robot will do nothing.
@@ -201,12 +217,113 @@ class TeleportActionConfig(ActionConfig):
 class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     # meters/sec
-    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.25])
-    # deg/sec
-    ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
+    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.3])
+    # rad/sec
+    ang_vel_range: List[float] = field(default_factory=lambda: [-0.45, 0.45])
+    # rad/sec
+    ang_vel_range_camera_pitch: List[float] = field(
+        default_factory=lambda: [-0.45, 0.45]
+    )
+    # rad
+    ang_range_camera_pitch: List[float] = field(
+        default_factory=lambda: [-1.57, 0.43]
+    )
+    time_step: float = 0.1  # seconds
+    enable_scale_convert: bool = True
+
+
+@dataclass
+class WaypointControlActionConfig(VelocityControlActionConfig):
+    r"""
+    In Navigation tasks only, this action will utilize a velocity controller to
+    move the robot to the desired waypoint.
+    The waypoint is specified in the frame of the robot.
+    """
+    type: str = "WaypointAction"
+    action_duration: float = 1.0  # seconds
+    # Action space range
+    waypoint_lin_range: List[float] = field(
+        default_factory=lambda: [-0.5, 0.5]
+    )  # meters
+    waypoint_ang_range: List[float] = field(
+        default_factory=lambda: [-np.pi, np.pi]
+    )  # radians
+    delta_ang_range_camera_pitch: List[float] = field(
+        default_factory=lambda: [-0.2, 0.2]
+    )  # radians
+    wait_duration_range: List[float] = field(
+        default_factory=lambda: [0.0, 10.0]
+    )  # seconds
+    yaw_input_in_degrees: bool = False
+    # Early stopping criteria
     min_abs_lin_speed: float = 0.025  # meters/sec
-    min_abs_ang_speed: float = 1.0  # # deg/sec
-    time_step: float = 1.0  # seconds
+    min_abs_ang_speed: float = 0.018  # rad/sec (1 deg/sec)
+    min_abs_ang_speed_camera_pitch: float = 0.018  # rad/sec (1 deg/sec)
+    # Controller parameters
+    v_max: float = 0.3
+    w_max: float = 0.45
+    w_max_camera_pitch: float = 0.90
+    acc_lin: float = 0.2
+    acc_ang: float = 0.6
+    acc_ang_camera_pitch: float = 0.6
+    max_heading_ang: float = np.pi / 4  # rad
+    lin_error_tol: float = 0.01
+    ang_error_tol: float = 0.025
+
+
+@dataclass
+class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will move the robot forward by
+    a fixed amount determined by the SimulatorConfig.forward_step_size amount.
+    """
+    type: str = "MoveForwardWaypointAction"
+    max_wait_duration: float = 3.0  # seconds
+    forward_step_size: float = 0.25  # meters
+
+
+@dataclass
+class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the left
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "TurnLeftWaypointAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
+
+
+@dataclass
+class TurnRightWaypointActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the right
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "TurnRightWaypointAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
+
+
+@dataclass
+class LookUpDiscreteToVelocityActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the left
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "LookUpDiscreteToVelocityAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
+
+
+@dataclass
+class LookDownDiscreteToVelocityActionConfig(WaypointControlActionConfig):
+    r"""
+    In Navigation tasks only, this discrete action will rotate the robot to the right
+    by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    """
+    type: str = "LookDownDiscreteToVelocityAction"
+    max_wait_duration: float = 3.0  # seconds
+    turn_angle: float = np.pi / 6  # rad (30 degrees)
 
 
 # -----------------------------------------------------------------------------
@@ -1310,6 +1427,8 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    cell_height: float = 0.2
+    max_climb: float = 0.2
     grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
@@ -1557,6 +1676,12 @@ cs.store(
     node=StopActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.velocity_stop",
+    group="habitat/task/actions",
+    name="velocity_stop",
+    node=VelocityStopActionConfig,
+)
+cs.store(
     package="habitat.task.actions.move_forward",
     group="habitat/task/actions",
     name="move_forward",
@@ -1587,10 +1712,52 @@ cs.store(
     node=LookDownActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.look_up_discrete_to_velocity",
+    group="habitat/task/actions",
+    name="look_up_discrete_to_velocity",
+    node=LookUpDiscreteToVelocityActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.look_down_discrete_to_velocity",
+    group="habitat/task/actions",
+    name="look_down_discrete_to_velocity",
+    node=LookDownDiscreteToVelocityActionConfig,
+)
+cs.store(
     package="habitat.task.actions.arm_action",
     group="habitat/task/actions",
     name="arm_action",
     node=ArmActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.velocity_control",
+    group="habitat/task/actions",
+    name="velocity_control",
+    node=VelocityControlActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.waypoint_control",
+    group="habitat/task/actions",
+    name="waypoint_control",
+    node=WaypointControlActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.move_forward_waypoint",
+    group="habitat/task/actions",
+    name="move_forward_waypoint",
+    node=MoveForwardWaypointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.turn_left_waypoint",
+    group="habitat/task/actions",
+    name="turn_left_waypoint",
+    node=TurnLeftWaypointActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.turn_right_waypoint",
+    group="habitat/task/actions",
+    name="turn_right_waypoint",
+    node=TurnRightWaypointActionConfig,
 )
 cs.store(
     package="habitat.task.actions.base_velocity",
