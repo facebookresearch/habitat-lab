@@ -447,7 +447,7 @@ def get_robot_spawns(
             _, details = rearrange_collision(
                 sim,
                 False,
-                ignore_base=False,
+                ignore_base=True,
             )
 
             # Only care about collisions between the robot and scene.

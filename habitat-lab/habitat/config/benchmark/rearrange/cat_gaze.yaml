@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
   - /habitat/task/rearrange: cat_gaze
   - /habitat/dataset/rearrangement: floorplanner
   - _self_
@@ -26,27 +26,27 @@ habitat:
       - data/objects/ycb/configs/
       - data/objects/amazon_berkeley/configs/
       - data/objects/google_object_dataset/configs/
+    debug_render_goal: False
+    debug_render: False
     needs_markers: False
     concur_render: True
     auto_sleep: True
+    requires_textures: False
+    kinematic_mode: True
     agents:
       main_agent:
         radius: 0.25
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
         sim_sensors:
-           head_rgb_sensor:
-             height: 256 # 640
-             width: 256 # 480
-             hfov: 90 # 42
            head_depth_sensor:
              height: 256 # 640
              width: 256 # 480
-             hfov: 90 # 42
+             hfov: 42 # 42
            head_panoptic_sensor:
              height: 256 # 640
              width: 256 # 480
-             hfov: 90 # 42
+             hfov: 42 # 42
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True

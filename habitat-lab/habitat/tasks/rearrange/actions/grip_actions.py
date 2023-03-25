@@ -176,7 +176,7 @@ class GazeGraspAction(MagicGraspAction):
             config.center_cone_vector
         ).normalized()
         self._instance_ids_start = sim.habitat_config.instance_ids_start
-
+        self._wrong_grasp_should_end = config.wrong_grasp_should_end
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -276,7 +276,8 @@ class GazeGraspAction(MagicGraspAction):
 
         # If there is nothing to grasp, then we return
         if center_obj_idx is None:
-            self._task._should_end = True
+            if self._wrong_grasp_should_end:
+                self._task._should_end = True
             return
 
         keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
