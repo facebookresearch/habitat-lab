@@ -47,8 +47,8 @@ class DynNavRLEnv(RearrangeTask):
         )
         self.force_obj_to_idx = None
         self.force_recep_to_name = None
-
         self._nav_to_info = None
+        self._goal_type = config.goal_type
 
     @property
     def nav_goal_pos(self):
@@ -94,6 +94,7 @@ class DynNavRLEnv(RearrangeTask):
         if (
             force_idx is None
             and random.random() < self._config.object_in_hand_sample_prob
+            and self._goal_type != 'ovmm'
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 

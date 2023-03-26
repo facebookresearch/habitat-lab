@@ -169,8 +169,11 @@ class OracleGraspAction(MagicGraspAction):
         self._sim: RearrangeSim = sim
         self._task: RearrangeTask = task
     def _grasp(self):
-        abs_obj_idx = self._sim.scene_obj_ids[self._task.abs_targ_idx]
-        self.cur_grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
+        allowed_scene_obj_ids = [int(g.object_id) for g in self._sim.ep_info.candidate_objects]
+        closest = np.argmin(np.linalg.norm((self._sim.get_scene_pos()[allowed_scene_obj_ids] - self._sim.robot.base_pos)[:, [0, 2]], axis=1))
+        snap_obj_idx = np.array(self._sim.scene_obj_ids)[allowed_scene_obj_ids][closest]
+        self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
+
     def _ungrasp(self):
         if self.cur_grasp_mgr.snap_idx != -1:
             rom = self._sim.get_rigid_object_manager()

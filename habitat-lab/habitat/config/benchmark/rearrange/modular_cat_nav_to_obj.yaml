@@ -29,7 +29,7 @@ habitat:
       - is_holding
       - relative_resting_position
   environment:
-    max_episode_steps: 400
+    max_episode_steps: 1250
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:

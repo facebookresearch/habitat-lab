@@ -17,7 +17,7 @@ class CatDynNavRLEnv(DynNavRLEnv):
         self, episode, start_hold_obj_idx=None, force_idx=None
     ):
         # learn nav to pick skill if not holding object currently
-        if start_hold_obj_idx is None:
+        if start_hold_obj_idx is None and not self._goal_type != 'ovmm':
             # starting positions of candidate objects
             all_pos = np.stack(
                 [goal.position for goal in episode.candidate_objects],

@@ -16,12 +16,20 @@ defaults:
     - robot_colls
     - rot_dist_to_goal
     - dist_to_goal
+    # TODO: inconsistent naming succ vs succcess, rearrange prefix
     - nav_to_pos_succ
     - does_want_terminate
     - rearrange_nav_to_obj_success
     - bad_called_terminate
     - rearrange_nav_to_obj_reward
     - num_steps
+    - obj_anywhere_on_goal
+    - end_effector_to_rest_distance
+    - did_pick_object
+    - pick_success
+    - place_success
+    - pick_nav_to_pos_succ
+    - rearrange_pick_nav_to_obj_success
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
@@ -69,6 +77,12 @@ measurements:
   force_terminate:
     max_accum_force: -1.0
     max_instant_force: -1.0
+  pick_success: 
+    object_goal: True
+    ee_resting_success_threshold: 100
+  place_success:
+    place_anywhere: True
+    ee_resting_success_threshold: 100
 lab_sensors:
   joint_sensor:
     dimensionality: 10

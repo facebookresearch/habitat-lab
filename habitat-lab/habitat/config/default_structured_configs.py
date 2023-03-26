@@ -582,6 +582,9 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
     type: str = "NavToPosSucc"
     success_distance: float = 1.5
 
+@dataclass
+class PickNavToPosSuccMeasurementConfig(MeasurementConfig):
+    type: str = "PickNavToPosSucc"
 
 @dataclass
 class NavToObjRewardMeasurementConfig(MeasurementConfig):
@@ -606,6 +609,10 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
     # distance in radians.
     success_angle_dist: float = 0.261799
+
+@dataclass
+class PickNavToObjSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "PickNavToObjSuccess"
 
 
 @dataclass
@@ -1868,6 +1875,12 @@ cs.store(
     node=NavToPosSuccMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.pick_nav_to_pos_succ",
+    group="habitat/task/measurements",
+    name="pick_nav_to_pos_succ",
+    node=PickNavToPosSuccMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.rot_dist_to_goal",
     group="habitat/task/measurements",
     name="rot_dist_to_goal",
@@ -1878,6 +1891,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_nav_to_obj_success",
     node=NavToObjSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rearrange_pick_nav_to_obj_success",
+    group="habitat/task/measurements",
+    name="rearrange_pick_nav_to_obj_success",
+    node=PickNavToObjSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_nav_to_obj_reward",

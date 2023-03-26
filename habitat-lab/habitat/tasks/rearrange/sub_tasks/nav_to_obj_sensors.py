@@ -21,6 +21,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import quaternion_from_coeff
+import magnum as mn
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -284,8 +285,18 @@ class RotDistToGoal(Measure):
             targ = task.nav_goal_pos[closest_goal]
         else:
             targ = task.nav_goal_pos
-        robot = self._sim.robot
-        T = robot.base_transformation
+
+        # robot = self._sim.robot
+        # T = robot.base_transformation
+        #TODO: handle this for other robots, add config params for angle wrt base
+        cam_info = self._sim.robot.params.cameras["robot_head"]
+        # Get the camera's attached link
+        link_trans = self._sim.robot.sim_obj.get_link_scene_node(
+            cam_info.attached_link_id
+        ).transformation
+        # Get the camera offset transformation
+        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+        T = link_trans @ offset_trans @ cam_info.relative_transform
         angle = get_angle_to_pos(T.transform_vector(targ))
         self._metric = np.abs(float(angle))
 
@@ -358,3 +369,66 @@ class NavToObjSuccess(Measure):
                 task.should_end = True
             else:
                 self._metric = False
+
+# TODO: Move to a separate file for ovmm sensors
+from habitat.tasks.rearrange.sub_tasks.pick_sensors import (
+    DidPickObjectMeasure,
+)
+@registry.register_measure
+class PickNavToPosSucc(Measure):
+    cls_uuid: str = "pick_nav_to_pos_succ"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickNavToPosSucc.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [NavToPosSucc.cls_uuid, DidPickObjectMeasure.cls_uuid],
+        )
+        self.update_metric(*args, task=task, **kwargs)
+
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+        super().__init__(*args, config=config, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        nav_to_pos_success = task.measurements.measures[
+            NavToPosSucc.cls_uuid
+        ].get_metric()
+
+        did_pick_object = task.measurements.measures[
+            DidPickObjectMeasure.cls_uuid
+        ].get_metric()
+        self._metric = nav_to_pos_success and did_pick_object
+
+
+@registry.register_measure
+class PickNavToObjSuccess(Measure):
+    cls_uuid: str = "pick_nav_to_obj_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickNavToObjSuccess.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [NavToObjSuccess.cls_uuid, DidPickObjectMeasure.cls_uuid],
+        )
+        self.update_metric(*args, task=task, **kwargs)
+
+    def __init__(self, *args, config, **kwargs):
+        self._config = config
+        super().__init__(*args, config=config, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        nav_to_obj_success = task.measurements.measures[
+            NavToObjSuccess.cls_uuid
+        ].get_metric()
+
+        did_pick_object = task.measurements.measures[
+            DidPickObjectMeasure.cls_uuid
+        ].get_metric()
+        self._metric = nav_to_obj_success and did_pick_object
