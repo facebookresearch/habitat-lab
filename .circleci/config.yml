@@ -157,7 +157,7 @@ jobs:
                 conda install -y pytorch==1.12.1=py3.9_cuda11.3_cudnn8.3.2_0 torchvision==0.13.1=py39_cu113 cudatoolkit=11.3 -c pytorch -c nvidia
               fi
               touch ~/miniconda/pytorch_installed
-              python -c 'import torch; print("Has cuda ? ",torch.cuda.is_available()); print("torch version : ",torch.__version__);'
+              python -c 'import torch; print("Has cuda?", torch.cuda.is_available()); print("torch version:", torch.__version__);'
       - restore_cache:
           keys:
             - v1-habitat-sim-{{ checksum "./hsim_sha" }}
@@ -314,15 +314,84 @@ jobs:
       - run:
           name: Ensure non-editable mode works
           command: |
+              cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
-              python -m pip install habitat-lab/
-              python -c "import habitat"
-              python -m pip install habitat-baselines/
-              python -c "import habitat_baselines"
+              conda create -y -n non-editable-install python=3.9
+              . activate non-editable-install
+              conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+              pip install habitat-lab/
+              python -c 'import habitat; print("habitat version:", habitat.__version__)'
+              pip install habitat-baselines/
+              python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+
+      - run:
+          name: Ensure build and intall work
+          command: |
+              cd habitat-lab
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+
+              conda create -y -n build-env python=3.9
+              . activate build-env
+              pip install --upgrade build
+              python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
+              python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
+
+              conda create -y -n bdist-install python=3.9
+              . activate bdist-install
+              conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
+              conda create -n sdist-install --clone bdist-install
+
+              # install from built distribution:
+              . activate bdist-install
+              pip install habitat-lab/dist/habitat_lab*.whl
+              python -c 'import habitat; print("habitat version:", habitat.__version__)'
+              pip install habitat-baselines/dist/habitat_baselines*.whl
+              python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+
+              # install from source distribution:
+              . activate sdist-install
+              pip install habitat-lab/dist/habitat-lab*.tar.gz
+              python -c 'import habitat; print("habitat version:", habitat.__version__)'
+              pip install habitat-baselines/dist/habitat-baselines*.tar.gz
+              python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
+
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
-
+  pypi_deploy:
+    <<: *gpu
+    parameters:
+      username_env_var:
+        description: "Twine username environment variable name"
+        type: env_var_name
+        default: TESTPYPI_USERNAME
+      password_env_var:
+        description: "Twine password environment variable name"
+        type: env_var_name
+        default: TESTPYPI_PASSWORD
+      repository:
+        description: "Twine repository name (possible options: testpypi or pypi)"
+        type: string
+        default: "testpypi"
+    steps:
+      - checkout:
+          path: ./habitat-lab
+      - run:
+          name: Deploy Habitat-Lab and Habitat-Baselines to PyPI
+          command: |
+              cd habitat-lab
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate build-env
+              pip install --upgrade twine
+              twine upload \\
+                --username ${<< parameters.username_env_var >>} \\
+                --password ${<< parameters.password_env_var >>} \\
+                --repository ${<< parameters.repository >>} \\
+                habitat-lab/dist/*
+              twine upload \\
+                --username ${<< parameters.username_env_var >>} \\
+                --password ${<< parameters.password_env_var >>} \\
+                --repository ${<< parameters.repository >>} \\
+                habitat-baselines/dist/*
 
 workflows:
   version: 2
@@ -331,3 +400,40 @@ workflows:
       - pre-commit
       - python_lint
       - install_and_test_ubuntu
+  testpypi_nightly:
+    triggers:
+      - schedule:
+          cron: "0 7 * * *"
+          filters:
+            branches:
+              only: main
+    jobs:
+      - pre-commit
+      - python_lint
+      - install_and_test_ubuntu
+      - pypi_deploy:
+          requires:
+            - pre-commit
+            - python_lint
+            - install_and_test_ubuntu
+  version_pipy_release:
+    jobs:
+      - pre-commit:
+          filters: &version_filter
+            tags:
+              only: /^v[0-9]+(\.[0-9]+)*.*/ # v0.1.5-rc1
+            branches:
+              ignore: /.*/
+      - python_lint:
+          filters: *version_filter
+      - install_and_test_ubuntu:
+          filters: *version_filter
+      - pypi_deploy:
+          filters: *version_filter
+          username_env_var: PYPI_USERNAME
+          password_env_var: PYPI_PASSWORD
+          repository: "pypi"
+          requires:
+            - pre-commit
+            - python_lint
+            - install_and_test_ubuntu
