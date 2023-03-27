@@ -1,0 +1,17 @@
+# @package hydra.launcher
+submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+timeout_min: 2160
+nodes: 1
+cpus_per_task: 10
+mem_per_cpu: 5
+name: ${hydra.job.name}%j
+_target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
+partition: devlab
+tasks_per_node: 2
+gres: gpu:2
+setup: 
+  - MAIN_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
+  - export MAIN_ADDR
+  - export MASTER_ADDR=$(hostname -s)
+  - export MAGNUM_LOG=quiet
+  - export HABITAT_SIM_LOG=quiet
