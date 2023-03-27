@@ -54,7 +54,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
             keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
 
-            if to_target < self._config.grasp_thresh_dist:
+            if to_target < self._grasp_thresh_dist:
                 self.cur_grasp_mgr.snap_to_obj(
                     self._sim.scene_obj_ids[closest_obj_idx],
                     force=False,
@@ -75,7 +75,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
-            if to_target < self._config.grasp_thresh_dist:
+            if to_target < self._grasp_thresh_dist:
                 self.cur_robot.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
@@ -176,7 +176,11 @@ class GazeGraspAction(MagicGraspAction):
             config.center_cone_vector
         ).normalized()
         self._instance_ids_start = sim.habitat_config.instance_ids_start
+        self._grasp_thresh_dist = config.grasp_thresh_dist
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
+        # TODO: better name?
+        self._distance_from = getattr(config, 'gaze_distance_from', 'camera')
+
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -224,25 +228,27 @@ class GazeGraspAction(MagicGraspAction):
         return cam_trans
 
     def determine_center_object(self):
-        """Determine if an object is at the center of the frame and in range"""
-        if isinstance(self._sim.robot, SpotRobot):
-            cam_pos = (
-                self._sim.agents[0]
-                .get_state()
-                .sensor_states["articulated_agent_arm_rgb"]
-                .position
-            )
-        elif isinstance(self._sim.robot, StretchRobot):
-            cam_pos = (
-                self._sim.agents[0]
-                .get_state()
-                .sensor_states["robot_head_depth"]
-                .position
-            )
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
+        cam_pos = None
+        if self._distance_from == 'camera':
+            """Determine if an object is at the center of the frame and in range"""
+            if isinstance(self._sim.robot, SpotRobot):
+                cam_pos = (
+                    self._sim.agents[0]
+                    .get_state()
+                    .sensor_states["articulated_agent_arm_rgb"]
+                    .position
+                )
+            elif isinstance(self._sim.robot, StretchRobot):
+                cam_pos = (
+                    self._sim.agents[0]
+                    .get_state()
+                    .sensor_states["robot_head_depth"]
+                    .position
+                )
+            else:
+                raise NotImplementedError(
+                    "This robot does not have GazeGraspAction."
+                )
 
         # Check if center pixel corresponds to a pickable object
         if isinstance(self._sim.robot, StretchRobot):
@@ -253,13 +259,20 @@ class GazeGraspAction(MagicGraspAction):
             raise NotImplementedError(
                 "This robot dose not have GazeGraspAction."
         )
+
         height, width = panoptic_img.shape[:2]
         center_obj_id = panoptic_img[height // 2,  width // 2] - self._instance_ids_start
         if center_obj_id in self._sim.scene_obj_ids:
             rom = self._sim.get_rigid_object_manager()
             # Skip if not in distance range
             obj_pos = rom.get_object_by_id(center_obj_id).translation
-            dist = np.linalg.norm(obj_pos - cam_pos)
+            if self._distance_from == 'camera':
+                dist = np.linalg.norm(obj_pos - cam_pos)
+            elif self._distance_from == 'agent':
+                agent_pos = self._sim.robot.base_pos
+                dist = np.linalg.norm((obj_pos - agent_pos)[[0, 2]])
+            else:
+                raise NotImplementedError
             if dist < self.min_dist or dist > self.max_dist:
                 return None, None
             # Skip if not in the central cone
@@ -281,10 +294,6 @@ class GazeGraspAction(MagicGraspAction):
             return
 
         keep_T = mn.Matrix4.translation(mn.Vector3(0.1, 0.0, 0.0))
-        # here we need the link T, not the EE T for the constraint frame
-        ee_link_T = self.cur_robot.sim_obj.get_link_scene_node(
-            self.cur_robot.params.ee_link
-        ).absolute_transformation()
         self.cur_grasp_mgr.snap_to_obj(
             center_obj_idx,
             force=True,

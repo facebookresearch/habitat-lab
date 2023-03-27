@@ -126,6 +126,7 @@ class ArmActionConfig(ActionConfig):
     center_cone_angle_threshold: float = 0.0
     center_cone_vector: Optional[List[float]] = None
     wrong_grasp_should_end: bool = False
+    gaze_distance_from: str = 'camera'
 
 
 @attr.s(auto_attribs=True, slots=True)
