@@ -24,6 +24,9 @@ class PddlApplyAction(ArticulatedAgentAction):
             self._action_ordering = (
                 self._task.pddl_problem.get_ordered_actions()
             )
+            self._entities_list = (
+                self._task.pddl_problem.get_ordered_entities_list()
+            )
 
         action_n_args = sum(
             [action.n_args for action in self._action_ordering]
@@ -41,9 +44,6 @@ class PddlApplyAction(ArticulatedAgentAction):
             }
         )
 
-    def get_entities_list(self):
-        return self._task.pddl_problem.get_ordered_entities_list()
-
     @property
     def was_prev_action_invalid(self):
         return self._was_prev_action_invalid
@@ -58,7 +58,7 @@ class PddlApplyAction(ArticulatedAgentAction):
             start_idx += action.n_args
         return start_idx
 
-    def _apply_action(self, apply_pddl_action, entities_list):
+    def _apply_action(self, apply_pddl_action):
         cur_i = 0
         for action in self._action_ordering:
             action_part = apply_pddl_action[cur_i : cur_i + action.n_args][:]
@@ -72,7 +72,9 @@ class PddlApplyAction(ArticulatedAgentAction):
                             f"Got invalid action value < 0 in {action_part} with action {action}"
                         )
 
-                param_values = [entities_list[i] for i in real_action_idxs]
+                param_values = [
+                    self._entities_list[i] for i in real_action_idxs
+                ]
 
                 # Look up the most recent version of this action.
                 apply_action = self._task.pddl_problem.actions[
@@ -92,12 +94,11 @@ class PddlApplyAction(ArticulatedAgentAction):
         self._prev_action = None
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         self._was_prev_action_invalid = False
-        entities_list = self.get_entities_list()
         inputs_outside = any(
-            a < 0 or a > len(entities_list) for a in apply_pddl_action
+            a < 0 or a > len(self._entities_list) for a in apply_pddl_action
         )
         if not inputs_outside:
-            self._apply_action(apply_pddl_action, entities_list)
+            self._apply_action(apply_pddl_action)
 
         if is_last_action:
             return self._sim.step(HabitatSimActions.arm_action)

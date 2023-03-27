@@ -71,12 +71,38 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._idx_to_name: Dict[int, str] = {}
 
         self._pddl = self._create_pddl(full_config, config)
+        self._create_skills(
+            dict(config.hierarchical_policy.defined_skills),
+            observation_space,
+            action_space,
+            full_config,
+        )
 
+        self._cur_skills: torch.Tensor = torch.full(
+            (self._num_envs,), -1, dtype=torch.long
+        )
+
+        high_level_cls = self._get_hl_policy_cls(config)
+        self._high_level_policy: HighLevelPolicy = high_level_cls(
+            config.hierarchical_policy.high_level_policy,
+            self._pddl,
+            num_envs,
+            self._name_to_idx,
+            observation_space,
+            action_space,
+        )
+        self._stop_action_idx, _ = find_action_range(
+            action_space, "rearrange_stop"
+        )
+
+    def _create_skills(
+        self, skills, observation_space, action_space, full_config
+    ):
         skill_i = 0
         for (
             skill_name,
             skill_config,
-        ) in config.hierarchical_policy.defined_skills.items():
+        ) in skills.items():
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config,
@@ -96,24 +122,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
 
-        self._cur_skills: torch.Tensor = torch.full(
-            (self._num_envs,), -1, dtype=torch.long
-        )
-
-        high_level_cls = eval(
-            config.hierarchical_policy.high_level_policy.name
-        )
-        self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.hierarchical_policy.high_level_policy,
-            self._pddl,
-            num_envs,
-            self._name_to_idx,
-            observation_space,
-            action_space,
-        )
-        self._stop_action_idx, _ = find_action_range(
-            action_space, "rearrange_stop"
-        )
+    def _get_hl_policy_cls(self, config):
+        return eval(config.hierarchical_policy.high_level_policy.name)
 
     def _create_pddl(self, full_config, config) -> PddlDomain:
         """
