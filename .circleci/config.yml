@@ -323,38 +323,37 @@ jobs:
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
-
-      - run:
-          name: Ensure build and intall work
+      - run: &build_sdist_and_bdist
+          name: Build sdist and bdist
           command: |
               cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-
               conda create -y -n build-env python=3.9
               . activate build-env
               pip install --upgrade build
               python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-lab/
               python -m build -s -w -C--global-option=egg_info -C--global-option=--tag-date habitat-baselines/
-
+      - run:
+          name: Ensure sdist and bdist intall work
+          command: |
+              cd habitat-lab
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               conda create -y -n bdist-install python=3.9
               . activate bdist-install
               conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
               conda create -n sdist-install --clone bdist-install
-
               # install from built distribution:
               . activate bdist-install
               pip install habitat-lab/dist/habitat_lab*.whl
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/dist/habitat_baselines*.whl
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
-
               # install from source distribution:
               . activate sdist-install
               pip install habitat-lab/dist/habitat-lab*.tar.gz
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
               pip install habitat-baselines/dist/habitat-baselines*.tar.gz
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
-
       - store_artifacts:
           path: habitat-lab/data/profile  # This is the benchmark profile
   pypi_deploy:
@@ -376,7 +375,19 @@ jobs:
       - checkout:
           path: ./habitat-lab
       - run:
-          name: Deploy Habitat-Lab and Habitat-Baselines to PyPI
+          name: Install conda
+          no_output_timeout: 20m
+          command: |
+              if [ ! -d ~/miniconda ]
+              then
+                curl -o ~/miniconda.sh -O  https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+                chmod +x ~/miniconda.sh
+                bash ~/miniconda.sh -b -p $HOME/miniconda
+                rm ~/miniconda.sh
+              fi
+      - run: *build_sdist_and_bdist
+      - run:
+          name: Deploy Habitat-Lab and Habitat-Baselines distributions to PyPI
           command: |
               cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
