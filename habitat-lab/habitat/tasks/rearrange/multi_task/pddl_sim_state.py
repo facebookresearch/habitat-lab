@@ -109,7 +109,11 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
             robot = sim_info.sim.get_agent_data(robot_id).articulated_agent
             dist = np.linalg.norm(robot.base_pos - targ_pos)
-            if dist > sim_info.robot_at_thresh:
+            if self.place_at_pos_dist == -1.0:
+                use_thresh = sim_info.robot_at_thresh
+            else:
+                use_thresh = self.place_at_pos_dist
+            if dist > use_thresh:
                 return False
 
         return True

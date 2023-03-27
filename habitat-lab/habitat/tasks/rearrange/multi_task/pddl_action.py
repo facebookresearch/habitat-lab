@@ -41,7 +41,8 @@ class PddlAction:
         parameters: List[PddlEntity],
         pre_cond: LogicalExpr,
         post_cond: List[Predicate],
-        task_info: ActionTaskInfo,
+        task_info: Optional[ActionTaskInfo],
+        post_cond_search: Optional[List[Dict[PddlEntity, PddlEntity]]] = None,
     ):
         """
         Models the PDDL acton entity.
@@ -51,6 +52,9 @@ class PddlAction:
         :param post_cond: The post conditions of the PDDL action.
         :param task_info: Information to link the PDDL action with a Habitat
             task definition.
+        :param post_cond_search: Mapping expanded quantifier inputs from the
+            pre-condition to ungrounded entities in the post-condition. One
+            mapping per quantifier expansion.
         """
         if not isinstance(pre_cond, LogicalExpr):
             raise ValueError(f"Incorrect type {pre_cond}")
@@ -62,6 +66,42 @@ class PddlAction:
         self._pre_cond = pre_cond
         self._post_cond = post_cond
         self._task_info = task_info
+        self._post_cond_search = post_cond_search
+
+    def set_post_cond_search(
+        self, post_cond_search: List[Dict[PddlEntity, PddlEntity]]
+    ):
+        self._post_cond_search = post_cond_search
+
+    def apply_if_true(self, sim_info: PddlSimInfo) -> bool:
+        """
+        Apply the action post-condition to the simulator if the action
+        pre-condition is true. This will also dynamically select the right
+        entities for the post-condition based on the pre-condition quantifiers.
+        """
+        is_sat = self._pre_cond.is_true(sim_info)
+        if not is_sat:
+            return False
+
+        post_conds = self._post_cond
+        if self._post_cond_search is not None:
+            found_assign = None
+            assert len(self._pre_cond.prev_truth_vals) == len(
+                self._post_cond_search
+            )
+            for sat, assign in zip(
+                self._pre_cond.prev_truth_vals, self._post_cond_search
+            ):
+                if sat:
+                    found_assign = assign
+                    break
+            # Clone and sub in so we don't overwrite the original predicates
+            post_conds = [p.clone().sub_in(found_assign) for p in post_conds]
+
+        for p in post_conds:
+            p.set_state(sim_info)
+
+        return True
 
     def get_arg_value(self, param_name: str) -> Optional[PddlEntity]:
         """
@@ -139,24 +179,33 @@ class PddlAction:
         self._param_values = [sub_dict.get(p, p) for p in self._param_values]
         self._post_cond = [p.sub_in(sub_dict) for p in self._post_cond]
         self._pre_cond = self._pre_cond.sub_in(sub_dict)
-        self._task_info.add_task_args = {
-            k: sub_dict.get(p, p)
-            for k, p in self._task_info.add_task_args.items()
-        }
+        if self._task_info is not None:
+            self._task_info.add_task_args = {
+                k: sub_dict.get(p, p)
+                for k, p in self._task_info.add_task_args.items()
+            }
 
     def clone(self) -> "PddlAction":
+        """
+        Clones the action potentially with a new name.
+        """
         return PddlAction(
             self._name,
             self._params,
             self._pre_cond.clone(),
             [p.clone() for p in self._post_cond],
             self._task_info,
+            self._post_cond_search,
         )
 
     def apply(self, sim_info: PddlSimInfo) -> None:
         for p in self._post_cond:
             rearrange_logger.debug(f"Setting predicate {p}")
             p.set_state(sim_info)
+
+    @property
+    def params(self) -> List[PddlEntity]:
+        return self._params
 
     @property
     def param_values(self) -> Optional[List[PddlEntity]]:
@@ -169,6 +218,7 @@ class PddlAction:
         return self._param_values
 
     def get_task_kwargs(self, sim_info: PddlSimInfo) -> Dict[str, Any]:
+        assert self._task_info is not None
         task_kwargs: Dict[str, Any] = {"orig_applied_args": {}}
         for param, param_value in zip(self._params, self.param_values):
             task_kwargs[param.name] = sim_info.search_for_entity(param_value)
@@ -188,6 +238,7 @@ class PddlAction:
         should_reset: bool = True,
         add_task_kwargs: Optional[Dict[str, Any]] = None,
     ) -> RearrangeTask:
+        assert self._task_info is not None
         rearrange_logger.debug(
             f"Loading task {self._task_info.task} with definition {self._task_info.task_def}"
         )
