@@ -270,7 +270,7 @@ class GazeGraspAction(MagicGraspAction):
                 dist = np.linalg.norm(obj_pos - cam_pos)
             elif self._distance_from == 'agent':
                 agent_pos = self._sim.robot.base_pos
-                dist = np.linalg.norm((obj_pos - agent_pos)[[0, 2]])
+                dist = np.linalg.norm(np.array(obj_pos - agent_pos)[[0, 2]])
             else:
                 raise NotImplementedError
             if dist < self.min_dist or dist > self.max_dist:
