@@ -70,6 +70,7 @@ class PddlDomain:
         """
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
+        self._orig_actions: Dict[str, PddlAction] = {}
 
         if not osp.isabs(domain_file_path):
             parent_dir = osp.dirname(__file__)
@@ -104,7 +105,6 @@ class PddlDomain:
         Fetches the PDDL actions into `self.actions`
         """
 
-        self._orig_actions: Dict[str, PddlAction] = {}
         for action_d in domain_def["actions"]:
             parameters = [
                 PddlEntity(p["name"], self.expr_types[p["expr_type"]])
@@ -577,6 +577,9 @@ class PddlDomain:
         only logical expressions that don't involve any quantifier. Doesn't
         require the simulation to be grounded and expands using the current
         defined types.
+
+        :returns: The expanded expression and the list of substitutions in the
+            case of an EXISTS quantifier.
         """
 
         expr.sub_exprs = [
@@ -591,7 +594,7 @@ class PddlDomain:
         elif expr.quantifier == LogicalQuantifierType.EXISTS:
             combine_type = LogicalExprType.OR
         elif expr.quantifier is None:
-            return expr, {}
+            return expr, []
         else:
             raise ValueError(f"Unrecongized {expr.quantifier}")
 

@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
