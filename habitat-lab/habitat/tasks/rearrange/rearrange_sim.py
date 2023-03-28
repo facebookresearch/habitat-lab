@@ -260,6 +260,10 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         self.agents_mgr.reconfigure(new_scene)
+        # Only remove and re-add objects if we have a new set of objects.
+        obj_names = [x[0] for x in ep_info.rigid_objs]
+        should_add_objects = self._prev_obj_names != obj_names
+        self._prev_obj_names = obj_names
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
