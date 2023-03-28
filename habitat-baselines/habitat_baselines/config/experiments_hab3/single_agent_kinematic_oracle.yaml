@@ -1,14 +1,13 @@
 # @package _global_
 
 defaults:
-  - /rearrange/rl_hierarchical
-  - override /habitat_baselines/rl/policy: hl_neural
+  - /rearrange/rl_hierarchical_oracle_nav
+  - override /habitat_baselines/rl/policy: hab3_hl_neural
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills
-  - override /hydra/output: path
-  - override /hydra/launcher: submitit_habitat
   - _self_
 
 habitat_baselines:
+  log_interval: 1
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
   tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
   eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
@@ -31,7 +30,7 @@ habitat:
         max_instant_force: -1.0
 
   environment:
-    max_episode_steps: 30
+    max_episode_steps: 700
 
   simulator:
     kinematic_mode: True
