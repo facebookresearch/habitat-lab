@@ -303,7 +303,6 @@ class RearrangeSim(HabitatSim):
             self._load_navmesh(ep_info)
 
         # Get the starting positions of the target objects.
-        rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
             [

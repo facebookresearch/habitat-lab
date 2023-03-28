@@ -144,7 +144,7 @@ habitat:
     robot_joint_start_noise: 0.0
     ctrl_freq: 120.0
     ac_freq_ratio: 4
-    load_objs: false
+    load_objs: true
     hold_thresh: 0.09
     grasp_impulse: 1000.0
     agents:
@@ -329,7 +329,7 @@ class SimulatorConfig(HabitatBaseConfig):
 ```
 - [Parameter sweeping and multirun](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run/). For example, launching 3 experiments with three different learning rates:
 ```bash
-python -u habitat-baselines/habitat_baselines/run.py --config-name=config.yaml  \
+python -u -m habitat_baselines.run --config-name=config.yaml  \
 –-multirun habitat_baselines.rl.ppo.lr 2.5e-4,2.5e-5,2.5e-6
 ```
 - Seamless [SLURM](https://slurm.schedmd.com/documentation.html) integration through
@@ -337,7 +337,7 @@ python -u habitat-baselines/habitat_baselines/run.py --config-name=config.yaml  
   To enable the feature Submitit plugin should be installed: `pip install hydra-submitit-launcher --upgrade`
   and `submitit_slurm` launcher specified in the command line `hydra/launcher=submitit_slurm`:
 ```bash
-python -u habitat-baselines/habitat_baselines/run.py --config-name=config.yaml  \
+python -u -m habitat_baselines.run --config-name=config.yaml  \
 hydra/launcher=submitit_slurm --multirun
 ```
 - Making the config key required by setting its value to `MISSING`. For example, we require the user to explicitly
@@ -367,14 +367,14 @@ config = habitat.get_config("benchmark/nav/pointnav/pointnav_gibson.yaml")
 #### via command line
 Override config values:
 ```bash
-python -u habitat_baselines/run.py --config-name=pointnav/ddppo_pointnav.yaml \
+python -u -m habitat_baselines.run --config-name=pointnav/ddppo_pointnav.yaml \
 habitat.environment.max_episode_steps=250 \
 habitat_baselines.total_num_steps=100
 ```
 
 Override the Config Group Option value:
 ```bash
-python -u habitat_baselines/run.py --config-name=pointnav/ddppo_pointnav.yaml \
+python -u -m habitat_baselines.run --config-name=pointnav/ddppo_pointnav.yaml \
 benchmark/nav/pointnav=pointnav_hm3d  # overriding benchmark config to be pointnav_hm3d
 ```
 

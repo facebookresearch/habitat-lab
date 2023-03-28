@@ -18,7 +18,6 @@ repos:
     -   id: check-merge-conflict
     -   id: check-toml
     -   id: check-yaml
-        exclude: "habitat-baselines/habitat_baselines/slambased/data/"
     -   id: mixed-line-ending
         args: ['--fix=lf']
 
@@ -107,7 +106,6 @@ repos:
     rev: v0.8.0.4
     hooks:
     -   id: shellcheck
-        exclude: ^habitat-baselines/habitat_baselines/slambased/
 
 -   repo: https://github.com/AleksaC/circleci-cli-py
     rev: v0.1.17183

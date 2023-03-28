@@ -15,18 +15,17 @@ class PddlApplyAction(ArticulatedAgentAction):
     def __init__(self, *args, task, **kwargs):
         super().__init__(*args, **kwargs)
         self._task = task
-        self._entities_list = None
         self._action_ordering = None
         self._was_prev_action_invalid = False
 
     @property
     def action_space(self):
-        if self._entities_list is None:
-            self._entities_list = (
-                self._task.pddl_problem.get_ordered_entities_list()
-            )
+        if self._action_ordering is None:
             self._action_ordering = (
                 self._task.pddl_problem.get_ordered_actions()
+            )
+            self._entities_list = (
+                self._task.pddl_problem.get_ordered_entities_list()
             )
 
         action_n_args = sum(
@@ -77,12 +76,16 @@ class PddlApplyAction(ArticulatedAgentAction):
                     self._entities_list[i] for i in real_action_idxs
                 ]
 
-                apply_action = action.clone()
+                # Look up the most recent version of this action.
+                apply_action = self._task.pddl_problem.actions[
+                    action.name
+                ].clone()
                 apply_action.set_param_values(param_values)
                 self._prev_action = apply_action
-                if self._task.pddl_problem.is_expr_true(apply_action.precond):
-                    self._task.pddl_problem.apply_action(apply_action)
-                else:
+
+                if not apply_action.apply_if_true(
+                    self._task.pddl_problem.sim_info
+                ):
                     self._was_prev_action_invalid = True
 
             cur_i += action.n_args
