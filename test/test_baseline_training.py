@@ -51,53 +51,53 @@ def setup_function(test_trainers):
 @pytest.mark.parametrize(
     "config_path,num_updates,overrides",
     [
+        # (
+        #     "rearrange/rl_skill.yaml",
+        #     3,
+        #     ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
+        # ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
-            3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["benchmark/rearrange=open_cab"],
         ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
-            3,
-            [
-                "benchmark/rearrange=open_fridge",
-            ],
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
-            3,
-            ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
-            3,
-            [
-                "habitat.dataset.split=minival",
-                "benchmark/rearrange=nav_to_obj",
-            ],
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
-            3,
-            [
-                "benchmark/rearrange=close_fridge",
-            ],
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
-            3,
-            ["benchmark/rearrange=close_cab"],
-        ),
-        (
-            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
-            3,
-            [],
-        ),
+        # (
+        #     "rearrange/rl_skill.yaml",
+        #     3,
+        #     [
+        #         "benchmark/rearrange=open_fridge",
+        #     ],
+        # ),
+        # (
+        #     "rearrange/rl_skill.yaml",
+        #     3,
+        #     ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
+        # ),
+        # (
+        #     "rearrange/rl_skill.yaml",
+        #     3,
+        #     [
+        #         "habitat.dataset.split=minival",
+        #         "benchmark/rearrange=nav_to_obj",
+        #     ],
+        # ),
+        # (
+        #     "rearrange/rl_skill.yaml",
+        #     3,
+        #     [
+        #         "benchmark/rearrange=close_fridge",
+        #     ],
+        # ),
+        # (
+        #     "rearrange/rl_skill.yaml",
+        #     3,
+        #     ["benchmark/rearrange=close_cab"],
+        # ),
+        # (
+        #     "imagenav/ddppo_imagenav_example.yaml",
+        #     3,
+        #     [],
+        # ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])

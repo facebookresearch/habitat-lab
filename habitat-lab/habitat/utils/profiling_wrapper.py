@@ -9,7 +9,7 @@ if habitat_sim isn't installed.
 Example of capturing an Nsight Systems profile with Habitat-lab:
 export HABITAT_PROFILING=1
 export NSYS_NVTX_PROFILER_REGISTER_ONLY=0  # required when using capture range
-path/to/nvidia/nsight-systems/bin/nsys profile --sample=none --trace=nvtx --trace-fork-before-exec=true --capture-range=nvtx -p "habitat_capture_range" --stop-on-range-end=true --output=my_profile --export=sqlite python habitat_baselines/run.py --config-name=pointnav/ppo_pointnav.yaml profiling.capture_start_step 200 profiling.num_steps_to_capture 100
+path/to/nvidia/nsight-systems/bin/nsys profile --sample=none --trace=nvtx --trace-fork-before-exec=true --capture-range=nvtx -p "habitat_capture_range" --stop-on-range-end=true --output=my_profile --export=sqlite python -m habitat_baselines.run --config-name=pointnav/ppo_pointnav.yaml profiling.capture_start_step=200 profiling.num_steps_to_capture=100
 # look for my_profile.qdrep in working directory
 """
 

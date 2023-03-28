@@ -2,6 +2,8 @@
 
 defaults:
   - /habitat: habitat_config_base
+  - /habitat/task/actions:
+    - base_velocity_non_cylinder
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbdp_arm_agent
   - /habitat/task/rearrange: play
   - /habitat/dataset/rearrangement: replica_cad
@@ -26,6 +28,15 @@ habitat:
         gaze_distance_range: [0.01, 0.3]
         center_cone_angle_threshold: 20.0
         center_cone_vector: [0.0, 1.0, 0.0]
+      base_velocity_non_cylinder:
+        allow_dyn_slide: False
+        # There is a collision if the difference between the clamped NavMesh position and target position
+        # is more than than collision_threshold for any point
+        collision_threshold: 1e-5
+        # The x and y locations of the clamped NavMesh position
+        navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        # If we allow the robot to move laterally
+        enable_lateral_move: True
   simulator:
     type: RearrangeSim-v0
     seed: 100
@@ -33,7 +44,7 @@ habitat:
       - "data/objects/ycb/configs/"
     agents:
       main_agent:
-        radius: 0.55
+        radius: 0.3
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:

@@ -14,7 +14,10 @@ from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.multi_task.composite_sensors import (
     CompositeSuccess,
 )
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat.tasks.rearrange.multi_task.pddl_domain import (
+    PddlDomain,
+    PddlProblem,
+)
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
@@ -41,13 +44,13 @@ from habitat_baselines.utils.common import get_num_actions
 @baseline_registry.register_policy
 class HierarchicalPolicy(nn.Module, Policy):
     """
-    :property _pddl_problem: Stores the PDDL domain information. This allows
+    :property _pddl: Stores the PDDL domain information. This allows
         accessing all the possible entities, actions, and predicates. Note that
         this is not the grounded PDDL problem with truth values assigned to the
         predicates basedon the current simulator state.
     """
 
-    _pddl_problem: PddlProblem
+    _pddl: PddlDomain
 
     def __init__(
         self,
@@ -67,23 +70,39 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._name_to_idx: Dict[str, int] = {}
         self._idx_to_name: Dict[int, str] = {}
 
-        task_spec_file = osp.join(
-            full_config.habitat.task.task_spec_base_path,
-            full_config.habitat.task.task_spec + ".yaml",
-        )
-        domain_file = full_config.habitat.task.pddl_domain_def
-
-        self._pddl_problem = PddlProblem(
-            domain_file,
-            task_spec_file,
-            config,
+        self._pddl = self._create_pddl(full_config, config)
+        self._create_skills(
+            dict(config.hierarchical_policy.defined_skills),
+            observation_space,
+            action_space,
+            full_config,
         )
 
+        self._cur_skills: torch.Tensor = torch.full(
+            (self._num_envs,), -1, dtype=torch.long
+        )
+
+        high_level_cls = self._get_hl_policy_cls(config)
+        self._high_level_policy: HighLevelPolicy = high_level_cls(
+            config.hierarchical_policy.high_level_policy,
+            self._pddl,
+            num_envs,
+            self._name_to_idx,
+            observation_space,
+            action_space,
+        )
+        self._stop_action_idx, _ = find_action_range(
+            action_space, "rearrange_stop"
+        )
+
+    def _create_skills(
+        self, skills, observation_space, action_space, full_config
+    ):
         skill_i = 0
         for (
             skill_name,
             skill_config,
-        ) in config.hierarchical_policy.defined_skills.items():
+        ) in skills.items():
             cls = eval(skill_config.skill_name)
             skill_policy = cls.from_config(
                 skill_config,
@@ -92,7 +111,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._num_envs,
                 full_config,
             )
-            skill_policy.set_pddl_problem(self._pddl_problem)
+            skill_policy.set_pddl_problem(self._pddl)
             if skill_config.pddl_action_names is None:
                 action_names = [skill_name]
             else:
@@ -103,23 +122,23 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
 
-        self._cur_skills: torch.Tensor = torch.full(
-            (self._num_envs,), -1, dtype=torch.long
-        )
+    def _get_hl_policy_cls(self, config):
+        return eval(config.hierarchical_policy.high_level_policy.name)
 
-        high_level_cls = eval(
-            config.hierarchical_policy.high_level_policy.name
+    def _create_pddl(self, full_config, config) -> PddlDomain:
+        """
+        Creates the PDDL domain from the config.
+        """
+        task_spec_file = osp.join(
+            full_config.habitat.task.task_spec_base_path,
+            full_config.habitat.task.task_spec + ".yaml",
         )
-        self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.hierarchical_policy.high_level_policy,
-            self._pddl_problem,
-            num_envs,
-            self._name_to_idx,
-            observation_space,
-            action_space,
-        )
-        self._stop_action_idx, _ = find_action_range(
-            action_space, "rearrange_stop"
+        domain_file = full_config.habitat.task.pddl_domain_def
+
+        return PddlProblem(
+            domain_file,
+            task_spec_file,
+            config,
         )
 
     def eval(self):

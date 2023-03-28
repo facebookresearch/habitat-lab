@@ -25,7 +25,7 @@ For training on sample data please follow steps in the repository README. You sh
 
 **train**:
 ```bash
-python -u habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=pointnav/ppo_pointnav_example.yaml
 ```
 
@@ -33,14 +33,14 @@ You can reduce training time by changing the trainer from the default implement 
 setting `trainer_name` to `"ver"` in either the config or via the command line.
 
 ```bash
-python -u habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=pointnav/ppo_pointnav_example.yaml \
   habitat_baselines.trainer_name=ver
 ```
 
 **test**:
 ```bash
-python -u habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=pointnav/ppo_pointnav_example.yaml \
   habitat_baselines.evaluate=True
 ```
@@ -60,13 +60,13 @@ To run the following examples, you need the [ReplicaCAD dataset](https://github.
 To train a high-level policy, while using pre-learned low-level skills (SRL baseline from [Habitat2.0](https://arxiv.org/abs/2106.14405)), you can run:
 
 ```bash
-python -u habitat-baselines/habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=rearrange/rl_hierarchical.yaml
 ```
 To run a rearrangement episode with oracle low-level skills and a fixed task planner, run:
 
 ```bash
-python -u habitat-baselines/habitat_baselines/run.py \
+python -u -m habitat_baselines.run \
   --config-name=rearrange/rl_hierarchical.yaml \
   habitat_baselines.evaluate=True \
   habitat_baselines/rl/policy=hl_fixed \

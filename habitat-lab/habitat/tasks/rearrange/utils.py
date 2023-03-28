@@ -457,6 +457,7 @@ def get_robot_spawns(
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check.
+    :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
 
     :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
     """
@@ -464,7 +465,6 @@ def get_robot_spawns(
     state = sim.capture_state()
     if agent is None:
         agent = sim.articulated_agent
-    targ_island_radius = sim.pathfinder.island_radius(target_position)
 
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
@@ -488,10 +488,6 @@ def get_robot_spawns(
         start_rotation = angle_to_object + rotation_noise
 
         if target_distance > distance_threshold or not is_navigable:
-            continue
-
-        island_radius = sim.pathfinder.island_radius(start_position)
-        if island_radius != targ_island_radius:
             continue
 
         agent.base_pos = start_position
