@@ -158,22 +158,25 @@ class PddlSimInfo:
         ):
             robot_id = self.robot_ids[ename]
             return self.sim.get_agent_data(robot_id).robot.base_pos
-        elif self.check_type_matches(
+        if self.check_type_matches(
             entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
         ):
             marker_info = self.marker_handles[ename]
             return marker_info.get_current_position()
-        elif self.check_type_matches(
+        if self.check_type_matches(
             entity, SimulatorObjectType.GOAL_ENTITY.value
         ):
             idx = self.target_ids[ename]
             targ_idxs, pos_targs = self.sim.get_targets()
             rel_idx = targ_idxs.tolist().index(idx)
             return pos_targs[rel_idx]
-        elif self.check_type_matches(
-            entity, SimulatorObjectType.MOVABLE_ENTITY.value
-        ) or self.check_type_matches(
+        if self.check_type_matches(
             entity, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
+        ):
+            recep = self.receptacles[ename]
+            return np.array(recep.center())
+        if self.check_type_matches(
+            entity, SimulatorObjectType.MOVABLE_ENTITY.value
         ):
             rom = self.sim.get_rigid_object_manager()
             idx = self.obj_ids[ename]
@@ -182,8 +185,7 @@ class PddlSimInfo:
                 abs_obj_id
             ).transformation.translation
             return cur_pos
-        else:
-            raise ValueError()
+        raise ValueError()
 
     def search_for_entity(
         self, entity: PddlEntity

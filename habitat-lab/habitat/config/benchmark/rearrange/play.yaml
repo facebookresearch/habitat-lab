@@ -35,4 +35,4 @@ habitat:
     habitat_sim_v0:
       enable_physics: True
   dataset:
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz

@@ -277,8 +277,13 @@ class RearrangeGraspManager:
 
     def update_object_to_grasp(self) -> None:
         """
-        Kinematically update held object to be within robot's grasp.
+        Kinematically update held object to be within robot's grasp. If nothing
+        is grasped then nothing will happen.
         """
+        if self._snapped_obj_id is None:
+            # Not grasping anything, so do nothing.
+            return
+
         rel_T = self._keep_T
         if rel_T is None:
             rel_T = mn.Matrix4.identity_init()

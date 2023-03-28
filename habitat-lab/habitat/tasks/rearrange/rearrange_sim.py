@@ -106,11 +106,6 @@ class RearrangeSim(HabitatSim):
         self._viz_objs: Dict[str, Any] = {}
         self._draw_bb_objs: List[int] = []
 
-        # Disables arm control. Useful if you are hiding the arm to perform
-        # some scene sensing (used in the sense phase of the sense-plan act
-        # architecture).
-        self.ctrl_arm = True
-
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
         self._debug_render_articulated_agent = (
@@ -288,7 +283,8 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.post_obj_load_reconfigure()
 
         # add episode clutter objects additional to base scene objects
-        self._add_objs(ep_info, should_add_objects)
+        if self.habitat_config.load_objs:
+            self._add_objs(ep_info, should_add_objects)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
@@ -307,7 +303,6 @@ class RearrangeSim(HabitatSim):
             self._load_navmesh(ep_info)
 
         # Get the starting positions of the target objects.
-        rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
         self.target_start_pos = np.array(
             [
@@ -845,7 +840,7 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
-        # optionally step physics and update the articulated_agent for benchmarking purposes
+        # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
             self.step_world(dt)
 

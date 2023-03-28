@@ -109,7 +109,11 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
             robot = sim_info.sim.get_agent_data(robot_id).articulated_agent
             dist = np.linalg.norm(robot.base_pos - targ_pos)
-            if dist > sim_info.robot_at_thresh:
+            if self.place_at_pos_dist == -1.0:
+                use_thresh = sim_info.robot_at_thresh
+            else:
+                use_thresh = self.place_at_pos_dist
+            if dist > use_thresh:
                 return False
 
         return True
@@ -140,20 +144,22 @@ class PddlRobotState:
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
+            agent = sim.get_agent_data(robot_id).articulated_agent
 
             if self.place_at_pos_dist == -1.0:
+                # Place as close to the object as possible.
                 if not sim_info.sim.is_point_within_bounds(targ_pos):
                     rearrange_logger.error(
                         f"Object {self.pos} is out of bounds but trying to set robot position"
                     )
 
                 agent_pos = sim_info.sim.safe_snap_point(targ_pos)
-                agent = sim.get_agent_data(robot_id).articulated_agent
                 agent.base_pos = agent_pos
                 agent.base_rot = get_angle_to_pos(
                     np.array(targ_pos - agent_pos)
                 )
             else:
+                # Place some distance away from the object.
                 start_pos, start_rot, was_fail = get_robot_spawns(
                     targ_pos,
                     self.base_angle_noise,
@@ -166,6 +172,10 @@ class PddlRobotState:
                 sim.articulated_agent.base_rot = start_rot
                 if was_fail:
                     rearrange_logger.error("Failed to place the robot.")
+
+            # We teleported the agent. We also need to teleport the object the agent was holding.
+            grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
+            grasp_mgr.update_object_to_grasp()
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")

@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
@@ -46,12 +45,6 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
 
-        self._pddl_problem = PddlProblem(
-            pddl_domain_path,
-            pddl_task_path,
-            task_config,
-        )
-        self._all_entities = self._pddl_problem.get_ordered_entities_list()
         self._oracle_nav_ac_idx, _ = find_action_range(
             action_space, "oracle_nav_action"
         )
@@ -59,6 +52,10 @@ class OracleNavPolicy(NnSkillPolicy):
         self._is_target_obj = None
         self._targ_obj_idx = None
         self._prev_pos = [None for _ in range(self._batch_size)]
+
+    def set_pddl_problem(self, pddl_prob):
+        super().set_pddl_problem(pddl_prob)
+        self._all_entities = self._pddl_problem.get_ordered_entities_list()
 
     def on_enter(
         self,

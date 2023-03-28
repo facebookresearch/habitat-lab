@@ -81,7 +81,6 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
-    "CompositeRewardMeasurementConfig",
 ]
 
 
@@ -1016,10 +1015,9 @@ class CompositeSuccessMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
-class CompositeRewardMeasurementConfig(MeasurementConfig):
-    type: str = "CompositeReward"
-    must_call_stop: bool = True
-    success_reward: float = 10.0
+class CompositeSubgoalReward(MeasurementConfig):
+    type: str = "CompositeSubgoalReward"
+    stage_sparse_reward: float = 1.0
 
 
 @dataclass
@@ -1352,6 +1350,7 @@ class SimulatorConfig(HabitatBaseConfig):
     forward_step_size: float = 0.25  # in metres
     create_renderer: bool = False
     requires_textures: bool = True
+    # Sleep options
     auto_sleep: bool = False
     step_physics: bool = True
     concur_render: bool = False
@@ -1383,7 +1382,7 @@ class SimulatorConfig(HabitatBaseConfig):
     # Rearrange agent setup
     ctrl_freq: float = 120.0
     ac_freq_ratio: int = 4
-    load_objs: bool = False
+    load_objs: bool = True
     # Rearrange agent grasping
     hold_thresh: float = 0.15
     grasp_impulse: float = 10000.0
@@ -2051,6 +2050,12 @@ cs.store(
     group="habitat/task/measurements",
     name="does_want_terminate",
     node=DoesWantTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.composite_subgoal_reward",
+    group="habitat/task/measurements",
+    name="composite_subgoal_reward",
+    node=CompositeSubgoalReward,
 )
 cs.store(
     package="habitat.task.measurements.composite_success",
