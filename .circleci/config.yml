@@ -393,15 +393,15 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate build-env
               pip install --upgrade twine
-              twine upload \\
-                --username ${<< parameters.username_env_var >>} \\
-                --password ${<< parameters.password_env_var >>} \\
-                --repository ${<< parameters.repository >>} \\
+              twine upload \
+                --username ${<< parameters.username_env_var >>} \
+                --password ${<< parameters.password_env_var >>} \
+                --repository ${<< parameters.repository >>} \
                 habitat-lab/dist/*
-              twine upload \\
-                --username ${<< parameters.username_env_var >>} \\
-                --password ${<< parameters.password_env_var >>} \\
-                --repository ${<< parameters.repository >>} \\
+              twine upload \
+                --username ${<< parameters.username_env_var >>} \
+                --password ${<< parameters.password_env_var >>} \
+                --repository ${<< parameters.repository >>} \
                 habitat-baselines/dist/*
 
 workflows:
