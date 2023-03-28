@@ -52,29 +52,29 @@ def setup_function(test_trainers):
     "config_path,num_updates,overrides",
     [
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["habitat.dataset.split=minival", "benchmark/rearrange=place"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["benchmark/rearrange=open_cab"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             [
                 "benchmark/rearrange=open_fridge",
             ],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["habitat.dataset.split=minival", "benchmark/rearrange=pick"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             [
                 "habitat.dataset.split=minival",
@@ -82,19 +82,19 @@ def setup_function(test_trainers):
             ],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             [
                 "benchmark/rearrange=close_fridge",
             ],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/rearrange/rl_skill.yaml",
+            "rearrange/rl_skill.yaml",
             3,
             ["benchmark/rearrange=close_cab"],
         ),
         (
-            "habitat-baselines/habitat_baselines/config/imagenav/ddppo_imagenav_example.yaml",
+            "imagenav/ddppo_imagenav_example.yaml",
             3,
             [],
         ),

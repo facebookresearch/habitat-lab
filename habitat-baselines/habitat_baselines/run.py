@@ -70,8 +70,8 @@ if __name__ == "__main__":
             "--exp-config is now --config-name and is a config path inside habitat-baselines/habitat_baselines/config/. \n"
             "--run-type train is replaced with habitat_baselines.evaluate=False (default) and --run-type eval is replaced with habitat_baselines.evaluate=True.\n"
             "instead of calling:\n\n"
-            "python habitat-baselines/habitat_baselines/run.py --exp-config habitat-baselines/habitat_baselines/config/<path-to-config> --run-type train/eval\n\n"
+            "python -u -m habitat_baselines.run --exp-config habitat-baselines/habitat_baselines/config/<path-to-config> --run-type train/eval\n\n"
             "You now need to do:\n\n"
-            "python habitat-baselines/habitat_baselines/run.py --config-name=<path-to-config> habitat_baselines.evaluate=False/True\n"
+            "python -u -m habitat_baselines.run --config-name=<path-to-config> habitat_baselines.evaluate=False/True\n"
         )
     main()

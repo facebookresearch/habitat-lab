@@ -99,22 +99,19 @@ def add_viz_sphere(
     return new_object
 
 
-def get_bb_corners(
-    obj: habitat_sim.physics.ManagedRigidObject,
-) -> List[mn.Vector3]:
+def get_bb_corners(range3d: mn.Range3D) -> List[mn.Vector3]:
     """
-    Return a list of object bounding box corners in object local space.
+    Return a list of AABB (Range3D) corners in object local space.
     """
-    bb = obj.root_scene_node.cumulative_bb
     return [
-        bb.back_bottom_left,
-        bb.back_bottom_right,
-        bb.back_top_right,
-        bb.back_top_left,
-        bb.front_top_left,
-        bb.front_top_right,
-        bb.front_bottom_right,
-        bb.front_bottom_left,
+        range3d.back_bottom_left,
+        range3d.back_bottom_right,
+        range3d.back_top_right,
+        range3d.back_top_left,
+        range3d.front_top_left,
+        range3d.front_top_right,
+        range3d.front_bottom_right,
+        range3d.front_bottom_left,
     ]
 
 
@@ -156,11 +153,10 @@ def bb_ray_prescreen(
     lowest_key_point_height = None
     highest_support_impact: mn.Vector3 = None
     highest_support_impact_height = None
-    highest_support_impact_with_stage = False
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
-    bb_corners = get_bb_corners(obj)
+    bb_corners = get_bb_corners(obj.collision_shape_aabb)
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
     support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
@@ -197,7 +193,6 @@ def bb_ray_prescreen(
                     ):
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
-                        highest_support_impact_with_stage = hit.object_id == -1
 
                 # terminates at the first non-self ray hit
                 break
@@ -207,20 +202,13 @@ def bb_ray_prescreen(
         - obj.translation.projected_onto_normalized(-gravity_dir).length()
     )
 
-    # account for the affects of stage mesh margin
-    margin_offset = (
-        0
-        if not highest_support_impact_with_stage
-        else sim.get_stage_initialization_template().margin
-    )
-
     surface_snap_point = (
         None
         if 0 not in support_impacts
-        else support_impacts[0]
-        + gravity_dir * (base_rel_height - margin_offset)
+        else support_impacts[0] + gravity_dir * base_rel_height
     )
-    # return list of obstructed and grounded rays, relative base height, distance to first surface impact, and ray results details
+
+    # return list of relative base height, object position for surface snapped point, and ray results details
     return {
         "base_rel_height": base_rel_height,
         "surface_snap_point": surface_snap_point,
