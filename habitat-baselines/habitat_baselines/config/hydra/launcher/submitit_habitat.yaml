@@ -9,7 +9,7 @@ _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.SlurmLauncher
 partition: devlab
 tasks_per_node: 2 #make sure that tasks_per_node and gres are the same
 gres: gpu:2
-setup: 
+setup:
   - export MAIN_ADDR=$(scontrol show hostnames "$SLURM_JOB_NODELIST" | head -n 1)
   - export MASTER_ADDR=$(hostname -s)
   - export MAGNUM_LOG=quiet
