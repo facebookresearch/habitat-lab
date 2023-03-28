@@ -144,7 +144,7 @@ habitat:
     robot_joint_start_noise: 0.0
     ctrl_freq: 120.0
     ac_freq_ratio: 4
-    load_objs: false
+    load_objs: true
     hold_thresh: 0.09
     grasp_impulse: 1000.0
     agents:
