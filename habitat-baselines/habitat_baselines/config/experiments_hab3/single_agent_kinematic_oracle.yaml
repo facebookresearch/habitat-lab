@@ -22,6 +22,9 @@ habitat_baselines:
 
 habitat:
   task:
+    actions:
+      oracle_nav_action:
+        spawn_max_dist_to_obj: -1.0
     measurements:
       composite_success:
         must_call_stop: False

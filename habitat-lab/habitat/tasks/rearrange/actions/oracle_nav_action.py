@@ -15,7 +15,7 @@ from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-from habitat.tasks.rearrange.utils import place_agent_at_dist
+from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
 
 
@@ -106,13 +106,14 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
-            start_pos, _, _ = place_agent_at_dist(
+            start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
                 self._config.spawn_max_dist_to_obj,
                 self._sim,
                 self._config.num_spawn_attempts,
                 1,
+                self.cur_articulated_agent,
             )
 
             if self.motion_type == "human_joints":

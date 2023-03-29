@@ -18,7 +18,10 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import place_agent_at_dist, rearrange_logger
+from habitat.tasks.rearrange.utils import (
+    place_agent_at_dist_from_pos,
+    rearrange_logger,
+)
 
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"
@@ -142,7 +145,7 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
             agent = sim.get_agent_data(robot_id).articulated_agent
 
-            start_pos, start_rot, was_fail = place_agent_at_dist(
+            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
                 targ_pos,
                 self.base_angle_noise,
                 self.place_at_pos_dist,
@@ -152,8 +155,8 @@ class PddlRobotState:
                 agent=agent,
             )
 
-            sim.articulated_agent.base_pos = start_pos
-            sim.articulated_agent.base_rot = start_rot
+            agent.base_pos = start_pos
+            agent.base_rot = start_rot
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
 

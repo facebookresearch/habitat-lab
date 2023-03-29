@@ -388,7 +388,7 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
         text_file.write(gfx_keyframe_str)
 
 
-def place_agent_at_dist(
+def place_agent_at_dist_from_pos(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
     distance_threshold: float,
