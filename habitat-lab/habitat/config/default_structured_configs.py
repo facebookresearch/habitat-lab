@@ -323,6 +323,7 @@ class OracleNavActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    # A value of -1.0 means we will get as close to the object as possible.
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
 
@@ -1324,8 +1325,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
-    width: int = 512
-    height: int = 512
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
