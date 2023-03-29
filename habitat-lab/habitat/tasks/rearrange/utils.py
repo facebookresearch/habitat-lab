@@ -388,6 +388,54 @@ def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
         text_file.write(gfx_keyframe_str)
 
 
+def place_agent_at_dist_from_pos(
+    target_position: np.ndarray,
+    rotation_perturbation_noise: float,
+    distance_threshold: float,
+    sim,
+    num_spawn_attempts: int,
+    physics_stability_steps: int,
+    agent: Optional[MobileManipulator] = None,
+):
+    """
+    Places the robot at closest point if distance_threshold is -1.0 otherwise
+    will place the robot at `distance_threshold` away.
+    """
+    if distance_threshold == -1.0:
+        return place_robot_at_closest_point(target_position, sim, agent=agent)
+    else:
+        return get_robot_spawns(
+            target_position,
+            rotation_perturbation_noise,
+            distance_threshold,
+            sim,
+            num_spawn_attempts,
+            physics_stability_steps,
+            agent=agent,
+        )
+
+
+def place_robot_at_closest_point(
+    target_position: np.ndarray, sim, agent: Optional[MobileManipulator] = None
+):
+    """
+    Gets the agent's position and orientation at the closest point to the target position.
+    :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
+    """
+    if agent is None:
+        agent = sim.articulated_agent
+
+    if not sim.is_point_within_bounds(target_position):
+        rearrange_logger.error(
+            f"Object {target_position} is out of bounds but trying to set robot position"
+        )
+
+    agent_pos = sim.safe_snap_point(target_position)
+    desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
+
+    return agent_pos, desired_angle, False
+
+
 def get_robot_spawns(
     target_position: np.ndarray,
     rotation_perturbation_noise: float,
