@@ -166,9 +166,7 @@ class HrlRolloutStorage(RolloutStorage):
                 gae + self.buffers["value_preds"][step]  # type: ignore
             )
 
-    def recurrent_generator(
-        self, advantages, num_batches
-    ) -> Iterator[DictTree]:
+    def data_generator(self, advantages, num_batches) -> Iterator[DictTree]:
         """
         Generates data batches based on the data that has been written to the
         rollout buffer.
