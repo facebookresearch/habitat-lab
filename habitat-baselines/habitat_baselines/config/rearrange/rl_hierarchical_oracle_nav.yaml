@@ -13,6 +13,10 @@ defaults:
   - _self_
 
 habitat:
+  task:
+    actions:
+      oracle_nav_action:
+        spawn_max_dist_to_obj: -1.0
   gym:
     obs_keys:
       - head_depth

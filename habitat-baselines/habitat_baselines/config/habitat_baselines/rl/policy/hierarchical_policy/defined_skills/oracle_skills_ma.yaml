@@ -1,7 +1,5 @@
 # @package habitat_baselines.rl.policy.hierarchical_policy.defined_skills
-
-# Oracle skills that will teleport to the skill post-condition. When automatically setting predicates you may want to run the simulation in kinematic mode:
-# To run in kinematic mode, add: `habitat.simulator.kinematic_mode=True habitat.simulator.ac_freq_ratio=1 habitat.task.measurements.force_terminate.max_accum_force=-1.0 habitat.task.measurements.force_terminate.max_instant_force=-1.0`
+# See `oracle_skills.yaml` for details.
 
 open_cab:
   skill_name: "NoopSkillPolicy"

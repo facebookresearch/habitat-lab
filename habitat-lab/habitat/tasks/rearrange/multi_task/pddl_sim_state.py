@@ -19,8 +19,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     SimulatorObjectType,
 )
 from habitat.tasks.rearrange.utils import (
-    get_angle_to_pos,
-    get_robot_spawns,
+    place_agent_at_dist_from_pos,
     rearrange_logger,
 )
 
@@ -173,30 +172,20 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
             agent = sim.get_agent_data(robot_id).articulated_agent
 
-            if self.place_at_pos_dist == -1.0:
-                if not sim_info.sim.is_point_within_bounds(targ_pos):
-                    rearrange_logger.error(
-                        f"Object {self.pos} is out of bounds but trying to set robot position"
-                    )
+            start_pos, start_rot, was_fail = place_agent_at_dist_from_pos(
+                targ_pos,
+                self.base_angle_noise,
+                self.place_at_pos_dist,
+                sim,
+                sim_info.num_spawn_attempts,
+                sim_info.physics_stability_steps,
+                agent=agent,
+            )
 
-                agent_pos = sim_info.sim.safe_snap_point(targ_pos)
-                agent.base_pos = agent_pos
-                agent.base_rot = get_angle_to_pos(
-                    np.array(targ_pos - agent_pos)
-                )
-            else:
-                start_pos, start_rot, was_fail = get_robot_spawns(
-                    targ_pos,
-                    self.base_angle_noise,
-                    self.place_at_pos_dist,
-                    sim,
-                    sim_info.num_spawn_attempts,
-                    sim_info.physics_stability_steps,
-                )
-                sim.articulated_agent.base_pos = start_pos
-                sim.articulated_agent.base_rot = start_rot
-                if was_fail:
-                    rearrange_logger.error("Failed to place the robot.")
+            agent.base_pos = start_pos
+            agent.base_rot = start_rot
+            if was_fail:
+                rearrange_logger.error("Failed to place the robot.")
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
             grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr

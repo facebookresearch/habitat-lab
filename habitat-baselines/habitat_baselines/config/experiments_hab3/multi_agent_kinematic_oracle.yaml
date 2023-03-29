@@ -1,29 +1,65 @@
 # @package _global_
 
-# Config for running hierarchical policies where a high-level (HL) policy selects from a set of low-level (LL) policies.
-# Supports different HL policy configurations and using a variety of LL policies.
-
 defaults:
-  - /benchmark/rearrange: rearrange_easy
+  - /benchmark/rearrange: multi_agent_tidy_house
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
-  - /habitat_baselines/rl/agent: single_agent
+  - /habitat_baselines/rl/agent: pop_play
   - /habitat_baselines/rl/policy/obs_transforms:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy: hl_fixed
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: nn_skills
+  - /habitat_baselines/rl/policy: hab3_hl_neural
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills_ma
   - /habitat/task/measurements:
     - composite_subgoal_reward
   - _self_
 
 habitat:
   task:
-    measurements:
-      composite_subgoal_reward:
-        stage_sparse_reward: 1.0
     reward_measure: composite_subgoal_reward
     slack_reward: -0.01
     success_reward: 5.0
+
+    measurements:
+      composite_subgoal_reward:
+        stage_sparse_reward: 1.0
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+
+  environment:
+    max_episode_steps: 700
+
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_joint
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_joint
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    habitat_sim_v0:
+      allow_sliding: True
+
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
@@ -33,7 +69,6 @@ habitat_baselines:
   video_fps: 30
   eval_ckpt_path_dir: ""
   num_environments: 4
-  writer_type: 'tb'
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
@@ -43,11 +78,26 @@ habitat_baselines:
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 
+  evaluate: False
+  writer_type: 'wb'
+
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+
   eval:
     should_load_ckpt: False
     video_option: ["disk"]
 
   rl:
+    policy:
+      hierarchical_policy:
+        # Override to use the oracle navigation skill (which will actually execute navigation).
+        defined_skills:
+          nav_to_obj:
+            skill_name: "OracleNavPolicy"
+            obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+            max_skill_steps: 300
     ppo:
       # ppo params
       clip_param: 0.2
