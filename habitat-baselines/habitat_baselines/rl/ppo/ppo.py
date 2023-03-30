@@ -180,11 +180,11 @@ class PPO(nn.Module, Updater):
             aux_loss_res,
         ) = self._evaluate_actions(
             batch["observations"],
-            batch["recurrent_hidden_states"],
+            batch.get("recurrent_hidden_states", None),
             batch["prev_actions"],
             batch["masks"],
             batch["actions"],
-            batch["rnn_build_seq_info"],
+            batch.get("rnn_build_seq_info", None),
         )
 
         ratio = torch.exp(action_log_probs - batch["action_log_probs"])

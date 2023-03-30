@@ -341,7 +341,7 @@ class PPOTrainer(BaseRLTrainer):
             profiling_wrapper.range_push("compute actions")
             action_data = self._agent.actor_critic.act(
                 step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
+                step_batch.get("recurrent_hidden_states", None),
                 step_batch["prev_actions"],
                 step_batch["masks"],
             )
@@ -466,7 +466,7 @@ class PPOTrainer(BaseRLTrainer):
 
             next_value = self._agent.actor_critic.get_value(
                 step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
+                step_batch.get("recurrent_hidden_states", None),
                 step_batch["prev_actions"],
                 step_batch["masks"],
             )

@@ -253,9 +253,13 @@ class SkillPolicy(Policy):
             self._cur_skill_args[batch_idx] = self._parse_skill_arg(
                 skill_arg[i]
             )
+        if rnn_hidden_states is not None:
+            ret_rnn_hidden_states = rnn_hidden_states[batch_idxs] * 0.0
+        else:
+            ret_rnn_hidden_states = None
 
         return (
-            rnn_hidden_states[batch_idxs] * 0.0,
+            ret_rnn_hidden_states,
             prev_actions[batch_idxs] * 0.0,
         )
 
