@@ -17,7 +17,7 @@ from habitat.datasets import make_dataset
 from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
 from habitat.tasks.nav.nav import MoveForwardAction
 
-CFG_TEST = "test/habitat_mp3d_object_nav_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_mp3d_object_nav_test.yaml"
 EPISODES_LIMIT = 6
 PARTIAL_LOAD_SCENES = 3
 

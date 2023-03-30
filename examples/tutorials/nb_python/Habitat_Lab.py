@@ -112,12 +112,12 @@ def display_sample(
 # ## Setup PointNav Task
 
 # %%
-# cat "./habitat-lab/habitat/config/test/habitat_all_sensors_test.yaml"
+# cat "./test/config/habitat/habitat_all_sensors_test.yaml"
 
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_path="./habitat-lab/habitat/config/test/habitat_all_sensors_test.yaml"
+        config_path="./test/config/habitat/habitat_all_sensors_test.yaml"
     )
 
     try:
@@ -245,7 +245,7 @@ except ImportError:
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_path="./habitat-lab/habitat/config/test/habitat_all_sensors_test.yaml"
+        config_path="./test/config/habitat/habitat_all_sensors_test.yaml"
     )
 
 
@@ -339,7 +339,7 @@ class AgentPositionSensor(habitat.Sensor):
 # %%
 if __name__ == "__main__":
     config = habitat.get_config(
-        config_path="./habitat-lab/habitat/config/test/habitat_all_sensors_test.yaml"
+        config_path="./test/config/habitat/habitat_all_sensors_test.yaml"
     )
 
     from habitat.config.default_structured_configs import LabSensorConfig
