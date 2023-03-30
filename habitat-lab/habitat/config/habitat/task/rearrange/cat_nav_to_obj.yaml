@@ -42,3 +42,8 @@ measurements:
   force_terminate:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
+lab_sensors:
+  joint_sensor:
+    dimensionality: 10
+  joint_velocity_sensor:
+    dimensionality: 10

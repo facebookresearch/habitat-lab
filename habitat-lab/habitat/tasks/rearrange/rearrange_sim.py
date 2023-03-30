@@ -4,7 +4,9 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
+import pickle
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -25,6 +27,9 @@ import habitat_sim
 from habitat.config import read_write
 from habitat.core.registry import registry
 from habitat.core.simulator import Observations
+from habitat.datasets.rearrange.navmesh_utils import (
+    compute_navmesh_island_classifications,
+)
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 
@@ -103,12 +108,31 @@ class RearrangeSim(HabitatSim):
         self._viz_handle_to_template: Dict[str, float] = {}
         self._viz_objs: Dict[str, Any] = {}
 
+        self._obj_orig_motion_types: Dict[str, MotionType] = {}
+
         # Disables arm control. Useful if you are hiding the arm to perform
         # some scene sensing (used in the sense phase of the sense-plan act
         # architecture).
         self.ctrl_arm = True
 
         self.robots_mgr = RobotManager(self.habitat_config, self)
+
+        self._debug_render_robot = self.habitat_config.debug_render_robot
+        self._debug_render_goal = self.habitat_config.debug_render_goal
+        self._debug_render = self.habitat_config.debug_render
+        self._concur_render = self.habitat_config.concur_render
+        self._enable_gfx_replay_save = (
+            self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
+        )
+        self._needs_markers = self.habitat_config.needs_markers
+        self._update_robot = self.habitat_config.update_robot
+        self._step_physics = self.habitat_config.step_physics
+        self._additional_object_paths = (
+            self.habitat_config.additional_object_paths
+        )
+        self._kinematic_mode = self.habitat_config.kinematic_mode
+        self._sleep_dist = self.habitat_config.sleep_dist
+        self._instance_ids_start = self.habitat_config.instance_ids_start
 
     @property
     def robot(self):
@@ -140,8 +164,24 @@ class RearrangeSim(HabitatSim):
         return target_trans
 
     def _try_acquire_context(self):
-        if self.habitat_config.concur_render:
+        if self._concur_render:
             self.renderer.acquire_gl_context()
+
+    def _auto_sleep(self):
+        all_robo_pos = [
+            robot.base_pos for robot in self.robots_mgr.robots_iter
+        ]
+        rom = self.get_rigid_object_manager()
+        for handle, ro in rom.get_objects_by_handle_substring().items():
+            is_far = all(
+                (robo_pos - ro.translation).length() > self._sleep_dist
+                for robo_pos in all_robo_pos
+            )
+            if is_far and ro.motion_type != MotionType.STATIC:
+                self._obj_orig_motion_types[handle] = ro.motion_type
+                ro.motion_type = habitat_sim.physics.MotionType.STATIC
+            elif not is_far:
+                ro.motion_type = self._obj_orig_motion_types[handle]
 
     def sleep_all_objects(self):
         """
@@ -150,6 +190,7 @@ class RearrangeSim(HabitatSim):
         rom = self.get_rigid_object_manager()
         for _, ro in rom.get_objects_by_handle_substring().items():
             ro.awake = False
+
         aom = self.get_articulated_object_manager()
         for _, ao in aom.get_objects_by_handle_substring().items():
             ao.awake = False
@@ -242,6 +283,12 @@ class RearrangeSim(HabitatSim):
         if self.habitat_config.auto_sleep:
             self.sleep_all_objects()
 
+        rom = self.get_rigid_object_manager()
+        self._obj_orig_motion_types = {
+            handle: ro.motion_type
+            for handle, ro in rom.get_objects_by_handle_substring().items()
+        }
+
         if new_scene:
             self._load_navmesh(ep_info)
             receptacles = find_receptacles(self)
@@ -271,9 +318,7 @@ class RearrangeSim(HabitatSim):
         for i, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
-                node.semantic_id = (
-                    obj.object_id + self.habitat_config.instance_ids_start
-                )
+                node.semantic_id = obj.object_id + self._instance_ids_start
 
     def get_robot_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -297,7 +342,11 @@ class RearrangeSim(HabitatSim):
         robot = self.get_robot_data(agent_idx).robot
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point()
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self.navmesh_classification_results[
+                    "active_island"
+                ]
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -333,7 +382,33 @@ class RearrangeSim(HabitatSim):
         base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+        if osp.exists(navmesh_path):
+            self.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            self.navmesh_settings = NavMeshSettings()
+            self.navmesh_settings.set_defaults()
+            agent_config = self.get_agent(0).agent_config
+            self.navmesh_settings.agent_radius = agent_config.radius
+            self.navmesh_settings.agent_height = agent_config.height
+            self.navmesh_settings.agent_max_climb = 0.01
+            self.recompute_navmesh(
+                self.pathfinder,
+                self.navmesh_settings,
+                include_static_objects=True,
+            )
+            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+            self.pathfinder.save_nav_mesh(navmesh_path)
+
+        island_classes_path = osp.join(
+            base_dir, "navmeshes", scene_name + ".pkl"
+        )
+        if osp.exists(island_classes_path):
+            with open(island_classes_path, "rb") as f:
+                self.navmesh_classification_results = pickle.load(f)
+        else:
+            compute_navmesh_island_classifications(self)
+            with open(island_classes_path, "wb") as f:
+                pickle.dump(self.navmesh_classification_results, f)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
@@ -392,24 +467,28 @@ class RearrangeSim(HabitatSim):
         """
         snap_point can return nan which produces hard to catch errors.
         """
-        new_pos = self.pathfinder.snap_point(pos)
-        island_radius = self.pathfinder.island_radius(new_pos)
+        new_pos = self.pathfinder.snap_point(
+            pos,
+            island_index=self.navmesh_classification_results["active_island"],
+        )
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # The point is not valid or not in a different island. Find a
-            # different point nearby that is on a different island and is
-            # valid.
+        if np.isnan(new_pos[0]):
+            # The point is not valid. Find a different point nearby that is valid.
             new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000
+                pos,
+                1.5,
+                1000,
+                island_index=self.navmesh_classification_results[
+                    "active_island"
+                ],
             )
-            island_radius = self.pathfinder.island_radius(new_pos)
 
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
+        if np.isnan(new_pos[0]):
             # This is a last resort, take a navmesh vertex that is closest
             use_verts = [
                 x
                 for s, x in zip(self._island_sizes, self._navmesh_vertices)
-                if s == self._max_island_size
+                if s == self.navmesh_classification_results["active_island"]
             ]
             distances = np.linalg.norm(
                 np.array(pos).reshape(1, 3) - use_verts, axis=-1
@@ -428,27 +507,15 @@ class RearrangeSim(HabitatSim):
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
-                obj_attr_mgr = self.get_object_template_manager()
-                matching_templates = (
-                    obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
-                )
-                if len(matching_templates.values()) > 1:
-                    # handle collision in object handles. eg: 'Elephant.object_config.json', 'Sootheze_Cold_Therapy_Elephant.object_config.json'
-                    exactly_matching = list(
-                        filter(
-                            lambda x: obj_handle == osp.basename(x),
-                            matching_templates.keys(),
-                        )
-                    )
-                    if len(exactly_matching) == 1:
-                        matching_template = exactly_matching[0]
-                    else:
-                        raise Exception(
-                            f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. {len(exactly_matching)} templates exactly match the handle. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
-                        )
-                else:
-                    matching_template = list(matching_templates.keys())[0]
-                ro = rom.add_object_by_template_handle(matching_template)
+                template = None
+                for obj_path in self._additional_object_paths:
+                    template = osp.join(obj_path, obj_handle)
+                    if osp.isfile(template):
+                        break
+                assert (
+                    template is not None
+                ), f"Could not find config file for object {obj_handle}"
+                ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
 
@@ -462,7 +529,7 @@ class RearrangeSim(HabitatSim):
             other_obj_handle = (
                 obj_handle.split(".")[0] + f"_:{obj_counts[obj_handle]:04d}"
             )
-            if self.habitat_config.kinematic_mode:
+            if self._kinematic_mode:
                 ro.motion_type = habitat_sim.physics.MotionType.KINEMATIC
                 ro.collidable = False
 
@@ -483,10 +550,7 @@ class RearrangeSim(HabitatSim):
         ]
         for aoi_handle in ao_mgr.get_object_handles():
             ao = ao_mgr.get_object_by_handle(aoi_handle)
-            if (
-                self.habitat_config.kinematic_mode
-                and ao.handle not in robot_art_handles
-            ):
+            if self._kinematic_mode and ao.handle not in robot_art_handles:
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
 
@@ -507,7 +571,7 @@ class RearrangeSim(HabitatSim):
         obj_attr_mgr = self.get_object_template_manager()
         for target_handle, transform in self._targets.items():
             # Visualize the goal of the object
-            if self.habitat_config.debug_render_goal:
+            if self._debug_render_goal:
                 new_target_handle = (
                     target_handle.split("_:")[0] + ".object_config.json"
                 )
@@ -638,8 +702,8 @@ class RearrangeSim(HabitatSim):
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
-        if self.habitat_config.debug_render:
-            if self.habitat_config.debug_render_robot:
+        if self._debug_render:
+            if self._debug_render_robot:
                 self.robots_mgr.update_debug()
             rom = self.get_rigid_object_manager()
             self._try_acquire_context()
@@ -668,8 +732,14 @@ class RearrangeSim(HabitatSim):
             self.viz_ids = defaultdict(lambda: None)
 
         self.maybe_update_robot()
+        if (
+            self.habitat_config.sleep_dist > 0.0
+            and self.habitat_config.habitat_sim_v0.enable_physics
+            and not self.habitat_config.kinematic_mode
+        ):
+            self._auto_sleep()
 
-        if self.habitat_config.concur_render:
+        if self._concur_render:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -683,14 +753,14 @@ class RearrangeSim(HabitatSim):
             self._prev_sim_obs = self.get_sensor_observations()
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
-        if self.habitat_config.habitat_sim_v0.enable_gfx_replay_save:
+        if self._enable_gfx_replay_save:
             self.gfx_replay_manager.save_keyframe()
 
-        if self.habitat_config.needs_markers:
+        if self._needs_markers:
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "robot_third_rgb" in obs and self.habitat_config.debug_render:
+        if "robot_third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -714,7 +784,7 @@ class RearrangeSim(HabitatSim):
         things, this will set the robot's sensors' positions to their new
         positions.
         """
-        if self.habitat_config.update_robot:
+        if self._update_robot:
             self.robots_mgr.update_robots()
 
     def visualize_position(
@@ -757,9 +827,8 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the robot.
         """
-
         # optionally step physics and update the robot for benchmarking purposes
-        if self.habitat_config.step_physics:
+        if self._step_physics:
             self.step_world(dt)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:

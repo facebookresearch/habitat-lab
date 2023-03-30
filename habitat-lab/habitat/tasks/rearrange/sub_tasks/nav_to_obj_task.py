@@ -12,6 +12,7 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
 
@@ -47,8 +48,12 @@ class DynNavRLEnv(RearrangeTask):
         )
         self.force_obj_to_idx = None
         self.force_recep_to_name = None
+
         self._nav_to_info = None
-        self._goal_type = config.goal_type
+        self.robot_start_position = None
+        self.robot_start_rotation = None
+
+        self._min_start_distance = self._config.min_start_distance
 
     @property
     def nav_goal_pos(self):
@@ -94,7 +99,6 @@ class DynNavRLEnv(RearrangeTask):
         if (
             force_idx is None
             and random.random() < self._config.object_in_hand_sample_prob
-            and self._goal_type != 'ovmm'
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
@@ -107,15 +111,10 @@ class DynNavRLEnv(RearrangeTask):
                 goals = np.expand_dims(nav_to_pos, axis=0)
             else:
                 goals = nav_to_pos
-            distance = np.min(
-                [
-                    self._sim.geodesic_distance(start_pos, goal)
-                    for goal in goals
-                ]
-            )
+            distance = self._sim.geodesic_distance(start_pos, goals, episode)
             return (
                 distance != np.inf
-                and distance > self._config.min_start_distance
+                and distance > self._min_start_distance
             )
 
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
@@ -130,17 +129,26 @@ class DynNavRLEnv(RearrangeTask):
         )
 
     def reset(self, episode: Episode):
+        sim = self._sim
         super().reset(episode, fetch_observations=False)
+
+        # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
+        if isinstance(sim.robot, StretchRobot):
+            sim.robot.arm_motor_pos = np.array(
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+            )
+            sim.robot.arm_joint_pos = np.array(
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+            )
 
         self._nav_to_info = self._generate_nav_start_goal(
             episode, force_idx=self.force_obj_to_idx
         )
-        sim = self._sim
         sim.robot.base_pos = self._nav_to_info.robot_start_pos
         sim.robot.base_rot = self._nav_to_info.robot_start_angle
-        self.start_position = sim.robot.sim_obj.translation
+        self.robot_start_position = sim.robot.sim_obj.translation
         start_quat = sim.robot.sim_obj.rotation
-        self.start_rotation = np.array(
+        self.robot_start_rotation = np.array(
             [
                 start_quat.vector.x,
                 start_quat.vector.y,
@@ -167,8 +175,5 @@ class DynNavRLEnv(RearrangeTask):
                 self._sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )
-        # have the agent look down with its arm retracted (gripper down)
-        self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 0.775, 0, -1.57000005, 0, 0.0, -0.7125]
-        self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 0.775, 0, -1.57000005, 0, 0.0, -0.7125]
         self._sim.maybe_update_robot()
         return self._get_observations(episode)

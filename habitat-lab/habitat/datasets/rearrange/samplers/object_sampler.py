@@ -9,6 +9,7 @@ import random
 import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
+from habitat.tasks.rearrange.utils import get_aabb
 
 import magnum as mn
 import numpy as np
@@ -20,8 +21,10 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
     ReceptacleTracker,
+    TriangleMeshReceptacle,
     find_receptacles,
 )
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 
@@ -247,6 +250,13 @@ class ObjectSampler:
                     object_handle
                 )
 
+                # fail early if it's impossible to place the object
+                cumulative_bb = new_object.root_scene_node.cumulative_bb
+                new_object_base_area = cumulative_bb.size_x() * cumulative_bb.size_z()
+                if new_object_base_area > receptacle.total_area:
+                    logger.info(f"Failed to sample placement. {object_handle} was too large to place on {receptacle.name}")
+                    return None
+
             # try to place the object
             new_object.translation = target_object_position
             if self.orientation_sample is not None:
@@ -261,6 +271,10 @@ class ObjectSampler:
                     new_object.rotation = (
                         habitat_sim.utils.common.random_quaternion()
                     )
+            if isinstance(receptacle, TriangleMeshReceptacle):
+                new_object.translation = new_object.translation + mn.Vector3(
+                    0, 0.05, 0
+                )
 
             if isinstance(receptacle, OnTopOfReceptacle):
                 snap_down = False
@@ -297,7 +311,22 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
-                    if not self._is_accessible(sim, new_object):
+                    if not is_accessible(sim, new_object.translation, self.nav_to_min_distance):
+                        logger.warning(
+                            f"Failed to navigate to {object_handle} on {receptacle.name} in {num_placement_tries} tries."
+                        )
+                        continue
+                    object_aabb = get_aabb(new_object.object_id, sim, transformed=True)
+                    object_corners = [
+                        object_aabb.back_bottom_left,
+                        object_aabb.back_bottom_right,
+                        object_aabb.front_bottom_left,
+                        object_aabb.front_bottom_right
+                    ]
+                    if not all(receptacle.check_if_point_on_surface(sim, corner, threshold=0.1) for corner in object_corners):
+                        logger.warning(
+                            f"Failed to place {object_handle} within bounds of {receptacle.name} in {num_placement_tries} tries."
+                        )
                         continue
                     return new_object
 
@@ -305,7 +334,7 @@ class ObjectSampler:
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
-                if not self._is_accessible(sim, new_object):
+                if not is_accessible(sim, new_object.translation, self.nav_to_min_distance):
                     continue
                 return new_object
 
@@ -318,30 +347,6 @@ class ObjectSampler:
         )
 
         return None
-
-    def _is_accessible(self, sim, new_object) -> bool:
-        """
-        Return if the object is within a threshold distance of the nearest
-        navigable point and that the nearest navigable point is on the same
-        navigation mesh.
-
-        Note that this might not catch all edge cases since the distance is
-        based on Euclidean distance. The nearest navigable point may be
-        separated from the object by an obstacle.
-        """
-        if self.nav_to_min_distance == -1:
-            return True
-        snapped = sim.pathfinder.snap_point(new_object.translation)
-        island_radius: float = sim.pathfinder.island_radius(snapped)
-        dist = float(
-            np.linalg.norm(
-                np.array((snapped - new_object.translation))[[0, 2]]
-            )
-        )
-        return (
-            dist < self.nav_to_min_distance
-            and island_radius == self.largest_island_size
-        )
 
     def single_sample(
         self,
