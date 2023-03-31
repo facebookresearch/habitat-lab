@@ -41,7 +41,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         num_envs: int,
         percent_done_fn: Callable[[], float],
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
-        agent_name = None
+        agent_name=None,
     ):
         """
         :param percent_done_fn: Function that will return the percent of the
@@ -65,9 +65,11 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
-                raise ValueError("If there is more than an agent, you should specify the agent name")
+                raise ValueError(
+                    "If there is more than an agent, you should specify the agent name"
+                )
             else:
-                agent_name = config.habitat.simulator.agents_order[0] 
+                agent_name = config.habitat.simulator.agents_order[0]
 
         self.agent_name = agent_name
         self._nbuffers = 2 if self._ppo_cfg.use_double_buffered_sampler else 1
@@ -116,7 +118,11 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             config=self._config,
             device=self._device,
         )
-        print("Agent", self.agent_name, self._rollouts.buffers['observations'].keys())
+        print(
+            "Agent",
+            self.agent_name,
+            self._rollouts.buffers["observations"].keys(),
+        )
 
     def _create_updater(self, actor_critic) -> PPO:
         if self._is_distributed:
@@ -153,7 +159,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._env_spec.observation_space,
             self._env_spec.action_space,
             orig_action_space=self._env_spec.orig_action_space,
-            agent_name=self.agent_name
+            agent_name=self.agent_name,
         )
         if (
             self._config.habitat_baselines.rl.ddppo.pretrained_encoder

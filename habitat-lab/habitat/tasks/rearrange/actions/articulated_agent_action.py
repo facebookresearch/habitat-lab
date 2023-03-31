@@ -11,7 +11,10 @@ class ArticulatedAgentAction(SimulatorTaskAction):
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
-        if "agent_index" not in self._config or self._config.agent_index is None:
+        if (
+            "agent_index" not in self._config
+            or self._config.agent_index is None
+        ):
             self._agent_index = 0
             self._multi_agent = False
         else:

@@ -730,7 +730,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
         return spaces.Dict(
             {
                 "human_joints_trans": spaces.Box(
-                    shape=(4 * num_joints + num_dim_transform*2,),
+                    shape=(4 * num_joints + num_dim_transform * 2,),
                     low=-1,
                     high=1,
                     dtype=np.float32,

@@ -183,6 +183,7 @@ class MultiStorage(Storage):
                 storage.insert_first_observations(obs_dict)
             except:
                 breakpoint()
+
     def advance_rollout(self, buffer_index=0):
         for storage in self._active_storages:
             storage.advance_rollout(buffer_index)

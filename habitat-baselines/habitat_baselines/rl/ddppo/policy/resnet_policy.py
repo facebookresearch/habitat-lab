@@ -110,16 +110,18 @@ class PointNavResNetPolicy(NetPolicy):
                 )
             )
         )
-        
+
         agent_name = None
         if "agent_name" in kwargs:
             agent_name = kwargs["agent_name"]
-            
+
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
-                raise ValueError("If there is more than an agent, you should specify the agent name")
+                raise ValueError(
+                    "If there is more than an agent, you should specify the agent name"
+                )
             else:
-                agent_name = config.habitat.simulator.agents_order[0] 
+                agent_name = config.habitat.simulator.agents_order[0]
 
         return cls(
             observation_space=filtered_obs,

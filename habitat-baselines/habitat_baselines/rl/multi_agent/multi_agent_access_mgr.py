@@ -77,11 +77,11 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             policy_cls = MultiPolicy
             updater_cls = MultiUpdater
             storage_cls = MultiStorage
-        
+
         # TODO(andrew): why do we call these functions? It seems they
         # just create an empty class
         num_active_agents = sum(self._pop_config.num_active_agents_per_type)
-        
+
         self._multi_policy = policy_cls.from_config(
             config,
             env_spec.observation_space,
@@ -127,12 +127,14 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         agent_count_idxs = []
         agents = []
         for agent_i in range(self._pop_config.num_agent_types):
-            num_agents_type = self._pop_config.num_pool_agents_per_type[agent_i]
+            num_agents_type = self._pop_config.num_pool_agents_per_type[
+                agent_i
+            ]
             agent_count_idxs.append(num_agents_type)
 
             for agent_type_i in range(num_agents_type):
                 agent_ct = agent_i * num_agents_type + agent_type_i
-                
+
                 use_resume_state = None
                 if resume_state is not None:
                     use_resume_state = resume_state[str(agent_ct)]
@@ -147,7 +149,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                         env_spec.orig_action_space.spaces, agent_i
                     )
                 )
-                agent_action_space = create_action_space(agent_orig_action_space)
+                agent_action_space = create_action_space(
+                    agent_orig_action_space
+                )
                 agent_env_spec = EnvironmentSpec(
                     observation_space=agent_obs_space,
                     action_space=agent_action_space,
@@ -164,7 +168,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                         num_envs,
                         percent_done_fn,
                         lr_schedule_fn,
-                        agent_name
+                        agent_name,
                     )
                 )
         return agents, agent_count_idxs
@@ -185,21 +189,28 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         active_agent_types = []
         for agent_type_ind in range(self._pop_config.num_agent_types):
             if self._pop_config.num_active_agents_per_type[agent_type_ind] > 1:
-                raise ValueError("The current code only supports sampling one agent of a given type at a time")
+                raise ValueError(
+                    "The current code only supports sampling one agent of a given type at a time"
+                )
             active_agents_type = np.random.choice(
                 self._agent_count_idxs[agent_type_ind],
-                size=self._pop_config.num_active_agents_per_type[agent_type_ind]
+                size=self._pop_config.num_active_agents_per_type[
+                    agent_type_ind
+                ],
             )
             agent_cts = active_agents_type + prev_num_agents
             prev_num_agents += self._agent_count_idxs[agent_type_ind]
             active_agents.append(agent_cts)
-            active_agent_types.append(np.ones(agent_cts.shape)*agent_type_ind)
+            active_agent_types.append(
+                np.ones(agent_cts.shape) * agent_type_ind
+            )
 
         self._active_agents = np.concatenate(active_agents)
         active_agent_types = np.concatenate(active_agent_types)
 
         self._multi_storage.set_active(
-            [self._agents[i].rollouts for i in self._active_agents], active_agent_types
+            [self._agents[i].rollouts for i in self._active_agents],
+            active_agent_types,
         )
         self._multi_updater.set_active(
             [self._agents[i].updater for i in self._active_agents]

@@ -18,7 +18,7 @@ step_physics: False
 evaluate: False
 
 env_set:
-  MAGNUM_LOG: quiet 
+  MAGNUM_LOG: quiet
   HABITAT_SIM_LOG: quiet
 
 habitat_baselines:
