@@ -146,7 +146,7 @@ class PddlDomain:
             )
             self._orig_actions[action.name] = action
         self._actions = dict(self._orig_actions)
-
+        
     def _parse_predicates(self, domain_def) -> None:
         """
         Fetches the PDDL predicates into `self.predicates`.

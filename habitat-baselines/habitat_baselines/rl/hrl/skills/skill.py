@@ -71,6 +71,7 @@ class SkillPolicy(Policy):
                 found_grip = True
                 break
         if not found_grip and not self.should_ignore_grip:
+            breakpoint()
             raise ValueError(f"Could not find grip action in {action_space}")
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"

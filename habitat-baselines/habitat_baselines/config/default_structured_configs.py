@@ -103,7 +103,6 @@ class CenterCropperConfig(ObsTransformConfig):
 
 
 cs.store(
-    package="habitat_baselines.rl.policy.obs_transforms.center_cropper",
     group="habitat_baselines/rl/policy/obs_transforms",
     name="center_cropper_base",
     node=CenterCropperConfig,
@@ -124,7 +123,6 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
 
 
 cs.store(
-    package="habitat_baselines.rl.policy.obs_transforms.resize_shortest_edge",
     group="habitat_baselines/rl/policy/obs_transforms",
     name="resize_shortest_edge_base",
     node=ResizeShortestEdgeConfig,
@@ -149,7 +147,6 @@ class Cube2EqConfig(ObsTransformConfig):
 
 
 cs.store(
-    package="habitat_baselines.rl.policy.obs_transforms.cube_2_eq",
     group="habitat_baselines/rl/policy/obs_transforms",
     name="cube_2_eq_base",
     node=Cube2EqConfig,
@@ -176,7 +173,6 @@ class Cube2FishConfig(ObsTransformConfig):
 
 
 cs.store(
-    package="habitat_baselines.rl.policy.obs_transforms.cube_2_fish",
     group="habitat_baselines/rl/policy/obs_transforms",
     name="cube_2_fish_base",
     node=Cube2FishConfig,
@@ -190,7 +186,6 @@ class AddVirtualKeysConfig(ObsTransformConfig):
 
 
 cs.store(
-    package="habitat_baselines.rl.policy.obs_transforms.add_virtual_keys",
     group="habitat_baselines/rl/policy/obs_transforms",
     name="add_virtual_keys_base",
     node=AddVirtualKeysConfig,
@@ -215,7 +210,6 @@ class Eq2CubeConfig(ObsTransformConfig):
 
 
 cs.store(
-    package="habitat_baselines.rl.policy.obs_transforms.eq_2_cube",
     group="habitat_baselines/rl/policy/obs_transforms",
     name="eq_2_cube_base",
     node=Eq2CubeConfig,
@@ -363,8 +357,13 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     type: str = "SingleAgentAccessMgr"
     ###############################
     # Population play configuration
-    num_total_agents: int = 1
-    num_active_agents: int = 1
+    num_agent_types: int = 1
+    num_active_agents_per_type: List[int] = field(
+        default_factory=lambda: [1]
+    )
+    num_pool_agents_per_type: List[int] = field(
+        default_factory=lambda: [1]
+    )
     agent_sample_interval: int = 20
     allow_self_play: bool = False
     self_play_batched: bool = False
@@ -377,7 +376,7 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
     agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
     preemption: PreemptionConfig = PreemptionConfig()
-    policy: PolicyConfig = PolicyConfig()
+    policy: Dict[str, PolicyConfig] = MISSING
     ppo: PPOConfig = PPOConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()

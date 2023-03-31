@@ -245,10 +245,14 @@ class HumanoidJointSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        joints_pos = self._sim.get_agent_data(
+        curr_agent = self._sim.get_agent_data(
             self.agent_id
-        ).articulated_agent.get_joint_transform()[0]
-        return np.array(joints_pos, dtype=np.float32)
+        ).articulated_agent
+        if hasattr(curr_agent, 'get_joint_transform'):
+            joints_pos = curr_agent.get_joint_transform()[0]
+            return np.array(joints_pos, dtype=np.float32)
+        else:
+            return np.zeros(self.observation_space.shape, dtype=np.float32)
 
 
 @registry.register_sensor

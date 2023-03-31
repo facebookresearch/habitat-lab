@@ -49,7 +49,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
         self._agents = []
-        self._all_agent_idxs = []
+        self._agent_count_idxs = []
         self._pop_config = config.habitat_baselines.rl.agent
 
         for k in env_spec.orig_action_space:
@@ -57,7 +57,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 raise ValueError(
                     f"Multi-agent training requires splitting the action space between the agents. Shared actions are not supported yet {k}"
                 )
-        self._agents, self._all_agent_idxs = self._get_agents(
+        self._agents, self._agent_count_idxs = self._get_agents(
             config,
             env_spec,
             is_distrib,
@@ -77,14 +77,18 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             policy_cls = MultiPolicy
             updater_cls = MultiUpdater
             storage_cls = MultiStorage
-
+        
+        # TODO(andrew): why do we call these functions? It seems they
+        # just create an empty class
+        num_active_agents = sum(self._pop_config.num_active_agents_per_type)
+        
         self._multi_policy = policy_cls.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,
             orig_action_space=env_spec.orig_action_space,
             agent=self._agents[0],
-            n_agents=self._pop_config.num_active_agents,
+            n_agents=num_active_agents,
         )
         self._multi_updater = updater_cls.from_config(
             config,
@@ -92,7 +96,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             env_spec.action_space,
             orig_action_space=env_spec.orig_action_space,
             agent=self._agents[0],
-            n_agents=self._pop_config.num_active_agents,
+            n_agents=num_active_agents,
         )
 
         self._multi_storage = storage_cls.from_config(
@@ -101,7 +105,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             env_spec.action_space,
             orig_action_space=env_spec.orig_action_space,
             agent=self._agents[0],
-            n_agents=self._pop_config.num_active_agents,
+            n_agents=num_active_agents,
         )
 
         if self.nbuffers != 1:
@@ -120,43 +124,50 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         percent_done_fn: Callable[[], float],
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
-        all_agent_idxs = []
+        agent_count_idxs = []
         agents = []
-        for agent_i in range(self._pop_config.num_total_agents):
-            all_agent_idxs.append(agent_i)
-            use_resume_state = None
-            if resume_state is not None:
-                use_resume_state = resume_state[str(agent_i)]
+        for agent_i in range(self._pop_config.num_agent_types):
+            num_agents_type = self._pop_config.num_pool_agents_per_type[agent_i]
+            agent_count_idxs.append(num_agents_type)
 
-            agent_obs_space = spaces.Dict(
-                update_dict_with_agent_prefix(
-                    env_spec.observation_space, agent_i
+            for agent_type_i in range(num_agents_type):
+                agent_ct = agent_i * num_agents_type + agent_type_i
+                
+                use_resume_state = None
+                if resume_state is not None:
+                    use_resume_state = resume_state[str(agent_ct)]
+
+                agent_obs_space = spaces.Dict(
+                    update_dict_with_agent_prefix(
+                        env_spec.observation_space, agent_i
+                    )
                 )
-            )
-            agent_orig_action_space = spaces.Dict(
-                update_dict_with_agent_prefix(
-                    env_spec.orig_action_space.spaces, agent_i
+                agent_orig_action_space = spaces.Dict(
+                    update_dict_with_agent_prefix(
+                        env_spec.orig_action_space.spaces, agent_i
+                    )
                 )
-            )
-            agent_action_space = create_action_space(agent_orig_action_space)
-            agent_env_spec = EnvironmentSpec(
-                observation_space=agent_obs_space,
-                action_space=agent_action_space,
-                orig_action_space=agent_orig_action_space,
-            )
-            agents.append(
-                SingleAgentAccessMgr(
-                    config,
-                    agent_env_spec,
-                    is_distrib,
-                    device,
-                    use_resume_state,
-                    num_envs,
-                    percent_done_fn,
-                    lr_schedule_fn,
+                agent_action_space = create_action_space(agent_orig_action_space)
+                agent_env_spec = EnvironmentSpec(
+                    observation_space=agent_obs_space,
+                    action_space=agent_action_space,
+                    orig_action_space=agent_orig_action_space,
                 )
-            )
-        return agents, all_agent_idxs
+                agent_name = config.habitat.simulator.agents_order[agent_i]
+                agents.append(
+                    SingleAgentAccessMgr(
+                        config,
+                        agent_env_spec,
+                        is_distrib,
+                        device,
+                        use_resume_state,
+                        num_envs,
+                        percent_done_fn,
+                        lr_schedule_fn,
+                        agent_name
+                    )
+                )
+        return agents, agent_count_idxs
 
     @property
     def nbuffers(self):
@@ -169,14 +180,26 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         assert not self._pop_config.self_play_batched
 
         # Random sample over which agents are active.
-        self._active_agents = np.random.choice(
-            self._all_agent_idxs,
-            size=self._pop_config.num_active_agents,
-            replace=self._pop_config.allow_self_play,
-        )
+        prev_num_agents = 0
+        active_agents = []
+        active_agent_types = []
+        for agent_type_ind in range(self._pop_config.num_agent_types):
+            if self._pop_config.num_active_agents_per_type[agent_type_ind] > 1:
+                raise ValueError("The current code only supports sampling one agent of a given type at a time")
+            active_agents_type = np.random.choice(
+                self._agent_count_idxs[agent_type_ind],
+                size=self._pop_config.num_active_agents_per_type[agent_type_ind]
+            )
+            agent_cts = active_agents_type + prev_num_agents
+            prev_num_agents += self._agent_count_idxs[agent_type_ind]
+            active_agents.append(agent_cts)
+            active_agent_types.append(np.ones(agent_cts.shape)*agent_type_ind)
+
+        self._active_agents = np.concatenate(active_agents)
+        active_agent_types = np.concatenate(active_agent_types)
 
         self._multi_storage.set_active(
-            [self._agents[i].rollouts for i in self._active_agents]
+            [self._agents[i].rollouts for i in self._active_agents], active_agent_types
         )
         self._multi_updater.set_active(
             [self._agents[i].updater for i in self._active_agents]

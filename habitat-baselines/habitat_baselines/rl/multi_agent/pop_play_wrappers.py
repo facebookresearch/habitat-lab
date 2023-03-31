@@ -127,8 +127,10 @@ class MultiPolicy(Policy):
 class MultiStorage(Storage):
     def __init__(self):
         self._active_storages = []
+        self._agent_type_ids = []
 
-    def set_active(self, active_storages):
+    def set_active(self, active_storages, agent_type_ids):
+        self._agent_type_ids = agent_type_ids
         self._active_storages = active_storages
 
     def insert(
@@ -151,9 +153,10 @@ class MultiStorage(Storage):
         # per-agent.
         insert_d = {k: _maybe_chunk(v) for k, v in kwargs.items()}
         for agent_i, storage in enumerate(self._active_storages):
+            agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
                 agent_next_observations = update_dict_with_agent_prefix(
-                    next_observations, agent_i
+                    next_observations, agent_type_idx
                 )
             else:
                 agent_next_observations = None
@@ -174,10 +177,12 @@ class MultiStorage(Storage):
 
     def insert_first_observations(self, batch):
         for agent_i, storage in enumerate(self._active_storages):
-            storage.insert_first_observations(
-                update_dict_with_agent_prefix(batch, agent_i)
-            )
-
+            agent_idx = self._agent_type_ids[agent_i]
+            obs_dict = update_dict_with_agent_prefix(batch, agent_idx)
+            try:
+                storage.insert_first_observations(obs_dict)
+            except:
+                breakpoint()
     def advance_rollout(self, buffer_index=0):
         for storage in self._active_storages:
             storage.advance_rollout(buffer_index)

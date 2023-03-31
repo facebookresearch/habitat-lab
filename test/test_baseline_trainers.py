@@ -239,13 +239,13 @@ def test_cubemap_stiching(
         meta_config.habitat = config
 
         if camera == "equirect":
-            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+            meta_config.habitat_baselines.rl.policy.main_agent.obs_transforms = {
                 "cube2eq": Cube2EqConfig(
                     sensor_uuids=sensor_uuids, width=256, height=256
                 )
             }
         elif camera == "fisheye":
-            meta_config.habitat_baselines.rl.policy.obs_transforms = {
+            meta_config.habitat_baselines.rl.policy.main_agent.obs_transforms = {
                 "cube2fish": Cube2FishConfig(
                     sensor_uuids=sensor_uuids, width=256, height=256
                 )
