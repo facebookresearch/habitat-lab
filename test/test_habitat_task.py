@@ -13,7 +13,7 @@ import habitat
 from habitat.config.default_structured_configs import TeleportActionConfig
 from habitat.utils.test_utils import sample_non_stop_action
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_all_sensors_test.yaml"
 teleport_position = np.array(
     [-3.2890449, 0.15067159, 11.124366], dtype=np.float32
 )
@@ -72,7 +72,7 @@ def test_task_actions_sampling_for_teleport():
     [
         CFG_TEST,
         "benchmark/nav/pointnav/pointnav_habitat_test.yaml",
-        "test/habitat_mp3d_eqa_test.yaml",
+        "test/config/habitat/habitat_mp3d_eqa_test.yaml",
     ],
 )
 def test_task_actions_sampling(config_file):

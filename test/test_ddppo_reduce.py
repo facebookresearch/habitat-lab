@@ -40,7 +40,7 @@ def _worker_fn(
         "gloo", store=tcp_store, rank=world_rank, world_size=world_size
     )
 
-    config = get_config("test/ppo_pointnav_test.yaml")
+    config = get_config("test/config/habitat_baselines/ppo_pointnav_test.yaml")
     obs_space = gym.spaces.Dict(
         {
             IntegratedPointGoalGPSAndCompassSensor.cls_uuid: gym.spaces.Box(

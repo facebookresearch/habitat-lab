@@ -25,7 +25,7 @@ from habitat.utils.test_utils import (
     sample_non_stop_action_gym,
 )
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_all_sensors_test.yaml"
 NUM_ENVS = 4
 
 
