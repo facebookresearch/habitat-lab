@@ -844,8 +844,10 @@ class PPOTrainer(BaseRLTrainer):
             dtype=torch.long if discrete_actions else torch.float,
         )
         not_done_masks = torch.zeros(
-            self.config.habitat_baselines.num_environments,
-            1,
+            (
+                self.config.habitat_baselines.num_environments,
+                *self._agent.masks_shape,
+            ),
             device=self.device,
             dtype=torch.bool,
         )
@@ -904,14 +906,9 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     prev_actions.copy_(action_data.actions)  # type: ignore
                 else:
-                    for i, should_insert in enumerate(
-                        action_data.should_inserts
-                    ):
-                        if should_insert.item():
-                            test_recurrent_hidden_states[
-                                i
-                            ] = action_data.rnn_hidden_states[i]
-                            prev_actions[i].copy_(action_data.actions[i])  # type: ignore
+                    self._agent.update_hidden_state(
+                        test_recurrent_hidden_states, prev_actions, action_data
+                    )
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.

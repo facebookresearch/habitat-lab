@@ -34,6 +34,10 @@ class AgentAccessMgr(ABC):
     ):
         pass
 
+    @abstractmethod
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        raise NotImplementedError()
+
     @property
     @abstractmethod
     def nbuffers(self) -> int:
@@ -121,6 +125,11 @@ class AgentAccessMgr(ABC):
         """
         The shape of the tensor to track the hidden state, such as the RNN hidden state.
         """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def masks_shape(self):
         raise NotImplementedError()
 
     @abstractmethod

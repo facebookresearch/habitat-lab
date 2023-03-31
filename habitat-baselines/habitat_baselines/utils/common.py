@@ -708,6 +708,8 @@ def get_action_space_info(ac_space: spaces.Space) -> Tuple[Tuple[int], bool]:
             ),
             False,
         )
+    elif isinstance(ac_space, spaces.MultiDiscrete):
+        return ac_space.shape, True
     else:
         # For discrete pointnav
         return (1,), True

@@ -387,7 +387,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
-            should_inserts=call_high_level,
+            should_inserts=call_high_level.view(-1, 1),
             **action_kwargs,
         )
 
