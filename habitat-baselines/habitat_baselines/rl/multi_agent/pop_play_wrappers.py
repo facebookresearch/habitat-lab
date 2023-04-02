@@ -179,10 +179,7 @@ class MultiStorage(Storage):
         for agent_i, storage in enumerate(self._active_storages):
             agent_idx = self._agent_type_ids[agent_i]
             obs_dict = update_dict_with_agent_prefix(batch, agent_idx)
-            try:
-                storage.insert_first_observations(obs_dict)
-            except:
-                breakpoint()
+            storage.insert_first_observations(obs_dict)
 
     def advance_rollout(self, buffer_index=0):
         for storage in self._active_storages:
