@@ -54,6 +54,7 @@ class DynNavRLEnv(RearrangeTask):
         self.robot_start_rotation = None
 
         self._min_start_distance = self._config.min_start_distance
+        self._goal_type = config.goal_type
 
     @property
     def nav_goal_pos(self):
@@ -99,6 +100,7 @@ class DynNavRLEnv(RearrangeTask):
         if (
             force_idx is None
             and random.random() < self._config.object_in_hand_sample_prob
+            and self._goal_type != 'ovmm'
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
@@ -135,10 +137,10 @@ class DynNavRLEnv(RearrangeTask):
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
             sim.robot.arm_motor_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
             )
             sim.robot.arm_joint_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
             )
 
         self._nav_to_info = self._generate_nav_start_goal(
