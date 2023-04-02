@@ -202,7 +202,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             prev_num_agents += self._agent_count_idxs[agent_type_ind]
             active_agents.append(agent_cts)
             active_agent_types.append(
-                np.ones(agent_cts.shape) * agent_type_ind
+                np.ones(agent_cts.shape, dtype=np.int32) * agent_type_ind
             )
 
         self._active_agents = np.concatenate(active_agents)

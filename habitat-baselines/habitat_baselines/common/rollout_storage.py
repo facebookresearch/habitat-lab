@@ -35,7 +35,7 @@ class RolloutStorage(Storage):
         is_double_buffered: bool = False,
     ):
         action_shape, discrete_actions = get_action_space_info(action_space)
-        breakpoint()
+
         self.buffers = TensorDict()
         self.buffers["observations"] = TensorDict()
 
