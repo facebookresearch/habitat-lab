@@ -78,7 +78,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             updater_cls = MultiUpdater
             storage_cls = MultiStorage
 
-        # TODO(andrew): why do we call these functions? It seems they
+        # TODO(xavi to andrew): why do we call these functions? It seems they
         # just create an empty class
         num_active_agents = sum(self._pop_config.num_active_agents_per_type)
 

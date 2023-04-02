@@ -68,9 +68,6 @@ class PddlApplyAction(ArticulatedAgentAction):
                 real_action_idxs = [int(a) - 1 for a in action_part]
                 for a in real_action_idxs:
                     if a < 0.0:
-                        for acti in self._action_ordering:
-                            print(acti.name, acti.n_args)
-                        breakpoint()
                         raise ValueError(
                             f"Got invalid action value < 0 in {action_part} with action {action}"
                         )

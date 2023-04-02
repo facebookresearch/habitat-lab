@@ -75,7 +75,6 @@ class HumanoidRearrangeController:
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
-            breakpoint()
             raise RuntimeError(
                 f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data."
             )
