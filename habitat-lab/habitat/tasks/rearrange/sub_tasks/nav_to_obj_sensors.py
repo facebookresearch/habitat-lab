@@ -4,10 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
@@ -197,6 +200,7 @@ class RotDistToGoal(Measure):
 
     def __init__(self, *args, sim, **kwargs):
         self._sim = sim
+        self._use_base_T = True
         super().__init__(*args, sim=sim, **kwargs)
 
     @staticmethod
@@ -209,23 +213,68 @@ class RotDistToGoal(Measure):
             **kwargs,
         )
 
+    def get_camera_object_angle(self, obj_pos):
+        """Calculates angle between gripper line-of-sight and given global position."""
+
+        # Get the camera transformation
+        cam_T = self.get_camera_transform()
+
+        # Get object location in camera frame
+        cam_obj_pos = cam_T.inverted().transform_point(obj_pos)
+
+        return cam_obj_pos
+
+    def get_camera_transform(self):
+        if isinstance(self._sim.articulated_agent, SpotRobot):
+            cam_info = self._sim.articulated_agent.params.cameras[
+                "articulated_agent_arm_depth"
+            ]
+        elif isinstance(self._sim.articulated_agent, StretchRobot):
+            cam_info = self._sim.articulated_agent.params.cameras["head"]
+        else:
+            raise NotImplementedError(
+                "This robot does not have GazeGraspAction."
+            )
+
+        # Get the camera's attached link
+        link_trans = self._sim.articulated_agent.sim_obj.get_link_scene_node(
+            cam_info.attached_link_id
+        ).transformation
+        # Get the camera offset transformation
+        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+
+        return cam_trans
+
     def update_metric(self, *args, episode, task, observations, **kwargs):
         # Get the target location
         targ = task.nav_goal_pos
-        # Get the agent transformation
-        robot = self._sim.articulated_agent
-        T = robot.base_transformation
-        # Do transformation
-        pos = T.inverted().transform_point(targ)
-        # Project to 2D plane (x,y,z=0)
-        pos[2] = 0.0
-        # Unit vector of the pos
-        pos = pos.normalized()
-        # Define the coordinate of the robot
-        pos_robot = np.array([1.0, 0.0, 0.0])
-        # Get the angle
-        angle = np.arccos(np.dot(pos, pos_robot))
-        self._metric = np.abs(float(angle))
+
+        if self._use_base_T:
+            # Get the agent
+            robot = self._sim.articulated_agent
+            # Get the base transformation
+            T = robot.base_transformation
+            # Do transformation
+            pos = T.inverted().transform_point(targ)
+            # Project to 2D plane (x,y,z=0)
+            pos[2] = 0.0
+            # Unit vector of the pos
+            pos = pos.normalized()
+            # Define the coordinate of the robot
+            pos_robot = np.array([1.0, 0.0, 0.0])
+            # Get the angle
+            angle = np.arccos(np.dot(pos, pos_robot))
+            self._metric = np.abs(float(angle))
+        else:
+            pos = self.get_camera_object_angle(targ)
+            # Unit vector of the pos
+            pos = pos.normalized()
+            # Define the coordinate of the robot
+            pos_camera = np.array([0.0, 1.0, 0.0])
+            # Get the angle
+            angle = np.arccos(np.dot(pos, pos_camera))
+            self._metric = np.abs(float(angle))
 
 
 @registry.register_measure
