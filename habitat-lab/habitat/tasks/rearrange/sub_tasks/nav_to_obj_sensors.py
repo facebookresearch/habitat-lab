@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import quaternion_from_coeff
 
@@ -292,7 +292,16 @@ class RotDistToGoal(Measure):
             targ = task.nav_goal_pos
         robot = self._sim.robot
         T = robot.base_transformation
-        angle = get_angle_to_pos(T.transform_vector(targ))
+        # Do transformation
+        pos = T.inverted().transform_point(targ)
+        # Project to 2D plane (x,y,z=0)
+        pos[2] = 0.0
+        # Unit vector of the pos
+        pos = pos.normalized()
+        # Define the coordinate of the robot
+        pos_robot = np.array([1.0, 0.0, 0.0])
+        # Get the angle
+        angle = np.arccos(np.dot(pos, pos_robot))
         self._metric = np.abs(float(angle))
 
 
