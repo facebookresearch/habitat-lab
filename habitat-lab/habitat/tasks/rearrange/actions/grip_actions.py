@@ -180,7 +180,7 @@ class GazeGraspAction(MagicGraspAction):
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
         # TODO: better name?
         self._distance_from = getattr(config, 'gaze_distance_from', 'camera')
-
+        self._center_square_width = config.gaze_center_square_width
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -250,7 +250,6 @@ class GazeGraspAction(MagicGraspAction):
                     "This robot does not have GazeGraspAction."
                 )
 
-        # Check if center pixel corresponds to a pickable object
         if isinstance(self._sim.robot, StretchRobot):
             panoptic_img = self._sim._sensor_suite.get_observations(
                 self._sim.get_sensor_observations()
@@ -261,7 +260,31 @@ class GazeGraspAction(MagicGraspAction):
         )
 
         height, width = panoptic_img.shape[:2]
-        center_obj_id = panoptic_img[height // 2,  width // 2] - self._instance_ids_start
+
+        if self._center_square_width == 1:
+            center_obj_id = panoptic_img[height // 2,  width // 2] - self._instance_ids_start
+        else:
+            # check if any pixel within the center square has a valid pixel
+            if isinstance(self._sim.robot, StretchRobot):
+                obj_seg = self._task.sensor_suite.get_observations(
+                    observations=self._sim.get_sensor_observations()
+                , episode=self._sim.ep_info, task=self._task)['object_segmentation']
+            else:
+                raise NotImplementedError(
+                    "This robot dose not have GazeGraspAction."
+                )
+            s = int(self._center_square_width)
+            h_off = height // 2 - s // 2
+            w_off = width // 2 - s // 2
+            center_square = obj_seg[h_off:h_off + s,  w_off: w_off + s]
+            panoptic_masked = panoptic_img.squeeze(2) * obj_seg
+            if np.sum(center_square) > 1:
+                panoptic_center = panoptic_masked[h_off:h_off + s,  w_off: w_off + s]
+                center_obj_id = panoptic_center[panoptic_center > 0][0] - self._instance_ids_start
+            else:
+                center_obj_id = None
+
+        # Check if center pixel corresponds to a pickable object
         if center_obj_id in self._sim.scene_obj_ids:
             rom = self._sim.get_rigid_object_manager()
             # Skip if not in distance range

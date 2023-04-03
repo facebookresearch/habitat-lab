@@ -225,9 +225,9 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
                 obs_k = obs_k.astype(np.uint8)
             if obs_k.shape[2] == 1:
                 obs_k = np.concatenate([obs_k for _ in range(3)], axis=2)
-
-            height, width = obs_k.shape[:2]
-            obs_k[height//2 - 3: height//2 + 3, width//2 - 3: width//2 + 3] = [[255, 0, 0]]
+            if 'third' not in sensor_name:
+                height, width = obs_k.shape[:2]
+                obs_k[height//2 - 3: height//2 + 3, width//2 - 3: width//2 + 3] = [[255, 0, 0]]
             render_obs_images.append(obs_k)
 
     assert (

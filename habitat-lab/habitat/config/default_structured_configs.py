@@ -127,6 +127,7 @@ class ArmActionConfig(ActionConfig):
     center_cone_vector: Optional[List[float]] = None
     wrong_grasp_should_end: bool = False
     gaze_distance_from: str = 'camera'
+    gaze_center_square_width: float = 1
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -664,6 +665,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     wrong_pick_should_end: bool = True
     object_goal: bool = False
     sparse_reward: bool = False
+    angle_reward_min_dist: float = 0.0
+    angle_reward_scale: float = 1.0
 
 
 @attr.s(auto_attribs=True, slots=True)

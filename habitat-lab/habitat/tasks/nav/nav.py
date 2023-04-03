@@ -1002,7 +1002,7 @@ class DistanceToGoal(Measure):
         if self._distance_to == "VIEW_POINTS":
             self._episode_view_points = [
                 view_point.agent_state.position
-                for goal in episode.goals
+                for goal in getattr(episode, self._goals_attr)
                 for view_point in goal.view_points
             ]
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore

@@ -17,7 +17,9 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
-
+import magnum as mn
+import numpy as np
+import habitat_sim
 
 @registry.register_measure
 class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
@@ -115,6 +117,9 @@ class RearrangePickReward(RearrangeReward):
         self._drop_obj_should_end = config.drop_obj_should_end
         self._object_goal = config.object_goal
         self._sparse_reward = config.sparse_reward
+        self._angle_reward_min_dist = config.angle_reward_min_dist
+        self._angle_reward_scale = config.angle_reward_scale
+        self._task = task
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -148,6 +153,52 @@ class RearrangePickReward(RearrangeReward):
             observations=observations,
             **kwargs,
         )
+
+
+    @staticmethod
+    def cosine(v1, v2):
+        return np.clip(np.dot(v1, v2), -1.0, 1.0)
+
+
+    def get_camera_angle_reward(self, obj_pos):
+        """Calculates angle between gripper line-of-sight and given global position."""
+
+        # Get the camera transformation
+        cam_T = self.get_camera_transform()
+        # Get object location in camera frame
+        cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
+
+        # Get angle between (normalized) location and the vector that the camera should
+        # look at
+        reward = self.cosine(cam_obj_pos, mn.Vector3(0, 1, 0))
+
+        return reward
+
+    def get_camera_transform(self):
+        cam_info = self._sim.robot.params.cameras["robot_head"]
+
+        # Get the camera's attached link
+        link_trans = self._sim.robot.sim_obj.get_link_scene_node(
+            cam_info.attached_link_id
+        ).transformation
+        # Get the camera offset transformation
+        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+        return cam_trans
+
+    def closest_goal_position(self, episode):
+        path = habitat_sim.MultiGoalShortestPath()
+        targets = np.array([goal.position for goal in episode.candidate_objects])
+        path.requested_start = self._sim.robot.base_pos
+        path.requested_ends = targets
+        self._sim.pathfinder.find_path(path)
+        assert (
+            path.closest_end_point_index != -1
+        ), f"None of the goals are reachable from current position for episode {episode.episode_id}"
+        # RotDist to closest goal
+        targ = targets[path.closest_end_point_index]
+        return targ
+
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         super().update_metric(
@@ -217,6 +268,10 @@ class RearrangePickReward(RearrangeReward):
                 self._metric += self._dist_reward * dist_diff
             else:
                 self._metric -= self._dist_reward * dist_to_goal
+            if not did_pick and self.cur_dist < self._angle_reward_min_dist:
+                # closest based on geodesic distance
+                closest_pos = self.closest_goal_position(episode)
+                self._metric += self.get_camera_angle_reward(closest_pos)
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
