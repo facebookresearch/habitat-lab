@@ -118,11 +118,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             config=self._config,
             device=self._device,
         )
-        print(
-            "Agent",
-            self.agent_name,
-            self._rollouts.buffers["observations"].keys(),
-        )
 
     def _create_updater(self, actor_critic) -> PPO:
         if self._is_distributed:
@@ -298,7 +293,6 @@ def default_create_rollouts(
         env_spec.observation_space, actor_critic, config
     )
     ppo_cfg = config.habitat_baselines.rl.ppo
-    print(obs_space)
     rollouts = baseline_registry.get_storage(
         config.habitat_baselines.rollout_storage_name
     )(
