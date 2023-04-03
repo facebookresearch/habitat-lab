@@ -361,8 +361,9 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     type: str = "SingleAgentAccessMgr"
     ###############################
     # Population play configuration
-    num_total_agents: int = 1
-    num_active_agents: int = 1
+    num_agent_types: int = 1
+    num_active_agents_per_type: List[int] = field(default_factory=lambda: [1])
+    num_pool_agents_per_type: List[int] = field(default_factory=lambda: [1])
     agent_sample_interval: int = 20
     allow_self_play: bool = False
     self_play_batched: bool = False
@@ -375,9 +376,7 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
     agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
     preemption: PreemptionConfig = PreemptionConfig()
-    policy: Dict[str, PolicyConfig] = field(
-        default_factory=lambda: {"main_agent": PolicyConfig()}
-    )
+    policy: Dict[str, PolicyConfig] = MISSING
     ppo: PPOConfig = PPOConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()

@@ -11,20 +11,17 @@ class ArticulatedAgentAction(SimulatorTaskAction):
 
     def __init__(self, *args, **kwargs):
         super().__init__(self, *args, **kwargs)
-        name_action = kwargs["name"]
-        self._multi_agent = len(self._sim.agents_mgr) > 1
-
-        if not name_action.startswith("agent_"):
+        if (
+            "agent_index" not in self._config
+            or self._config.agent_index is None
+        ):
             self._agent_index = 0
             assert (
                 not self._multi_agent
             ), f"Error in action: {name_action}. Multiagent actions should start with agent_X."
         else:
-            agent_index = name_action.split("_")[1]
-            assert agent_index.isnumeric()
-            agent_index = int(agent_index)
-            assert agent_index < len(self._sim.agents_mgr)
-            self._agent_index = agent_index
+            self._agent_index = self._config.agent_index
+            self._multi_agent = True
 
     @property
     def _articulated_agent_mgr(self):
