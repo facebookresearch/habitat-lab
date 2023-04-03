@@ -271,7 +271,7 @@ class RearrangePickReward(RearrangeReward):
             if not did_pick and self.cur_dist < self._angle_reward_min_dist:
                 # closest based on geodesic distance
                 closest_pos = self.closest_goal_position(episode)
-                self._metric += self.get_camera_angle_reward(closest_pos)
+                self._metric += self.get_camera_angle_reward * self.get_camera_angle_reward(closest_pos)
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:
