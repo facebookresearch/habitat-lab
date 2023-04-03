@@ -680,8 +680,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         :param observations: Original observations upon which the keyframe is added.
         """
-        if not self.config.enable_batch_renderer:
-            return
+        assert self.config.enable_batch_renderer
 
         assert KEYFRAME_OBSERVATION_KEY not in observations
         for _sensor_uuid, sensor in self._sensors.items():
