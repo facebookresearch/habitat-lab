@@ -11,7 +11,11 @@ from typing import Callable, Dict, List, Union
 import magnum as mn
 import numpy as np
 from omegaconf import DictConfig
-from torch import Tensor
+
+try:
+    from torch import Tensor
+except ImportError:
+    pass
 
 import habitat_sim
 from habitat.core.batch_rendering.env_batch_renderer_constants import (
@@ -136,7 +140,7 @@ class EnvBatchRenderer:
             )
 
         # Render observations
-        batch_observations: Dict[str, Union[np.ndarray, Tensor]] = {}
+        batch_observations: Dict[str, Union[np.ndarray, "Tensor"]] = {}
         for sensor_spec in self._sensor_specifications:
             batch_observations[sensor_spec.uuid] = self._draw_observations(
                 sensor_spec
