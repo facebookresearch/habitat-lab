@@ -5,10 +5,14 @@ defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - /habitat_baselines/rl/agent: pop_play
-  - /habitat_baselines/rl/policy/obs_transforms:
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_0.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy: hab3_hl_neural
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills_ma
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat/task/measurements:
     - composite_subgoal_reward
   - _self_
@@ -79,7 +83,7 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
+  writer_type: 'tb'
 
   wb:
     project_name: 'hab3'
