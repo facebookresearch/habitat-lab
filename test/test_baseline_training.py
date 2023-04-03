@@ -263,7 +263,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
             skill_name,
             skill,
         ) in (
-            config.habitat_baselines.rl.policy.hierarchical_policy.defined_skills.items()
+            config.habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills.items()
         ):
             if skill.load_ckpt_file == "":
                 continue
