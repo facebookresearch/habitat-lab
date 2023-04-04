@@ -426,8 +426,20 @@ class HierarchicalPolicy(nn.Module, Policy):
         orig_action_space,
         **kwargs,
     ):
+        agent_name = None
+        if "agent_name" in kwargs:
+            agent_name = kwargs["agent_name"]
+
+        if agent_name is None:
+            if len(config.habitat.simulator.agents_order) > 1:
+                raise ValueError(
+                    "If there is more than an agent, you need to specify the agent name"
+                )
+            else:
+                agent_name = config.habitat.simulator.agents_order[0]
+
         return cls(
-            config.habitat_baselines.rl.policy,
+            config.habitat_baselines.rl.policy[agent_name],
             config,
             observation_space,
             orig_action_space,
