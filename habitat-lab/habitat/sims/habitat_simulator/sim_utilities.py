@@ -153,6 +153,7 @@ def bb_ray_prescreen(
     lowest_key_point_height = None
     highest_support_impact: mn.Vector3 = None
     highest_support_impact_height = None
+    highest_support_impact_with_stage = False
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
@@ -180,6 +181,7 @@ def bb_ray_prescreen(
                 if hit.object_id == obj.object_id:
                     continue
                 elif hit.object_id in support_obj_ids:
+                    print(f"hit.ray_distance = {hit.ray_distance}")
                     hit_point = ray.origin + ray.direction * hit.ray_distance
                     support_impacts[ix] = hit_point
                     support_impact_height = mn.math.dot(
@@ -193,6 +195,7 @@ def bb_ray_prescreen(
                     ):
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
+                        highest_support_impact_with_stage = hit.object_id == -1
 
                 # terminates at the first non-self ray hit
                 break
@@ -202,11 +205,23 @@ def bb_ray_prescreen(
         - obj.translation.projected_onto_normalized(-gravity_dir).length()
     )
 
+    # account for the affects of stage mesh margin
+    margin_offset = (
+        0
+        if not highest_support_impact_with_stage
+        else sim.get_stage_initialization_template().margin
+    )
+
     surface_snap_point = (
         None
         if 0 not in support_impacts
-        else support_impacts[0] + gravity_dir * base_rel_height
+        else support_impacts[0]
+        + gravity_dir * (base_rel_height - margin_offset)
     )
+
+    print(f"base_rel_height = {base_rel_height}")
+    print(f"surface_snap_point = {surface_snap_point}")
+    print(f"lowest_key_point_height = {lowest_key_point_height}")
 
     # return list of relative base height, object position for surface snapped point, and ray results details
     return {
@@ -269,8 +284,16 @@ def snap_down(
                 )
             ):
                 obj.translation = cached_position
-                # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
-                # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
+                print(
+                    f" Failure: contact in final position w/ distance = {cp.contact_distance}."
+                )
+                if not (
+                    cp.object_id_a in support_obj_ids
+                    or cp.object_id_b in support_obj_ids
+                ):
+                    print(
+                        f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}."
+                    )
                 return False
         return True
     else:
