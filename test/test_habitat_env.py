@@ -15,6 +15,9 @@ from gym import Wrapper
 
 import habitat
 from habitat.config.default import get_agent_config, get_config
+from habitat.core.batch_rendering.env_batch_renderer_constants import (
+    KEYFRAME_OBSERVATION_KEY,
+)
 from habitat.core.simulator import AgentState
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.gym.gym_definitions import make_gym_from_config
@@ -269,6 +272,97 @@ def test_rl_vectorized_envs(gpu2gpu):
             observations, rewards, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            assert len(observations) == num_envs
+            assert len(rewards) == num_envs
+            assert len(dones) == num_envs
+            assert len(infos) == num_envs
+
+            tiled_img = envs.render(mode="rgb_array")
+            new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
+            new_width = int(np.ceil(float(NUM_ENVS) / new_height))
+            h, w, c = observations[0]["rgb"].shape
+            assert tiled_img.shape == (
+                h * new_height,
+                w * new_width,
+                c,
+            ), "vector env render is broken"
+
+            if (i + 1) % configs[0].habitat.environment.max_episode_steps == 0:
+                assert all(
+                    dones
+                ), "dones should be true after max_episode steps"
+
+
+@pytest.mark.parametrize("classic_replay_renderer", [False, True])
+@pytest.mark.parametrize("gpu2gpu", [False])
+def test_rl_vectorized_envs_batch_renderer(
+    gpu2gpu: bool, classic_replay_renderer: bool
+):
+    import habitat_sim
+
+    if gpu2gpu and not habitat_sim.cuda_enabled:
+        pytest.skip("GPU-GPU requires CUDA")
+
+    configs, datasets = _load_test_data()
+    for config in configs:
+        with habitat.config.read_write(config):
+            config.habitat.simulator.renderer.enable_batch_renderer = True
+            config.habitat.simulator.renderer.classic_replay_renderer = (
+                classic_replay_renderer
+            )
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
+                True
+            )
+            config.habitat.simulator.create_renderer = False
+            config.habitat.simulator.habitat_sim_v0.gpu_gpu = gpu2gpu
+            agent_config = get_agent_config(config.habitat.simulator)
+            # Only keep the rgb_sensor
+            agent_config.sim_sensors = {
+                "rgb_sensor": agent_config.sim_sensors["rgb_sensor"]
+            }
+
+    num_envs = len(configs)
+    env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
+    with habitat.VectorEnv(
+        make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
+    ) as envs:
+        envs.initialize_batch_renderer(configs[0])
+        observations = envs.reset()
+        for env_obs in observations:
+            assert KEYFRAME_OBSERVATION_KEY in env_obs
+
+        observations = envs.post_step(observations)
+        for env_obs in observations:
+            assert KEYFRAME_OBSERVATION_KEY not in env_obs
+
+        assert len(observations) == num_envs
+
+        # TODO: Add screenshot tests. Image stats are compared until then.
+        reset_image_mean: List[float] = [126.23, 126.84, 126.62, 125.63]
+        reset_image_std_dev: List[float] = [26.54, 26.16, 25.80, 26.56]
+        tiled_img = envs.render(mode="rgb_array")
+        for env_idx in range(num_envs):
+            mean = float(np.mean(tiled_img[env_idx]))
+            std_dev = float(np.std(tiled_img[env_idx]))
+            assert abs(reset_image_mean[env_idx] - mean) < 0.01
+            assert abs(reset_image_std_dev[env_idx] - std_dev) < 0.01
+
+        for i in range(2 * configs[0].habitat.environment.max_episode_steps):
+            outputs = envs.step(
+                sample_non_stop_action_gym(envs.action_spaces[0], num_envs)
+            )
+            observations, rewards, dones, infos = [
+                list(x) for x in zip(*outputs)
+            ]
+
+            for env_obs in observations:
+                assert KEYFRAME_OBSERVATION_KEY in env_obs
+
+            observations = envs.post_step(observations)
+
+            for env_obs in observations:
+                assert KEYFRAME_OBSERVATION_KEY not in env_obs
+
             assert len(observations) == num_envs
             assert len(rewards) == num_envs
             assert len(dones) == num_envs

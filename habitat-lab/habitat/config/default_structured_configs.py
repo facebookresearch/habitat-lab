@@ -1322,6 +1322,20 @@ class AgentConfig(HabitatBaseConfig):
 
 
 @dataclass
+class RendererConfig(HabitatBaseConfig):
+    r"""Configuration for the renderer.
+
+    :property enable_batch_renderer: [Experimental] Enables batch rendering, which accelerates rendering for concurrent environments. See env_batch_renderer.py for details.
+    :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
+    :property classic_replay_renderer: For debugging. Create a ClassicReplayRenderer instead of BatchReplayRenderer when enable_batch_renderer is active.
+    """
+
+    enable_batch_renderer: bool = False
+    composite_files: Optional[List[str]] = None
+    classic_replay_renderer: bool = False
+
+
+@dataclass
 class HabitatSimV0Config(HabitatBaseConfig):
     gpu_device_id: int = 0
     # Use Habitat-Sim's GPU->GPU copy mode to return rendering results in
@@ -1401,6 +1415,8 @@ class SimulatorConfig(HabitatBaseConfig):
     ep_info: Optional[Any] = None
     # The offset id values for the object
     object_ids_start: int = 100
+    # Configuration for rendering
+    renderer: RendererConfig = RendererConfig()
 
 
 @dataclass
