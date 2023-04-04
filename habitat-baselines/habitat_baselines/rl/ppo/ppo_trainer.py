@@ -795,19 +795,27 @@ class PPOTrainer(BaseRLTrainer):
             config.habitat.dataset.split = config.habitat_baselines.eval.split
 
         if len(self.config.habitat_baselines.eval.video_option) > 0:
-            agent_config = get_agent_config(config.habitat.simulator)
-            agent_sensors = agent_config.sim_sensors
-            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
-            with read_write(agent_sensors):
-                agent_sensors.update(extra_sensors)
-            with read_write(config):
-                if config.habitat.gym.obs_keys is not None:
-                    for render_view in extra_sensors.values():
-                        if render_view.uuid not in config.habitat.gym.obs_keys:
-                            config.habitat.gym.obs_keys.append(
+            n_agents = len(config.habitat.simulator.agents)
+            for agent_i in range(n_agents):
+                agent_name = config.habitat.simulator.agents_order[agent_i]
+                agent_config = get_agent_config(
+                    config.habitat.simulator, agent_i
+                )
+                agent_sensors = agent_config.sim_sensors
+                extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+                with read_write(agent_sensors):
+                    agent_sensors.update(extra_sensors)
+                with read_write(config):
+                    if config.habitat.gym.obs_keys is not None:
+                        for render_view in extra_sensors.values():
+                            if (
                                 render_view.uuid
-                            )
-                config.habitat.simulator.debug_render = True
+                                not in config.habitat.gym.obs_keys
+                            ):
+                                config.habitat.gym.obs_keys.append(
+                                    f"{agent_name}_{render_view.uuid}"
+                                )
+                    config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
