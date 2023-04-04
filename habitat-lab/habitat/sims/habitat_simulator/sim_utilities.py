@@ -205,6 +205,7 @@ def bb_ray_prescreen(
     )
 
     # account for the affects of stage mesh margin
+    # Warning: Bullet raycast on stage triangle mesh does NOT consider the margin, so explicitly consider this here.
     margin_offset = (
         0
         if not highest_support_impact_with_stage
