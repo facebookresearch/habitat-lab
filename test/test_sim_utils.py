@@ -87,7 +87,6 @@ def test_snap_down(support_margin, obj_margin, stage_support):
     hab_cfg = make_cfg(sim_settings)
     hab_cfg.metadata_mediator = mm
     with Simulator(hab_cfg) as sim:
-        print("made it?")
         rom = sim.get_rigid_object_manager()
 
         # add the cube objects
