@@ -211,7 +211,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         self._active_agents = np.concatenate(active_agents)
         active_agent_types = np.concatenate(active_agent_types)
 
-        if not self._is_post_init:
+        if self._is_post_init:
             # If not post init then we are running in evaluation mode and
             # should only setup the policy
             self._multi_storage.set_active(
