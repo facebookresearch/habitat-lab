@@ -141,6 +141,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def policy_action_space(self):
         return self._policy_action_space
 
+    @property
+    def masks_shape(self):
+        return (1,)
+
     def _create_policy(self) -> NetPolicy:
         """
         Creates and initializes the policy. This should also load any model weights from checkpoints.
@@ -253,6 +257,17 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.clip_param = self._ppo_cfg.clip_param * (
                 1 - self._percent_done_fn()
             )
+
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        """
+        Update the hidden state given that `should_inserts` is not None. Writes
+        to `rnn_hxs` and `prev_actions` in place.
+        """
+
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            if should_insert.item():
+                rnn_hxs[env_i] = action_data.rnn_hidden_states[env_i]
+                prev_actions[env_i].copy_(action_data.actions[env_i])  # type: ignore
 
 
 def get_rollout_obs_space(obs_space, actor_critic, config):

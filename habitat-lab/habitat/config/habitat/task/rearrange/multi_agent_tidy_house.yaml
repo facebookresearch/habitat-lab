@@ -19,6 +19,8 @@ defaults:
     - articulated_agent_colls
     - composite_success
     - num_steps
+    - composite_stage_goals
+    - composite_subgoal_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -32,10 +34,10 @@ defaults:
   - _self_
 
 type: RearrangeCompositeTask-v0
-reward_measure: composite_success
+reward_measure: composite_subgoal_reward
 success_measure: composite_success
-success_reward: 100.0
 slack_reward: -0.01
+success_reward: 5.0
 end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
@@ -66,3 +68,5 @@ measurements:
     max_instant_force: 10000.0
   composite_success:
     must_call_stop: False
+  composite_subgoal_reward:
+    stage_sparse_reward: 1.0
