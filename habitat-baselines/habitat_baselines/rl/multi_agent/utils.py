@@ -13,6 +13,10 @@ def _remove_agent_prefix(name: str, agent_s: str) -> str:
 def update_dict_with_agent_prefix(
     names: Union[Dict[str, Any], TensorDict], agent_idx: int
 ) -> Union[Dict[str, Any], TensorDict]:
+    """
+    :param agent_idx: The index of the agent name in the dictionary. Will format as `agent_{agent_idx}`
+    """
+
     was_td_dict = isinstance(names, TensorDict)
     agent_s = f"agent_{agent_idx}_"
     ret = {
