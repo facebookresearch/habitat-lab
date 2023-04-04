@@ -52,6 +52,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         self._agent_count_idxs = []
         self._pop_config = config.habitat_baselines.rl.agent
 
+        # Tracks if the agent storage is setup.
+        self._is_post_init = False
+
         for k in env_spec.orig_action_space:
             if not k.startswith("agent"):
                 raise ValueError(
@@ -112,6 +115,8 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             raise ValueError(
                 "Multi-agent training does not support double buffered sampling"
             )
+        if config.habitat_baselines.evaluate:
+            self._sample_active()
 
     def _get_agents(
         self,
@@ -208,18 +213,22 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         self._active_agents = np.concatenate(active_agents)
         active_agent_types = np.concatenate(active_agent_types)
 
-        self._multi_storage.set_active(
-            [self._agents[i].rollouts for i in self._active_agents],
-            active_agent_types,
-        )
-        self._multi_updater.set_active(
-            [self._agents[i].updater for i in self._active_agents]
-        )
+        if self._is_post_init:
+            # If not post init then we are running in evaluation mode and
+            # should only setup the policy
+            self._multi_storage.set_active(
+                [self._agents[i].rollouts for i in self._active_agents],
+                active_agent_types,
+            )
+            self._multi_updater.set_active(
+                [self._agents[i].updater for i in self._active_agents]
+            )
         self._multi_policy.set_active(
             [self._agents[i].actor_critic for i in self._active_agents]
         )
 
     def post_init(self, create_rollouts_fn=None):
+        self._is_post_init = True
         for agent in self._agents:
             agent.post_init(create_rollouts_fn)
 
@@ -240,28 +249,30 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         return len(self._agents)
 
     def load_state_dict(self, state):
-        for agent in self._agents:
-            agent.load_state_dict(state)
+        for agent_i, agent in enumerate(self._agents):
+            agent.load_state_dict(state[agent_i])
 
     def load_ckpt_state_dict(self, ckpt):
         for agent in self._agents:
             agent.load_ckpt_state_dict(ckpt)
 
     @property
+    def masks_shape(self):
+        return (
+            sum(self._agents[i].masks_shape[0] for i in self._active_agents),
+        )
+
+    @property
     def hidden_state_shape(self):
         """
         Stack the hidden states of all the policies in the active population.
         """
-
-        return np.sum(
-            np.stack(
-                [
-                    self._agents[i].hidden_state_shape
-                    for i in self._active_agents
-                ]
-            ),
-            axis=0,
+        hidden_shapes = np.stack(
+            [self._agents[i].hidden_state_shape for i in self._active_agents]
         )
+        any_hidden_shape = hidden_shapes[0]
+        # The hidden states will be concatenated over the last dimension.
+        return [*any_hidden_shape[:-1], np.sum(hidden_shapes[:, -1])]
 
     def after_update(self):
         """
@@ -307,4 +318,26 @@ class MultiAgentAccessMgr(AgentAccessMgr):
 
     @property
     def policy_action_space(self):
-        return self.actor_critic.policy_action_space
+        # TODO: Hack for discrete HL action spaces.
+        return spaces.MultiDiscrete(
+            tuple([agent.policy_action_space.n for agent in self._agents])
+        )
+
+    def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        n_agents = len(self._active_agents)
+        hxs_dim = rnn_hxs.shape[-1] // n_agents
+        ac_dim = prev_actions.shape[-1] // n_agents
+        # Not very efficient, but update each policies's hidden state individually.
+        for env_i, should_insert in enumerate(action_data.should_inserts):
+            for policy_i, agent_should_insert in enumerate(should_insert):
+                if not agent_should_insert.item():
+                    continue
+                rnn_sel = slice(policy_i * hxs_dim, (policy_i + 1) * hxs_dim)
+                rnn_hxs[env_i, :, rnn_sel] = action_data.rnn_hidden_states[
+                    env_i, :, rnn_sel
+                ]
+
+                ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
+                prev_actions[env_i, ac_sel].copy_(
+                    action_data.actions[env_i, ac_sel]
+                )

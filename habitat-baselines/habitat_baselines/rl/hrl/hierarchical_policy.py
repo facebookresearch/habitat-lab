@@ -378,11 +378,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
-            should_inserts=did_choose_new_skill.view(-1, 1),
-            actions=use_action,
-            values=hl_info.values,
-            action_log_probs=hl_info.action_log_probs,
-            rnn_hidden_states=rnn_hidden_states,
+            should_inserts=call_high_level.view(-1, 1),
+            **action_kwargs,
         )
 
     @property
