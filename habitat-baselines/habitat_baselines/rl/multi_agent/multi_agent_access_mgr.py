@@ -51,7 +51,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         self._agents = []
         self._agent_count_idxs = []
         self._pop_config = config.habitat_baselines.rl.agent
-        self._is_post_init = True
+
+        # Tracks if the agent storage is setup.
+        self._is_post_init = False
 
         for k in env_spec.orig_action_space:
             if not k.startswith("agent"):
@@ -322,25 +324,20 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         )
 
     def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
-        """
-        Update the hidden state of the agents in the population. Writes to the
-        data in place.
-        """
         n_agents = len(self._active_agents)
         hxs_dim = rnn_hxs.shape[-1] // n_agents
         ac_dim = prev_actions.shape[-1] // n_agents
-        # Not very efficient, but update each agent's hidden state individually.
+        # Not very efficient, but update each policies's hidden state individually.
         for env_i, should_insert in enumerate(action_data.should_inserts):
             for policy_i, agent_should_insert in enumerate(should_insert):
-                if agent_should_insert.item():
-                    rnn_sel = slice(
-                        policy_i * hxs_dim, (policy_i + 1) * hxs_dim
-                    )
-                    rnn_hxs[env_i, :, rnn_sel] = action_data.rnn_hidden_states[
-                        env_i, :, rnn_sel
-                    ]
+                if not agent_should_insert.item():
+                    continue
+                rnn_sel = slice(policy_i * hxs_dim, (policy_i + 1) * hxs_dim)
+                rnn_hxs[env_i, :, rnn_sel] = action_data.rnn_hidden_states[
+                    env_i, :, rnn_sel
+                ]
 
-                    ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
-                    prev_actions[env_i, ac_sel].copy_(
-                        action_data.actions[env_i, ac_sel]
-                    )
+                ac_sel = slice(policy_i * ac_dim, (policy_i + 1) * ac_dim)
+                prev_actions[env_i, ac_sel].copy_(
+                    action_data.actions[env_i, ac_sel]
+                )

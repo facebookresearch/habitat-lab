@@ -36,6 +36,10 @@ class AgentAccessMgr(ABC):
 
     @abstractmethod
     def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        """
+        Update the hidden state of the policies in the population. Writes to the
+        data in place.
+        """
         raise NotImplementedError()
 
     @property
