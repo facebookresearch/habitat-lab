@@ -945,7 +945,7 @@ class PPOTrainer(BaseRLTrainer):
                 [[not done] for done in dones],
                 dtype=torch.bool,
                 device="cpu",
-            )
+            ).repeat(1, *self._agent.masks_shape)
 
             rewards = torch.tensor(
                 rewards_l, dtype=torch.float, device="cpu"
@@ -981,7 +981,7 @@ class PPOTrainer(BaseRLTrainer):
                     rgb_frames[i].append(frame)
 
                 # episode ended
-                if not not_done_masks[i].item():
+                if not not_done_masks[i].any().item():
                     pbar.update()
                     episode_stats = {
                         "reward": current_episode_reward[i].item()
