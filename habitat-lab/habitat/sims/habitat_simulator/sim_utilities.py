@@ -219,10 +219,6 @@ def bb_ray_prescreen(
         + gravity_dir * (base_rel_height - margin_offset)
     )
 
-    print(f"base_rel_height = {base_rel_height}")
-    print(f"surface_snap_point = {surface_snap_point}")
-    print(f"lowest_key_point_height = {lowest_key_point_height}")
-
     # return list of relative base height, object position for surface snapped point, and ray results details
     return {
         "base_rel_height": base_rel_height,
@@ -284,16 +280,8 @@ def snap_down(
                 )
             ):
                 obj.translation = cached_position
-                print(
-                    f" Failure: contact in final position w/ distance = {cp.contact_distance}."
-                )
-                if not (
-                    cp.object_id_a in support_obj_ids
-                    or cp.object_id_b in support_obj_ids
-                ):
-                    print(
-                        f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}."
-                    )
+                # print(f" Failure: contact in final position w/ distance = {cp.contact_distance}.")
+                # print(f" Failure: contact in final position with non support object {cp.object_id_a} or {cp.object_id_b}.")
                 return False
         return True
     else:
