@@ -181,7 +181,6 @@ def bb_ray_prescreen(
                 if hit.object_id == obj.object_id:
                     continue
                 elif hit.object_id in support_obj_ids:
-                    print(f"hit.ray_distance = {hit.ray_distance}")
                     hit_point = ray.origin + ray.direction * hit.ray_distance
                     support_impacts[ix] = hit_point
                     support_impact_height = mn.math.dot(
