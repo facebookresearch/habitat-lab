@@ -42,16 +42,19 @@ def test_snap_down(support_margin, obj_margin, stage_support):
 
     otm = mm.object_template_manager
     stm = mm.stage_template_manager
-    # setup a cube ground plane object config
+
+    # prepare the support object depending on 'stage_support' mode. Either a STATIC object or a stage mesh.
     cube_template_handle = otm.get_template_handles("cubeSolid")[0]
     cube_stage_template_handle = "cube_stage_object"
     plane_stage_template_handle = "plane_stage"
     if not stage_support:
+        # setup a cube ground plane object config
         cube_template = otm.get_template_by_handle(cube_template_handle)
         cube_template.scale = mn.Vector3(10, 0.05, 10)
         cube_template.margin = support_margin
         otm.register_template(cube_template, cube_stage_template_handle)
     else:
+        # setup a stage using the plane.glb test asset
         new_stage_template = stm.create_new_template(
             handle=plane_stage_template_handle
         )
@@ -98,7 +101,9 @@ def test_snap_down(support_margin, obj_margin, stage_support):
             cube_stage_obj = rom.add_object_by_template_handle(
                 cube_stage_template_handle
             )
-            assert cube_stage_obj.is_alive
+            assert (
+                cube_stage_obj.is_alive
+            ), "Failure to add object may indicate configuration issue or no 'cube_stage_template_handle'."
             support_obj_ids = [cube_stage_obj.object_id]
         cube_obj = rom.add_object_by_template_handle(cube_template_handle)
         assert cube_obj.is_alive
