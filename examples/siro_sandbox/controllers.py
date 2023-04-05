@@ -321,18 +321,23 @@ class GuiHumanoidController(Controller):
     ):
         self.agent_idx = agent_idx
         super().__init__(self.agent_idx, is_multi_agent)
-        self.humanoid_controller = HumanoidRearrangeController(walk_pose_path)
-        self.env = env
+        self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+        self._env = env
         self._gui_input = gui_input
-        self._walk_dir = None
+        self._hint_walk_dir = None
+        self._hint_grasp_obj_idx = None
+        self._hint_drop_pos = None
 
     def get_articulated_agent(self):
-        return self.env._sim.agents_mgr[self.agent_idx].articulated_agent
+        return self._env._sim.agents_mgr[self.agent_idx].articulated_agent
 
     def on_environment_reset(self):
         super().on_environment_reset()
         base_pos = self.get_articulated_agent().base_pos
-        self.humanoid_controller.reset(base_pos)
+        self._humanoid_controller.reset(base_pos)
+        self._hint_walk_dir = None
+        self._hint_grasp_obj_idx = None
+        self._hint_drop_pos = None
 
     def get_random_joint_action(self):
         # Add random noise to human arms but keep global transform
@@ -374,16 +379,48 @@ class GuiHumanoidController(Controller):
         )
         return humanoidjoint_action
 
+    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop):
+        self._hint_walk_dir = walk_dir
+        self._hint_grasp_obj_idx = grasp_obj_idx
+        self._hint_drop_pos = do_drop
+
+    def _get_grasp_mgr(self):
+        agents_mgr = self._env._sim.agents_mgr
+        grasp_mgr = agents_mgr._all_agent_data[self.agent_idx].grasp_mgr
+        return grasp_mgr
+
+    @property
+    def is_grasped(self):
+        return self._get_grasp_mgr().is_grasped
+
+    def _update_grasp(self, grasp_object_id, drop_pos):
+        if grasp_object_id is not None:
+            assert not self.is_grasped
+            self._get_grasp_mgr().snap_to_obj(grasp_object_id)
+
+        elif drop_pos:
+            assert self.is_grasped
+            grasp_object_id = self._get_grasp_mgr().snap_idx
+            self._get_grasp_mgr().desnap()
+
+            # teleport to requested drop_pos
+            sim = self._env.task._sim
+            rigid_obj = sim.get_rigid_object_manager().get_object_by_id(
+                grasp_object_id
+            )
+            rigid_obj.translation = drop_pos
+
     def act(self, obs, env):
+        self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
+        self._hint_grasp_obj_idx = None
+        self._hint_drop_pos = None
+
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
         else:
             agent_k = ""
         humanoidjoint_name = f"{agent_k}humanoidjoint_action"
         ac_spaces = env.action_space.spaces
-
-        # base_action_name = f"{agent_k}humanoidjoint_action"
-        # base_key = "human_joints_trans"
 
         do_humanoidjoint_action = humanoidjoint_name in ac_spaces
 
@@ -411,9 +448,9 @@ class GuiHumanoidController(Controller):
                 # move in world-space x- direction ("west")
                 humancontroller_base_user_input[0] -= 1
 
-            if self._walk_dir:
-                humancontroller_base_user_input[0] += self._walk_dir.x
-                humancontroller_base_user_input[1] += self._walk_dir.z
+            if self._hint_walk_dir:
+                humancontroller_base_user_input[0] += self._hint_walk_dir.x
+                humancontroller_base_user_input[1] += self._hint_walk_dir.z
 
         action_names = []
         action_args = {}
@@ -424,15 +461,15 @@ class GuiHumanoidController(Controller):
                     0,
                     humancontroller_base_user_input[1],
                 )
-                # pose, root_trans = self.humanoid_controller.get_walk_pose(
+                # pose, root_trans = self._humanoid_controller.get_walk_pose(
                 #     relative_pos, distance_multiplier=1.0
                 # )
-                # humanoidjoint_action = self.humanoid_controller.vectorize_pose(
+                # humanoidjoint_action = self._humanoid_controller.vectorize_pose(
                 #     pose, root_trans
                 # )
                 # Use the controller
-                self.humanoid_controller.calculate_walk_pose(relative_pos)
-                humanoidjoint_action = self.humanoid_controller.get_pose()
+                self._humanoid_controller.calculate_walk_pose(relative_pos)
+                humanoidjoint_action = self._humanoid_controller.get_pose()
             else:
                 pass
                 # reference code
@@ -457,7 +494,7 @@ class ControllerHelper:
         self.n_robots = len(env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
 
-        self.env = env
+        self._env = env
 
         gui_controller: Controller = None
         if args.humanoid_user_agent:
@@ -481,6 +518,11 @@ class ControllerHelper:
             ),
         ]
 
+    def get_gui_humanoid_controller(self):
+        if isinstance(self.controllers[0], GuiHumanoidController):
+            return self.controllers[0]
+        return None
+
     def update(self, obs):
         all_names = []
         all_args = {}
@@ -492,7 +534,7 @@ class ControllerHelper:
                 ctrl_reset_ep,
                 ctrl_end_play,
                 self.all_hxs[i],
-            ) = self.controllers[i].act(obs, self.env)
+            ) = self.controllers[i].act(obs, self._env)
             end_play = end_play or ctrl_end_play
             reset_ep = reset_ep or ctrl_reset_ep
             all_names.extend(ctrl_action["action"])

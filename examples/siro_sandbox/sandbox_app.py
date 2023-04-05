@@ -53,40 +53,130 @@ class SandboxDriver(GuiAppDriver):
 
         self.ctrl_helper = ControllerHelper(self.env, args, gui_input)
 
+        self.gui_humanoid_ctrl = self.ctrl_helper.get_gui_humanoid_controller()
+
         self.ctrl_helper.on_environment_reset()
 
         self.cam_zoom_dist = 1.0
         self.gui_input = gui_input
 
-        self._debug_line_render = (
-            None  # will be set later via a hack (see bottom of this file)
-        )
+        self._debug_line_render = None
 
-    def do_raycast_and_get_walk_dir(self):
-        walk_dir = None
+    def set_debug_line_render(self, debug_line_render):
+        self._debug_line_render = debug_line_render
+        self._debug_line_render.set_line_width(3)
+
+    def visualize_task(self):
+        sim = self.env.task._sim
+        idxs, goal_pos = sim.get_targets()
+        scene_pos = sim.get_scene_pos()
+        target_pos = scene_pos[idxs]
+
+        for i in range(len(idxs)):
+            radius = 0.25
+            goal_color = mn.Color3(0, 153 / 255, 51 / 255)  # green
+            target_color = mn.Color4(1, 1, 1, 0.1)  # white, almost transparent
+            self._debug_line_render.draw_circle(
+                goal_pos[i], radius, goal_color
+            )
+            self._debug_line_render.draw_transformed_line(
+                target_pos[i], goal_pos[i], target_color, goal_color
+            )
+            # self._debug_line_render.draw_circle(target_pos[i], radius, goal_color)
+
+    def viz_and_get_grasp_drop_hints(self):
+        object_color = mn.Color3(255 / 255, 255 / 255, 0)
+        object_highlight_radius = 0.1
+        object_drop_height = 0.15
+
         ray = self.gui_input.mouse_ray
 
-        target_y = 0.15  # hard-coded to match ReplicaCAD stage floor y
+        if not ray or ray.direction.y >= 0:
+            return None, None
 
-        if not ray or ray.direction.y >= 0 or ray.origin.y <= target_y:
-            return walk_dir
+        # hack move ray below ceiling (todo: base this on humanoid agent base y, so that it works in multi-floor homes)
+        raycast_start_y = 2.0
+        if ray.origin.y < raycast_start_y:
+            return None, None
 
-        dist_to_target_y = -ray.origin.y / ray.direction.y
-
-        target = ray.origin + ray.direction * dist_to_target_y
+        dist_to_raycast_start_y = (
+            ray.origin.y - raycast_start_y
+        ) / -ray.direction.y
+        assert dist_to_raycast_start_y >= 0
+        adjusted_origin = ray.origin + ray.direction * dist_to_raycast_start_y
+        ray.origin = adjusted_origin
 
         # reference code for casting a ray into the scene
-        # raycast_results = self.env._sim.cast_ray(ray=ray)
-        # if raycast_results.has_hits():
-        #     hit_info = raycast_results.hits[0]
-        #     self._debug_line_render.draw_circle(hit_info.point + mn.Vector3(0, 0.05, 0), 0.03, mn.Color3(0, 1, 0))
+        raycast_results = self.env._sim.cast_ray(ray=ray)
+        if not raycast_results.has_hits():
+            return None, None
+
+        hit_info = raycast_results.hits[0]
+        # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
+
+        if self.gui_humanoid_ctrl.is_grasped:
+            self._debug_line_render.draw_circle(
+                hit_info.point, object_highlight_radius, object_color
+            )
+            if self.gui_input.get_mouse_button_down(GuiInput.MouseNS.LEFT):
+                drop_pos = hit_info.point + mn.Vector3(
+                    0, object_drop_height, 0
+                )
+                return None, drop_pos
+        else:
+            # Currently, it's too hard to select objects that are very small
+            # on-screen. Todo: use hit_info.point and search for nearest rigid object within
+            # X cm.
+            if hit_info.object_id != -1:
+                sim = self.env.task._sim
+                rigid_obj_mgr = sim.get_rigid_object_manager()
+                is_rigid_obj = rigid_obj_mgr.get_library_has_id(
+                    hit_info.object_id
+                )
+                if is_rigid_obj:
+                    rigid_obj = (
+                        sim.get_rigid_object_manager().get_object_by_id(
+                            hit_info.object_id
+                        )
+                    )
+                    assert rigid_obj
+                    if (
+                        rigid_obj.motion_type
+                        == habitat_sim.physics.MotionType.DYNAMIC
+                    ):
+                        self._debug_line_render.draw_circle(
+                            rigid_obj.translation,
+                            object_highlight_radius,
+                            object_color,
+                        )
+                        if self.gui_input.get_mouse_button_down(
+                            GuiInput.MouseNS.LEFT
+                        ):
+                            grasp_object_id = hit_info.object_id
+                            return grasp_object_id, None
+
+        return None, None
+
+    def viz_and_get_humanoid_walk_dir(self):
+        path_color = mn.Color3(0, 153 / 255, 255 / 255)
+        path_endpoint_radius = 0.12
+
+        ray = self.gui_input.mouse_ray
+
+        floor_y = 0.15  # hardcoded to ReplicaCAD
+
+        if not ray or ray.direction.y >= 0 or ray.origin.y <= floor_y:
+            return None
+
+        dist_to_floor_y = (ray.origin.y - floor_y) / -ray.direction.y
+        target_on_floor = ray.origin + ray.direction * dist_to_floor_y
 
         agent_idx = 0
         art_obj = self.env._sim.agents_mgr[agent_idx].articulated_agent.sim_obj
         robot_root = art_obj.transformation
 
         pathfinder = self.env._sim.pathfinder
-        snapped_pos = pathfinder.snap_point(target)
+        snapped_pos = pathfinder.snap_point(target_on_floor)
         snapped_start_pos = robot_root.translation
         snapped_start_pos.y = snapped_pos.y
 
@@ -95,41 +185,47 @@ class SandboxDriver(GuiAppDriver):
         path.requested_end = snapped_pos
         found_path = pathfinder.find_path(path)
 
-        if found_path:
-            path_color = mn.Color3(0, 0, 1)
-            # skip rendering first point. It is at the object root, at the wrong height
-            for path_i in range(0, len(path.points) - 1):
-                a = mn.Vector3(path.points[path_i])
-                b = mn.Vector3(path.points[path_i + 1])
+        if not found_path:
+            return None
 
-                self._debug_line_render.draw_transformed_line(a, b, path_color)
-                # env.sim.viz_ids[f"next_loc_{path_i}"] = env.sim.visualize_position(
-                #     path.points[path_i], env.sim.viz_ids[f"next_loc_{path_i}"]
-                # )
+        path_points = []
+        for path_i in range(0, len(path.points)):
+            adjusted_point = mn.Vector3(path.points[path_i])
+            # first point in path is at wrong height
+            if path_i == 0:
+                adjusted_point.y = mn.Vector3(path.points[path_i + 1]).y
+            path_points.append(adjusted_point)
 
-            end_pos = mn.Vector3(path.points[-1])
-            self._debug_line_render.draw_circle(end_pos, 0.16, path_color)
+        self._debug_line_render.draw_path_with_endpoint_circles(
+            path_points, path_endpoint_radius, path_color
+        )
 
-            # if self.gui_input.get_key(GuiInput.KeyNS.B):
-            if (
-                self.gui_input.get_mouse_button(GuiInput.MouseNS.RIGHT)
-                or self.gui_input.get_key(GuiInput.KeyNS.SPACE)
-            ) and len(path.points) >= 2:
-                walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(
-                    path.points[0]
-                )
+        if (
+            self.gui_input.get_mouse_button(GuiInput.MouseNS.RIGHT)
+            or self.gui_input.get_key(GuiInput.KeyNS.SPACE)
+        ) and len(path.points) >= 2:
+            walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
+            return walk_dir
 
-        color = mn.Color3(0, 0.5, 0) if found_path else mn.Color3(0.5, 0, 0)
-        self._debug_line_render.draw_circle(target, 0.08, color)
+        return None
 
-        return walk_dir
+    def viz_and_get_humanoid_hints(self):
+        grasp_object_id, drop_pos = self.viz_and_get_grasp_drop_hints()
+        walk_dir = self.viz_and_get_humanoid_walk_dir()
+
+        return walk_dir, grasp_object_id, drop_pos
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
 
-        walk_dir = self.do_raycast_and_get_walk_dir()
-        # temp hack: inject walk_dir
-        self.ctrl_helper.controllers[0]._walk_dir = walk_dir
+        (
+            walk_dir,
+            grasp_object_id,
+            drop_pos,
+        ) = self.viz_and_get_humanoid_hints()
+        self.gui_humanoid_ctrl.set_act_hints(
+            walk_dir, grasp_object_id, drop_pos
+        )
 
         action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
 
@@ -138,6 +234,8 @@ class SandboxDriver(GuiAppDriver):
         if reset_ep:
             self.obs = self.env.reset()
             self.ctrl_helper.on_environment_reset()
+
+        self.visualize_task()
 
         post_sim_update_dict = {}
 
@@ -304,7 +402,7 @@ if __name__ == "__main__":
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     # sloppy: provide replay app renderer's debug_line_render to our driver
-    driver._debug_line_render = (
+    driver.set_debug_line_render(
         app_renderer._replay_renderer.debug_line_render(0)
     )
 

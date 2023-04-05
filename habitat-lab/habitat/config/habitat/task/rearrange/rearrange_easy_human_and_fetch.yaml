@@ -32,7 +32,7 @@ success_reward: 100.0
 slack_reward: -0.01
 end_on_success: True
 constraint_violation_ends_episode: False
-constraint_violation_drops_object: True
+constraint_violation_drops_object: False
 task_spec: rearrange_easy
 actions:
   # Actions are defined per agent. Unlike the sensors, actions are not
