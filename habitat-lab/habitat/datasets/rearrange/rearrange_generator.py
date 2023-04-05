@@ -484,7 +484,8 @@ class RearrangeEpisodeGenerator:
                 new_receptacle = sampler.sample_receptacle(
                     self.sim, recep_tracker
                 )
-                if recep_tracker.update_receptacle_tracking(new_receptacle):
+                if recep_tracker.allocate_one_placement(new_receptacle):
+                    # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
                 new_target_receptacles.append(new_receptacle)
 
@@ -504,7 +505,8 @@ class RearrangeEpisodeGenerator:
                 )
                 if isinstance(new_receptacle, OnTopOfReceptacle):
                     new_receptacle.set_episode_data(self.episode_data)
-                if recep_tracker.update_receptacle_tracking(new_receptacle):
+                if recep_tracker.allocate_one_placement(new_receptacle):
+                    # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
 
                 new_goal_receptacles.append(new_receptacle)
@@ -512,6 +514,7 @@ class RearrangeEpisodeGenerator:
             goal_receptacles[sampler_name] = new_goal_receptacles
             all_goal_receptacles.extend(new_goal_receptacles)
 
+        # Goal and target receptacles are allowed 1 extra maximum object if a limit was defined
         for recep in [*all_goal_receptacles, *all_target_receptacles]:
             recep_tracker.inc_count(recep.name)
 

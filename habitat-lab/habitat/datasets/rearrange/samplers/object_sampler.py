@@ -413,8 +413,9 @@ class ObjectSampler:
                 )
                 if (
                     new_object is not None
-                    and recep_tracker.update_receptacle_tracking(receptacle)
+                    and recep_tracker.allocate_one_placement(receptacle)
                 ):
+                    # used up receptacle, need to recompute the sampler's receptacle_candidates
                     self.receptacle_candidates = None
 
             if new_object is not None:
