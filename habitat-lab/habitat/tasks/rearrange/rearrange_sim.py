@@ -228,20 +228,11 @@ class RearrangeSim(HabitatSim):
 
         with read_write(config):
             config["scene"] = ep_info.scene_id
-
-        super().reconfigure(config, should_close_on_new_scene=False)
-
-        self.ref_handle_to_rigid_obj_id = {}
-
-        self.ep_info = ep_info
-        self._try_acquire_context()
-
         new_scene = self.prev_scene_id != ep_info.scene_id
 
         if new_scene:
             self._prev_obj_names = None
 
-        self.robots_mgr.reconfigure(new_scene)
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
@@ -249,6 +240,14 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
+        super().reconfigure(config, should_close_on_new_scene=False)
+
+        self.ref_handle_to_rigid_obj_id = {}
+        self.robots_mgr.reconfigure(new_scene)
+
+        self.ep_info = ep_info
+        self._try_acquire_context()
+
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
