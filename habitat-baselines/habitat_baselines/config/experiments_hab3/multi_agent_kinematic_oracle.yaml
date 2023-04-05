@@ -18,13 +18,6 @@ defaults:
   - _self_
 
 habitat:
-  task:
-
-    measurements:
-      force_terminate:
-        max_accum_force: -1.0
-        max_instant_force: -1.0
-
   environment:
     max_episode_steps: 700
 

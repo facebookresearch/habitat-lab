@@ -979,7 +979,7 @@ class PPOTrainer(BaseRLTrainer):
                     frame = observations_to_image(
                         {k: v[i] for k, v in batch.items()}, infos[i]
                     )
-                    if not not_done_masks[i].item():
+                    if not not_done_masks[i].any().item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
                         frame = observations_to_image(
