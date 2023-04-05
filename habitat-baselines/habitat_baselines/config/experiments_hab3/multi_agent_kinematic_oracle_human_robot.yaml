@@ -130,6 +130,8 @@ habitat_baselines:
               max_skill_steps: 300
       agent_1:
         hierarchical_policy:
+          high_level_policy:
+            name: "FixedHighLevelPolicy"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             open_cab:

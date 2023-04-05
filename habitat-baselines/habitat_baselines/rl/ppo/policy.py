@@ -83,6 +83,87 @@ class PolicyActionData:
             return self.take_actions
 
 
+@dataclass
+class MultiAgentPolicyActionData(PolicyActionData):
+    """
+    Information returned from the `Policy.act` method representing the
+    information from multiple agent's action. This class is needed to store
+    actions of multiple agents together
+
+    :property should_inserts: Of shape [# envs, 1]. If False at environment
+        index `i`, then don't write this transition to the rollout buffer. If
+        `None`, then write all data.
+    :property policy_info`: Optional logging information about the policy per
+        environment. For example, you could log the policy entropy.
+    :property take_actions`: If specified, these actions will be executed in
+        the environment, but not stored in the storage buffer. This allows
+        exectuing and learning from different actions. If not specified, the
+        agent will execute `self.actions`.
+    :property values: The actor value predictions. None if the actor does not predict value.
+    :property actions: The actions to store in the storage buffer. if
+        `take_actions` is None, then this is also the action executed in the
+        environment.
+    :property rnn_hidden_states: Actor hidden states.
+    :property action_log_probs: The log probabilities of the actions under the
+        current policy.
+    """
+
+    rnn_hidden_states: torch.Tensor
+    actions: Optional[torch.Tensor] = None
+    values: Optional[torch.Tensor] = None
+    action_log_probs: Optional[torch.Tensor] = None
+    take_actions: Optional[torch.Tensor] = None
+    policy_info: Optional[List[Dict[str, Any]]] = None
+    should_inserts: Optional[torch.BoolTensor] = None
+
+    # Indices
+    length_rnn_hidden_states: Optional[torch.Tensor] = None
+    length_actions: Optional[torch.Tensor] = None
+    num_agents: Optional[int] = 1
+
+    def _unpack(self, tensor_to_unpack, unpack_lengths=None):
+        if unpack_lengths is None:
+            unpack_lengths = [
+                int(tensor_to_unpack.shape[-1] / self.num_agents)
+            ] * self.num_agents
+        tensor_unpacked = torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
+        return tensor_unpacked
+
+    def unpack(self):
+        """
+        Returns attributes of the policy unpacked per agent
+        """
+        return {
+            "rnn_hidden_states": self._unpack(
+                self.rnn_hidden_states, self.length_rnn_hidden_states
+            ),
+            "actions": self._unpack(self.actions, self.length_actions),
+            "values": self._unpack(self.values),
+            "action_log_probs": self._unpack(self.action_log_probs),
+            "take_actions": self._unpack(self.take_actions),
+            "should_inserts": self._unpack(self.should_inserts),
+        }
+
+    def write_action(self, write_idx: int, write_action: torch.Tensor) -> None:
+        """
+        Used to override an action across all environments.
+        :param write_idx: The index in the action dimension to write the new action.
+        :param write_action: The action to write at `write_idx`.
+        """
+        self.actions[:, write_idx] = write_action
+
+    @property
+    def env_actions(self) -> torch.Tensor:
+        """
+        The actions to execute in the environment.
+        """
+
+        if self.take_actions is None:
+            return self.actions
+        else:
+            return self.take_actions
+
+
 class Policy(abc.ABC):
     action_distribution: nn.Module
 

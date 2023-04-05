@@ -60,6 +60,10 @@ class HrlRolloutStorage(RolloutStorage):
 
         Rewards acquired of steps where `should_insert[i] == False` will be summed up and added to the next step where `should_insert[i] == True`
         """
+        # The actions here could be Float instead of long because we previously
+        # concatenated them with actions from other agents.
+        if self.buffers["actions"] is not None and actions is not None:
+            actions = actions.type(self.buffers["actions"].dtype)
 
         if next_masks is not None:
             next_masks = next_masks.to(self.device)

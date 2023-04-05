@@ -239,7 +239,7 @@ class RolloutStorage(Storage):
                 batch["advantages"] = advantages[curr_slice]
             batch["recurrent_hidden_states"] = batch[
                 "recurrent_hidden_states"
-            ][0:1]
+            ][0][0:1]
 
             batch.map_in_place(lambda v: v.flatten(0, 1))
 

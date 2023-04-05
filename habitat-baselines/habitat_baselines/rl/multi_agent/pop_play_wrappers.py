@@ -10,7 +10,11 @@ from habitat_baselines.rl.multi_agent.utils import (
     add_agent_prefix,
     update_dict_with_agent_prefix,
 )
-from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
+from habitat_baselines.rl.ppo.policy import (
+    MultiAgentPolicyActionData,
+    Policy,
+    PolicyActionData,
+)
 from habitat_baselines.rl.ppo.updater import Updater
 
 
@@ -34,10 +38,11 @@ class MultiPolicy(Policy):
         deterministic=False,
     ):
         n_agents = len(self._active_policies)
-
-        agent_rnn_hidden_states = rnn_hidden_states.chunk(n_agents, -1)
-        agent_prev_actions = prev_actions.chunk(n_agents, -1)
-        agent_masks = masks.chunk(n_agents, -1)
+        agent_rnn_hidden_states = rnn_hidden_states[0].split(
+            rnn_hidden_states[1], -1
+        )
+        agent_prev_actions = prev_actions[0].split(prev_actions[1], -1)
+        agent_masks = masks[0].split(masks[1], -1)
 
         agent_actions = []
         for agent_i, policy in enumerate(self._active_policies):
@@ -55,34 +60,42 @@ class MultiPolicy(Policy):
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
-        batch_size = masks.shape[0]
-        device = masks.device
-        # Action dim is split evenly between the agents.
-        action_dim = prev_actions.shape[-1] // n_agents
+        batch_size = masks[0].shape[0]
+        device = masks[0].device
 
-        def _maybe_cat(get_dat, feature_dim, dtype):
+        # Action dim is split evenly between the agents.
+        action_dims = prev_actions[1]
+
+        def _maybe_cat(get_dat, feature_dims, dtype):
             all_dat = [get_dat(ac) for ac in agent_actions]
             # Replace any None with dummy data.
             all_dat = [
                 torch.zeros(
-                    (batch_size, feature_dim), device=device, dtype=dtype
+                    (batch_size, feature_dims[ind]), device=device, dtype=dtype
                 )
                 if dat is None
                 else dat
-                for dat in all_dat
+                for ind, dat in enumerate(all_dat)
             ]
             return torch.cat(all_dat, -1)
 
-        return PolicyActionData(
+        rnn_hidden_lengths = [
+            ac.rnn_hidden_states.shape[-1] for ac in agent_actions
+        ]
+        return MultiAgentPolicyActionData(
             rnn_hidden_states=torch.cat(
                 [ac.rnn_hidden_states for ac in agent_actions], -1
             ),
             actions=_maybe_cat(
-                lambda ac: ac.actions, action_dim, prev_actions.dtype
+                lambda ac: ac.actions, action_dims, prev_actions[0].dtype
             ),
-            values=_maybe_cat(lambda ac: ac.values, 1, torch.float32),
+            values=_maybe_cat(
+                lambda ac: ac.values, [1] * len(agent_actions), torch.float32
+            ),
             action_log_probs=_maybe_cat(
-                lambda ac: ac.action_log_probs, 1, torch.float32
+                lambda ac: ac.action_log_probs,
+                [1] * len(agent_actions),
+                torch.float32,
             ),
             take_actions=torch.cat(
                 [ac.take_actions for ac in agent_actions], -1
@@ -91,13 +104,19 @@ class MultiPolicy(Policy):
             should_inserts=torch.cat(
                 [ac.should_inserts for ac in agent_actions], -1
             ),
+            length_rnn_hidden_states=rnn_hidden_lengths,
+            length_actions=action_dims,
+            num_agents=n_agents,
         )
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
-        n_agents = len(self._active_policies)
-        agent_rnn_hidden_states = rnn_hidden_states.chunk(n_agents, -1)
-        agent_prev_actions = prev_actions.chunk(n_agents, -1)
-        agent_masks = masks.chunk(n_agents, -1)
+        agent_rnn_hidden_states = torch.split(
+            rnn_hidden_states[0], rnn_hidden_states[1], dim=-1
+        )
+        agent_prev_actions = torch.split(
+            prev_actions[0], prev_actions[1], dim=-1
+        )
+        agent_masks = torch.split(masks[0], masks[1], dim=-1)
         all_value = []
         for agent_i, policy in enumerate(self._active_policies):
             agent_obs = update_dict_with_agent_prefix(observations, agent_i)
@@ -151,7 +170,14 @@ class MultiStorage(Storage):
 
         # Assumed that all other arguments are tensors that need to be chunked
         # per-agent.
-        insert_d = {k: _maybe_chunk(v) for k, v in kwargs.items()}
+        if "action_data" not in kwargs:
+            insert_d = {k: _maybe_chunk(v) for k, v in kwargs.items()}
+        else:
+            insert_d = {
+                k: v
+                for k, v in kwargs["action_data"].unpack().items()
+                if k in kwargs
+            }
         for agent_i, storage in enumerate(self._active_storages):
             agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
@@ -205,7 +231,19 @@ class MultiStorage(Storage):
                 agent_step_data[k].append(v)
         obs = TensorDict(obs)
         for k in agent_step_data:
-            agent_step_data[k] = torch.cat(agent_step_data[k], dim=-1)
+            lengths_data = [
+                t.shape[-1] if t.numel() > 0 else 0 for t in agent_step_data[k]
+            ]
+            as_data_greater = [
+                as_data
+                for as_data in agent_step_data[k]
+                if as_data.numel() > 0
+            ]
+            agent_step_data[k] = (
+                torch.cat(as_data_greater, dim=-1),
+                lengths_data,
+            )
+
         agent_step_data = dict(agent_step_data)
         agent_step_data["observations"] = obs
         return TensorDict(agent_step_data)
@@ -239,8 +277,9 @@ class MultiUpdater(Updater):
         for agent_i, (rollout, updater) in enumerate(
             zip(rollouts._active_storages, self._active_updaters)
         ):
-            agent_losses = updater.update(rollout)
-            add_agent_names(losses, agent_losses, agent_i)
+            if len(list(updater.parameters())):
+                agent_losses = updater.update(rollout)
+                add_agent_names(losses, agent_losses, agent_i)
         return losses
 
     @classmethod
