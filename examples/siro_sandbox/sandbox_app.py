@@ -34,6 +34,7 @@ from habitat.config.default_structured_configs import (
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
@@ -66,8 +67,11 @@ class SandboxDriver(GuiAppDriver):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
 
+    def get_sim(self) -> RearrangeSim:
+        return self.env.task._sim
+
     def visualize_task(self):
-        sim = self.env.task._sim
+        sim = self.get_sim()
         idxs, goal_pos = sim.get_targets()
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
@@ -128,7 +132,7 @@ class SandboxDriver(GuiAppDriver):
             # on-screen. Todo: use hit_info.point and search for nearest rigid object within
             # X cm.
             if hit_info.object_id != -1:
-                sim = self.env.task._sim
+                sim = self.get_sim()
                 rigid_obj_mgr = sim.get_rigid_object_manager()
                 is_rigid_obj = rigid_obj_mgr.get_library_has_id(
                     hit_info.object_id
