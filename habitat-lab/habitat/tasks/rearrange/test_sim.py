@@ -303,16 +303,16 @@ class TestSim(HabitatSim):
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
-        # self.target_start_pos = np.array(
-        #     [
-        #         scene_pos[
-        #             self.scene_obj_ids.index(
-        #                 rom.get_object_by_handle(t_handle).object_id
-        #             )
-        #         ]
-        #         for t_handle, _ in self._targets.items()
-        #     ]
-        # )
+        self.target_start_pos = np.array(
+            [
+                scene_pos[
+                    self.scene_obj_ids.index(
+                        rom.get_object_by_handle(t_handle).object_id
+                    )
+                ]
+                for t_handle, _ in self._targets.items()
+            ]
+        )
 
         if self.first_setup:
             self.first_setup = False
