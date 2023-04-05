@@ -17,6 +17,7 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+from typing import Any
 
 import magnum as mn
 import numpy as np
@@ -34,7 +35,6 @@ from habitat.config.default_structured_configs import (
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
@@ -67,7 +67,8 @@ class SandboxDriver(GuiAppDriver):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
 
-    def get_sim(self) -> RearrangeSim:
+    # trying to get around mypy complaints about missing sim attributes
+    def get_sim(self) -> Any:
         return self.env.task._sim
 
     def visualize_task(self):
@@ -111,7 +112,7 @@ class SandboxDriver(GuiAppDriver):
         ray.origin = adjusted_origin
 
         # reference code for casting a ray into the scene
-        raycast_results = self.env._sim.cast_ray(ray=ray)
+        raycast_results = self.get_sim().cast_ray(ray=ray)
         if not raycast_results.has_hits():
             return None, None
 
@@ -176,10 +177,12 @@ class SandboxDriver(GuiAppDriver):
         target_on_floor = ray.origin + ray.direction * dist_to_floor_y
 
         agent_idx = 0
-        art_obj = self.env._sim.agents_mgr[agent_idx].articulated_agent.sim_obj
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
         robot_root = art_obj.transformation
 
-        pathfinder = self.env._sim.pathfinder
+        pathfinder = self.get_sim().pathfinder
         snapped_pos = pathfinder.snap_point(target_on_floor)
         snapped_start_pos = robot_root.translation
         snapped_start_pos.y = snapped_pos.y
@@ -261,7 +264,9 @@ class SandboxDriver(GuiAppDriver):
             )
 
         agent_idx = 0
-        art_obj = self.env._sim.agents_mgr[agent_idx].articulated_agent.sim_obj
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
         robot_root = art_obj.transformation
         lookat = robot_root.translation + mn.Vector3(0, 1, 0)
         cam_transform = mn.Matrix4.look_at(
@@ -274,7 +279,7 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict[
             "keyframes"
         ] = (
-            self.env._sim.gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
+            self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 
         def flip_vertical(obs):
