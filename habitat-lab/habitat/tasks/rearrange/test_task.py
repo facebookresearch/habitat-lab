@@ -28,8 +28,8 @@ from habitat.tasks.rearrange.utils import (
 )
 
 
-@registry.register_task(name="RearrangeEmptyTask-v0")
-class RearrangeTask(NavigationTask):
+@registry.register_task(name="TestTask-v0")
+class TestTask(NavigationTask):
     """
     Defines additional logic for valid collisions and gripping shared between
     all rearrangement tasks.
@@ -46,17 +46,17 @@ class RearrangeTask(NavigationTask):
 
         task_new_sensors: Dict[str, Sensor] = {}
         task_obs_spaces = OrderedDict()
-        for robot_idx, agent_id in enumerate(self._sim.robots_mgr.agent_names):
-            for sensor_name, sensor in sensor_suite.sensors.items():
-                if isinstance(sensor, UsesRobotInterface):
-                    new_sensor = copy.copy(sensor)
-                    new_sensor.robot_id = robot_idx
-                    full_name = f"{agent_id}_{sensor_name}"
-                    task_new_sensors[full_name] = new_sensor
-                    task_obs_spaces[full_name] = new_sensor.observation_space
-                else:
-                    task_new_sensors[sensor_name] = sensor
-                    task_obs_spaces[sensor_name] = sensor.observation_space
+        # for robot_idx, agent_id in enumerate(self._sim.robots_mgr.agent_names):
+        #     for sensor_name, sensor in sensor_suite.sensors.items():
+        #         if isinstance(sensor, UsesRobotInterface):
+        #             new_sensor = copy.copy(sensor)
+        #             new_sensor.robot_id = robot_idx
+        #             full_name = f"{agent_id}_{sensor_name}"
+        #             task_new_sensors[full_name] = new_sensor
+        #             task_obs_spaces[full_name] = new_sensor.observation_space
+        #         else:
+        #             task_new_sensors[sensor_name] = sensor
+        #             task_obs_spaces[sensor_name] = sensor.observation_space
 
         sensor_suite.sensors = task_new_sensors
         sensor_suite.observation_spaces = spaces.Dict(spaces=task_obs_spaces)
@@ -74,7 +74,7 @@ class RearrangeTask(NavigationTask):
         self._targ_idx: int = 0
         self._episode_id: str = ""
         self._cur_episode_step = 0
-        self._should_place_robot = should_place_robot
+        self._should_place_robot = False
 
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
@@ -166,9 +166,9 @@ class RearrangeTask(NavigationTask):
                 action_instance.reset(episode=episode, task=self)
             self._is_episode_active = True
 
-            if self._should_place_robot:
-                for agent_idx in range(self._sim.num_robots):
-                    self._set_robot_start(agent_idx)
+            # if self._should_place_robot:
+            #     for agent_idx in range(self._sim.num_robots):
+            #         self._set_robot_start(agent_idx)
 
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
@@ -178,7 +178,7 @@ class RearrangeTask(NavigationTask):
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:
-            self._sim.maybe_update_robot()
+            # self._sim.maybe_update_robot()
             return self._get_observations(episode)
         else:
             return None
@@ -211,20 +211,20 @@ class RearrangeTask(NavigationTask):
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         action_args = action["action_args"]
-        if self._config.enable_safe_drop and self._is_violating_safe_drop(
-            action_args
-        ):
-            action_args["grip_action"] = None
+        # if self._config.enable_safe_drop and self._is_violating_safe_drop(
+        #     action_args
+        # ):
+        #     action_args["grip_action"] = None
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
         self._cur_episode_step += 1
-        for grasp_mgr in self._sim.robots_mgr.grasp_iter:
-            if (
-                grasp_mgr.is_violating_hold_constraint()
-                and self._config.constraint_violation_drops_object
-            ):
-                grasp_mgr.desnap(True)
+        # for grasp_mgr in self._sim.robots_mgr.grasp_iter:
+        #     if (
+        #         grasp_mgr.is_violating_hold_constraint()
+        #         and self._config.constraint_violation_drops_object
+        #     ):
+        #         grasp_mgr.desnap(True)
 
         return obs
 

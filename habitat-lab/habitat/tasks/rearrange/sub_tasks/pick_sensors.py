@@ -339,3 +339,40 @@ class RearrangePickSuccess(Measure):
         )
 
         self._prev_ee_pos = observations["ee_pos"]
+
+
+@registry.register_measure
+class TestSuccess(Measure):
+    cls_uuid: str = "test_success"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return TestSuccess.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        pass
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = True
+
+
+@registry.register_measure
+class TestReward(Measure):
+    cls_uuid: str = "test_reward"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+        self._metric = None
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return TestReward.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        pass
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = 1.0

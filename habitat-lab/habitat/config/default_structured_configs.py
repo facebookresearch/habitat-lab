@@ -670,10 +670,21 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class TestRewardMeasurementConfig(MeasurementConfig):
+    drop_pen: float = 0.5
+    type: str = "TestReward"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     type: str = "RearrangePickSuccess"
     ee_resting_success_threshold: float = 0.15
     object_goal: bool = False
+
+
+@attr.s(auto_attribs=True, slots=True)
+class TestSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "TestSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1660,6 +1671,18 @@ cs.store(
     group="habitat/task/measurements",
     name="pick_success",
     node=RearrangePickSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.test_reward",
+    group="habitat/task/measurements",
+    name="test_reward",
+    node=TestRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.test_success",
+    group="habitat/task/measurements",
+    name="test_success",
+    node=TestSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.answer_accuracy",

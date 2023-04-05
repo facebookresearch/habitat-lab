@@ -30,6 +30,7 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.sub_tasks.place_task
     import habitat.tasks.rearrange.sub_tasks.reach_sensors
     import habitat.tasks.rearrange.sub_tasks.reach_task
+    import habitat.tasks.rearrange.test_task
 
     if not HabitatSimActions.has_action("arm_action"):
         HabitatSimActions.extend_action_space("arm_action")
