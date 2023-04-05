@@ -56,7 +56,6 @@ class MultiPolicy(Policy):
                     deterministic,
                 )
             )
-
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
@@ -98,11 +97,23 @@ class MultiPolicy(Policy):
                 torch.float32,
             ),
             take_actions=torch.cat(
-                [ac.take_actions for ac in agent_actions], -1
+                [
+                    ac.take_actions
+                    if ac.take_actions is not None
+                    else ac.actions
+                    for ac in agent_actions
+                ],
+                -1,
             ),
             policy_info=policy_info,
             should_inserts=torch.cat(
-                [ac.should_inserts for ac in agent_actions], -1
+                [
+                    ac.should_inserts
+                    if ac.should_inserts is not None
+                    else torch.ones((batch_size, 1), dtype=torch.bool)
+                    for ac in agent_actions
+                ],
+                -1,
             ),
             length_rnn_hidden_states=rnn_hidden_lengths,
             length_actions=action_dims,
@@ -290,6 +301,8 @@ class MultiUpdater(Updater):
 def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
     ret: List[Dict] = []
     for agent_i, ac in enumerate(inputs):
+        if ac is None:
+            ac = [{}]
         for env_i, env_d in enumerate(ac):
             if len(ret) <= env_i:
                 ret.append(
