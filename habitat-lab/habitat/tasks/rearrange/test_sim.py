@@ -294,9 +294,9 @@ class TestSim(HabitatSim):
             receptacles = find_receptacles(self)
             self.receptacles = {r.name: r for r in receptacles}
 
-        print(ep_info.scene_id, ep_info.episode_id)
         if '108294897_176710602' in ep_info.scene_id:
-            import pdb; pdb.set_trace()
+            assert len(self.receptacles) == 114
+            print('assertion passed')
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
