@@ -460,18 +460,21 @@ class RearrangeEpisodeGenerator:
         )
         self.sim.pathfinder.load_nav_mesh(navmesh_path)
 
+        # prepare target samplers
         self._get_object_target_samplers()
-        target_numbers = {
+        target_numbers: Dict[str, int] = {
             k: sampler.target_objects_number
             for k, sampler in self._target_samplers.items()
         }
-        targ_sampler_name_to_obj_sampler_names = {}
+        # prepare mapping of target samplers to their source object samplers
+        targ_sampler_name_to_obj_sampler_names: Dict[str, List[str]] = {}
         for targ_sampler_cfg in self.cfg.object_target_samplers:
             sampler_name = targ_sampler_cfg["name"]
             targ_sampler_name_to_obj_sampler_names[
                 sampler_name
             ] = targ_sampler_cfg["params"]["object_samplers"]
 
+        # sample and allocate receptacles to contain the target objects
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
         for sampler_name, num_targets in target_numbers.items():
@@ -492,6 +495,7 @@ class RearrangeEpisodeGenerator:
             target_receptacles[obj_sampler_name].extend(new_target_receptacles)
             all_target_receptacles.extend(new_target_receptacles)
 
+        # sample and allocate receptacles to contain the goal states for target objects
         goal_receptacles = {}
         all_goal_receptacles = []
         for sampler, (sampler_name, num_targets) in zip(
@@ -514,7 +518,7 @@ class RearrangeEpisodeGenerator:
             goal_receptacles[sampler_name] = new_goal_receptacles
             all_goal_receptacles.extend(new_goal_receptacles)
 
-        # Goal and target receptacles are allowed 1 extra maximum object if a limit was defined
+        # Goal and target containing receptacles are allowed 1 extra maximum object for each goal/target if a limit was defined
         for recep in [*all_goal_receptacles, *all_target_receptacles]:
             recep_tracker.inc_count(recep.name)
 
@@ -601,7 +605,7 @@ class RearrangeEpisodeGenerator:
 
         target_refs: Dict[str, str] = {}
 
-        # sample targets
+        # sample goal positions for target objects after all other clutter is placed and validated
         handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
         for sampler_name, target_sampler in self._target_samplers.items():
             obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
