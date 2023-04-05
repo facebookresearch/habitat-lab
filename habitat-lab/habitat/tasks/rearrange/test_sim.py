@@ -259,11 +259,6 @@ class TestSim(HabitatSim):
 
         self._clear_objects(should_add_objects)
 
-        if '108294897_176710602' in ep_info.scene_id:
-            rom = self.get_rigid_object_manager()
-            assert len(rom.get_object_handles()) == 240 + len(self.scene_obj_ids)
-            print(f'before adding objs: assertion passed')
-
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
         self._viz_handle_to_template = {}
