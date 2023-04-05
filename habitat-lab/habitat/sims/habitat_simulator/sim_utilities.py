@@ -153,6 +153,7 @@ def bb_ray_prescreen(
     lowest_key_point_height = None
     highest_support_impact: mn.Vector3 = None
     highest_support_impact_height = None
+    highest_support_impact_with_stage = False
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
@@ -193,6 +194,7 @@ def bb_ray_prescreen(
                     ):
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
+                        highest_support_impact_with_stage = hit.object_id == -1
 
                 # terminates at the first non-self ray hit
                 break
@@ -202,10 +204,19 @@ def bb_ray_prescreen(
         - obj.translation.projected_onto_normalized(-gravity_dir).length()
     )
 
+    # account for the affects of stage mesh margin
+    # Warning: Bullet raycast on stage triangle mesh does NOT consider the margin, so explicitly consider this here.
+    margin_offset = (
+        0
+        if not highest_support_impact_with_stage
+        else sim.get_stage_initialization_template().margin
+    )
+
     surface_snap_point = (
         None
         if 0 not in support_impacts
-        else support_impacts[0] + gravity_dir * base_rel_height
+        else support_impacts[0]
+        + gravity_dir * (base_rel_height - margin_offset)
     )
 
     # return list of relative base height, object position for surface snapped point, and ray results details
