@@ -16,6 +16,9 @@ habitat:
     max_episode_steps: 1
   simulator:
     type: TestSim-v0
+    additional_object_paths:
+      - data/objects/amazon_berkeley/configs/
+      - data/objects/google_object_dataset/configs/
     debug_render_goal: False
     debug_render: False
     needs_markers: False

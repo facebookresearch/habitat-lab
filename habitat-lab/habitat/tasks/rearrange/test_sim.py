@@ -259,6 +259,11 @@ class TestSim(HabitatSim):
 
         self._clear_objects(should_add_objects)
 
+        if '108294897_176710602' in ep_info.scene_id:
+            rom = self.get_rigid_object_manager()
+            assert len(rom.get_object_handles()) == 240 + len(self.scene_obj_ids)
+            print(f'before adding objs: assertion passed')
+
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
         self._viz_handle_to_template = {}
@@ -274,7 +279,8 @@ class TestSim(HabitatSim):
         self.robots_mgr.post_obj_load_reconfigure()
 
         # # add episode clutter objects additional to base scene objects
-        # self._add_objs(ep_info, should_add_objects)
+        self._add_objs(ep_info, should_add_objects)
+
         self._setup_targets(ep_info)
 
         self.add_markers(ep_info)
@@ -295,8 +301,10 @@ class TestSim(HabitatSim):
             self.receptacles = {r.name: r for r in receptacles}
 
         if '108294897_176710602' in ep_info.scene_id:
-            assert len(self.receptacles) == 114
-            print('assertion passed')
+            rom = self.get_rigid_object_manager()
+            assert len(rom.get_object_handles()) == 240 + len(self.scene_obj_ids)
+            print('after adding objs: assertion passed')
+
         # Get the starting positions of the target objects.
         rom = self.get_rigid_object_manager()
         scene_pos = self.get_scene_pos()
@@ -381,8 +389,6 @@ class TestSim(HabitatSim):
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
         base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
-        # base_dir = 'data/chris_meshes/'
-        # base_dir = 'data/new_navmeshes/'
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
