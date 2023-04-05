@@ -71,8 +71,12 @@ class InputHandlerApplication(Application):
         mouse_button = event.button
         GuiInput.validate_mouse_button(mouse_button)
         for wrapper in self._gui_inputs:
-            wrapper._mouse_button_held.remove(mouse_button)
-            wrapper._mouse_button_up.add(mouse_button)
+            # In theory, mouse_button should always be present in _mouse_button_held.
+            # In practice, we seem to get spurious release events due to the app
+            # losing focus (e.g. switching to VS code debugger while mouse-clicking)
+            if mouse_button in wrapper._mouse_button_held:
+                wrapper._mouse_button_held.remove(mouse_button)
+                wrapper._mouse_button_up.add(mouse_button)
 
     def mouse_scroll_event(self, event: Application.MouseEvent) -> None:
         # shift+scroll is forced into x direction on mac, seemingly at OS level,
@@ -192,4 +196,6 @@ class GuiApplication(InputHandlerApplication):
             # Nothing was rendered, which suggests we have some time to kill. Sleeping
             # here may lower the app CPU usage.
             time.sleep(0)
+
+        # request redraw continuously
         self.redraw()
