@@ -1,5 +1,7 @@
 # Sandbox Tool
 
+![siro_sandbox_screenshot](https://user-images.githubusercontent.com/6557808/230213487-f4812c2f-ec7f-4d68-9bbe-0b65687f769b.png)
+
 ## Overview
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
@@ -12,13 +14,15 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 1. Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation).
 2. Run this command:
 ```
-HABITAT_SIM_LOG=quiet python examples/interactive_play.py --disable-inverse-kinematics --use-humanoid-controller --cfg habitat-lab/habitat/config/benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
+HABITAT_SIM_LOG=quiet python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --humanoid-user-agent --cfg habitat-lab/habitat/config/benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
 ```
 Controls:
-* Mouse to move humanoid
-* Mouse scroll wheel to zoom camera
-* `M` to reset to new episode
-* Note there's no way to grasp objects yet
+* Mouse scroll wheel to zoom the camera in/out.
+* Right-click on the floor and hold to move the humanoid.
+* Mouse-over an object. When you see a yellow highlight, left-click to grasp.
+    * Note grasping isn't restricted to proximity to the humanoid.
+    * Left-click again to drop the object anywhere in the scene.
+* `M` to reset to a new episode.
 
 ## Testing BatchReplayRenderer
 
