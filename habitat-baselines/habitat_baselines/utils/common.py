@@ -686,7 +686,9 @@ def iterate_action_space_recursively(action_space):
 def is_continuous_action_space(action_space) -> bool:
     if isinstance(action_space, spaces.Box):
         return True
-    elif isinstance(action_space, (spaces.Discrete, spaces.MultiDiscrete)):
+    elif isinstance(
+        action_space, (spaces.Discrete, spaces.MultiDiscrete, spaces.Dict)
+    ):
         return False
     else:
         raise NotImplementedError(

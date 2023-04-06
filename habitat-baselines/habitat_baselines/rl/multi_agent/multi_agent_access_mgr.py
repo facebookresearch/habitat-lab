@@ -319,9 +319,23 @@ class MultiAgentAccessMgr(AgentAccessMgr):
     @property
     def policy_action_space(self):
         # TODO: Hack for discrete HL action spaces.
-        return spaces.MultiDiscrete(
-            tuple([agent.policy_action_space.n for agent in self._agents])
+        all_discreet = np.all(
+            [
+                isinstance(agent.policy_action_space, spaces.MultiDiscrete)
+                for agent in self._agents
+            ]
         )
+        if all_discreet:
+            return spaces.MultiDiscrete(
+                tuple([agent.policy_action_space.n for agent in self._agents])
+            )
+        else:
+            return spaces.Dict(
+                {
+                    index: agent.policy_action_space
+                    for index, agent in enumerate(self._agents)
+                }
+            )
 
     def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
         n_agents = len(self._active_agents)
