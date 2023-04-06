@@ -265,7 +265,7 @@ class CompositeSubgoalReward(Measure):
 
     def __init__(self, *args, config, **kwargs):
         super().__init__(*args, config, **kwargs)
-        self._config = config
+        self._stage_reward = config.stage_sparse_reward
 
     def reset_metric(self, *args, **kwargs):
         self._stage_succ = []
@@ -275,7 +275,7 @@ class CompositeSubgoalReward(Measure):
         )
 
     def _get_stage_reward(self, name):
-        return self._config.stage_sparse_reward
+        return self._stage_reward
 
     def update_metric(self, *args, task, **kwargs):
         self._metric = 0.0
