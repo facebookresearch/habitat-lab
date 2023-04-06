@@ -62,7 +62,10 @@ class HrlRolloutStorage(RolloutStorage):
         """
         # The actions here could be Float instead of long because we previously
         # concatenated them with actions from other agents.
-        if self.buffers["actions"] is not None and actions is not None:
+        if (
+            type(self.buffers["actions"]) is torch.Tensor
+            and actions is not None
+        ):
             actions = actions.type(self.buffers["actions"].dtype)
 
         if next_masks is not None:
