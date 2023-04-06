@@ -146,8 +146,15 @@ class EmptyActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 # # NAVIGATION actions
 # -----------------------------------------------------------------------------
+
 @dataclass
-class MoveForwardActionConfig(ActionConfig):
+class DiscreteNavigationActionConfig(ActionConfig):
+    forward_step_size: float = 0.25
+    turn_angle: int = 10  # angle to rotate left or right in degrees
+    tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
+
+@dataclass
+class MoveForwardActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will move the robot forward by
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
@@ -155,8 +162,9 @@ class MoveForwardActionConfig(ActionConfig):
     type: str = "MoveForwardAction"
 
 
+
 @dataclass
-class TurnLeftActionConfig(ActionConfig):
+class TurnLeftActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
@@ -165,7 +173,7 @@ class TurnLeftActionConfig(ActionConfig):
 
 
 @dataclass
-class TurnRightActionConfig(ActionConfig):
+class TurnRightActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
@@ -174,7 +182,7 @@ class TurnRightActionConfig(ActionConfig):
 
 
 @dataclass
-class LookUpActionConfig(ActionConfig):
+class LookUpActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot's camera up
     by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
@@ -183,7 +191,7 @@ class LookUpActionConfig(ActionConfig):
 
 
 @dataclass
-class LookDownActionConfig(ActionConfig):
+class LookDownActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot's camera down
     by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
