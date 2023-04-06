@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
+import random
 import time
 from collections import defaultdict
 
@@ -478,15 +479,20 @@ class RearrangeEpisodeGenerator:
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
         for sampler_name, num_targets in target_numbers.items():
-            obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
-                sampler_name
-            ][0]
-            sampler = self._obj_samplers[obj_sampler_name]
-            new_target_receptacles = []
-            for _ in range(num_targets):
-                new_receptacle = sampler.sample_receptacle(
-                    self.sim, recep_tracker
+            new_target_receptacles: List[Receptacle] = []
+            while len(new_target_receptacles) < num_targets:
+                obj_sampler_name = random.choice(
+                    targ_sampler_name_to_obj_sampler_names[sampler_name]
                 )
+                sampler = self._obj_samplers[obj_sampler_name]
+                new_receptacle = None
+                try:
+                    new_receptacle = sampler.sample_receptacle(
+                        self.sim, recep_tracker
+                    )
+                except AssertionError:
+                    # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
+                    continue
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
