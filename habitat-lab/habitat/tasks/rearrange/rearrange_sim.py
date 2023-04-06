@@ -122,7 +122,9 @@ class RearrangeSim(HabitatSim):
         self._needs_markers = self.habitat_config.needs_markers
         self._update_robot = self.habitat_config.update_robot
         self._step_physics = self.habitat_config.step_physics
-        self._additional_object_paths = self.habitat_config.additional_object_paths
+        self._additional_object_paths = (
+            self.habitat_config.additional_object_paths
+        )
 
     @property
     def robot(self):
@@ -229,19 +231,14 @@ class RearrangeSim(HabitatSim):
         with read_write(config):
             config["scene"] = ep_info.scene_id
 
-        super().reconfigure(config, should_close_on_new_scene=False)
-
         self.ref_handle_to_rigid_obj_id = {}
 
         self.ep_info = ep_info
-        self._try_acquire_context()
 
         new_scene = self.prev_scene_id != ep_info.scene_id
 
         if new_scene:
             self._prev_obj_names = None
-
-        self.robots_mgr.reconfigure(new_scene)
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
@@ -249,6 +246,11 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
+
+        super().reconfigure(config, should_close_on_new_scene=False)
+
+        self._try_acquire_context()
+        self.robots_mgr.reconfigure(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -471,7 +473,9 @@ class RearrangeSim(HabitatSim):
                     template = osp.join(obj_path, obj_handle)
                     if osp.isfile(template):
                         break
-                assert template is not None, f"Could not find config file for object {obj_handle}"
+                assert (
+                    template is not None
+                ), f"Could not find config file for object {obj_handle}"
                 ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self.scene_obj_ids[i])
