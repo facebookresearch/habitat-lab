@@ -230,6 +230,11 @@ class RearrangeSim(HabitatSim):
 
         with read_write(config):
             config["scene"] = ep_info.scene_id
+
+        self.ref_handle_to_rigid_obj_id = {}
+
+        self.ep_info = ep_info
+
         new_scene = self.prev_scene_id != ep_info.scene_id
 
         if new_scene:
@@ -241,13 +246,11 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
+
         super().reconfigure(config, should_close_on_new_scene=False)
 
-        self.ref_handle_to_rigid_obj_id = {}
-        self.robots_mgr.reconfigure(new_scene)
-
-        self.ep_info = ep_info
         self._try_acquire_context()
+        self.robots_mgr.reconfigure(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
