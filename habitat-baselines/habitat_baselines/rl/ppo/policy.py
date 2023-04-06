@@ -144,25 +144,6 @@ class MultiAgentPolicyActionData(PolicyActionData):
             "should_inserts": self._unpack(self.should_inserts),
         }
 
-    def write_action(self, write_idx: int, write_action: torch.Tensor) -> None:
-        """
-        Used to override an action across all environments.
-        :param write_idx: The index in the action dimension to write the new action.
-        :param write_action: The action to write at `write_idx`.
-        """
-        self.actions[:, write_idx] = write_action
-
-    @property
-    def env_actions(self) -> torch.Tensor:
-        """
-        The actions to execute in the environment.
-        """
-
-        if self.take_actions is None:
-            return self.actions
-        else:
-            return self.take_actions
-
 
 class Policy(abc.ABC):
     action_distribution: nn.Module
