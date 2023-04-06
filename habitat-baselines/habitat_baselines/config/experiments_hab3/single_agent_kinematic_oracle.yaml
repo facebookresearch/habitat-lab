@@ -2,8 +2,8 @@
 
 defaults:
   - /rearrange/rl_hierarchical_oracle_nav
-  - override /habitat_baselines/rl/policy: hab3_hl_neural
-  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills: oracle_skills
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
   - _self_
 
 habitat_baselines:
