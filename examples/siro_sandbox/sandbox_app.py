@@ -39,7 +39,7 @@ from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 
-DEFAULT_CFG = "habitat-lab/habitat/config/benchmark/rearrange/rearrange_easy_human_and_fetch.yaml"
+DEFAULT_CFG = "benchmark/rearrange/rearrange_easy_human_and_fetch.yaml"
 
 
 class SandboxDriver(GuiAppDriver):

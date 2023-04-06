@@ -14,7 +14,7 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 1. Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation).
 2. Run this command:
 ```
-HABITAT_SIM_LOG=quiet python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --humanoid-user-agent --cfg habitat-lab/habitat/config/benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --humanoid-user-agent --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
 ```
 Controls:
 * Mouse scroll wheel to zoom the camera in/out.
@@ -26,7 +26,12 @@ Controls:
 
 ## Testing BatchReplayRenderer
 
-Run the above command but also include `--use-batch-renderer`. Note the humanoid isn't visualized because 3D primitives aren't yet supported in the batch renderer.
+This is an experimental feature aimed at those of us building the batch renderer. Run the above command but also include `--use-batch-renderer` as one of the first arguments.
+
+### Known Issues
+* The batch renderer doesn't work on Mac due to Mac's poor OpenGL support. We may resolve this later this year.
+* The humanoid isn't visualized because 3D primitives aren't yet supported in the batch renderer.
+* Ruslan reported an issue with the mouse-controlled humanoid navigation not working correctly.
 
 ## Sandbox Tool Architecture
 * The sandbox app is logically divided into a Sim/Task/RL component (`SandboxDriver`) and a GUI component (`GuiApplication` and `ReplayGuiAppRenderer`).

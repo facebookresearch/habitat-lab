@@ -513,7 +513,7 @@ class ControllerHelper:
             BaselinesController(
                 1,
                 is_multi_agent,
-                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
+                "rearrange/rl_hierarchical.yaml",
                 env,
             ),
         ]
