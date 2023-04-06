@@ -1,5 +1,4 @@
-from collections import defaultdict
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import torch
 
@@ -232,7 +231,7 @@ class MultiStorage(Storage):
 
     def _merge_step_outputs(self, get_step):
         obs: Dict[str, torch.Tensor] = {}
-        agent_step_data = defaultdict(list)
+        agent_step_data: Dict[str, Any] = {}
         for agent_i, storage in enumerate(self._active_storages):
             agent_step = get_step(storage)
             add_agent_names(agent_step["observations"], obs, agent_i)
