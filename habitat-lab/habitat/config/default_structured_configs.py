@@ -1125,6 +1125,9 @@ class TaskConfig(HabitatBaseConfig):
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
+    # Factor to shrink the receptacle sampling volume when predicates place
+    # objects on top of receptacles.
+    recep_place_shrink_factor: float = 0.8
     # EE sample parameters
     ee_sample_factor: float = 0.2
     ee_exclude_region: float = 0.0
@@ -1149,7 +1152,6 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
-    filter_nav_to_tasks: List = field(default_factory=list)
     actions: Dict[str, ActionConfig] = MISSING
 
 

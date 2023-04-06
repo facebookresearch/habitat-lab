@@ -389,7 +389,16 @@ class PddlSimState:
             elif sim_info.check_type_matches(
                 target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
             ):
-                raise NotImplementedError()
+                # Place object on top of receptacle.
+                recep = cast(mn.Range3D, sim_info.search_for_entity(target))
+
+                # Divide by 2 because the `from_center` creates from the half size.
+                shrunk_recep = mn.Range3D.from_center(
+                    recep.center(),
+                    (recep.size() / 2.0) * sim_info.recep_place_shrink_factor,
+                )
+                pos = np.random.uniform(shrunk_recep.min, shrunk_recep.max)
+                set_T = mn.Matrix4.translation(pos)
             else:
                 raise ValueError(f"Got unexpected target {target}")
 

@@ -378,6 +378,7 @@ class PddlDomain:
             num_spawn_attempts=self._config.num_spawn_attempts,
             physics_stability_steps=self._config.physics_stability_steps,
             receptacles=sim.receptacles,
+            recep_place_shrink_factor=self._config.recep_place_shrink_factor,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
