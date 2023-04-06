@@ -1086,6 +1086,12 @@ class StopAction(SimulatorTaskAction):
 
 @registry.register_task_action
 class VelocityStopAction(SimulatorTaskAction):
+    """
+    Stop action for tasks where the action space is velocity commands.
+    An explicit stop is required in order to terminate the episode.
+    (ex: for when the goal is reached)
+    """
+
     name: str = "velocity_stop"
 
     def reset(self, task: EmbodiedTask, *args: Any, **kwargs: Any):
@@ -1316,7 +1322,7 @@ class VelocityAction(SimulatorTaskAction):
             camera_pitch_angular_velocity = self._scale_inputs(
                 camera_pitch_angular_velocity,
                 [-1, 1],
-                self._ang_vel_range,
+                self._ang_vel_range_camera_pitch,
             )
 
         linear_velocity_clamped = np.clip(
@@ -1346,7 +1352,7 @@ class VelocityAction(SimulatorTaskAction):
         linear_velocity: float,
         angular_velocity: float,
         time_step: Optional[float] = None,
-    ):
+    ) -> AgentState:
         """
         Apply velocity command to simulation, step simulation, and return agent observation
         """
@@ -1801,7 +1807,7 @@ class WaypointAction(VelocityAction):
         """
         # Convert rotation to rotation vector
         q = agent_state.rotation
-        if type(q) is mn.Quaternion:
+        if isinstance(q, mn.Quaternion):
             q = quaternion.from_float_array(
                 np.array([q.scalar] + list(q.vector))
             )

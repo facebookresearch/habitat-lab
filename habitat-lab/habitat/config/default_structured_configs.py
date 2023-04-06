@@ -215,6 +215,11 @@ class TeleportActionConfig(ActionConfig):
 
 @dataclass
 class VelocityControlActionConfig(ActionConfig):
+    r"""
+    In Navigation tasks only, this action will execute a linear
+    forward velocity an angular velocity command on the robot.
+    Suitable for differential drive robots.
+    """
     type: str = "VelocityAction"
     # meters/sec
     lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.3])
@@ -235,9 +240,11 @@ class VelocityControlActionConfig(ActionConfig):
 @dataclass
 class WaypointControlActionConfig(VelocityControlActionConfig):
     r"""
-    In Navigation tasks only, this action will utilize a velocity controller to
-    move the robot to the desired waypoint.
+    In Navigation tasks only, this action will utilize a velocity controller
+    (which basically produces a series of VelocityAction outputs) to move
+    the robot to the desired waypoint.
     The waypoint is specified in the frame of the robot.
+    Suitable for differential drive robots.
     """
     type: str = "WaypointAction"
     action_duration: float = 1.0  # seconds
@@ -276,6 +283,7 @@ class MoveForwardWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will move the robot forward by
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
+    This is implemented by generating a WaypointAction with predefined parameters.
     """
     type: str = "MoveForwardWaypointAction"
     max_wait_duration: float = 3.0  # seconds
@@ -287,6 +295,7 @@ class TurnLeftWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    This is implemented by generating a WaypointAction with predefined parameters.
     """
     type: str = "TurnLeftWaypointAction"
     max_wait_duration: float = 3.0  # seconds
@@ -298,6 +307,7 @@ class TurnRightWaypointActionConfig(WaypointControlActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
+    This is implemented by generating a WaypointAction with predefined parameters.
     """
     type: str = "TurnRightWaypointAction"
     max_wait_duration: float = 3.0  # seconds
