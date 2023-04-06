@@ -7,4 +7,4 @@ defaults:
 type: RearrangeDataset-v0
 split: train
 data_path: data/datasets/floorplanner/rearrange/v1/{split}/rearrange_easy.json.gz
-scenes_dir: "data/test_scene_dataset/"
+scenes_dir: "data/fpss/fphab/"
