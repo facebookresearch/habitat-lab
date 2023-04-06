@@ -1041,6 +1041,20 @@ class CompositeSubgoalReward(MeasurementConfig):
 
 
 @dataclass
+class DidAgentsCollideConfig(MeasurementConfig):
+    type: str = "DidAgentsCollide"
+
+
+@dataclass
+class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
+    type: str = "CooperateSubgoalReward"
+    stage_sparse_reward: float = 1.0
+    end_on_collide: bool = True
+    # Positive penalty means give negative reward.
+    collide_penalty: float = 1.0
+
+
+@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
@@ -2118,6 +2132,18 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_subgoal_reward",
     node=CompositeSubgoalReward,
+)
+cs.store(
+    package="habitat.task.measurements.cooperate_subgoal_reward",
+    group="habitat/task/measurements",
+    name="cooperate_subgoal_reward",
+    node=CooperateSubgoalRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.did_agents_collide",
+    group="habitat/task/measurements",
+    name="did_agents_collide",
+    node=DidAgentsCollideConfig,
 )
 cs.store(
     package="habitat.task.measurements.composite_success",
