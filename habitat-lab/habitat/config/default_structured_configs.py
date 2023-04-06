@@ -1148,6 +1148,7 @@ class DatasetConfig(HabitatBaseConfig):
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
     content_scenes: List[str] = ["*"]
+    episode_ids: List[int] = []
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"

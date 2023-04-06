@@ -156,4 +156,6 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                             for g in episode[goal_type]
                         ],
                     )
-            self.episodes.append(rearrangement_episode)
+
+            if len(self.config.episode_ids) > 0 and i in self.config.episode_ids:
+                self.episodes.append(rearrangement_episode)
