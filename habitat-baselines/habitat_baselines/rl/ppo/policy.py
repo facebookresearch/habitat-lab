@@ -90,22 +90,9 @@ class MultiAgentPolicyActionData(PolicyActionData):
     information from multiple agent's action. This class is needed to store
     actions of multiple agents together
 
-    :property should_inserts: Of shape [# envs, 1]. If False at environment
-        index `i`, then don't write this transition to the rollout buffer. If
-        `None`, then write all data.
-    :property policy_info`: Optional logging information about the policy per
-        environment. For example, you could log the policy entropy.
-    :property take_actions`: If specified, these actions will be executed in
-        the environment, but not stored in the storage buffer. This allows
-        exectuing and learning from different actions. If not specified, the
-        agent will execute `self.actions`.
-    :property values: The actor value predictions. None if the actor does not predict value.
-    :property actions: The actions to store in the storage buffer. if
-        `take_actions` is None, then this is also the action executed in the
-        environment.
-    :property rnn_hidden_states: Actor hidden states.
-    :property action_log_probs: The log probabilities of the actions under the
-        current policy.
+    :property length_actions: List containing, for every agent, the size of their action space.
+    :property length_rnn_hidden_states: List containing for every agent the dimensionality of the rnn hidden state.
+    :property num_agents: The number of agents represented in this PolicyActionData
     """
 
     rnn_hidden_states: torch.Tensor
