@@ -1165,7 +1165,7 @@ class StopAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        # task.is_stop_called = True  # type: ignore
+        task.is_stop_called = True  # type: ignore
         return self._sim.get_observations_at()  # type: ignore
 
 
