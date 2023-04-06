@@ -33,7 +33,6 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -1048,7 +1047,7 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         self._turn_angle = config.turn_angle
         self._tilt_angle = config.tilt_angle
 
-    def move(
+    def _move_body(
         self, delta_position: Optional[float], delta_rotation: Optional[float]
     ):
         agent_state = self._sim.get_agent_state()
@@ -1068,18 +1067,18 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
                 -mn.Vector3.z_axis() * delta_position
             )
 
-        final_position = self._sim.pathfinder.try_step(
+        final_position = self._sim.pathfinder.try_step(  # type: ignore
             current_rigid_state.translation, goal_position
         )
         final_rotation = agent_mn_quat
         if delta_rotation is not None:
             delta_rotation = mn.Rad(np.deg2rad(delta_rotation))
             # Add the rotation. This assumes that the rotation is only along the Y axis.
-            final_rotation = mn.Quaternion.rotation(
-                agent_mn_quat.angle() * agent_mn_quat.axis().y
-                + delta_rotation,
-                mn.Vector3(0, 1, 0),
+            delta_rot = mn.Quaternion.rotation(
+                delta_rotation, mn.Vector3.y_axis()
             )
+            final_rotation = agent_mn_quat * delta_rot
+
             final_rotation = final_rotation.normalized()
         final_rotation = [
             *final_rotation.vector,
@@ -1108,10 +1107,21 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
             keep_agent_at_new_pose=True,
         )
 
-        # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
 
         return agent_observations
+
+    def _move_camera_vertical(self, amount: float):
+        assert (
+            len(self._sim.agents) == 1  # type: ignore
+        ), "For navigation tasks, there can be only one agent in the scene"
+        sensor_names = list(self._sim.agents[0]._sensors.keys())  # type: ignore
+        for sensor_name in sensor_names:
+            sensor = self._sim.agents[0]._sensors[sensor_name].node  # type: ignore
+            sensor.rotation = sensor.rotation * mn.Quaternion.rotation(
+                mn.Rad(np.deg2rad(amount)), mn.Vector3.x_axis()
+            )
+        return self._sim.get_observations_at()  # type: ignore
 
 
 @registry.register_task_action
@@ -1122,7 +1132,7 @@ class MoveForwardAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self.move(self._forward_step_size, None)
+        return self._move_body(self._forward_step_size, None)
 
 
 @registry.register_task_action
@@ -1131,7 +1141,7 @@ class TurnLeftAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self.move(None, +self._turn_angle)
+        return self._move_body(None, +self._turn_angle)
 
 
 @registry.register_task_action
@@ -1141,7 +1151,7 @@ class TurnRightAction(NavigationMovementAgentAction):
         ``step``.
         """
 
-        return self.move(None, -self._turn_angle)
+        return self._move_body(None, -self._turn_angle)
 
 
 @registry.register_task_action
@@ -1160,21 +1170,21 @@ class StopAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class LookUpAction(SimulatorTaskAction):
+class LookUpAction(NavigationMovementAgentAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.look_up)
+        return self._move_camera_vertical(self._tilt_angle)
 
 
 @registry.register_task_action
-class LookDownAction(SimulatorTaskAction):
+class LookDownAction(NavigationMovementAgentAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.look_down)
+        return self._move_camera_vertical(-self._tilt_angle)
 
 
 @registry.register_task_action
