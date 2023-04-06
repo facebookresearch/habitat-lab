@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface, get_angle_to_pos
+from habitat.tasks.rearrange.utils import UsesRobotInterface
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import quaternion_from_coeff
 
@@ -259,53 +259,6 @@ class RobotStartCompassSensor(EpisodicCompassSensor):
         )
 
 
-@registry.register_sensor(name="RobotStartGPSSensor")
-class RobotStartGPSSensor(EpisodicGPSSensor):
-    cls_uuid: str = "robot_start_gps"
-
-    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
-        super().__init__(sim=sim, config=config)
-
-    def get_agent_start_pose(self, episode, task):
-        return task.start_position, quaternion_from_coeff(task.start_rotation)
-
-    def get_agent_current_pose(self, sim):
-        curr_quat = sim.robot.sim_obj.rotation
-        curr_rotation = [
-            curr_quat.vector.x,
-            curr_quat.vector.y,
-            curr_quat.vector.z,
-            curr_quat.scalar,
-        ]
-
-        return sim.robot.sim_obj.translation, quaternion_from_coeff(
-            curr_rotation
-        )
-
-
-@registry.register_sensor(name="RobotStartCompassSensor")
-class RobotStartCompassSensor(EpisodicCompassSensor):
-    cls_uuid: str = "robot_start_compass"
-
-    def __init__(self, sim, config: "DictConfig", *args, **kwargs):
-        super().__init__(sim=sim, config=config)
-
-    def get_agent_start_pose(self, episode, task):
-        return task.start_position, quaternion_from_coeff(task.start_rotation)
-
-    def get_agent_current_pose(self, sim):
-        curr_quat = sim.robot.sim_obj.rotation
-        curr_rotation = [
-            curr_quat.vector.x,
-            curr_quat.vector.y,
-            curr_quat.vector.z,
-            curr_quat.scalar,
-        ]
-        return sim.robot.sim_obj.translation, quaternion_from_coeff(
-            curr_rotation
-        )
-
-
 @registry.register_measure
 class RotDistToGoal(Measure):
     cls_uuid: str = "rot_dist_to_goal"
@@ -338,8 +291,19 @@ class RotDistToGoal(Measure):
         else:
             targ = task.nav_goal_pos
         robot = self._sim.robot
+
+        # Get the base transformation
         T = robot.base_transformation
-        angle = get_angle_to_pos(T.transform_vector(targ))
+        # Do transformation
+        pos = T.inverted().transform_point(targ)
+        # Project to 2D plane (x,y,z=0)
+        pos[2] = 0.0
+        # Unit vector of the pos
+        pos = pos.normalized()
+        # Define the coordinate of the robot
+        pos_robot = np.array([1.0, 0.0, 0.0])
+        # Get the angle
+        angle = np.arccos(np.dot(pos, pos_robot))
         self._metric = np.abs(float(angle))
 
 

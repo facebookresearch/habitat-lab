@@ -383,7 +383,7 @@ class StartReceptacleSensorConfig(LabSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ObjectEmbeddingSensorConfig(LabSensorConfig):
     type: str = "ObjectEmbeddingSensor"
-    embeddings_file: str = "clip_embeddings.pickle"
+    embeddings_file: str = "data/objects/clip_embeddings.pickle"
     dimensionality: int = 512
 
 
@@ -845,6 +845,7 @@ class TaskConfig(HabitatBaseConfig):
     filter_nav_to_tasks: List = []
     actions: Dict[str, ActionConfig] = MISSING
     goal_type: str = "object_on_recep"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorSensorConfig(HabitatBaseConfig):
