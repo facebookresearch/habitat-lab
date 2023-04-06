@@ -549,6 +549,8 @@ class RearrangeEpisodeGenerator:
             self.visualize_scene_receptacles()
             self.vdb.make_debug_video(prefix="receptacles_")
 
+        # track a list of target objects to be used for settle culling later
+        target_object_names: List[str] = []
         # sample object placements
         self.object_to_containing_receptacle: Dict[str, Receptacle] = {}
         for sampler_name, obj_sampler in self._obj_samplers.items():
@@ -562,6 +564,15 @@ class RearrangeEpisodeGenerator:
             if len(object_sample_data) == 0:
                 return None
             new_objects, receptacles = zip(*object_sample_data)
+            # collect names of all newly placed target objects
+            target_object_names.extend(
+                [
+                    obj.handle
+                    for obj in new_objects[
+                        : len(target_receptacles[sampler_name])
+                    ]
+                ]
+            )
             for obj, rec in zip(new_objects, receptacles):
                 self.object_to_containing_receptacle[obj.handle] = rec
             if sampler_name not in self.episode_data["sampled_objects"]:
@@ -590,7 +601,7 @@ class RearrangeEpisodeGenerator:
                 )
 
         # simulate the world for a few seconds to validate the placements
-        if not self.settle_sim():
+        if not self.settle_sim(target_object_names):
             logger.warning(
                 "Aborting episode generation due to unstable state."
             )
@@ -806,7 +817,10 @@ class RearrangeEpisodeGenerator:
         self.vdb = DebugVisualizer(self.sim, output_path=output_path)
 
     def settle_sim(
-        self, duration: float = 5.0, make_video: bool = True
+        self,
+        target_object_names: List[str],
+        duration: float = 5.0,
+        make_video: bool = True,
     ) -> bool:
         """
         Run dynamics for a few seconds to check for stability of newly placed objects and optionally produce a video.
@@ -909,8 +923,19 @@ class RearrangeEpisodeGenerator:
 
         success = len(unstable_placements) == 0
 
+        # count unstable target objects, these can't be salvaged
+        unstable_target_objects = [
+            obj_name
+            for obj_name in unstable_placements
+            if obj_name in target_object_names
+        ]
+
         # optionally salvage the episode by removing unstable objects
-        if self.cfg.correct_unstable_results and not success:
+        if (
+            self.cfg.correct_unstable_results
+            and not success
+            and len(unstable_target_objects) == 0
+        ):
             detailed_receptacle_stability_report += (
                 "\n  attempting to correct unstable placements..."
             )
@@ -924,6 +949,7 @@ class RearrangeEpisodeGenerator:
                     for obj_name in unstable_placements
                     if obj_name in obj_names
                 ]
+
                 # check that we have freedom to reject some objects
                 num_required_objects = sampler.num_objects[0]
                 num_stable_objects = len(objects) - len(unstable_subset)

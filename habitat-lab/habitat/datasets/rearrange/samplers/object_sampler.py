@@ -374,16 +374,25 @@ class ObjectSampler:
         self,
         sim: habitat_sim.Simulator,
         recep_tracker: ReceptacleTracker,
-        target_receptacles,
+        target_receptacles: List[Receptacle],
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
-    ) -> List[habitat_sim.physics.ManagedRigidObject]:
+    ) -> List[Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]:
         """
         Defaults to uniform sample: object -> receptacle -> volume w/ rejection -> repeat.
-        Optionally provide a debug visualizer (vdb)
+
+        :param sim: The active Simulator instance.
+        :param recep_tracker: The pre-initialized ReceptacleTracker instace containg active ReceptacleSets.
+        :param target_receptacles: A list of pre-selected Receptacles for target object placement. These will be sampled first.
+        :param snap_down: Whether or not to use the snap_down utility to place the objects.
+        :param vdb: Optionally provide a debug visualizer (vdb)
+
+        :return: The list of new (object,receptacle) pairs placed by the sampler.
         """
         num_pairing_tries = 0
-        new_objects: List[habitat_sim.physics.ManagedRigidObject] = []
+        new_objects: List[
+            Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]
+        ] = []
 
         logger.info(
             f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
@@ -397,7 +406,7 @@ class ObjectSampler:
         ):
             num_pairing_tries += 1
             if len(new_objects) < len(target_receptacles):
-                # no objects sampled yet
+                # sample objects explicitly from pre-designated target receptacles first
                 new_object, receptacle = self.single_sample(
                     sim,
                     recep_tracker,
