@@ -45,7 +45,6 @@ try:
     from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
     from habitat_sim import RigidState
     from habitat_sim.physics import VelocityControl
-    from habitat_sim.utils import quat_rotate_vector
 except ImportError:
     pass
 
@@ -1044,14 +1043,14 @@ class DistanceToGoalReward(Measure):
 class NavigationMovementAgentAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._sim: RearrangeSim = sim
+        self._sim = sim
         self._forward_step_size = config.forward_step_size
         self._turn_angle = config.turn_angle
         self._tilt_angle = config.tilt_angle
 
-
-
-    def move(self, delta_position:Optional[float], delta_rotation:Optional[float]):
+    def move(
+        self, delta_position: Optional[float], delta_rotation: Optional[float]
+    ):
         agent_state = self._sim.get_agent_state()
         # Convert from np.quaternion (quaternion.quaternion) to mn.Quaternion
         normalized_quaternion = agent_state.rotation
@@ -1065,14 +1064,9 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
 
         goal_position = mn.Vector3(agent_state.position)
         if delta_position is not None:
-
-            goal_position += agent_mn_quat.transform_vector(mn.Vector3(0,0,-delta_position))
-
-        # if delta_rotation is not None:
-        #     delta_rotation = np.deg2rad(delta_rotation)
-        #     self.vel_control.angular_velocity = np.array(
-        #         [0.0, delta_rotation, 0.0]
-        #     )
+            goal_position += agent_mn_quat.transform_vector(
+                -mn.Vector3.z_axis() * delta_position
+            )
 
         final_position = self._sim.pathfinder.try_step(
             current_rigid_state.translation, goal_position
@@ -1080,10 +1074,12 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         final_rotation = agent_mn_quat
         if delta_rotation is not None:
             delta_rotation = mn.Rad(np.deg2rad(delta_rotation))
-            # print("<><><><><>", delta_rotation, agent_mn_quat.axis())
-            # final_rotation = agent_mn_quat * mn.Quaternion(mn.Vector3(0,0.5,0), 0)
-            # final_rotation = final_rotation.normalized()
-            final_rotation = mn.Quaternion.rotation( agent_mn_quat.angle() + delta_rotation, agent_mn_quat.axis())
+            # Add the rotation. This assumes that the rotation is only along the Y axis.
+            final_rotation = mn.Quaternion.rotation(
+                agent_mn_quat.angle() * agent_mn_quat.axis().y
+                + delta_rotation,
+                mn.Vector3(0, 1, 0),
+            )
             final_rotation = final_rotation.normalized()
         final_rotation = [
             *final_rotation.vector,
@@ -1094,7 +1090,9 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         dist_moved_before_filter = (
             goal_position - current_rigid_state.translation
         ).dot()
-        dist_moved_after_filter = (final_position - current_rigid_state.translation).dot()
+        dist_moved_after_filter = (
+            final_position - current_rigid_state.translation
+        ).dot()
 
         # NB: There are some cases where ||filter_end - end_pos|| > 0 when a
         # collision _didn't_ happen. One such case is going up stairs.  Instead,
@@ -1103,7 +1101,6 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         # filter.
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
-
 
         agent_observations = self._sim.get_observations_at(
             position=final_position,
@@ -1117,9 +1114,6 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         return agent_observations
 
 
-
-
-
 @registry.register_task_action
 class MoveForwardAction(NavigationMovementAgentAction):
     name: str = "move_forward"
@@ -1128,8 +1122,7 @@ class MoveForwardAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        # return self.move(self._forward_step_size , None)
-        return self.move(None, self._turn_angle)
+        return self.move(self._forward_step_size, None)
 
 
 @registry.register_task_action
@@ -1138,8 +1131,7 @@ class TurnLeftAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        # return self.move( self._forward_step_size , None)
-        return self.move(None, self._turn_angle)
+        return self.move(None, +self._turn_angle)
 
 
 @registry.register_task_action
@@ -1148,9 +1140,8 @@ class TurnRightAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        # return self.move(self._forward_step_size, None)
-        # return self.move(None, - self._turn_angle)
-        return self.move(None, self._turn_angle)
+
+        return self.move(None, -self._turn_angle)
 
 
 @registry.register_task_action

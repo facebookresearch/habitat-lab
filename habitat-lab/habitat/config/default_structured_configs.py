@@ -147,11 +147,13 @@ class EmptyActionConfig(ActionConfig):
 # # NAVIGATION actions
 # -----------------------------------------------------------------------------
 
+
 @dataclass
 class DiscreteNavigationActionConfig(ActionConfig):
     forward_step_size: float = 0.25
     turn_angle: int = 10  # angle to rotate left or right in degrees
     tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
+
 
 @dataclass
 class MoveForwardActionConfig(DiscreteNavigationActionConfig):
@@ -160,7 +162,6 @@ class MoveForwardActionConfig(DiscreteNavigationActionConfig):
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
     """
     type: str = "MoveForwardAction"
-
 
 
 @dataclass
