@@ -914,6 +914,7 @@ class PPOTrainer(BaseRLTrainer):
             and self.envs.num_envs > 0
         ):
             current_episodes_info = self.envs.current_episodes()
+
             space_lengths = {
                 "index_len_recurrent_hidden_states": hidden_state_lens,
                 "index_len_prev_actions": action_space_lens,
@@ -951,7 +952,9 @@ class PPOTrainer(BaseRLTrainer):
                 ]
             else:
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
+
             outputs = self.envs.step(step_data)
+
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]

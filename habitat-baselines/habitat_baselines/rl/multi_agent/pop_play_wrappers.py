@@ -350,7 +350,7 @@ def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
                 ret.append(
                     {add_agent_prefix(k, agent_i): v for k, v in env_d.items()}
                 )
-        else:
-            for k, v in env_d.items():
-                ret[env_i][add_agent_prefix(k, agent_i)] = v
+            else:
+                for k, v in env_d.items():
+                    ret[env_i][add_agent_prefix(k, agent_i)] = v
     return ret
