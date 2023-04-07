@@ -13,8 +13,8 @@ Project-specific README for SIRo.
 1. Download humanoid data.
     * From the Habitat-lab root directory, `python -m habitat_sim.utils.datasets_download --uids humanoid_data  --data-path data/`
     * Manually download `walking_motion_processed.pkl` from [this Slack thread](https://cvmlp.slack.com/archives/C0460NTKM4G/p1678403985106999?thread_ts=1678402520.813389&cid=C0460NTKM4G) to `data/humanoids/humanoid_data/walking_motion_processed.pkl`
-2. Note other required datasets that should download automatically as needed when running Habitat-lab:
-    * hab_ycb, hab_fetch, replica_cad_dataset, rearrange_pick_dataset_v0, rearrange_dataset_v1
+1. Download other required datasets:
+    * `python -m habitat_sim.utils.datasets_download --uids ycb hab_fetch replica_cad_dataset rearrange_pick_dataset_v0 rearrange_dataset_v1 --data-path data/`
 
 # Sandbox Tool
 
@@ -24,7 +24,7 @@ see [Sandbox Tool Readme](./examples/siro_sandbox/README.md)
 
 Fetch-Fetch in ReplicaCAD multi-agent training, single GPU. From `habitat-lab` directory:
 ```
-HABITAT_SIM_LOG=warning:physics=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py --config-name experiments_hab3/pop_play_kinematic_oracle.yaml 
+HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py --config-name experiments_hab3/pop_play_kinematic_oracle.yaml 
 ```
 
 # Eval
