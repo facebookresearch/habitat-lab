@@ -340,6 +340,8 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             profiling_wrapper.range_push("compute actions")
+
+            # Obtain lenghts
             step_batch_lens = {
                 k: v
                 for k, v in step_batch.items()
@@ -915,6 +917,7 @@ class PPOTrainer(BaseRLTrainer):
         ):
             current_episodes_info = self.envs.current_episodes()
 
+            # TODO: make sure this is batched properly
             space_lengths = {
                 "index_len_recurrent_hidden_states": hidden_state_lens,
                 "index_len_prev_actions": action_space_lens,

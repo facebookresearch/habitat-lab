@@ -53,7 +53,7 @@ class MultiPolicy(Policy):
                 split_indices = int(all_dim / n_agents)
                 split_indices = [split_indices] * n_agents
             else:
-                split_indices = kwargs[name_index]
+                split_indices = kwargs[name_index][0].int().tolist()
             split_index_dict[name_index] = split_indices
 
         agent_rnn_hidden_states = rnn_hidden_states.split(
@@ -157,7 +157,7 @@ class MultiPolicy(Policy):
                 split_indices = int(all_dim / n_agents)
                 split_indices = [split_indices] * n_agents
             else:
-                split_indices = kwargs[name_index]
+                split_indices = kwargs[name_index][0].int().tolist()
             split_index_dict[name_index] = split_indices
 
         agent_rnn_hidden_states = torch.split(
@@ -293,8 +293,11 @@ class MultiStorage(Storage):
                 for as_data in agent_step_data[k]
                 if as_data.numel() > 0
             ]
+            batch_size = as_data_greater[0].shape[0]
             new_agent_step_data[k] = torch.cat(as_data_greater, dim=-1)
-            new_agent_step_data[new_name] = lengths_data
+            new_agent_step_data[new_name] = torch.Tensor(lengths_data)[
+                None, :
+            ].repeat(batch_size, 1)
 
         agent_step_data = dict(new_agent_step_data)
         agent_step_data["observations"] = obs
