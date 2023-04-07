@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 
@@ -72,6 +72,14 @@ class AgentAccessMgr(ABC):
 
     @property
     @abstractmethod
+    def policy_action_space_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of action space of each of the agents.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
     def rollouts(self) -> Storage:
         """
         Gets the current rollout storage.
@@ -128,6 +136,14 @@ class AgentAccessMgr(ABC):
     def hidden_state_shape(self) -> Tuple[int]:
         """
         The shape of the tensor to track the hidden state, such as the RNN hidden state.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def hidden_state_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of the hidden state of each of the agents.
         """
         raise NotImplementedError()
 

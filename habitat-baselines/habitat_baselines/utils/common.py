@@ -712,6 +712,11 @@ def get_action_space_info(ac_space: spaces.Space) -> Tuple[Tuple[int], bool]:
         )
     elif isinstance(ac_space, spaces.MultiDiscrete):
         return ac_space.shape, True
+    elif isinstance(ac_space, spaces.Dict):
+        num_actions = 0
+        for _, ac_sub_space in ac_space.items():
+            num_actions += get_action_space_info(ac_sub_space)[0][0]
+        return (num_actions,), False
     else:
         # For discrete pointnav
         return (1,), True

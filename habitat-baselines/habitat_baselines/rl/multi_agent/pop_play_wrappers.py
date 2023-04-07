@@ -36,14 +36,33 @@ class MultiPolicy(Policy):
         prev_actions,
         masks,
         deterministic=False,
+        **kwargs,
     ):
         n_agents = len(self._active_policies)
-        agent_rnn_hidden_states = rnn_hidden_states[0].split(
-            rnn_hidden_states[1], -1
-        )
-        agent_prev_actions = prev_actions[0].split(prev_actions[1], -1)
-        agent_masks = masks[0].split(masks[1], -1)
+        index_names = [
+            "index_len_recurrent_hidden_states",
+            "index_len_prev_actions",
+        ]
+        split_index_dict = {}
+        for name_index in index_names:
+            if name_index not in kwargs:
+                if name_index == "index_len_recurrent_hidden_states":
+                    all_dim = rnn_hidden_states.shape[-1]
+                else:
+                    all_dim = prev_actions.shape[-1]
+                split_indices = int(all_dim / n_agents)
+                split_indices = [split_indices] * n_agents
+            else:
+                split_indices = kwargs[name_index]
+            split_index_dict[name_index] = split_indices
 
+        agent_rnn_hidden_states = rnn_hidden_states.split(
+            split_index_dict["index_len_recurrent_hidden_states"], -1
+        )
+        agent_prev_actions = prev_actions.split(
+            split_index_dict["index_len_prev_actions"], -1
+        )
+        agent_masks = masks.split([1, 1], -1)
         agent_actions = []
         for agent_i, policy in enumerate(self._active_policies):
             agent_obs = update_dict_with_agent_prefix(observations, agent_i)
@@ -59,11 +78,11 @@ class MultiPolicy(Policy):
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
-        batch_size = masks[0].shape[0]
-        device = masks[0].device
+        batch_size = masks.shape[0]
+        device = masks.device
 
         # Action dim is split evenly between the agents.
-        action_dims = prev_actions[1]
+        action_dims = split_index_dict["index_len_prev_actions"]
 
         def _maybe_cat(get_dat, feature_dims, dtype):
             all_dat = [get_dat(ac) for ac in agent_actions]
@@ -86,7 +105,7 @@ class MultiPolicy(Policy):
                 [ac.rnn_hidden_states for ac in agent_actions], -1
             ),
             actions=_maybe_cat(
-                lambda ac: ac.actions, action_dims, prev_actions[0].dtype
+                lambda ac: ac.actions, action_dims, prev_actions.dtype
             ),
             values=_maybe_cat(
                 lambda ac: ac.values, [1] * len(agent_actions), torch.float32
@@ -120,14 +139,36 @@ class MultiPolicy(Policy):
             num_agents=n_agents,
         )
 
-    def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
+    def get_value(
+        self, observations, rnn_hidden_states, prev_actions, masks, **kwargs
+    ):
+        n_agents = len(self._active_policies)
+        index_names = [
+            "index_len_recurrent_hidden_states",
+            "index_len_prev_actions",
+        ]
+        split_index_dict = {}
+        for name_index in index_names:
+            if name_index not in kwargs:
+                if name_index == "index_len_recurrent_hidden_states":
+                    all_dim = rnn_hidden_states.shape[-1]
+                else:
+                    all_dim = prev_actions.shape[-1]
+                split_indices = int(all_dim / n_agents)
+                split_indices = [split_indices] * n_agents
+            else:
+                split_indices = kwargs[name_index]
+            split_index_dict[name_index] = split_indices
+
         agent_rnn_hidden_states = torch.split(
-            rnn_hidden_states[0], rnn_hidden_states[1], dim=-1
+            rnn_hidden_states,
+            split_index_dict["index_len_recurrent_hidden_states"],
+            dim=-1,
         )
         agent_prev_actions = torch.split(
-            prev_actions[0], prev_actions[1], dim=-1
+            prev_actions, split_index_dict["index_len_prev_actions"], dim=-1
         )
-        agent_masks = torch.split(masks[0], masks[1], dim=-1)
+        agent_masks = torch.split(masks, [1, 1], dim=-1)
         all_value = []
         for agent_i, policy in enumerate(self._active_policies):
             agent_obs = update_dict_with_agent_prefix(observations, agent_i)
@@ -241,7 +282,9 @@ class MultiStorage(Storage):
                     continue
                 agent_step_data[k].append(v)
         obs = TensorDict(obs)
+        new_agent_step_data = {}
         for k in agent_step_data:
+            new_name = "index_len_" + k
             lengths_data = [
                 t.shape[-1] if t.numel() > 0 else 0 for t in agent_step_data[k]
             ]
@@ -250,13 +293,12 @@ class MultiStorage(Storage):
                 for as_data in agent_step_data[k]
                 if as_data.numel() > 0
             ]
-            agent_step_data[k] = (
-                torch.cat(as_data_greater, dim=-1),
-                lengths_data,
-            )
+            new_agent_step_data[k] = torch.cat(as_data_greater, dim=-1)
+            new_agent_step_data[new_name] = lengths_data
 
-        agent_step_data = dict(agent_step_data)
+        agent_step_data = dict(new_agent_step_data)
         agent_step_data["observations"] = obs
+
         return TensorDict(agent_step_data)
 
     def get_current_step(self, env_slice, buffer_index):

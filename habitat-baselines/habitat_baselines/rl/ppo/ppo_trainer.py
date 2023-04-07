@@ -340,11 +340,17 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             profiling_wrapper.range_push("compute actions")
+            step_batch_lens = {
+                k: v
+                for k, v in step_batch.items()
+                if k.startswith("index_len")
+            }
             action_data = self._agent.actor_critic.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                **step_batch_lens,
             )
 
         self.pth_time += time.time() - t_sample_action
@@ -466,11 +472,17 @@ class PPOTrainer(BaseRLTrainer):
         with inference_mode():
             step_batch = self._agent.rollouts.get_last_step()
 
+            step_batch_lens = {
+                k: v
+                for k, v in step_batch.items()
+                if k.startswith("index_len")
+            }
             next_value = self._agent.actor_critic.get_value(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                **step_batch_lens,
             )
 
         self._agent.rollouts.compute_returns(
@@ -846,6 +858,8 @@ class PPOTrainer(BaseRLTrainer):
             ),
             device=self.device,
         )
+        hidden_state_lens = self._agent.hidden_state_shape_lens
+        action_space_lens = self._agent.policy_action_space_shape_lens
         prev_actions = torch.zeros(
             self.config.habitat_baselines.num_environments,
             *action_shape,
@@ -900,7 +914,10 @@ class PPOTrainer(BaseRLTrainer):
             and self.envs.num_envs > 0
         ):
             current_episodes_info = self.envs.current_episodes()
-
+            space_lengths = {
+                "index_len_recurrent_hidden_states": hidden_state_lens,
+                "index_len_prev_actions": action_space_lens,
+            }
             with inference_mode():
                 action_data = self._agent.actor_critic.act(
                     batch,
@@ -908,6 +925,7 @@ class PPOTrainer(BaseRLTrainer):
                     prev_actions,
                     not_done_masks,
                     deterministic=False,
+                    **space_lengths,
                 )
                 if action_data.should_inserts is None:
                     test_recurrent_hidden_states = (
@@ -933,9 +951,7 @@ class PPOTrainer(BaseRLTrainer):
                 ]
             else:
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
-
             outputs = self.envs.step(step_data)
-
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
