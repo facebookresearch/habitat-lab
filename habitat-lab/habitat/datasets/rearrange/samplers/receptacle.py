@@ -7,7 +7,7 @@
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import namedtuple
+from collections import defaultdict, namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
@@ -505,33 +505,161 @@ def get_all_scenedataset_receptacles(
     return receptacles
 
 
-def import_tri_mesh_ply(ply_file: str) -> TriangleMeshData:
+def import_tri_mesh(mesh_file: str) -> List[TriangleMeshData]:
     """
-    Returns a Tuple of (verts,indices) from a ply mesh using magnum trade importer.
+    Returns a list of Tuples of (verts,indices) from a mesh asset using magnum trade importer.
 
-    :param ply_file: The input PLY mesh file. NOTE: must contain only triangles.
+    :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
     manager = mn.trade.ImporterManager()
     importer = manager.load_and_instantiate("AnySceneImporter")
-    importer.open_file(ply_file)
+    importer.open_file(mesh_file)
 
-    # TODO: We don't support mesh merging or multi-mesh parsing currently
-    if importer.mesh_count > 1:
-        raise NotImplementedError(
-            "Importing multi-mesh receptacles (mesh merging or multi-mesh parsing) is not supported."
+    mesh_data: List[TriangleMeshData] = []
+
+    def add_mesh_data(mesh_ix: int, abs_trans: Optional[mn.Matrix4] = None):
+        """
+        Load and transform mesh data into global data-structures.
+        """
+        mesh = importer.mesh(mesh_ix)
+
+        assert (
+            mesh.primitive == mn.MeshPrimitive.TRIANGLES
+        ), "Must be a triangle mesh."
+
+        transformed_positions = mesh.attribute(mn.trade.MeshAttribute.POSITION)
+        # apply the absolute transforms to the mesh data
+        if abs_trans is not None:
+            transformed_positions = [
+                abs_trans.transform_point(pos)
+                for pos in mesh.attribute(mn.trade.MeshAttribute.POSITION)
+            ]
+
+        mesh_data.append(
+            TriangleMeshData(
+                transformed_positions,
+                mesh.indices,
+            )
         )
 
-    mesh_ix = 0
-    mesh = importer.mesh(mesh_ix)
-    assert (
-        mesh.primitive == mn.MeshPrimitive.TRIANGLES
-    ), "Must be a triangle mesh."
+    # Import mesh data from a scene format (e.g. glTF)
+    scene_ix = importer.default_scene
+    if scene_ix != -1:
+        scene_data = importer.scene(scene_ix)
+        mesh_transforms: Dict[int, mn.Matrix4] = defaultdict(
+            mn.Matrix4.identity_init
+        )
+        # parse local transformations
+        for object_ix in range(importer.object_count):
+            if scene_data.has_field_object(
+                field_name=mn.trade.SceneField.MESH, object=object_ix
+            ):
+                # parse 4x4 matrix attributes
+                if scene_data.has_field(
+                    mn.trade.SceneField.TRANSFORMATION
+                ) and scene_data.has_field_object(
+                    field_name=mn.trade.SceneField.TRANSFORMATION,
+                    object=object_ix,
+                ):
+                    # NOTE: need parents accumulation?
+                    transform_data_offset = scene_data.field_object_offset(
+                        field_name=mn.trade.SceneField.TRANSFORMATION,
+                        object=object_ix,
+                    )
+                    mesh_transforms[object_ix] = mn.Matrix4(
+                        scene_data.field(mn.trade.SceneField.TRANSFORMATION)[
+                            transform_data_offset
+                        ]
+                    )
+                # parse vector translation attributes:
+                if scene_data.has_field(
+                    mn.trade.SceneField.TRANSLATION
+                ) and scene_data.has_field_object(
+                    field_name=mn.trade.SceneField.TRANSLATION,
+                    object=object_ix,
+                ):
+                    # NOTE: need parents accumulation?
+                    translation_data_offset = scene_data.field_object_offset(
+                        field_name=mn.trade.SceneField.TRANSLATION,
+                        object=object_ix,
+                    )
+                    mesh_transforms[object_ix].translation = mn.Vector3(
+                        scene_data.field(mn.trade.SceneField.TRANSLATION)[
+                            translation_data_offset
+                        ]
+                    )
+                # parse quaternion rotation attributes:
+                if scene_data.has_field(
+                    mn.trade.SceneField.ROTATION
+                ) and scene_data.has_field_object(
+                    field_name=mn.trade.SceneField.ROTATION,
+                    object=object_ix,
+                ):
+                    # NOTE: need parents accumulation?
+                    rotation_data_offset = scene_data.field_object_offset(
+                        field_name=mn.trade.SceneField.ROTATION,
+                        object=object_ix,
+                    )
+                    rotation_mat = scene_data.field(
+                        mn.trade.SceneField.ROTATION
+                    )[rotation_data_offset].to_matrix()
+                    mesh_transforms[object_ix] = mn.Matrix4.from_(
+                        rotation_mat,
+                        mesh_transforms[object_ix].translation,
+                    )
 
-    # zero-copy reference to importer datastructures
-    mesh_data = TriangleMeshData(
-        mesh.attribute(mn.trade.MeshAttribute.POSITION),
-        mesh.indices,
-    )
+        def get_parent(obj_ix: int, scene_data: mn.trade.SceneData):
+            """
+            Retrieve the parent object index of a SceneData object from its object index.
+
+            :return: The parent object index or -1 for no parent.
+            """
+            if scene_data.has_field_object(
+                field_name=mn.trade.SceneField.PARENT, object=obj_ix
+            ):
+                parent_object_offset = scene_data.field_object_offset(
+                    field_name=mn.trade.SceneField.PARENT, object=obj_ix
+                )
+                parent_object_ix = scene_data.field(
+                    mn.trade.SceneField.PARENT
+                )[parent_object_offset]
+                return parent_object_ix
+            return -1
+
+        # accumulate absolute transformations through parents
+        abs_mesh_transforms: Dict[int, mn.Matrix4] = defaultdict(
+            mn.Matrix4.identity_init
+        )
+        for object_ix in range(importer.object_count):
+            abs_mesh_transforms[object_ix] = mesh_transforms[object_ix]
+            if scene_data.has_field_object(
+                field_name=mn.trade.SceneField.MESH, object=object_ix
+            ):
+                parent_object_ix = get_parent(object_ix, scene_data)
+                while parent_object_ix != -1:
+                    abs_mesh_transforms[object_ix] = mesh_transforms[
+                        parent_object_ix
+                    ].__matmul__(abs_mesh_transforms[object_ix])
+                    parent_object_ix = get_parent(parent_object_ix, scene_data)
+
+        # load the mesh data for mesh objects
+        for object_ix in range(importer.object_count):
+            if scene_data.has_field_object(
+                field_name=mn.trade.SceneField.MESH, object=object_ix
+            ):
+                # this object is a mesh
+                mesh_offset = scene_data.field_object_offset(
+                    field_name=mn.trade.SceneField.MESH, object=object_ix
+                )
+                mesh_ix = scene_data.field(mn.trade.SceneField.MESH)[
+                    mesh_offset
+                ]
+                add_mesh_data(mesh_ix, abs_mesh_transforms[object_ix])
+
+    else:
+        # No SceneData, so treat this as a set of raw meshes
+        for mesh_ix in range(importer.mesh_count):
+            add_mesh_data(mesh_ix)
 
     return mesh_data
 
@@ -639,17 +767,21 @@ def parse_receptacles_from_user_config(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
                 # TODO: build the mesh_data entry from scale and mesh
-                mesh_data = import_tri_mesh_ply(mesh_file)
+                mesh_data: List[TriangleMeshData] = import_tri_mesh(mesh_file)
 
-                receptacles.append(
-                    TriangleMeshReceptacle(
-                        name=receptacle_name,
-                        mesh_data=mesh_data,
-                        up=up,
-                        parent_object_handle=parent_object_handle,
-                        parent_link=parent_link_ix,
+                for mix, single_mesh_data in enumerate(mesh_data):
+                    single_receptacle_name = (
+                        receptacle_name + "." + str(mix).rjust(4, "0")
                     )
-                )
+                    receptacles.append(
+                        TriangleMeshReceptacle(
+                            name=single_receptacle_name,
+                            mesh_data=single_mesh_data,
+                            up=up,
+                            parent_object_handle=parent_object_handle,
+                            parent_link=parent_link_ix,
+                        )
+                    )
             else:
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
