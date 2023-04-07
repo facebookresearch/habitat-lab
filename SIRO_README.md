@@ -22,7 +22,10 @@ see [Sandbox Tool Readme](./examples/siro_sandbox/README.md)
 
 # Training
 
-todo: terminal commands, etc.
+Fetch-Fetch in ReplicaCAD multi-agent training, single GPU. From `habitat-lab` directory:
+```
+HABITAT_SIM_LOG=warning:physics=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py --config-name experiments_hab3/pop_play_kinematic_oracle.yaml 
+```
 
 # Eval
 
