@@ -35,6 +35,7 @@ habitat:
     reward_measure: composite_subgoal_reward
     slack_reward: -0.01
     success_reward: 5.0
+    task_spec: tidy_house
 
     measurements:
       composite_subgoal_reward:
@@ -96,39 +97,37 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: ""
   num_environments: 4
   num_updates: -1
   total_num_steps: 5.0e7
-  log_interval: 10
-  num_checkpoints: 100
+  log_interval: 1
+  num_checkpoints: 10
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
+  writer_type: 'tb'
 
-  # video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  # tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  # eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
 
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
 
   eval:
-    should_load_ckpt: False
+    should_load_ckpt: True
     video_option: ["disk"]
 
   rl:
     policy:
       agent_0:
         hierarchical_policy:
-          # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"
@@ -136,8 +135,6 @@ habitat_baselines:
               max_skill_steps: 300
       agent_1:
         hierarchical_policy:
-          high_level_policy:
-            name: "NeuralHighLevelPolicy"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             open_cab:
