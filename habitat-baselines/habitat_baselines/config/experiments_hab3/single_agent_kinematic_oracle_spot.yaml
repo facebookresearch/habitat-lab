@@ -2,6 +2,7 @@
 
 defaults:
   - /rearrange/rl_hierarchical_oracle_nav
+  # Spot has both arm and head cameras, so we need this override
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
@@ -40,6 +41,7 @@ habitat:
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
+    # Define the Spot robot here
     agents:
       main_agent:
         radius: 0.3
