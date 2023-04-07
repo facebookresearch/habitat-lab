@@ -384,9 +384,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
-        agent_config.action_space = registry.get_action_space_configuration(
-            self.habitat_config.action_space_config
-        )(self.habitat_config).get()
 
         return habitat_sim.Configuration(sim_config, [agent_config])
 

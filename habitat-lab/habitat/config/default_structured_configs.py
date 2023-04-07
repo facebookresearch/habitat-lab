@@ -1368,9 +1368,6 @@ class HabitatSimV0Config(HabitatBaseConfig):
 @dataclass
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
-    action_space_config: str = "v0"
-    action_space_config_arguments: Dict[str, Any] = field(default_factory=dict)
-    forward_step_size: float = 0.25  # in metres
     create_renderer: bool = False
     requires_textures: bool = True
     # Sleep options
@@ -1392,8 +1389,6 @@ class SimulatorConfig(HabitatBaseConfig):
     # otherwise it leads to circular references:
     #
     seed: int = II("habitat.seed")
-    turn_angle: int = 10  # angle to rotate left or right in degrees
-    tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
     default_agent_id: int = 0
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
