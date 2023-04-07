@@ -119,8 +119,6 @@ habitat:
       step_repetition_range: 0.2
   simulator:
     type: Sim-v0
-    action_space_config: v0
-    action_space_config_arguments: {}
     forward_step_size: 0.25
     create_renderer: false
     requires_textures: true

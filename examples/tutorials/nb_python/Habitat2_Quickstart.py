@@ -435,7 +435,6 @@ habitat:
     additional_object_paths:
       - "data/objects/ycb/configs/"
     debug_render: False
-    action_space_config: v0
     concur_render: False
     auto_sleep: False
     agents:
