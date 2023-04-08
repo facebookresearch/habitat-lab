@@ -230,6 +230,10 @@ class MultiStorage(Storage):
                 for k, v in kwargs["action_data"].unpack().items()
                 if k in kwargs
             }
+            args1 = sorted(list(insert_d.keys()) + ["action_data"])
+            args2 = sorted(kwargs.keys())
+            assert args1 == args2
+
         for agent_i, storage in enumerate(self._active_storages):
             agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
