@@ -87,7 +87,7 @@ habitat_baselines:
   eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
   checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
   log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
-  num_environments: 2
+  num_environments: 1
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 1
@@ -98,7 +98,7 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
+  writer_type: 'tb'
 
   wb:
     project_name: 'hab3'
