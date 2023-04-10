@@ -113,6 +113,7 @@ habitat_baselines:
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
     should_load_ckpt: False
