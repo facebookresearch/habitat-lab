@@ -331,10 +331,7 @@ class EmbodiedTask:
 
         self._sim.step_physics(1.0 / 60.0)  # type:ignore
         # observations.update(self._sim.get_sensor_observations())
-        sim_obs = self._sim.get_sensor_observations()  # type:ignore
-        sim_obs = self._sim._sensor_suite.get_observations(  # type:ignore
-            sim_obs
-        )
+        sim_obs = self._sim.step(None)
         observations.update(sim_obs)
 
         observations.update(

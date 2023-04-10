@@ -1101,15 +1101,11 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
 
-        agent_observations = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
+        self._sim.set_agent_state(  # type:ignore
+            final_position, final_rotation, reset_sensors=False
         )
 
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
-
-        return agent_observations
 
     def _move_camera_vertical(self, amount: float):
         assert (
@@ -1121,7 +1117,6 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
             sensor.rotation = sensor.rotation * mn.Quaternion.rotation(
                 mn.Rad(np.deg2rad(amount)), mn.Vector3.x_axis()
             )
-        return self._sim.get_observations_at()  # type: ignore
 
 
 @registry.register_task_action
@@ -1166,7 +1161,6 @@ class StopAction(SimulatorTaskAction):
         ``step``.
         """
         task.is_stop_called = True  # type: ignore
-        return self._sim.get_observations_at()  # type: ignore
 
 
 @registry.register_task_action
@@ -1175,7 +1169,7 @@ class LookUpAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._move_camera_vertical(self._tilt_angle)
+        self._move_camera_vertical(self._tilt_angle)
 
 
 @registry.register_task_action
@@ -1184,7 +1178,7 @@ class LookDownAction(NavigationMovementAgentAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._move_camera_vertical(-self._tilt_angle)
+        self._move_camera_vertical(-self._tilt_angle)
 
 
 @registry.register_task_action
@@ -1212,10 +1206,10 @@ class TeleportAction(SimulatorTaskAction):
             rotation = list(rotation)
 
         if not self._sim.is_navigable(position):
-            return self._sim.get_observations_at()  # type: ignore
+            return
 
-        return self._sim.get_observations_at(
-            position=position, rotation=rotation, keep_agent_at_new_pose=True
+        self._sim.set_agent_state(  # type:ignore
+            position, rotation, reset_sensors=False
         )
 
     @property
@@ -1320,7 +1314,7 @@ class VelocityAction(SimulatorTaskAction):
             and abs(angular_velocity) < self.min_abs_ang_speed
         ):
             task.is_stop_called = True  # type: ignore
-            return self._sim.get_observations_at(position=None, rotation=None)
+            return
 
         angular_velocity = np.deg2rad(angular_velocity)
         self.vel_control.linear_velocity = np.array(
@@ -1374,16 +1368,11 @@ class VelocityAction(SimulatorTaskAction):
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
 
-        agent_observations = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
+        self._sim.set_agent_state(  # type:ignore
+            final_position, final_rotation, reset_sensors=False
         )
-
         # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
-
-        return agent_observations
 
 
 @registry.register_task(name="Nav-v0")
