@@ -27,7 +27,6 @@ from magnum.platform.glfw import Application
 import habitat
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
-from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     OracleNavActionConfig,
     PddlApplyActionConfig,
@@ -302,6 +301,48 @@ class SandboxDriver(GuiAppDriver):
         return post_sim_update_dict
 
 
+def update_habitat_config(config, args):
+    with habitat.config.read_write(config):
+        env_config = config.habitat.environment
+        sim_config = config.habitat.simulator
+        task_config = config.habitat.task
+        task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
+        task_config.actions[
+            "agent_1_oracle_nav_action"
+        ] = OracleNavActionConfig(agent_index=1)
+
+        if True:
+            # Code below is ported from interactive_play.py. I'm not sure what it is for.
+            if "composite_success" in task_config.measurements:
+                task_config.measurements.composite_success.must_call_stop = (
+                    False
+                )
+            if "rearrange_nav_to_obj_success" in task_config.measurements:
+                task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
+                    False
+                )
+            if "force_terminate" in task_config.measurements:
+                task_config.measurements.force_terminate.max_accum_force = -1.0
+                task_config.measurements.force_terminate.max_instant_force = (
+                    -1.0
+                )
+
+        if args.never_end:
+            env_config.max_episode_steps = 0
+
+        if not args.disable_inverse_kinematics:
+            if "arm_action" not in task_config.actions:
+                raise ValueError(
+                    "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
+                )
+            sim_config.agents.main_agent.ik_arm_urdf = (
+                "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+            )
+            task_config.actions.arm_action.arm_controller = "ArmEEAction"
+
+    return config
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -333,13 +374,6 @@ if __name__ == "__main__":
         action="store_true",
         help="If specified, does not add the inverse kinematics end-effector control. Only relevant for a user-controlled *robot* agent.",
     )
-    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
-    parser.add_argument(
-        "opts",
-        default=None,
-        nargs=argparse.REMAINDER,
-        help="Modify config options from command line",
-    )
     parser.add_argument(
         "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
     )
@@ -355,48 +389,21 @@ if __name__ == "__main__":
         default=False,
         help="Choose between classic and batch renderer",
     )
+    parser.add_argument(
+        "–-save-screenshot", type=str, default="sandbox_app_screenshot.png"
+    )
+    parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
+    parser.add_argument(
+        "opts",
+        default=None,
+        nargs=argparse.REMAINDER,
+        help="Modify config options from command line",
+    )
 
     args = parser.parse_args()
 
     config = habitat.get_config(args.cfg, args.opts)
-    with habitat.config.read_write(config):
-        env_config = config.habitat.environment
-        sim_config = config.habitat.simulator
-        task_config = config.habitat.task
-        task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
-        task_config.actions[
-            "agent_1_oracle_nav_action"
-        ] = OracleNavActionConfig(agent_index=1)
-
-        if True:
-            # Code below is ported from interactive_play.py. I'm not sure what it is for.
-            agent_config = get_agent_config(sim_config=sim_config)
-            if "composite_success" in task_config.measurements:
-                task_config.measurements.composite_success.must_call_stop = (
-                    False
-                )
-            if "rearrange_nav_to_obj_success" in task_config.measurements:
-                task_config.measurements.rearrange_nav_to_obj_success.must_call_stop = (
-                    False
-                )
-            if "force_terminate" in task_config.measurements:
-                task_config.measurements.force_terminate.max_accum_force = -1.0
-                task_config.measurements.force_terminate.max_instant_force = (
-                    -1.0
-                )
-
-        if args.never_end:
-            env_config.max_episode_steps = 0
-
-        if not args.disable_inverse_kinematics:
-            if "arm_action" not in task_config.actions:
-                raise ValueError(
-                    "Action space does not have any arm control so cannot add inverse kinematics. Specify the `--disable-inverse-kinematics` option"
-                )
-            sim_config.agents.main_agent.ik_arm_urdf = (
-                "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
-            )
-            task_config.actions.arm_action.arm_controller = "ArmEEAction"
+    config = update_habitat_config(config, args)
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
