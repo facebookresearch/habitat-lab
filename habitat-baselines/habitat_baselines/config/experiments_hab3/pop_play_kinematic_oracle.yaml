@@ -17,6 +17,10 @@ defaults:
     - composite_subgoal_reward
   - _self_
 
+hydra:
+  job:
+    name: 'pop_play'
+
 habitat:
   environment:
     max_episode_steps: 700

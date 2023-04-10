@@ -30,6 +30,10 @@ defaults:
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   - _self_
 
+hydra:
+  job:
+    name: 'pop_play_humanoid'
+
 habitat:
   task:
     actions:

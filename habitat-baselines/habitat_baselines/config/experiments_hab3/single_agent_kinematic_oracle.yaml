@@ -6,6 +6,10 @@ defaults:
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
   - _self_
 
+hydra:
+  job:
+    name: 'single_oracle'
+
 habitat_baselines:
   log_interval: 1
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
@@ -18,6 +22,7 @@ habitat_baselines:
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
   num_environments: 2
 
 habitat:
