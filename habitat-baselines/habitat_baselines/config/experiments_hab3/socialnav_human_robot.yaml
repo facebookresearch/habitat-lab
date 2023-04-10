@@ -13,7 +13,7 @@ defaults:
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
-    - composite_subgoal_reward
+    - social_nav_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -31,7 +31,7 @@ defaults:
 
 habitat:
   task:
-    reward_measure: composite_subgoal_reward
+    reward_measure: social_nav_reward
     task_spec: multi_agent_tidy_house_solved
     actions:
       agent_0_arm_action:

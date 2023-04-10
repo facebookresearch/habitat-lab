@@ -842,7 +842,10 @@ class PPOTrainer(BaseRLTrainer):
             self._agent.policy_action_space
         )
 
-        if self._agent.actor_critic.should_load_agent_state:
+        if (
+            self._agent.actor_critic.should_load_agent_state
+            and self.config.habitat_baselines.eval.should_load_ckpt
+        ):
             self._agent.load_state_dict(ckpt_dict)
 
         observations = self.envs.reset()
