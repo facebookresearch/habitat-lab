@@ -81,11 +81,11 @@ defaults:
 | --- | --- |
 | habitat.task.actions.stop |     In Navigation tasks only, the stop action is a discrete action. When called, the Agent will request to stop the navigation task. Note that this action is needed to succeed in a Navigation task since the Success is determined by the Agent calling the stop action within range of the target. Note that this is different from the RearrangeStopActionConfig that works for Rearrangement tasks only instead of the Navigation tasks.|
 | habitat.task.actions.empty | In Navigation tasks only, the pass action. The robot will do nothing.|
-| habitat.task.actions.move_forward |     In Navigation tasks only, this discrete action will move the robot forward by a fixed amount determined by the `habitat.simulator.forward_step_size` amount. |
-| habitat.task.actions.turn_left |     In Navigation tasks only, this discrete action will rotate the robot to the left  by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
-| habitat.task.actions.turn_right |     In Navigation tasks only, this discrete action will rotate the robot to the right by a fixed amount determined by the `habitat.simulator.turn_angle` amount. |
-| habitat.task.actions.look_up |      In Navigation tasks only, this discrete action will rotate the robot's camera up by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
-| habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `habitat.simulator.tilt_angle` amount. |
+| habitat.task.actions.move_forward |     In Navigation tasks only, this discrete action will move the robot forward by a fixed amount determined by the `forward_step_size` amount. |
+| habitat.task.actions.turn_left |     In Navigation tasks only, this discrete action will rotate the robot to the left  by a fixed amount determined by the `turn_angle` amount. |
+| habitat.task.actions.turn_right |     In Navigation tasks only, this discrete action will rotate the robot to the right by a fixed amount determined by the `turn_angle` amount. |
+| habitat.task.actions.look_up |      In Navigation tasks only, this discrete action will rotate the robot's camera up by a fixed amount determined by the `tilt_angle` amount. |
+| habitat.task.actions.look_down |      In Navigation tasks only, this discrete action will rotate the robot's camera down by a fixed amount determined by the `tilt_angle` amount. |
 
 ## Navigation Measures
 A measure is a way to collect data about the environment at each step that is not sensor information. Measures can contain privileged information for the user (like a top down map) or for training (like rewards).

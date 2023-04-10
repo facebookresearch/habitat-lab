@@ -53,7 +53,9 @@ def shortest_path_example():
     with SimpleRLEnv(config=config) as env:
         goal_radius = env.episodes[0].goals[0].radius
         if goal_radius is None:
-            goal_radius = config.habitat.simulator.forward_step_size
+            goal_radius = (
+                config.habitat.task.actions.move_forward.forward_step_size
+            )
         follower = ShortestPathFollower(
             env.habitat_env.sim, goal_radius, False
         )
