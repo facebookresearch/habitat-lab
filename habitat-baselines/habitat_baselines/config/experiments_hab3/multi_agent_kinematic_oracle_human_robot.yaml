@@ -113,6 +113,7 @@ habitat_baselines:
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
     should_load_ckpt: False
@@ -180,12 +181,10 @@ habitat_baselines:
               apply_postconds: True
               force_end_on_timeout: False
               ignore_grip: True
-
             wait:
               skill_name: "WaitSkillPolicy"
               max_skill_steps: -1
               ignore_grip: True
-
             reset_arm:
               skill_name: "NoopSkillPolicy"
               max_skill_steps: 1
