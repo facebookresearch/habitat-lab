@@ -59,6 +59,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space: spaces.Space,
         action_space: ActionSpace,
         num_envs: int,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
 
@@ -90,6 +91,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._name_to_idx,
             observation_space,
             action_space,
+            agent_name,
         )
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
@@ -424,12 +426,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space,
         action_space,
         orig_action_space,
+        agent_name=None,
         **kwargs,
     ):
-        agent_name = None
-        if "agent_name" in kwargs:
-            agent_name = kwargs["agent_name"]
-
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
                 raise ValueError(
@@ -444,4 +443,5 @@ class HierarchicalPolicy(nn.Module, Policy):
             observation_space,
             orig_action_space,
             config.habitat_baselines.num_environments,
+            agent_name,
         )

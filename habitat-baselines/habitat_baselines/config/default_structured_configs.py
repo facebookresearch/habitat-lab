@@ -361,6 +361,7 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     num_active_agents_per_type: List[int] = field(default_factory=lambda: [1])
     num_pool_agents_per_type: List[int] = field(default_factory=lambda: [1])
     agent_sample_interval: int = 20
+    behavior_latent_dim: int = -1
     allow_self_play: bool = False
     self_play_batched: bool = False
     ###############################

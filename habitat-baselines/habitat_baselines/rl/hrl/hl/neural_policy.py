@@ -85,10 +85,13 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         return {"actions": None}
 
     def _setup_actions(self) -> List[PddlAction]:
-        all_actions = self._pddl_prob.get_possible_actions()
-        all_actions = [
-            ac for ac in all_actions if ac.name in self._config.allowed_actions
-        ]
+        # In the PDDL domain, the agents are referred to as robots.
+        robot_id = "robot_" + self._agent_name.split("_")[1]
+        robot_entity = self._pddl_prob.get_entity(robot_id)
+        all_actions = self._pddl_prob.get_possible_actions(
+            filter_entities=[robot_entity],
+            allowed_action_names=self._config.allowed_actions,
+        )
         if not self._config.allow_other_place:
             all_actions = [
                 ac

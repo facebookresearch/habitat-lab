@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Dict, List
+from typing import Callable, Dict, List, Optional
 
 import torch
 
@@ -19,8 +19,11 @@ class MultiPolicy(Policy):
     Wraps a set of policies. Splits inputs and concatenates outputs.
     """
 
-    def __init__(self):
+    def __init__(self, update_obs_with_agent_prefix_fn):
         self._active_policies = []
+        if update_obs_with_agent_prefix_fn is None:
+            update_obs_with_agent_prefix_fn = update_dict_with_agent_prefix
+        self._update_obs_with_agent_prefix_fn = update_obs_with_agent_prefix_fn
 
     def set_active(self, active_policies):
         self._active_policies = active_policies
@@ -41,7 +44,9 @@ class MultiPolicy(Policy):
 
         agent_actions = []
         for agent_i, policy in enumerate(self._active_policies):
-            agent_obs = update_dict_with_agent_prefix(observations, agent_i)
+            agent_obs = self._update_obs_with_agent_prefix_fn(
+                observations, agent_i
+            )
             agent_actions.append(
                 policy.act(
                     agent_obs,
@@ -120,8 +125,15 @@ class MultiPolicy(Policy):
         return _merge_list_dict(all_extra)
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, **kwargs):
-        return MultiPolicy()
+    def from_config(
+        cls,
+        config,
+        observation_space,
+        action_space,
+        update_obs_with_agent_prefix_fn: Optional[Callable] = None,
+        **kwargs,
+    ):
+        return MultiPolicy(update_obs_with_agent_prefix_fn)
 
 
 class MultiStorage(Storage):
