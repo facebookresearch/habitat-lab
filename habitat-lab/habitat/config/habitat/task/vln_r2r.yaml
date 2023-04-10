@@ -15,3 +15,9 @@ defaults:
 
 
 type: VLN-v0
+task:
+  actions:
+    turn_left:
+      turn_angle: 15
+    turn_right:
+      turn_angle: 15

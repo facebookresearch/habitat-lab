@@ -132,8 +132,6 @@ habitat:
     scene_dataset: default
     additional_object_paths: []
     seed: ${habitat.seed}
-    turn_angle: 10
-    tilt_angle: 15
     default_agent_id: 0
     debug_render: false
     debug_render_robot: false
