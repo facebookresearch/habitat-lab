@@ -308,6 +308,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             )
         )
         self._prev_sim_obs: Optional[Observations] = None
+        self._collided = False
 
     def create_sim_config(
         self, _sensor_suite: SensorSuite
@@ -426,7 +427,10 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
     def step(
         self, action: Optional[Union[str, np.ndarray, int]]
     ) -> Observations:
-        sim_obs = self.get_sensor_observations()
+        if action is None:
+            sim_obs = self.get_sensor_observations()
+        else:
+            sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         if self.config.enable_batch_renderer:
             self.add_keyframe_to_observations(sim_obs)
@@ -671,7 +675,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             will _always_ be false after :meth:`reset` or :meth:`get_observations_at` as neither of those
             result in an action (step) being taken.
         """
-        return self._prev_sim_obs.get("collided", False)
+        return self._collided
 
     def add_keyframe_to_observations(self, observations):
         r"""Adds an item to observations that contains the latest gfx-replay keyframe.

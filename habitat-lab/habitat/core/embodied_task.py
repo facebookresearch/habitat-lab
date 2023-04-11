@@ -295,7 +295,6 @@ class EmbodiedTask:
 
     def _step_single_action(
         self,
-        observations: Any,
         action_name: Any,
         action: Dict[str, Any],
         episode: Episode,
@@ -319,20 +318,16 @@ class EmbodiedTask:
         if isinstance(action_name, tuple):  # there are multiple actions
             for a_name in action_name:
                 self._step_single_action(
-                    observations,
                     a_name,
                     action,
                     episode,
                 )
         else:
-            self._step_single_action(
-                observations, action_name, action, episode
-            )
+            self._step_single_action(action_name, action, episode)
 
         self._sim.step_physics(1.0 / 60.0)  # type:ignore
-        # observations.update(self._sim.get_sensor_observations())
-        sim_obs = self._sim.step(None)
-        observations.update(sim_obs)
+
+        observations = self._sim.step(None)
 
         observations.update(
             self.sensor_suite.get_observations(

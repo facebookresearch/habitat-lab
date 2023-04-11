@@ -671,7 +671,7 @@ class Collisions(Measure):
 
     def update_metric(self, episode, action, *args: Any, **kwargs: Any):
         self._metric["is_collision"] = False
-        if self._sim.previous_step_collided:
+        if self._sim._collided:
             self._metric["count"] += 1
             self._metric["is_collision"] = True
 
@@ -1105,7 +1105,7 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
             final_position, final_rotation, reset_sensors=False
         )
 
-        self._sim._prev_sim_obs["collided"] = collided  # type: ignore
+        self._sim._collided = collided  # type: ignore
 
     def _move_camera_vertical(self, amount: float):
         assert (
@@ -1372,7 +1372,7 @@ class VelocityAction(SimulatorTaskAction):
             final_position, final_rotation, reset_sensors=False
         )
         # TODO: Make a better way to flag collisions
-        self._sim._prev_sim_obs["collided"] = collided  # type: ignore
+        self._sim._collided = collided  # type: ignore
 
 
 @registry.register_task(name="Nav-v0")
