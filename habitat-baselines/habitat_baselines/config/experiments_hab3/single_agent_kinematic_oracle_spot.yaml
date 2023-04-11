@@ -1,0 +1,59 @@
+# @package _global_
+
+defaults:
+  - /rearrange/rl_hierarchical_oracle_nav
+  # Spot has both arm and head cameras, so we need this override
+  - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - _self_
+
+hydra:
+  job:
+    name: 'spot_single_oracle'
+
+habitat_baselines:
+  log_interval: 1
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  evaluate: False
+  writer_type: 'wb'
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+  num_environments: 2
+
+habitat:
+  task:
+    actions:
+      oracle_nav_action:
+        spawn_max_dist_to_obj: -1.0
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
+
+  environment:
+    max_episode_steps: 700
+
+  simulator:
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+    # Define the Spot robot here
+    agents:
+      main_agent:
+        radius: 0.3
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_depth_sensor:
+            height: 256
+            width: 256
+            hfov: 55
