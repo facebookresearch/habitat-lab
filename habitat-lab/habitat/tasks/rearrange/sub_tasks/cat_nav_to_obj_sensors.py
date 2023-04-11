@@ -55,7 +55,7 @@ class CatNavGoalSegmentationSensor(Sensor):
             dtype=np.int32,
         )
 
-    def _get_obs_channel(self, pan_obs, max_obs_val, goals, goals_type, ep):
+    def _get_obs_channel(self, pan_obs, max_obs_val, goals, goals_type):
         obs = np.zeros_like(pan_obs).squeeze(axis=-1)
         for goal in goals:
             if goals_type == "obj":
@@ -88,14 +88,12 @@ class CatNavGoalSegmentationSensor(Sensor):
                 max_obs_val,
                 episode.candidate_objects_hard,
                 "obj",
-                episode,
             )
             obs[..., 1] = self._get_obs_channel(
                 pan_obs,
                 max_obs_val,
                 episode.candidate_start_receps,
                 "rec",
-                episode,
             )
         else:
             obs[..., 0] = self._get_obs_channel(
@@ -103,7 +101,6 @@ class CatNavGoalSegmentationSensor(Sensor):
                 max_obs_val,
                 episode.candidate_goal_receps,
                 "rec",
-                episode,
             )
 
         return obs
