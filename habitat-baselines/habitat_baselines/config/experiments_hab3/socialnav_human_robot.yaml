@@ -32,6 +32,8 @@ defaults:
 habitat:
   task:
     reward_measure: social_nav_reward
+    slack_reward: 0.
+    success_reward: 0.
     task_spec: multi_agent_tidy_house_solved
     actions:
       agent_0_arm_action:
@@ -81,8 +83,8 @@ habitat:
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
-  updater_name: "HRLPPO"
-  distrib_updater_name: "HRLDDPPO"
+  updater_name: "PPO"
+  distrib_updater_name: "DDPPO"
   torch_gpu_id: 0
   video_fps: 30
   eval_ckpt_path_dir: "data/checkpoints"

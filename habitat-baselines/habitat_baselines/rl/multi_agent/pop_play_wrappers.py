@@ -226,7 +226,7 @@ class MultiStorage(Storage):
             insert_d = {k: _maybe_chunk(v) for k, v in kwargs.items()}
         else:
             insert_d = {
-                k: v
+                k: list(v)
                 for k, v in kwargs["action_data"].unpack().items()
                 if k in kwargs
             }
@@ -235,6 +235,14 @@ class MultiStorage(Storage):
             assert args1 == args2
 
         for agent_i, storage in enumerate(self._active_storages):
+            # TODO: this only works if we assume htat the policy will always be recurrent
+            if (
+                "next_recurrent_hidden_states" in insert_d
+                and insert_d["next_recurrent_hidden_states"][agent_i].numel()
+                == 0
+            ):
+                insert_d["next_recurrent_hidden_states"][agent_i] = None
+
             agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
                 agent_next_observations = update_dict_with_agent_prefix(
