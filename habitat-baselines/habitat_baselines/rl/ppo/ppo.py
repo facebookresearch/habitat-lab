@@ -6,7 +6,7 @@
 
 import collections
 import inspect
-from typing import Any, Dict, List, Optional, Union
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
@@ -25,6 +25,9 @@ from habitat_baselines.utils.common import (
     inference_mode,
 )
 
+if TYPE_CHECKING:
+    from omegaconf import DictConfig
+
 EPS_PPO = 1e-5
 
 
@@ -33,56 +36,35 @@ class PPO(nn.Module, Updater):
     entropy_coef: Union[float, LagrangeInequalityCoefficient]
 
     @classmethod
-    def from_config(cls, actor_critic: NetPolicy, config):
-        config = {k.lower(): v for k, v in config.items()}
-        param_dict = dict(actor_critic=actor_critic)
-        sig = inspect.signature(cls.__init__)
-        for p in sig.parameters.values():
-            if p.name == "self" or p.name in param_dict:
-                continue
+    def from_config(cls, actor_critic, config):
+        return cls(actor_critic, config)
 
-            assert p.name in config, "{} parameter '{}' not in config".format(
-                cls.__name__, p.name
-            )
-
-            param_dict[p.name] = config[p.name]
-
-        return cls(**param_dict)
+    def pre_update(self):
+        pass
 
     def __init__(
         self,
         actor_critic: NetPolicy,
-        clip_param: float,
-        ppo_epoch: int,
-        num_mini_batch: int,
-        value_loss_coef: float,
-        entropy_coef: float,
-        lr: Optional[float] = None,
-        eps: Optional[float] = None,
-        max_grad_norm: Optional[float] = None,
-        use_clipped_value_loss: bool = False,
-        use_normalized_advantage: bool = True,
-        entropy_target_factor: float = 0.0,
-        use_adaptive_entropy_pen: bool = False,
+        config: "DictConfig",
     ) -> None:
         super().__init__()
 
         self.actor_critic = actor_critic
 
-        self.clip_param = clip_param
-        self.ppo_epoch = ppo_epoch
-        self.num_mini_batch = num_mini_batch
+        self.clip_param = config.clip_param
+        self.ppo_epoch = config.ppo_epoch
+        self.num_mini_batch = config.num_mini_batch
 
-        self.value_loss_coef = value_loss_coef
-        self.entropy_coef = entropy_coef
+        self.value_loss_coef = config.value_loss_coef
+        self.entropy_coef = config.entropy_coef
 
-        self.max_grad_norm = max_grad_norm
-        self.use_clipped_value_loss = use_clipped_value_loss
+        self.max_grad_norm = config.max_grad_norm
+        self.use_clipped_value_loss = config.use_clipped_value_loss
 
         self.device = next(actor_critic.parameters()).device
 
         if (
-            use_adaptive_entropy_pen
+            config.use_adaptive_entropy_pen
             and hasattr(self.actor_critic, "num_actions")
             and getattr(self.actor_critic, "action_distribution_type", None)
             == "gaussian"
@@ -90,14 +72,14 @@ class PPO(nn.Module, Updater):
             num_actions = self.actor_critic.num_actions
 
             self.entropy_coef = LagrangeInequalityCoefficient(
-                -float(entropy_target_factor) * num_actions,
-                init_alpha=entropy_coef,
+                -float(config.entropy_target_factor) * num_actions,
+                init_alpha=self.entropy_coef,
                 alpha_max=1.0,
                 alpha_min=1e-4,
                 greater_than=True,
             ).to(device=self.device)
 
-        self.use_normalized_advantage = use_normalized_advantage
+        self.use_normalized_advantage = config.use_normalized_advantage
 
         params = list(filter(lambda p: p.requires_grad, self.parameters()))
 
@@ -105,8 +87,8 @@ class PPO(nn.Module, Updater):
             optim_cls = optim.Adam
             optim_kwargs = dict(
                 params=params,
-                lr=lr,
-                eps=eps,
+                lr=config.lr,
+                eps=config.eps,
             )
             signature = inspect.signature(optim_cls.__init__)
             if "foreach" in signature.parameters:

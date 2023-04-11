@@ -3,7 +3,10 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type
 import gym.spaces as spaces
 import numpy as np
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
+from habitat.config import read_write
 from habitat.gym.gym_wrapper import create_action_space
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_spec import EnvironmentSpec
@@ -24,6 +27,7 @@ from habitat_baselines.rl.multi_agent.self_play_wrappers import (
 from habitat_baselines.rl.multi_agent.utils import (
     update_dict_with_agent_prefix,
 )
+from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
@@ -33,6 +37,7 @@ if TYPE_CHECKING:
 
 COORD_AGENT = 0
 BEHAV_AGENT = 1
+COORD_AGENT_NAME = "agent_0"
 BEHAV_AGENT_NAME = "agent_1"
 
 ROBOT_TYPE = 0
@@ -43,6 +48,10 @@ BEHAV_ID = "behav_latent"
 
 @baseline_registry.register_agent_access_mgr
 class BdpAgentAccessMgr(MultiAgentAccessMgr):
+    """
+    Behavioral Diversity Play implementation.
+    """
+
     def _sample_active_idxs(self):
         assert not self._pop_config.self_play_batched
         assert self._pop_config.num_agent_types == 2
@@ -50,9 +59,14 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
 
         num_envs = self._agents[0]._num_envs
         device = self._agents[0]._device
-        self._behav_latents = torch.zeros(
-            (num_envs, self._pop_config.behavior_latent_dim), device=device
+
+        behav_ids = torch.randint(
+            0, self._pop_config.behavior_latent_dim, (num_envs,), device=device
         )
+        self._behav_latents = F.one_hot(
+            behav_ids, self._pop_config.behavior_latent_dim
+        ).float()
+
         return np.array([COORD_AGENT, BEHAV_AGENT]), np.array(
             [ROBOT_TYPE, HUMAN_TYPE]
         )
@@ -82,7 +96,9 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
             n_agents=num_active_agents,
         )
 
-        multi_storage = MultiStorage.from_config(
+        hl_policy = self._agents[BEHAV_AGENT].actor_critic._high_level_policy
+        discrim = hl_policy._aux_modules["bdp_discrim"].discrim
+        multi_storage = BdpStorage.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,
@@ -90,6 +106,8 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
             agent=self._agents[0],
             n_agents=num_active_agents,
             update_obs_with_agent_prefix_fn=self._inject_behav_latent,
+            hl_policy=hl_policy,
+            discrim=discrim,
         )
         return multi_policy, multi_updater, multi_storage
 
@@ -113,6 +131,14 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
                 shape=(self._pop_config.behavior_latent_dim,),
                 dtype=np.float32,
             )
+        elif agent_name == COORD_AGENT_NAME:
+            # Remove the discriminator from this policy.
+            config = config.copy()
+            with read_write(config):
+                del config.habitat_baselines.rl.auxiliary_losses["bdp_discrim"]
+        else:
+            raise ValueError(f"Unexpected agent name {agent_name}")
+
         return SingleAgentAccessMgr(
             config,
             agent_env_spec,
@@ -124,3 +150,55 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
             lr_schedule_fn,
             agent_name,
         )
+
+
+@baseline_registry.register_auxiliary_loss(name="bdp_discrim")
+class BehavDiscrim(nn.Module):
+    """
+    Defines the discriminator network and the training objective for the
+    discriminator. Through the Habitat Baselines auxiliary loss registry, this
+    is automatically added to the policy class and the loss is computed in the
+    policy update.
+    """
+
+    def __init__(
+        self,
+        action_space: spaces.Box,
+        net: Net,
+        loss_scale,
+        hidden_size,
+        behavior_latent_dim,
+    ):
+        super().__init__()
+
+        # For now the discriminator input is just (z_t, a_t) where z_t is the
+        # LSTM encoded state and a_t is the current action.
+        input_dim = net._hidden_size
+        self.discrim = nn.Sequential(
+            nn.Linear(input_dim, hidden_size),
+            nn.ReLU(True),
+            nn.Linear(hidden_size, hidden_size),
+            nn.ReLU(True),
+            nn.Linear(hidden_size, behavior_latent_dim),
+        )
+        self.loss_scale = loss_scale
+
+    def pred_logits(self, policy_features, obs):
+        return self.discrim(policy_features)
+
+    def forward(self, policy_features, obs):
+        pred_logits = self.pred_logits(policy_features, obs)
+        behav_ids = torch.argmax(obs["behav_latent"], -1)
+        loss = F.cross_entropy(pred_logits, behav_ids)
+        return {"loss": loss * self.loss_scale}
+
+
+class BdpStorage(MultiStorage):
+    def __init__(self, *args, discrim, hl_policy, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._discrim = discrim
+        self._hl_policy = hl_policy
+
+    def compute_returns(self, next_value, use_gae, gamma, tau):
+        # TODO: Infer the diversity rewards.
+        super().compute_returns(next_value, use_gae, gamma, tau)

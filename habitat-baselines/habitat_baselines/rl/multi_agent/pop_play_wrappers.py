@@ -139,7 +139,7 @@ class MultiPolicy(Policy):
 
 
 class MultiStorage(Storage):
-    def __init__(self, update_obs_with_agent_prefix_fn):
+    def __init__(self, update_obs_with_agent_prefix_fn, **kwargs):
         self._active_storages = []
         self._agent_type_ids = []
         if update_obs_with_agent_prefix_fn is None:
@@ -248,7 +248,7 @@ class MultiStorage(Storage):
         update_obs_with_agent_prefix_fn: Optional[Callable] = None,
         **kwargs,
     ):
-        return MultiStorage(update_obs_with_agent_prefix_fn)
+        return cls(update_obs_with_agent_prefix_fn, **kwargs)
 
 
 class MultiUpdater(Updater):

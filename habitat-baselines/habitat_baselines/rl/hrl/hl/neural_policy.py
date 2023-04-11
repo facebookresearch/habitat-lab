@@ -15,7 +15,7 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo.policy import CriticHead
+from habitat_baselines.rl.ppo.policy import CriticHead, get_aux_modules
 from habitat_baselines.utils.common import CategoricalNet
 
 
@@ -27,8 +27,13 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     problem.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, *args, action_space, aux_loss_config=None, **kwargs):
+        super().__init__(
+            *args,
+            action_space=action_space,
+            aux_loss_config=aux_loss_config,
+            **kwargs,
+        )
         self._all_actions = self._setup_actions()
         self._n_actions = len(self._all_actions)
 
@@ -80,6 +85,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         )
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
+
+        self._aux_modules = get_aux_modules(
+            aux_loss_config, action_space, self
+        )
 
     def create_hl_info(self):
         return {"actions": None}
@@ -140,10 +149,6 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             hidden, rnn_hidden_states, masks, rnn_build_seq_info
         )
 
-    def to(self, device):
-        self._device = device
-        return super().to(device)
-
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         state, _ = self.forward(observations, rnn_hidden_states, masks)
         return self._critic(state)
@@ -165,12 +170,16 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         action_log_probs = distribution.log_probs(action)
         distribution_entropy = distribution.entropy()
 
+        aux_loss_res = {
+            k: v(features, observations) for k, v in self._aux_modules.items()
+        }
+
         return (
             value,
             action_log_probs,
             distribution_entropy,
             rnn_hidden_states,
-            {},
+            aux_loss_res,
         )
 
     def get_next_skill(

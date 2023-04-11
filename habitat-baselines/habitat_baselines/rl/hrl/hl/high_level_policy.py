@@ -20,6 +20,7 @@ class HighLevelPolicy(nn.Module):
         skill_name_to_idx: Dict[int, str],
         observation_space: spaces.Space,
         action_space: spaces.Space,
+        aux_loss_config=None,
         agent_name: Optional[str] = None,
     ):
         super().__init__()
