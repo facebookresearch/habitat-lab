@@ -13,6 +13,9 @@ import ctypes
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
 
+from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
+from habitat.gui.text_drawer import TextDrawer
+
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
@@ -245,6 +248,9 @@ class SandboxDriver(GuiAppDriver):
         self.visualize_task()
 
         post_sim_update_dict = {}
+        # add env specific information to the post_sim_update_dict
+        info = self.env.get_metrics()
+        post_sim_update_dict["info"] = {"env": info}
 
         if self.gui_input.mouse_scroll_offset != 0:
             zoom_sensitivity = 0.07
@@ -402,12 +408,20 @@ if __name__ == "__main__":
     glfw_config.title = "Sandbox App"
     glfw_config.size = (args.width, args.height)
     gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
-    driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
     framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+
+    # instantiate driver:
+    driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
+
+    # instantiate renderer:
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
         framebuffer_size.x, framebuffer_size.y, args.use_batch_renderer
     )
+    image_drawer = ImageFramebufferDrawer(max_width=1024, max_height=1024)
+    text_drawer = TextDrawer(framebuffer_size)
+    app_renderer.set_image_and_text_drawers(image_drawer, text_drawer)
+
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     # sloppy: provide replay app renderer's debug_line_render to our driver

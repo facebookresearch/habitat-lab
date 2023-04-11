@@ -174,12 +174,14 @@ class GuiApplication(InputHandlerApplication):
             if self._debug_counter >= 100:
                 elapsed = curr_time - self._debug_timer
                 sps = self._debug_counter / elapsed
-                print("sps: {:.1f}".format(sps))
+                print("[debug] sps: {:.1f}".format(sps))
                 self._debug_timer = curr_time
                 self._debug_counter = 0
 
         for _ in range(num_sim_updates):
             post_sim_update_dict = self._driver.sim_update(sim_dt)
+            # add app specific information to the post_sim_update_dict
+            post_sim_update_dict["info"]["app"] = {"SPS": self._target_sps}
             self._sim_input.on_frame_end()
             self._app_renderer.post_sim_update(post_sim_update_dict)
 
