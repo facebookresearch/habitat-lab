@@ -172,7 +172,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 )
                 agent_name = config.habitat.simulator.agents_order[agent_i]
                 agents.append(
-                    SingleAgentAccessMgr(
+                    self._create_single_agent(
                         config,
                         agent_env_spec,
                         is_distrib,
@@ -185,6 +185,30 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                     )
                 )
         return agents, agent_count_idxs
+
+    def _create_single_agent(
+        self,
+        config,
+        agent_env_spec,
+        is_distrib,
+        device,
+        use_resume_state,
+        num_envs,
+        percent_done_fn,
+        lr_schedule_fn,
+        agent_name,
+    ):
+        return SingleAgentAccessMgr(
+            config,
+            agent_env_spec,
+            is_distrib,
+            device,
+            use_resume_state,
+            num_envs,
+            percent_done_fn,
+            lr_schedule_fn,
+            agent_name,
+        )
 
     @property
     def nbuffers(self):

@@ -105,7 +105,9 @@ class MultiPolicy(Policy):
         agent_masks = masks.chunk(n_agents, -1)
         all_value = []
         for agent_i, policy in enumerate(self._active_policies):
-            agent_obs = update_dict_with_agent_prefix(observations, agent_i)
+            agent_obs = self._update_obs_with_agent_prefix_fn(
+                observations, agent_i
+            )
             all_value.append(
                 policy.get_value(
                     agent_obs,
@@ -137,9 +139,12 @@ class MultiPolicy(Policy):
 
 
 class MultiStorage(Storage):
-    def __init__(self):
+    def __init__(self, update_obs_with_agent_prefix_fn):
         self._active_storages = []
         self._agent_type_ids = []
+        if update_obs_with_agent_prefix_fn is None:
+            update_obs_with_agent_prefix_fn = update_dict_with_agent_prefix
+        self._update_obs_with_agent_prefix_fn = update_obs_with_agent_prefix_fn
 
     def set_active(self, active_storages, agent_type_ids):
         self._agent_type_ids = agent_type_ids
@@ -167,8 +172,10 @@ class MultiStorage(Storage):
         for agent_i, storage in enumerate(self._active_storages):
             agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
-                agent_next_observations = update_dict_with_agent_prefix(
-                    next_observations, agent_type_idx
+                agent_next_observations = (
+                    self._update_obs_with_agent_prefix_fn(
+                        next_observations, agent_i
+                    )
                 )
             else:
                 agent_next_observations = None
@@ -190,7 +197,7 @@ class MultiStorage(Storage):
     def insert_first_observations(self, batch):
         for agent_i, storage in enumerate(self._active_storages):
             agent_idx = self._agent_type_ids[agent_i]
-            obs_dict = update_dict_with_agent_prefix(batch, agent_idx)
+            obs_dict = self._update_obs_with_agent_prefix_fn(batch, agent_idx)
             storage.insert_first_observations(obs_dict)
 
     def advance_rollout(self, buffer_index=0):
@@ -233,8 +240,15 @@ class MultiStorage(Storage):
         )
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, **kwargs):
-        return MultiStorage()
+    def from_config(
+        cls,
+        config,
+        observation_space,
+        action_space,
+        update_obs_with_agent_prefix_fn: Optional[Callable] = None,
+        **kwargs,
+    ):
+        return MultiStorage(update_obs_with_agent_prefix_fn)
 
 
 class MultiUpdater(Updater):

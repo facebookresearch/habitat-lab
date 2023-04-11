@@ -33,9 +33,12 @@ if TYPE_CHECKING:
 
 COORD_AGENT = 0
 BEHAV_AGENT = 1
+BEHAV_AGENT_NAME = "agent_1"
 
 ROBOT_TYPE = 0
 HUMAN_TYPE = 1
+
+BEHAV_ID = "behav_latent"
 
 
 @baseline_registry.register_agent_access_mgr
@@ -44,13 +47,20 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         assert not self._pop_config.self_play_batched
         assert self._pop_config.num_agent_types == 2
         assert self._pop_config.num_active_agents_per_type == [1, 1]
-        self._behav_latents = torch.zeros()
+
+        num_envs = self._agents[0]._num_envs
+        device = self._agents[0]._device
+        self._behav_latents = torch.zeros(
+            (num_envs, self._pop_config.behavior_latent_dim), device=device
+        )
         return np.array([COORD_AGENT, BEHAV_AGENT]), np.array(
             [ROBOT_TYPE, HUMAN_TYPE]
         )
 
     def _inject_behav_latent(self, obs, agent_idx):
         agent_obs = update_dict_with_agent_prefix(obs, agent_idx)
+        if agent_idx == BEHAV_AGENT:
+            agent_obs[BEHAV_ID] = self._behav_latents
         return agent_obs
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
@@ -79,5 +89,38 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
             orig_action_space=env_spec.orig_action_space,
             agent=self._agents[0],
             n_agents=num_active_agents,
+            update_obs_with_agent_prefix_fn=self._inject_behav_latent,
         )
         return multi_policy, multi_updater, multi_storage
+
+    def _create_single_agent(
+        self,
+        config,
+        agent_env_spec,
+        is_distrib,
+        device,
+        use_resume_state,
+        num_envs,
+        percent_done_fn,
+        lr_schedule_fn,
+        agent_name,
+    ):
+        if agent_name == BEHAV_AGENT_NAME:
+            # Inject the behavior latent into the observation spec
+            agent_env_spec.observation_space[BEHAV_ID] = spaces.Box(
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                shape=(self._pop_config.behavior_latent_dim,),
+                dtype=np.float32,
+            )
+        return SingleAgentAccessMgr(
+            config,
+            agent_env_spec,
+            is_distrib,
+            device,
+            use_resume_state,
+            num_envs,
+            percent_done_fn,
+            lr_schedule_fn,
+            agent_name,
+        )
