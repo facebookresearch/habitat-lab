@@ -39,23 +39,9 @@ class MultiPolicy(Policy):
         **kwargs,
     ):
         n_agents = len(self._active_policies)
-        index_names = [
-            "index_len_recurrent_hidden_states",
-            "index_len_prev_actions",
-        ]
-        split_index_dict = {}
-        for name_index in index_names:
-            if name_index not in kwargs:
-                if name_index == "index_len_recurrent_hidden_states":
-                    all_dim = rnn_hidden_states.shape[-1]
-                else:
-                    all_dim = prev_actions.shape[-1]
-                split_indices = int(all_dim / n_agents)
-                split_indices = [split_indices] * n_agents
-            else:
-                split_indices = kwargs[name_index]
-            split_index_dict[name_index] = split_indices
-
+        split_index_dict = self._build_index_split(
+            rnn_hidden_states, prev_actions, kwargs
+        )
         agent_rnn_hidden_states = rnn_hidden_states.split(
             split_index_dict["index_len_recurrent_hidden_states"], -1
         )
@@ -138,9 +124,11 @@ class MultiPolicy(Policy):
             num_agents=n_agents,
         )
 
-    def get_value(
-        self, observations, rnn_hidden_states, prev_actions, masks, **kwargs
-    ):
+    def _build_index_split(self, rnn_hidden_states, prev_actions, kwargs):
+        """
+        Return a dictionary with rnn_hidden_states and action lengths that
+        will be used to split these tensors into different agents.
+        """
         n_agents = len(self._active_policies)
         index_names = [
             "index_len_recurrent_hidden_states",
@@ -158,7 +146,14 @@ class MultiPolicy(Policy):
             else:
                 split_indices = kwargs[name_index]
             split_index_dict[name_index] = split_indices
+        return split_index_dict
 
+    def get_value(
+        self, observations, rnn_hidden_states, prev_actions, masks, **kwargs
+    ):
+        split_index_dict = self._build_index_split(
+            rnn_hidden_states, prev_actions, kwargs
+        )
         agent_rnn_hidden_states = torch.split(
             rnn_hidden_states,
             split_index_dict["index_len_recurrent_hidden_states"],
