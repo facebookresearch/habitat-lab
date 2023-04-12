@@ -7,11 +7,12 @@
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
+import corrade as cr
 import magnum as mn
 import numpy as np
 
@@ -517,149 +518,59 @@ def import_tri_mesh(mesh_file: str) -> List[TriangleMeshData]:
 
     mesh_data: List[TriangleMeshData] = []
 
-    def add_mesh_data(mesh_ix: int, abs_trans: Optional[mn.Matrix4] = None):
-        """
-        Load and transform mesh data into global data-structures.
-        """
-        mesh = importer.mesh(mesh_ix)
+    if importer.scene_count > 0:
+        scene_id = importer.default_scene
+        # If there's no default scene, load the first one
+        if scene_id == -1:
+            scene_id = 0
 
-        assert (
-            mesh.primitive == mn.MeshPrimitive.TRIANGLES
-        ), "Must be a triangle mesh."
+        scene = importer.scene(scene_id)
 
-        transformed_positions = mesh.attribute(mn.trade.MeshAttribute.POSITION)
-        # apply the absolute transforms to the mesh data
-        if abs_trans is not None:
-            transformed_positions = [
-                abs_trans.transform_point(pos)
-                for pos in mesh.attribute(mn.trade.MeshAttribute.POSITION)
+        # Mesh referenced by mesh_assignments[i] has a corresponding transform in
+        # mesh_transformations[i]. Association to a particular node ID is stored in
+        # scene.mapping(mn.trade.SceneField.MESH)[i], but it's not needed for anything
+        # here.
+        mesh_assignments: cr.containers.StridedArrayView1D = scene.field(
+            mn.trade.SceneField.MESH
+        )
+        mesh_transformations: List[
+            mn.Matrix4
+        ] = mn.scenetools.flatten_transformation_hierarchy3d(
+            scene, mn.trade.SceneField.MESH
+        )
+        assert len(mesh_assignments) == len(mesh_transformations)
+
+        # A mesh can be referenced by multiple nodes, so this can't operate in-place.
+        flattened_meshes: List[mn.trade.MeshData] = []
+        for mesh_id, transformation in zip(
+            mesh_assignments, mesh_transformations
+        ):
+            flattened_meshes += [
+                mn.meshtools.transform3d(
+                    importer.mesh(mesh_id), transformation
+                )
             ]
 
-        mesh_data.append(
-            TriangleMeshData(
-                transformed_positions,
-                mesh.indices,
+        for mesh in flattened_meshes:
+            assert (
+                mesh.primitive == mn.MeshPrimitive.TRIANGLES
+            ), "Must be a triangle mesh."
+            mesh_data.append(
+                TriangleMeshData(
+                    mesh.attribute(mn.trade.MeshAttribute.POSITION),
+                    mesh.indices,
+                )
             )
-        )
-
-    # Import mesh data from a scene format (e.g. glTF)
-    scene_ix = importer.default_scene
-    if scene_ix != -1:
-        scene_data = importer.scene(scene_ix)
-        mesh_transforms: Dict[int, mn.Matrix4] = defaultdict(
-            mn.Matrix4.identity_init
-        )
-        # parse local transformations
-        for object_ix in range(importer.object_count):
-            if scene_data.has_field_object(
-                field_name=mn.trade.SceneField.MESH, object=object_ix
-            ):
-                # parse 4x4 matrix attributes
-                if scene_data.has_field(
-                    mn.trade.SceneField.TRANSFORMATION
-                ) and scene_data.has_field_object(
-                    field_name=mn.trade.SceneField.TRANSFORMATION,
-                    object=object_ix,
-                ):
-                    # NOTE: need parents accumulation?
-                    transform_data_offset = scene_data.field_object_offset(
-                        field_name=mn.trade.SceneField.TRANSFORMATION,
-                        object=object_ix,
-                    )
-                    mesh_transforms[object_ix] = mn.Matrix4(
-                        scene_data.field(mn.trade.SceneField.TRANSFORMATION)[
-                            transform_data_offset
-                        ]
-                    )
-                # parse vector translation attributes:
-                if scene_data.has_field(
-                    mn.trade.SceneField.TRANSLATION
-                ) and scene_data.has_field_object(
-                    field_name=mn.trade.SceneField.TRANSLATION,
-                    object=object_ix,
-                ):
-                    # NOTE: need parents accumulation?
-                    translation_data_offset = scene_data.field_object_offset(
-                        field_name=mn.trade.SceneField.TRANSLATION,
-                        object=object_ix,
-                    )
-                    mesh_transforms[object_ix].translation = mn.Vector3(
-                        scene_data.field(mn.trade.SceneField.TRANSLATION)[
-                            translation_data_offset
-                        ]
-                    )
-                # parse quaternion rotation attributes:
-                if scene_data.has_field(
-                    mn.trade.SceneField.ROTATION
-                ) and scene_data.has_field_object(
-                    field_name=mn.trade.SceneField.ROTATION,
-                    object=object_ix,
-                ):
-                    # NOTE: need parents accumulation?
-                    rotation_data_offset = scene_data.field_object_offset(
-                        field_name=mn.trade.SceneField.ROTATION,
-                        object=object_ix,
-                    )
-                    rotation_mat = scene_data.field(
-                        mn.trade.SceneField.ROTATION
-                    )[rotation_data_offset].to_matrix()
-                    mesh_transforms[object_ix] = mn.Matrix4.from_(
-                        rotation_mat,
-                        mesh_transforms[object_ix].translation,
-                    )
-
-        def get_parent(obj_ix: int, scene_data: mn.trade.SceneData):
-            """
-            Retrieve the parent object index of a SceneData object from its object index.
-
-            :return: The parent object index or -1 for no parent.
-            """
-            if scene_data.has_field_object(
-                field_name=mn.trade.SceneField.PARENT, object=obj_ix
-            ):
-                parent_object_offset = scene_data.field_object_offset(
-                    field_name=mn.trade.SceneField.PARENT, object=obj_ix
-                )
-                parent_object_ix = scene_data.field(
-                    mn.trade.SceneField.PARENT
-                )[parent_object_offset]
-                return parent_object_ix
-            return -1
-
-        # accumulate absolute transformations through parents
-        abs_mesh_transforms: Dict[int, mn.Matrix4] = defaultdict(
-            mn.Matrix4.identity_init
-        )
-        for object_ix in range(importer.object_count):
-            abs_mesh_transforms[object_ix] = mesh_transforms[object_ix]
-            if scene_data.has_field_object(
-                field_name=mn.trade.SceneField.MESH, object=object_ix
-            ):
-                parent_object_ix = get_parent(object_ix, scene_data)
-                while parent_object_ix != -1:
-                    abs_mesh_transforms[object_ix] = mesh_transforms[
-                        parent_object_ix
-                    ].__matmul__(abs_mesh_transforms[object_ix])
-                    parent_object_ix = get_parent(parent_object_ix, scene_data)
-
-        # load the mesh data for mesh objects
-        for object_ix in range(importer.object_count):
-            if scene_data.has_field_object(
-                field_name=mn.trade.SceneField.MESH, object=object_ix
-            ):
-                # this object is a mesh
-                mesh_offset = scene_data.field_object_offset(
-                    field_name=mn.trade.SceneField.MESH, object=object_ix
-                )
-                mesh_ix = scene_data.field(mn.trade.SceneField.MESH)[
-                    mesh_offset
-                ]
-                add_mesh_data(mesh_ix, abs_mesh_transforms[object_ix])
-
     else:
-        # No SceneData, so treat this as a set of raw meshes
+        # mesh asset with no scenes (e.g. PLY)
         for mesh_ix in range(importer.mesh_count):
-            add_mesh_data(mesh_ix)
+            mesh = importer.mesh(mesh_ix)
+            mesh_data.append(
+                TriangleMeshData(
+                    mesh.attribute(mn.trade.MeshAttribute.POSITION),
+                    mesh.indices,
+                )
+            )
 
     return mesh_data
 
