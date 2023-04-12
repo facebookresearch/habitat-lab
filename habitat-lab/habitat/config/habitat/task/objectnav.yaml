@@ -21,10 +21,6 @@ defaults:
   - _self_
 
 actions:
-  turn_left:
-    turn_angle: 30
-  turn_right:
-    turn_angle: 30
   look_up:
     tilt_angle: 30
   look_down:

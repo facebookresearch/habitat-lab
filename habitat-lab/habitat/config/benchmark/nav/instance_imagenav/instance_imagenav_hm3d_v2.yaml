@@ -11,6 +11,7 @@ habitat:
   environment:
     max_episode_steps: 1000
   simulator:
+    turn_angle: 30
     agents:
       main_agent:
         sim_sensors:

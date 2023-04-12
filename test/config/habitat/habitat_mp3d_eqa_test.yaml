@@ -8,18 +8,11 @@ habitat:
     max_episode_steps: 1000
     iterator_options:
       shuffle: False
-  task:
-    actions:
-      move_forward:
-        forward_step_size: 0.1
-      turn_right:
-        turn_angle: 9
-      turn_left:
-        turn_angle: 9
-
 
   simulator:
     scene: data/scene_datasets/mp3d/17DRP5sb8fy/17DRP5sb8fy.glb
+    forward_step_size: 0.1
+    turn_angle: 9
     agents:
       main_agent:
         sim_sensors:

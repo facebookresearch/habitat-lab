@@ -22,5 +22,7 @@ habitat:
           depth_sensor:
             width: 256
             height: 256
+    forward_step_size: 0.25
+    turn_angle: 15
     habitat_sim_v0:
       gpu_device_id: 0
