@@ -184,7 +184,13 @@ class MultiPolicy(Policy):
         all_extra = []
         for policy in self._active_policies:
             all_extra.append(policy.get_extra(action_data, infos, dones))
-        return _merge_list_dict(all_extra)
+        # The action_data is shared across all policies, so no need ot reutrn multiple times
+        inputs = all_extra[0]
+        ret: List[Dict] = []
+        for env_d in inputs:
+            ret.append(env_d)
+
+        return ret
 
     @classmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
