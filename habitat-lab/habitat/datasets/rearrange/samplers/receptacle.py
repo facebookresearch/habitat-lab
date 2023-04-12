@@ -734,11 +734,16 @@ class ReceptacleSet:
 class ReceptacleTracker:
     def __init__(
         self,
-        max_objects_per_receptacle,
+        max_objects_per_receptacle: Dict[str, int],
         receptacle_sets: Dict[str, ReceptacleSet],
     ):
-        self._receptacle_counts = dict(max_objects_per_receptacle)
-        self._receptacle_sets = {
+        """
+        :param max_objects_per_receptacle: A Dict mapping receptacle names to the remaining number of objects allowed in the receptacle.
+        :param receptacle_sets: Dict mapping ReceptacleSet name to its dataclass.
+        """
+        self._receptacle_counts: Dict[str, int] = max_objects_per_receptacle
+        # deep copy ReceptacleSets because they may be modified by allocations
+        self._receptacle_sets: Dict[str, ReceptacleSet] = {
             k: deepcopy(v) for k, v in receptacle_sets.items()
         }
 
@@ -746,14 +751,28 @@ class ReceptacleTracker:
     def recep_sets(self) -> Dict[str, ReceptacleSet]:
         return self._receptacle_sets
 
-    def inc_count(self, recep_name):
+    def inc_count(self, recep_name: str) -> None:
+        """
+        Increment allowed objects for a Receptacle.
+        :param recep_name: The name of the Receptacle.
+        """
         if recep_name in self._receptacle_counts:
             self._receptacle_counts[recep_name] += 1
 
-    def update_receptacle_tracking(self, new_receptacle: Receptacle):
-        recep_name = new_receptacle.name
+    def allocate_one_placement(self, allocated_receptacle: Receptacle) -> bool:
+        """
+        Record that a Receptacle has been allocated for one new object placement.
+        If the Receptacle has a configured maximum number of remaining object placements, decrement that counter.
+        If the Receptacle has no remaining allocations after this one, remove it from any existing ReceptacleSets to prevent it being sampled in the future.
+
+        :param new_receptacle: The Receptacle with a new allocated object placement.
+
+        :return: Whether or not the Receptacle has run out of remaining allocations.
+        """
+        recep_name = allocated_receptacle.name
         if recep_name not in self._receptacle_counts:
             return False
+        # decrement remaining allocations
         self._receptacle_counts[recep_name] -= 1
         if self._receptacle_counts[recep_name] < 0:
             raise ValueError(f"Receptacle count for {recep_name} is invalid")
