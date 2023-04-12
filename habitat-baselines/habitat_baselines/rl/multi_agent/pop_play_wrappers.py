@@ -356,7 +356,7 @@ def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
     ret: List[Dict] = []
     for agent_i, ac in enumerate(inputs):
         if ac is None:
-            ac = [{}]
+           continue
         for env_i, env_d in enumerate(ac):
             if len(ret) <= env_i:
                 ret.append(
