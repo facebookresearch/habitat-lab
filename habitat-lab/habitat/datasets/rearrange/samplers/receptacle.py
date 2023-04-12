@@ -7,7 +7,6 @@
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
@@ -301,13 +300,6 @@ class AABBReceptacle(Receptacle):
         # TODO: test this
 
 
-# TriangleMeshData "vertices":List[mn.Vector3] "indices":List[int]
-TriangleMeshData = namedtuple(
-    "TriangleMeshData",
-    "vertices indices",
-)
-
-
 def assert_triangles(indices: List[int]) -> None:
     """
     Assert that an index array is divisible by 3 as a heuristic for triangle-only faces.
@@ -326,7 +318,7 @@ class TriangleMeshReceptacle(Receptacle):
     def __init__(
         self,
         name: str,
-        mesh_data: TriangleMeshData,  # vertices, indices
+        mesh_data: mn.trade.MeshData,
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
@@ -335,7 +327,7 @@ class TriangleMeshReceptacle(Receptacle):
         Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
 
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :param mesh_data: The Receptacle's mesh data. A Tuple of two Lists, first vertex geometry (Vector3) and second topology (indicies of triangle corner verts(int) (len divisible by 3)).
+        :param mesh_data: The Receptacle's mesh data. A magnum.trade.MeshData object (indices len divisible by 3).
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
@@ -354,7 +346,7 @@ class TriangleMeshReceptacle(Receptacle):
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
             self.area_weighted_accumulator.append(
-                0.5 * float(np.linalg.norm(np.cross(w1, w2)))
+                0.5 * mn.math.cross(w1, w2).length()
             )
             self.total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
@@ -366,20 +358,18 @@ class TriangleMeshReceptacle(Receptacle):
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
 
-    def get_face_verts(self, f_ix: int) -> List[np.ndarray]:
+    def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
         Get all three vertices of a mesh triangle given it's face index as a list of numpy arrays.
 
         :param f_ix: The index of the mesh triangle.
         """
-        verts: List[np.ndarray] = []
+        verts: List[mn.Vector3] = []
         for ix in range(3):
+            index = int(f_ix * 3 + ix)
+            v_ix = self.mesh_data.indices[index]
             verts.append(
-                np.array(
-                    self.mesh_data.vertices[
-                        self.mesh_data.indices[int(f_ix * 3 + ix)]
-                    ]
-                )
+                self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)[v_ix]
             )
         return verts
 
@@ -506,9 +496,9 @@ def get_all_scenedataset_receptacles(
     return receptacles
 
 
-def import_tri_mesh(mesh_file: str) -> List[TriangleMeshData]:
+def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
     """
-    Returns a list of Tuples of (verts,indices) from a mesh asset using magnum trade importer.
+    Returns a list of MeshData objects from a mesh asset using magnum trade importer.
 
     :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
@@ -516,7 +506,7 @@ def import_tri_mesh(mesh_file: str) -> List[TriangleMeshData]:
     importer = manager.load_and_instantiate("AnySceneImporter")
     importer.open_file(mesh_file)
 
-    mesh_data: List[TriangleMeshData] = []
+    mesh_data: List[mn.trade.MeshData] = []
 
     if importer.scene_count > 0:
         scene_id = importer.default_scene
@@ -541,36 +531,23 @@ def import_tri_mesh(mesh_file: str) -> List[TriangleMeshData]:
         assert len(mesh_assignments) == len(mesh_transformations)
 
         # A mesh can be referenced by multiple nodes, so this can't operate in-place.
-        flattened_meshes: List[mn.trade.MeshData] = []
-        for mesh_id, transformation in zip(
-            mesh_assignments, mesh_transformations
-        ):
-            flattened_meshes += [
-                mn.meshtools.transform3d(
-                    importer.mesh(mesh_id), transformation
-                )
-            ]
+        flattened_meshes: List[mn.trade.MeshData] = [
+            mn.meshtools.transform3d(importer.mesh(mesh_id), transformation)
+            for mesh_id, transformation in zip(
+                mesh_assignments, mesh_transformations
+            )
+        ]
 
         for mesh in flattened_meshes:
             assert (
                 mesh.primitive == mn.MeshPrimitive.TRIANGLES
             ), "Must be a triangle mesh."
-            mesh_data.append(
-                TriangleMeshData(
-                    mesh.attribute(mn.trade.MeshAttribute.POSITION),
-                    mesh.indices,
-                )
-            )
+            mesh_data.append(mesh)
     else:
         # mesh asset with no scenes (e.g. PLY)
-        for mesh_ix in range(importer.mesh_count):
-            mesh = importer.mesh(mesh_ix)
-            mesh_data.append(
-                TriangleMeshData(
-                    mesh.attribute(mn.trade.MeshAttribute.POSITION),
-                    mesh.indices,
-                )
-            )
+        mesh_data = [
+            importer.mesh(mesh_ix) for mesh_ix in range(importer.mesh_count)
+        ]
 
     return mesh_data
 
@@ -678,7 +655,7 @@ def parse_receptacles_from_user_config(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
                 # TODO: build the mesh_data entry from scale and mesh
-                mesh_data: List[TriangleMeshData] = import_tri_mesh(mesh_file)
+                mesh_data: List[mn.trade.MeshData] = import_tri_mesh(mesh_file)
 
                 for mix, single_mesh_data in enumerate(mesh_data):
                     single_receptacle_name = (
