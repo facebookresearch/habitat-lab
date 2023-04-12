@@ -17,6 +17,7 @@ from typing import (
     cast,
 )
 
+import magnum as mn
 import numpy as np
 from gym import spaces
 from gym.spaces.box import Box
@@ -24,6 +25,10 @@ from omegaconf import DictConfig
 
 import habitat_sim
 from habitat.config.default import get_agent_config
+from habitat.core.batch_rendering.env_batch_renderer_constants import (
+    KEYFRAME_OBSERVATION_KEY,
+    KEYFRAME_SENSOR_PREFIX,
+)
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import (
@@ -286,6 +291,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
         self._current_scene = self.sim_config.sim_cfg.scene_id
+        self.sim_config.enable_batch_renderer = (
+            config.renderer.enable_batch_renderer
+        )
         super().__init__(self.sim_config)
         # load additional object paths specified by the dataset
         # TODO: Should this be moved elsewhere?
@@ -412,13 +420,20 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sim_obs = self.get_sensor_observations()
 
         self._prev_sim_obs = sim_obs
-        return self._sensor_suite.get_observations(sim_obs)
+        if self.config.enable_batch_renderer:
+            self.add_keyframe_to_observations(sim_obs)
+            return sim_obs
+        else:
+            return self._sensor_suite.get_observations(sim_obs)
 
     def step(self, action: Union[str, np.ndarray, int]) -> Observations:
         sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
-        observations = self._sensor_suite.get_observations(sim_obs)
-        return observations
+        if self.config.enable_batch_renderer:
+            self.add_keyframe_to_observations(sim_obs)
+            return sim_obs
+        else:
+            return self._sensor_suite.get_observations(sim_obs)
 
     def render(self, mode: str = "rgb") -> Any:
         r"""
@@ -429,6 +444,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         Returns:
             rendered frame according to the mode
         """
+        assert not self.config.enable_batch_renderer
+
         sim_obs = self.get_sensor_observations()
         observations = self._sensor_suite.get_observations(sim_obs)
 
@@ -650,9 +667,31 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             bool: True if the previous step resulted in a collision, false otherwise
 
         Warning:
-            This feild is only updated when :meth:`step`, :meth:`reset`, or :meth:`get_observations_at` are
-            called.  It does not update when the agent is moved to a new loction.  Furthermore, it
+            This field is only updated when :meth:`step`, :meth:`reset`, or :meth:`get_observations_at` are
+            called.  It does not update when the agent is moved to a new location.  Furthermore, it
             will _always_ be false after :meth:`reset` or :meth:`get_observations_at` as neither of those
             result in an action (step) being taken.
         """
         return self._prev_sim_obs.get("collided", False)
+
+    def add_keyframe_to_observations(self, observations):
+        r"""Adds an item to observations that contains the latest gfx-replay keyframe.
+        This is used to communicate the state of concurrent simulators to the batch renderer between processes.
+
+        :param observations: Original observations upon which the keyframe is added.
+        """
+        assert self.config.enable_batch_renderer
+
+        assert KEYFRAME_OBSERVATION_KEY not in observations
+        for _sensor_uuid, sensor in self._sensors.items():
+            node = sensor._sensor_object.node
+            transform = node.absolute_transformation()
+            rotation = mn.Quaternion.from_matrix(transform.rotation())
+            self.gfx_replay_manager.add_user_transform_to_keyframe(
+                KEYFRAME_SENSOR_PREFIX + _sensor_uuid,
+                transform.translation,
+                rotation,
+            )
+        observations[
+            KEYFRAME_OBSERVATION_KEY
+        ] = self.gfx_replay_manager.extract_keyframe()

@@ -155,8 +155,8 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
     list(
         itertools.product(
             [
-                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical_oracle_nav.yaml",
-                "habitat-baselines/habitat_baselines/config/rearrange/rl_hierarchical.yaml",
+                "rearrange/rl_hierarchical_oracle_nav.yaml",
+                "rearrange/rl_hierarchical.yaml",
             ],
             [
                 "hl_neural",

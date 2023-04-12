@@ -4,4 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-VERSION = "0.2.4"
+
+from typing_extensions import Final
+
+KEYFRAME_OBSERVATION_KEY: Final[str] = "keyframe"
+KEYFRAME_SENSOR_PREFIX: Final[str] = "sensor_"
