@@ -81,7 +81,6 @@ class MultiPolicy(Policy):
         batch_size = masks.shape[0]
         device = masks.device
 
-        # Action dim is split evenly between the agents.
         action_dims = split_index_dict["index_len_prev_actions"]
 
         def _maybe_cat(get_dat, feature_dims, dtype):
