@@ -231,7 +231,9 @@ class MultiStorage(Storage):
             }
             args1 = sorted(list(insert_d.keys()) + ["action_data"])
             args2 = sorted(kwargs.keys())
-            assert args1 == args2
+            assert (
+                args1 == args2
+            ), "You are trying to insert more values than those defined in the PolicyActionData"
 
         for agent_i, storage in enumerate(self._active_storages):
             # TODO: this only works if we assume htat the policy will always be recurrent
@@ -294,6 +296,10 @@ class MultiStorage(Storage):
                 agent_step_data[k].append(v)
         obs = TensorDict(obs)
         new_agent_step_data = {}
+
+        # Concatenate the fields in agent_step_data in the last dimension.
+        # Since we want to be able to split this tensor later, we store the original lenghts
+        # of the tensor, stored as index_len_{tensor_name}
         for k in agent_step_data:
             new_name = "index_len_" + k
             lengths_data = [
@@ -355,7 +361,7 @@ def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
     ret: List[Dict] = []
     for agent_i, ac in enumerate(inputs):
         if ac is None:
-           continue
+            continue
         for env_i, env_d in enumerate(ac):
             if len(ret) <= env_i:
                 ret.append(

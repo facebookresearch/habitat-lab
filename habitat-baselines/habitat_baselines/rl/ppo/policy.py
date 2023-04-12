@@ -109,6 +109,16 @@ class MultiAgentPolicyActionData(PolicyActionData):
     num_agents: Optional[int] = 1
 
     def _unpack(self, tensor_to_unpack, unpack_lengths=None):
+        """
+        Splits the tensor tensor_to_unpack in the last dimension in the last dimension
+        according to unpack lengths, so that the ith tensor will have unpack_lengths[i]
+        in the last dimension. If unpack_lenghts is None, splits tensor_to_unpack evenly
+        according to self.num_agents.
+
+        :property tensor_to_unpack: The tensor we want to split into different chunks
+        :unpack_lengths: List of integers indicating the sizes to unpack, or None if we want to unpack evenly
+        """
+
         if unpack_lengths is None:
             unpack_lengths = [
                 int(tensor_to_unpack.shape[-1] / self.num_agents)

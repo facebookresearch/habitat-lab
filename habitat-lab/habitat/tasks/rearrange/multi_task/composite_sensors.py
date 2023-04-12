@@ -290,7 +290,7 @@ class CompositeSubgoalReward(Measure):
 @registry.register_measure
 class SocialNavReward(Measure):
     """
-    Reward that gives a sparse reward on completing a PDDL stage-goal.
+    Reward that gives a continuous reward on the social navigation task.
     """
 
     cls_uuid: str = "social_nav_reward"
