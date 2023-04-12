@@ -340,11 +340,19 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             profiling_wrapper.range_push("compute actions")
+
+            # Obtain lenghts
+            step_batch_lens = {
+                k: v
+                for k, v in step_batch.items()
+                if k.startswith("index_len")
+            }
             action_data = self._agent.actor_critic.act(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                **step_batch_lens,
             )
 
         self.pth_time += time.time() - t_sample_action
@@ -377,6 +385,7 @@ class PPOTrainer(BaseRLTrainer):
             value_preds=action_data.values,
             buffer_index=buffer_index,
             should_inserts=action_data.should_inserts,
+            action_data=action_data,
         )
 
     def _collect_environment_result(self, buffer_index: int = 0):
@@ -465,11 +474,17 @@ class PPOTrainer(BaseRLTrainer):
         with inference_mode():
             step_batch = self._agent.rollouts.get_last_step()
 
+            step_batch_lens = {
+                k: v
+                for k, v in step_batch.items()
+                if k.startswith("index_len")
+            }
             next_value = self._agent.actor_critic.get_value(
                 step_batch["observations"],
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                **step_batch_lens,
             )
 
         self._agent.rollouts.compute_returns(
@@ -827,7 +842,10 @@ class PPOTrainer(BaseRLTrainer):
             self._agent.policy_action_space
         )
 
-        if self._agent.actor_critic.should_load_agent_state:
+        if (
+            self._agent.actor_critic.should_load_agent_state
+            and self.config.habitat_baselines.eval.should_load_ckpt
+        ):
             self._agent.load_state_dict(ckpt_dict)
 
         observations = self.envs.reset()
@@ -845,6 +863,8 @@ class PPOTrainer(BaseRLTrainer):
             ),
             device=self.device,
         )
+        hidden_state_lens = self._agent.hidden_state_shape_lens
+        action_space_lens = self._agent.policy_action_space_shape_lens
         prev_actions = torch.zeros(
             self.config.habitat_baselines.num_environments,
             *action_shape,
@@ -900,6 +920,11 @@ class PPOTrainer(BaseRLTrainer):
         ):
             current_episodes_info = self.envs.current_episodes()
 
+            # TODO: make sure this is batched properly
+            space_lengths = {
+                "index_len_recurrent_hidden_states": hidden_state_lens,
+                "index_len_prev_actions": action_space_lens,
+            }
             with inference_mode():
                 action_data = self._agent.actor_critic.act(
                     batch,
@@ -907,6 +932,7 @@ class PPOTrainer(BaseRLTrainer):
                     prev_actions,
                     not_done_masks,
                     deterministic=False,
+                    **space_lengths,
                 )
                 if action_data.should_inserts is None:
                     test_recurrent_hidden_states = (
