@@ -179,6 +179,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._policy_action_space
 
     @property
+    def policy_action_space_shape_lens(self):
+        return [self._policy_action_space[0]]
+
+    @property
     def masks_shape(self):
         return (1,)
 
@@ -277,6 +281,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self._updater.load_state_dict(state)
             if "lr_sched_state" in state:
                 self._lr_scheduler.load_state_dict(state["lr_sched_state"])
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self._ppo_cfg.hidden_size]
 
     def after_update(self):
         if (
