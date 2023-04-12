@@ -107,8 +107,12 @@ class InputHandlerApplication(Application):
 
     def mouse_move_event(self, event: Application.MouseMoveEvent) -> None:
         mouse_pos = self.get_mouse_position(event.position)
+        relative_mouse_position = self.get_mouse_position(
+            event.relative_position
+        )
         for wrapper in self._gui_inputs:
             wrapper._mouse_position = mouse_pos
+            wrapper._relative_mouse_position = relative_mouse_position
 
     def update_mouse_ray(self, unproject_fn):
         for wrapper in self._gui_inputs:
