@@ -128,8 +128,11 @@ class MultiPolicy(Policy):
 
     def _build_index_split(self, rnn_hidden_states, prev_actions, kwargs):
         """
-        Return a dictionary with rnn_hidden_states and action lengths that
-        will be used to split these tensors into different agents.
+        Return a dictionary with rnn_hidden_states lengths and action lengths that
+        will be used to split these tensors into different agents. If the lengths
+        are already in kwargs, we return them as is, if not, we assume agents
+        have the same action/hidden dimension, so the tensors will be split equally.
+        Therefore, the lists become [dimension_tensor // num_agents] * num_agents
         """
         n_agents = len(self._active_policies)
         index_names = [
