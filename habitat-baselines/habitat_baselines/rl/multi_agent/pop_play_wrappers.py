@@ -170,7 +170,6 @@ class MultiStorage(Storage):
         # per-agent.
         insert_d = {k: _maybe_chunk(v) for k, v in kwargs.items()}
         for agent_i, storage in enumerate(self._active_storages):
-            agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
                 agent_next_observations = (
                     self._update_obs_with_agent_prefix_fn(

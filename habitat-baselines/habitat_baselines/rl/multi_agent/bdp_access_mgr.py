@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type
-
 import gym.spaces as spaces
 import numpy as np
 import torch
@@ -7,9 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from habitat.config import read_write
-from habitat.gym.gym_wrapper import create_action_space
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import (
     MultiAgentAccessMgr,
 )
@@ -19,21 +15,10 @@ from habitat_baselines.rl.multi_agent.pop_play_wrappers import (
     MultiUpdater,
     update_dict_with_agent_prefix,
 )
-from habitat_baselines.rl.multi_agent.self_play_wrappers import (
-    SelfBatchedPolicy,
-    SelfBatchedStorage,
-    SelfBatchedUpdater,
-)
-from habitat_baselines.rl.multi_agent.utils import (
-    update_dict_with_agent_prefix,
-)
 from habitat_baselines.rl.ppo.policy import Net
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
-
-if TYPE_CHECKING:
-    from omegaconf import DictConfig
 
 COORD_AGENT = 0
 BEHAV_AGENT = 1
@@ -99,7 +84,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         )
 
         hl_policy = self._agents[BEHAV_AGENT].actor_critic._high_level_policy
-        discrim = hl_policy._aux_modules["bdp_discrim"].discrim
+        discrim = hl_policy._aux_modules["bdp_discrim"]
         multi_storage = BdpStorage.from_config(
             config,
             env_spec.observation_space,
@@ -108,6 +93,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
             agent=self._agents[0],
             n_agents=num_active_agents,
             update_obs_with_agent_prefix_fn=self._inject_behav_latent,
+            discrim_reward_weight=self._pop_config.discrim_reward_weight,
             hl_policy=hl_policy,
             discrim=discrim,
         )
@@ -190,17 +176,47 @@ class BehavDiscrim(nn.Module):
 
     def forward(self, policy_features, obs):
         pred_logits = self.pred_logits(policy_features, obs)
-        behav_ids = torch.argmax(obs["behav_latent"], -1)
+        behav_ids = torch.argmax(obs[BEHAV_ID], -1)
         loss = F.cross_entropy(pred_logits, behav_ids)
         return {"loss": loss * self.loss_scale}
 
 
 class BdpStorage(MultiStorage):
-    def __init__(self, *args, discrim, hl_policy, **kwargs):
+    """
+    Overrides the storage so we can inject the diversity reward computation
+    before computing return.
+    """
+
+    def __init__(
+        self, *args, discrim, hl_policy, discrim_reward_weight, **kwargs
+    ):
         super().__init__(*args, **kwargs)
         self._discrim = discrim
         self._hl_policy = hl_policy
+        self._discrim_reward_weight = discrim_reward_weight
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
-        # TODO: Infer the diversity rewards.
+        """
+        Adds the diversity reward to the behavior agent's rollout buffer. This
+        overrides the existing rewards in the buffer. The buffer of the
+        coordination agent is unmodified.
+        """
+
+        behav_storage = self._active_storages[BEHAV_AGENT]
+        with torch.no_grad():
+            masks = behav_storage.buffers["masks"]
+            obs = behav_storage.buffers["observations"]
+            features, _ = self._hl_policy(
+                obs.map(lambda x: x.flatten(0, 1)),
+                behav_storage.buffers["recurrent_hidden_states"].flatten(0, 1),
+                masks.flatten(0, 1),
+            )
+            features = features.view(*masks.shape[:2], -1)
+            pred_logits = self._discrim.pred_logits(features, obs)
+            behav_ids = torch.argmax(obs[BEHAV_ID], -1).long()
+            scores = F.log_softmax(pred_logits, -1)
+            log_prob = scores.gather(-1, behav_ids.view(*masks.shape[:2], 1))
+            behav_storage.buffers["rewards"] += (
+                self._discrim_reward_weight * log_prob
+            )
         super().compute_returns(next_value, use_gae, gamma, tau)

@@ -27,12 +27,26 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     problem.
     """
 
-    def __init__(self, *args, action_space, aux_loss_config=None, **kwargs):
+    def __init__(
+        self,
+        config,
+        pddl_problem,
+        num_envs,
+        skill_name_to_idx,
+        observation_space,
+        action_space,
+        aux_loss_config,
+        agent_name,
+    ):
         super().__init__(
-            *args,
-            action_space=action_space,
-            aux_loss_config=aux_loss_config,
-            **kwargs,
+            config,
+            pddl_problem,
+            num_envs,
+            skill_name_to_idx,
+            observation_space,
+            action_space,
+            aux_loss_config,
+            agent_name,
         )
         self._all_actions = self._setup_actions()
         self._n_actions = len(self._all_actions)
@@ -162,7 +176,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         action,
         rnn_build_seq_info,
     ):
-        features, _ = self.forward(
+        features, rnn_hxs = self.forward(
             observations, rnn_hidden_states, masks, rnn_build_seq_info
         )
         distribution = self._policy(features)

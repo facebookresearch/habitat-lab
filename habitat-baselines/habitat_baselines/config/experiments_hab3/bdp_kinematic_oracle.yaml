@@ -15,6 +15,7 @@ habitat_baselines:
     agent:
       num_pool_agents_per_type: [1, 1]
       behavior_latent_dim: 16
+      discrim_reward_weight: 0.001
     policy:
       agent_1:
         # This is the behav policy.
@@ -23,7 +24,3 @@ habitat_baselines:
             policy_input_keys:
               - "head_depth"
               - "behav_latent"
-                # auxiliary_losses:
-                #   bdp_discrim: 
-                #     loss_scale: 0.1
-

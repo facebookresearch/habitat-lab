@@ -90,7 +90,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             policy_cls: Type = SelfBatchedPolicy
             updater_cls: Type = SelfBatchedUpdater
             storage_cls: Type = SelfBatchedStorage
-            self._active_agents = [0, 0]
+            self._active_agents = np.array([0, 0])
         else:
             policy_cls = MultiPolicy
             updater_cls = MultiUpdater

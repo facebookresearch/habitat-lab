@@ -370,6 +370,7 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     agent_sample_interval: int = 20
     # A value of -1 means not configured.
     behavior_latent_dim: int = -1
+    discrim_reward_weight: float = 1.0
     allow_self_play: bool = False
     self_play_batched: bool = False
     ###############################

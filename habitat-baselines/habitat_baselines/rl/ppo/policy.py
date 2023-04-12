@@ -160,7 +160,7 @@ class Policy(abc.ABC):
 def get_aux_modules(aux_loss_config, action_space, net):
     aux_loss_modules = nn.ModuleDict()
     if aux_loss_config is None:
-        return
+        return aux_loss_modules
     for aux_loss_name, cfg in aux_loss_config.items():
         aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
 
