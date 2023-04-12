@@ -150,8 +150,6 @@ class EmptyActionConfig(ActionConfig):
 
 @dataclass
 class DiscreteNavigationActionConfig(ActionConfig):
-    forward_step_size: float = 0.25
-    turn_angle: int = 10  # angle to rotate left or right in degrees
     tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
 
 
@@ -1368,6 +1366,8 @@ class HabitatSimV0Config(HabitatBaseConfig):
 @dataclass
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
+    forward_step_size: float = 0.25  # in metres
+    turn_angle: int = 10  # angle to rotate left or right in degrees
     create_renderer: bool = False
     requires_textures: bool = True
     # Sleep options

@@ -305,7 +305,7 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
-        task_action.step(
+        return task_action.step(
             **action["action_args"],
             task=self,
         )
@@ -314,20 +314,23 @@ class EmbodiedTask:
         action_name = action["action"]
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
-        observations: Any = {}
+        observations: Any = None
         if isinstance(action_name, tuple):  # there are multiple actions
             for a_name in action_name:
-                self._step_single_action(
+                observations = self._step_single_action(
                     a_name,
                     action,
                     episode,
                 )
         else:
-            self._step_single_action(action_name, action, episode)
+            observations = self._step_single_action(
+                action_name, action, episode
+            )
 
         self._sim.step_physics(1.0 / 60.0)  # type:ignore
 
-        observations = self._sim.step(None)
+        if observations is None:
+            observations = self._sim.step(None)
 
         observations.update(
             self.sensor_suite.get_observations(

@@ -386,6 +386,28 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
 
         agent_config.sensor_specifications = sensor_specifications
 
+        agent_config.action_space = {
+            0: habitat_sim.ActionSpec("stop"),
+            1: habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.forward_step_size
+                ),
+            ),
+            2: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.turn_angle
+                ),
+            ),
+            3: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.turn_angle
+                ),
+            ),
+        }
+
         return habitat_sim.Configuration(sim_config, [agent_config])
 
     @property

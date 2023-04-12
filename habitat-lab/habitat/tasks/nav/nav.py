@@ -33,6 +33,7 @@ from habitat.core.simulator import (
 )
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -1120,33 +1121,33 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
 
 
 @registry.register_task_action
-class MoveForwardAction(NavigationMovementAgentAction):
+class MoveForwardAction(SimulatorTaskAction):
     name: str = "move_forward"
 
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._move_body(self._forward_step_size, None)
+        return self._sim.step(HabitatSimActions.move_forward)
 
 
 @registry.register_task_action
-class TurnLeftAction(NavigationMovementAgentAction):
+class TurnLeftAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._move_body(None, +self._turn_angle)
+        return self._sim.step(HabitatSimActions.turn_left)
 
 
 @registry.register_task_action
-class TurnRightAction(NavigationMovementAgentAction):
+class TurnRightAction(SimulatorTaskAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
 
-        return self._move_body(None, -self._turn_angle)
+        return self._sim.step(HabitatSimActions.turn_right)
 
 
 @registry.register_task_action
