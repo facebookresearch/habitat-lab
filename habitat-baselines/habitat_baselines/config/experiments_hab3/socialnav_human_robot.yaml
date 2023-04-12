@@ -9,12 +9,11 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
-    - composite_subgoal_reward
+    - social_nav_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -32,18 +31,10 @@ defaults:
 
 habitat:
   task:
-    reward_measure: composite_subgoal_reward
-    slack_reward: -0.01
-    success_reward: 5.0
-
-    measurements:
-      composite_subgoal_reward:
-        stage_sparse_reward: 1.0
-      composite_success:
-        must_call_stop: False
-      force_terminate:
-        max_accum_force: -1.0
-        max_instant_force: -1.0
+    reward_measure: social_nav_reward
+    slack_reward: 0.
+    success_reward: 0.
+    task_spec: multi_agent_tidy_house_solved
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
@@ -92,12 +83,12 @@ habitat:
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
-  updater_name: "HRLPPO"
-  distrib_updater_name: "HRLDDPPO"
+  updater_name: "PPO"
+  distrib_updater_name: "DDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  eval_ckpt_path_dir: ""
-  num_environments: 4
+  eval_ckpt_path_dir: "data/checkpoints"
+  num_environments: 1
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 10
@@ -107,7 +98,7 @@ habitat_baselines:
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
 
-  evaluate: False
+  evaluate: True
   writer_type: 'tb'
 
   wb:
@@ -116,80 +107,23 @@ habitat_baselines:
     run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
-    should_load_ckpt: False
+    should_load_ckpt: True
     video_option: ["disk"]
 
   rl:
     policy:
-      agent_0:
-        hierarchical_policy:
-          # Override to use the oracle navigation skill (which will actually execute navigation).
-          defined_skills:
-            nav_to_obj:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 300
       agent_1:
         hierarchical_policy:
+          high_level_policy:
+            name: "FixedHighLevelPolicy"
+            add_arm_rest: False
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
-            open_cab:
-              skill_name: "NoopSkillPolicy"
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["open_cab_by_name"]
-              ignore_grip: True
-            open_fridge:
-              skill_name: "NoopSkillPolicy"
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["open_fridge_by_name"]
-              ignore_grip: True
-            close_cab:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_start_sensor"]
-              max_skill_steps: 1
-              force_end_on_timeout: False
-              pddl_action_names: ["close_cab_by_name"]
-              ignore_grip: True
-            close_fridge:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_start_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              pddl_action_names: ["close_fridge_by_name"]
-              ignore_grip: True
             nav_to_obj:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
               ignore_grip: True
-            pick:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_start_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              ignore_grip: True
-            place:
-              skill_name: "NoopSkillPolicy"
-              obs_skill_inputs: ["obj_goal_sensor"]
-              max_skill_steps: 1
-              apply_postconds: True
-              force_end_on_timeout: False
-              ignore_grip: True
-            wait:
-              skill_name: "WaitSkillPolicy"
-              max_skill_steps: -1
-              ignore_grip: True
-            reset_arm:
-              skill_name: "NoopSkillPolicy"
-              max_skill_steps: 1
-              ignore_grip: True
-              force_end_on_timeout: False
     ppo:
       # ppo params
       clip_param: 0.2
