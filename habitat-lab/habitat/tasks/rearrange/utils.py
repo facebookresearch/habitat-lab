@@ -473,6 +473,12 @@ def get_robot_spawns(
             target_position, distance_threshold
         )
 
+        # It is found that get_random_navigable_point_near() occasionally returns
+        # NaNs for start_position. We want to make sure that the generated
+        # start_position is not NaN
+        if np.isnan(start_position).any():
+            continue
+
         relative_target = target_position - start_position
 
         angle_to_object = get_angle_to_pos(relative_target)
