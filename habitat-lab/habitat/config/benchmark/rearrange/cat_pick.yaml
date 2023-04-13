@@ -30,7 +30,8 @@ habitat:
     auto_sleep: True
     agents:
       main_agent:
-        radius: 0.25
+        radius: 0.085
+        height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
         sim_sensors:
