@@ -475,7 +475,7 @@ def get_robot_spawns(
 
         # It is found that get_random_navigable_point_near() occasionally returns
         # NaNs for start_position. We want to make sure that the generated
-        # start_position is not NaN
+        # start_position is not NaN.
         if np.isnan(start_position).any():
             continue
 
