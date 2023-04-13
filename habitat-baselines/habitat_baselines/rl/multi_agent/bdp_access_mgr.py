@@ -42,9 +42,12 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
     """
 
     def _sample_active_idxs(self):
-        assert not self._pop_config.self_play_batched
-        assert self._pop_config.num_agent_types == 2
-        assert self._pop_config.num_active_agents_per_type == [1, 1]
+        if (
+            self._pop_config.self_play_batched
+            or self._pop_config.num_agent_types != 2
+            or self._pop_config.num_active_agents_per_type != [1, 1]
+        ):
+            raise ValueError("BDP only supports pop play with 2 agents")
 
         num_envs = self._agents[0]._num_envs
         device = self._agents[0]._device
@@ -161,8 +164,6 @@ class BehavDiscrim(nn.Module):
     ):
         super().__init__()
 
-        # For now the discriminator input is just (z_t, a_t) where z_t is the
-        # LSTM encoded state and a_t is the current action.
         input_dim = net._hidden_size
         self.discrim = nn.Sequential(
             nn.Linear(input_dim, hidden_size),
