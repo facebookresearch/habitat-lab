@@ -1044,69 +1044,7 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
     def __init__(self, *args, config, sim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim = sim
-        self._forward_step_size = config.forward_step_size
-        self._turn_angle = config.turn_angle
         self._tilt_angle = config.tilt_angle
-
-    def _move_body(
-        self, delta_position: Optional[float], delta_rotation: Optional[float]
-    ):
-        agent_state = self._sim.get_agent_state()
-        # Convert from np.quaternion (quaternion.quaternion) to mn.Quaternion
-        normalized_quaternion = agent_state.rotation
-        agent_mn_quat = mn.Quaternion(
-            normalized_quaternion.imag, normalized_quaternion.real
-        )
-        current_rigid_state = RigidState(
-            agent_mn_quat,
-            agent_state.position,
-        )
-
-        goal_position = mn.Vector3(agent_state.position)
-        if delta_position is not None:
-            goal_position += agent_mn_quat.transform_vector(
-                -mn.Vector3.z_axis() * delta_position
-            )
-
-        final_position = self._sim.pathfinder.try_step(  # type: ignore
-            current_rigid_state.translation, goal_position
-        )
-        final_rotation = agent_mn_quat
-        if delta_rotation is not None:
-            delta_rotation = mn.Rad(np.deg2rad(delta_rotation))
-            # Add the rotation. This assumes that the rotation is only along the Y axis.
-            delta_rot = mn.Quaternion.rotation(
-                delta_rotation, mn.Vector3.y_axis()
-            )
-            final_rotation = agent_mn_quat * delta_rot
-
-            final_rotation = final_rotation.normalized()
-        final_rotation = [
-            *final_rotation.vector,
-            final_rotation.scalar,
-        ]
-
-        # Check if a collision occurred
-        dist_moved_before_filter = (
-            goal_position - current_rigid_state.translation
-        ).dot()
-        dist_moved_after_filter = (
-            final_position - current_rigid_state.translation
-        ).dot()
-
-        # NB: There are some cases where ||filter_end - end_pos|| > 0 when a
-        # collision _didn't_ happen. One such case is going up stairs.  Instead,
-        # we check to see if the the amount moved after the application of the
-        # filter is _less_ than the amount moved before the application of the
-        # filter.
-        EPS = 1e-5
-        collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
-
-        self._sim.set_agent_state(  # type:ignore
-            final_position, final_rotation, reset_sensors=False
-        )
-
-        self._sim._collided = collided  # type: ignore
 
     def _move_camera_vertical(self, amount: float):
         assert (

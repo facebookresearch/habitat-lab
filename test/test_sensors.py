@@ -165,8 +165,7 @@ def test_collisions():
                 loc = env.sim.get_agent_state().position
                 if (
                     np.linalg.norm(loc - prev_loc)
-                    < 0.9
-                    * config.habitat.task.actions.move_forward.forward_step_size
+                    < 0.9 * config.habitat.simulator.forward_step_size
                     and action["action"] == MoveForwardAction.name
                 ):
                     # Check to see if the new method of doing collisions catches
