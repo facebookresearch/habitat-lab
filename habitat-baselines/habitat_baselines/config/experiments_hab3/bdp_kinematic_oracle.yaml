@@ -13,6 +13,7 @@ habitat_baselines:
         loss_scale: 0.1
         behavior_latent_dim: 16
     agent:
+      # BDP uses a behavior latent to create a population, instead of multiple independent policies.
       num_pool_agents_per_type: [1, 1]
       behavior_latent_dim: 16
       discrim_reward_weight: 0.001
