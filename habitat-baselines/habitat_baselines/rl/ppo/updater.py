@@ -19,12 +19,6 @@ class Updater(abc.ABC):
         Perform an update from data in the storage objet.
         """
 
-    @abc.abstractmethod
-    def init_distributed(self, find_unused_params: bool = True) -> None:
-        """
-        Setup distributed training.
-        """
-
     @classmethod
     @abc.abstractmethod
     def from_config(
