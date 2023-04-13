@@ -509,7 +509,19 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
     def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
         """
         Filter all but position data and interleave a mesh to reduce overall memory footprint.
+        Convert triangle like primitives into triangles and assert only triangles remain.
         """
+
+        # convert to triangles and validate the result
+        if mesh.primitive in [
+            mn.MeshPrimitive.TRIANGLE_STRIP,
+            mn.MeshPrimitive.TRIANGLE_FAN,
+        ]:
+            mesh = mn.meshtools.generate_indices(mesh)
+        assert (
+            mesh.primitive == mn.MeshPrimitive.TRIANGLES
+        ), "Must be a triangle mesh."
+
         # `mesh_filtered` now refers to data in `mesh`
         # (`mesh_filtered.vertex_data_flags` isn't `OWNED`)
         # until a proper fix, it's important to use a different variable
@@ -523,10 +535,18 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
         mesh_interleaved = mn.meshtools.interleave(
             mesh_filtered, mn.meshtools.InterleaveFlags.NONE
         )
+
         return mesh_interleaved
 
     mesh_data: List[mn.trade.MeshData] = []
 
+    # import mesh data and pre-process
+    mesh_data = [
+        filter_interleave_mesh(importer.mesh(mesh_ix))
+        for mesh_ix in range(importer.mesh_count)
+    ]
+
+    # if there is a scene defined, apply any transformations
     if importer.scene_count > 0:
         scene_id = importer.default_scene
         # If there's no default scene, load the first one
@@ -550,24 +570,12 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
         assert len(mesh_assignments) == len(mesh_transformations)
 
         # A mesh can be referenced by multiple nodes, so this can't operate in-place.
-        flattened_meshes: List[mn.trade.MeshData] = [
-            mn.meshtools.transform3d(importer.mesh(mesh_id), transformation)
+        # i.e., len(mesh_data) likely changes after this step
+        mesh_data = [
+            mn.meshtools.transform3d(mesh_data[mesh_id], transformation)
             for mesh_id, transformation in zip(
                 mesh_assignments, mesh_transformations
             )
-        ]
-
-        for mesh in flattened_meshes:
-            assert (
-                mesh.primitive == mn.MeshPrimitive.TRIANGLES
-            ), "Must be a triangle mesh."
-
-            mesh_data.append(filter_interleave_mesh(mesh))
-    else:
-        # mesh asset with no scenes (e.g. PLY)
-        mesh_data = [
-            filter_interleave_mesh(importer.mesh(mesh_ix))
-            for mesh_ix in range(importer.mesh_count)
         ]
 
     return mesh_data
