@@ -31,6 +31,7 @@ class HighLevelPolicy(nn.Module):
         self._skill_name_to_idx = skill_name_to_idx
         self._obs_space = observation_space
         self._device = None
+        self._agent_name = agent_name
 
     def to(self, device):
         self._device = device

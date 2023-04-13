@@ -324,6 +324,13 @@ class AuxLossConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class BdpDiscrimConfig(AuxLossConfig):
+    loss_scale: float = 0.1
+    hidden_size: int = 128
+    behavior_latent_dim: int = -1
+
+
+@dataclass
 class CPCALossConfig(AuxLossConfig):
     """Action-conditional contrastive predictive coding loss"""
 
@@ -365,6 +372,9 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     num_active_agents_per_type: List[int] = field(default_factory=lambda: [1])
     num_pool_agents_per_type: List[int] = field(default_factory=lambda: [1])
     agent_sample_interval: int = 20
+    # A value of -1 means not configured.
+    behavior_latent_dim: int = -1
+    discrim_reward_weight: float = 1.0
     allow_self_play: bool = False
     self_play_batched: bool = False
     ###############################
@@ -520,6 +530,12 @@ cs.store(
     group="habitat_baselines/rl/auxiliary_losses",
     name="cpca",
     node=CPCALossConfig,
+)
+cs.store(
+    package="habitat_baselines.rl.auxiliary_losses.bdp_discrim",
+    group="habitat_baselines/rl/auxiliary_losses",
+    name="bdp_discrim",
+    node=BdpDiscrimConfig,
 )
 
 

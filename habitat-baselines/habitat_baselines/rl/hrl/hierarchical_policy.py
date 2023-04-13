@@ -48,8 +48,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space: spaces.Space,
         action_space: ActionSpace,
         num_envs: int,
-        aux_loss_config,
-        agent_name: Optional[str],
+        aux_loss_config=None,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
 
@@ -644,10 +644,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         agent_name=None,
         **kwargs,
     ):
-        agent_name = None
-        if "agent_name" in kwargs:
-            agent_name = kwargs["agent_name"]
-
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
                 raise ValueError(
@@ -662,6 +658,8 @@ class HierarchicalPolicy(nn.Module, Policy):
             observation_space,
             orig_action_space,
             config.habitat_baselines.num_environments,
+            config.habitat_baselines.rl.auxiliary_losses,
+            agent_name,
         )
 
 

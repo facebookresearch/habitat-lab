@@ -15,11 +15,7 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo.policy import (
-    CriticHead,
-    PolicyActionData,
-    get_aux_modules,
-)
+from habitat_baselines.rl.ppo.policy import CriticHead, get_aux_modules
 from habitat_baselines.utils.common import CategoricalNet
 
 
@@ -105,37 +101,21 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
 
-        self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
+        self._aux_modules = get_aux_modules(
+            aux_loss_config, action_space, self
+        )
 
-    @property
-    def should_load_agent_state(self):
-        return True
-
-    def get_termination(
-        self,
-        observations,
-        rnn_hidden_states,
-        prev_actions,
-        masks,
-        cur_skills,
-        log_info,
-    ):
-        if self._termination_obs_name is None:
-            return super().get_termination(
-                observations,
-                rnn_hidden_states,
-                prev_actions,
-                masks,
-                cur_skills,
-                log_info,
-            )
-        return (observations[self._termination_obs_name] > 0.0).view(-1).cpu()
+    def create_hl_info(self):
+        return {"actions": None}
 
     def _setup_actions(self) -> List[PddlAction]:
-        all_actions = self._pddl_prob.get_possible_actions()
-        all_actions = [
-            ac for ac in all_actions if ac.name in self._config.allowed_actions
-        ]
+        # In the PDDL domain, the agents are referred to as robots.
+        robot_id = "robot_" + self._agent_name.split("_")[1]
+        robot_entity = self._pddl_prob.get_entity(robot_id)
+        all_actions = self._pddl_prob.get_possible_actions(
+            filter_entities=[robot_entity],
+            allowed_action_names=self._config.allowed_actions,
+        )
         if not self._config.allow_other_place:
             all_actions = [
                 ac
@@ -185,10 +165,6 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             hidden, rnn_hidden_states, masks, rnn_build_seq_info
         )
 
-    def to(self, device):
-        self._device = device
-        return super().to(device)
-
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         state, _ = self.forward(observations, rnn_hidden_states, masks)
         return self._critic(state)
@@ -202,7 +178,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         action,
         rnn_build_seq_info,
     ):
-        features, rnn_hidden_states = self.forward(
+        features, rnn_hxs = self.forward(
             observations, rnn_hidden_states, masks, rnn_build_seq_info
         )
         distribution = self._policy(features)
@@ -211,6 +187,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         distribution_entropy = distribution.entropy()
         aux_loss_res = {
             k: v(features, observations) for k, v in self.aux_modules.items()
+        }
+
+        aux_loss_res = {
+            k: v(features, observations) for k, v in self._aux_modules.items()
         }
 
         return (
