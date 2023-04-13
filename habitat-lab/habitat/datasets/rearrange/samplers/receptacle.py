@@ -506,6 +506,25 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
     importer = manager.load_and_instantiate("AnySceneImporter")
     importer.open_file(mesh_file)
 
+    def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
+        """
+        Filter all but position data and interleave a mesh to reduce overall memory footprint.
+        """
+        # `mesh_filtered` now refers to data in `mesh`
+        # (`mesh_filtered.vertex_data_flags` isn't `OWNED`)
+        # until a proper fix, it's important to use a different variable
+        # which should tell Python's GC to not delete the original
+        mesh_filtered = mn.meshtools.filter_only_attributes(
+            mesh, [mn.trade.MeshAttribute.POSITION]
+        )
+
+        # makes the mesh standalone / self-owned again
+        # (`mesh.vertex_data_flags` is `OWNED`)
+        mesh_interleaved = mn.meshtools.interleave(
+            mesh_filtered, mn.meshtools.InterleaveFlags.NONE
+        )
+        return mesh_interleaved
+
     mesh_data: List[mn.trade.MeshData] = []
 
     if importer.scene_count > 0:
@@ -542,11 +561,13 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
             assert (
                 mesh.primitive == mn.MeshPrimitive.TRIANGLES
             ), "Must be a triangle mesh."
-            mesh_data.append(mesh)
+
+            mesh_data.append(filter_interleave_mesh(mesh))
     else:
         # mesh asset with no scenes (e.g. PLY)
         mesh_data = [
-            importer.mesh(mesh_ix) for mesh_ix in range(importer.mesh_count)
+            filter_interleave_mesh(importer.mesh(mesh_ix))
+            for mesh_ix in range(importer.mesh_count)
         ]
 
     return mesh_data
