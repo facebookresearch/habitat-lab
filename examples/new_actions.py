@@ -65,7 +65,7 @@ def _strafe_body(
 
 
 # We define and register our actions as follows.
-# the __init__ method receives a sin and config argument.
+# the __init__ method receives a sim and config argument.
 @habitat.registry.register_task_action
 class StrafeLeft(SimulatorTaskAction):
     def __init__(self, *args, config, sim, **kwargs):
@@ -81,6 +81,8 @@ class StrafeLeft(SimulatorTaskAction):
         print(
             f"Calling {self._get_uuid()} d={self._move_amount}m noise={self._noise_amount}"
         )
+        # This is where the code for the new action goes. Here we use a
+        # helper method but you could directly modify the simulation here.
         _strafe_body(self._sim, self._move_amount, 90, self._noise_amount)
 
 
