@@ -22,6 +22,7 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
 
 # coordination agent is the agent trained to coordinate with a diverse set of partners
 COORD_AGENT = 0
+# behavior policy is a latent conditioned policy that generates diverse behaviors when conditioned on different latents
 BEHAV_AGENT = 1
 COORD_AGENT_NAME = "agent_0"
 BEHAV_AGENT_NAME = "agent_1"
