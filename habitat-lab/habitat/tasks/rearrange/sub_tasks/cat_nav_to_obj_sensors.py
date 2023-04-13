@@ -9,11 +9,13 @@ from typing import Any
 import numpy as np
 from gym import spaces
 
+import habitat_sim
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task import (
     CatDynNavRLEnv,
 )
+from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import RotDistToGoal
 
 
 @registry.register_sensor
@@ -154,3 +156,32 @@ class ReceptacleSegmentationSensor(Sensor):
             obj_id_map[instance_id] = semantic_id
         obs = obj_id_map[obs]
         return obs
+
+
+@registry.register_measure
+class CatNavRotDistToGoal(RotDistToGoal):
+    cls_uuid: str = "cat_nav_rot_dist_to_goal"
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        self._is_nav_to_obj = task.is_nav_to_obj
+        super().__init__(*args, sim=sim, **kwargs)
+
+    def _get_targ(self, task, episode):
+        if self._is_nav_to_obj:
+            goals = episode.candidate_objects
+        else:
+            goals = episode.candidate_goal_receps
+        goal_pos = [g.position for g in goals]
+        goal_view_points = [
+            g.view_points[0].agent_state.position for g in goals
+        ]
+        path = habitat_sim.MultiGoalShortestPath()
+        path.requested_start = self._sim.robot.base_pos
+        path.requested_ends = goal_view_points
+        self._sim.pathfinder.find_path(path)
+        assert (
+            path.closest_end_point_index != -1
+        ), f"None of the goals are reachable from current position for episode {episode.episode_id}"
+        # RotDist to closest goal
+        targ = goal_pos[path.closest_end_point_index]
+        return targ

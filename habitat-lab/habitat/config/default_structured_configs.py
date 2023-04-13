@@ -768,6 +768,11 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class CatNavRotDistToGoalMeasurementConfig(MeasurementConfig):
+    type: str = "CatNavRotDistToGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class TaskConfig(HabitatBaseConfig):
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
@@ -1661,6 +1666,12 @@ cs.store(
     group="habitat/task/measurements",
     name="answer_accuracy",
     node=AnswerAccuracyMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
+    group="habitat/task/measurements",
+    name="cat_nav_rot_dist_to_goal",
+    node=CatNavRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",
