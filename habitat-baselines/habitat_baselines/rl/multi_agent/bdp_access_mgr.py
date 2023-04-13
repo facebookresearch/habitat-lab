@@ -199,7 +199,7 @@ class BdpStorage(MultiStorage):
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         """
-        Adds the diversity reward to the behavior agent's rollout buffer. This
+        Adds a weighted diversity reward to the task reward in the behavior agent's rollout buffer. This
         overrides the existing rewards in the buffer. The buffer of the
         coordination agent is unmodified.
         """
