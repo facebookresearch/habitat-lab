@@ -57,10 +57,10 @@ def _strafe_body(
     final_position = sim.pathfinder.try_step(  # type: ignore
         agent_state.position, agent_state.position + delta_position
     )
-    sim.get_observations_at(
-        position=final_position,  # new position
-        rotation=agent_state.rotation,  # unchanged
-        keep_agent_at_new_pose=True,  # we want to move the agent over there
+    sim.set_agent_state(
+        final_position,
+        [*rotation.vector, rotation.scalar],
+        reset_sensors=False,
     )
 
 
