@@ -38,7 +38,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
     """
     Behavioral Diversity Play implementation. A behavior policy is trained to
     generate diverse behaviors through a diversity reward bonus. A coordination
-    policy is trained against the behavior policy.
+    policy is trained to coordinate with the behavior policy.
     """
 
     def _sample_active_idxs(self):
