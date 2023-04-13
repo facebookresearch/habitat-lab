@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List, Optional
 
 import torch
 
@@ -23,8 +23,11 @@ class MultiPolicy(Policy):
     Wraps a set of policies. Splits inputs and concatenates outputs.
     """
 
-    def __init__(self):
+    def __init__(self, update_obs_with_agent_prefix_fn):
         self._active_policies = []
+        if update_obs_with_agent_prefix_fn is None:
+            update_obs_with_agent_prefix_fn = update_dict_with_agent_prefix
+        self._update_obs_with_agent_prefix_fn = update_obs_with_agent_prefix_fn
 
     def set_active(self, active_policies):
         self._active_policies = active_policies
@@ -51,7 +54,9 @@ class MultiPolicy(Policy):
         agent_masks = masks.split([1, 1], -1)
         agent_actions = []
         for agent_i, policy in enumerate(self._active_policies):
-            agent_obs = update_dict_with_agent_prefix(observations, agent_i)
+            agent_obs = self._update_obs_with_agent_prefix_fn(
+                observations, agent_i
+            )
             agent_actions.append(
                 policy.act(
                     agent_obs,
@@ -170,7 +175,9 @@ class MultiPolicy(Policy):
         agent_masks = torch.split(masks, [1, 1], dim=-1)
         all_value = []
         for agent_i, policy in enumerate(self._active_policies):
-            agent_obs = update_dict_with_agent_prefix(observations, agent_i)
+            agent_obs = self._update_obs_with_agent_prefix_fn(
+                observations, agent_i
+            )
             all_value.append(
                 policy.get_value(
                     agent_obs,
@@ -196,14 +203,24 @@ class MultiPolicy(Policy):
         return ret
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, **kwargs):
-        return MultiPolicy()
+    def from_config(
+        cls,
+        config,
+        observation_space,
+        action_space,
+        update_obs_with_agent_prefix_fn: Optional[Callable] = None,
+        **kwargs,
+    ):
+        return MultiPolicy(update_obs_with_agent_prefix_fn)
 
 
 class MultiStorage(Storage):
-    def __init__(self):
+    def __init__(self, update_obs_with_agent_prefix_fn, **kwargs):
         self._active_storages = []
         self._agent_type_ids = []
+        if update_obs_with_agent_prefix_fn is None:
+            update_obs_with_agent_prefix_fn = update_dict_with_agent_prefix
+        self._update_obs_with_agent_prefix_fn = update_obs_with_agent_prefix_fn
 
     def set_active(self, active_storages, agent_type_ids):
         self._agent_type_ids = agent_type_ids
@@ -250,10 +267,11 @@ class MultiStorage(Storage):
             ):
                 insert_d["next_recurrent_hidden_states"][agent_i] = None
 
-            agent_type_idx = self._agent_type_ids[agent_i]
             if next_observations is not None:
-                agent_next_observations = update_dict_with_agent_prefix(
-                    next_observations, agent_type_idx
+                agent_next_observations = (
+                    self._update_obs_with_agent_prefix_fn(
+                        next_observations, agent_i
+                    )
                 )
             else:
                 agent_next_observations = None
@@ -275,7 +293,7 @@ class MultiStorage(Storage):
     def insert_first_observations(self, batch):
         for agent_i, storage in enumerate(self._active_storages):
             agent_idx = self._agent_type_ids[agent_i]
-            obs_dict = update_dict_with_agent_prefix(batch, agent_idx)
+            obs_dict = self._update_obs_with_agent_prefix_fn(batch, agent_idx)
             storage.insert_first_observations(obs_dict)
 
     def advance_rollout(self, buffer_index=0):
@@ -335,8 +353,15 @@ class MultiStorage(Storage):
         )
 
     @classmethod
-    def from_config(cls, config, observation_space, action_space, **kwargs):
-        return MultiStorage()
+    def from_config(
+        cls,
+        config,
+        observation_space,
+        action_space,
+        update_obs_with_agent_prefix_fn: Optional[Callable] = None,
+        **kwargs,
+    ):
+        return cls(update_obs_with_agent_prefix_fn, **kwargs)
 
 
 class MultiUpdater(Updater):
@@ -361,6 +386,10 @@ class MultiUpdater(Updater):
     @classmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
         return MultiUpdater()
+
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        for updater in self._active_updaters:
+            updater.init_distributed(find_unused_params)
 
 
 def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:

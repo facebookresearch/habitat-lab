@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type
 
 import gym.spaces as spaces
 import numpy as np
@@ -71,45 +71,12 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             lr_schedule_fn,
         )
 
-        if self._pop_config.self_play_batched:
-            policy_cls: Type = SelfBatchedPolicy
-            updater_cls: Type = SelfBatchedUpdater
-            storage_cls: Type = SelfBatchedStorage
-            self._active_agents = [0, 0]
-        else:
-            policy_cls = MultiPolicy
-            updater_cls = MultiUpdater
-            storage_cls = MultiStorage
-
-        # TODO(xavi to andrew): why do we call these functions? It seems they
-        # just create an empty class
         num_active_agents = sum(self._pop_config.num_active_agents_per_type)
-
-        self._multi_policy = policy_cls.from_config(
-            config,
-            env_spec.observation_space,
-            env_spec.action_space,
-            orig_action_space=env_spec.orig_action_space,
-            agent=self._agents[0],
-            n_agents=num_active_agents,
-        )
-        self._multi_updater = updater_cls.from_config(
-            config,
-            env_spec.observation_space,
-            env_spec.action_space,
-            orig_action_space=env_spec.orig_action_space,
-            agent=self._agents[0],
-            n_agents=num_active_agents,
-        )
-
-        self._multi_storage = storage_cls.from_config(
-            config,
-            env_spec.observation_space,
-            env_spec.action_space,
-            orig_action_space=env_spec.orig_action_space,
-            agent=self._agents[0],
-            n_agents=num_active_agents,
-        )
+        (
+            self._multi_policy,
+            self._multi_updater,
+            self._multi_storage,
+        ) = self._create_multi_components(config, env_spec, num_active_agents)
 
         if self.nbuffers != 1:
             raise ValueError(
@@ -117,6 +84,47 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             )
         if config.habitat_baselines.evaluate:
             self._sample_active()
+
+    def _create_multi_components(self, config, env_spec, num_active_agents):
+        if self._pop_config.self_play_batched:
+            policy_cls: Type = SelfBatchedPolicy
+            updater_cls: Type = SelfBatchedUpdater
+            storage_cls: Type = SelfBatchedStorage
+            self._active_agents = np.array([0, 0])
+        else:
+            policy_cls = MultiPolicy
+            updater_cls = MultiUpdater
+            storage_cls = MultiStorage
+
+        # TODO(xavi to andrew): why do we call these functions? It seems they
+        # just create an empty class
+
+        multi_policy = policy_cls.from_config(
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=num_active_agents,
+        )
+        multi_updater = updater_cls.from_config(
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=num_active_agents,
+        )
+
+        multi_storage = storage_cls.from_config(
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=num_active_agents,
+        )
+        return multi_policy, multi_updater, multi_storage
 
     def _get_agents(
         self,
@@ -164,7 +172,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 )
                 agent_name = config.habitat.simulator.agents_order[agent_i]
                 agents.append(
-                    SingleAgentAccessMgr(
+                    self._create_single_agent(
                         config,
                         agent_env_spec,
                         is_distrib,
@@ -178,13 +186,37 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 )
         return agents, agent_count_idxs
 
+    def _create_single_agent(
+        self,
+        config,
+        agent_env_spec,
+        is_distrib,
+        device,
+        use_resume_state,
+        num_envs,
+        percent_done_fn,
+        lr_schedule_fn,
+        agent_name,
+    ):
+        return SingleAgentAccessMgr(
+            config,
+            agent_env_spec,
+            is_distrib,
+            device,
+            use_resume_state,
+            num_envs,
+            percent_done_fn,
+            lr_schedule_fn,
+            agent_name,
+        )
+
     @property
     def nbuffers(self):
         return self._agents[0].nbuffers
 
-    def _sample_active(self):
+    def _sample_active_idxs(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Samples the set of agents currently active in the episode.
+        Returns indices of active agents.
         """
         assert not self._pop_config.self_play_batched
 
@@ -209,9 +241,16 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             active_agent_types.append(
                 np.ones(agent_cts.shape, dtype=np.int32) * agent_type_ind
             )
+        return np.concatenate(active_agents), np.concatenate(
+            active_agent_types
+        )
 
-        self._active_agents = np.concatenate(active_agents)
-        active_agent_types = np.concatenate(active_agent_types)
+    def _sample_active(self):
+        """
+        Samples the set of agents currently active in the episode.
+        """
+
+        self._active_agents, active_agent_types = self._sample_active_idxs()
 
         if self._is_post_init:
             # If not post init then we are running in evaluation mode and

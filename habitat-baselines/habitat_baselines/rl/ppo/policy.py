@@ -216,6 +216,21 @@ class Policy(abc.ABC):
         pass
 
 
+def get_aux_modules(aux_loss_config, action_space, net):
+    aux_loss_modules = nn.ModuleDict()
+    if aux_loss_config is None:
+        return aux_loss_modules
+    for aux_loss_name, cfg in aux_loss_config.items():
+        aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
+
+        aux_loss_modules[aux_loss_name] = aux_loss(
+            action_space,
+            net,
+            **cfg,
+        )
+    return aux_loss_modules
+
+
 class NetPolicy(nn.Module, Policy):
     aux_loss_modules: nn.ModuleDict
 
@@ -252,17 +267,9 @@ class NetPolicy(nn.Module, Policy):
 
         self.critic = CriticHead(self.net.output_size)
 
-        self.aux_loss_modules = nn.ModuleDict()
-        if aux_loss_config is None:
-            return
-        for aux_loss_name, cfg in aux_loss_config.items():
-            aux_loss = baseline_registry.get_auxiliary_loss(aux_loss_name)
-
-            self.aux_loss_modules[aux_loss_name] = aux_loss(
-                action_space,
-                self.net,
-                **cfg,
-            )
+        self.aux_loss_modules = get_aux_modules(
+            aux_loss_config, action_space, net
+        )
 
     @property
     def should_load_agent_state(self):
