@@ -372,8 +372,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             # Add actions from apply_postcond
             actions[batch_ids] += action_data.actions
 
-            if action_data.rnn_hidden_states is not None:
-                rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+            rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         actions[:, self._stop_action_idx] = 0.0
 
