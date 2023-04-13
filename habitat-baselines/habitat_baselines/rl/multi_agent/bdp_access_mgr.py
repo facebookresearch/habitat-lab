@@ -20,6 +20,7 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
 
+# coordination agent is the agent trained to coordinate with a diverse set of partners
 COORD_AGENT = 0
 BEHAV_AGENT = 1
 COORD_AGENT_NAME = "agent_0"
