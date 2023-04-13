@@ -114,6 +114,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 1,
                 self.cur_articulated_agent,
             )
+            if np.isnan(start_pos).any():
+                print("start_pos contains NaN @oracle_nav_action.py.")
 
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(

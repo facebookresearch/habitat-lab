@@ -475,20 +475,12 @@ def get_robot_spawns(
     for _ in range(num_spawn_attempts):
         sim.set_state(state)
 
-        if distance_threshold == -1.0:
-            # Place as close to the object as possible.
-            if not sim.is_point_within_bounds(target_position):
-                rearrange_logger.error(
-                    f"Object {target_position} is out of bounds but trying to set robot position"
-                )
+        # It is found that get_random_navigable_point_near() occasionally returns
+        # NaNs for start_position. We want to make sure that the generated
+        # start_position is not NaN
+        if np.isnan(start_position).any():
+            continue
 
-            start_position = sim.safe_snap_point(target_position)
-        else:
-            # Place within `distance_threshold` of the object.
-            start_position = sim.pathfinder.get_random_navigable_point_near(
-                target_position, distance_threshold
-            )
-        # Face the robot towards the object.
         relative_target = target_position - start_position
         angle_to_object = get_angle_to_pos(relative_target)
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
