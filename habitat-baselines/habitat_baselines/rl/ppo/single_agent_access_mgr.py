@@ -142,6 +142,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._policy_action_space
 
     @property
+    def policy_action_space_shape_lens(self):
+        return [self._policy_action_space[0]]
+
+    @property
     def masks_shape(self):
         return (1,)
 
@@ -244,6 +248,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             self.actor_critic.num_recurrent_layers,
             self._ppo_cfg.hidden_size,
         )
+
+    @property
+    def hidden_state_shape_lens(self):
+        return [self._ppo_cfg.hidden_size]
 
     def after_update(self):
         if (

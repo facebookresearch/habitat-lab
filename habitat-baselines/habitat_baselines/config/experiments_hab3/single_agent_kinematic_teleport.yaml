@@ -6,6 +6,10 @@ defaults:
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
   - _self_
 
+hydra:
+  job:
+    name: 'single_teleport'
+
 habitat_baselines:
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
   tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
@@ -17,6 +21,7 @@ habitat_baselines:
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
+    run_name: ${hydra.job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
   num_environments: 2
 
 habitat:

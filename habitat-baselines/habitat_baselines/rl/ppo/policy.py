@@ -83,6 +83,65 @@ class PolicyActionData:
             return self.take_actions
 
 
+@dataclass
+class MultiAgentPolicyActionData(PolicyActionData):
+    """
+    Information returned from the `Policy.act` method representing the
+    information from multiple agent's action. This class is needed to store
+    actions of multiple agents together
+
+    :property length_actions: List containing, for every agent, the size of their action space.
+    :property length_rnn_hidden_states: List containing for every agent the dimensionality of the rnn hidden state.
+    :property num_agents: The number of agents represented in this PolicyActionData
+    """
+
+    rnn_hidden_states: torch.Tensor
+    actions: Optional[torch.Tensor] = None
+    values: Optional[torch.Tensor] = None
+    action_log_probs: Optional[torch.Tensor] = None
+    take_actions: Optional[torch.Tensor] = None
+    policy_info: Optional[List[Dict[str, Any]]] = None
+    should_inserts: Optional[torch.BoolTensor] = None
+
+    # Indices
+    length_rnn_hidden_states: Optional[torch.Tensor] = None
+    length_actions: Optional[torch.Tensor] = None
+    num_agents: Optional[int] = 1
+
+    def _unpack(self, tensor_to_unpack, unpack_lengths=None):
+        """
+        Splits the tensor tensor_to_unpack in the last dimension in the last dimension
+        according to unpack lengths, so that the ith tensor will have unpack_lengths[i]
+        in the last dimension. If unpack_lenghts is None, splits tensor_to_unpack evenly
+        according to self.num_agents.
+
+        :property tensor_to_unpack: The tensor we want to split into different chunks
+        :unpack_lengths: List of integers indicating the sizes to unpack, or None if we want to unpack evenly
+        """
+
+        if unpack_lengths is None:
+            unpack_lengths = [
+                int(tensor_to_unpack.shape[-1] / self.num_agents)
+            ] * self.num_agents
+        tensor_unpacked = torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
+        return tensor_unpacked
+
+    def unpack(self):
+        """
+        Returns attributes of the policy unpacked per agent
+        """
+        return {
+            "next_recurrent_hidden_states": self._unpack(
+                self.rnn_hidden_states, self.length_rnn_hidden_states
+            ),
+            "actions": self._unpack(self.actions, self.length_actions),
+            "value_preds": self._unpack(self.values),
+            "action_log_probs": self._unpack(self.action_log_probs),
+            "take_actions": self._unpack(self.take_actions),
+            "should_inserts": self._unpack(self.should_inserts),
+        }
+
+
 class Policy(abc.ABC):
     action_distribution: nn.Module
 
