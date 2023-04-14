@@ -35,6 +35,13 @@ class AgentAccessMgr(ABC):
         pass
 
     @abstractmethod
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        """
+        Setup any components for distributed training.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
         """
         Update the hidden state of the policies in the population. Writes to the

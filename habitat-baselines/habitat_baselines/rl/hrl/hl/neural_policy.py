@@ -101,9 +101,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
 
-        self._aux_modules = get_aux_modules(
-            aux_loss_config, action_space, self
-        )
+        self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
 
     def create_hl_info(self):
         return {"actions": None}
@@ -190,7 +188,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         }
 
         aux_loss_res = {
-            k: v(features, observations) for k, v in self._aux_modules.items()
+            k: v(features, observations) for k, v in self.aux_modules.items()
         }
 
         return (

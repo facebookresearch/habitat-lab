@@ -387,10 +387,6 @@ class MultiUpdater(Updater):
     def from_config(cls, config, observation_space, action_space, **kwargs):
         return MultiUpdater()
 
-    def init_distributed(self, find_unused_params: bool = True) -> None:
-        for updater in self._active_updaters:
-            updater.init_distributed(find_unused_params)
-
 
 def _merge_list_dict(inputs: List[List[Dict]]) -> List[Dict]:
     ret: List[Dict] = []
