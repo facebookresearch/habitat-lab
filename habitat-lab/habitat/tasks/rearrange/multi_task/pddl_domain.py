@@ -436,10 +436,10 @@ class PddlDomain:
         all_entities = self.all_entities.values()
         true_preds: List[Predicate] = []
         for pred in self.predicates.values():
-            for entity_input in itertools.combinations(
+            for entity_input in itertools.permutations(
                 all_entities, pred.n_args
             ):
-                if not pred.are_args_compatible(entity_input):
+                if not pred.are_args_compatible(list(entity_input)):
                     continue
 
                 use_pred = pred.clone()

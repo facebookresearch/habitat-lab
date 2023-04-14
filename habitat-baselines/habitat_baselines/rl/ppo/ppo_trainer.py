@@ -330,20 +330,19 @@ class PPOTrainer(BaseRLTrainer):
             int((buffer_index + 1) * num_envs / self._agent.nbuffers),
         )
 
-        with self.timer.avg_time("sample_action"):
+        with self.timer.avg_time("sample_action"), inference_mode():
             # Sample actions
-            with inference_mode():
-                step_batch = self._agent.rollouts.get_current_step(
-                    env_slice, buffer_index
-                )
+            step_batch = self._agent.rollouts.get_current_step(
+                env_slice, buffer_index
+            )
 
-                profiling_wrapper.range_push("compute actions")
-                action_data = self._agent.actor_critic.act(
-                    step_batch["observations"],
-                    step_batch["recurrent_hidden_states"],
-                    step_batch["prev_actions"],
-                    step_batch["masks"],
-                )
+            profiling_wrapper.range_push("compute actions")
+            action_data = self._agent.actor_critic.act(
+                step_batch["observations"],
+                step_batch["recurrent_hidden_states"],
+                step_batch["prev_actions"],
+                step_batch["masks"],
+            )
 
         profiling_wrapper.range_pop()  # compute actions
 
@@ -572,11 +571,7 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             logger.info(
-                "update: {}\t"
-                "frames: {}".format(
-                    self.num_updates_done,
-                    self.num_steps_done,
-                )
+                f"Num updates: {self.num_updates_done}\tNum frames {self.num_steps_done}"
             )
 
             logger.info(

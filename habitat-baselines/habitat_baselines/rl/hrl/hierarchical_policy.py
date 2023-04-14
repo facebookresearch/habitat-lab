@@ -225,10 +225,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         for k, v in skill_to_batch.items():
             grouped_skills[k] = (
                 v,
-                {
-                    dat_k: dat if dat is None else dat[v]
-                    for dat_k, dat in sel_dat.items()
-                },
+                {dat_k: dat[v] for dat_k, dat in sel_dat.items()},
             )
         return grouped_skills
 
