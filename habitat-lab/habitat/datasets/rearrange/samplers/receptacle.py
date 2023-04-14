@@ -20,6 +20,10 @@ from habitat.core.logging import logger
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 from habitat.utils.geometry_utils import random_triangle_point
 
+# global module singleton for mesh importing instantiated upon first import
+_manager = mn.trade.ImporterManager()
+_importer = _manager.load_and_instantiate("AnySceneImporter")
+
 
 class Receptacle(ABC):
     """
@@ -502,9 +506,8 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
 
     :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
-    manager = mn.trade.ImporterManager()
-    importer = manager.load_and_instantiate("AnySceneImporter")
-    importer.open_file(mesh_file)
+
+    _importer.open_file(mesh_file)
 
     def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
         """
@@ -522,38 +525,32 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
             mesh.primitive == mn.MeshPrimitive.TRIANGLES
         ), "Must be a triangle mesh."
 
-        # `mesh_filtered` now refers to data in `mesh`
-        # (`mesh_filtered.vertex_data_flags` isn't `OWNED`)
-        # until a proper fix, it's important to use a different variable
-        # which should tell Python's GC to not delete the original
-        mesh_filtered = mn.meshtools.filter_only_attributes(
+        # filter out all but positions (and indices) from the mesh
+        mesh = mn.meshtools.filter_only_attributes(
             mesh, [mn.trade.MeshAttribute.POSITION]
         )
 
-        # makes the mesh standalone / self-owned again
-        # (`mesh.vertex_data_flags` is `OWNED`)
-        mesh_interleaved = mn.meshtools.interleave(
-            mesh_filtered, mn.meshtools.InterleaveFlags.NONE
-        )
+        # reformat the mesh data after filtering
+        mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
 
-        return mesh_interleaved
+        return mesh
 
     mesh_data: List[mn.trade.MeshData] = []
 
     # import mesh data and pre-process
     mesh_data = [
-        filter_interleave_mesh(importer.mesh(mesh_ix))
-        for mesh_ix in range(importer.mesh_count)
+        filter_interleave_mesh(_importer.mesh(mesh_ix))
+        for mesh_ix in range(_importer.mesh_count)
     ]
 
     # if there is a scene defined, apply any transformations
-    if importer.scene_count > 0:
-        scene_id = importer.default_scene
+    if _importer.scene_count > 0:
+        scene_id = _importer.default_scene
         # If there's no default scene, load the first one
         if scene_id == -1:
             scene_id = 0
 
-        scene = importer.scene(scene_id)
+        scene = _importer.scene(scene_id)
 
         # Mesh referenced by mesh_assignments[i] has a corresponding transform in
         # mesh_transformations[i]. Association to a particular node ID is stored in
