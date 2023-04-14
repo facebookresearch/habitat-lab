@@ -4,7 +4,7 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions@actions.agent_0_humanoidjoint_action: humanoidjoint_action
   - /habitat/task/actions@actions.agent_1_arm_action: arm_action
-  - /habitat/task/actions@actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@actions.agent_1_base_velocity_non_cylinder: base_velocity_non_cylinder
   - /habitat/task/actions@actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/measurements:
     - object_to_goal_distance
@@ -41,11 +41,31 @@ actions:
     agent_index : 0
   agent_1_arm_action:
     agent_index : 1
+    arm_controller: "ArmRelPosMaskAction"
+    # grip_controller: "GazeGraspAction" # NOTE GazeGraspAction doesnt work in multi-agent setting
     grip_controller: MagicGraspAction
-  agent_1_base_velocity:
+    arm_joint_mask: [1,1,0,1,1,1,1]
+    arm_joint_dimensionality: 7
+    grasp_thresh_dist: 0.15
+    disable_grip: False
+    delta_pos_limit: 0.0125
+    ee_ctrl_lim: 0.015
+    gaze_distance_range: [0.01, 0.3]
+    center_cone_angle_threshold: 20.0
+    center_cone_vector: [0.0, 1.0, 0.0]
+  agent_1_base_velocity_non_cylinder:
     agent_index : 1
+    allow_dyn_slide: True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than than collision_threshold for any point
+    collision_threshold: 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+    # If we allow the robot to move laterally
+    enable_lateral_move: True
   agent_1_rearrange_stop:
     agent_index : 1
+
 measurements:
   force_terminate:
     max_accum_force: 100000.0

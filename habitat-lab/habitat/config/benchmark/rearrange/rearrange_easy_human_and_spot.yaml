@@ -6,7 +6,7 @@ defaults:
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: rgbd_head_rgbdp_arm_agent
   # Note, this is a copy of task human_and_fetch config
   # TODO: figure out what should be a proper task config for this setting
-  - /habitat/task/rearrange: rearrange_easy_human_and_fetch_copy
+  - /habitat/task/rearrange: rearrange_easy_human_and_spot
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
@@ -17,7 +17,8 @@ habitat:
       - agent_0_obj_start_sensor
       - agent_0_obj_goal_sensor
       - agent_0_joint
-      - agent_1_head_depth
+      - agent_1_arm_depth_sensor
+      - agent_1_arm_rgb_sensor
       - agent_1_obj_start_sensor
       - agent_1_obj_goal_sensor
       - agent_1_joint
