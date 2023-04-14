@@ -85,6 +85,10 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         if config.habitat_baselines.evaluate:
             self._sample_active()
 
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        for agent in self._agents:
+            agent.init_distributed(find_unused_params)
+
     def _create_multi_components(self, config, env_spec, num_active_agents):
         if self._pop_config.self_play_batched:
             policy_cls: Type = SelfBatchedPolicy
