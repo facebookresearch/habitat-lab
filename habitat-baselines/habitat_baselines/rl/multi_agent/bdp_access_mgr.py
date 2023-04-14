@@ -65,8 +65,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
 
     def _inject_behav_latent(self, obs, agent_idx):
         agent_obs = update_dict_with_agent_prefix(obs, agent_idx)
-        if agent_idx == BEHAV_AGENT:
-            agent_obs[BEHAV_ID] = self._behav_latents
+        agent_obs[BEHAV_ID] = self._behav_latents
         return agent_obs
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
@@ -116,21 +115,13 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         lr_schedule_fn,
         agent_name,
     ):
-        if agent_name == BEHAV_AGENT_NAME:
-            # Inject the behavior latent into the observation spec
-            agent_env_spec.observation_space[BEHAV_ID] = spaces.Box(
-                low=np.finfo(np.float32).min,
-                high=np.finfo(np.float32).max,
-                shape=(self._pop_config.behavior_latent_dim,),
-                dtype=np.float32,
-            )
-        elif agent_name == COORD_AGENT_NAME:
-            # Remove the discriminator from this policy.
-            config = config.copy()
-            with read_write(config):
-                del config.habitat_baselines.rl.auxiliary_losses["bdp_discrim"]
-        else:
-            raise ValueError(f"Unexpected agent name {agent_name}")
+        # Inject the behavior latent into the observation spec
+        agent_env_spec.observation_space[BEHAV_ID] = spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=(self._pop_config.behavior_latent_dim,),
+            dtype=np.float32,
+        )
 
         return SingleAgentAccessMgr(
             config,
