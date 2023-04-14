@@ -58,7 +58,7 @@ import habitat
 import habitat.tasks.rearrange.rearrange_task
 
 # Temporary import for this project to use the custom multi-agent measures.
-import habitat_baselines.rl.multi_agent.measures
+import habitat_baselines.rl.multi_agent.measures  # noqa: F401
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (

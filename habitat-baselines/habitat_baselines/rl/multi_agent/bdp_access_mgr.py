@@ -20,9 +20,7 @@ from habitat_baselines.rl.ppo.single_agent_access_mgr import (
     SingleAgentAccessMgr,
 )
 
-# coordination agent is the agent trained to coordinate with a diverse set of partners
 COORD_AGENT = 0
-# behavior policy is a latent conditioned policy that generates diverse behaviors when conditioned on different latents
 BEHAV_AGENT = 1
 COORD_AGENT_NAME = "agent_0"
 BEHAV_AGENT_NAME = "agent_1"
@@ -38,7 +36,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
     """
     Behavioral Diversity Play implementation. A behavior policy is trained to
     generate diverse behaviors through a diversity reward bonus. A coordination
-    policy is trained to coordinate with the behavior policy.
+    policy is trained against the behavior policy.
     """
 
     def _sample_active_idxs(self):
@@ -65,7 +63,8 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
 
     def _inject_behav_latent(self, obs, agent_idx):
         agent_obs = update_dict_with_agent_prefix(obs, agent_idx)
-        agent_obs[BEHAV_ID] = self._behav_latents
+        if agent_idx == BEHAV_AGENT:
+            agent_obs[BEHAV_ID] = self._behav_latents
         return agent_obs
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
@@ -88,7 +87,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         )
 
         hl_policy = self._agents[BEHAV_AGENT].actor_critic._high_level_policy
-        discrim = hl_policy._aux_modules["bdp_discrim"]
+        discrim = hl_policy.aux_modules["bdp_discrim"]
         multi_storage = BdpStorage.from_config(
             config,
             env_spec.observation_space,
@@ -115,13 +114,21 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         lr_schedule_fn,
         agent_name,
     ):
-        # Inject the behavior latent into the observation spec
-        agent_env_spec.observation_space[BEHAV_ID] = spaces.Box(
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            shape=(self._pop_config.behavior_latent_dim,),
-            dtype=np.float32,
-        )
+        if agent_name == BEHAV_AGENT_NAME:
+            # Inject the behavior latent into the observation spec
+            agent_env_spec.observation_space[BEHAV_ID] = spaces.Box(
+                low=np.finfo(np.float32).min,
+                high=np.finfo(np.float32).max,
+                shape=(self._pop_config.behavior_latent_dim,),
+                dtype=np.float32,
+            )
+        elif agent_name == COORD_AGENT_NAME:
+            # Remove the discriminator from this policy.
+            config = config.copy()
+            with read_write(config):
+                del config.habitat_baselines.rl.auxiliary_losses["bdp_discrim"]
+        else:
+            raise ValueError(f"Unexpected agent name {agent_name}")
 
         return SingleAgentAccessMgr(
             config,
@@ -169,6 +176,8 @@ class BehavDiscrim(nn.Module):
         return self.discrim(policy_features)
 
     def forward(self, policy_features, obs):
+        # Don't backprop into the policy representation.
+        policy_features = policy_features.detach()
         pred_logits = self.pred_logits(policy_features, obs)
         behav_ids = torch.argmax(obs[BEHAV_ID], -1)
         loss = F.cross_entropy(pred_logits, behav_ids)
@@ -191,7 +200,7 @@ class BdpStorage(MultiStorage):
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         """
-        Adds a weighted diversity reward to the task reward in the behavior agent's rollout buffer. This
+        Adds the diversity reward to the behavior agent's rollout buffer. This
         overrides the existing rewards in the buffer. The buffer of the
         coordination agent is unmodified.
         """
