@@ -78,7 +78,7 @@ class PddlDomain:
                 parent_dir, "domain_configs", domain_file_path
             )
 
-        if "." not in domain_file_path:
+        if "." not in domain_file_path.split("/")[-1]:
             domain_file_path += ".yaml"
 
         with open(get_full_habitat_config_path(domain_file_path), "r") as f:
