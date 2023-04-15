@@ -31,7 +31,7 @@ defaults:
 type: RearrangeCompositeTask-v0
 reward_measure: cooperate_subgoal_reward
 success_measure: composite_success
-success_reward: 100.0
+success_reward: 5.0
 slack_reward: -0.01
 end_on_success: True
 constraint_violation_ends_episode: False
