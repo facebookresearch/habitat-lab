@@ -575,6 +575,8 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
             )
         ]
 
+    _importer.close()
+
     return mesh_data
 
 
