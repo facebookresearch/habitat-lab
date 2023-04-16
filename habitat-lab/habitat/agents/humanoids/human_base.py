@@ -61,10 +61,28 @@ class Humanoid(AgentInterface):
         if self.sim_obj is None or not self.sim_obj.is_alive:
             ao_mgr = self._sim.get_articulated_object_manager()
             # TODO: is fixed_base here neededs
+            # self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
+            #     self.urdf_path, fixed_base=False, maintain_link_order=True
+            # )
+            # fbx_path = "data/human_sim_data/human_smpl_textured.fbx"
+
+            # fbx_path = "/Users/xavierpuig/Documents/Projects/test_smplx_blender/test_out/female2_0.fbx"
+            fbx_path = "/Users/xavierpuig/Downloads/smplx_corrected.glb"
+            
+            
+            # self.urdf_path = "/Users/xavierpuig/Documents/Projects/test_smplx_blender/test_out/smpl.urdf"
+            # self.urdf_path = "/Users/xavierpuig/Documents/Projects/skinning/habitat-lab/data/human_sim_data/amass_male_from_blender_good.urdf"
+            
+            # fbx_path = "/Users/xavierpuig/Documents/Projects/test_smplx_blender/test_out/female_1.fbx"
+
+
+            # self.sim_obj = ao_mgr.add_skinned_articulated_object_from_urdf(
+            #     self.urdf_path, fbx_path, fixed_base=False, maintain_link_order=True
+            # )
             self.sim_obj = ao_mgr.add_articulated_object_from_urdf(
                 self.urdf_path, fixed_base=False, maintain_link_order=True
             )
-            
+            # breakpoint()
             # TODO: is it right to do it here
             self.sim_obj.motion_type = phy.MotionType.KINEMATIC
         # breakpoint()

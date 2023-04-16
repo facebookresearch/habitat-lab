@@ -141,6 +141,7 @@ def get_input_vel_ctlr(
     base_action = [0, 0]
     # breakpoint()
     # if reached_dest(human_controller, agent_path):
+    # breakpoint()
     if reached_dest(human_controller, agent_path):
         base_action_name = "humanjoint_action"
         base_key = "human_joints_trans"
@@ -611,7 +612,8 @@ def play_env(env, args, config):
             goal_location = agent_location * (
                 mn.Vector3.x_axis() + mn.Vector3.z_axis()
             ) + radius * mn.Vector3([np.cos(angle_pos), 0, np.sin(angle_pos)])
-
+        elif keys[pygame.K_m]:
+            break
         elif keys[pygame.K_s]:
             radius -= 0.05
             goal_location = agent_location * (

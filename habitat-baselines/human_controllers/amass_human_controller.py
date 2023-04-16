@@ -6,52 +6,51 @@ import os
 from os import path as osp
 from typing import List, Optional
 
+import pickle as pkl
 import magnum as mn
 import numpy as np
 import pybullet as p
 from fairmotion.ops import motion as motion_ops
 
 from habitat.utils.fairmotion_utils import AmassHelper, MotionData
+class Pose:
+    def __init__(self, joints_quat, root_transform):
+        """
+        Contains a single humanoid pose
+            :param joints_quat: list or array of num_joints * 4 elements, with the rotation quaternions
+            :param root_transform: Matrix4 with the root trasnform.
+        """
+        self.joints = list(joints_quat)
+        self.root_transform = root_transform
 
 
-class Motions:
+class Motion:
     """
-    The Motions class is collection of stats that will hold the different movement motions
-    for the character to use when following a path. The character is left-footed so that
-    is our reference for with step the motions assume first.
+    Contains a sequential motion, corresponding to a sequence of poses
+        :param joints_quat_array: num_poses x num_joints x 4 array, containing the join orientations
+        :param transform_array: num_poses x 4 x 4 array, containing the root transform
+        :param displacement: on each pose, how much forward displacement was there?
+            Used to measure how many poses we should advance to move a cerain amount
+        :param fps: the FPS at which the motion was recorded
     """
 
-    def __init__(self, amass_path, body_model_path):
-        self.amass_path = amass_path
-        self.body_model_path = body_model_path
+    def __init__(self, joints_quat_array, transform_array, displacement, fps):
+        num_poses = joints_quat_array.shape[0]
+        self.num_poses = num_poses
+        poses = []
+        for index in range(num_poses):
+            pose = Pose(
+                joints_quat_array[index].reshape(-1),
+                mn.Matrix4(transform_array[index]),
+            )
+            poses.append(pose)
 
-        # logger.info("Loading Motion data...")
+        self.poses = poses
+        self.fps = fps
+        self.displacement = displacement
+        self.map_of_total_displacement = displacement
 
-        # TODO: add more diversity here
-        motion_files = {
-            "walk": f"{self.amass_path}/CMU/10/10_04_poses.npz",  # [0] cycle walk
-            "run": f"{self.amass_path}/CMU/09/09_01_poses.npz",  # [1] cycle run
-        }
 
-        motion_data = {
-            key: AmassHelper.load_amass_file(value, bm_path=body_model_path)
-            for key, value in motion_files.items()
-        }
-
-        ### TRANSITIVE ###
-        # all motions must have same fps for this implementation, so use first motion to set global
-        fps = motion_data["walk"].fps
-
-        # Standing pose that must be converted (amass -> habitat joint positions)
-        self.standing_pose = motion_data["walk"].poses[0]
-
-        # Walk-to-walk cycle
-        self.walk_to_walk = MotionData(
-            motion_ops.cut(motion_data["walk"], 300, 430)
-        )
-
-        # Run-to-run cycle
-        self.run_to_run = MotionData(motion_ops.cut(motion_data["run"], 3, 89))
 
 
 class AmassHumanController:
@@ -69,115 +68,41 @@ class AmassHumanController:
         obj_translation=None,
         draw_fps=60,
     ):
-        self.motions = Motions(amass_path, body_model_path)
-        self.base_offset = mn.Vector3([0, 1.1, 0])
-
-        self.last_pose = self.motions.standing_pose
-        self.urdf_path = urdf_path
-        self.amass_path = amass_path
-
-        self.ROOT = 0
-
+        self.base_offset = mn.Vector3(0, 0.9, 0)
         self.mocap_frame = 0
-        self.curr_trans = mn.Vector3([0, 0, 0.3])
-        self.rotation_offset: Optional[mn.Quaternion] = mn.Quaternion()
+        walk_pose_path= "/Users/xavierpuig/Documents/Projects/humans_habitat_3/integrate_hl/test_create_pose/walking_motion_processed_smplx.pkl"
+        # walk_pose_path= "/Users/xavierpuig/Documents/Projects/humans_habitat_3/integrate_hl/test_create_pose/walking_motion_processed_smplh.pkl"
+        
+        with open(walk_pose_path, "rb") as f:
+            walk_data = pkl.load(f)
+        walk_info = walk_data["walk_motion"]
 
-        self.obj_transform = self.obtain_root_transform_at_frame(0)
-        self.prev_orientation = None
+        self.walk_motion = Motion(
+            walk_info["joints_array"],
+            walk_info["transform_array"],
+            walk_info["displacement"],
+            walk_info["fps"],
+        )
 
-        # smoothing_params
-        self.frames_to_stop = 10
-        self.frames_to_start = 10
+        self.stop_pose = Pose(
+            walk_data["stop_pose"]["joints"].reshape(-1),
+            mn.Matrix4(walk_data["stop_pose"]["transform"]),
+        )
         self.draw_fps = draw_fps
-
-        # state variables
-        self.time_since_stop = 0  # How many frames since we started stopping
-        self.time_since_start = 0  # How many frames since we started walking
-        self.fully_started = False
-        self.fully_stopped = False
-        self.last_walk_pose = None
-
-        self.path_ind = 0
-        self.path_distance_covered_next_wp = (
-            0  # The distance we will have to cover in the next WP
-        )
-        self.path_distance_walked = 0
-
-        # How many many meters in one step
-        map_displacement = self.motions.walk_to_walk.map_of_total_displacement
         self.dist_per_step_size = (
-            map_displacement[-1] * 1.0 / len(map_displacement)
+            self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
 
-        # Option args
-        self.use_ik_grab = False
+        # These two matrices store the global transformation of the base
+        # as well as the transformation caused by the walking gait
+        # We initialize them to identity
+        self.obj_transform_offset = mn.Matrix4()
+        self.obj_transform_base = mn.Matrix4()
+        self.joint_pose = []
 
-        if obj_translation is not None:
-            self.base_pos = obj_translation
-
-        self.pc_id = p.connect(p.DIRECT)
-        self.human_bullet_id = p.loadURDF(urdf_path)
-
-        self.link_ids = list(range(p.getNumJoints(self.human_bullet_id)))
-        # Joint INFO
-        # https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html#getjointinfo
-        self.joint_info = [
-            p.getJointInfo(self.human_bullet_id, index)
-            for index in self.link_ids
-        ]
-
-        # Data used to grab
-        # self.use_ik_grab = False
-        if grab_path is None or len(grab_path) == 0:
-            self.use_ik_grab = False
-        if self.use_ik_grab:
-            graph_path_split = osp.splitext(grab_path)
-            grab_poses = "{}{}.{}".format(
-                graph_path_split[0], "_processed_", graph_path_split[1]
-            )
-            grab_data = np.load(grab_path)
-            num_poses = grab_data["trans"].shape[0]
-            self.num_pos = num_poses
-
-            # TODO: change this literal argument
-            if not os.path.isfile(grab_poses):
-                self.grab_quaternions = np.zeros((num_poses, 68))
-                self.grab_transform = np.zeros((num_poses, 16))
-                from tqdm import tqdm
-
-                for pose_index in tqdm(range(num_poses)):
-                    current_pose = MotionData.obtain_pose(
-                        self.last_pose.skel, grab_data, pose_index
-                    )
-                    (
-                        pose_quaternion,
-                        root_trans,
-                        root_rot,
-                    ) = AmassHelper.convert_CMUamass_single_pose(
-                        current_pose, self.joint_info, raw=True
-                    )
-                    transform_as_mat = np.array(
-                        mn.Matrix4.from_(root_rot.to_matrix(), root_trans)
-                    ).reshape(-1)
-                    self.grab_quaternions[pose_index, :] = pose_quaternion
-                    self.grab_transform[pose_index, :] = transform_as_mat
-                np.savez(
-                    grab_poses,
-                    joints=self.grab_quaternions,
-                    root_transform=self.grab_transform,
-                )
-            else:
-                pick = np.load(grab_poses)
-                self.grab_quaternions = pick['joints']
-                self.grab_transform = pick['root_transform']
-            self.coords_grab = grab_data['coord']
-            self.vpose = {
-                "min": self.coords_grab.min(0),
-                "max": self.coords_grab.max(0),
-                "bins": [40, 40, 10],
-            }
-        self.reach_pos = 0
-        # breakpoint()
+        self.prev_orientation = None
+        self.mocap_frame = 0
+        self.obj_transform = mn.Matrix4()
 
     @property
     def root_pos(self):
@@ -202,78 +127,27 @@ class AmassHumanController:
 
     @base_pos.setter
     def base_pos(self, position: mn.Vector3):
-        if self.mocap_frame == 108:
-            breakpoint()
+        # if self.mocap_frame == 108:
+        #     breakpoint()
         self.obj_transform.translation = position + self.base_offset
 
     def reset(self, position) -> None:
         """Reset the joints on the human. (Put in rest state)"""
         self.base_pos = position
-        self.last_pose = self.motions.standing_pose
+        self.last_pose = self.stop_pose
 
     def stop(self, progress=None):
         """Sets the human into a standing pose. If progress != None, it interpolates between the previous and stopping pose"""
-        new_pose = self.motions.standing_pose
-        (
-            new_pose,
-            new_root_trans,
-            root_rotation,
-        ) = AmassHelper.convert_CMUamass_single_pose(new_pose, self.joint_info)
+        new_pose = self.stop_pose
 
-        if progress is None:
-            self.time_since_stop += 1
-            if self.fully_started:
-                progress = min(self.time_since_stop, self.frames_to_stop)
-            else:
-                # If we were just starting walking and are stopping again, the progress is
-                # just reduced by the steps we started to walk
-                progress = max(0, self.frames_to_stop - self.time_since_start)
-            progress = progress * 1.0 / self.frames_to_stop
-        else:
-            self.time_since_stop = int(progress * self.frames_to_stop)
 
-        if progress == 1:
-            self.fully_stopped = True
-        else:
-            self.fully_stopped = False
+        return new_pose.joints, self.obj_transform
 
-        if self.last_walk_pose is not None:
-            # If we walked in the past, interpolate between walk and stop
-            interp_pose = (
-                np.array(self.last_walk_pose) * (1 - progress)
-                + np.array(new_pose) * progress
-            )
-            interp_pose = list(interp_pose)
-        else:
-            interp_pose = new_pose
-
-        self.time_since_start = 0
-
-        return interp_pose, self.obj_transform
-
-    def obtain_root_transform_at_frame(self, mocap_frame):
-        curr_motion_data = self.motions.walk_to_walk
-        global_neutral_correction = AmassHelper.global_correction_quat(
-            mn.Vector3.z_axis(), curr_motion_data.direction_forward
-        )
-        full_transform = curr_motion_data.motion.poses[
-            mocap_frame
-        ].get_transform(self.ROOT, local=True)
-
-        full_transform = mn.Matrix4(full_transform)
-        full_transform.translation -= curr_motion_data.center_of_root_drift
-        full_transform = (
-            mn.Matrix4.from_(
-                global_neutral_correction.to_matrix(), mn.Vector3()
-            )
-            @ full_transform
-        )
-        return full_transform
 
     @property
     def step_distance(self):
-        step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
-        curr_motion_data = self.motions.walk_to_walk
+        step_size = int(self.walk_motion.fps / self.draw_fps)
+        curr_motion_data = self.walk_motion
 
         prev_distance = curr_motion_data.map_of_total_displacement[
             self.mocap_frame
@@ -364,7 +238,7 @@ class AmassHumanController:
 
     def walk(self, position: mn.Vector3):
         """ Walks to the desired position. Rotates the character if facing in a different direction """
-        step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
+        step_size = int(self.walk_motion.fps / self.draw_fps)
 
         forward_V = position
 
@@ -413,29 +287,27 @@ class AmassHumanController:
         )
         self.mocap_frame = (
             self.mocap_frame + step_size
-        ) % self.motions.walk_to_walk.motion.num_frames()
+        ) % self.walk_motion.num_poses
         if self.mocap_frame == 0:
             self.distance_rot = 0
 
-        new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
-        curr_motion_data = self.motions.walk_to_walk
-        new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(
-            new_pose, self.joint_info
-        )
+        
+        new_pose = self.walk_motion.poses[self.mocap_frame]
+        # print(new_pose.joints[:8])
+        # breakpoint()
+        joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # How much distance we should have covered in the last step
-        prev_distance = curr_motion_data.map_of_total_displacement[
+        prev_distance = self.walk_motion.displacement[
             self.mocap_frame - step_size
         ]
         if (self.mocap_frame - step_size) < 0:
             distance_covered = (
-                curr_motion_data.map_of_total_displacement[self.mocap_frame]
-                + curr_motion_data.map_of_total_displacement[-1]
+                self.walk_motion.displacement[self.mocap_frame]
+                + self.walk_motion.displacement[-1]
             )
         else:
-            distance_covered = curr_motion_data.map_of_total_displacement[
-                self.mocap_frame
-            ]
+            distance_covered = self.walk_motion.displacement[self.mocap_frame]
 
         dist_diff = min(
             distance_to_walk, max(0, distance_covered - prev_distance)
@@ -444,7 +316,7 @@ class AmassHumanController:
         self.prev_orientation = forward_V
 
         
-        full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
+        full_transform = obj_transform
         full_transform.translation *= 0
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform.translation,
@@ -458,59 +330,46 @@ class AmassHumanController:
 
         full_transform.translation += forward_V * dist_diff
 
-        self.time_since_start += 1
-        if self.fully_stopped:
-            progress = min(self.time_since_start, self.frames_to_start)
-        else:
-            # if it didn't fully stop it should take us to walk as many
-            # frames as the time we spent stopping
-            progress = max(0, self.frames_to_start - self.time_since_stop)
+        # self.time_since_start += 1
+        # if self.fully_stopped:
+        #     progress = min(self.time_since_start, self.frames_to_start)
+        # else:
+        #     # if it didn't fully stop it should take us to walk as many
+        #     # frames as the time we spent stopping
+        #     progress = max(0, self.frames_to_start - self.time_since_stop)
 
         # Ensure a smooth transition from walking to standing
-        progress_norm = progress * 1.0 / self.frames_to_start
-        if progress_norm < 1.0:
-            # if it was standing before walking, interpolate between walking and standing pose
-            standing_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(
-                self.motions.standing_pose, self.joint_info
-            )
-            interp_pose = (1 - progress_norm) * np.array(
-                standing_pose
-            ) + progress_norm * np.array(new_pose)
-            interp_pose = list(interp_pose)
-            self.fully_started = False
-        else:
-            interp_pose = new_pose
-            self.fully_started = True
+        # progress_norm = progress * 1.0 / self.frames_to_start
+        
+        interp_pose = new_pose.joints
+        self.fully_started = True
 
-        if self.time_since_start >= self.frames_to_start:
-            self.fully_started = True
+        # if self.time_since_start >= self.frames_to_start:
+        #     self.fully_started = True
         self.time_since_stop = 0
         self.last_walk_pose = new_pose
 
         # breakpoint()
 
         self.obj_transform = full_transform
+        print(full_transform)
+        print(interp_pose[:5])
 
         return interp_pose, full_transform
 
     def compute_turn(self, rel_pos):
         """Turns a certain angle towards a direction"""
         assert self.prev_orientation is not None
-        step_size = int(self.motions.walk_to_walk.fps / self.draw_fps)
+        step_size = int(self.walk_motion.fps / self.draw_fps)
         # breakpoint()
         self.mocap_frame = (
             self.mocap_frame + step_size
-        ) % self.motions.walk_to_walk.motion.num_frames()
+        ) % self.walk_motion.num_poses
         if self.mocap_frame == 0:
             self.distance_rot = 0
         # curr_pos = self.motions.walk_to_walk[self.mocap_frame]
         new_pose = self.motions.walk_to_walk.poses[self.mocap_frame]
         # curr_motion_data = self.motions.walk_to_walk
-
-        # new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(self.motions.standing_pose, self.joint_info)
-        new_pose, _, _ = AmassHelper.convert_CMUamass_single_pose(
-            new_pose, self.joint_info
-        )
 
         char_pos = self.base_pos
 
@@ -546,7 +405,7 @@ class AmassHumanController:
             char_pos, char_pos + forward_V.normalized(), mn.Vector3.y_axis()
         )
 
-        full_transform = self.obtain_root_transform_at_frame(self.mocap_frame)
+        full_transform = new_pose.transform
         # while transform is facing -Z, remove forward displacement
         full_transform.translation *= 0
         full_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
@@ -555,9 +414,10 @@ class AmassHumanController:
 
         self.prev_orientation = forward_V
 
-        interp_pose = new_pose
+        interp_pose = new_pose.joints
         full_transform.translation = self.obj_transform.translation
         self.obj_transform = full_transform
+        
         return interp_pose, full_transform
 
     @classmethod

@@ -84,8 +84,8 @@ class AmassHuman(Humanoid):
                     attached_link_id=-1,
                 ),
                 "robot_third": RobotCameraParams(
-                    cam_offset_pos=mn.Vector3(-1.2, 2.0, -1.2),
-                    cam_look_at_pos=mn.Vector3(1, 0.0, 0.75),
+                    cam_offset_pos=mn.Vector3(-1.2, 1.5, -1.2),
+                    cam_look_at_pos=mn.Vector3(1, 0.3, 0.75),
                     attached_link_id=-1,
                 ),
             },
@@ -192,7 +192,10 @@ class AmassHuman(Humanoid):
     def set_joint_transform(self, pos: List, transform: mn.Matrix4):
         self.joint_rotation = pos
         # TODO: sim_obj.joint_positions isnt in reality joint_Rotation?
-        self.sim_obj.joint_positions = pos
+        # breakpoint()
+        other = [0,0,0,1] * 37
+        self.sim_obj.joint_positions = pos + other
+        # breakpoint()
         self.sim_obj.transformation = transform
         # breakpoint()
 

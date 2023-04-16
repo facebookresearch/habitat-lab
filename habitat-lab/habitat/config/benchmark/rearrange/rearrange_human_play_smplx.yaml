@@ -1,0 +1,54 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: humanoid_agent_base
+  - /habitat/task/rearrange: play
+  - /habitat/dataset/rearrangement: replica_cad
+  - _self_
+
+# Config for empty task to explore the scene.
+habitat:
+  environment:
+    max_episode_steps: 0
+  task:
+    actions:
+      humanjoint_action:
+        type: "HumanJointAction"
+      # grab_right_action:
+      #   type: "GrabRightAction"
+      # grab_left_action:
+      #   type: "GrabLeftAction"
+      # release_left_action:
+      #   type: "ReleaseLeftAction"
+      # release_right_action:
+      #   type: "ReleaseRightAction"
+
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    agents:
+      main_agent:
+        is_set_start_state: False
+        radius: 0.3
+        agent_urdf: '/Users/xavierpuig/Documents/Projects/test_smplx_blender/test_out/female2_0.urdf'
+        # agent_urdf: 'data/human_sim_data/amass_male_new.urdf'
+        ik_arm_urdf: 'data/human_sim_data/amass_male_new.urdf'
+        agent_type: 'AmassHuman'
+        amass_path: 'data/human_sim_data/amass_smpl_h/'
+        body_model_path: 'data/human_sim_data/smplh/male/model.npz'
+        grab_path: 'data/human_sim_data/left_hand_smplh_hand.npz'
+        sim_sensors:
+          third_rgb_sensor:
+            height: 212
+            width: 120
+          third_depth_sensor:
+            height: 212
+            width: 120
+
+    habitat_sim_v0:
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/all_receptacles_10k_1k.json.gz
