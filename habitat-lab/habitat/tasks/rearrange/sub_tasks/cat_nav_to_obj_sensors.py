@@ -58,7 +58,8 @@ class CatNavGoalSegmentationSensor(Sensor):
         )
 
     def _get_obs_channel(self, pan_obs, max_obs_val, goals, goals_type):
-        obs = np.zeros_like(pan_obs).squeeze(axis=-1)
+        pan_obs = pan_obs.squeeze(axis=-1)
+        obs = np.zeros_like(pan_obs)
         for goal in goals:
             if goals_type == "obj":
                 obj_id = self._sim.scene_obj_ids[int(goal.object_id)]
@@ -72,7 +73,7 @@ class CatNavGoalSegmentationSensor(Sensor):
             # Skip if object is not in the agent's viewport
             if instance_id >= max_obs_val:
                 continue
-            obs[obs == instance_id] = 1
+            obs[pan_obs == instance_id] = 1
         return obs
 
     def get_observation(
