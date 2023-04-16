@@ -126,6 +126,7 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
+        self._force_reconfig_reload = self.habitat_config.force_reconfig_reload
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -259,14 +260,16 @@ class RearrangeSim(HabitatSim):
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
-        should_add_objects = self._prev_obj_names != obj_names
+        should_add_objects = (
+            self._prev_obj_names != obj_names
+        ) or self._force_reconfig_reload
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
 
         super().reconfigure(config, should_close_on_new_scene=False)
         self._try_acquire_context()
-        self.agents_mgr.reconfigure(new_scene)
+        self.agents_mgr.reconfigure(new_scene or self._force_reconfig_reload)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}

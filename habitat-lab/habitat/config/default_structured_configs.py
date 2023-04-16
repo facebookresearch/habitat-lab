@@ -1391,6 +1391,8 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
+    # If true, this will clear all entities in the reset before the next scene.
+    force_reconfig_reload: bool = False
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
     debug_render_goal: bool = True
