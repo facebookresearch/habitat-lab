@@ -19,7 +19,6 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
     PddlProblem,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     FixedHighLevelPolicy,
     HighLevelPolicy,
@@ -254,7 +253,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._cur_call_high_level |= (~masks_cpu).view(-1)
 
         skill_id = self._cur_skills[0].item()
-        cur_skill = self._skills[skill_id] if skill_id != -1 else None
         hl_terminate_episode, hl_info = self._update_skills(
             observations,
             rnn_hidden_states,
@@ -285,10 +283,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 cur_batch_idx=batch_ids,
             )
 
-            # LL skills are not allowed to terminate the overall episode.
-            # Add actions from apply_postcond
             actions[batch_ids] += action_data.actions
-
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         actions[:, self._stop_action_idx] = 0.0
@@ -446,7 +441,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             (
                 self._cur_call_high_level[batch_ids],
                 bad_should_terminate[batch_ids],
-                actions[batch_ids],
+                new_actions,
             ) = self._skills[skill_id].should_terminate(
                 **dat,
                 batch_idx=batch_ids,
@@ -456,6 +451,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                     for i in batch_ids
                 ],
             )
+            actions[batch_ids] += new_actions
         return self._cur_call_high_level, bad_should_terminate, actions
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
