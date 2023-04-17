@@ -23,7 +23,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
 --cfg-opts habitat.dataset.split=minival
 ```
-3. To use Spot run:
+3. To use Spot run (make sure you are using latest habitat-sim version):
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning
 python examples/siro_sandbox/sandbox_app.py \
