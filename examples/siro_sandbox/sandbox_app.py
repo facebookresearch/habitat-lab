@@ -259,7 +259,7 @@ class SandboxDriver(GuiAppDriver):
         # if Q is held update yaw and pitch
         # by scale * mouse relative position delta
         if self.gui_input.get_key(GuiInput.KeyNS.Q):
-            scale = 1 / 14
+            scale = 1 / 30
             self._lookat_offset_yaw += (
                 scale * self.gui_input._relative_mouse_position[0]
             )
