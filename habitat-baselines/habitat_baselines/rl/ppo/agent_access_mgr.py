@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 
@@ -35,6 +35,13 @@ class AgentAccessMgr(ABC):
         pass
 
     @abstractmethod
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        """
+        Setup any components for distributed training.
+        """
+        raise NotImplementedError()
+
+    @abstractmethod
     def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
         """
         Update the hidden state of the policies in the population. Writes to the
@@ -67,6 +74,14 @@ class AgentAccessMgr(ABC):
         """
         The action space the policy acts in. This can be different from the
         environment action space for hierarchical policies.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def policy_action_space_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of action space of each of the agents.
         """
         raise NotImplementedError()
 
@@ -128,6 +143,14 @@ class AgentAccessMgr(ABC):
     def hidden_state_shape(self) -> Tuple[int]:
         """
         The shape of the tensor to track the hidden state, such as the RNN hidden state.
+        """
+        raise NotImplementedError()
+
+    @property
+    @abstractmethod
+    def hidden_state_shape_lens(self) -> List[int]:
+        """
+        A list with the dimensionality of the hidden state of each of the agents.
         """
         raise NotImplementedError()
 

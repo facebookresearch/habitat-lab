@@ -17,6 +17,7 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+from functools import wraps
 from typing import Any
 
 import magnum as mn
@@ -42,6 +43,20 @@ DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/rearrange_easy_human_and_fetch.yaml"
 
 
+def requires_habitat_sim_with_bullet(callable_):
+    @wraps(callable_)
+    def wrapper(*args, **kwds):
+        import habitat_sim
+
+        assert (
+            habitat_sim.built_with_bullet
+        ), f"Habitat-sim is built without bullet, but {callable_.__name__} requires Habitat-sim with bullet."
+        return callable_(*args, **kwds)
+
+    return wrapper
+
+
+@requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
     def __init__(self, args, config, gui_input):
         with habitat.config.read_write(config):

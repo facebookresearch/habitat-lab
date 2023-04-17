@@ -59,6 +59,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space: spaces.Space,
         action_space: ActionSpace,
         num_envs: int,
+        aux_loss_config=None,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
 
@@ -84,12 +86,14 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         high_level_cls = self._get_hl_policy_cls(config)
         self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.hierarchical_policy.high_level_policy,
-            self._pddl,
-            num_envs,
-            self._name_to_idx,
-            observation_space,
-            action_space,
+            config=config.hierarchical_policy.high_level_policy,
+            pddl_problem=self._pddl,
+            num_envs=num_envs,
+            skill_name_to_idx=self._name_to_idx,
+            observation_space=observation_space,
+            action_space=action_space,
+            aux_loss_config=aux_loss_config,
+            agent_name=agent_name,
         )
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
@@ -424,12 +428,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space,
         action_space,
         orig_action_space,
+        agent_name=None,
         **kwargs,
     ):
-        agent_name = None
-        if "agent_name" in kwargs:
-            agent_name = kwargs["agent_name"]
-
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
                 raise ValueError(
@@ -444,4 +445,6 @@ class HierarchicalPolicy(nn.Module, Policy):
             observation_space,
             orig_action_space,
             config.habitat_baselines.num_environments,
+            config.habitat_baselines.rl.auxiliary_losses,
+            agent_name,
         )

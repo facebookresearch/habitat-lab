@@ -11,12 +11,11 @@ defaults:
   - /habitat/task/actions@actions.agent_1_pddl_apply_action: pddl_apply_action
   - /habitat/task/actions@actions.agent_1_oracle_nav_action: oracle_nav_action
   - /habitat/task/measurements:
-    - object_to_goal_distance
-    - articulated_agent_force
-    - force_terminate
-    - articulated_agent_colls
     - composite_success
     - num_steps
+    - did_agents_collide
+    - composite_stage_goals
+    - cooperate_subgoal_reward
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -30,9 +29,9 @@ defaults:
   - _self_
 
 type: RearrangeCompositeTask-v0
-reward_measure: composite_success
+reward_measure: cooperate_subgoal_reward
 success_measure: composite_success
-success_reward: 100.0
+success_reward: 5.0
 slack_reward: -0.01
 end_on_success: True
 constraint_violation_ends_episode: False
@@ -54,8 +53,7 @@ actions:
     agent_index : 1
     spawn_max_dist_to_obj: -1.0
 measurements:
-  force_terminate:
-    max_accum_force: 100000.0
-    max_instant_force: 10000.0
   composite_success:
     must_call_stop: False
+  cooperate_subgoal_reward:
+    stage_sparse_reward: 1.0
