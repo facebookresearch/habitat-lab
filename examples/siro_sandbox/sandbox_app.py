@@ -21,7 +21,7 @@ from typing import Any
 
 import magnum as mn
 import numpy as np
-from controllers import ControllerHelper
+from controllers import ControllerHelper, GuiHumanoidController
 from magnum.platform.glfw import Application
 
 import habitat
@@ -54,7 +54,7 @@ class SandboxDriver(GuiAppDriver):
 
         self.ctrl_helper = ControllerHelper(self.env, args, gui_input)
 
-        self.gui_humanoid_ctrl = self.ctrl_helper.get_gui_humanoid_controller()
+        self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
 
         self.ctrl_helper.on_environment_reset()
 
@@ -119,7 +119,7 @@ class SandboxDriver(GuiAppDriver):
         hit_info = raycast_results.hits[0]
         # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
 
-        if self.gui_humanoid_ctrl.is_grasped:
+        if self.gui_agent_ctrl.is_grasped:
             self._debug_line_render.draw_circle(
                 hit_info.point, object_highlight_radius, object_color
             )
@@ -225,14 +225,15 @@ class SandboxDriver(GuiAppDriver):
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
 
-        (
-            walk_dir,
-            grasp_object_id,
-            drop_pos,
-        ) = self.viz_and_get_humanoid_hints()
-        self.gui_humanoid_ctrl.set_act_hints(
-            walk_dir, grasp_object_id, drop_pos
-        )
+        if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
+            (
+                walk_dir,
+                grasp_object_id,
+                drop_pos,
+            ) = self.viz_and_get_humanoid_hints()
+            self.gui_agent_ctrl.set_act_hints(
+                walk_dir, grasp_object_id, drop_pos
+            )
 
         action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
 
@@ -323,10 +324,15 @@ if __name__ == "__main__":
         help="Vertical resolution of the window.",
     )
     parser.add_argument(
-        "--humanoid-user-agent",
-        action="store_true",
-        default=False,
-        help="Set to true if the user-controlled agent is a humanoid. Set to false if the user-controlled agent is a robot.",
+        "--gui-controlled-agent-index",
+        type=int,
+        default=None,
+        help=(
+            "GUI-controlled agent index (must be >= 0 and < number of agents). "
+            "Defaults to None, indicating that all the agents are policy-controlled. "
+            "If none of the agents is GUI-controlled, the camera is switched to 'free camera' mode "
+            "that lets the user observe the scene (instead of controlling one of the agents)"
+        ),
     )
     parser.add_argument(
         "--disable-inverse-kinematics",
@@ -397,6 +403,16 @@ if __name__ == "__main__":
                 "./data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
+
+    assert (
+        args.gui_controlled_agent_index is None
+        or args.gui_controlled_agent_index >= 0
+        and args.gui_controlled_agent_index
+        < len(config.habitat.simulator.agents)
+    ), (
+        f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
+        f"must be >= 0 and < number of agents ({len(config.habitat.simulator.agents)})"
+    )
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"

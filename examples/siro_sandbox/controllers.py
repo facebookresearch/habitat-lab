@@ -496,32 +496,53 @@ class ControllerHelper:
 
         self._env = env
 
-        gui_controller: Controller = None
-        if args.humanoid_user_agent:
-            gui_controller = GuiHumanoidController(
-                0, is_multi_agent, gui_input, env, args.walk_pose_path
-            )
-        else:
-            gui_controller = GuiRobotController(0, is_multi_agent, gui_input)
+        self._gui_agent_controller: Controller = None
+        gui_controlled_agent_index = args.gui_controlled_agent_index
+        if gui_controlled_agent_index is not None:
+            agent_name = env.sim.habitat_config.agents_order[
+                gui_controlled_agent_index
+            ]
+            articulated_agent_type = env.sim.habitat_config.agents[
+                agent_name
+            ].articulated_agent_type
 
-        self.controllers = []
-        self.n_robots = self.n_robots
+            if articulated_agent_type == "KinematicHumanoid":
+                self._gui_agent_controller = GuiHumanoidController(
+                    gui_controlled_agent_index,
+                    is_multi_agent,
+                    gui_input,
+                    env,
+                    args.walk_pose_path,
+                )
+            else:
+                self._gui_agent_controller = GuiRobotController(
+                    gui_controlled_agent_index, is_multi_agent, gui_input
+                )
+
         self.all_hxs = [None for _ in range(self.n_robots)]
-        self.active_controllers = [0, 1]
-        self.controllers = [
-            gui_controller,
-            BaselinesController(
-                1,
-                is_multi_agent,
-                "rearrange/rl_hierarchical.yaml",
-                env,
-            ),
-        ]
+        self.controllers = (
+            []
+            if self._gui_agent_controller is None
+            else [self._gui_agent_controller]
+        )
+        self.controllers.extend(
+            [
+                BaselinesController(
+                    agent_index,
+                    is_multi_agent,
+                    "rearrange/rl_hierarchical.yaml",
+                    env,
+                )
+                for agent_index in range(self.n_robots)
+                if agent_index != gui_controlled_agent_index
+            ]
+        )
+        self.active_controllers = list(
+            range(len(self.controllers))
+        )  # assuming all controllers are active
 
-    def get_gui_humanoid_controller(self):
-        if isinstance(self.controllers[0], GuiHumanoidController):
-            return self.controllers[0]
-        return None
+    def get_gui_agent_controller(self):
+        return self._gui_agent_controller
 
     def update(self, obs):
         all_names = []

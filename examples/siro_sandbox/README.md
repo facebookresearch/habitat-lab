@@ -14,7 +14,7 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 1. Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation).
 2. Run this command:
 ```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --humanoid-user-agent --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --gui-controlled-agent-index 0 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
 ```
 Controls:
 * Mouse scroll wheel to zoom the camera in/out.
