@@ -22,7 +22,6 @@ from habitat.utils.geometry_utils import random_triangle_point
 
 # global module singleton for mesh importing instantiated upon first import
 _manager = mn.trade.ImporterManager()
-_importer = _manager.load_and_instantiate("AnySceneImporter")
 
 
 class Receptacle(ABC):
@@ -500,40 +499,44 @@ def get_all_scenedataset_receptacles(
     return receptacles
 
 
+def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
+    """
+    Filter all but position data and interleave a mesh to reduce overall memory footprint.
+    Convert triangle like primitives into triangles and assert only triangles remain.
+
+    NOTE: Modifies the mesh data in-place
+    :return: The modified mesh for easy of use.
+    """
+
+    # convert to triangles and validate the result
+    if mesh.primitive in [
+        mn.MeshPrimitive.TRIANGLE_STRIP,
+        mn.MeshPrimitive.TRIANGLE_FAN,
+    ]:
+        mesh = mn.meshtools.generate_indices(mesh)
+    assert (
+        mesh.primitive == mn.MeshPrimitive.TRIANGLES
+    ), "Must be a triangle mesh."
+
+    # filter out all but positions (and indices) from the mesh
+    mesh = mn.meshtools.filter_only_attributes(
+        mesh, [mn.trade.MeshAttribute.POSITION]
+    )
+
+    # reformat the mesh data after filtering
+    mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
+
+    return mesh
+
+
 def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
     """
     Returns a list of MeshData objects from a mesh asset using magnum trade importer.
 
     :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
-
+    _importer = _manager.load_and_instantiate("AnySceneImporter")
     _importer.open_file(mesh_file)
-
-    def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
-        """
-        Filter all but position data and interleave a mesh to reduce overall memory footprint.
-        Convert triangle like primitives into triangles and assert only triangles remain.
-        """
-
-        # convert to triangles and validate the result
-        if mesh.primitive in [
-            mn.MeshPrimitive.TRIANGLE_STRIP,
-            mn.MeshPrimitive.TRIANGLE_FAN,
-        ]:
-            mesh = mn.meshtools.generate_indices(mesh)
-        assert (
-            mesh.primitive == mn.MeshPrimitive.TRIANGLES
-        ), "Must be a triangle mesh."
-
-        # filter out all but positions (and indices) from the mesh
-        mesh = mn.meshtools.filter_only_attributes(
-            mesh, [mn.trade.MeshAttribute.POSITION]
-        )
-
-        # reformat the mesh data after filtering
-        mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
-
-        return mesh
 
     mesh_data: List[mn.trade.MeshData] = []
 
@@ -574,8 +577,6 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
                 mesh_assignments, mesh_transformations
             )
         ]
-
-    _importer.close()
 
     return mesh_data
 
