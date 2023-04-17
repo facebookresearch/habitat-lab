@@ -19,8 +19,8 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
---humanoid-user-agent \
 --never-end \
+--gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
 --cfg-opts habitat.dataset.split=minival
 ```
