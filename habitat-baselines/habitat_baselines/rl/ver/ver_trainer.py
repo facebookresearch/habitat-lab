@@ -289,7 +289,7 @@ class VERTrainer(PPOTrainer):
         self._agent.actor_critic.share_memory()
 
         if self._is_distributed:
-            self._agent.updater.init_distributed(find_unused_params=False)  # type: ignore[operator]
+            self._agent.init_distributed(find_unused_params=False)
 
         self._iw_sync = InferenceWorkerSync(
             self.mp_ctx,

@@ -1022,6 +1022,11 @@ class CompositeSubgoalReward(MeasurementConfig):
 
 
 @dataclass
+class SocialNavReward(MeasurementConfig):
+    type: str = "SocialNavReward"
+
+
+@dataclass
 class DidAgentsCollideConfig(MeasurementConfig):
     type: str = "DidAgentsCollide"
 
@@ -2071,6 +2076,12 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_subgoal_reward",
     node=CompositeSubgoalReward,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_reward",
+    group="habitat/task/measurements",
+    name="social_nav_reward",
+    node=SocialNavReward,
 )
 cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",

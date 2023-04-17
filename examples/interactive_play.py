@@ -56,6 +56,9 @@ import numpy as np
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
+
+# Temporary import for this project to use the custom multi-agent measures.
+import habitat_baselines.rl.multi_agent.measures  # noqa: F401
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
@@ -114,9 +117,9 @@ def get_input_vel_ctlr(
         base_key = "human_joints_trans"
     else:
         base_action_name = f"{agent_k}base_velocity"
-        arm_key = "arm_action"
-        grip_key = "grip_action"
-        base_key = "base_vel"
+        arm_key = f"{agent_k}arm_action"
+        grip_key = f"{agent_k}grip_action"
+        base_key = f"{agent_k}base_vel"
 
     if arm_action_name in env.action_space.spaces:
         arm_action_space = env.action_space.spaces[arm_action_name].spaces[
@@ -517,11 +520,14 @@ def play_env(env, args, config):
             entity_sel = input("Enter Entity Selection: ")
             action_sel = int(action_sel)
             entity_sel = [int(x) + 1 for x in entity_sel.split(",")]
-            ac = np.zeros(pddl_action.action_space["pddl_action"].shape[0])
+            # Any PDDL action can control both agents.
+            ac = np.zeros(
+                pddl_action.action_space["agent_0_pddl_action"].shape[0]
+            )
             ac_start = pddl_action.get_pddl_action_start(action_sel)
             ac[ac_start : ac_start + len(entity_sel)] = entity_sel
 
-            step_env(env, "pddl_apply_action", {"pddl_action": ac})
+            step_env(env, "pddl_apply_action", {"agent_0_pddl_action": ac})
 
         if not args.no_render and keys[pygame.K_g]:
             pred_list = env.task.sensor_suite.sensors[

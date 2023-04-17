@@ -17,6 +17,7 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+from functools import wraps
 from typing import Any
 
 import magnum as mn
@@ -42,6 +43,20 @@ DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed.pkl"
 DEFAULT_CFG = "benchmark/rearrange/rearrange_easy_human_and_fetch.yaml"
 
 
+def requires_habitat_sim_with_bullet(callable_):
+    @wraps(callable_)
+    def wrapper(*args, **kwds):
+        import habitat_sim
+
+        assert (
+            habitat_sim.built_with_bullet
+        ), f"Habitat-sim is built without bullet, but {callable_.__name__} requires Habitat-sim with bullet."
+        return callable_(*args, **kwds)
+
+    return wrapper
+
+
+@requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
     def __init__(self, args, config, gui_input):
         with habitat.config.read_write(config):
@@ -62,8 +77,12 @@ class SandboxDriver(GuiAppDriver):
         self.gui_input = gui_input
 
         self._debug_line_render = None
-
         self._debug_images = args.debug_images
+        # lookat offset yaw (spin left/right) and pitch (up/down)
+        # to enable camera rotation and pitch control
+        # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
+        self._lookat_offset_yaw = 0.785
+        self._lookat_offset_pitch = 0.955
 
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
@@ -224,6 +243,30 @@ class SandboxDriver(GuiAppDriver):
 
         return walk_dir, grasp_object_id, drop_pos
 
+    def _camera_pitch_and_yaw_wasd_control(self):
+        # update yaw and pitch uning WASD keys
+        cam_rot_angle = 0.05
+        if self.gui_input.get_key(GuiInput.KeyNS.W):
+            self._lookat_offset_pitch += cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.S):
+            self._lookat_offset_pitch -= cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.A):
+            self._lookat_offset_yaw += cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.D):
+            self._lookat_offset_yaw -= cam_rot_angle
+
+    def _camera_pitch_and_yaw_mouse_control(self):
+        # if Q is held update yaw and pitch
+        # by scale * mouse relative position delta
+        if self.gui_input.get_key(GuiInput.KeyNS.Q):
+            scale = 1 / 30
+            self._lookat_offset_yaw += (
+                scale * self.gui_input._relative_mouse_position[0]
+            )
+            self._lookat_offset_pitch += (
+                scale * self.gui_input._relative_mouse_position[1]
+            )
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
 
@@ -271,8 +314,20 @@ class SandboxDriver(GuiAppDriver):
         )
         robot_root = art_obj.transformation
         lookat = robot_root.translation + mn.Vector3(0, 1, 0)
+        # two ways for camera pitch and yaw control for UX comparison:
+        # 1) hold WASD keys
+        self._camera_pitch_and_yaw_wasd_control()
+        # 2) hold Q and move mouse
+        self._camera_pitch_and_yaw_mouse_control()
+        offset = mn.Vector3(
+            np.cos(self._lookat_offset_yaw)
+            * np.cos(self._lookat_offset_pitch),
+            np.sin(self._lookat_offset_pitch),
+            np.sin(self._lookat_offset_yaw)
+            * np.cos(self._lookat_offset_pitch),
+        )
         cam_transform = mn.Matrix4.look_at(
-            lookat + mn.Vector3(0.5, 1, 0.5).normalized() * self.cam_zoom_dist,
+            lookat + offset.normalized() * self.cam_zoom_dist,
             lookat,
             mn.Vector3(0, 1, 0),
         )

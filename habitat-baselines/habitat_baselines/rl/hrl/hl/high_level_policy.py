@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import gym.spaces as spaces
 import torch
@@ -20,6 +20,8 @@ class HighLevelPolicy(nn.Module):
         skill_name_to_idx: Dict[int, str],
         observation_space: spaces.Space,
         action_space: spaces.Space,
+        aux_loss_config=None,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
         self._config = config
@@ -28,6 +30,7 @@ class HighLevelPolicy(nn.Module):
         self._skill_name_to_idx = skill_name_to_idx
         self._obs_space = observation_space
         self._device = None
+        self._agent_name = agent_name
 
     def to(self, device):
         self._device = device
