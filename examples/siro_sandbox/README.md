@@ -14,9 +14,17 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 1. Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation).
 2. Run this command:
 ```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --humanoid-user-agent --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--humanoid-user-agent --never-end \
+--cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
+--cfg-opts habitat.dataset.split=minival
 ```
-Controls:
+
+Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
+
+### Controls
 * Mouse scroll wheel to zoom the camera in/out.
 * Right-click on the floor and hold to move the humanoid.
 * Mouse-over an object. When you see a yellow highlight, left-click to grasp.
