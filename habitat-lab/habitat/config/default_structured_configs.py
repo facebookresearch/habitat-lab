@@ -384,6 +384,18 @@ class ObjectSegmentationSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class ReceptacleSegmentationSensorConfig(LabSensorConfig):
+    type: str = "ReceptacleSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CatNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "CatNavGoalSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
@@ -753,6 +765,11 @@ class PickDistanceToGoalRewardMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CatNavRotDistToGoalMeasurementConfig(MeasurementConfig):
+    type: str = "CatNavRotDistToGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1522,6 +1539,18 @@ cs.store(
     name="object_segmentation_sensor",
     node=ObjectSegmentationSensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.receptacle_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="receptacle_segmentation_sensor",
+    node=ReceptacleSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.cat_nav_goal_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="cat_nav_goal_segmentation_sensor",
+    node=CatNavGoalSegmentationSensorConfig,
+)
 
 # Task Measurements
 cs.store(
@@ -1637,6 +1666,12 @@ cs.store(
     group="habitat/task/measurements",
     name="answer_accuracy",
     node=AnswerAccuracyMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
+    group="habitat/task/measurements",
+    name="cat_nav_rot_dist_to_goal",
+    node=CatNavRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",

@@ -277,7 +277,7 @@ class RotDistToGoal(Measure):
             **kwargs,
         )
 
-    def update_metric(self, *args, episode, task, observations, **kwargs):
+    def _get_targ(self, task, episode):
         if len(task.nav_goal_pos.shape) == 2:
             path = habitat_sim.MultiGoalShortestPath()
             path.requested_start = self._sim.robot.base_pos
@@ -290,6 +290,11 @@ class RotDistToGoal(Measure):
             targ = task.nav_goal_pos[path.closest_end_point_index]
         else:
             targ = task.nav_goal_pos
+        return targ
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        targ = self._get_targ(task, episode)
+
         robot = self._sim.robot
 
         # Get the base transformation
