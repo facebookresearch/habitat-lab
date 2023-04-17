@@ -89,7 +89,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         )
 
         hl_policy = self._agents[BEHAV_AGENT].actor_critic._high_level_policy
-        discrim = hl_policy._aux_modules["bdp_discrim"]
+        discrim = hl_policy.aux_modules["bdp_discrim"]
         multi_storage = BdpStorage.from_config(
             config,
             env_spec.observation_space,
@@ -178,6 +178,8 @@ class BehavDiscrim(nn.Module):
         return self.discrim(policy_features)
 
     def forward(self, policy_features, obs):
+        # Don't backprop into the policy representation.
+        policy_features = policy_features.detach()
         pred_logits = self.pred_logits(policy_features, obs)
         behav_ids = torch.argmax(obs[BEHAV_ID], -1)
         loss = F.cross_entropy(pred_logits, behav_ids)
@@ -200,9 +202,9 @@ class BdpStorage(MultiStorage):
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
         """
-        Adds a weighted diversity reward to the task reward in the behavior agent's rollout buffer. This
-        overrides the existing rewards in the buffer. The buffer of the
-        coordination agent is unmodified.
+        Adds a weighted diversity reward to the task reward in the behavior
+        agent's rollout buffer. This overrides the existing rewards in the
+        buffer. The buffer of the coordination agent is unmodified.
         """
 
         behav_storage = self._active_storages[BEHAV_AGENT]
