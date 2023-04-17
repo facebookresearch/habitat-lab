@@ -63,6 +63,8 @@ class SandboxDriver(GuiAppDriver):
 
         self._debug_line_render = None
 
+        self._debug_images = args.debug_images
+
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
@@ -282,12 +284,6 @@ class SandboxDriver(GuiAppDriver):
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
 
-        def flip_vertical(obs):
-            converted_obs = np.empty_like(obs)
-            for row in range(obs.shape[0]):
-                converted_obs[row, :] = obs[obs.shape[0] - row - 1, :]
-            return converted_obs
-
         def depth_to_rgb(obs):
             converted_obs = np.concatenate(
                 [obs * 255.0 for _ in range(3)], axis=2
@@ -295,9 +291,17 @@ class SandboxDriver(GuiAppDriver):
             return converted_obs
 
         # reference code for visualizing a camera sensor in the app GUI
-        # post_sim_update_dict["debug_images"] = [
-        #     flip_vertical(depth_to_rgb(self.obs["agent_1_robot_head_depth"]))
-        # ]
+        assert set(self._debug_images).issubset(set(self.obs.keys())), (
+            f"Cemara sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
+            f"not in available sensors ids: {list(self.obs.keys())}"
+        )
+        debug_images = (
+            depth_to_rgb(self.obs[k]) if "depth" in k else self.obs[k]
+            for k in self._debug_images
+        )
+        post_sim_update_dict["debug_images"] = [
+            np.flipud(image) for image in debug_images
+        ]
 
         return post_sim_update_dict
 
@@ -335,10 +339,19 @@ if __name__ == "__main__":
     )
     parser.add_argument("--cfg", type=str, default=DEFAULT_CFG)
     parser.add_argument(
-        "opts",
-        default=None,
-        nargs=argparse.REMAINDER,
+        "--cfg-opts",
+        nargs="*",
+        default=list(),
         help="Modify config options from command line",
+    )
+    parser.add_argument(
+        "--debug-images",
+        nargs="*",
+        default=list(),
+        help=(
+            "Visualize camera sensors (corresponding to `--debug-images` keys) in the app GUI."
+            "For example, to visualize agent1's head depth sensor set: --debug-images agent_1_head_depth"
+        ),
     )
     parser.add_argument(
         "--walk-pose-path", type=str, default=DEFAULT_POSE_PATH
@@ -358,7 +371,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    config = habitat.get_config(args.cfg, args.opts)
+    config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
         env_config = config.habitat.environment
         sim_config = config.habitat.simulator
