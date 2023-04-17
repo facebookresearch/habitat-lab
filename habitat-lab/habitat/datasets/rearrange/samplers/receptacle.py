@@ -535,25 +535,25 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
 
     :param mesh_file: The input meshes file. NOTE: must contain only triangles.
     """
-    _importer = _manager.load_and_instantiate("AnySceneImporter")
-    _importer.open_file(mesh_file)
+    importer = _manager.load_and_instantiate("AnySceneImporter")
+    importer.open_file(mesh_file)
 
     mesh_data: List[mn.trade.MeshData] = []
 
     # import mesh data and pre-process
     mesh_data = [
-        filter_interleave_mesh(_importer.mesh(mesh_ix))
-        for mesh_ix in range(_importer.mesh_count)
+        filter_interleave_mesh(importer.mesh(mesh_ix))
+        for mesh_ix in range(importer.mesh_count)
     ]
 
     # if there is a scene defined, apply any transformations
-    if _importer.scene_count > 0:
-        scene_id = _importer.default_scene
+    if importer.scene_count > 0:
+        scene_id = importer.default_scene
         # If there's no default scene, load the first one
         if scene_id == -1:
             scene_id = 0
 
-        scene = _importer.scene(scene_id)
+        scene = importer.scene(scene_id)
 
         # Mesh referenced by mesh_assignments[i] has a corresponding transform in
         # mesh_transformations[i]. Association to a particular node ID is stored in
