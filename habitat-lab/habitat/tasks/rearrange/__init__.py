@@ -6,3 +6,24 @@
 
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
+
+
+def _try_register_rearrange_task():
+    import habitat.tasks.rearrange.actions.actions
+    import habitat.tasks.rearrange.actions.grip_actions
+    import habitat.tasks.rearrange.actions.oracle_nav_action
+    import habitat.tasks.rearrange.actions.pddl_actions
+    import habitat.tasks.rearrange.multi_task.composite_sensors
+    import habitat.tasks.rearrange.multi_task.composite_task
+    import habitat.tasks.rearrange.rearrange_sensors
+    import habitat.tasks.rearrange.rearrange_task
+    import habitat.tasks.rearrange.sub_tasks.articulated_object_sensors
+    import habitat.tasks.rearrange.sub_tasks.articulated_object_task
+    import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors
+    import habitat.tasks.rearrange.sub_tasks.nav_to_obj_task
+    import habitat.tasks.rearrange.sub_tasks.pick_sensors
+    import habitat.tasks.rearrange.sub_tasks.pick_task
+    import habitat.tasks.rearrange.sub_tasks.place_sensors
+    import habitat.tasks.rearrange.sub_tasks.place_task
+    import habitat.tasks.rearrange.sub_tasks.reach_sensors
+    import habitat.tasks.rearrange.sub_tasks.reach_task
