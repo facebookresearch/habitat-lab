@@ -61,13 +61,16 @@ actions:
   arm_action:
     type: "ArmAction"
     arm_controller: "ArmRelPosReducedActionStretch"
-    grip_controller: "OracleGraspAction"
+    grip_controller: "GazeGraspAction"
     arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
     arm_joint_dimensionality: 7
     grasp_thresh_dist: 0.15
     disable_grip: False
     delta_pos_limit: 0.0125
     ee_ctrl_lim: 0.015
+    gaze_distance_range: [0.1, 3.0]
+    center_cone_angle_threshold: 90.0
+    center_cone_vector: [0.0, 1.0, 0.0]
   base_velocity:
     type: "BaseWaypointVelAction"
     lin_speed: 0.2500

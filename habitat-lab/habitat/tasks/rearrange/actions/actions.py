@@ -22,7 +22,8 @@ from habitat.tasks.rearrange.actions.grip_actions import (
     GripSimulatorTaskAction,
     MagicGraspAction,
     SuctionGraspAction,
-    OracleGraspAction
+    OracleGraspAction,
+    GazeGraspAction
 )
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
@@ -714,10 +715,14 @@ class BaseWaypointVelAction(RobotAction):
             self.cur_grasp_mgr.update_object_to_grasp()
 
     def step(self, *args, is_last_action, **kwargs):
-        lin_pos, ang_pos = kwargs[self._action_arg_prefix + "base_vel"]
+        waypoint, sel = kwargs[self._action_arg_prefix + "base_vel"]
         # Scale the target waypoints and the rotation of the robot
-        lin_pos = np.clip(lin_pos, -1, 1) * self._config.lin_speed
-        ang_pos = np.clip(ang_pos, -1, 1) * self._config.ang_speed
+        if sel > 0:
+            lin_pos = np.clip(waypoint, -1, 1) * self._config.lin_speed
+            ang_pos = 0.0
+        else:
+            lin_pos = 0.0
+            ang_pos = np.clip(waypoint, -1, 1) * self._config.ang_speed
         if not self._config.allow_back:
             lin_pos = np.maximum(lin_pos, 0)
 

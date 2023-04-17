@@ -15,7 +15,7 @@ from habitat.core.registry import registry
 from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
-
+from habitat.tasks.rearrange.utils import get_robot_spawns
 
 @dataclass
 class NavToInfo:
@@ -55,6 +55,7 @@ class DynNavRLEnv(RearrangeTask):
 
         self._min_start_distance = self._config.min_start_distance
         self._goal_type = config.goal_type
+        self._pick_init = config.pick_init
 
     @property
     def nav_goal_pos(self):
@@ -136,18 +137,54 @@ class DynNavRLEnv(RearrangeTask):
 
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
+            camera_rot = -1.7375 if self._pick_init else 0.0
             sim.robot.arm_motor_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
             )
             sim.robot.arm_joint_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
             )
 
         self._nav_to_info = self._generate_nav_start_goal(
             episode, force_idx=self.force_obj_to_idx
         )
-        sim.robot.base_pos = self._nav_to_info.robot_start_pos
-        sim.robot.base_rot = self._nav_to_info.robot_start_angle
+        if self._pick_init:
+            spawn_recs = [
+                sim.receptacles[
+                    episode.name_to_receptacle[
+                        list(sim.instance_handle_to_ref_handle.keys())[0]
+                    ]
+                ]
+            ]
+            snap_pos = np.array(
+                [
+                    r.get_surface_center(sim)
+                    for r in spawn_recs
+                ]
+            )
+
+            start_pos, angle_to_obj, was_succ = get_robot_spawns(
+                snap_pos,
+                self._config.base_angle_noise,
+                self._config.spawn_max_dists_to_obj,
+                sim,
+                self._config.num_spawn_attempts,
+                self._config.physics_stability_steps,
+            )
+
+            if was_succ:
+                rearrange_logger.error(
+                    f"Episode {episode.episode_id} failed to place robot"
+                )
+            sim.robot.base_pos = start_pos
+            # in the case of Stretch, rotate base so that the arm faces the target location
+            if isinstance(self._sim.robot, StretchRobot):
+                sim.robot.base_rot = angle_to_obj + np.pi / 2
+            else:
+                sim.robot.base_rot = angle_to_obj
+        else:
+            sim.robot.base_pos = self._nav_to_info.robot_start_pos
+            sim.robot.base_rot = self._nav_to_info.robot_start_angle
         self.robot_start_position = sim.robot.sim_obj.translation
         start_quat = sim.robot.sim_obj.rotation
         self.robot_start_rotation = np.array(
