@@ -279,8 +279,9 @@ def get_input_vel_ctlr(
             ) = env._sim.articulated_agent.get_joint_transform()
             # Divide joint_trans by 4 since joint_trans has flattened quaternions
             # and the dimension of each quaternion is 4
+            base_trans = env._sim.articulated_agent.base_transformation
             num_joints = len(joint_trans) // 4
-            root_trans = np.array(root_trans)
+            root_trans = np.array(base_trans)
             index_arms_start = 10
             joint_trans_quat = [
                 mn.Quaternion(
@@ -306,8 +307,9 @@ def get_input_vel_ctlr(
                     for quat in rotated_joints_quat
                 ]
             )
+            offset_trans = np.array(mn.Matrix4())
             base_action = np.concatenate(
-                [joint_trans.reshape(-1), root_trans.transpose().reshape(-1)]
+                [joint_trans.reshape(-1), offset_trans.transpose().reshape(-1), root_trans.transpose().reshape(-1)]
             )
         else:
             # Use the controller
@@ -470,7 +472,7 @@ def play_env(env, args, config):
     humanoid_controller = None
     if args.use_humanoid_controller:
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
-        humanoid_controller.reset(env._sim.articulated_agent.base_pos)
+        humanoid_controller.reset(env._sim.articulated_agent.base_transformation)
 
     while True:
         if (
