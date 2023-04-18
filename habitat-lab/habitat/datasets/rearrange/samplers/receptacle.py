@@ -7,11 +7,11 @@
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Union
 
+import corrade as cr
 import magnum as mn
 import numpy as np
 
@@ -19,6 +19,9 @@ import habitat_sim
 from habitat.core.logging import logger
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 from habitat.utils.geometry_utils import random_triangle_point
+
+# global module singleton for mesh importing instantiated upon first import
+_manager = mn.trade.ImporterManager()
 
 
 class Receptacle(ABC):
@@ -300,13 +303,6 @@ class AABBReceptacle(Receptacle):
         # TODO: test this
 
 
-# TriangleMeshData "vertices":List[mn.Vector3] "indices":List[int]
-TriangleMeshData = namedtuple(
-    "TriangleMeshData",
-    "vertices indices",
-)
-
-
 def assert_triangles(indices: List[int]) -> None:
     """
     Assert that an index array is divisible by 3 as a heuristic for triangle-only faces.
@@ -325,7 +321,7 @@ class TriangleMeshReceptacle(Receptacle):
     def __init__(
         self,
         name: str,
-        mesh_data: TriangleMeshData,  # vertices, indices
+        mesh_data: mn.trade.MeshData,
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
@@ -334,7 +330,7 @@ class TriangleMeshReceptacle(Receptacle):
         Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
 
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :param mesh_data: The Receptacle's mesh data. A Tuple of two Lists, first vertex geometry (Vector3) and second topology (indicies of triangle corner verts(int) (len divisible by 3)).
+        :param mesh_data: The Receptacle's mesh data. A magnum.trade.MeshData object (indices len divisible by 3).
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
@@ -353,7 +349,7 @@ class TriangleMeshReceptacle(Receptacle):
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
             self.area_weighted_accumulator.append(
-                0.5 * float(np.linalg.norm(np.cross(w1, w2)))
+                0.5 * mn.math.cross(w1, w2).length()
             )
             self.total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
@@ -365,20 +361,18 @@ class TriangleMeshReceptacle(Receptacle):
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
 
-    def get_face_verts(self, f_ix: int) -> List[np.ndarray]:
+    def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
         Get all three vertices of a mesh triangle given it's face index as a list of numpy arrays.
 
         :param f_ix: The index of the mesh triangle.
         """
-        verts: List[np.ndarray] = []
+        verts: List[mn.Vector3] = []
         for ix in range(3):
+            index = int(f_ix * 3 + ix)
+            v_ix = self.mesh_data.indices[index]
             verts.append(
-                np.array(
-                    self.mesh_data.vertices[
-                        self.mesh_data.indices[int(f_ix * 3 + ix)]
-                    ]
-                )
+                self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)[v_ix]
             )
         return verts
 
@@ -505,33 +499,84 @@ def get_all_scenedataset_receptacles(
     return receptacles
 
 
-def import_tri_mesh_ply(ply_file: str) -> TriangleMeshData:
+def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
     """
-    Returns a Tuple of (verts,indices) from a ply mesh using magnum trade importer.
+    Filter all but position data and interleave a mesh to reduce overall memory footprint.
+    Convert triangle like primitives into triangles and assert only triangles remain.
 
-    :param ply_file: The input PLY mesh file. NOTE: must contain only triangles.
+    NOTE: Modifies the mesh data in-place
+    :return: The modified mesh for easy of use.
     """
-    manager = mn.trade.ImporterManager()
-    importer = manager.load_and_instantiate("AnySceneImporter")
-    importer.open_file(ply_file)
 
-    # TODO: We don't support mesh merging or multi-mesh parsing currently
-    if importer.mesh_count > 1:
-        raise NotImplementedError(
-            "Importing multi-mesh receptacles (mesh merging or multi-mesh parsing) is not supported."
-        )
-
-    mesh_ix = 0
-    mesh = importer.mesh(mesh_ix)
+    # convert to triangles and validate the result
+    if mesh.primitive in [
+        mn.MeshPrimitive.TRIANGLE_STRIP,
+        mn.MeshPrimitive.TRIANGLE_FAN,
+    ]:
+        mesh = mn.meshtools.generate_indices(mesh)
     assert (
         mesh.primitive == mn.MeshPrimitive.TRIANGLES
     ), "Must be a triangle mesh."
 
-    # zero-copy reference to importer datastructures
-    mesh_data = TriangleMeshData(
-        mesh.attribute(mn.trade.MeshAttribute.POSITION),
-        mesh.indices,
+    # filter out all but positions (and indices) from the mesh
+    mesh = mn.meshtools.filter_only_attributes(
+        mesh, [mn.trade.MeshAttribute.POSITION]
     )
+
+    # reformat the mesh data after filtering
+    mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
+
+    return mesh
+
+
+def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
+    """
+    Returns a list of MeshData objects from a mesh asset using magnum trade importer.
+
+    :param mesh_file: The input meshes file. NOTE: must contain only triangles.
+    """
+    importer = _manager.load_and_instantiate("AnySceneImporter")
+    importer.open_file(mesh_file)
+
+    mesh_data: List[mn.trade.MeshData] = []
+
+    # import mesh data and pre-process
+    mesh_data = [
+        filter_interleave_mesh(importer.mesh(mesh_ix))
+        for mesh_ix in range(importer.mesh_count)
+    ]
+
+    # if there is a scene defined, apply any transformations
+    if importer.scene_count > 0:
+        scene_id = importer.default_scene
+        # If there's no default scene, load the first one
+        if scene_id == -1:
+            scene_id = 0
+
+        scene = importer.scene(scene_id)
+
+        # Mesh referenced by mesh_assignments[i] has a corresponding transform in
+        # mesh_transformations[i]. Association to a particular node ID is stored in
+        # scene.mapping(mn.trade.SceneField.MESH)[i], but it's not needed for anything
+        # here.
+        mesh_assignments: cr.containers.StridedArrayView1D = scene.field(
+            mn.trade.SceneField.MESH
+        )
+        mesh_transformations: List[
+            mn.Matrix4
+        ] = mn.scenetools.flatten_transformation_hierarchy3d(
+            scene, mn.trade.SceneField.MESH
+        )
+        assert len(mesh_assignments) == len(mesh_transformations)
+
+        # A mesh can be referenced by multiple nodes, so this can't operate in-place.
+        # i.e., len(mesh_data) likely changes after this step
+        mesh_data = [
+            mn.meshtools.transform3d(mesh_data[mesh_id], transformation)
+            for mesh_id, transformation in zip(
+                mesh_assignments, mesh_transformations
+            )
+        ]
 
     return mesh_data
 
@@ -639,17 +684,21 @@ def parse_receptacles_from_user_config(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
                 # TODO: build the mesh_data entry from scale and mesh
-                mesh_data = import_tri_mesh_ply(mesh_file)
+                mesh_data: List[mn.trade.MeshData] = import_tri_mesh(mesh_file)
 
-                receptacles.append(
-                    TriangleMeshReceptacle(
-                        name=receptacle_name,
-                        mesh_data=mesh_data,
-                        up=up,
-                        parent_object_handle=parent_object_handle,
-                        parent_link=parent_link_ix,
+                for mix, single_mesh_data in enumerate(mesh_data):
+                    single_receptacle_name = (
+                        receptacle_name + "." + str(mix).rjust(4, "0")
                     )
-                )
+                    receptacles.append(
+                        TriangleMeshReceptacle(
+                            name=single_receptacle_name,
+                            mesh_data=single_mesh_data,
+                            up=up,
+                            parent_object_handle=parent_object_handle,
+                            parent_link=parent_link_ix,
+                        )
+                    )
             else:
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
