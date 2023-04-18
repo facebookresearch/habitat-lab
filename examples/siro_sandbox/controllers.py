@@ -333,8 +333,8 @@ class GuiHumanoidController(Controller):
 
     def on_environment_reset(self):
         super().on_environment_reset()
-        base_pos = self.get_articulated_agent().base_pos
-        self._humanoid_controller.reset(base_pos)
+        base_trans = self.get_articulated_agent().base_transformation
+        self._humanoid_controller.reset(base_trans)
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
