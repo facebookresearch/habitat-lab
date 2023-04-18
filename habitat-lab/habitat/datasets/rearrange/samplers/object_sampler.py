@@ -9,7 +9,6 @@ import random
 import time
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
-from habitat.tasks.rearrange.utils import get_aabb
 
 import magnum as mn
 import numpy as np
@@ -17,6 +16,7 @@ import numpy as np
 import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
@@ -24,8 +24,8 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     TriangleMeshReceptacle,
     find_receptacles,
 )
-from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
+from habitat.tasks.rearrange.utils import get_aabb
 
 
 class ObjectSampler:
@@ -37,7 +37,7 @@ class ObjectSampler:
         self,
         object_set: List[str],
         allowed_recep_set_names: List[str],
-        num_objects: Tuple[int, int] = (1, 1),
+        num_objects: Optional[Tuple[int, int]] = None,
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
@@ -60,8 +60,12 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
-        self.num_objects = num_objects  # tuple of [min,max] objects to sample
-        assert self.num_objects[1] >= self.num_objects[0]
+        if num_objects is not None:
+            self.set_num_samples(
+                num_objects
+            )  # tuple of [min,max] objects to sample
+        else:
+            self.num_objects = None
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
@@ -69,7 +73,6 @@ class ObjectSampler:
             sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
-        self.set_num_samples()
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -252,9 +255,13 @@ class ObjectSampler:
 
                 # fail early if it's impossible to place the object
                 cumulative_bb = new_object.root_scene_node.cumulative_bb
-                new_object_base_area = cumulative_bb.size_x() * cumulative_bb.size_z()
+                new_object_base_area = (
+                    cumulative_bb.size_x() * cumulative_bb.size_z()
+                )
                 if new_object_base_area > receptacle.total_area:
-                    logger.info(f"Failed to sample placement. {object_handle} was too large to place on {receptacle.name}")
+                    logger.info(
+                        f"Failed to sample placement. {object_handle} was too large to place on {receptacle.name}"
+                    )
                     return None
 
             # try to place the object
@@ -311,19 +318,28 @@ class ObjectSampler:
                     logger.info(
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
-                    if not is_accessible(sim, new_object.translation, self.nav_to_min_distance):
+                    if not is_accessible(
+                        sim, new_object.translation, self.nav_to_min_distance
+                    ):
                         logger.warning(
                             f"Failed to navigate to {object_handle} on {receptacle.name} in {num_placement_tries} tries."
                         )
                         continue
-                    object_aabb = get_aabb(new_object.object_id, sim, transformed=True)
+                    object_aabb = get_aabb(
+                        new_object.object_id, sim, transformed=True
+                    )
                     object_corners = [
                         object_aabb.back_bottom_left,
                         object_aabb.back_bottom_right,
                         object_aabb.front_bottom_left,
-                        object_aabb.front_bottom_right
+                        object_aabb.front_bottom_right,
                     ]
-                    if not all(receptacle.check_if_point_on_surface(sim, corner, threshold=0.1) for corner in object_corners):
+                    if not all(
+                        receptacle.check_if_point_on_surface(
+                            sim, corner, threshold=0.1
+                        )
+                        for corner in object_corners
+                    ):
                         logger.warning(
                             f"Failed to place {object_handle} within bounds of {receptacle.name} in {num_placement_tries} tries."
                         )
@@ -334,7 +350,9 @@ class ObjectSampler:
                 logger.info(
                     f"Successfully sampled object placement in {num_placement_tries} tries."
                 )
-                if not is_accessible(sim, new_object.translation, self.nav_to_min_distance):
+                if not is_accessible(
+                    sim, new_object.translation, self.nav_to_min_distance
+                ):
                     continue
                 return new_object
 
@@ -376,7 +394,12 @@ class ObjectSampler:
 
         return new_object, target_receptacle
 
-    def set_num_samples(self):
+    def set_num_samples(self, num_objects: Tuple[int, int] = None):
+        if num_objects is not None:
+            self.num_objects = num_objects
+            assert self.num_objects[1] >= self.num_objects[0]
+        if self.num_objects is None:
+            return
         self.target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
             if self.num_objects[1] > self.num_objects[0]
