@@ -319,6 +319,7 @@ class VERConfig(HabitatBaselinesBaseConfig):
     variable_experience: bool = True
     num_inference_workers: int = 2
     overlap_rollouts_and_learn: bool = False
+    min_scenes_per_env: int = 16
 
 
 @dataclass
