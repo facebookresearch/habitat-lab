@@ -1,7 +1,8 @@
 #!/bin/bash
 
 base_dir="/checkpoint/akshararai/hab3"
-read -p -r "Enter sweep directory name (example: pop_play/2023-04-17/16-19-04):" SWEEP_SUBDIR
+# shellcheck disable=SC2162
+read -p "Enter sweep directory name (example: pop_play/2023-04-17/16-19-04):" SWEEP_SUBDIR
 SWEEP_DIR="$base_dir/$SWEEP_SUBDIR"
 echo "$SWEEP_DIR"
 #SWEEP_DIR="/checkpoint/akshararai/hab3/pop_play/2023-04-17/16-19-04/"
