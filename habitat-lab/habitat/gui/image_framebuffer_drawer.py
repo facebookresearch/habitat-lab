@@ -33,12 +33,12 @@ class ImageFramebufferDrawer:
             )
             # todo: catch case where storage is not 0-dim-major?
             self.draw_bytearray(
-                bytearray(pixel_data),
-                pixel_data.shape[0],
-                pixel_data.shape[1],
-                pixel_data.shape[2],
-                dest_x,
-                dest_y,
+                bytearray_pixel_data=bytearray(pixel_data),
+                height=pixel_data.shape[0],
+                width=pixel_data.shape[1],
+                bytes_per_pixel=pixel_data.shape[2],
+                dest_x=dest_x,
+                dest_y=dest_y,
             )
         else:
             raise TypeError(
@@ -50,8 +50,8 @@ class ImageFramebufferDrawer:
     def draw_bytearray(
         self,
         bytearray_pixel_data,
-        width,
         height,
+        width,
         bytes_per_pixel,
         dest_x,
         dest_y,

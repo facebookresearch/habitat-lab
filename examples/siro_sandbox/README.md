@@ -8,20 +8,43 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 ## Known Issues
 * The policy-driven agent doesn't seem to be working in terms of producing interesting actions. As a placeholder, I've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
 * One-time visual flicker shortly after app startup on Mac
+* Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode)
 
-## Running HITL eval with a user-controlled humanoid and policy-driven Fetch
+## Running HITL eval with a user-controlled humanoid and policy-driven Fetch or Spot
 
 1. Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation).
-2. Run this command:
+2. To use Fetch run:
 ```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning python examples/siro_sandbox/sandbox_app.py --disable-inverse-kinematics --humanoid-user-agent --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml --never-end habitat.dataset.split=minival
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--humanoid-user-agent \
+--never-end \
+--cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
+--cfg-opts habitat.dataset.split=minival
 ```
-Controls:
+3. To use Spot run (make sure you are using latest habitat-sim version):
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--humanoid-user-agent \
+--never-end \
+--cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml \
+--cfg-opts habitat.dataset.split=minival
+```
+
+Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
+
+### Controls
 * Mouse scroll wheel to zoom the camera in/out.
 * Right-click on the floor and hold to move the humanoid.
 * Mouse-over an object. When you see a yellow highlight, left-click to grasp.
     * Note grasping isn't restricted to proximity to the humanoid.
     * Left-click again to drop the object anywhere in the scene.
+* Camera yaw and pitch control (TODO: decide which one has better UX):
+    1. WASD keys
+    2. hold Q and move mouse
 * `M` to reset to a new episode.
 
 ## Testing BatchReplayRenderer
