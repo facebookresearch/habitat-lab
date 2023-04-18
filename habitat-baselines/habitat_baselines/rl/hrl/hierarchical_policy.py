@@ -208,6 +208,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         from the skill ID to the indices of the batch and the observations at
         these indices the skill is currently running for. This is used to batch
         observations per skill.
+
+        If an entry in `sel_dat` is `None`, then it is including in all groups.
         """
 
         skill_to_batch: Dict[int, List[int]] = defaultdict(list)
@@ -364,9 +366,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             # LL skills are not allowed to terminate the overall episode.
-            actions[batch_ids] += action_data.actions
             # Add actions from apply_postcond
+            actions[batch_ids] += action_data.actions
+
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+
         actions[:, self._stop_action_idx] = 0.0
 
         should_terminate = bad_should_terminate | hl_terminate

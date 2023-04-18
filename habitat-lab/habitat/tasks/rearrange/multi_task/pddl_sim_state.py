@@ -63,12 +63,16 @@ class PddlRobotState:
         meters of the entity.
     :property base_angle_noise: How much noise to add to the robot base angle
         when setting the robot base position.
+    :property place_at_angle_thresh: The required maximum angle to the target
+        entity in the robot's local frame. Specified in radains. If not specified,
+        no angle is considered.
     """
 
     holding: Optional[PddlEntity] = None
     should_drop: bool = False
     pos: Optional[Any] = None
     place_at_pos_dist: float = -1.0
+    place_at_angle_thresh: Optional[float] = None
     base_angle_noise: float = 0.0
 
     def sub_in(
@@ -108,12 +112,36 @@ class PddlRobotState:
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
             robot = sim_info.sim.get_agent_data(robot_id).articulated_agent
-            dist = np.linalg.norm(robot.base_pos - targ_pos)
+
+            # Get the base transformation
+            T = robot.base_transformation
+            # Do transformation
+            pos = T.inverted().transform_point(targ_pos)
+            # Compute distance
+            dist = np.linalg.norm(pos)
+            # Project to 2D plane (x,y,z=0)
+            pos[2] = 0.0
+            # Unit vector of the pos
+            pos = pos.normalized()
+            # Define the coordinate of the robot
+            pos_robot = np.array([1.0, 0.0, 0.0])
+            # Get the angle
+            angle = np.arccos(np.dot(pos, pos_robot))
+
             if self.place_at_pos_dist == -1.0:
                 use_thresh = sim_info.robot_at_thresh
             else:
                 use_thresh = self.place_at_pos_dist
+
+            # Check the distance threshold.
             if dist > use_thresh:
+                return False
+
+            # Check for the angle threshold
+            if (
+                self.place_at_angle_thresh is not None
+                and np.abs(angle) > self.place_at_angle_thresh
+            ):
                 return False
 
         return True
@@ -389,7 +417,16 @@ class PddlSimState:
             elif sim_info.check_type_matches(
                 target, SimulatorObjectType.STATIC_RECEPTACLE_ENTITY.value
             ):
-                raise NotImplementedError()
+                # Place object on top of receptacle.
+                recep = cast(mn.Range3D, sim_info.search_for_entity(target))
+
+                # Divide by 2 because the `from_center` creates from the half size.
+                shrunk_recep = mn.Range3D.from_center(
+                    recep.center(),
+                    (recep.size() / 2.0) * sim_info.recep_place_shrink_factor,
+                )
+                pos = np.random.uniform(shrunk_recep.min, shrunk_recep.max)
+                set_T = mn.Matrix4.translation(pos)
             else:
                 raise ValueError(f"Got unexpected target {target}")
 
