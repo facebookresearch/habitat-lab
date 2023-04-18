@@ -85,7 +85,7 @@ habitat_baselines:
     run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
-    should_load_ckpt: False
+    should_load_ckpt: True
     video_option: ["disk"]
 
   rl:
