@@ -309,7 +309,11 @@ def get_input_vel_ctlr(
             )
             offset_trans = np.array(mn.Matrix4())
             base_action = np.concatenate(
-                [joint_trans.reshape(-1), offset_trans.transpose().reshape(-1), root_trans.transpose().reshape(-1)]
+                [
+                    joint_trans.reshape(-1),
+                    offset_trans.transpose().reshape(-1),
+                    root_trans.transpose().reshape(-1),
+                ]
             )
         else:
             # Use the controller
@@ -472,7 +476,9 @@ def play_env(env, args, config):
     humanoid_controller = None
     if args.use_humanoid_controller:
         humanoid_controller = HumanoidRearrangeController(args.walk_pose_path)
-        humanoid_controller.reset(env._sim.articulated_agent.base_transformation)
+        humanoid_controller.reset(
+            env._sim.articulated_agent.base_transformation
+        )
 
     while True:
         if (

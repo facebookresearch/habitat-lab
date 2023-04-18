@@ -35,8 +35,8 @@ class KinematicHumanoid(MobileManipulator):
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "head": ArticulatedAgentCameraParams(
-                    cam_offset_pos=mn.Vector3(0., 0.5, 0.25),
-                    cam_look_at_pos=mn.Vector3(0., 0.5, 0.75),
+                    cam_offset_pos=mn.Vector3(0.0, 0.5, 0.25),
+                    cam_look_at_pos=mn.Vector3(0.0, 0.5, 0.75),
                     attached_link_id=-1,
                 ),
                 "third": ArticulatedAgentCameraParams(
@@ -159,7 +159,6 @@ class KinematicHumanoid(MobileManipulator):
         )
         self.offset_rot = -np.pi / 2
 
-
     @property
     def inverse_offset_transform(self):
         rot = self.offset_transform.rotation().transposed()
@@ -169,10 +168,12 @@ class KinematicHumanoid(MobileManipulator):
     @property
     def base_transformation(self):
         angle_rot = self.offset_rot
-        add_rot = mn.Matrix4.rotation(
-            mn.Rad(angle_rot), mn.Vector3(0, 1.0, 0)
+        add_rot = mn.Matrix4.rotation(mn.Rad(angle_rot), mn.Vector3(0, 1.0, 0))
+        return (
+            self.sim_obj.transformation
+            @ self.inverse_offset_transform
+            @ add_rot
         )
-        return self.sim_obj.transformation @ self.inverse_offset_transform @ add_rot
 
     @property
     def base_pos(self):
@@ -209,7 +210,7 @@ class KinematicHumanoid(MobileManipulator):
         if self._base_type == "mobile" or self._base_type == "leg":
             angle_rot = -self.offset_rot
             self.sim_obj.rotation = mn.Quaternion.rotation(
-                mn.Rad(rotation_y_rad+angle_rot), mn.Vector3(0, 1, 0)
+                mn.Rad(rotation_y_rad + angle_rot), mn.Vector3(0, 1, 0)
             )
         else:
             raise NotImplementedError("The base type is not implemented.")
@@ -217,7 +218,7 @@ class KinematicHumanoid(MobileManipulator):
     def set_rest_position(self) -> None:
         """Sets the agents in a resting position"""
         joint_list = self.rest_joints
-        offset_transform = mn.Matrix4() # self.rest_matrix
+        offset_transform = mn.Matrix4()  # self.rest_matrix
         self.sim_obj.joint_positions = joint_list
         self.set_joint_transform(
             joint_list, offset_transform, self.base_transformation
@@ -229,7 +230,6 @@ class KinematicHumanoid(MobileManipulator):
         self.sim_obj.motion_type = habitat_sim.physics.MotionType.KINEMATIC
         self.update()
         self.set_rest_position()
-
 
     def update(self) -> None:
         """Updates the camera transformations and performs necessary checks on
@@ -305,7 +305,6 @@ class KinematicHumanoid(MobileManipulator):
         final_transform = (base_transform @ add_rot) @ offset_transform
 
         self.sim_obj.transformation = final_transform
-
 
     def get_joint_transform(self):
         """Returns the joints and base transform of the humanoid"""

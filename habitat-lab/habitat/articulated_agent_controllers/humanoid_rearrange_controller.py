@@ -53,7 +53,8 @@ TURNING_STEP_AMOUNT = (
     20  # The maximum angle we should be rotating at a given step
 )
 THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
-EPS = 1e-5 # Distance at which we should stop
+EPS = 1e-5  # Distance at which we should stop
+
 
 class HumanoidRearrangeController:
     """
@@ -113,8 +114,10 @@ class HumanoidRearrangeController:
         """Reset the joints on the human. (Put in rest state)"""
         self.obj_transform_offset = mn.Matrix4()
         self.obj_transform_base = base_transformation
-        self.prev_orientation = base_transformation.transform_vector(mn.Vector3(1.0, 0., 0.))
-        
+        self.prev_orientation = base_transformation.transform_vector(
+            mn.Vector3(1.0, 0.0, 0.0)
+        )
+
     def calculate_stop_pose(self):
         """
         Calculates a stop, standing pose
@@ -154,13 +157,13 @@ class HumanoidRearrangeController:
                 np.arctan2(prev_orientation[2], prev_orientation[0])
                 * deg_per_rads
             )
-            # Update this...    
+            # Update this...
             forward_angle = new_angle - prev_angle
             if forward_angle >= 180:
                 forward_angle = 180 - forward_angle
             if forward_angle <= -180:
                 forward_angle = 360 + forward_angle
-            
+
             if np.abs(forward_angle) > self.min_angle_turn:
                 actual_angle_move = self.turning_step_amount
                 if abs(forward_angle) < actual_angle_move:
@@ -225,7 +228,9 @@ class HumanoidRearrangeController:
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform
 
         # We correct the object transform
-        forward_V_norm = mn.Vector3([forward_V[2], forward_V[1], -forward_V[0]])
+        forward_V_norm = mn.Vector3(
+            [forward_V[2], forward_V[1], -forward_V[0]]
+        )
         look_at_path_T = mn.Matrix4.look_at(
             self.obj_transform_base.translation,
             self.obj_transform_base.translation + forward_V_norm.normalized(),
@@ -233,9 +238,7 @@ class HumanoidRearrangeController:
         )
 
         # Remove the forward component, and orient according to forward_V
-        add_rot = mn.Matrix4.rotation(
-            mn.Rad(np.pi), mn.Vector3(0, 1.0, 0)
-        )
+        add_rot = mn.Matrix4.rotation(mn.Rad(np.pi), mn.Vector3(0, 1.0, 0))
         obj_transform = add_rot @ obj_transform
         obj_transform.translation *= mn.Vector3.x_axis() + mn.Vector3.y_axis()
 
