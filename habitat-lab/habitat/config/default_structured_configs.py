@@ -1895,6 +1895,12 @@ cs.store(
     node=TargetStartGpsCompassSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.all_predicates",
+    group="habitat/task/lab_sensors",
+    name="all_predicates",
+    node=GlobalPredicatesSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.target_goal_gps_compass_sensor",
     group="habitat/task/lab_sensors",
     name="target_goal_gps_compass_sensor",

@@ -23,6 +23,7 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     FixedHighLevelPolicy,
     HighLevelPolicy,
     NeuralHighLevelPolicy,
+    PlannerHighLevelPolicy,
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
