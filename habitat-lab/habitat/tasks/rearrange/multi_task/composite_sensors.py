@@ -321,3 +321,61 @@ class SocialNavReward(Measure):
 
         distance = np.linalg.norm(position_human - position_robot)
         self._metric = -distance
+
+
+@registry.register_measure
+class SocialNavDistanceReward(Measure):
+    """
+    Reward that gives a continuous reward on the social navigation task based on the
+    distance between the agent and the robot.
+    """
+
+    cls_uuid: str = "social_nav_distance_reward"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return SocialNavDistanceReward.cls_uuid
+
+    def __init__(self, *args, config, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        self._safe_distance_range = config.safe_distance_range
+        self._safe_distance_reward = config.safe_distance_reward
+        self._zero_distance_reward = config.zero_distance_reward
+        self._zero_reward_distance = config.zero_reward_distance
+
+    def reset_metric(self, *args, **kwargs):
+        self._stage_succ = []
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = 0.0
+        position_human = kwargs["observations"]["agent_1_localization_sensor"][
+            :3
+        ]
+        position_robot = kwargs["observations"]["agent_0_localization_sensor"][
+            :3
+        ]
+
+        distance = np.linalg.norm(position_human - position_robot)
+
+        if (
+            distance >= self._safe_distance_range[0]
+            and distance <= self._safe_distance_range[1]
+        ):
+            self._metric = self._safe_distance_reward
+        elif distance < self._safe_distance_range[0]:
+            self._metric = (
+                distance * self._safe_distance_reward
+                - distance * self._zero_distance_reward
+                + self._safe_distance_range[0] * self._zero_distance_reward
+            ) / self._safe_distance_range[0]
+        elif distance > self._safe_distance_range[1]:
+            self._metric = (
+                -self._safe_distance_range[1] * distance
+                + self._safe_distance_range[1] * self._zero_reward_distance
+            ) / (self._zero_reward_distance - self._safe_distance_reward)
+        else:
+            self._metric = 0.0

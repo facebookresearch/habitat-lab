@@ -6,6 +6,8 @@ import numpy as np
 from habitat.gym.gym_wrapper import create_action_space
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_spec import EnvironmentSpec
+from habitat_baselines.rl.hrl.hierarchical_policy import HierarchicalPolicy
+from habitat_baselines.rl.hrl.hl import FixedHighLevelPolicy
 from habitat_baselines.rl.multi_agent.pop_play_wrappers import (
     MultiPolicy,
     MultiStorage,
@@ -305,10 +307,16 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent.pre_rollout()
 
     def get_resume_state(self):
-        return {
-            str(agent_i): agent.get_resume_state()
-            for agent_i, agent in enumerate(self._agents)
-        }
+        state_dict = {}
+        for agent_i, agent in enumerate(self._agents):
+            if not (
+                isinstance(agent.actor_critic, HierarchicalPolicy)
+                and isinstance(
+                    agent.actor_critic._high_level_policy, FixedHighLevelPolicy
+                )
+            ):
+                state_dict[str(agent_i)] = agent.get_resume_state()
+        return state_dict
 
     def get_save_state(self):
         return {

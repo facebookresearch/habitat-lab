@@ -1027,6 +1027,17 @@ class SocialNavReward(MeasurementConfig):
 
 
 @dataclass
+class SocialNavDistanceReward(MeasurementConfig):
+    type: str = "SocialNavDistanceReward"
+    safe_distance_range: List[float] = field(
+        default_factory=lambda: [1.0, 2.0]
+    )
+    safe_distance_reward: float = 1.0
+    zero_distance_reward: float = -1.0
+    zero_reward_distance: float = 2.5
+
+
+@dataclass
 class DidAgentsCollideConfig(MeasurementConfig):
     type: str = "DidAgentsCollide"
 
@@ -2082,6 +2093,12 @@ cs.store(
     group="habitat/task/measurements",
     name="social_nav_reward",
     node=SocialNavReward,
+)
+cs.store(
+    package="habitat.task.measurements.social_nav_distance_reward",
+    group="habitat/task/measurements",
+    name="social_nav_distance_reward",
+    node=SocialNavDistanceReward,
 )
 cs.store(
     package="habitat.task.measurements.cooperate_subgoal_reward",
