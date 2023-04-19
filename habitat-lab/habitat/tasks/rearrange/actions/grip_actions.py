@@ -348,12 +348,16 @@ class GazeGraspAction(MagicGraspAction):
         return
 
     def _ungrasp(self):
+        if self.cur_grasp_mgr.snap_idx != -1:
+            rom = self._sim.get_rigid_object_manager()
+            ro = rom.get_object_by_id(self.cur_grasp_mgr.snap_idx)
+            ro.motion_type = habitat_sim.physics.MotionType.DYNAMIC
+            ro.collidable = True
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-
         if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
         elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
