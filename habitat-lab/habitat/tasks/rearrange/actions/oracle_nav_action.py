@@ -119,7 +119,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
-                    self.cur_articulated_agent.base_pos
+                    self.cur_articulated_agent.base_transformation
                 )
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
