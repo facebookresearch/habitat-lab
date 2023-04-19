@@ -68,11 +68,12 @@ class HumanoidRearrangeController:
         self,
         walk_pose_path,
         draw_fps=30,
+        rotate_amount=20,
         base_offset=(0, 0.9, 0),
     ):
         self.min_angle_turn = MIN_ANGLE_TURN
-        self.turning_step_amount = TURNING_STEP_AMOUNT
-        self.threshold_rotate_not_move = THRESHOLD_ROTATE_NOT_MOVE
+        self.turning_step_amount = rotate_amount
+        self.threshold_rotate_not_move = rotate_amount
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
@@ -157,10 +158,9 @@ class HumanoidRearrangeController:
                 np.arctan2(prev_orientation[2], prev_orientation[0])
                 * deg_per_rads
             )
-            # Update this...
             forward_angle = new_angle - prev_angle
             if forward_angle >= 180:
-                forward_angle = 180 - forward_angle
+                forward_angle = forward_angle - 360
             if forward_angle <= -180:
                 forward_angle = 360 + forward_angle
 
