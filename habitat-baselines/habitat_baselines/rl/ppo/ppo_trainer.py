@@ -831,18 +831,27 @@ class PPOTrainer(BaseRLTrainer):
                 agent_config = get_agent_config(
                     config.habitat.simulator, agent_i
                 )
-            agent_sensors = agent_config.sim_sensors
-            extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
-            with read_write(agent_sensors):
-                agent_sensors.update(extra_sensors)
-            with read_write(config):
-                if config.habitat.gym.obs_keys is not None:
-                    for render_view in extra_sensors.values():
-                        if render_view.uuid not in config.habitat.gym.obs_keys:
-                            config.habitat.gym.obs_keys.append(
-                                f"{agent_name}_{render_view.uuid}"
-                            )
-                config.habitat.simulator.debug_render = True
+
+                agent_sensors = agent_config.sim_sensors
+                extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
+                with read_write(agent_sensors):
+                    agent_sensors.update(extra_sensors)
+                with read_write(config):
+                    if config.habitat.gym.obs_keys is not None:
+                        for render_view in extra_sensors.values():
+                            if (
+                                render_view.uuid
+                                not in config.habitat.gym.obs_keys
+                            ):
+                                if n_agents > 1:
+                                    config.habitat.gym.obs_keys.append(
+                                        f"{agent_name}_{render_view.uuid}"
+                                    )
+                                else:
+                                    config.habitat.gym.obs_keys.append(
+                                        f"{render_view.uuid}"
+                                    )
+                    config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
             logger.info(f"env config: {OmegaConf.to_yaml(config)}")
@@ -933,10 +942,13 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes_info = self.envs.current_episodes()
 
             # TODO: make sure this is batched properly
-            space_lengths = {
-                "index_len_recurrent_hidden_states": hidden_state_lens,
-                "index_len_prev_actions": action_space_lens,
-            }
+            space_lengths = {}
+            n_agents = len(config.habitat.simulator.agents)
+            if n_agents > 1:
+                space_lengths = {
+                    "index_len_recurrent_hidden_states": hidden_state_lens,
+                    "index_len_prev_actions": action_space_lens,
+                }
             with inference_mode():
                 action_data = self._agent.actor_critic.act(
                     batch,
