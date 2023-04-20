@@ -43,7 +43,7 @@ python examples/siro_sandbox/sandbox_app.py \
     * Left-click again to drop the object anywhere in the scene.
 * Camera yaw and pitch control (TODO: decide which one has better UX):
     1. WASD keys
-    2. hold Q and move mouse
+    2. hold R and move mouse
 * `M` to reset to a new episode.
 
 ## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
