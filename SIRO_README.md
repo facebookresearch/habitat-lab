@@ -24,15 +24,30 @@ see [Sandbox Tool Readme](./examples/siro_sandbox/README.md)
 
 # Training
 
+## Multi-Agent
 Fetch-Fetch in ReplicaCAD multi-agent training, single GPU. From `habitat-lab` directory:
 ```
 HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle.yaml hydra/output=path
 ```
 This will create a directory `outputs/pop-play/<date>/<time>/0` and store data like checkpoints and logs into that folder. If you would like to edit the path where your run data is stored, you can edit `config/hydra/output/path.yaml` to take other paths.
 
+Fetch-Humanoid Training
+To run a Fetch-Humanoid Policy on ReplicaCAD, single GPU, you will need to run:
+```
+HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid.yaml hydra/output=path
+```
+Note that the default value for population here is [1,1], meaning that we will be training a single policy for each agent. The argument `rl.agent.num_pool_agents_per_type` can be changed to [1,8] for population based training, where the humanoid is samples from 8 policies.
+
+
 # Eval
 
-todo: terminal commands, etc.
+To run evaluation, run, from `habitat-lab` directory:
+
+```
+sh eval_sweep.sh
+```
+
+You will be prompted to enter a directory `$SWEEP_SUBDIR` name where the checkpoints and config files are saved (normally in the format `name/yyyy-dd-mm/hh-mm-ss`). The script will generate videos of evaluation at `$SWEEP_SUBDIR/0/video`.  
 
 # Spot robot
 
