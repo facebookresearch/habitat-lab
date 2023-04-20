@@ -21,7 +21,11 @@ from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
 from habitat.utils import profiling_wrapper
-from habitat_baselines.common import VectorEnvFactory
+from habitat.utils.perf_logger import PerfLogger
+from habitat.utils.visualizations.utils import (
+    observations_to_image,
+    overlay_frame,
+)
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.env_spec import EnvironmentSpec
@@ -94,6 +98,8 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
 
+        self._perf_logger = None
+
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
         device and only runs if distributed
@@ -137,10 +143,7 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        env_factory: VectorEnvFactory = hydra.utils.instantiate(
-            config.habitat_baselines.vector_env_factory
-        )
-        self.envs = env_factory.construct_envs(
+        self.envs, num_scenes = construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
@@ -156,18 +159,16 @@ class PPOTrainer(BaseRLTrainer):
             orig_action_space=self.envs.orig_action_spaces[0],
         )
 
-        # The measure keys that should only be logged on rank0 and nowhere
-        # else. They will be excluded from all other workers and only reported
-        # from the single worker.
-        self._rank0_keys: Set[str] = set(
-            list(self.config.habitat.task.rank0_env0_measure_names)
-            + list(self.config.habitat.task.rank0_measure_names)
-        )
-
-        # Information on measures that declared in `self._rank0_keys` or
-        # to be only reported on rank0. This is seperately logged from
-        # `self.window_episode_stats`.
-        self._single_proc_infos: Dict[str, List[float]] = {}
+        # create PerfLogger once we have observation_space and number of scenes
+        if (
+            rank0_only()
+            and self.config.habitat_baselines.profiling.enable_perf_logger
+        ):
+            self._perf_logger = PerfLogger(
+                config,
+                num_scenes,
+                self._env_spec.observation_space,
+            )
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -288,6 +289,7 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
+        self.timer = Timing(self._perf_logger)
 
         self.t_start = time.time()
 
@@ -476,8 +478,28 @@ class PPOTrainer(BaseRLTrainer):
                     )
                 self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
-            self.current_episode_reward[env_slice].masked_fill_(
-                done_masks, 0.0
+                self.current_episode_reward[env_slice].masked_fill_(
+                    done_masks, 0.0
+                )
+
+            if self._perf_logger:
+                for env_info in infos:
+                    if "runtime_perf_stats" in env_info:
+                        self._perf_logger.add_sample_stats(
+                            env_info["runtime_perf_stats"]
+                        )
+
+            if self._is_static_encoder:
+                with inference_mode():
+                    batch[
+                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                    ] = self._encoder(batch)
+
+            self._agent.rollouts.insert(
+                next_observations=batch,
+                rewards=rewards,
+                next_masks=not_done_masks,
+                buffer_index=buffer_index,
             )
 
         if self._is_static_encoder:
@@ -569,6 +591,8 @@ class PPOTrainer(BaseRLTrainer):
             self.num_rollouts_done_store.set("num_done", "0")
 
         self.num_steps_done += count_steps_delta
+        if self._perf_logger:
+            self._perf_logger.add_steps(count_steps_delta)
 
         return losses
 
@@ -653,6 +677,9 @@ class PPOTrainer(BaseRLTrainer):
             if self.config.habitat_baselines.should_log_single_proc_infos:
                 for k, v in self._single_proc_infos.items():
                     logger.info(f" - {k}: {np.mean(v):.3f}")
+
+            if self._perf_logger:
+                self._perf_logger.check_log_summary()
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:

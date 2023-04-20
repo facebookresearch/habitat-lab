@@ -81,6 +81,8 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
+    # DEBUG MEASURES
+    "RuntimePerfStatsMeasurementConfig",
 ]
 
 
@@ -686,15 +688,7 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
-    """
-    If added to the measurements, this will time various sections of code in
-    the simulator and task logic. If using with a multi-environment trainer
-    (like DD-PPO) it is recommended to only log this stat for one environment
-    since this metric can include many numbers.
-    """
-
     type: str = "RuntimePerfStats"
-    disable_logging: bool = False
 
 
 @dataclass
@@ -2255,12 +2249,11 @@ cs.store(
     node=RearrangeReachSuccessMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.habitat_perf",
+    package="habitat.task.measurements.runtime_perf_stats",
     group="habitat/task/measurements",
-    name="habitat_perf",
+    name="runtime_perf_stats",
     node=RuntimePerfStatsMeasurementConfig,
 )
-
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins
