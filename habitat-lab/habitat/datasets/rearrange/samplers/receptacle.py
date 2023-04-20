@@ -14,6 +14,7 @@ from typing import Any, Dict, List, Optional, Union
 import corrade as cr
 import magnum as mn
 import numpy as np
+import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
@@ -344,10 +345,12 @@ class TriangleMeshReceptacle(Receptacle):
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0.0
+        triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
+            triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * mn.math.cross(w1, w2).length()
             )
@@ -360,6 +363,15 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
+
+        # Init the trimesh
+        self.trimesh = trimesh.Trimesh(
+            **trimesh.triangles.to_kwargs(triangles)
+        )
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        return mn.Range3D(self.trimesh.bounds)
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
