@@ -200,11 +200,13 @@ class PddlDomain:
         """
 
         self._constants: Dict[str, PddlEntity] = {}
-        for c in domain_def["constants"]:
-            self._constants[c["name"]] = PddlEntity(
-                c["name"],
-                self.expr_types[c["expr_type"]],
-            )
+        # For the scene that has not constants
+        if domain_def["constants"] is not None:
+            for c in domain_def["constants"]:
+                self._constants[c["name"]] = PddlEntity(
+                    c["name"],
+                    self.expr_types[c["expr_type"]],
+                )
 
     def register_type(self, expr_type: ExprType):
         """
