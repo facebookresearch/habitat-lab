@@ -17,7 +17,7 @@ class ArticulatedAgentAction(SimulatorTaskAction):
             self._multi_agent = False
         else:
             self._agent_index = self._config.agent_index
-            self._multi_agent = False
+            self._multi_agent = True
 
     @property
     def _articulated_agent_mgr(self):
