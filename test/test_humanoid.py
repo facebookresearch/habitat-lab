@@ -223,10 +223,11 @@ def test_humanoid_controller():
         )
         humanoid_controller = HumanoidRearrangeController(walk_pose_path)
 
-        init_pos = kin_humanoid.base_pos
+        init_trans = kin_humanoid.base_transformation
+        init_pos = init_trans.transformation
         target_pos = init_pos + mn.Vector3(1.5, 0, 0)
         step_count = 0
-        humanoid_controller.reset(init_pos)
+        humanoid_controller.reset(init_trans)
         while step_count < num_steps:
             pose_diff = target_pos - kin_humanoid.base_pos
             humanoid_controller.calculate_walk_pose(pose_diff)
