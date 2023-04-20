@@ -56,4 +56,20 @@ You will be prompted to enter a directory `$SWEEP_SUBDIR` name where the checkpo
 
 ## Testing the Spot
 
-todo: terminal commands, etc.
+To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the following instruction
+
+Dataset
+1. Download the asset from the Google Drive(https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
+2. Unzip the file and put it in `habitat_lab/habitat-lab/data/fpss`
+3. Download the amazon and google objects
+4. Put them in `habitat_lab/habitat-lab/data/objects`
+5. Download the episode (there is only single scene) from the Google Drive(https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
+6. Unzip it and put them in `habitat-lab/habitat-lab/data/datasets/floorplanner/`
+
+Program
+7. Assume you have already setup the habitat, then `cd habitat-lab/`
+8. `srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 python -u habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml habitat_baselines.num_environments=1`
+
+TODO
+1. Generate more scenes
+2. Fix Spot robot navmesh issue
