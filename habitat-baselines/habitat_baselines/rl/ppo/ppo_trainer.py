@@ -827,9 +827,14 @@ class PPOTrainer(BaseRLTrainer):
                                 render_view.uuid
                                 not in config.habitat.gym.obs_keys
                             ):
-                                config.habitat.gym.obs_keys.append(
-                                    f"{agent_name}_{render_view.uuid}"
-                                )
+                                if n_agents > 1:
+                                    config.habitat.gym.obs_keys.append(
+                                        f"{agent_name}_{render_view.uuid}"
+                                    )
+                                else:
+                                    config.habitat.gym.obs_keys.append(
+                                        f"{render_view.uuid}"
+                                    )
                     config.habitat.simulator.debug_render = True
 
         if config.habitat_baselines.verbose:
@@ -921,10 +926,13 @@ class PPOTrainer(BaseRLTrainer):
             current_episodes_info = self.envs.current_episodes()
 
             # TODO: make sure this is batched properly
-            space_lengths = {
-                "index_len_recurrent_hidden_states": hidden_state_lens,
-                "index_len_prev_actions": action_space_lens,
-            }
+            space_lengths = {}
+            n_agents = len(config.habitat.simulator.agents)
+            if n_agents > 1:
+                space_lengths = {
+                    "index_len_recurrent_hidden_states": hidden_state_lens,
+                    "index_len_prev_actions": action_space_lens,
+                }
             with inference_mode():
                 action_data = self._agent.actor_critic.act(
                     batch,
