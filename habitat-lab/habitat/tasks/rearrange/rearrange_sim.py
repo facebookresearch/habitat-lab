@@ -128,6 +128,11 @@ class RearrangeSim(HabitatSim):
         self._step_physics = self.habitat_config.step_physics
         self._kinematic_mode = self.habitat_config.kinematic_mode
 
+        self._backend_runtime_perf_stat_names = (
+            super().get_runtime_perf_stat_names()
+        )
+        self._extra_runtime_perf_stats: Dict[str, Any] = {}
+
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
         return self._receptacles
@@ -280,6 +285,8 @@ class RearrangeSim(HabitatSim):
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
+        t_start = time.time()
+
         with read_write(config):
             config["scene"] = ep_info.scene_id
 
@@ -374,6 +381,7 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
                 )
+        self.add_perf_timing("reconfigure", t_start)
 
     def get_agent_data(self, agent_idx: Optional[int]) -> ArticulatedAgentData:
         if agent_idx is None:
@@ -821,13 +829,21 @@ class RearrangeSim(HabitatSim):
                 self.internal_step(-1, update_articulated_agent=False)
 
             t_start = time.time()
-            obs = self._sensor_suite.get_observations(
-                self.get_sensor_observations_async_finish()
+            self._prev_sim_obs = self.get_sensor_observations_async_finish()
+            self.add_perf_timing(
+                "get_sensor_observations_async_finish", t_start
             )
-            self.add_perf_timing("get_sensor_observations", t_start)
+
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
+
+            t_start = time.time()
+            self._prev_sim_obs = self.get_sensor_observations()
+            self.add_perf_timing("get_sensor_observations", t_start)
+
+            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
             t_start = time.time()
             obs = self._sensor_suite.get_observations(
@@ -911,9 +927,11 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
-        # optionally step physics and update the robot for benchmarking purposes
-        if self.habitat_config.step_physics:
+        # Optionally step physics and update the articulated_agent for benchmarking purposes
+        if self._step_physics:
+            t_start = time.time()
             self.step_world(dt)
+            self.add_perf_timing("step_world", t_start)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
@@ -951,25 +969,17 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-    def add_perf_timing(self, desc: str, t_start: float) -> None:
-        """
-        Records a duration since `t_start` into the perf stats. Note that this
-        is additive, so times between successive calls accumulate, not reset.
-        Also note that this will only log if `self._perf_logging_enabled=True`.
-        """
-        if not self._perf_logging_enabled:
-            return
+    def add_perf_timing(self, desc, t_start):
+        self._extra_runtime_perf_stats[desc] = time.time() - t_start
 
-        name = ".".join(self.cur_runtime_perf_scope)
-        if desc != "":
-            name += "." + desc
-        self._extra_runtime_perf_stats[name] += time.time() - t_start
+    def get_runtime_perf_stats(self):
+        names = self._backend_runtime_perf_stat_names
+        values = super().get_runtime_perf_stat_values()
+        stats_dict = dict(zip(names, values))
 
-    def get_runtime_perf_stats(self) -> Dict[str, float]:
-        stats_dict = {}
         for name, value in self._extra_runtime_perf_stats.items():
             stats_dict[name] = value
         # clear this dict so we don't accidentally collect these twice
-        self._extra_runtime_perf_stats = defaultdict(float)
+        self._extra_runtime_perf_stats = {}
 
         return stats_dict
