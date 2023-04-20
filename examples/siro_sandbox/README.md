@@ -44,7 +44,7 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
     * Left-click again to drop the object anywhere in the scene.
 * Camera yaw and pitch control (TODO: decide which one has better UX):
     1. WASD keys
-    2. hold Q and move mouse
+    2. hold R and move mouse
 * `M` to reset to a new episode.
 
 ## Testing BatchReplayRenderer

@@ -84,6 +84,16 @@ class SandboxDriver(GuiAppDriver):
         self._lookat_offset_yaw = 0.785
         self._lookat_offset_pitch = 0.955
 
+        self.lookat = None
+
+    @property
+    def lookat_offset_yaw(self):
+        return self.to_zero_2pi_range(self._lookat_offset_yaw)
+
+    @property
+    def lookat_offset_pitch(self):
+        return self.to_zero_2pi_range(self._lookat_offset_pitch)
+
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
@@ -197,7 +207,7 @@ class SandboxDriver(GuiAppDriver):
         dist_to_floor_y = (ray.origin.y - floor_y) / -ray.direction.y
         target_on_floor = ray.origin + ray.direction * dist_to_floor_y
 
-        agent_idx = 0
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
         art_obj = (
             self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
         )
@@ -245,20 +255,20 @@ class SandboxDriver(GuiAppDriver):
 
     def _camera_pitch_and_yaw_wasd_control(self):
         # update yaw and pitch uning WASD keys
-        cam_rot_angle = 0.05
+        cam_rot_angle = 0.1
         if self.gui_input.get_key(GuiInput.KeyNS.W):
-            self._lookat_offset_pitch += cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.S):
             self._lookat_offset_pitch -= cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.S):
+            self._lookat_offset_pitch += cam_rot_angle
         if self.gui_input.get_key(GuiInput.KeyNS.A):
-            self._lookat_offset_yaw += cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.D):
             self._lookat_offset_yaw -= cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.D):
+            self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
         # if Q is held update yaw and pitch
         # by scale * mouse relative position delta
-        if self.gui_input.get_key(GuiInput.KeyNS.Q):
+        if self.gui_input.get_key(GuiInput.KeyNS.R):
             scale = 1 / 30
             self._lookat_offset_yaw += (
                 scale * self.gui_input._relative_mouse_position[0]
@@ -266,6 +276,52 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch += (
                 scale * self.gui_input._relative_mouse_position[1]
             )
+
+    def _free_camera_lookat_control(self):
+        if self.lookat is None:
+            # init lookat
+            self.lookat = np.array(
+                self.get_sim().sample_navigable_point()
+            ) + np.array([0, 1, 0])
+        else:
+            # update lookat
+            move_delta = 0.1
+            move = np.zeros(3)
+            if self.gui_input.get_key(GuiInput.KeyNS.UP):
+                move[0] -= move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.DOWN):
+                move[0] += move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.E):
+                move[1] += move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.Q):
+                move[1] -= move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.LEFT):
+                move[2] += move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.RIGHT):
+                move[2] -= move_delta
+
+            # align move forward direction with lookat direction
+            if self.lookat_offset_pitch >= -(
+                np.pi / 2
+            ) and self.lookat_offset_pitch <= (np.pi / 2):
+                rotation_rad = -self.lookat_offset_yaw
+            else:
+                rotation_rad = -self.lookat_offset_yaw + np.pi
+
+            rot_matrix = np.array(
+                [
+                    [np.cos(rotation_rad), 0, np.sin(rotation_rad)],
+                    [0, 1, 0],
+                    [-np.sin(rotation_rad), 0, np.cos(rotation_rad)],
+                ]
+            )
+
+            self.lookat += mn.Vector3(rot_matrix @ move)
+
+        # highlight the lookat translation as a red circle
+        self._debug_line_render.draw_circle(
+            self.lookat, 0.03, mn.Color3(1, 0, 0)
+        )
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
@@ -309,23 +365,26 @@ class SandboxDriver(GuiAppDriver):
                 self.cam_zoom_dist, min_zoom_dist, max_zoom_dist
             )
 
-        agent_idx = 0
-        art_obj = (
-            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
-        )
-        robot_root = art_obj.transformation
-        lookat = robot_root.translation + mn.Vector3(0, 1, 0)
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        if agent_idx is not None:
+            art_obj = (
+                self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+            )
+            robot_root = art_obj.transformation
+            lookat = robot_root.translation + mn.Vector3(0, 1, 0)
+        else:
+            self._free_camera_lookat_control()
+            lookat = self.lookat
+
         # two ways for camera pitch and yaw control for UX comparison:
         # 1) hold WASD keys
         self._camera_pitch_and_yaw_wasd_control()
-        # 2) hold Q and move mouse
+        # 2) hold R and move mouse
         self._camera_pitch_and_yaw_mouse_control()
         offset = mn.Vector3(
-            np.cos(self._lookat_offset_yaw)
-            * np.cos(self._lookat_offset_pitch),
-            np.sin(self._lookat_offset_pitch),
-            np.sin(self._lookat_offset_yaw)
-            * np.cos(self._lookat_offset_pitch),
+            np.cos(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
+            np.sin(self.lookat_offset_pitch),
+            np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
         )
         cam_transform = mn.Matrix4.look_at(
             lookat + offset.normalized() * self.cam_zoom_dist,
@@ -360,6 +419,15 @@ class SandboxDriver(GuiAppDriver):
         ]
 
         return post_sim_update_dict
+
+    @staticmethod
+    def to_zero_2pi_range(radians):
+        """Helper method to properly clip radians to [0, 2pi] range."""
+        return (
+            (2 * np.pi) - ((-radians) % (2 * np.pi))
+            if radians < 0
+            else radians % (2 * np.pi)
+        )
 
 
 if __name__ == "__main__":
