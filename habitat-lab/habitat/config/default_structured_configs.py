@@ -81,6 +81,8 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
+    # DEBUG MEASURES
+    "RuntimePerfStatsMeasurementConfig",
 ]
 
 
@@ -676,6 +678,11 @@ class TopDownMapMeasurementConfig(MeasurementConfig):
 @dataclass
 class CollisionsMeasurementConfig(MeasurementConfig):
     type: str = "Collisions"
+
+
+@dataclass
+class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
+    type: str = "RuntimePerfStats"
 
 
 @dataclass
@@ -2211,7 +2218,12 @@ cs.store(
     name="rearrange_reach_success",
     node=RearrangeReachSuccessMeasurementConfig,
 )
-
+cs.store(
+    package="habitat.task.measurements.runtime_perf_stats",
+    group="habitat/task/measurements",
+    name="runtime_perf_stats",
+    node=RuntimePerfStatsMeasurementConfig,
+)
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins

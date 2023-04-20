@@ -23,6 +23,7 @@ from habitat.config.default import get_agent_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
+from habitat.utils.perf_logger import PerfLogger
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
@@ -98,6 +99,8 @@ class PPOTrainer(BaseRLTrainer):
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
 
+        self._perf_logger = None
+
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
         device and only runs if distributed
@@ -141,7 +144,7 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs = construct_envs(
+        self.envs, num_scenes = construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
@@ -151,6 +154,17 @@ class PPOTrainer(BaseRLTrainer):
             action_space=self.envs.action_spaces[0],
             orig_action_space=self.envs.orig_action_spaces[0],
         )
+
+        # create PerfLogger once we have observation_space and number of scenes
+        if (
+            rank0_only()
+            and self.config.habitat_baselines.profiling.enable_perf_logger
+        ):
+            self._perf_logger = PerfLogger(
+                config,
+                num_scenes,
+                self._env_spec.observation_space,
+            )
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -274,7 +288,7 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
-        self.timer = Timing()
+        self.timer = Timing(self._perf_logger)
 
         self.t_start = time.time()
 
@@ -437,6 +451,13 @@ class PPOTrainer(BaseRLTrainer):
                     done_masks, 0.0
                 )
 
+            if self._perf_logger:
+                for env_info in infos:
+                    if "runtime_perf_stats" in env_info:
+                        self._perf_logger.add_sample_stats(
+                            env_info["runtime_perf_stats"]
+                        )
+
             if self._is_static_encoder:
                 with inference_mode():
                     batch[
@@ -526,6 +547,8 @@ class PPOTrainer(BaseRLTrainer):
             self.num_rollouts_done_store.set("num_done", "0")
 
         self.num_steps_done += count_steps_delta
+        if self._perf_logger:
+            self._perf_logger.add_steps(count_steps_delta)
 
         return losses
 
@@ -600,6 +623,9 @@ class PPOTrainer(BaseRLTrainer):
                     ),
                 )
             )
+
+            if self._perf_logger:
+                self._perf_logger.check_log_summary()
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
