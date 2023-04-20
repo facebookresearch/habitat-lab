@@ -391,6 +391,23 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class ProfilingConfig(HabitatBaselinesBaseConfig):
+    # The PerfLogger logs runtime perf stats as name/value pairs on two rows, like so:
+    #
+    # 2023-04-19 19:17:41,331 PerfLogger
+    # statName1,statName2,statName3
+    # 1.23,4,anotherStatValue
+    #
+    # The comma-separated lines can be pasted into a spreadsheet as CSV data. Runtime
+    # perf stats include timings and measures of scene complexity like object count and
+    # triangle count. These can be compared across experiments to understand changes
+    # in training throughput (steps per second, aka SPS).
+    enable_perf_logger: bool = False
+    # PerfLogger is verbose so we may not want to log it as often as other logging. Set
+    # to 1 to print at the same interval as habitat_baselines.log_interval, or
+    # set to a larger number to log less often.
+    perf_logger_skip_interval: int = 10
+
+    # Used with Nsight Systems profiling. See also profiling_wrapper.py.
     capture_start_step: int = -1
     num_steps_to_capture: int = -1
 

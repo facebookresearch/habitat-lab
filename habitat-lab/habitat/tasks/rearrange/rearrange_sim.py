@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
+import time
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -126,6 +127,11 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
+
+        self._backend_runtime_perf_stat_names = (
+            super().get_runtime_perf_stat_names()
+        )
+        self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -249,6 +255,8 @@ class RearrangeSim(HabitatSim):
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
+        t_start = time.time()
+
         with read_write(config):
             config["scene"] = ep_info.scene_id
 
@@ -336,6 +344,7 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
                 )
+        self.add_perf_timing("reconfigure", t_start)
 
     def get_agent_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -758,12 +767,21 @@ class RearrangeSim(HabitatSim):
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
+            t_start = time.time()
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
+            self.add_perf_timing(
+                "get_sensor_observations_async_finish", t_start
+            )
+
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
+
+            t_start = time.time()
             self._prev_sim_obs = self.get_sensor_observations()
+            self.add_perf_timing("get_sensor_observations", t_start)
+
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         if self._enable_gfx_replay_save:
@@ -842,7 +860,9 @@ class RearrangeSim(HabitatSim):
         """
         # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
+            t_start = time.time()
             self.step_world(dt)
+            self.add_perf_timing("step_world", t_start)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
@@ -879,3 +899,20 @@ class RearrangeSim(HabitatSim):
                 for idx in self._scene_obj_ids
             ]
         )
+
+    def add_perf_timing(self, desc, t_start):
+        t_curr = time.time()
+        full_desc = desc + " (ms)"
+        self._extra_runtime_perf_stats[full_desc] = (t_curr - t_start) * 1000
+
+    def get_runtime_perf_stats(self):
+        names = self._backend_runtime_perf_stat_names
+        values = super().get_runtime_perf_stat_values()
+        stats_dict = dict(zip(names, values))
+
+        for name, value in self._extra_runtime_perf_stats.items():
+            stats_dict[name] = value
+        # clear this dict so we don't accidentally collect these twice
+        self._extra_runtime_perf_stats = {}
+
+        return stats_dict
