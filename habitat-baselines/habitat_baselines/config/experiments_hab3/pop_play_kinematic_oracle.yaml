@@ -77,7 +77,7 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
+  writer_type: 'tb'
 
   wb:
     project_name: 'hab3'
