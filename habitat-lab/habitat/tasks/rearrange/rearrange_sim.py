@@ -901,9 +901,7 @@ class RearrangeSim(HabitatSim):
         )
 
     def add_perf_timing(self, desc, t_start):
-        t_curr = time.time()
-        full_desc = desc + " (ms)"
-        self._extra_runtime_perf_stats[full_desc] = (t_curr - t_start) * 1000
+        self._extra_runtime_perf_stats[desc] = time.time() - t_start
 
     def get_runtime_perf_stats(self):
         names = self._backend_runtime_perf_stat_names

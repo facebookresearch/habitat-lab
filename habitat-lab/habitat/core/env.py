@@ -477,9 +477,7 @@ class RLEnv(gym.Env):
         info = self.get_info(observations)
 
         if "runtime_perf_stats" in info:
-            info["runtime_perf_stats"]["RLEnv.step (ms)"] = (
-                time.time() - t_start
-            ) * 1000
+            info["runtime_perf_stats"]["RLEnv.step"] = time.time() - t_start
 
         return observations, reward, done, info
 

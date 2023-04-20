@@ -175,15 +175,18 @@ class PerfLogger:
 
     def add_sample_stats(self, sample_stat_vals_dict):
         for name, sample_val in sample_stat_vals_dict.items():
-            if name not in self._sample_stat_count_average_max:
-                self._sample_stat_count_average_max[name] = [0, 0, sample_val]
-            stat_list = self._sample_stat_count_average_max[name]
-            old_count = stat_list[0]
-            stat_list[1] = (stat_list[1] * old_count + sample_val) / (
-                old_count + 1
-            )
-            stat_list[2] = max(stat_list[2], sample_val)
-            stat_list[0] = old_count + 1
+            self.add_sample_stat(name, sample_val)
+
+    def add_sample_stat(self, name, sample_val):
+        if name not in self._sample_stat_count_average_max:
+            self._sample_stat_count_average_max[name] = [0, 0, sample_val]
+        stat_list = self._sample_stat_count_average_max[name]
+        old_count = stat_list[0]
+        stat_list[1] = (stat_list[1] * old_count + sample_val) / (
+            old_count + 1
+        )
+        stat_list[2] = max(stat_list[2], sample_val)
+        stat_list[0] = old_count + 1
 
     def check_log_summary(self, reset_sample_stats=True):
         self._log_counter += 1

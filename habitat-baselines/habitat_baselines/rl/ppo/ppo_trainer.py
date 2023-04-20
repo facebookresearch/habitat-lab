@@ -288,7 +288,7 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
-        self.timer = Timing()
+        self.timer = Timing(self._perf_logger)
 
         self.t_start = time.time()
 
@@ -366,8 +366,6 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["masks"],
                 **step_batch_lens,
             )
-
-        self.pth_time += time.time() - t_sample_action
 
         profiling_wrapper.range_pop()  # compute actions
 
@@ -514,8 +512,6 @@ class PPOTrainer(BaseRLTrainer):
             self._agent.rollouts.after_update()
 
             self._agent.after_update()
-
-        self.pth_time += time.time() - t_update_model
 
         return losses
 
