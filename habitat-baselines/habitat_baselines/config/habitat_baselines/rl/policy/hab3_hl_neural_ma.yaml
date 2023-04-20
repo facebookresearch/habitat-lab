@@ -27,4 +27,5 @@ hierarchical_policy:
       - "obj_goal_sensor"
       - "obj_start_gps_compass"
       - "obj_goal_gps_compass"
+      - "other_agent_gps"
   defined_skills: {}
