@@ -23,7 +23,7 @@ from habitat.utils.geometry_utils import (
 )
 from habitat.utils.test_utils import sample_non_stop_action
 
-CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
 OLD_STOP_ACTION_ID = 3
 

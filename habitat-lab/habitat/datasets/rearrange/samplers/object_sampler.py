@@ -27,7 +27,7 @@ from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 
 class ObjectSampler:
     """
-    Sample an object from a set and try to place it in the scene from some receptacle set.
+    Sample an object from a set and try to place it in the scene on a Receptacles from some Receptacle set.
     """
 
     def __init__(
@@ -41,7 +41,13 @@ class ObjectSampler:
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
     ) -> None:
         """
+        :param object_set: The set objects from which placements will be sampled.
+        :param allowed_recep_set_names:
+        :param num_objects: The [minimum, maximum] number of objects for this sampler. Actual target value for the sampler will be uniform random number in this range.
+        :param orientation_sample: Optionally choose to sample object orientation as well as position. Options are: None, "up" (1D), "all" (rand quat).
+        :param sample_region_ratio: Defines a XZ scaling of the sample region around its center. Default no scaling. Enables shrinking aabb receptacles away from edges.
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
+        :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
@@ -88,7 +94,13 @@ class ObjectSampler:
     ) -> Receptacle:
         """
         Sample a receptacle from the receptacle_set and return relevant information.
-        If cull_tilted_receptacles is True, receptacles are culled for objects with local "down" (-Y), not aligned with gravity (unit dot product compared to tilt_tolerance).
+
+        :param sim: The active Simulator instance.
+        :param recep_tracker: The pre-initialized ReceptacleTracker object defining available ReceptacleSets.
+        :param cull_tilted_receptacles: Whether or not to remove tilted Receptacles from the candidate set.
+        :param tilt_tolerance: If cull_tilted_receptacles is True, receptacles are culled for objects with local "down" (-Y), not aligned with gravity (unit dot product compared to tilt_tolerance).
+
+        :return: The sampled Receptacle. AssertionError if no valid Receptacle candidates are found.
         """
         if self.receptacle_instances is None:
             self.receptacle_instances = find_receptacles(sim)
@@ -211,6 +223,14 @@ class ObjectSampler:
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
         """
         Attempt to sample a valid placement of the object in/on a receptacle given an object handle and receptacle information.
+
+        :param sim: The active Simulator instance.
+        :param object_handle: The handle of the object template for instantiation and attempted placement.
+        :param receptacle: The Receptacle instance on which to sample a placement position.
+        :param snap_down: Whether or not to use the snap_down utility to place the object.
+        :param vdb: Optionally provide a debug visualizer (vdb)
+
+        :return: The newly instanced rigid object or None if placement sampling failed.
         """
         num_placement_tries = 0
         new_object = None
@@ -311,7 +331,11 @@ class ObjectSampler:
 
         return None
 
-    def _is_accessible(self, sim, new_object) -> bool:
+    def _is_accessible(
+        self,
+        sim: habitat_sim.Simulator,
+        obj: habitat_sim.physics.ManagedRigidObject,
+    ) -> bool:
         """
         Return if the object is within a threshold distance of the nearest
         navigable point and that the nearest navigable point is on the same
@@ -323,12 +347,10 @@ class ObjectSampler:
         """
         if self.nav_to_min_distance == -1:
             return True
-        snapped = sim.pathfinder.snap_point(new_object.translation)
+        snapped = sim.pathfinder.snap_point(obj.translation)
         island_radius: float = sim.pathfinder.island_radius(snapped)
         dist = float(
-            np.linalg.norm(
-                np.array((snapped - new_object.translation))[[0, 2]]
-            )
+            np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
         return (
             dist < self.nav_to_min_distance
@@ -344,6 +366,18 @@ class ObjectSampler:
         fixed_target_receptacle=None,
         fixed_obj_handle: Optional[str] = None,
     ) -> Optional[habitat_sim.physics.ManagedRigidObject]:
+        """
+        Sample a single object placement by first sampling a Receptacle candidate, then an object, then attempting to place that object on the Receptacle.
+
+        :param sim: The active Simulator instance.
+        :param recep_tracker: The pre-initialized ReceptacleTracker instace containg active ReceptacleSets.
+        :param snap_down: Whether or not to use the snap_down utility to place the objects.
+        :param vdb: Optionally provide a debug visualizer (vdb)
+        :param fixed_target_receptacle: Optionally provide a pre-selected Receptacle instead of sampling. For example, when a target object's receptacle is selected in advance.
+        :param fixed_obj_handle: Optionally provide a pre-selected object instead of sampling. For example, when sampling the goal position for a known target object.
+
+        :return: The newly instanced rigid object or None if sampling failed.
+        """
         # draw a new pairing
         if fixed_obj_handle is None:
             object_handle = self.sample_object()
@@ -363,7 +397,10 @@ class ObjectSampler:
 
         return new_object, target_receptacle
 
-    def set_num_samples(self):
+    def set_num_samples(self) -> None:
+        """
+        Choose a target number of objects to sample from the configured range.
+        """
         self.target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
             if self.num_objects[1] > self.num_objects[0]
@@ -374,16 +411,25 @@ class ObjectSampler:
         self,
         sim: habitat_sim.Simulator,
         recep_tracker: ReceptacleTracker,
-        target_receptacles,
+        target_receptacles: List[Receptacle],
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
-    ) -> List[habitat_sim.physics.ManagedRigidObject]:
+    ) -> List[Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]:
         """
         Defaults to uniform sample: object -> receptacle -> volume w/ rejection -> repeat.
-        Optionally provide a debug visualizer (vdb)
+
+        :param sim: The active Simulator instance.
+        :param recep_tracker: The pre-initialized ReceptacleTracker instace containg active ReceptacleSets.
+        :param target_receptacles: A list of pre-selected Receptacles for target object placement. These will be sampled first.
+        :param snap_down: Whether or not to use the snap_down utility to place the objects.
+        :param vdb: Optionally provide a debug visualizer (vdb)
+
+        :return: The list of new (object,receptacle) pairs placed by the sampler.
         """
         num_pairing_tries = 0
-        new_objects: List[habitat_sim.physics.ManagedRigidObject] = []
+        new_objects: List[
+            Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]
+        ] = []
 
         logger.info(
             f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
@@ -397,7 +443,7 @@ class ObjectSampler:
         ):
             num_pairing_tries += 1
             if len(new_objects) < len(target_receptacles):
-                # no objects sampled yet
+                # sample objects explicitly from pre-designated target receptacles first
                 new_object, receptacle = self.single_sample(
                     sim,
                     recep_tracker,
@@ -413,8 +459,9 @@ class ObjectSampler:
                 )
                 if (
                     new_object is not None
-                    and recep_tracker.update_receptacle_tracking(receptacle)
+                    and recep_tracker.allocate_one_placement(receptacle)
                 ):
+                    # used up receptacle, need to recompute the sampler's receptacle_candidates
                     self.receptacle_candidates = None
 
             if new_object is not None:

@@ -569,13 +569,13 @@ class VERRolloutStorage(RolloutStorage):
         self.buffers["returns"].copy_(returns_t, non_blocking=True)
         self.current_rollout_step_idxs[0] = self.num_steps
 
-    def recurrent_generator(
+    def data_generator(
         self,
         advantages: Optional[torch.Tensor],
         num_mini_batch: int,
     ) -> Iterator[DictTree]:
         if not self.variable_experience:
-            yield from super().recurrent_generator(advantages, num_mini_batch)
+            yield from super().data_generator(advantages, num_mini_batch)
         else:
             for mb_inds in generate_ver_mini_batches(
                 num_mini_batch,

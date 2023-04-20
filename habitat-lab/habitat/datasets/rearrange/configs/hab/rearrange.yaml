@@ -134,7 +134,7 @@ object_samplers:
     params:
       object_sets: ["hab2"]
       receptacle_sets: ["clutter"]
-      num_samples: [30, 30]
+      num_samples: [30, 40]
       orientation_sampling: "up"
   -
     name: "any_targets"

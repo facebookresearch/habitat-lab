@@ -15,6 +15,7 @@ defaults:
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat/task/measurements:
     - composite_subgoal_reward
+    - runtime_perf_stats
   - _self_
 
 hydra:
@@ -77,15 +78,19 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
+  writer_type: 'tb'
 
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
     run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
+  profiling:
+    enable_perf_logger: True
+    perf_logger_skip_interval: 20
+
   eval:
-    should_load_ckpt: False
+    should_load_ckpt: True
     video_option: ["disk"]
 
   rl:

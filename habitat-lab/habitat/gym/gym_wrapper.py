@@ -12,6 +12,9 @@ import gym
 import numpy as np
 from gym import spaces
 
+from habitat.core.batch_rendering.env_batch_renderer_constants import (
+    KEYFRAME_OBSERVATION_KEY,
+)
 from habitat.core.simulator import Observations
 from habitat.core.spaces import EmptySpace
 from habitat.utils.visualizations.utils import observations_to_image
@@ -25,7 +28,6 @@ try:
 
 except ImportError:
     pygame = None
-
 
 HabGymWrapperObsType = Union[np.ndarray, Dict[str, np.ndarray]]
 
@@ -68,7 +70,7 @@ def _is_continuous(original_space: gym.Space) -> bool:
     if isinstance(original_space, Mapping):
         return any((_is_continuous(v) for v in original_space.values()))
     raise NotImplementedError(
-        f"Unknow action space found : {original_space}. Can only be Box or Empty"
+        f"Unknown action space found : {original_space}. Can only be Box or Empty"
     )
 
 
@@ -90,7 +92,7 @@ def _recursive_continuous_size_getter(
             _recursive_continuous_size_getter(v, low, high)
     else:
         raise NotImplementedError(
-            f"Unknow continuous action space found : {original_space}. Can only be Box, Empty or Dict."
+            f"Unknown continuous action space found : {original_space}. Can only be Box, Empty or Dict."
         )
 
 
@@ -286,6 +288,11 @@ class HabGymWrapper(gym.Wrapper):
             observation["achieved_goal"] = OrderedDict(
                 [(k, obs[k]) for k in self._gym_achieved_goal_keys]
             )
+
+        if KEYFRAME_OBSERVATION_KEY in obs:
+            observation[KEYFRAME_OBSERVATION_KEY] = obs[
+                KEYFRAME_OBSERVATION_KEY
+            ]
 
         for k, v in observation.items():
             if isinstance(self.observation_space, spaces.Box):

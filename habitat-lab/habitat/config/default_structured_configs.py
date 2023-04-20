@@ -81,6 +81,8 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
+    # DEBUG MEASURES
+    "RuntimePerfStatsMeasurementConfig",
 ]
 
 
@@ -263,6 +265,8 @@ class BaseVelocityNonCylinderActionConfig(ActionConfig):
     ang_speed: float = 10.0
     # If we want to do sliding or not
     allow_dyn_slide: bool = False
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
     # If we allow the robot to move back or not
     allow_back: bool = True
     # There is a collision if the difference between the clamped NavMesh position and target position
@@ -674,6 +678,11 @@ class TopDownMapMeasurementConfig(MeasurementConfig):
 @dataclass
 class CollisionsMeasurementConfig(MeasurementConfig):
     type: str = "Collisions"
+
+
+@dataclass
+class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
+    type: str = "RuntimePerfStats"
 
 
 @dataclass
@@ -1145,6 +1154,9 @@ class TaskConfig(HabitatBaseConfig):
     num_spawn_attempts: int = 200
     spawn_max_dist_to_obj: float = 2.0
     base_angle_noise: float = 0.523599
+    # Factor to shrink the receptacle sampling volume when predicates place
+    # objects on top of receptacles.
+    recep_place_shrink_factor: float = 0.8
     # EE sample parameters
     ee_sample_factor: float = 0.2
     ee_exclude_region: float = 0.0
@@ -1169,7 +1181,6 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
-    filter_nav_to_tasks: List = field(default_factory=list)
     actions: Dict[str, ActionConfig] = MISSING
 
 
@@ -1342,6 +1353,20 @@ class AgentConfig(HabitatBaseConfig):
 
 
 @dataclass
+class RendererConfig(HabitatBaseConfig):
+    r"""Configuration for the renderer.
+
+    :property enable_batch_renderer: [Experimental] Enables batch rendering, which accelerates rendering for concurrent environments. See env_batch_renderer.py for details.
+    :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
+    :property classic_replay_renderer: For debugging. Create a ClassicReplayRenderer instead of BatchReplayRenderer when enable_batch_renderer is active.
+    """
+
+    enable_batch_renderer: bool = False
+    composite_files: Optional[List[str]] = None
+    classic_replay_renderer: bool = False
+
+
+@dataclass
 class HabitatSimV0Config(HabitatBaseConfig):
     gpu_device_id: int = 0
     # Use Habitat-Sim's GPU->GPU copy mode to return rendering results in
@@ -1421,6 +1446,8 @@ class SimulatorConfig(HabitatBaseConfig):
     ep_info: Optional[Any] = None
     # The offset id values for the object
     object_ids_start: int = 100
+    # Configuration for rendering
+    renderer: RendererConfig = RendererConfig()
 
 
 @dataclass
@@ -2191,7 +2218,12 @@ cs.store(
     name="rearrange_reach_success",
     node=RearrangeReachSuccessMeasurementConfig,
 )
-
+cs.store(
+    package="habitat.task.measurements.runtime_perf_stats",
+    group="habitat/task/measurements",
+    name="runtime_perf_stats",
+    node=RuntimePerfStatsMeasurementConfig,
+)
 
 from hydra.core.config_search_path import ConfigSearchPath
 from hydra.core.plugins import Plugins

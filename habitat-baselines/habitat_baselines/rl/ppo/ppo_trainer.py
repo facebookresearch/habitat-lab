@@ -23,6 +23,7 @@ from habitat.config.default import get_agent_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
+from habitat.utils.perf_logger import PerfLogger
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
@@ -69,6 +70,7 @@ from habitat_baselines.utils.info_dict import (
     extract_scalars_from_info,
     extract_scalars_from_infos,
 )
+from habitat_baselines.utils.timing import Timing
 
 
 @baseline_registry.register_trainer(name="ddppo")
@@ -96,6 +98,8 @@ class PPOTrainer(BaseRLTrainer):
         # Distributed if the world size would be
         # greater than 1
         self._is_distributed = get_distrib_size()[2] > 1
+
+        self._perf_logger = None
 
     def _all_reduce(self, t: torch.Tensor) -> torch.Tensor:
         r"""All reduce helper method that moves things to the correct
@@ -140,7 +144,7 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs = construct_envs(
+        self.envs, num_scenes = construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
@@ -150,6 +154,17 @@ class PPOTrainer(BaseRLTrainer):
             action_space=self.envs.action_spaces[0],
             orig_action_space=self.envs.orig_action_spaces[0],
         )
+
+        # create PerfLogger once we have observation_space and number of scenes
+        if (
+            rank0_only()
+            and self.config.habitat_baselines.profiling.enable_perf_logger
+        ):
+            self._perf_logger = PerfLogger(
+                config,
+                num_scenes,
+                self._env_spec.observation_space,
+            )
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
@@ -273,9 +288,8 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
+        self.timer = Timing(self._perf_logger)
 
-        self.env_time = 0.0
-        self.pth_time = 0.0
         self.t_start = time.time()
 
     @rank0_only
@@ -331,10 +345,8 @@ class PPOTrainer(BaseRLTrainer):
             int((buffer_index + 1) * num_envs / self._agent.nbuffers),
         )
 
-        t_sample_action = time.time()
-
-        # Sample actions
-        with inference_mode():
+        with self.timer.avg_time("sample_action"), inference_mode():
+            # Sample actions
             step_batch = self._agent.rollouts.get_current_step(
                 env_slice, buffer_index
             )
@@ -355,38 +367,34 @@ class PPOTrainer(BaseRLTrainer):
                 **step_batch_lens,
             )
 
-        self.pth_time += time.time() - t_sample_action
-
         profiling_wrapper.range_pop()  # compute actions
 
-        t_step_env = time.time()
+        with self.timer.avg_time("obs_insert"):
+            for index_env, act in zip(
+                range(env_slice.start, env_slice.stop),
+                action_data.env_actions.cpu().unbind(0),
+            ):
+                if is_continuous_action_space(self._env_spec.action_space):
+                    # Clipping actions to the specified limits
+                    act = np.clip(
+                        act.numpy(),
+                        self._env_spec.action_space.low,
+                        self._env_spec.action_space.high,
+                    )
+                else:
+                    act = act.item()
+                self.envs.async_step_at(index_env, act)
 
-        for index_env, act in zip(
-            range(env_slice.start, env_slice.stop),
-            action_data.env_actions.cpu().unbind(0),
-        ):
-            if is_continuous_action_space(self._env_spec.action_space):
-                # Clipping actions to the specified limits
-                act = np.clip(
-                    act.numpy(),
-                    self._env_spec.action_space.low,
-                    self._env_spec.action_space.high,
-                )
-            else:
-                act = act.item()
-            self.envs.async_step_at(index_env, act)
-
-        self.env_time += time.time() - t_step_env
-
-        self._agent.rollouts.insert(
-            next_recurrent_hidden_states=action_data.rnn_hidden_states,
-            actions=action_data.actions,
-            action_log_probs=action_data.action_log_probs,
-            value_preds=action_data.values,
-            buffer_index=buffer_index,
-            should_inserts=action_data.should_inserts,
-            action_data=action_data,
-        )
+        with self.timer.avg_time("obs_insert"):
+            self._agent.rollouts.insert(
+                next_recurrent_hidden_states=action_data.rnn_hidden_states,
+                actions=action_data.actions,
+                action_log_probs=action_data.action_log_probs,
+                value_preds=action_data.values,
+                buffer_index=buffer_index,
+                should_inserts=action_data.should_inserts,
+                action_data=action_data,
+            )
 
     def _collect_environment_result(self, buffer_index: int = 0):
         num_envs = self.envs.num_envs
@@ -395,70 +403,75 @@ class PPOTrainer(BaseRLTrainer):
             int((buffer_index + 1) * num_envs / self._agent.nbuffers),
         )
 
-        t_step_env = time.time()
-        outputs = [
-            self.envs.wait_step_at(index_env)
-            for index_env in range(env_slice.start, env_slice.stop)
-        ]
+        with self.timer.avg_time("step_env"):
+            outputs = [
+                self.envs.wait_step_at(index_env)
+                for index_env in range(env_slice.start, env_slice.stop)
+            ]
 
         observations, rewards_l, dones, infos = [
             list(x) for x in zip(*outputs)
         ]
 
-        self.env_time += time.time() - t_step_env
+        with self.timer.avg_time("update_stats"):
+            batch = batch_obs(observations, device=self.device)
+            batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
-        t_update_stats = time.time()
-        batch = batch_obs(observations, device=self.device)
-        batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-
-        rewards = torch.tensor(
-            rewards_l,
-            dtype=torch.float,
-            device=self.current_episode_reward.device,
-        )
-        rewards = rewards.unsqueeze(1)
-
-        not_done_masks = torch.tensor(
-            [[not done] for done in dones],
-            dtype=torch.bool,
-            device=self.current_episode_reward.device,
-        )
-        done_masks = torch.logical_not(not_done_masks)
-
-        self.current_episode_reward[env_slice] += rewards
-        current_ep_reward = self.current_episode_reward[env_slice]
-        self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
-        self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-        for k, v_k in extract_scalars_from_infos(infos).items():
-            v = torch.tensor(
-                v_k,
+            rewards = torch.tensor(
+                rewards_l,
                 dtype=torch.float,
                 device=self.current_episode_reward.device,
-            ).unsqueeze(1)
-            if k not in self.running_episode_stats:
-                self.running_episode_stats[k] = torch.zeros_like(
-                    self.running_episode_stats["count"]
+            )
+            rewards = rewards.unsqueeze(1)
+
+            not_done_masks = torch.tensor(
+                [[not done] for done in dones],
+                dtype=torch.bool,
+                device=self.current_episode_reward.device,
+            )
+            done_masks = torch.logical_not(not_done_masks)
+
+            self.current_episode_reward[env_slice] += rewards
+            current_ep_reward = self.current_episode_reward[env_slice]
+            self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
+            self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
+            for k, v_k in extract_scalars_from_infos(infos).items():
+                v = torch.tensor(
+                    v_k,
+                    dtype=torch.float,
+                    device=self.current_episode_reward.device,
+                ).unsqueeze(1)
+                if k not in self.running_episode_stats:
+                    self.running_episode_stats[k] = torch.zeros_like(
+                        self.running_episode_stats["count"]
+                    )
+                self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
+
+                self.current_episode_reward[env_slice].masked_fill_(
+                    done_masks, 0.0
                 )
-            self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
-        self.current_episode_reward[env_slice].masked_fill_(done_masks, 0.0)
+            if self._perf_logger:
+                for env_info in infos:
+                    if "runtime_perf_stats" in env_info:
+                        self._perf_logger.add_sample_stats(
+                            env_info["runtime_perf_stats"]
+                        )
 
-        if self._is_static_encoder:
-            with inference_mode():
-                batch[
-                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                ] = self._encoder(batch)
+            if self._is_static_encoder:
+                with inference_mode():
+                    batch[
+                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                    ] = self._encoder(batch)
 
-        self._agent.rollouts.insert(
-            next_observations=batch,
-            rewards=rewards,
-            next_masks=not_done_masks,
-            buffer_index=buffer_index,
-        )
+            self._agent.rollouts.insert(
+                next_observations=batch,
+                rewards=rewards,
+                next_masks=not_done_masks,
+                buffer_index=buffer_index,
+            )
 
-        self._agent.rollouts.advance_rollout(buffer_index)
-
-        self.pth_time += time.time() - t_update_stats
+            self._agent.rollouts.advance_rollout(buffer_index)
 
         return env_slice.stop - env_slice.start
 
@@ -469,39 +482,37 @@ class PPOTrainer(BaseRLTrainer):
 
     @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self):
-        t_update_model = time.time()
+        with self.timer.avg_time("update_agent"):
+            with inference_mode():
+                step_batch = self._agent.rollouts.get_last_step()
 
-        with inference_mode():
-            step_batch = self._agent.rollouts.get_last_step()
+                step_batch_lens = {
+                    k: v
+                    for k, v in step_batch.items()
+                    if k.startswith("index_len")
+                }
+                next_value = self._agent.actor_critic.get_value(
+                    step_batch["observations"],
+                    step_batch.get("recurrent_hidden_states", None),
+                    step_batch["prev_actions"],
+                    step_batch["masks"],
+                    **step_batch_lens,
+                )
 
-            step_batch_lens = {
-                k: v
-                for k, v in step_batch.items()
-                if k.startswith("index_len")
-            }
-            next_value = self._agent.actor_critic.get_value(
-                step_batch["observations"],
-                step_batch["recurrent_hidden_states"],
-                step_batch["prev_actions"],
-                step_batch["masks"],
-                **step_batch_lens,
+            self._agent.rollouts.compute_returns(
+                next_value,
+                self._ppo_cfg.use_gae,
+                self._ppo_cfg.gamma,
+                self._ppo_cfg.tau,
             )
 
-        self._agent.rollouts.compute_returns(
-            next_value,
-            self._ppo_cfg.use_gae,
-            self._ppo_cfg.gamma,
-            self._ppo_cfg.tau,
-        )
+            self._agent.train()
 
-        self._agent.train()
+            losses = self._agent.updater.update(self._agent.rollouts)
+            self._agent.rollouts.after_update()
 
-        losses = self._agent.updater.update(self._agent.rollouts)
-        self._agent.rollouts.after_update()
+            self._agent.after_update()
 
-        self._agent.after_update()
-
-        self.pth_time += time.time() - t_update_model
         return losses
 
     def _coalesce_post_step(
@@ -536,6 +547,8 @@ class PPOTrainer(BaseRLTrainer):
             self.num_rollouts_done_store.set("num_done", "0")
 
         self.num_steps_done += count_steps_delta
+        if self._perf_logger:
+            self._perf_logger.add_steps(count_steps_delta)
 
         return losses
 
@@ -573,7 +586,16 @@ class PPOTrainer(BaseRLTrainer):
             writer.add_scalar(f"learner/{k}", v, self.num_steps_done)
 
         fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
+
+        # Log perf metrics.
         writer.add_scalar("perf/fps", fps, self.num_steps_done)
+
+        for timer_name, timer_val in self.timer.items():
+            writer.add_scalar(
+                f"perf/{timer_name}",
+                timer_val.mean,
+                self.num_steps_done,
+            )
 
         # log stats
         if (
@@ -588,13 +610,7 @@ class PPOTrainer(BaseRLTrainer):
             )
 
             logger.info(
-                "update: {}\tenv-time: {:.3f}s\tpth-time: {:.3f}s\t"
-                "frames: {}".format(
-                    self.num_updates_done,
-                    self.env_time,
-                    self.pth_time,
-                    self.num_steps_done,
-                )
+                f"Num updates: {self.num_updates_done}\tNum frames {self.num_steps_done}"
             )
 
             logger.info(
@@ -607,6 +623,9 @@ class PPOTrainer(BaseRLTrainer):
                     ),
                 )
             )
+
+            if self._perf_logger:
+                self._perf_logger.check_log_summary()
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
@@ -644,8 +663,6 @@ class PPOTrainer(BaseRLTrainer):
             self._agent.load_state_dict(resume_state)
 
             requeue_stats = resume_state["requeue_stats"]
-            self.env_time = requeue_stats["env_time"]
-            self.pth_time = requeue_stats["pth_time"]
             self.num_steps_done = requeue_stats["num_steps_done"]
             self.num_updates_done = requeue_stats["num_updates_done"]
             self._last_checkpoint_percent = requeue_stats[
@@ -678,8 +695,6 @@ class PPOTrainer(BaseRLTrainer):
 
                 if rank0_only() and self._should_save_resume_state():
                     requeue_stats = dict(
-                        env_time=self.env_time,
-                        pth_time=self.pth_time,
                         count_checkpoints=count_checkpoints,
                         num_steps_done=self.num_steps_done,
                         num_updates_done=self.num_updates_done,
@@ -816,6 +831,7 @@ class PPOTrainer(BaseRLTrainer):
                 agent_config = get_agent_config(
                     config.habitat.simulator, agent_i
                 )
+
                 agent_sensors = agent_config.sim_sensors
                 extra_sensors = config.habitat_baselines.eval.extra_sim_sensors
                 with read_write(agent_sensors):
