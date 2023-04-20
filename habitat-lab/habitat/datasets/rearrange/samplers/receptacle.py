@@ -331,7 +331,7 @@ class TriangleMeshReceptacle(Receptacle):
         Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
 
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :param mesh_data: The Receptacle's mesh data. A Tuple of two Lists, first vertex geometry (Vector3) and second topology (indicies of triangle corner verts(int) (len divisible by 3)).
+        :param mesh_data: The Receptacle's mesh data. A magnum.trade.MeshData object (indices len divisible by 3).
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
         :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
@@ -352,7 +352,7 @@ class TriangleMeshReceptacle(Receptacle):
             w2 = v[2] - v[1]
             triangles.append(v)
             self.area_weighted_accumulator.append(
-                0.5 * float(np.linalg.norm(np.cross(w1, w2)))
+                0.5 * mn.math.cross(w1, w2).length()
             )
             self.total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
