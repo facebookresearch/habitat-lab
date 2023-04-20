@@ -4,14 +4,12 @@
 
 from collections import deque
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 
 import torch
 
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
-from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
-from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 
 
@@ -39,7 +37,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self._max_search_depth = self._config.max_search_depth
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
-        self._plans = [[] for _ in range(self._num_envs)]
+        self._plans: List[List[PddlAction]] = [
+            [] for _ in range(self._num_envs)
+        ]
         self._should_replan = torch.zeros(self._num_envs, dtype=torch.bool)
 
     def apply_mask(self, mask):
@@ -64,7 +64,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             return ",".join(sorted([p.compact_str for p in preds]))
 
         stack = deque([PlanNode(start_true_preds, None, 0, None)])
-        visited = set([_get_pred_hash(start_true_preds)])
+        visited = {_get_pred_hash(start_true_preds)}
         sol_nodes = []
         while len(stack) != 0:
             cur_node = stack.pop()
