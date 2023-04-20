@@ -26,7 +26,7 @@ from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
 )
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_all_sensors_test.yaml"
 CFG_MULTI_TEST = "benchmark/nav/pointnav/pointnav_gibson.yaml"
 PARTIAL_LOAD_SCENES = 3
 NUM_EPISODES = 10

@@ -266,7 +266,6 @@ habitat:
     obj_succ_thresh: 0.3
     art_succ_thresh: 0.15
     robot_at_thresh: 2.0
-    filter_nav_to_tasks: []
     actions:
       stop:
         type: StopAction
