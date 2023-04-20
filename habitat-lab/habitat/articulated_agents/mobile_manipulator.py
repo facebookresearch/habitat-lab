@@ -19,7 +19,7 @@ from habitat_sim.simulator import Simulator
 class ArticulatedAgentCameraParams:
     """Data to configure a camera placement on the articulated agent.
     :property attached_link_id: Which link ID this camera is attached to, -1
-        for the base link.
+        for the root transformation, -2 for the base transformation.
     :property cam_offset_pos: The 3D position of the camera relative to the
         transformation of the attached link.
     :property cam_look_at_pos: The 3D of where the camera should face relative
