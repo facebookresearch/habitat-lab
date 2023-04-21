@@ -61,7 +61,7 @@ To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the
 Dataset
 1. Download the asset from the Google Drive(https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
 2. Unzip the file and put it in `habitat_lab/habitat-lab/data/fpss`
-3. Download the amazon and google objects
+3. Download the amazon and google objects from the Google Drive(https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB?usp=share_link)
 4. Put them in `habitat_lab/habitat-lab/data/objects`
 5. Download the episode (there is only single scene) from the Google Drive(https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
 6. Unzip it and put them in `habitat-lab/habitat-lab/data/datasets/floorplanner/`
