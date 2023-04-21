@@ -144,6 +144,7 @@ class PddlSimInfo:
 
     num_spawn_attempts: int
     physics_stability_steps: int
+    recep_place_shrink_factor: float
 
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
@@ -157,7 +158,7 @@ class PddlSimInfo:
             entity, SimulatorObjectType.ROBOT_ENTITY.value
         ):
             robot_id = self.robot_ids[ename]
-            return self.sim.get_agent_data(robot_id).robot.base_pos
+            return self.sim.get_agent_data(robot_id).articulated_agent.base_pos
         if self.check_type_matches(
             entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
         ):

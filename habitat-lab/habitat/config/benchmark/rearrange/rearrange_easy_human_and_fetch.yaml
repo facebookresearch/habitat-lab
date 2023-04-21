@@ -12,12 +12,12 @@ habitat:
   gym:
     obs_keys:
       - agent_0_head_depth
-      - agent_1_head_depth
       - agent_0_obj_start_sensor
-      - agent_1_obj_start_sensor
       - agent_0_obj_goal_sensor
-      - agent_1_obj_goal_sensor
       - agent_0_joint
+      - agent_1_head_depth
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
       - agent_1_joint
   environment:
     max_episode_steps: 1500
@@ -37,6 +37,8 @@ habitat:
         articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
         articulated_agent_type: 'KinematicHumanoid'
       agent_1:
+        articulated_agent_type: FetchSuctionRobot
+        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
         radius: 0.3
         sim_sensors:
           head_depth_sensor:
@@ -45,8 +47,6 @@ habitat:
         # A new instance of the sensor is created. The agents do not share a
         # depth camera, but instead a different depth camera is created for
         # each agent.
-        articulated_agent_urdf: ./data/robots/hab_fetch/robots/hab_suction.urdf
-        articulated_agent_type: FetchSuctionRobot
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True

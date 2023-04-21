@@ -49,7 +49,13 @@ def reference_path_example(mode):
     Args:
         mode: 'geodesic_path' or 'greedy'
     """
-    config = habitat.get_config(config_path="test/habitat_r2r_vln_test.yaml")
+    config = habitat.get_config(
+        config_path="benchmark/nav/vln_r2r.yaml",
+        overrides=[
+            "habitat.task.measurements.success.success_distance=0.1",
+            "habitat.dataset.split=val_seen",
+        ],
+    )
     with habitat.config.read_write(config):
         config.habitat.task.measurements.update(
             {"top_down_map": TopDownMapMeasurementConfig()}

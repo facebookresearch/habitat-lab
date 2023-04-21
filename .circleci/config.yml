@@ -396,12 +396,12 @@ jobs:
               twine upload \
                 --username ${<< parameters.username_env_var >>} \
                 --password ${<< parameters.password_env_var >>} \
-                --repository ${<< parameters.repository >>} \
+                --repository << parameters.repository >> \
                 habitat-lab/dist/*
               twine upload \
                 --username ${<< parameters.username_env_var >>} \
                 --password ${<< parameters.password_env_var >>} \
-                --repository ${<< parameters.repository >>} \
+                --repository << parameters.repository >> \
                 habitat-baselines/dist/*
 
 workflows:
@@ -427,6 +427,8 @@ workflows:
             - pre-commit
             - python_lint
             - install_and_test_ubuntu
+          context:
+            - pypi_context
   version_pipy_release:
     jobs:
       - pre-commit:
@@ -448,3 +450,5 @@ workflows:
             - pre-commit
             - python_lint
             - install_and_test_ubuntu
+          context:
+            - pypi_context

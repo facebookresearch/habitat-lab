@@ -202,7 +202,7 @@ class RolloutStorage(Storage):
                     + self.buffers["rewards"][step]
                 )
 
-    def recurrent_generator(
+    def data_generator(
         self,
         advantages: Optional[torch.Tensor],
         num_mini_batch: int,

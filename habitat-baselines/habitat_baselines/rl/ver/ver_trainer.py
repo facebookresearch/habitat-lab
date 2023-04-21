@@ -47,7 +47,6 @@ from habitat_baselines.rl.ver.inference_worker import (
 from habitat_baselines.rl.ver.preemption_decider import PreemptionDeciderWorker
 from habitat_baselines.rl.ver.report_worker import ReportWorker
 from habitat_baselines.rl.ver.task_enums import ReportWorkerTasks
-from habitat_baselines.rl.ver.timing import Timing
 from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.rl.ver.worker_common import (
     InferenceWorkerSync,
@@ -55,6 +54,7 @@ from habitat_baselines.rl.ver.worker_common import (
     WorkerQueues,
 )
 from habitat_baselines.utils.common import cosine_decay, inference_mode
+from habitat_baselines.utils.timing import Timing
 
 try:
     torch.backends.cudnn.allow_tf32 = True
@@ -289,7 +289,7 @@ class VERTrainer(PPOTrainer):
         self._agent.actor_critic.share_memory()
 
         if self._is_distributed:
-            self._agent.updater.init_distributed(find_unused_params=False)  # type: ignore[operator]
+            self._agent.init_distributed(find_unused_params=False)
 
         self._iw_sync = InferenceWorkerSync(
             self.mp_ctx,

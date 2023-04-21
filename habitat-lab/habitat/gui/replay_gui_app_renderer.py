@@ -112,12 +112,13 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         self._text_drawer.draw_text(self._text_to_draw)
 
         # arrange debug images on right side of frame, tiled down from the top
-        dest_y = 0
+        dest_y = self.viewport_size.y
         for image in self._debug_images:
+            im_height, im_width, _ = image.shape
             self._image_drawer.draw(
-                image, self.viewport_size[0] - image.shape[0], dest_y
+                image, self.viewport_size.x - im_width, dest_y - im_height
             )
-            dest_y += image[1]
+            dest_y -= im_height
 
         self._need_render = False
 

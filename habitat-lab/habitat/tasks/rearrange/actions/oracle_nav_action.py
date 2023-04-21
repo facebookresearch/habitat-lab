@@ -115,10 +115,12 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 1,
                 self.cur_articulated_agent,
             )
+            if np.isnan(start_pos).any():
+                print("start_pos contains NaN @oracle_nav_action.py.")
 
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
-                    self.cur_articulated_agent.base_pos
+                    self.cur_articulated_agent.base_transformation
                 )
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
@@ -164,6 +166,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             raise Exception
         else:
             # Compute distance and angle to target
+            if len(curr_path_points) == 1:
+                curr_path_points += curr_path_points
             cur_nav_targ = curr_path_points[1]
             forward = np.array([1.0, 0, 0])
             robot_forward = np.array(base_T.transform_vector(forward))

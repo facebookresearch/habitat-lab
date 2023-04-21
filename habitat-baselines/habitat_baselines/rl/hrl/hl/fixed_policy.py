@@ -76,6 +76,13 @@ class FixedHighLevelPolicy(HighLevelPolicy):
         else:
             return self._next_sol_idxs[batch_idx].item()
 
+    def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
+        # We assign a value of 0. This is needed so that we can concatenate values in multiagent
+        # policies
+        return torch.zeros(rnn_hidden_states.shape[0], 1).to(
+            rnn_hidden_states.device
+        )
+
     def get_next_skill(
         self,
         observations,

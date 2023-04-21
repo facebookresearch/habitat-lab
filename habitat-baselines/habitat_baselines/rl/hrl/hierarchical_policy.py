@@ -59,6 +59,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space: spaces.Space,
         action_space: ActionSpace,
         num_envs: int,
+        aux_loss_config=None,
+        agent_name: Optional[str] = None,
     ):
         super().__init__()
 
@@ -84,12 +86,14 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         high_level_cls = self._get_hl_policy_cls(config)
         self._high_level_policy: HighLevelPolicy = high_level_cls(
-            config.hierarchical_policy.high_level_policy,
-            self._pddl,
-            num_envs,
-            self._name_to_idx,
-            observation_space,
-            action_space,
+            config=config.hierarchical_policy.high_level_policy,
+            pddl_problem=self._pddl,
+            num_envs=num_envs,
+            skill_name_to_idx=self._name_to_idx,
+            observation_space=observation_space,
+            action_space=action_space,
+            aux_loss_config=aux_loss_config,
+            agent_name=agent_name,
         )
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
@@ -208,6 +212,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         from the skill ID to the indices of the batch and the observations at
         these indices the skill is currently running for. This is used to batch
         observations per skill.
+
+        If an entry in `sel_dat` is `None`, then it is including in all groups.
         """
 
         skill_to_batch: Dict[int, List[int]] = defaultdict(list)
@@ -364,9 +370,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             # LL skills are not allowed to terminate the overall episode.
-            actions[batch_ids] += action_data.actions
             # Add actions from apply_postcond
+            actions[batch_ids] += action_data.actions
+
             rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
+
         actions[:, self._stop_action_idx] = 0.0
 
         should_terminate = bad_should_terminate | hl_terminate
@@ -424,12 +432,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         observation_space,
         action_space,
         orig_action_space,
+        agent_name=None,
         **kwargs,
     ):
-        agent_name = None
-        if "agent_name" in kwargs:
-            agent_name = kwargs["agent_name"]
-
         if agent_name is None:
             if len(config.habitat.simulator.agents_order) > 1:
                 raise ValueError(
@@ -444,4 +449,6 @@ class HierarchicalPolicy(nn.Module, Policy):
             observation_space,
             orig_action_space,
             config.habitat_baselines.num_environments,
+            config.habitat_baselines.rl.auxiliary_losses,
+            agent_name,
         )

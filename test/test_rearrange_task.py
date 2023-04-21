@@ -284,13 +284,13 @@ def test_receptacle_parsing():
             # check for contents and correct type parsing
             if receptacle.name == "receptacle_aabb_chair_test":
                 assert type(receptacle) is hab_receptacle.AABBReceptacle
-            elif receptacle.name == "receptacle_mesh_chair_test":
+            elif receptacle.name == "receptacle_mesh_chair_test.0000":
                 assert (
                     type(receptacle) is hab_receptacle.TriangleMeshReceptacle
                 )
             elif receptacle.name == "receptacle_aabb_simpleroom_test":
                 assert type(receptacle) is hab_receptacle.AABBReceptacle
-            elif receptacle.name == "receptacle_mesh_simpleroom_test":
+            elif receptacle.name == "receptacle_mesh_simpleroom_test.0000":
                 assert (
                     type(receptacle) is hab_receptacle.TriangleMeshReceptacle
                 )

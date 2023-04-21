@@ -33,7 +33,6 @@ from habitat_baselines.rl.ver.task_enums import (
     EnvironmentWorkerTasks,
     ReportWorkerTasks,
 )
-from habitat_baselines.rl.ver.timing import Timing
 from habitat_baselines.rl.ver.worker_common import (
     ProcessBase,
     WorkerBase,
@@ -43,6 +42,7 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
+from habitat_baselines.utils.timing import Timing
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type
 
 import gym.spaces as spaces
 import numpy as np
@@ -71,45 +71,12 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             lr_schedule_fn,
         )
 
-        if self._pop_config.self_play_batched:
-            policy_cls: Type = SelfBatchedPolicy
-            updater_cls: Type = SelfBatchedUpdater
-            storage_cls: Type = SelfBatchedStorage
-            self._active_agents = [0, 0]
-        else:
-            policy_cls = MultiPolicy
-            updater_cls = MultiUpdater
-            storage_cls = MultiStorage
-
-        # TODO(xavi to andrew): why do we call these functions? It seems they
-        # just create an empty class
         num_active_agents = sum(self._pop_config.num_active_agents_per_type)
-
-        self._multi_policy = policy_cls.from_config(
-            config,
-            env_spec.observation_space,
-            env_spec.action_space,
-            orig_action_space=env_spec.orig_action_space,
-            agent=self._agents[0],
-            n_agents=num_active_agents,
-        )
-        self._multi_updater = updater_cls.from_config(
-            config,
-            env_spec.observation_space,
-            env_spec.action_space,
-            orig_action_space=env_spec.orig_action_space,
-            agent=self._agents[0],
-            n_agents=num_active_agents,
-        )
-
-        self._multi_storage = storage_cls.from_config(
-            config,
-            env_spec.observation_space,
-            env_spec.action_space,
-            orig_action_space=env_spec.orig_action_space,
-            agent=self._agents[0],
-            n_agents=num_active_agents,
-        )
+        (
+            self._multi_policy,
+            self._multi_updater,
+            self._multi_storage,
+        ) = self._create_multi_components(config, env_spec, num_active_agents)
 
         if self.nbuffers != 1:
             raise ValueError(
@@ -117,6 +84,51 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             )
         if config.habitat_baselines.evaluate:
             self._sample_active()
+
+    def init_distributed(self, find_unused_params: bool = True) -> None:
+        for agent in self._agents:
+            agent.init_distributed(find_unused_params)
+
+    def _create_multi_components(self, config, env_spec, num_active_agents):
+        if self._pop_config.self_play_batched:
+            policy_cls: Type = SelfBatchedPolicy
+            updater_cls: Type = SelfBatchedUpdater
+            storage_cls: Type = SelfBatchedStorage
+            self._active_agents = np.array([0, 0])
+        else:
+            policy_cls = MultiPolicy
+            updater_cls = MultiUpdater
+            storage_cls = MultiStorage
+
+        # TODO(xavi to andrew): why do we call these functions? It seems they
+        # just create an empty class
+
+        multi_policy = policy_cls.from_config(
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=num_active_agents,
+        )
+        multi_updater = updater_cls.from_config(
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=num_active_agents,
+        )
+
+        multi_storage = storage_cls.from_config(
+            config,
+            env_spec.observation_space,
+            env_spec.action_space,
+            orig_action_space=env_spec.orig_action_space,
+            agent=self._agents[0],
+            n_agents=num_active_agents,
+        )
+        return multi_policy, multi_updater, multi_storage
 
     def _get_agents(
         self,
@@ -164,7 +176,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 )
                 agent_name = config.habitat.simulator.agents_order[agent_i]
                 agents.append(
-                    SingleAgentAccessMgr(
+                    self._create_single_agent(
                         config,
                         agent_env_spec,
                         is_distrib,
@@ -178,13 +190,37 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 )
         return agents, agent_count_idxs
 
+    def _create_single_agent(
+        self,
+        config,
+        agent_env_spec,
+        is_distrib,
+        device,
+        use_resume_state,
+        num_envs,
+        percent_done_fn,
+        lr_schedule_fn,
+        agent_name,
+    ):
+        return SingleAgentAccessMgr(
+            config,
+            agent_env_spec,
+            is_distrib,
+            device,
+            use_resume_state,
+            num_envs,
+            percent_done_fn,
+            lr_schedule_fn,
+            agent_name,
+        )
+
     @property
     def nbuffers(self):
         return self._agents[0].nbuffers
 
-    def _sample_active(self):
+    def _sample_active_idxs(self) -> Tuple[np.ndarray, np.ndarray]:
         """
-        Samples the set of agents currently active in the episode.
+        Returns indices of active agents.
         """
         assert not self._pop_config.self_play_batched
 
@@ -209,9 +245,16 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             active_agent_types.append(
                 np.ones(agent_cts.shape, dtype=np.int32) * agent_type_ind
             )
+        return np.concatenate(active_agents), np.concatenate(
+            active_agent_types
+        )
 
-        self._active_agents = np.concatenate(active_agents)
-        active_agent_types = np.concatenate(active_agent_types)
+    def _sample_active(self):
+        """
+        Samples the set of agents currently active in the episode.
+        """
+
+        self._active_agents, active_agent_types = self._sample_active_idxs()
 
         if self._is_post_init:
             # If not post init then we are running in evaluation mode and
@@ -270,9 +313,21 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         hidden_shapes = np.stack(
             [self._agents[i].hidden_state_shape for i in self._active_agents]
         )
-        any_hidden_shape = hidden_shapes[0]
+        # We do max because some policies may be non-neural
+        # And will have a hidden state of [0, hidden_dim]
+        max_hidden_shape = hidden_shapes.max(0)
         # The hidden states will be concatenated over the last dimension.
-        return [*any_hidden_shape[:-1], np.sum(hidden_shapes[:, -1])]
+        return [*max_hidden_shape[:-1], np.sum(hidden_shapes[:, -1])]
+
+    @property
+    def hidden_state_shape_lens(self):
+        """
+        Stack the hidden states of all the policies in the active population.
+        """
+        hidden_indices = [
+            self._agents[i].hidden_state_shape[-1] for i in self._active_agents
+        ]
+        return hidden_indices
 
     def after_update(self):
         """
@@ -319,11 +374,41 @@ class MultiAgentAccessMgr(AgentAccessMgr):
     @property
     def policy_action_space(self):
         # TODO: Hack for discrete HL action spaces.
-        return spaces.MultiDiscrete(
-            tuple([agent.policy_action_space.n for agent in self._agents])
+        all_discrete = np.all(
+            [
+                isinstance(agent.policy_action_space, spaces.MultiDiscrete)
+                for agent in self._agents
+            ]
         )
+        if all_discrete:
+            return spaces.MultiDiscrete(
+                tuple([agent.policy_action_space.n for agent in self._agents])
+            )
+        else:
+            return spaces.Dict(
+                {
+                    index: agent.policy_action_space
+                    for index, agent in enumerate(self._agents)
+                }
+            )
+
+    @property
+    def policy_action_space_shape_lens(self):
+        lens = []
+        for agent in self._agents:
+            if isinstance(agent.policy_action_space, spaces.Discrete):
+                lens.append(1)
+            elif isinstance(agent.policy_action_space, spaces.Box):
+                lens.append(agent.policy_action_space.shape[0])
+            else:
+                raise ValueError(
+                    f"Action distribution {agent.policy_action_space}"
+                    "not supported."
+                )
+        return lens
 
     def update_hidden_state(self, rnn_hxs, prev_actions, action_data):
+        # TODO: will not work with different hidden states
         n_agents = len(self._active_agents)
         hxs_dim = rnn_hxs.shape[-1] // n_agents
         ac_dim = prev_actions.shape[-1] // n_agents
