@@ -47,9 +47,9 @@ habitat:
   simulator:
     agents:
       main_agent:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+        articulated_agent_urdf: 'data/female2_0.urdf'
         articulated_agent_type: KinematicHumanoid
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        motion_data_path: "data/walking_motion_processed_smplx.pkl"
 
 habitat_baselines:
   rl:

@@ -31,7 +31,7 @@ class KinematicHumanoid(MobileManipulator):
             wheel_mtr_vel_gain=None,
             wheel_mtr_max_impulse=None,
             ee_offset=[mn.Vector3(), mn.Vector3()],
-            ee_links=[14, 18],
+            ee_links=[20, 39],
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "head": ArticulatedAgentCameraParams(
@@ -217,6 +217,7 @@ class KinematicHumanoid(MobileManipulator):
 
     def set_rest_position(self) -> None:
         """Sets the agents in a resting position"""
+        return 
         joint_list = self.rest_joints
         offset_transform = mn.Matrix4()  # self.rest_matrix
         self.sim_obj.joint_positions = joint_list

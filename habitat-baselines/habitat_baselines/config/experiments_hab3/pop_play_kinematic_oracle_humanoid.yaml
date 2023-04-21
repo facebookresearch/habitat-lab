@@ -76,9 +76,9 @@ habitat:
   simulator:
     agents:
       agent_1:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+        articulated_agent_urdf: 'data/female2_0.urdf'
         articulated_agent_type: KinematicHumanoid
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        motion_data_path: "data/walking_motion_processed_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -106,7 +106,7 @@ habitat_baselines:
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
-
+  
   evaluate: False
   writer_type: 'wb'
 
