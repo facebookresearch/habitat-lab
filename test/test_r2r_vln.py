@@ -15,7 +15,7 @@ from habitat.datasets.vln import r2r_vln_dataset as r2r_vln_dataset
 from habitat.tasks.nav.shortest_path_follower import ShortestPathFollower
 from habitat.tasks.vln.vln import VLNEpisode
 
-CFG_TEST = "test/habitat_r2r_vln_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_r2r_vln_test.yaml"
 R2R_VAL_SEEN_EPISODES = 778
 EPISODES_LIMIT = 1
 

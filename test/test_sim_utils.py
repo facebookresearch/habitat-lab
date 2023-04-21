@@ -4,6 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os.path as osp
+
 import magnum as mn
 import pytest
 
@@ -21,12 +23,17 @@ from habitat_sim.utils.settings import default_sim_settings, make_cfg
     not built_with_bullet,
     reason="ArticulatedObject API requires Bullet physics.",
 )
+@pytest.mark.skipif(
+    not osp.exists("data/test_assets/scenes/plane.glb"),
+    reason="Requires the plane.glb habitat test asset",
+)
 @pytest.mark.parametrize(
     "support_margin",
     [0.0, 0.04, 0.1],
 )
 @pytest.mark.parametrize("obj_margin", [0.0, 0.04, 0.1])
-def test_snap_down(support_margin, obj_margin):
+@pytest.mark.parametrize("stage_support", [True, False])
+def test_snap_down(support_margin, obj_margin, stage_support):
     """
     Test snapping objects onto stages and other assets.
     """
@@ -34,13 +41,40 @@ def test_snap_down(support_margin, obj_margin):
     mm = MetadataMediator()
 
     otm = mm.object_template_manager
-    # setup a cube ground plane object config
+    stm = mm.stage_template_manager
+
+    # prepare the support object depending on 'stage_support' mode. Either a STATIC object or a stage mesh.
     cube_template_handle = otm.get_template_handles("cubeSolid")[0]
     cube_stage_template_handle = "cube_stage_object"
-    cube_template = otm.get_template_by_handle(cube_template_handle)
-    cube_template.scale = mn.Vector3(10, 0.05, 10)
-    cube_template.margin = support_margin
-    otm.register_template(cube_template, cube_stage_template_handle)
+    plane_stage_template_handle = "plane_stage"
+    if not stage_support:
+        # setup a cube ground plane object config
+        cube_template = otm.get_template_by_handle(cube_template_handle)
+        cube_template.scale = mn.Vector3(10, 0.05, 10)
+        cube_template.margin = support_margin
+        otm.register_template(cube_template, cube_stage_template_handle)
+    else:
+        # setup a stage using the plane.glb test asset
+        new_stage_template = stm.create_new_template(
+            handle=plane_stage_template_handle
+        )
+        new_stage_template.render_asset_handle = (
+            "data/test_assets/scenes/plane.glb"
+        )
+        new_stage_template.margin = support_margin
+        new_stage_template.orient_up = mn.Vector3(0, 0, 1)
+        new_stage_template.orient_front = mn.Vector3(0, 1, 0)
+        # need to make the scale reasonable or navmesh takes forever to recompute
+        # BUG: this scale is not used by sim currently...
+        new_stage_template.scale = mn.Vector3(0.01, 1.0, 0.01)
+        # temporary hack: load and arbitrary navmesh, we don't use it anyway
+        new_stage_template.navmesh_asset_handle = (
+            "data/test_assets/scenes/simple_room.stage_config.navmesh"
+        )
+        stm.register_template(
+            template=new_stage_template,
+            specified_handle=plane_stage_template_handle,
+        )
 
     # setup test cube object config
     cube_template = otm.get_template_by_handle(cube_template_handle)
@@ -51,17 +85,24 @@ def test_snap_down(support_margin, obj_margin):
     sim_settings = default_sim_settings.copy()
     sim_settings["sensor_height"] = 0
     sim_settings["scene"] = "NONE"
+    if stage_support:
+        sim_settings["scene"] = plane_stage_template_handle
     hab_cfg = make_cfg(sim_settings)
     hab_cfg.metadata_mediator = mm
     with Simulator(hab_cfg) as sim:
         rom = sim.get_rigid_object_manager()
 
         # add the cube objects
-        cube_stage_obj = rom.add_object_by_template_handle(
-            cube_stage_template_handle
-        )
-        assert cube_stage_obj.is_alive
-        support_obj_ids = [cube_stage_obj.object_id]
+        cube_stage_obj = None
+        support_obj_ids = [-1]
+        if not stage_support:
+            cube_stage_obj = rom.add_object_by_template_handle(
+                cube_stage_template_handle
+            )
+            assert (
+                cube_stage_obj.is_alive
+            ), "Failure to add object may indicate configuration issue or no 'cube_stage_template_handle'."
+            support_obj_ids = [cube_stage_obj.object_id]
         cube_obj = rom.add_object_by_template_handle(cube_template_handle)
         assert cube_obj.is_alive
 
@@ -72,7 +113,8 @@ def test_snap_down(support_margin, obj_margin):
                 MotionType.KINEMATIC,
                 MotionType.DYNAMIC,
             ]:
-                cube_stage_obj.motion_type = support_motion_type
+                if not stage_support:
+                    cube_stage_obj.motion_type = support_motion_type
                 cube_obj.motion_type = object_motion_type
 
                 # snap will fail because object COM is inside the support surface shape so raycast won't detect the support surface
@@ -110,3 +152,6 @@ def test_snap_down(support_margin, obj_margin):
                 assert (
                     bb_ray_prescreen_results["surface_snap_point"] is not None
                 )
+                if stage_support:
+                    # don't need 3 iterations for stage b/c no motion types to test
+                    break

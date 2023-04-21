@@ -4,8 +4,13 @@ from typing import Any, Dict, List
 import numpy as np
 
 # These metrics are not scalars and cannot be easily reported
-# (unless using videos)
+# (unless using videos).
 NON_SCALAR_METRICS = {"top_down_map", "collisions.is_collision"}
+
+# These metrics are arbitrary data we're communicating from env workers
+# to the main rollout-collection process; not relevant to learning the task; like
+# runtime_perf_stats and other debug data.
+NON_TASK_METRICS = {"runtime_perf_stats"}
 
 
 def extract_scalars_from_info(info: Dict[str, Any]) -> Dict[str, float]:
@@ -21,7 +26,11 @@ def extract_scalars_from_info(info: Dict[str, Any]) -> Dict[str, float]:
     """
     result = {}
     for k, v in info.items():
-        if not isinstance(k, str) or k in NON_SCALAR_METRICS:
+        if (
+            not isinstance(k, str)
+            or k in NON_SCALAR_METRICS
+            or k in NON_TASK_METRICS
+        ):
             continue
 
         if isinstance(v, dict):

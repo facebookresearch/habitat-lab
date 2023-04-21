@@ -469,11 +469,15 @@ class RLEnv(gym.Env):
 
         :return: :py:`(observations, reward, done, info)`
         """
+        t_start = time.time()
 
         observations = self._env.step(*args, **kwargs)
         reward = self.get_reward(observations)
         done = self.get_done(observations)
         info = self.get_info(observations)
+
+        if "runtime_perf_stats" in info:
+            info["runtime_perf_stats"]["RLEnv.step"] = time.time() - t_start
 
         return observations, reward, done, info
 

@@ -56,6 +56,7 @@ actions:
   agent_1_base_velocity_non_cylinder:
     agent_index : 1
     allow_dyn_slide: True
+    enable_rotation_check_for_dyn_slide: False
     # There is a collision if the difference between the clamped NavMesh position and target position
     # is more than than collision_threshold for any point
     collision_threshold: 1e-5

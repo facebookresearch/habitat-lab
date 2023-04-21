@@ -82,24 +82,7 @@ class PddlAction:
         is_sat = self._pre_cond.is_true(sim_info)
         if not is_sat:
             return False
-
-        post_conds = self._post_cond
-        if self._post_cond_search is not None:
-            found_assign = None
-            assert len(self._pre_cond.prev_truth_vals) == len(
-                self._post_cond_search
-            )
-            for sat, assign in zip(
-                self._pre_cond.prev_truth_vals, self._post_cond_search
-            ):
-                if sat:
-                    found_assign = assign
-                    break
-            # Clone and sub in so we don't overwrite the original predicates
-            post_conds = [p.clone().sub_in(found_assign) for p in post_conds]
-
-        for p in post_conds:
-            p.set_state(sim_info)
+        self.apply(sim_info)
 
         return True
 
@@ -199,8 +182,22 @@ class PddlAction:
         )
 
     def apply(self, sim_info: PddlSimInfo) -> None:
-        for p in self._post_cond:
-            rearrange_logger.debug(f"Setting predicate {p}")
+        post_conds = self._post_cond
+        if self._post_cond_search is not None:
+            found_assign = None
+            assert len(self._pre_cond.prev_truth_vals) == len(
+                self._post_cond_search
+            )
+            for sat, assign in zip(
+                self._pre_cond.prev_truth_vals, self._post_cond_search
+            ):
+                if sat:
+                    found_assign = assign
+                    break
+            # Clone and sub in so we don't overwrite the original predicates
+            post_conds = [p.clone().sub_in(found_assign) for p in post_conds]
+
+        for p in post_conds:
             p.set_state(sim_info)
 
     @property
