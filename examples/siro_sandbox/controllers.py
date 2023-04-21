@@ -51,7 +51,14 @@ def clean_dict(d, remove_prefix):
 
 
 class BaselinesController(Controller):
-    def __init__(self, agent_idx, is_multi_agent, cfg_path, env):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        cfg_path,
+        env,
+        sample_random_basenine_base_vel=False,
+    ):
         super().__init__(agent_idx, is_multi_agent)
 
         config = get_baselines_config(
@@ -59,8 +66,8 @@ class BaselinesController(Controller):
             [
                 # "habitat_baselines/rl/policy=hl_fixed",
                 # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
-                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 "habitat_baselines.num_environments=1",
+                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 f"habitat.task.task_spec={env._config.task.task_spec}",
                 f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
             ],
@@ -87,6 +94,7 @@ class BaselinesController(Controller):
         )
         self._action_shape, _ = get_action_space_info(self._gym_ac_space)
         self._step_i = 0
+        self._sample_random_basenine_base_vel = sample_random_basenine_base_vel
 
     def act(self, obs, env):
         masks = torch.ones(
@@ -128,9 +136,10 @@ class BaselinesController(Controller):
         )
 
         # temp do random base actions
-        action["action_args"]["base_vel"] = torch.rand_like(
-            action["action_args"]["base_vel"]
-        )
+        if self._sample_random_basenine_base_vel:
+            action["action_args"]["base_vel"] = torch.rand_like(
+                action["action_args"]["base_vel"]
+            )
 
         def change_ac_name(k):
             if "pddl" in k:
@@ -504,6 +513,7 @@ class ControllerHelper:
                 is_multi_agent,
                 "rearrange/rl_hierarchical.yaml",
                 env,
+                sample_random_basenine_base_vel=args.sample_random_basenine_base_vel,
             )
             for agent_index in range(self.n_robots)
             if agent_index != self._gui_controlled_agent_index

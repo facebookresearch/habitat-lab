@@ -315,7 +315,6 @@ class SandboxDriver(GuiAppDriver):
                 scale * self.gui_input._relative_mouse_position[1]
             )
 
-<<<<<<< HEAD
     def draw_nav_hint(
         self, start_pos, start_dir, end_pos, color, anim_fraction
     ):
@@ -374,7 +373,6 @@ class SandboxDriver(GuiAppDriver):
 
         self._debug_line_render.draw_circle(end_pos, end_radius, color, 24)
 
-=======
     def _free_camera_lookat_control(self):
         if self.lookat is None:
             # init lookat
@@ -421,7 +419,6 @@ class SandboxDriver(GuiAppDriver):
             self.lookat, 0.03, mn.Color3(1, 0, 0)
         )
 
->>>>>>> f6499aa2 (implemented free camera mode)
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
 
@@ -470,14 +467,6 @@ class SandboxDriver(GuiAppDriver):
                 self.cam_zoom_dist, min_zoom_dist, max_zoom_dist
             )
 
-<<<<<<< HEAD
-        agent_idx = 0
-        art_obj = (
-            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
-        )
-        robot_root = art_obj.transformation
-        lookat = robot_root.translation + mn.Vector3(0, 0.5, 0)
-=======
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
         if agent_idx is not None:
             art_obj = (
@@ -489,7 +478,6 @@ class SandboxDriver(GuiAppDriver):
             self._free_camera_lookat_control()
             lookat = self.lookat
 
->>>>>>> f6499aa2 (implemented free camera mode)
         # two ways for camera pitch and yaw control for UX comparison:
         # 1) hold WASD keys
         self._camera_pitch_and_yaw_wasd_control()
@@ -660,6 +648,16 @@ if __name__ == "__main__":
         type=int,
         help="If specified, use the specified viewport height for the debug third-person camera",
     )
+    # temp argument:
+    # allowes to swith between oracle baseline nav
+    # and random base vel action
+    parser.add_argument(
+        "--sample-random-basenine-base-vel",
+        action="store_true",
+        default=False,
+        help="Sample random BaselinesController base vel",
+    )
+
     args = parser.parse_args()
 
     glfw_config = Application.Configuration()
