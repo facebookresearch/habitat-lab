@@ -57,10 +57,7 @@ python examples/siro_sandbox/sandbox_app.py \
 * Camera yaw and pitch control (TODO: decide which one has better UX):
     1. WASD keys
     2. hold R and move mouse
-<<<<<<< HEAD
 * In [free camera mode](#gui-controlled-agents-and-free-camera-mode) use arrow keys to move the look-at point (camera yaw/pitch and zoom in/out controls are the same as in the steps above).
-=======
->>>>>>> f6499aa2 (implemented free camera mode)
 * `M` to reset to a new episode.
 
 ## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
