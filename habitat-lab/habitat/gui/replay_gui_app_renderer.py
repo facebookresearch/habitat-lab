@@ -16,8 +16,14 @@ from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
 
 class ReplayGuiAppRenderer(GuiAppRenderer):
-    def __init__(self, width, height, use_batch_renderer=False):
-        self.viewport_size = mn.Vector2i(width, height)
+    def __init__(
+        self,
+        viewport_size,
+        use_batch_renderer=False,
+        im_framebuffer_drawer_kwargs=None,
+        text_drawer_kwargs=None,
+    ):
+        self.viewport_size = viewport_size
         # arbitrary uuid
         self._sensor_uuid = "rgb_camera"
 
@@ -28,8 +34,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         camera_sensor_spec.senπsor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.uuid = self._sensor_uuid
         camera_sensor_spec.resolution = [
-            height,
-            width,
+            self.viewport_size.y,
+            self.viewport_size.x,
         ]
         camera_sensor_spec.position = np.array([0, 0, 0])
         camera_sensor_spec.orientation = np.array([0, 0, 0])
@@ -44,18 +50,23 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             else ReplayRenderer.create_classic_replay_renderer(cfg)
         )
 
-        # todo: allocate drawer lazily
-        self._image_drawer = ImageFramebufferDrawer(
-            max_width=1024, max_height=1024
-        )
         self._debug_images = []
         self._text_to_draw = ""
         self._need_render = True
 
-    def set_image_and_text_drawers(self, image_drawer, text_drawer):
-        assert isinstance(image_drawer, ImageFramebufferDrawer)
-        assert isinstance(text_drawer, TextDrawer)
+        im_framebuffer_drawer_kwargs = im_framebuffer_drawer_kwargs or {}
+        self._image_drawer: ImageFramebufferDrawer = ImageFramebufferDrawer(
+            **im_framebuffer_drawer_kwargs
+        )
+        text_drawer_kwargs = text_drawer_kwargs or {}
+        self._text_drawer: TextDrawer = TextDrawer(
+            viewport_size, **text_drawer_kwargs
+        )
+
+    def set_image_drawer(self, image_drawer: ImageFramebufferDrawer):
         self._image_drawer = image_drawer
+
+    def set_text_drawer(self, text_drawer: TextDrawer):
         self._text_drawer = text_drawer
 
     def post_sim_update(self, post_sim_update_dict):

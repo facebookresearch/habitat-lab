@@ -13,9 +13,6 @@ import ctypes
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
 
-from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
-from habitat.gui.text_drawer import TextDrawer
-
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
@@ -87,9 +84,14 @@ class SandboxDriver(GuiAppDriver):
         self._lookat_offset_yaw = 0.785
         self._lookat_offset_pitch = 0.955
 
+        self._text_drawer = None
+
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
+
+    def set_text_drawer(self, text_drawer):
+        self._text_drawer = text_drawer
 
     # trying to get around mypy complaints about missing sim attributes
     def get_sim(self) -> Any:
@@ -362,7 +364,7 @@ class SandboxDriver(GuiAppDriver):
         )
         post_sim_update_dict["debug_images"] = [
             np.flipud(image) for image in debug_images
-        ]
+        ]  # type: ignore
 
         return post_sim_update_dict
 
@@ -484,17 +486,16 @@ if __name__ == "__main__":
     # instantiate renderer:
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
-        framebuffer_size.x, framebuffer_size.y, args.use_batch_renderer
+        viewport_size=framebuffer_size,
+        use_batch_renderer=args.use_batch_renderer,
     )
-    image_drawer = ImageFramebufferDrawer(max_width=1024, max_height=1024)
-    text_drawer = TextDrawer(framebuffer_size)
-    app_renderer.set_image_and_text_drawers(image_drawer, text_drawer)
-
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
     # sloppy: provide replay app renderer's debug_line_render to our driver
     driver.set_debug_line_render(
         app_renderer._replay_renderer.debug_line_render(0)
     )
+    # provide image framebuffer drawer's text_drawer to our driver
+    driver.set_text_drawer(app_renderer._text_drawer)
 
     gui_app_wrapper.exec()
