@@ -62,7 +62,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         # todo: allocate drawer lazily
         self._image_drawer = ImageFramebufferDrawer(
-            max_width=1024, max_height=1024
+            max_width=1440, max_height=1440
         )
         self._debug_images = []
         self._need_render = True
