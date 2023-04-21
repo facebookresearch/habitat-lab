@@ -51,7 +51,6 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         )
 
         self._debug_images = []
-        self._text_to_draw = ""
         self._need_render = True
 
         im_framebuffer_drawer_kwargs = im_framebuffer_drawer_kwargs or {}
@@ -119,8 +118,8 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         self._replay_renderer.render(mn.gl.default_framebuffer)
 
-        # display text
-        self._text_drawer.draw_text(self._text_to_draw)
+        # draws text collected in self._text_drawer._text_transform_pairs on the screen
+        self._text_drawer.draw_text()
 
         # arrange debug images on right side of frame, tiled down from the top
         dest_y = self.viewport_size.y

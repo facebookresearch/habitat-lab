@@ -18,6 +18,7 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
 from functools import wraps
+from pprint import pformat
 from typing import Any
 
 import magnum as mn
@@ -297,7 +298,16 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict = {}
         # add env specific information to the post_sim_update_dict
         info = self.env.get_metrics()
-        post_sim_update_dict["info"] = {"env": info}
+        self._text_drawer.add_text(
+            f"Metrics:\n"
+            f"""{
+                pformat(info)
+                .replace("'", " ")
+                .replace("{", " ")
+                .replace("}", " ")
+            }""",
+            text_delta_y=-80,
+        )
 
         if self.gui_input.mouse_scroll_offset != 0:
             zoom_sensitivity = 0.07
