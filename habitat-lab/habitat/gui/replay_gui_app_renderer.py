@@ -14,8 +14,14 @@ from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
 
 class ReplayGuiAppRenderer(GuiAppRenderer):
-    def __init__(self, width, height, use_batch_renderer=False):
-        self.viewport_size = mn.Vector2i(width, height)
+    def __init__(
+        self,
+        window_width,
+        window_height,
+        use_batch_renderer=False,
+        viewport_rect=None,
+    ):
+        self.window_size = mn.Vector2i(window_width, window_height)
         # arbitrary uuid
         self._sensor_uuid = "rgb_camera"
 
@@ -25,10 +31,22 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         camera_sensor_spec = habitat_sim.CameraSensorSpec()
         camera_sensor_spec.senπsor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.uuid = self._sensor_uuid
-        camera_sensor_spec.resolution = [
-            height,
-            width,
-        ]
+        if viewport_rect:
+            # unfortunately, at present, we only support a viewport rect placed
+            # in the bottom left corner. See https://cvmlp.slack.com/archives/G0131KVLBLL/p1682023823697029
+            assert viewport_rect.left == 0
+            assert viewport_rect.bottom == 0
+            assert viewport_rect.right <= window_width
+            assert viewport_rect.top <= window_height
+            camera_sensor_spec.resolution = [
+                viewport_rect.top,
+                viewport_rect.right,
+            ]
+        else:
+            camera_sensor_spec.resolution = [
+                window_height,
+                window_width,
+            ]
         camera_sensor_spec.position = np.array([0, 0, 0])
         camera_sensor_spec.orientation = np.array([0, 0, 0])
 
@@ -44,7 +62,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         # todo: allocate drawer lazily
         self._image_drawer = ImageFramebufferDrawer(
-            max_width=1024, max_height=1024
+            max_width=1440, max_height=1440
         )
         self._debug_images = []
         self._need_render = True
@@ -84,11 +102,11 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         self._replay_renderer.render(mn.gl.default_framebuffer)
 
         # arrange debug images on right side of frame, tiled down from the top
-        dest_y = self.viewport_size.y
+        dest_y = self.window_size.y
         for image in self._debug_images:
             im_height, im_width, _ = image.shape
             self._image_drawer.draw(
-                image, self.viewport_size.x - im_width, dest_y - im_height
+                image, self.window_size.x - im_width, dest_y - im_height
             )
             dest_y -= im_height
 
