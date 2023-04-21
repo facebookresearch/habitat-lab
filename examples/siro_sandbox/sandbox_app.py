@@ -497,6 +497,15 @@ if __name__ == "__main__":
         default=False,
         help="Choose between classic and batch renderer",
     )
+    # temp argument:
+    # allowes to swith between oracle baseline nav
+    # and random base vel action
+    parser.add_argument(
+        "--sample-random-basenine-base-vel",
+        action="store_true",
+        default=False,
+        help="Sample random BaselinesController base vel",
+    )
 
     args = parser.parse_args()
 

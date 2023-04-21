@@ -21,7 +21,8 @@ python examples/siro_sandbox/sandbox_app.py \
 --never-end \
 --gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
---cfg-opts habitat.dataset.split=minival
+--cfg-opts habitat.dataset.split=minival \
+--sample-random-basenine-base-vel
 ```
 3. To use Spot run (make sure you are using latest habitat-sim version):
 ```
@@ -31,7 +32,8 @@ python examples/siro_sandbox/sandbox_app.py \
 --humanoid-user-agent \
 --never-end \
 --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml \
---cfg-opts habitat.dataset.split=minival
+--cfg-opts habitat.dataset.split=minival \
+--sample-random-basenine-base-vel
 ```
 
 Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
