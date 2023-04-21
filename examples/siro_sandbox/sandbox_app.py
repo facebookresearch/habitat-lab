@@ -370,7 +370,7 @@ def parse_debug_third_person(args, framebuffer_size):
     do_show = args.debug_third_person_width != 0
 
     width = args.debug_third_person_width
-    # default to square aspet ratio
+    # default to square aspect ratio
     height = (
         args.debug_third_person_height
         if args.debug_third_person_height != 0
