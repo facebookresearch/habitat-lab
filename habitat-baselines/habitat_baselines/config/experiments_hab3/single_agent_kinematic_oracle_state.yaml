@@ -1,9 +1,16 @@
 # @package _global_
 
 defaults:
-  - /rearrange/rl_hierarchical_oracle_nav
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
-  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - /benchmark/rearrange: rearrange_easy
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
+  - /habitat_baselines/rl/agent: single_agent
+  - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.main_agent.obs_transforms.add_virtual_keys:
+    - add_virtual_keys_base
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
+  - /habitat/task/measurements:
+    - composite_subgoal_reward
   - /habitat/task/lab_sensors:
     - multi_agent_all_predicates
   - _self_
@@ -28,6 +35,7 @@ habitat_baselines:
   num_environments: 2
   rl:
     policy:
+      main_agent:
         hierarchical_policy:
           high_level_policy:
             policy_input_keys:
@@ -42,15 +50,27 @@ habitat_baselines:
 
 habitat:
   task:
-    actions:
-      oracle_nav_action:
-        spawn_max_dist_to_obj: -1.0
     measurements:
       composite_success:
         must_call_stop: False
       force_terminate:
         max_accum_force: -1.0
         max_instant_force: -1.0
+
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - multi_agent_all_predicates
+
 
   environment:
     max_episode_steps: 700
