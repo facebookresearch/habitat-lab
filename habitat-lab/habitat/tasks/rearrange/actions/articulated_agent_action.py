@@ -11,7 +11,7 @@ class ArticulatedAgentAction(SimulatorTaskAction):
 
     def __init__(self, *args, sim, **kwargs):
         super().__init__(self, *args, sim=sim, **kwargs)
-        num_agents = len(sim.config.agents)
+        num_agents = self._sim.num_articulated_agents
         if num_agents == 1:
             self._agent_index = 0
             self._multi_agent = False
