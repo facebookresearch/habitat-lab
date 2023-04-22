@@ -13,11 +13,6 @@ objects:
   - name: robot_1
     expr_type: robot_entity_type
 
-
-init:
-  - closed_fridge(fridge_push_point)
-
-
 goal:
   expr_type: AND
   sub_exprs:

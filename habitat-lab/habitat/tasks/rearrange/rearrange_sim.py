@@ -127,7 +127,6 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
-
         self._backend_runtime_perf_stat_names = (
             super().get_runtime_perf_stat_names()
         )

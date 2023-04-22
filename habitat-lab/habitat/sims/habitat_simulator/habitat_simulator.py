@@ -695,3 +695,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         observations[
             KEYFRAME_OBSERVATION_KEY
         ] = self.gfx_replay_manager.extract_keyframe()
+
+    def get_runtime_perf_stat_names(self) -> str:
+        """
+        Name of the performance stat that should be logged.
+        """
+        return "perf_stat"
