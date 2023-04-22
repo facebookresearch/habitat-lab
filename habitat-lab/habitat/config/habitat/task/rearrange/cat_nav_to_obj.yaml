@@ -3,8 +3,6 @@
 defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
-    # - base_velocity
-    # - rearrange_stop
     - move_forward
     - turn_left
     - turn_right
@@ -14,7 +12,7 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
-    - rot_dist_to_goal
+    - cat_nav_rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
     - does_want_terminate
@@ -25,9 +23,8 @@ defaults:
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
-    - object_category_sensor
     - start_receptacle_sensor
-    - object_segmentation_sensor
+    - cat_nav_goal_segmentation_sensor
     - receptacle_segmentation_sensor
     - object_embedding_sensor
     - robot_start_gps_sensor

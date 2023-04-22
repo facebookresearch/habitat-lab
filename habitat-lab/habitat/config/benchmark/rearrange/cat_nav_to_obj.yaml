@@ -14,7 +14,7 @@ habitat:
       - robot_head_depth
       - robot_head_panoptic
       - object_embedding
-      - object_segmentation
+      - cat_nav_goal_segmentation
       - receptacle_segmentation
       - start_receptacle
       - robot_start_gps
