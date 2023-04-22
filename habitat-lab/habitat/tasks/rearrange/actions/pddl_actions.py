@@ -13,21 +13,18 @@ from habitat.tasks.rearrange.actions.grip_actions import ArticulatedAgentAction
 @registry.register_task_action
 class PddlApplyAction(ArticulatedAgentAction):
     def __init__(self, *args, task, **kwargs):
+        self._action_ordering = task.pddl_problem.get_ordered_actions()
+        self._entities_list = task.pddl_problem.get_ordered_entities_list()
         super().__init__(*args, **kwargs)
         self._task = task
-        self._action_ordering = None
         self._was_prev_action_invalid = False
 
     @property
-    def action_space(self):
-        if self._action_ordering is None:
-            self._action_ordering = (
-                self._task.pddl_problem.get_ordered_actions()
-            )
-            self._entities_list = (
-                self._task.pddl_problem.get_ordered_entities_list()
-            )
+    def entities(self):
+        return self._entities_list
 
+    @property
+    def action_space(self):
         action_n_args = sum(
             [action.n_args for action in self._action_ordering]
         )
@@ -72,9 +69,7 @@ class PddlApplyAction(ArticulatedAgentAction):
                             f"Got invalid action value < 0 in {action_part} with action {action}"
                         )
 
-                param_values = [
-                    self._entities_list[i] for i in real_action_idxs
-                ]
+                param_values = [self.entities[i] for i in real_action_idxs]
 
                 # Look up the most recent version of this action.
                 apply_action = self._task.pddl_problem.actions[
@@ -95,7 +90,7 @@ class PddlApplyAction(ArticulatedAgentAction):
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         self._was_prev_action_invalid = False
         inputs_outside = any(
-            a < 0 or a > len(self._entities_list) for a in apply_pddl_action
+            a < 0 or a > len(self.entities) for a in apply_pddl_action
         )
         if not inputs_outside:
             self._apply_action(apply_pddl_action)

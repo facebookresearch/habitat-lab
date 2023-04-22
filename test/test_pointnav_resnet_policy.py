@@ -123,7 +123,9 @@ def download_data():
 def test_pretrained_models(
     pretrained_weights_path, backbone, observation_space, action_space
 ):
-    config = get_config("test/ddppo_pointnav_test.yaml")
+    config = get_config(
+        "test/config/habitat_baselines/ddppo_pointnav_test.yaml"
+    )
     with read_write(config):
         ddppo_config = config.habitat_baselines.rl.ddppo
         ddppo_config.pretrained = True

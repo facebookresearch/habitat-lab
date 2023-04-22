@@ -144,6 +144,7 @@ class PddlSimInfo:
 
     num_spawn_attempts: int
     physics_stability_steps: int
+    recep_place_shrink_factor: float
 
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]

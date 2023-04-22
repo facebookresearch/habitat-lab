@@ -6,7 +6,7 @@
 
 from habitat.config.default import get_config
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_all_sensors_test.yaml"
 MAX_TEST_STEPS_LIMIT = 3
 
 

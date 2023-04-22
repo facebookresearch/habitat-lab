@@ -146,10 +146,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
 
     @property
     def policy_action_space_shape_lens(self):
-        if isinstance(self._policy_action_space, spaces.Discrete):
-            return 1
-        else:
-            return [self._policy_action_space[0]]
+        return [self._policy_action_space]
 
     @property
     def masks_shape(self):

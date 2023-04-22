@@ -18,7 +18,7 @@ def construct_envs(
     config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
-) -> VectorEnv:
+):
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
     each individual env, grouped by scenes.
@@ -96,4 +96,8 @@ def construct_envs(
         env_fn_args=tuple((c,) for c in configs),
         workers_ignore_signals=workers_ignore_signals,
     )
-    return envs
+
+    if config.habitat.simulator.renderer.enable_batch_renderer:
+        envs.initialize_batch_renderer(config)
+
+    return envs, len(scenes)

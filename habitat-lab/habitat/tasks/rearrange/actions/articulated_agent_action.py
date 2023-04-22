@@ -9,12 +9,10 @@ class ArticulatedAgentAction(SimulatorTaskAction):
 
     _sim: RearrangeSim
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(self, *args, **kwargs)
-        if (
-            "agent_index" not in self._config
-            or self._config.agent_index is None
-        ):
+    def __init__(self, *args, sim, **kwargs):
+        super().__init__(self, *args, sim=sim, **kwargs)
+        num_agents = self._sim.num_articulated_agents
+        if num_agents == 1:
             self._agent_index = 0
             self._multi_agent = False
         else:
