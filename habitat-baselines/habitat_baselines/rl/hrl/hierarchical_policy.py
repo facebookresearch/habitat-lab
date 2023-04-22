@@ -241,6 +241,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         prev_actions,
         masks,
         deterministic=False,
+        **kwargs,
     ):
         masks_cpu = masks.cpu()
         log_info: List[Dict[str, Any]] = [{} for _ in range(self._num_envs)]
