@@ -188,7 +188,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                 skill_args_data[batch_idx] = [param.name for param in cur_ac.param_values]  # type: ignore[call-overload]
             else:
                 # If we have no next action, do nothing.
-                next_skill[batch_idx] = self._skill_name_to_idx["wait"]  # type: ignore[call-overload]
+                next_skill[batch_idx] = self._skill_name_to_idx["wait"]
                 # TODO(xavi to andrew): Is 1 a good default param?
                 skill_args_data[batch_idx] = ["1"]  # type: ignore[call-overload]
         return next_skill, skill_args_data, immediate_end, {}

@@ -18,7 +18,7 @@ class HighLevelPolicy(nn.Module):
         config,
         pddl_problem: PddlProblem,
         num_envs: int,
-        skill_name_to_idx: Dict[int, str],
+        skill_name_to_idx: Dict[str, int],
         observation_space: spaces.Space,
         action_space: spaces.Space,
         aux_loss_config=None,
