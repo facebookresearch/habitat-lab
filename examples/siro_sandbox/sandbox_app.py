@@ -32,6 +32,7 @@ from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     OracleNavActionConfig,
     PddlApplyActionConfig,
+    ThirdRGBSensorConfig,
 )
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
@@ -430,6 +431,27 @@ class SandboxDriver(GuiAppDriver):
         )
 
 
+def parse_debug_third_person(args, framebuffer_size):
+    viewport_multiplier = mn.Vector2(
+        framebuffer_size.x / args.width, framebuffer_size.y / args.height
+    )
+
+    do_show = args.debug_third_person_width != 0
+
+    width = args.debug_third_person_width
+    # default to square aspect ratio
+    height = (
+        args.debug_third_person_height
+        if args.debug_third_person_height != 0
+        else width
+    )
+
+    width = int(width * viewport_multiplier.x)
+    height = int(height * viewport_multiplier.y)
+
+    return do_show, width, height
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -497,6 +519,18 @@ if __name__ == "__main__":
         default=False,
         help="Choose between classic and batch renderer",
     )
+    parser.add_argument(
+        "--debug-third-person-width",
+        default=0,
+        type=int,
+        help="If specified, enable the debug third-person camera (habitat.simulator.debug_render) with specified viewport width",
+    )
+    parser.add_argument(
+        "--debug-third-person-height",
+        default=0,
+        type=int,
+        help="If specified, use the specified viewport height for the debug third-person camera",
+    )
     # temp argument:
     # allowes to swith between oracle baseline nav
     # and random base vel action
@@ -506,8 +540,20 @@ if __name__ == "__main__":
         default=False,
         help="Sample random BaselinesController base vel",
     )
-
     args = parser.parse_args()
+
+    glfw_config = Application.Configuration()
+    glfw_config.title = "Sandbox App"
+    glfw_config.size = (args.width, args.height)
+    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
+    # on Mac Retina displays, this will be 2x the window size
+    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+
+    (
+        show_debug_third_person,
+        debug_third_person_width,
+        debug_third_person_height,
+    ) = parse_debug_third_person(args, framebuffer_size)
 
     config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
@@ -519,9 +565,22 @@ if __name__ == "__main__":
             "agent_1_oracle_nav_action"
         ] = OracleNavActionConfig(agent_index=1)
 
+        agent_config = get_agent_config(sim_config=sim_config)
+
+        if show_debug_third_person:
+            sim_config.debug_render = True
+            agent_config.sim_sensors.update(
+                {
+                    "third_rgb_sensor": ThirdRGBSensorConfig(
+                        height=debug_third_person_height,
+                        width=debug_third_person_width,
+                    )
+                }
+            )
+            args.debug_images.append("agent_0_third_rgb")
+
+        # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
-            # Code below is ported from interactive_play.py. I'm not sure what it is for.
-            agent_config = get_agent_config(sim_config=sim_config)
             if "composite_success" in task_config.measurements:
                 task_config.measurements.composite_success.must_call_stop = (
                     False
@@ -559,15 +618,26 @@ if __name__ == "__main__":
         f"must be >= 0 and < number of agents ({len(config.habitat.simulator.agents)})"
     )
 
-    glfw_config = Application.Configuration()
-    glfw_config.title = "Sandbox App"
-    glfw_config.size = (args.width, args.height)
-    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
-    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+
+    viewport_rect = None
+    if show_debug_third_person:
+        # adjust main viewport to leave room for the debug third-person camera on the right
+        assert framebuffer_size.x > debug_third_person_width
+        viewport_rect = mn.Range2Di(
+            mn.Vector2i(0, 0),
+            mn.Vector2i(
+                framebuffer_size.x - debug_third_person_width,
+                framebuffer_size.y,
+            ),
+        )
+
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
-        framebuffer_size.x, framebuffer_size.y, args.use_batch_renderer
+        framebuffer_size.x,
+        framebuffer_size.y,
+        args.use_batch_renderer,
+        viewport_rect,
     )
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
