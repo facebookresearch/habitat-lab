@@ -524,7 +524,6 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         stats = self._all_reduce(stats)
-
         for i, k in enumerate(stats_ordering):
             self.window_episode_stats[k].append(stats[i])
 
@@ -623,7 +622,7 @@ class PPOTrainer(BaseRLTrainer):
                     ),
                 )
             )
-
+            breakpoint()
             if self._perf_logger:
                 self._perf_logger.check_log_summary()
 

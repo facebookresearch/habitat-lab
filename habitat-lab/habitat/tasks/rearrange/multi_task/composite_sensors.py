@@ -218,6 +218,43 @@ class CompositeSuccess(Measure):
 
 
 @registry.register_measure
+class ReachPosSuccess(Measure):
+    """
+    Reward that gives a continuous reward on the social navigation task.
+    """
+
+    cls_uuid: str = "reach_pos_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ReachPosSuccess.cls_uuid
+
+    def __init__(self, *args, config, **kwargs):
+        super().__init__(*args, config, **kwargs)
+        # self._stage_reward = config.stage_sparse_reward
+
+    def reset_metric(self, *args, **kwargs):
+        self.update_metric(
+            *args,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        
+        position_human = kwargs["observations"]["agent_1_localization_sensor"][
+            :3
+        ]
+        position_robot = kwargs["observations"]["agent_0_localization_sensor"][
+            :3
+        ].copy()
+        position_robot[1] = 0.
+
+        distance = np.linalg.norm(position_robot)
+        self._metric = distance < 0.1
+        if self._metric:
+            task.should_end = True
+
+@registry.register_measure
 class CompositeStageGoals(Measure):
     """
     Adds to the metrics `[TASK_NAME]_success`: Did the agent complete a
@@ -305,6 +342,7 @@ class SocialNavReward(Measure):
 
     def reset_metric(self, *args, **kwargs):
         self._stage_succ = []
+        self.prev_val = None
         self.update_metric(
             *args,
             **kwargs,
@@ -318,6 +356,8 @@ class SocialNavReward(Measure):
         position_robot = kwargs["observations"]["agent_0_localization_sensor"][
             :3
         ]
-
-        distance = np.linalg.norm(position_human - position_robot)
-        self._metric = -distance
+        position_robot[1] = 0.
+        distance = np.linalg.norm(position_robot)
+        if self.prev_val is not None:
+            self._metric = (self.prev_val - distance) * 10
+        self.prev_val = distance

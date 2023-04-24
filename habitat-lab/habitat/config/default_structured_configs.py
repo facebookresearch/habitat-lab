@@ -81,6 +81,7 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
+    "ReachPosSuccessMeasurementConfig",
     # DEBUG MEASURES
     "RuntimePerfStatsMeasurementConfig",
 ]
@@ -1032,6 +1033,15 @@ class CompositeSuccessMeasurementConfig(MeasurementConfig):
     """
     type: str = "CompositeSuccess"
     must_call_stop: bool = True
+
+@dataclass
+class ReachPosSuccessMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+
+    :property must_call_stop: If true, the robot must in addition, call the rearrange_stop action for this measure to be a success.
+    """
+    type: str = "ReachPosSuccess"
 
 
 @dataclass
@@ -2155,6 +2165,12 @@ cs.store(
     group="habitat/task/measurements",
     name="composite_success",
     node=CompositeSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.reach_pos_success",
+    group="habitat/task/measurements",
+    name="reach_pos_success",
+    node=ReachPosSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.gfx_replay_measure",
