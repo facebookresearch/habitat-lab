@@ -501,6 +501,10 @@ class RearrangeEpisodeGenerator:
         rom = self.sim.get_rigid_object_manager()
         self.existing_rigid_objects = set(rom.get_object_handles())
 
+        recep_tracker.init_scene_filters(
+            mm=self.sim.metadata_mediator, scene_handle=ep_scene_handle
+        )
+
         scene_name = osp.basename(ep_scene_handle).split(".")[0]
         navmesh_path = osp.join(
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
@@ -548,7 +552,11 @@ class RearrangeEpisodeGenerator:
         all_target_receptacles = []
         for sampler_name, num_targets in target_numbers.items():
             new_target_receptacles: List[Receptacle] = []
+            failed_samplers: Dict[str, bool] = defaultdict(bool)
             while len(new_target_receptacles) < num_targets:
+                assert len(failed_samplers.keys()) < len(
+                    targ_sampler_name_to_obj_sampler_names[sampler_name]
+                ), f"All target samplers failed to find a match for '{sampler_name}'."
                 obj_sampler_name = random.choice(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 )
@@ -560,7 +568,9 @@ class RearrangeEpisodeGenerator:
                     )
                 except AssertionError:
                     # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
+                    failed_samplers[obj_sampler_name]
                     continue
+
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
@@ -594,7 +604,7 @@ class RearrangeEpisodeGenerator:
 
         # Goal and target containing receptacles are allowed 1 extra maximum object for each goal/target if a limit was defined
         for recep in [*all_goal_receptacles, *all_target_receptacles]:
-            recep_tracker.inc_count(recep.name)
+            recep_tracker.inc_count(recep.unique_name)
 
         # sample AO states for objects in the scene
         # ao_instance_handle -> [ (link_ix, state), ... ]
@@ -790,7 +800,8 @@ class RearrangeEpisodeGenerator:
         ]
 
         name_to_receptacle = {
-            k: v.name for k, v in self.object_to_containing_receptacle.items()
+            k: v.unique_name
+            for k, v in self.object_to_containing_receptacle.items()
         }
 
         return RearrangeEpisode(
@@ -1005,7 +1016,7 @@ class RearrangeEpisodeGenerator:
             if obj_name in unstable_placements:
                 rec_num_obj_vs_unstable[rec]["num_unstable_objects"] += 1
         for rec, obj_in_rec in rec_num_obj_vs_unstable.items():
-            detailed_receptacle_stability_report += f"\n      receptacle '{rec.name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
+            detailed_receptacle_stability_report += f"\n      receptacle '{rec.unique_name}': ({obj_in_rec['num_unstable_objects']}/{obj_in_rec['num_objects']}) (unstable/total) objects."
 
         success = len(unstable_placements) == 0
 
