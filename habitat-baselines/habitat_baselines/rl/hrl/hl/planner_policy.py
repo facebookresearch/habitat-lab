@@ -35,6 +35,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self._predicates_list = self._pddl_prob.get_possible_predicates()
         self._all_actions = self._setup_actions()
         self._max_search_depth = self._config.max_search_depth
+        self._reactive_planner = self._config.is_reactive
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
         self._plans: List[List[PddlAction]] = [
@@ -43,8 +44,12 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self._should_replan = torch.zeros(self._num_envs, dtype=torch.bool)
 
     def apply_mask(self, mask):
-        # We must replan.
-        self._should_replan *= mask.cpu().view(-1)
+        if self._reactive_planner:
+            # Replan at every step
+            self._should_replan = torch.ones(self._num_envs, dtype=torch.bool)
+        else:
+            # Only plan at step 0
+            self._should_replan = ~mask.cpu().view(-1)
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         # We assign a value of 0. This is needed so that we can concatenate values in multiagent
@@ -54,11 +59,17 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         )
 
     def _get_solution_nodes(self, pred_vals):
+        # The true predicates at the current state
         start_true_preds = [
             pred
             for is_valid, pred in zip(pred_vals, self._predicates_list)
             if (is_valid == 1.0)
         ]
+
+        def _is_pred_at(pred, robot_type):
+            return (
+                pred.name == "robot_at" and pred._arg_values[-1] == robot_type
+            )
 
         def _get_pred_hash(preds):
             return ",".join(sorted([p.compact_str for p in preds]))
@@ -67,8 +78,8 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         visited = {_get_pred_hash(start_true_preds)}
         sol_nodes = []
         while len(stack) != 0:
-            cur_node = stack.pop()
-            print(f"Cur visited size {len(visited)}, depth {cur_node.depth}")
+            cur_node = stack.popleft()
+            # print(f"Cur visited size {len(visited)}, depth {cur_node.depth}")
 
             if cur_node.depth > self._max_search_depth:
                 break
@@ -80,21 +91,27 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                     continue
 
                 # Use set so we filter out duplicate predicates.
-                new_pred_set = list(cur_node.cur_pred_state)
+                pred_set = list(cur_node.cur_pred_state)
+                if action.name == "nav":
+                    # Remove the at precondition, since we are walking somewhere else
+                    robot_to_nav = action._param_values[-1]
+                    pred_set = [
+                        pred
+                        for pred in pred_set
+                        if not _is_pred_at(pred, robot_to_nav)
+                    ]
                 for p in action.post_cond:
-                    if p not in new_pred_set:
-                        new_pred_set.append(p)
+                    if p not in pred_set:
+                        pred_set.append(p)
 
-                pred_hash = _get_pred_hash(new_pred_set)
+                pred_hash = _get_pred_hash(pred_set)
 
                 if pred_hash not in visited:
                     visited.add(pred_hash)
                     add_node = PlanNode(
-                        new_pred_set, cur_node, cur_node.depth + 1, action
+                        pred_set, cur_node, cur_node.depth + 1, action
                     )
-                    if self._pddl_prob.goal.is_true_from_predicates(
-                        new_pred_set
-                    ):
+                    if self._pddl_prob.goal.is_true_from_predicates(pred_set):
                         # Found a goal, we can stop searching.
                         sol_nodes.append(add_node)
                     else:
@@ -171,9 +188,10 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             cur_ac = self._get_plan_action(all_pred_vals[batch_idx], batch_idx)
             if cur_ac is not None:
                 next_skill[batch_idx] = self._skill_name_to_idx[cur_ac.name]
-                skill_args_data[batch_idx] = cur_ac.param_values  # type: ignore[call-overload]
+                skill_args_data[batch_idx] = [param.name for param in cur_ac.param_values]  # type: ignore[call-overload]
             else:
                 # If we have no next action, do nothing.
-                next_skill[batch_idx] = "wait"
-
+                next_skill[batch_idx] = self._skill_name_to_idx["wait"]
+                # TODO(xavi to andrew): Is 1 a good default param?
+                skill_args_data[batch_idx] = ["1"]  # type: ignore[call-overload]
         return next_skill, skill_args_data, immediate_end, {}

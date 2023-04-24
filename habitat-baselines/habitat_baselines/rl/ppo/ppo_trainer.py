@@ -849,7 +849,7 @@ class PPOTrainer(BaseRLTrainer):
                                     )
                                 else:
                                     config.habitat.gym.obs_keys.append(
-                                        f"main_agent_{render_view.uuid}"
+                                        f"{render_view.uuid}"
                                     )
                     config.habitat.simulator.debug_render = True
 
