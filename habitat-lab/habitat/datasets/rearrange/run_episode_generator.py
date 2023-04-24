@@ -24,8 +24,12 @@ os.environ["HYDRA_FULL_ERROR"] = "1"
 import os
 import os.path as osp
 import random
+import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List
+
+flags = sys.getdlopenflags()
+sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import numpy as np
 from omegaconf import OmegaConf
