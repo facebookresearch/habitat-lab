@@ -145,6 +145,22 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             return [agent_pos, point]
         return path.points
 
+    def _update_controller_to_navmesh(self):
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        target_rigid_state_trans = (
+            self.humanoid_controller.obj_transform_base.translation
+        )
+        end_pos = self._sim.step_filter(
+            rigid_state.translation, target_rigid_state_trans
+        )
+
+        # Offset the base
+        end_pos -= self.cur_articulated_agent.params.base_offset
+        self.humanoid_controller.obj_transform_base.translation = end_pos
+
     def step(self, *args, is_last_action, **kwargs):
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_action"
@@ -233,6 +249,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 else:
                     self.humanoid_controller.calculate_stop_pose()
 
+                self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[
                     f"{self._action_arg_prefix}human_joints_trans"
