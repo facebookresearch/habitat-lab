@@ -109,10 +109,15 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
+            if "robot" in nav_to_obj.name:
+                # Safety margin between the human and the robot
+                sample_distance = 1.0
+            else:
+                sample_distance = self._config.spawn_max_dist_to_obj
             start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
-                self._config.spawn_max_dist_to_obj,
+                sample_distance,
                 self._sim,
                 self._config.num_spawn_attempts,
                 1,
