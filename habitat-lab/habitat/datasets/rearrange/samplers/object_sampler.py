@@ -142,7 +142,7 @@ class ObjectSampler:
                     for (
                         ex_receptacle_substr
                     ) in receptacle_set.excluded_receptacle_substrings:
-                        if ex_receptacle_substr in receptacle.name:
+                        if ex_receptacle_substr in receptacle.unique_name:
                             culled = True
                             break
                     if culled:
@@ -154,7 +154,7 @@ class ObjectSampler:
                         for (
                             name_constraint
                         ) in receptacle_set.included_receptacle_substrings:
-                            if name_constraint in receptacle.name:
+                            if name_constraint in receptacle.unique_name:
                                 found_match = True
                                 break
                         break
@@ -168,7 +168,7 @@ class ObjectSampler:
                             for (
                                 name_constraint
                             ) in receptacle_set.included_receptacle_substrings:
-                                if name_constraint in receptacle.name:
+                                if name_constraint in receptacle.unique_name:
                                     # found a valid substring match for this receptacle, stop the search
                                     found_match = True
                                     break
@@ -193,7 +193,7 @@ class ObjectSampler:
                         if gravity_alignment < tilt_tolerance:
                             culled = True
                             logger.info(
-                                f"Culled by tilt: '{receptacle.name}', {gravity_alignment}"
+                                f"Culled by tilt: '{receptacle.unique_name}', {gravity_alignment}"
                             )
                     if not culled:
                         # found a valid receptacle
@@ -326,7 +326,7 @@ class ObjectSampler:
             new_object.handle
         )
         logger.warning(
-            f"Failed to sample {object_handle} placement on {receptacle.name} in {self.max_placement_attempts} tries."
+            f"Failed to sample {object_handle} placement on {receptacle.unique_name} in {self.max_placement_attempts} tries."
         )
 
         return None
@@ -388,7 +388,7 @@ class ObjectSampler:
         else:
             target_receptacle = self.sample_receptacle(sim, recep_tracker)
         logger.info(
-            f"Sampling '{object_handle}' from '{target_receptacle.name}'"
+            f"Sampling '{object_handle}' from '{target_receptacle.unique_name}'"
         )
 
         new_object = self.sample_placement(
