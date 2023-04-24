@@ -204,6 +204,10 @@ class PddlAction:
         for p in post_conds:
             p.set_state(sim_info)
 
+        print(self.compact_str)
+        if "nav" in self.compact_str:
+            breakpoint()
+
     @property
     def params(self) -> List[PddlEntity]:
         return self._params

@@ -18,7 +18,7 @@ habitat_baselines:
   checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
   log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
   evaluate: False
-  writer_type: 'wb'
+  writer_type: 'tb'
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'

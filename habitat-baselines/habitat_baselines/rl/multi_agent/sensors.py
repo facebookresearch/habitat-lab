@@ -62,4 +62,9 @@ class MultiAgentGlobalPredicatesSensor(UsesArticulatedAgentInterface, Sensor):
     def get_observation(self, observations, episode, *args, **kwargs):
         sim_info = self._task.pddl_problem.sim_info
         truth_values = [p.is_true(sim_info) for p in self.predicates_list]
+        print("TRUE PREDICATES")
+        for i, j in enumerate(self.predicates_list):
+            if truth_values[i]:
+                print(j.compact_str)
+        print("-----")
         return np.array(truth_values, dtype=np.float32)
