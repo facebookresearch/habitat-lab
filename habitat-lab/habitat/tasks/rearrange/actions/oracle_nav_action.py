@@ -101,8 +101,11 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._prev_ep_id = self._task._episode_id
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
-        if nav_to_target_idx not in self._targets:
-            nav_to_obj = self._poss_entities[nav_to_target_idx]
+        nav_to_obj = self._poss_entities[nav_to_target_idx]
+        if (
+            nav_to_target_idx not in self._targets
+            or "robot" in nav_to_obj.name
+        ):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
