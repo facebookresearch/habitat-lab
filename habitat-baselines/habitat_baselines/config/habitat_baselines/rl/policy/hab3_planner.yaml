@@ -13,4 +13,5 @@ hierarchical_policy:
       - nav_to_receptacle_by_name
     allow_other_place: False
     max_search_depth: 8
+    is_reactive: False
   defined_skills: {}

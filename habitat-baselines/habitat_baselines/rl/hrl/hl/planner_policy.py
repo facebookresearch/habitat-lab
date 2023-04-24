@@ -35,6 +35,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self._predicates_list = self._pddl_prob.get_possible_predicates()
         self._all_actions = self._setup_actions()
         self._max_search_depth = self._config.max_search_depth
+        self._reactive_planner = self._config.is_reactive
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
         self._plans: List[List[PddlAction]] = [
@@ -43,8 +44,12 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self._should_replan = torch.zeros(self._num_envs, dtype=torch.bool)
 
     def apply_mask(self, mask):
-        # We must replan.
-        self._should_replan = ~mask.cpu().view(-1)
+        if self._reactive_planner:
+            # Replan at every step
+            self._should_replan = torch.ones(self._num_envs, dtype=torch.bool)
+        else:
+            # Only plan at step 0
+            self._should_replan = ~mask.cpu().view(-1)
 
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         # We assign a value of 0. This is needed so that we can concatenate values in multiagent
