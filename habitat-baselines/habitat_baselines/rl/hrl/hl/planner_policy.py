@@ -86,29 +86,27 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                     continue
 
                 # Use set so we filter out duplicate predicates.
-                new_pred_set = list(cur_node.cur_pred_state)
+                pred_set = list(cur_node.cur_pred_state)
                 if action.name == "nav":
                     # Remove the at precondition, since we are walking somewhere else
                     robot_to_nav = action._param_values[-1]
-                    new_pred_set = [
+                    pred_set = [
                         pred
-                        for pred in new_pred_set
+                        for pred in pred_set
                         if not _is_pred_at(pred, robot_to_nav)
                     ]
                 for p in action.post_cond:
-                    if p not in new_pred_set:
-                        new_pred_set.append(p)
+                    if p not in pred_set:
+                        pred_set.append(p)
 
-                pred_hash = _get_pred_hash(new_pred_set)
+                pred_hash = _get_pred_hash(pred_set)
 
                 if pred_hash not in visited:
                     visited.add(pred_hash)
                     add_node = PlanNode(
-                        new_pred_set, cur_node, cur_node.depth + 1, action
+                        pred_set, cur_node, cur_node.depth + 1, action
                     )
-                    if self._pddl_prob.goal.is_true_from_predicates(
-                        new_pred_set
-                    ):
+                    if self._pddl_prob.goal.is_true_from_predicates(pred_set):
                         # Found a goal, we can stop searching.
                         sol_nodes.append(add_node)
                     else:
