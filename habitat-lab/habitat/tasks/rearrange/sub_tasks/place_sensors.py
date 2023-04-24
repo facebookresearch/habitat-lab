@@ -45,6 +45,7 @@ class ObjAnywhereOnGoal(Measure):
         self._sim.perform_discrete_collision_detection()
         cps = self._sim.get_physics_contact_points()
 
+        self._metric = False
         abs_obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
         for cp in cps:
             if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
@@ -71,8 +72,9 @@ class ObjAnywhereOnGoal(Measure):
                                     n in self._sim.valid_goal_rec_names
                                 )
                                 break
+                    if self._metric:
+                        return
 
-        self._metric = False
 
 
 @registry.register_measure
