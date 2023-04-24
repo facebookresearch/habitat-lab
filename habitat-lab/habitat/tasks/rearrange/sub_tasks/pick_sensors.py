@@ -263,7 +263,8 @@ class RearrangePickReward(RearrangeReward):
                 self._metric += self._dist_reward * dist_diff
             else:
                 self._metric -= self._dist_reward * dist_to_goal
-            # Ensure no object is picked, cur_dist is not stale and that agent is within self._angle_reward_min_dist of a goal 
+            # Ensure no object is picked, cur_dist is not stale and that agent is within
+            # self._angle_reward_min_dist of a goal
             if not did_pick and self.cur_dist != -1 and self.cur_dist < self._angle_reward_min_dist:
                 # closest based on l2 distance
                 closest_pos = self.closest_goal_position(episode)
