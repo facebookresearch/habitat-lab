@@ -2,6 +2,7 @@
 
 defaults:
   - /rearrange/rl_hierarchical
+  - override /benchmark/rearrange: limited_tidy_house
   - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills
   - _self_
@@ -23,6 +24,8 @@ habitat_baselines:
     entity: 'andrew-colab'
     run_name: ${hydra.job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
   num_environments: 2
+  num_checkpoints: 10
+  total_num_steps: 1.0e7
 
 habitat:
   task:
