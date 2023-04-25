@@ -106,9 +106,9 @@ class HrlRolloutStorage(RolloutStorage):
 
         env_idxs = torch.arange(self._num_envs)
         if rewards is not None:
-            # Accumulate rewards between updates.
-            reward_write_idxs = torch.clamp(self._cur_step_idxs - 1, min=0)
-            self.buffers["rewards"][reward_write_idxs, env_idxs] += rewards
+            # Accumulate rewards between writes to the observations.
+            # reward_write_idxs = torch.clamp(self._cur_step_idxs - 1, min=0)
+            self.buffers["rewards"][self._cur_step_idxs, env_idxs] += rewards
 
         if len(next_step) > 0:
             self.buffers.set(
@@ -140,23 +140,10 @@ class HrlRolloutStorage(RolloutStorage):
 
         self._cur_step_idxs += self._last_should_inserts.long()
 
-        is_past_buffer = self._cur_step_idxs >= self.num_steps
-        if is_past_buffer.sum() > 0:
-            self._cur_step_idxs[is_past_buffer] = self.num_steps - 1
-            env_idxs = torch.arange(self._num_envs)
-            self.buffers["rewards"][
-                self._cur_step_idxs[is_past_buffer], env_idxs[is_past_buffer]
-            ] = 0.0
-
     def after_update(self):
         env_idxs = torch.arange(self._num_envs)
         self.buffers[0] = self.buffers[self._cur_step_idxs, env_idxs]
-        self.buffers["masks"][1:] = False
-        self.buffers["rewards"][1:] = 0.0
 
-        self.current_rollout_step_idxs = [
-            0 for _ in self.current_rollout_step_idxs
-        ]
         self._cur_step_idxs[:] = 0
 
     def compute_returns(self, next_value, use_gae, gamma, tau):
@@ -206,8 +193,8 @@ class HrlRolloutStorage(RolloutStorage):
                 # Stricly less than is so we throw out the last transition. We
                 # need to throw out the last transition because we were not
                 # able to accumulate rewards for it.
-                batch["loss_mask"][:, i] = (
-                    batch["loss_mask"][:, i] < self._cur_step_idxs[env_i]
+                batch["loss_mask"][:, i] = batch["loss_mask"][:, i] < (
+                    self._cur_step_idxs[env_i] - 1
                 )
 
             batch.map_in_place(lambda v: v.flatten(0, 1))
