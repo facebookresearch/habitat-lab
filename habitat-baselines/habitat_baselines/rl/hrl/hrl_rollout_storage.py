@@ -73,6 +73,7 @@ class HrlRolloutStorage(RolloutStorage):
             next_masks = next_masks.to(self.device)
         if rewards is not None:
             rewards = rewards.to(self.device)
+
         next_step = dict(
             observations=next_observations,
             recurrent_hidden_states=next_recurrent_hidden_states,
@@ -96,18 +97,18 @@ class HrlRolloutStorage(RolloutStorage):
         if should_inserts is None:
             should_inserts = self._last_should_inserts
 
+        assert should_inserts is not None
         # Starts as shape [batch_size, 1]
         should_inserts = should_inserts.flatten()
-
-        assert should_inserts is not None
 
         if should_inserts.sum() == 0:
             return
 
         env_idxs = torch.arange(self._num_envs)
+
         if rewards is not None:
+            rewards = rewards.to(self.device)
             # Accumulate rewards between writes to the observations.
-            # reward_write_idxs = torch.clamp(self._cur_step_idxs - 1, min=0)
             self.buffers["rewards"][self._cur_step_idxs, env_idxs] += rewards
 
         if len(next_step) > 0:
@@ -143,6 +144,8 @@ class HrlRolloutStorage(RolloutStorage):
     def after_update(self):
         env_idxs = torch.arange(self._num_envs)
         self.buffers[0] = self.buffers[self._cur_step_idxs, env_idxs]
+        self.buffers["masks"][1:] = False
+        self.buffers["rewards"][1:] = 0.0
 
         self._cur_step_idxs[:] = 0
 
