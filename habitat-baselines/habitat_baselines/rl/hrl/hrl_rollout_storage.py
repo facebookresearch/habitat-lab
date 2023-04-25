@@ -215,6 +215,10 @@ class HrlRolloutStorage(RolloutStorage):
         # storage and separately tracking the current write index.
         raise ValueError()
 
+    @current_rollout_step_idxs.setter
+    def current_rollout_step_idxs(self, val):
+        pass
+
     @property
     def current_rollout_step_idx(self):
         # To ensure we aren't accessing this property from the base rollout
@@ -222,10 +226,14 @@ class HrlRolloutStorage(RolloutStorage):
         raise ValueError()
 
     def get_current_step(self, env_slice, buffer_index):
+        # Ignore `env_slice` since we assume that double buffer sampling is not
+        # supported.
+        env_idxs = torch.arange(self._num_envs)
         return self.buffers[
             self._cur_step_idxs[env_slice],
-            env_slice,
+            env_idxs,
         ]
 
     def get_last_step(self):
-        return self.buffers[self._cur_step_idxs]
+        env_idxs = torch.arange(self._num_envs)
+        return self.buffers[self._cur_step_idxs, env_idxs]
