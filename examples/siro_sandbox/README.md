@@ -53,6 +53,41 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
 
 Add `--debug-third-person-width 600` to enable the debug third-person camera. Like all visual sensors, this is simulator-rendered, unlike the main sandbox app viewport, which is replay-rendered.
 
+## Uning FP dataset
+To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md#spot-robot) and run any of the above Sandbox launch command with the following config overrides:
+```
+...
+--cfg-opts \
+habitat.task.task_spec=rearrange_easy_fp \
+habitat.task.pddl_domain_def=fp \
++habitat.simulator.additional_object_paths="[data/objects/ycb/configs/, data/objects/amazon_berkeley/configs/, data/objects/google_object_dataset/configs/]" \
+habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/s108294897_176710602.json.gz
+```
+
+### Known Issues
+- Sandbox tools fails after a few second with the following error:
+```
+File "habitat-lab/habitat-baselines/habitat_baselines/rl/hrl/skills/skill.py", line 157, in _apply_postcond
+    actions[idx, ac_idx : ac_idx + action.n_args] = torch.tensor(
+RuntimeError: The expanded size of the tensor (0) must match the existing size (2) at non-singleton dimension 0.  Target sizes: [0].  Tensor sizes: [2]
+```
+A workaround to have Sandbox up and running with FP is to update line 157 in `habitat-lab/habitat-baselines/habitat_baselines/rl/hrl/skills/skill.py`  like this:
+```
+try:
+    actions[idx, ac_idx : ac_idx + action.n_args] = torch.tensor(
+        entity_idxs, dtype=actions.dtype, device=actions.device
+    )
+except:
+    print(skill_name)
+    print(
+        f"Trying to set actions[{idx}, {ac_idx} : {ac_idx + action.n_args}]"
+        f"but shape of actions[{idx}] is {actions[idx].shape}"
+    )
+    print(entity_idxs)
+    pass
+```
+
+
 ## Testing BatchReplayRenderer
 
 This is an experimental feature aimed at those of us building the batch renderer. Run the above command but also include `--use-batch-renderer` as one of the first arguments.
