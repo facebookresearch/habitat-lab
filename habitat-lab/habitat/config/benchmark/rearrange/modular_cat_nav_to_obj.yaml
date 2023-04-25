@@ -46,6 +46,7 @@ habitat:
         height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
+        ik_arm_urdf: None
         sim_sensors:
            head_rgb_sensor:
              height: 640
