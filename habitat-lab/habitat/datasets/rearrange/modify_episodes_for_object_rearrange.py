@@ -619,6 +619,10 @@ def add_cat_fields_to_episodes(
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
         )
+
+        if start_rec_cat == goal_rec_cat:
+            continue
+
         episode["object_category"] = obj_cat
         episode["start_recep_category"] = start_rec_cat
         episode["goal_recep_category"] = goal_rec_cat
@@ -639,10 +643,8 @@ def add_cat_fields_to_episodes(
         episode["candidate_goal_receps"] = get_candidate_receptacles(
             all_rec_goals, goal_rec_cat
         )
-        if (
-            enable_add_viewpoints
-            and not add_viewpoints(sim, episode, obj_idx_to_name, debug_viz)
-            or start_rec_cat == goal_rec_cat
+        if enable_add_viewpoints and not add_viewpoints(
+            sim, episode, obj_idx_to_name, debug_viz
         ):
             continue
         assert (
