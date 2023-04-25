@@ -26,9 +26,6 @@ habitat_baselines:
   num_environments: 2
   num_checkpoints: 10
   total_num_steps: 1.0e7
-  rl:
-    ppo:
-      num_steps: 60
 
 habitat:
   task:

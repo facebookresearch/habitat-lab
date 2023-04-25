@@ -152,7 +152,7 @@ class HrlRolloutStorage(RolloutStorage):
 
         assert isinstance(self.buffers["value_preds"], torch.Tensor)
         gae = 0.0
-        for step in reversed(range(self._cur_step_idxs.max() - 1)):
+        for step in reversed(range(self._cur_step_idxs.max())):
             delta = (
                 self.buffers["rewards"][step]
                 + gamma
@@ -208,3 +208,24 @@ class HrlRolloutStorage(RolloutStorage):
             )
 
             yield batch.to_tree()
+
+    @property
+    def current_rollout_step_idxs(self):
+        # To ensure we aren't accessing this property from the base rollout
+        # storage and separately tracking the current write index.
+        raise ValueError()
+
+    @property
+    def current_rollout_step_idx(self):
+        # To ensure we aren't accessing this property from the base rollout
+        # storage and separately tracking the current write index.
+        raise ValueError()
+
+    def get_current_step(self, env_slice, buffer_index):
+        return self.buffers[
+            self._cur_step_idxs[env_slice],
+            env_slice,
+        ]
+
+    def get_last_step(self):
+        return self.buffers[self._cur_step_idxs]
