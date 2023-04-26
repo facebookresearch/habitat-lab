@@ -61,6 +61,8 @@ class BaselinesController(Controller):
                 # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
                 "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 "habitat_baselines.num_environments=1",
+                f"habitat.task.task_spec={env._config.task.task_spec}",
+                f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
             ],
         )
         policy_cls = baseline_registry.get_policy(
