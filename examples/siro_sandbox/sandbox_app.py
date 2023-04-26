@@ -13,6 +13,8 @@ import ctypes
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
 
+from habitat.utils.visualizations import maps
+
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
@@ -30,9 +32,12 @@ import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
+    CollisionsMeasurementConfig,
+    FogOfWarConfig,
     OracleNavActionConfig,
     PddlApplyActionConfig,
     ThirdRGBSensorConfig,
+    TopDownMapMeasurementConfig,
 )
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
@@ -84,6 +89,8 @@ class SandboxDriver(GuiAppDriver):
         # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
         self._lookat_offset_yaw = 0.785
         self._lookat_offset_pitch = 0.955
+
+        self._topdown_map_resolution = args.topdown_map_resolution
 
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
@@ -283,6 +290,7 @@ class SandboxDriver(GuiAppDriver):
         action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
 
         self.obs = self.env.step(action)
+        info = self.env.get_metrics()
 
         if reset_ep:
             self.obs = self.env.reset()
@@ -347,16 +355,34 @@ class SandboxDriver(GuiAppDriver):
             return converted_obs
 
         # reference code for visualizing a camera sensor in the app GUI
-        assert set(self._debug_images).issubset(set(self.obs.keys())), (
-            f"Cemara sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
-            f"not in available sensors ids: {list(self.obs.keys())}"
+        available_sensors_ids = set(self.obs.keys()).union(set(info.keys()))
+        assert set(self._debug_images).issubset(available_sensors_ids), (
+            f"Cemara sensors ids: {list(set(self._debug_images).difference(available_sensors_ids))} "
+            f"not in available sensors ids: {list(available_sensors_ids)}"
         )
+        debug_images = []
+        for k in self._debug_images:
+            if k in self.obs:
+                debug_images.append((k, self.obs[k]))
+            elif k in info:
+                if k == "top_down_map":
+                    top_down_map = maps.colorize_draw_agent_and_fit_to_height(
+                        info["top_down_map"], self._topdown_map_resolution
+                    )
+
+                    debug_images.append((k, top_down_map))
+            else:
+                raise KeyError(
+                    f'Debug images key "{k}" is not in observations and info.'
+                )
+
         debug_images = (
-            depth_to_rgb(self.obs[k]) if "depth" in k else self.obs[k]
-            for k in self._debug_images
+            (k, depth_to_rgb(image)) if "depth" in k else (k, image)
+            for k, image in debug_images
         )
+
         post_sim_update_dict["debug_images"] = [
-            np.flipud(image) for image in debug_images
+            (k, np.flipud(image)) for k, image in debug_images
         ]
 
         return post_sim_update_dict
@@ -457,6 +483,12 @@ if __name__ == "__main__":
         type=int,
         help="If specified, use the specified viewport height for the debug third-person camera",
     )
+    parser.add_argument(
+        "--topdown-map-resolution",
+        type=int,
+        default=0,
+        help="Top-down map resolution. Defaults to 0 (map visualization is disabled in this case).",
+    )
     args = parser.parse_args()
 
     glfw_config = Application.Configuration()
@@ -481,6 +513,25 @@ if __name__ == "__main__":
         task_config.actions[
             "agent_1_oracle_nav_action"
         ] = OracleNavActionConfig(agent_index=1)
+
+        if args.topdown_map_resolution:
+            task_config.measurements.update(
+                {
+                    "top_down_map": TopDownMapMeasurementConfig(
+                        map_padding=0,
+                        map_resolution=args.topdown_map_resolution,
+                        draw_source=False,
+                        draw_border=True,
+                        draw_shortest_path=False,
+                        draw_view_points=False,
+                        draw_goal_positions=False,
+                        draw_goal_aabbs=False,
+                        fog_of_war=FogOfWarConfig(draw=False),
+                    ),
+                    "collisions": CollisionsMeasurementConfig(),
+                }
+            )
+            args.debug_images.append("top_down_map")
 
         agent_config = get_agent_config(sim_config=sim_config)
 
