@@ -22,14 +22,11 @@ class ImageFramebufferDrawer:
         )
 
     def draw(self, pixel_data, dest_x, dest_y):
-        import torch  # lazy import; avoid torch dependency at file scope
-
-        if isinstance(pixel_data, (np.ndarray, torch.Tensor)):
-            assert len(pixel_data.shape) == 3 and (
-                pixel_data.shape[2] == 3 or pixel_data.shape[2] == 4
-            )
+        if isinstance(pixel_data, np.ndarray):
             assert (
-                pixel_data.dtype == np.uint8 or pixel_data.dtype == torch.uint8
+                pixel_data.dtype == np.uint8
+                and len(pixel_data.shape) == 3
+                and (pixel_data.shape[2] == 3 or pixel_data.shape[2] == 4)
             )
             # todo: catch case where storage is not 0-dim-major?
             self.draw_bytearray(
