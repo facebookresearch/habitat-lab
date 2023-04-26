@@ -63,8 +63,15 @@ class ImageFramebufferDrawer:
         assert len(bytearray_pixel_data) == width * height * bytes_per_pixel
         assert bytes_per_pixel == 3 or bytes_per_pixel == 4
 
+        # mn.ImageView2D expects four-byte-aligned rows by default
+        # we pass a pixel storage https://doc.magnum.graphics/python/magnum/PixelStorage/
+        # argument to alow drawing images of variable resolution
+        storage = mn.PixelStorage()
+        storage.alignment = 1
+
         size = mn.Vector2i(width, height)
         image = mn.ImageView2D(
+            storage,
             mn.PixelFormat.RGBA8_UNORM
             if bytes_per_pixel == 4
             else mn.PixelFormat.RGB8_UNORM,
