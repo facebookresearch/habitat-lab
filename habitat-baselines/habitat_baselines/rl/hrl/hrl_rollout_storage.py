@@ -74,6 +74,7 @@ class HrlRolloutStorage(RolloutStorage):
             next_masks = next_masks.to(self.device)
         if rewards is not None:
             rewards = rewards.to(self.device)
+
         next_step = dict(
             observations=next_observations,
             recurrent_hidden_states=next_recurrent_hidden_states,
@@ -98,9 +99,6 @@ class HrlRolloutStorage(RolloutStorage):
         if should_inserts is None:
             should_inserts = self._last_should_inserts
 
-        # Starts as shape [batch_size, 1]
-        should_inserts = should_inserts.flatten()
-
         assert should_inserts is not None
         # Starts as shape [batch_size, 1]
         should_inserts = should_inserts.flatten()
@@ -110,6 +108,7 @@ class HrlRolloutStorage(RolloutStorage):
             return
 
         env_idxs = torch.arange(self._num_envs)
+
         if rewards is not None:
             rewards = rewards.to(self.device)
             # Accumulate rewards between writes to the observations.
@@ -142,7 +141,8 @@ class HrlRolloutStorage(RolloutStorage):
         if an element was written to that environment index in the previous
         step.
         """
-        self._cur_step_idxs += self._last_should_inserts
+
+        self._cur_step_idxs += self._last_should_inserts.long()
 
     def after_update(self):
         env_idxs = torch.arange(self._num_envs)
@@ -199,8 +199,8 @@ class HrlRolloutStorage(RolloutStorage):
                 # Stricly less than is so we throw out the last transition. We
                 # need to throw out the last transition because we were not
                 # able to accumulate rewards for it.
-                batch["loss_mask"][:, i] = (
-                    batch["loss_mask"][:, i] < self._cur_step_idxs[env_i]
+                batch["loss_mask"][:, i] = batch["loss_mask"][:, i] < (
+                    self._cur_step_idxs[env_i] - 1
                 )
 
             batch.map_in_place(lambda v: v.flatten(0, 1))
@@ -232,11 +232,13 @@ class HrlRolloutStorage(RolloutStorage):
         raise ValueError()
 
     def get_current_step(self, env_slice, buffer_index):
-        return TensorDict(self._current_step)
-
-    def insert_first_observations(self, batch):
-        super().insert_first_observations(batch)
-        self._current_step = self.buffers[0]
+        # Ignore `env_slice` since we assume that double buffer sampling is not
+        # supported.
+        env_idxs = torch.arange(self._num_envs)
+        return self.buffers[
+            self._cur_step_idxs[env_slice],
+            env_idxs,
+        ]
 
     def get_last_step(self):
         env_idxs = torch.arange(self._num_envs)

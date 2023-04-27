@@ -127,3 +127,6 @@ class Predicate:
             and self._args == other_pred._args
             and self._arg_values == other_pred._arg_values
         )
+
+    def __hash__(self):
+        return hash(self.compact_str)
