@@ -38,8 +38,8 @@ class PerfLogger:
     """
 
     def _find_username(self, config):
-        # if len(config.habitat_baselines.wb.entity):
-        #     return config.habitat_baselines.wb.entity
+        if len(config.habitat_baselines.wb.entity):
+            return config.habitat_baselines.wb.entity
         return os.getlogin()
 
     def _find_git_hash(self):

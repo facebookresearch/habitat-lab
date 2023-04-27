@@ -7,11 +7,10 @@ hierarchical_policy:
   high_level_policy:
     name: "NeuralHighLevelPolicy"
     allowed_actions:
-      - nav_to_goal
-      - nav_to_obj
+      - nav
       - pick
       - place
-      #- nav_to_receptacle_by_name
+      - nav_to_receptacle_by_name
     allow_other_place: False
     hidden_dim: 512
     use_rnn: True
@@ -20,12 +19,4 @@ hierarchical_policy:
     normalize_visual_inputs: False
     num_rnn_layers: 2
     replan_dist: -1.0
-    policy_input_keys:
-      - "head_depth"
-      - "joint"
-      - "is_holding"
-      - "obj_start_sensor"
-      - "obj_goal_sensor"
-      - "obj_start_gps_compass"
-      - "obj_goal_gps_compass"
   defined_skills: {}

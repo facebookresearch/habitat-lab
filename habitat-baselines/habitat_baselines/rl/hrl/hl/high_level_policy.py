@@ -4,6 +4,7 @@ import gym.spaces as spaces
 import torch
 import torch.nn as nn
 
+from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
 from habitat_baselines.rl.ppo.policy import PolicyActionData
 
@@ -134,3 +135,33 @@ class HighLevelPolicy(nn.Module):
         """
 
         return torch.zeros(self._num_envs, dtype=torch.bool)
+
+    def _setup_actions(self) -> List[PddlAction]:
+        """
+        Returns the list of all actions this agent can execute.
+        """
+
+        # In the PDDL domain, the agents are referred to as robots.
+        robot_id = "robot_" + self._agent_name.split("_")[1]
+
+        if robot_id in self._pddl_prob.all_entities:
+            # There are potentially multiple robots and we need to filter by
+            # just this robot.
+            filter_set = [self._pddl_prob.get_entity(robot_id)]
+        else:
+            # There are not other robot entities, so no need to filter.
+            filter_set = []
+        all_actions = self._pddl_prob.get_possible_actions(
+            filter_entities=filter_set,
+            allowed_action_names=self._config.allowed_actions,
+        )
+        if not self._config.allow_other_place:
+            all_actions = [
+                ac
+                for ac in all_actions
+                if (
+                    ac.name != "place"
+                    or ac.param_values[0].name in ac.param_values[1].name
+                )
+            ]
+        return all_actions
