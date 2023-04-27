@@ -1,0 +1,17 @@
+name: "HierarchicalPolicy"
+obs_transforms:
+  add_virtual_keys:
+    virtual_keys:
+      "goal_to_agent_gps_compass": 2
+hierarchical_policy:
+  high_level_policy:
+    name: "PlannerHighLevelPolicy"
+    allowed_actions:
+      - nav
+      - pick
+      - place
+      - nav_to_receptacle_by_name
+    allow_other_place: False
+    max_search_depth: 8
+    is_reactive: False
+  defined_skills: {}

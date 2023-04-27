@@ -1,4 +1,3 @@
-# Version of tidy house that only has two target objects.
 objects:
   - name: any_targets|0
     expr_type: movable_entity_type
@@ -10,8 +9,11 @@ objects:
     expr_type: goal_entity_type
   - name: robot_0
     expr_type: robot_entity_type
-  - name: robot_1
-    expr_type: robot_entity_type
+
+
+init:
+  - closed_fridge(fridge_push_point)
+
 
 goal:
   expr_type: AND
@@ -19,7 +21,6 @@ goal:
     - at(any_targets|0,TARGET_any_targets|0)
     - at(any_targets|1,TARGET_any_targets|1)
     - not_holding(robot_0)
-    - not_holding(robot_1)
 
 stage_goals:
   stage_1:

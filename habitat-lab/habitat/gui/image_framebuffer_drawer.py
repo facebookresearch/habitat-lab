@@ -9,7 +9,7 @@ import numpy as np
 
 
 class ImageFramebufferDrawer:
-    def __init__(self, max_width=1024, max_height=1024):
+    def __init__(self, max_width=1440, max_height=1440):
         size = mn.Vector2i(max_width, max_height)
 
         # pre-allocate texture and framebuffer
