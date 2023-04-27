@@ -692,6 +692,12 @@ def parse_receptacles_from_user_config(
                 mesh_file = os.path.join(
                     parent_template_directory, sub_config.get("mesh_filepath")
                 )
+                # Support for multiple meshes directory
+                if not os.path.exists(mesh_file):
+                    mesh_file = os.path.join(
+                        parent_template_directory,
+                        sub_config.get("mesh_filepath").split("/")[-1],
+                    )
                 assert os.path.exists(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
