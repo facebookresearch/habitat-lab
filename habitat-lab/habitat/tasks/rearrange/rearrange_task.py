@@ -79,7 +79,6 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
-
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
@@ -180,6 +179,9 @@ class RearrangeTask(NavigationTask):
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
 
+        if "overfit" in self._config and self._config.overfit:
+            self._sim.pathfinder.seed(0)
+            np.random.seed(0)
         if self._sim_reset:
             self._sim.reset()
             for action_instance in self.actions.values():

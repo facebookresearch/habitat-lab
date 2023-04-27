@@ -2,24 +2,30 @@
 
 defaults:
   - /rearrange/rl_hierarchical_oracle_nav_human
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hl_fixed
+  - override /benchmark/rearrange: limited_tidy_house
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_hl_neural
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills_humanoid
   - _self_
 
 hydra:
   job:
-    name: 'single_fixedpolicy_oracle'
+    name: 'single_learned_oracle_human'
 
 habitat_baselines:
   log_interval: 1
-  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  tensorboard_dir: ""
-  eval_ckpt_path_dir: ""
-  checkpoint_folder: ""
-  log_file: ""
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video/
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb/
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/ckpt/
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/ckpt/
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/log
   evaluate: False
   writer_type: 'tb'
-  num_environments: 2
+  num_environments: 1
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+
 
 habitat:
   task:

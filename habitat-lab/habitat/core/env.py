@@ -100,7 +100,11 @@ class Env:
                 len(self._dataset.episodes) > 0
             ), "dataset should have non-empty episodes list"
             self._setup_episode_iterator()
-            self.current_episode = next(self.episode_iterator)
+            if (
+                "overfit" in self._config.task
+                and not self._config.task.overfit
+            ) or self._current_episode is None:
+                self.current_episode = next(self.episode_iterator)
             with read_write(self._config):
                 self._config.simulator.scene_dataset = (
                     self.current_episode.scene_dataset_config
@@ -143,6 +147,8 @@ class Env:
             for k, v in self._config.environment.iterator_options.items()
         }
         iter_option_dict["seed"] = self._config.seed
+        if "overfit" in self._config.task and self._config.task.overfit:
+            iter_option_dict["shuffle"] = False
         self._episode_iterator = self._dataset.get_episode_iterator(
             **iter_option_dict
         )
@@ -253,7 +259,8 @@ class Env:
 
         # This is always set to true after a reset that way
         # on the next reset an new episode is taken (if possible)
-        self._episode_from_iter_on_reset = True
+        if not ("overfit" in self._config.task and self._config.task.overfit):
+            self._episode_from_iter_on_reset = True
         self._episode_force_changed = False
 
         assert self._current_episode is not None, "Reset requires an episode"

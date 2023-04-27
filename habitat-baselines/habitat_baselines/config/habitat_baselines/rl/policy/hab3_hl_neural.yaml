@@ -11,7 +11,7 @@ hierarchical_policy:
       - nav_to_obj
       - pick
       - place
-      #- nav_to_receptacle_by_name
+      - nav_to_receptacle_by_name
     allow_other_place: False
     hidden_dim: 512
     use_rnn: True
@@ -22,7 +22,7 @@ hierarchical_policy:
     replan_dist: -1.0
     policy_input_keys:
       - "head_depth"
-      - "joint"
+      - "humanoid_joint_sensor"
       - "is_holding"
       - "obj_start_sensor"
       - "obj_goal_sensor"
