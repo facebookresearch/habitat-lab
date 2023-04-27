@@ -6,7 +6,6 @@
 
 from typing import Optional, Union
 
-import cv2
 import magnum as mn
 import numpy as np
 from gym import spaces
@@ -178,7 +177,6 @@ class GazeGraspAction(MagicGraspAction):
         self._instance_ids_start = sim.habitat_config.instance_ids_start
         self._grasp_thresh_dist = config.grasp_thresh_dist
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
-        # TODO: better name?
         self._distance_from = getattr(config, 'gaze_distance_from', 'camera')
         self._center_square_width = config.gaze_center_square_width
     @property

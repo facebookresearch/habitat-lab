@@ -188,7 +188,6 @@ class RearrangePickReward(RearrangeReward):
 
     def closest_goal_position(self, episode):
         # Find the goal that is closest based on l2-distance
-        path = habitat_sim.MultiGoalShortestPath()
         targets = np.array([goal.position for goal in episode.candidate_objects])
         closest_goal_index = np.argmin(np.linalg.norm(np.expand_dims(self._sim.robot.base_pos, 0) - targets, axis=1))
         targ = targets[closest_goal_index]
