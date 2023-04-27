@@ -259,7 +259,7 @@ class MultiStorage(Storage):
             ), "You are trying to insert more values than those defined in the PolicyActionData"
 
         for agent_i, storage in enumerate(self._active_storages):
-            # TODO: this only works if we assume htat the policy will always be recurrent
+            # TODO: this only works if we assume that the policy will always be recurrent
             if (
                 "next_recurrent_hidden_states" in insert_d
                 and insert_d["next_recurrent_hidden_states"][agent_i].numel()
