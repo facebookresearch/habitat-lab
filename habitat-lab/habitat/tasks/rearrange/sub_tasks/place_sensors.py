@@ -94,6 +94,8 @@ class PlaceReward(RearrangeReward):
         self._dist_reward = config.dist_reward
         self._sparse_reward = config.sparse_reward
         self._place_anywhere = config.place_anywhere
+        self._drop_pen_type = getattr(config, 'drop_pen_type', 'constant')
+        self._curr_step = 0
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
@@ -134,7 +136,7 @@ class PlaceReward(RearrangeReward):
 
         self._prev_dist = -1.0
         self._prev_dropped = not self._sim.grasp_mgr.is_grasped
-
+        self._curr_step = 0
         super().reset_metric(
             *args,
             episode=episode,
@@ -168,7 +170,6 @@ class PlaceReward(RearrangeReward):
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
-
         if (not obj_at_goal) or cur_picked:
             if self._sparse_reward:
                 dist_to_goal = 0.0
@@ -196,7 +197,12 @@ class PlaceReward(RearrangeReward):
                 self._prev_dist = -1
             else:
                 # Dropped at wrong location
-                reward -= self._drop_pen
+                drop_pen = self._drop_pen
+                if self._drop_pen_type == 'penalize_remaining_dist':
+                    drop_pen *= dist_to_goal
+                elif self._drop_pen_type == 'penalize_remaining_time':
+                    drop_pen *= (300 - self._curr_step) / 300
+                reward -= drop_pen
                 if self._wrong_drop_should_end:
                     rearrange_logger.debug(
                         "Dropped to wrong place, ending episode."
@@ -218,7 +224,8 @@ class PlaceReward(RearrangeReward):
             else:
                 reward -= self._dist_reward * dist_to_goal
         self._prev_dist = dist_to_goal
-
+        self._curr_step += 1
+        
         self._metric = reward
 
 

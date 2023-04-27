@@ -71,7 +71,7 @@ habitat_baselines:
     ddppo:
       sync_frac: 0.6
       # The PyTorch distributed backend to use
-      distrib_backend: NCCL
+      distrib_backend: GLOO
       # Visual encoder backbone
       pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
       # Initialize with pretrained weights

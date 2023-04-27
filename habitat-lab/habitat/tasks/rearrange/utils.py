@@ -411,13 +411,13 @@ def get_robot_spawns(
     state = sim.capture_state()
 
     # Try to place the robot.
-    for _ in range(num_spawn_attempts):
+    for i in range(num_spawn_attempts):
         sim.set_state(state)
         target_position = target_positions[
             np.random.choice(target_positions.shape[0])
         ]
         start_position = sim.pathfinder.get_random_navigable_point_near(
-            target_position, distance_threshold
+            target_position, distance_threshold, island_index=sim.navmesh_classification_results["active_island"]
         )
 
         relative_target = target_position - start_position

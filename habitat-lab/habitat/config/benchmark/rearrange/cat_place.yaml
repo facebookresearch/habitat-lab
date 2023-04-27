@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
   - /habitat/task/rearrange: cat_place
   - /habitat/dataset/rearrangement: floorplanner
   - _self_
@@ -34,10 +34,6 @@ habitat:
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
         sim_sensors:
-           head_rgb_sensor:
-             height: 256 # 640
-             width: 256 # 480
-             hfov: 90 # 42
            head_depth_sensor:
              height: 256 # 640
              width: 256 # 480

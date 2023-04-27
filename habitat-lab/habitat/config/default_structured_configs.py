@@ -709,7 +709,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     min_dist_to_goal: float = 0.15
     place_anywhere: bool = False
     sparse_reward: bool = False
-
+    drop_pen_type: str = "constant"
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
