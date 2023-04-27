@@ -18,7 +18,6 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
 from functools import wraps
-from pprint import pformat
 from typing import Any
 
 import magnum as mn
@@ -33,6 +32,7 @@ from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
     OracleNavActionConfig,
     PddlApplyActionConfig,
+    ThirdRGBSensorConfig,
 )
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
@@ -85,14 +85,9 @@ class SandboxDriver(GuiAppDriver):
         self._lookat_offset_yaw = 0.785
         self._lookat_offset_pitch = 0.955
 
-        self._text_drawer = None
-
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
-
-    def set_text_drawer(self, text_drawer):
-        self._text_drawer = text_drawer
 
     # trying to get around mypy complaints about missing sim attributes
     def get_sim(self) -> Any:
@@ -296,18 +291,6 @@ class SandboxDriver(GuiAppDriver):
         self.visualize_task()
 
         post_sim_update_dict = {}
-        # add env specific information to the post_sim_update_dict
-        info = self.env.get_metrics()
-        self._text_drawer.add_text(
-            f"Metrics:\n"
-            f"""{
-                pformat(info)
-                .replace("'", " ")
-                .replace("{", " ")
-                .replace("}", " ")
-            }""",
-            text_delta_y=-80,
-        )
 
         if self.gui_input.mouse_scroll_offset != 0:
             zoom_sensitivity = 0.07
@@ -374,9 +357,30 @@ class SandboxDriver(GuiAppDriver):
         )
         post_sim_update_dict["debug_images"] = [
             np.flipud(image) for image in debug_images
-        ]  # type: ignore
+        ]
 
         return post_sim_update_dict
+
+
+def parse_debug_third_person(args, framebuffer_size):
+    viewport_multiplier = mn.Vector2(
+        framebuffer_size.x / args.width, framebuffer_size.y / args.height
+    )
+
+    do_show = args.debug_third_person_width != 0
+
+    width = args.debug_third_person_width
+    # default to square aspect ratio
+    height = (
+        args.debug_third_person_height
+        if args.debug_third_person_height != 0
+        else width
+    )
+
+    width = int(width * viewport_multiplier.x)
+    height = int(height * viewport_multiplier.y)
+
+    return do_show, width, height
 
 
 if __name__ == "__main__":
@@ -441,8 +445,32 @@ if __name__ == "__main__":
         default=False,
         help="Choose between classic and batch renderer",
     )
-
+    parser.add_argument(
+        "--debug-third-person-width",
+        default=0,
+        type=int,
+        help="If specified, enable the debug third-person camera (habitat.simulator.debug_render) with specified viewport width",
+    )
+    parser.add_argument(
+        "--debug-third-person-height",
+        default=0,
+        type=int,
+        help="If specified, use the specified viewport height for the debug third-person camera",
+    )
     args = parser.parse_args()
+
+    glfw_config = Application.Configuration()
+    glfw_config.title = "Sandbox App"
+    glfw_config.size = (args.width, args.height)
+    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
+    # on Mac Retina displays, this will be 2x the window size
+    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+
+    (
+        show_debug_third_person,
+        debug_third_person_width,
+        debug_third_person_height,
+    ) = parse_debug_third_person(args, framebuffer_size)
 
     config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
@@ -454,9 +482,22 @@ if __name__ == "__main__":
             "agent_1_oracle_nav_action"
         ] = OracleNavActionConfig(agent_index=1)
 
+        agent_config = get_agent_config(sim_config=sim_config)
+
+        if show_debug_third_person:
+            sim_config.debug_render = True
+            agent_config.sim_sensors.update(
+                {
+                    "third_rgb_sensor": ThirdRGBSensorConfig(
+                        height=debug_third_person_height,
+                        width=debug_third_person_width,
+                    )
+                }
+            )
+            args.debug_images.append("agent_0_third_rgb")
+
+        # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
-            # Code below is ported from interactive_play.py. I'm not sure what it is for.
-            agent_config = get_agent_config(sim_config=sim_config)
             if "composite_success" in task_config.measurements:
                 task_config.measurements.composite_success.must_call_stop = (
                     False
@@ -484,20 +525,27 @@ if __name__ == "__main__":
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
-    glfw_config = Application.Configuration()
-    glfw_config.title = "Sandbox App"
-    glfw_config.size = (args.width, args.height)
-    gui_app_wrapper = GuiApplication(glfw_config, args.target_sps)
     framebuffer_size = gui_app_wrapper.get_framebuffer_size()
 
-    # instantiate driver:
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
 
-    # instantiate renderer:
+    viewport_rect = None
+    if show_debug_third_person:
+        # adjust main viewport to leave room for the debug third-person camera on the right
+        assert framebuffer_size.x > debug_third_person_width
+        viewport_rect = mn.Range2Di(
+            mn.Vector2i(0, 0),
+            mn.Vector2i(
+                framebuffer_size.x - debug_third_person_width,
+                framebuffer_size.y,
+            ),
+        )
+
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
-        viewport_size=framebuffer_size,
-        use_batch_renderer=args.use_batch_renderer,
+        framebuffer_size,
+        viewport_rect,
+        args.use_batch_renderer,
     )
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 
@@ -505,7 +553,5 @@ if __name__ == "__main__":
     driver.set_debug_line_render(
         app_renderer._replay_renderer.debug_line_render(0)
     )
-    # provide image framebuffer drawer's text_drawer to our driver
-    driver.set_text_drawer(app_renderer._text_drawer)
 
     gui_app_wrapper.exec()

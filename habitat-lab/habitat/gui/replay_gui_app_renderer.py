@@ -18,12 +18,13 @@ from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 class ReplayGuiAppRenderer(GuiAppRenderer):
     def __init__(
         self,
-        viewport_size,
+        window_size,
+        viewport_rect=None,
         use_batch_renderer=False,
         im_framebuffer_drawer_kwargs=None,
         text_drawer_kwargs=None,
     ):
-        self.viewport_size = viewport_size
+        self.window_size = window_size
         # arbitrary uuid
         self._sensor_uuid = "rgb_camera"
 
@@ -33,10 +34,22 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         camera_sensor_spec = habitat_sim.CameraSensorSpec()
         camera_sensor_spec.senπsor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.uuid = self._sensor_uuid
-        camera_sensor_spec.resolution = [
-            self.viewport_size.y,
-            self.viewport_size.x,
-        ]
+        if viewport_rect:
+            # unfortunately, at present, we only support a viewport rect placed
+            # in the bottom left corner. See https://cvmlp.slack.com/archives/G0131KVLBLL/p1682023823697029
+            assert viewport_rect.left == 0
+            assert viewport_rect.bottom == 0
+            assert viewport_rect.right <= self.window_size.x
+            assert viewport_rect.top <= self.window_size.y
+            camera_sensor_spec.resolution = [
+                viewport_rect.top,
+                viewport_rect.right,
+            ]
+        else:
+            camera_sensor_spec.resolution = [
+                self.window_size.y,
+                self.window_size.x,
+            ]
         camera_sensor_spec.position = np.array([0, 0, 0])
         camera_sensor_spec.orientation = np.array([0, 0, 0])
 
@@ -58,8 +71,16 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             **im_framebuffer_drawer_kwargs
         )
         text_drawer_kwargs = text_drawer_kwargs or {}
+        drawer_window_size = (
+            self.window_size
+            if not viewport_rect
+            else mn.Vector2i(
+                viewport_rect.right - viewport_rect.left,
+                viewport_rect.top - viewport_rect.bottom,
+            )
+        )
         self._text_drawer: TextDrawer = TextDrawer(
-            viewport_size, **text_drawer_kwargs
+            drawer_window_size, **text_drawer_kwargs
         )
 
     def set_image_drawer(self, image_drawer: ImageFramebufferDrawer):
@@ -122,11 +143,11 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         self._text_drawer.draw_text()
 
         # arrange debug images on right side of frame, tiled down from the top
-        dest_y = self.viewport_size.y
+        dest_y = self.window_size.y
         for image in self._debug_images:
             im_height, im_width, _ = image.shape
             self._image_drawer.draw(
-                image, self.viewport_size.x - im_width, dest_y - im_height
+                image, self.window_size.x - im_width, dest_y - im_height
             )
             dest_y -= im_height
 

@@ -127,7 +127,6 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
-
         self._backend_runtime_perf_stat_names = (
             super().get_runtime_perf_stat_names()
         )
@@ -401,7 +400,12 @@ class RearrangeSim(HabitatSim):
 
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+
+        if "fpss" in ep_info.scene_id.split("/"):
+            # For FP scenes, we use different path structure than for other scenes.
+            base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
+        else:
+            base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
         self.pathfinder.load_nav_mesh(navmesh_path)
