@@ -112,7 +112,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     ):
         if self._config.replan_dist > 0.0:
             other_agent_dist = observations["other_agent_gps"].norm(dim=-1)
-            return (other_agent_dist < other_agent_dist).cpu()
+            return (other_agent_dist < self._config.replan_dist).cpu()
         else:
             return super().get_termination(
                 observations,

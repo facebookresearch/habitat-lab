@@ -19,13 +19,4 @@ hierarchical_policy:
     normalize_visual_inputs: False
     num_rnn_layers: 2
     replan_dist: -1.0
-    policy_input_keys:
-      - "head_depth"
-      - "joint"
-      - "is_holding"
-      - "obj_start_sensor"
-      - "obj_goal_sensor"
-      - "obj_start_gps_compass"
-      - "obj_goal_gps_compass"
-      - "other_agent_gps"
   defined_skills: {}

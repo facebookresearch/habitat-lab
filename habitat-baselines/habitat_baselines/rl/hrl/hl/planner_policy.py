@@ -92,7 +92,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
 
                 # Use set so we filter out duplicate predicates.
                 pred_set = list(cur_node.cur_pred_state)
-                if action.name == "nav":
+                if "nav" in action.name:
                     # Remove the at precondition, since we are walking somewhere else
                     robot_to_nav = action._param_values[-1]
                     pred_set = [
@@ -192,6 +192,6 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             else:
                 # If we have no next action, do nothing.
                 next_skill[batch_idx] = self._skill_name_to_idx["wait"]
-                # TODO(xavi to andrew): Is 1 a good default param?
+                # Wait 1 step.
                 skill_args_data[batch_idx] = ["1"]  # type: ignore[call-overload]
         return next_skill, skill_args_data, immediate_end, {}
