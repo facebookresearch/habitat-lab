@@ -10,18 +10,20 @@ import numpy as np
 import habitat_sim
 from habitat.gui.gui_application import GuiAppRenderer
 from habitat.gui.image_framebuffer_drawer import ImageFramebufferDrawer
+from habitat.gui.text_drawer import TextDrawer
 from habitat_sim import ReplayRenderer, ReplayRendererConfiguration
 
 
 class ReplayGuiAppRenderer(GuiAppRenderer):
     def __init__(
         self,
-        window_width,
-        window_height,
-        use_batch_renderer=False,
+        window_size,
         viewport_rect=None,
+        use_batch_renderer=False,
+        im_framebuffer_drawer_kwargs=None,
+        text_drawer_kwargs=None,
     ):
-        self.window_size = mn.Vector2i(window_width, window_height)
+        self.window_size = window_size
         # arbitrary uuid
         self._sensor_uuid = "rgb_camera"
 
@@ -36,16 +38,16 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             # in the bottom left corner. See https://cvmlp.slack.com/archives/G0131KVLBLL/p1682023823697029
             assert viewport_rect.left == 0
             assert viewport_rect.bottom == 0
-            assert viewport_rect.right <= window_width
-            assert viewport_rect.top <= window_height
+            assert viewport_rect.right <= self.window_size.x
+            assert viewport_rect.top <= self.window_size.y
             camera_sensor_spec.resolution = [
                 viewport_rect.top,
                 viewport_rect.right,
             ]
         else:
             camera_sensor_spec.resolution = [
-                window_height,
-                window_width,
+                self.window_size.y,
+                self.window_size.x,
             ]
         camera_sensor_spec.position = np.array([0, 0, 0])
         camera_sensor_spec.orientation = np.array([0, 0, 0])
@@ -60,12 +62,31 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
             else ReplayRenderer.create_classic_replay_renderer(cfg)
         )
 
-        # todo: allocate drawer lazily
-        self._image_drawer = ImageFramebufferDrawer(
-            max_width=1440, max_height=1440
-        )
         self._debug_images = []
         self._need_render = True
+
+        im_framebuffer_drawer_kwargs = im_framebuffer_drawer_kwargs or {}
+        self._image_drawer: ImageFramebufferDrawer = ImageFramebufferDrawer(
+            **im_framebuffer_drawer_kwargs
+        )
+        text_drawer_kwargs = text_drawer_kwargs or {}
+        drawer_window_size = (
+            self.window_size
+            if not viewport_rect
+            else mn.Vector2i(
+                viewport_rect.right - viewport_rect.left,
+                viewport_rect.top - viewport_rect.bottom,
+            )
+        )
+        self._text_drawer: TextDrawer = TextDrawer(
+            drawer_window_size, **text_drawer_kwargs
+        )
+
+    def set_image_drawer(self, image_drawer: ImageFramebufferDrawer):
+        self._image_drawer = image_drawer
+
+    def set_text_drawer(self, text_drawer: TextDrawer):
+        self._text_drawer = text_drawer
 
     def post_sim_update(self, post_sim_update_dict):
         keyframes = post_sim_update_dict["keyframes"]
@@ -75,11 +96,11 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         for keyframe in keyframes:
             self._replay_renderer.set_environment_keyframe(env_index, keyframe)
 
-        if "debug_images" in post_sim_update_dict:
-            self._debug_images = post_sim_update_dict["debug_images"]
-
         if len(keyframes):
             self._need_render = True
+
+        if "debug_images" in post_sim_update_dict:
+            self._debug_images = post_sim_update_dict["debug_images"]
 
     def unproject(self, viewport_pos):
         return self._replay_renderer.unproject(0, viewport_pos)
@@ -100,6 +121,9 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         mn.gl.default_framebuffer.bind()
 
         self._replay_renderer.render(mn.gl.default_framebuffer)
+
+        # draws text collected in self._text_drawer._text_transform_pairs on the screen
+        self._text_drawer.draw_text()
 
         # arrange debug images on right side of frame, tiled down from the top
         dest_y = self.window_size.y
