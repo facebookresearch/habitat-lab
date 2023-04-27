@@ -3,7 +3,6 @@
 # Copyright (c) Meta Platforms, Inc. and its affiliates.
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
-from pprint import pformat
 
 import magnum as mn
 import numpy as np
@@ -102,22 +101,6 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         if "debug_images" in post_sim_update_dict:
             self._debug_images = post_sim_update_dict["debug_images"]
-
-        if "info" in post_sim_update_dict:
-            # get needed metrics and format text string
-            # to be drawn on the GUI app screen
-            info = post_sim_update_dict["info"]
-            self._text_to_draw = (
-                pformat(
-                    {
-                        "App metrics": info["app"],
-                        "Env metrics": info["env"],
-                    },
-                )
-                .replace("'", " ")
-                .replace("{", " ")
-                .replace("}", " ")
-            )
 
     def unproject(self, viewport_pos):
         return self._replay_renderer.unproject(0, viewport_pos)

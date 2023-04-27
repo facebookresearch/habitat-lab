@@ -70,6 +70,7 @@ class TextDrawer:
             display_font_size,
             text.Alignment.TOP_LEFT,
         )
+        self._window_text.reserve(self._max_display_text_chars)
 
         # make magnum text background transparent
         mn.gl.Renderer.enable(mn.gl.Renderer.Feature.BLENDING)
@@ -109,9 +110,8 @@ class TextDrawer:
 
     def draw_text(self):
         """Draws collected text on the screen"""
+        self._shader.bind_vector_texture(self._glyph_cache.texture)
         for text_to_draw, transform in self._text_transform_pairs:
-            self._shader.bind_vector_texture(self._glyph_cache.texture)
-            self._window_text.reserve(self._max_display_text_chars)
             self._shader.transformation_projection_matrix = transform
             self._shader.color = [1.0, 1.0, 1.0]
             self._window_text.render(text_to_draw)
