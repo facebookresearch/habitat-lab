@@ -216,11 +216,15 @@ class ResNetEncoder(nn.Module):
                 final_spatial_w,
             )
             rgb_keys = [k for k in observation_space.spaces if "rgb" in k]
-            rgb_size = [observation_space.spaces[k].shape[:2] for k in rgb_keys]
-            
+            rgb_size = [
+                observation_space.spaces[k].shape[:2] for k in rgb_keys
+            ]
+
             self.visual_transform = None
             if use_augmentations:
-                self.visual_transform = ShiftAndJitterTransform(size=rgb_size[0])
+                self.visual_transform = ShiftAndJitterTransform(
+                    size=rgb_size[0]
+                )
                 self.visual_transform.randomize_environments = False
 
     @property
@@ -491,7 +495,7 @@ class PointNavResNetNet(Net):
             ngroups=resnet_baseplanes // 2,
             make_backbone=getattr(resnet_gn if ovrl else resnet, backbone),
             no_downscaling=no_downscaling,
-            use_augmentations=use_augmentations
+            use_augmentations=use_augmentations,
         )
 
         if not self.visual_encoder.is_blind:
