@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 from typing import Any, Dict, List, Optional
 
 import magnum as mn
@@ -137,6 +138,8 @@ def bb_ray_prescreen(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     check_all_corners: bool = False,
+    estimate_support_stability: bool = True,
+    support_stability_threshold: float = 0.1,
 ) -> Dict[str, Any]:
     """
     Pre-screen a potential placement by casting rays in the gravity direction from the object center of mass (and optionally each corner of its bounding box) checking for interferring objects below.
@@ -153,7 +156,7 @@ def bb_ray_prescreen(
     lowest_key_point_height = None
     highest_support_impact: mn.Vector3 = None
     highest_support_impact_height = None
-    highest_support_impact_with_stage = False
+    highest_support_impact_id = None
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
@@ -181,7 +184,7 @@ def bb_ray_prescreen(
                 if hit.object_id == obj.object_id:
                     continue
                 elif hit.object_id in support_obj_ids:
-                    hit_point = ray.origin + ray.direction * hit.ray_distance
+                    hit_point = hit.point
                     support_impacts[ix] = hit_point
                     support_impact_height = mn.math.dot(
                         hit_point, -gravity_dir
@@ -194,10 +197,11 @@ def bb_ray_prescreen(
                     ):
                         highest_support_impact = hit_point
                         highest_support_impact_height = support_impact_height
-                        highest_support_impact_with_stage = hit.object_id == -1
+                        highest_support_impact_id = hit.object_id
 
                 # terminates at the first non-self ray hit
                 break
+
     # compute the relative base height of the object from its lowest bb corner and COM
     base_rel_height = (
         lowest_key_point_height
@@ -206,18 +210,81 @@ def bb_ray_prescreen(
 
     # account for the affects of stage mesh margin
     # Warning: Bullet raycast on stage triangle mesh does NOT consider the margin, so explicitly consider this here.
-    margin_offset = (
-        0
-        if not highest_support_impact_with_stage
-        else sim.get_stage_initialization_template().margin
-    )
+    margin_offset = 0
+    if highest_support_impact_id is None:
+        pass
+    elif highest_support_impact_id == -1:
+        margin_offset = sim.get_stage_initialization_template().margin
+    else:
+        margin_offset = (
+            -sim.get_rigid_object_manager()
+            .get_object_by_id(highest_support_impact_id)
+            .margin
+        )
 
     surface_snap_point = (
         None
         if 0 not in support_impacts
-        else support_impacts[0]
+        else highest_support_impact
         + gravity_dir * (base_rel_height - margin_offset)
     )
+
+    if surface_snap_point is not None and estimate_support_stability:
+        # compute average height of support points after object height adjustment
+        corner_support_positions = []
+        sup_raycast_results = []
+        world_com = object_local_to_global.transform_point(key_points[0])
+        for ix, key_point in enumerate(key_points):
+            world_point = object_local_to_global.transform_point(key_point)
+            if ix != 0:
+                # move the corners out a bit for more conservative estimate
+                delta_dir = world_point - world_com
+                lateral_dir = delta_dir - delta_dir.projected_onto_normalized(
+                    gravity_dir
+                )
+                world_point += (
+                    lateral_dir * 0.3
+                )  # 10% wider than original shape
+
+            ray = habitat_sim.geo.Ray(
+                world_point + gravity_dir * (base_rel_height - margin_offset),
+                gravity_dir,
+            )
+            sup_raycast_results.append(sim.cast_ray(ray))
+            # classify any obstructions before hitting the support surface
+            for hit in sup_raycast_results[-1].hits:
+                if hit.object_id == obj.object_id:
+                    continue
+                else:
+                    corner_support_positions.append(hit.point)
+                    break
+
+        num_corner_supports = len(corner_support_positions)
+        if num_corner_supports > 0:
+            # print(f"corner_support_positions = {corner_support_positions}")
+            max_support_deviation = 0
+            avg_support_pos_height = 0.0
+            for p in corner_support_positions:
+                # print(f"    {p[1]}")
+                avg_support_pos_height += p[1]
+            avg_support_pos_height /= num_corner_supports
+            variance = 0.0
+            for p in corner_support_positions:
+                support_deviation = p[1] - avg_support_pos_height
+                max_support_deviation = max(
+                    max_support_deviation, support_deviation
+                )
+                variance += (support_deviation) ** 2
+            variance /= num_corner_supports
+            std_deviation = math.sqrt(variance)
+            # print(f"corner height std deviation = {std_deviation}")
+            # print(f"corner height max deviation = {max_support_deviation}")
+
+            if (
+                std_deviation > support_stability_threshold
+                or max_support_deviation > support_stability_threshold
+            ):
+                surface_snap_point = None
 
     # return list of relative base height, object position for surface snapped point, and ray results details
     return {
@@ -254,7 +321,9 @@ def snap_down(
         # set default support surface to stage/ground mesh
         support_obj_ids = [-1]
 
-    bb_ray_prescreen_results = bb_ray_prescreen(sim, obj, support_obj_ids)
+    bb_ray_prescreen_results = bb_ray_prescreen(
+        sim, obj, support_obj_ids, check_all_corners=False
+    )
 
     if bb_ray_prescreen_results["surface_snap_point"] is None:
         # no support under this object, return failure
