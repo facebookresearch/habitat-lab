@@ -576,6 +576,8 @@ if __name__ == "__main__":
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
+    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
 
     viewport_rect = None
@@ -592,10 +594,9 @@ if __name__ == "__main__":
 
     # note this must be created after GuiApplication due to OpenGL stuff
     app_renderer = ReplayGuiAppRenderer(
-        framebuffer_size.x,
-        framebuffer_size.y,
-        args.use_batch_renderer,
+        framebuffer_size,
         viewport_rect,
+        args.use_batch_renderer,
     )
     gui_app_wrapper.set_driver_and_renderer(driver, app_renderer)
 

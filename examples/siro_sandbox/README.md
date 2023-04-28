@@ -53,6 +53,17 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
 
 Add `--debug-third-person-width 600` to enable the debug third-person camera. Like all visual sensors, this is simulator-rendered, unlike the main sandbox app viewport, which is replay-rendered.
 
+## Uning FP dataset
+To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md#spot-robot) and run any of the above Sandbox launch command with the following config overrides:
+```
+...
+--cfg-opts \
+habitat.task.task_spec=rearrange_easy_fp \
+habitat.task.pddl_domain_def=fp \
++habitat.simulator.additional_object_paths="[data/objects/ycb/configs/, data/objects/amazon_berkeley/configs/, data/objects/google_object_dataset/configs/]" \
+habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/s108294897_176710602.json.gz
+```
+
 ## Testing BatchReplayRenderer
 
 This is an experimental feature aimed at those of us building the batch renderer. Run the above command but also include `--use-batch-renderer` as one of the first arguments.

@@ -7,7 +7,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.ddppo.policy import resnet
 from habitat_baselines.rl.ddppo.policy.resnet_policy import ResNetEncoder
@@ -102,27 +101,30 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
 
         self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
 
+    def get_termination(
+        self,
+        observations,
+        rnn_hidden_states,
+        prev_actions,
+        masks,
+        cur_skills,
+        log_info,
+    ):
+        if self._config.replan_dist > 0.0:
+            other_agent_dist = observations["other_agent_gps"].norm(dim=-1)
+            return (other_agent_dist < self._config.replan_dist).cpu()
+        else:
+            return super().get_termination(
+                observations,
+                rnn_hidden_states,
+                prev_actions,
+                masks,
+                cur_skills,
+                log_info,
+            )
+
     def create_hl_info(self):
         return {"actions": None}
-
-    def _setup_actions(self) -> List[PddlAction]:
-        # In the PDDL domain, the agents are referred to as robots.
-        robot_id = "robot_" + self._agent_name.split("_")[1]
-        robot_entity = self._pddl_prob.get_entity(robot_id)
-        all_actions = self._pddl_prob.get_possible_actions(
-            filter_entities=[robot_entity],
-            allowed_action_names=self._config.allowed_actions,
-        )
-        if not self._config.allow_other_place:
-            all_actions = [
-                ac
-                for ac in all_actions
-                if (
-                    ac.name != "place"
-                    or ac.param_values[0].name in ac.param_values[1].name
-                )
-            ]
-        return all_actions
 
     def get_policy_action_space(
         self, env_action_space: spaces.Space

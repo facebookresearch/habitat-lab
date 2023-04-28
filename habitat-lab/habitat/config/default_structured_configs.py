@@ -549,6 +549,16 @@ class GlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
+    type: str = "MultiAgentGlobalPredicatesSensor"
+
+
+@dataclass
+class OtherAgentGpsConfig(LabSensorConfig):
+    type: str = "OtherAgentGps"
+
+
+@dataclass
 class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
@@ -1325,8 +1335,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
-    width: int = 256
-    height: int = 256
+    width: int = 512
+    height: int = 512
 
 
 @dataclass
@@ -1920,6 +1930,24 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="target_start_gps_compass_sensor",
     node=TargetStartGpsCompassSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.all_predicates",
+    group="habitat/task/lab_sensors",
+    name="all_predicates",
+    node=GlobalPredicatesSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.multi_agent_all_predicates",
+    group="habitat/task/lab_sensors",
+    name="multi_agent_all_predicates",
+    node=MultiAgentGlobalPredicatesSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.other_agent_gps",
+    group="habitat/task/lab_sensors",
+    name="other_agent_gps",
+    node=OtherAgentGpsConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_goal_gps_compass_sensor",
