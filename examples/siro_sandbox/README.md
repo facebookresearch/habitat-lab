@@ -34,6 +34,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival
 ```
 
+
 ## Controls
 * Mouse scroll wheel to zoom the camera in/out.
 * Right-click on the floor and hold to move the humanoid.

@@ -52,6 +52,14 @@ sh eval_sweep.sh
 
 You will be prompted to enter a directory `$SWEEP_SUBDIR` name where the checkpoints and config files are saved (normally in the format `name/yyyy-dd-mm/hh-mm-ss`). The script will generate videos of evaluation at `$SWEEP_SUBDIR/0/video`.
 
+## Demo Fetch-Human Fixed Planner
+
+You can also run a Fetch-Humanoid where both work with a Fixed Planner, using:
+
+```
+python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluate=True habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=False  --config-name experiments_hab3/rearrange_fetch_human_planner.yaml
+```
+
 # Spot robot
 
 ## Testing the Spot
