@@ -1107,14 +1107,14 @@ class MoveForwardAction(SimulatorTaskAction):
         ``step``.
         """
         actuation = self._sim.config.agents[0].action_space[1].actuation.amount
-        current_pos = np.array(self._sim.robot.base_pos)
 
         trans = self._sim.robot.base_transformation
         local_pos = np.array([actuation, 0, 0])
         global_pos = trans.transform_point(local_pos)
+        active_island_idx = self._sim.navmesh_classification_results["active_island"]
+        snapped_global_pos = self._sim.pathfinder.snap_point(global_pos, island_index=active_island_idx)
 
-        self._sim.robot.base_pos = global_pos
-        self._sim.maybe_update_robot()
+        self._sim.robot.base_pos = snapped_global_pos
         return self._sim.step(HabitatSimActions.move_forward)
 
 
@@ -1135,7 +1135,6 @@ class TurnLeftAction(SimulatorTaskAction):
             self._sim.current_angle + actuation * np.pi / 180
         )
         self._sim.robot.base_rot = self._sim.updated_angle
-        self._sim.maybe_update_robot()
         self._sim.current_angle = self._sim.updated_angle
         return self._sim.step(HabitatSimActions.turn_left)
 
@@ -1158,7 +1157,6 @@ class TurnRightAction(SimulatorTaskAction):
         )
 
         self._sim.robot.base_rot = self._sim.updated_angle
-        self._sim.maybe_update_robot()
         self._sim.current_angle = self._sim.updated_angle
 
         return self._sim.step(HabitatSimActions.turn_right)
