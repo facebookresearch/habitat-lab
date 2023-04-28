@@ -284,7 +284,7 @@ class HumanoidJointActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
     """
     type: str = "HumanoidJointAction"
-    num_joints: int = 17
+    num_joints: int = 54
 
 
 @dataclass
@@ -444,7 +444,7 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the joint positions of the robot.
     """
     type: str = "HumanoidJointSensor"
-    dimensionality: int = 17 * 4
+    dimensionality: int = 54 * 4
 
 
 @dataclass
