@@ -217,13 +217,7 @@ class KinematicHumanoid(MobileManipulator):
 
     def set_rest_position(self) -> None:
         """Sets the agents in a resting position"""
-        return 
-        joint_list = self.rest_joints
-        offset_transform = mn.Matrix4()  # self.rest_matrix
-        self.sim_obj.joint_positions = joint_list
-        self.set_joint_transform(
-            joint_list, offset_transform, self.base_transformation
-        )
+        return
 
     def reconfigure(self) -> None:
         """Instantiates the human in the scene. Loads the URDF, sets initial state of parameters, joints, motors, etc..."""
