@@ -7,7 +7,8 @@ hierarchical_policy:
   high_level_policy:
     name: "NeuralHighLevelPolicy"
     allowed_actions:
-      - nav
+      - nav_to_goal
+      - nav_to_obj
       - pick
       - place
       - nav_to_receptacle_by_name
