@@ -438,7 +438,8 @@ def get_robot_spawns(
             np.random.choice(target_positions.shape[0])
         ]
         start_position = sim.pathfinder.get_random_navigable_point_near(
-            target_position, distance_threshold
+            target_position, distance_threshold,
+            island_index=sim.navmesh_classification_results["active_island"]
         )
 
         relative_target = target_position - start_position
