@@ -116,7 +116,9 @@ def get_obj_rec_cat_in_eps(
 def read_obj_category_mapping(filename):
     df = pd.read_csv(filename)
     name_key = "id" if "id" in df else "name"
-    category_key = "wnsynsetkey" if "wnsynsetkey" in df else "clean_category"
+    category_key = (
+        "main_wnsynsetkey" if "main_wnsynsetkey" in df else "clean_category"
+    )
 
     df["category"] = (
         df[category_key]
@@ -329,7 +331,9 @@ def load_objects(sim, objects, additional_obj_config_paths):
             template = osp.abspath(osp.join(obj_path, obj_handle))
             if osp.isfile(template):
                 break
-        assert template is not None, f"Could not find config file for object {obj_handle}"
+        assert (
+            template is not None
+        ), f"Could not find config file for object {obj_handle}"
         ro = rom.add_object_by_template_handle(template)
 
         # The saved matrices need to be flipped when reloading.
@@ -603,7 +607,9 @@ def add_cat_fields_to_episodes(
 
         rec = find_receptacles(sim)
         rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
-        obj_idx_to_name = load_objects(sim, episode["rigid_objs"], episode["additional_obj_config_paths"])
+        obj_idx_to_name = load_objects(
+            sim, episode["rigid_objs"], episode["additional_obj_config_paths"]
+        )
         populate_semantic_graph(sim)
         all_rec_goals = collect_receptacle_goals(
             sim, rec_category_mapping=rec_category_mapping
@@ -613,6 +619,10 @@ def add_cat_fields_to_episodes(
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
         )
+
+        if start_rec_cat == goal_rec_cat:
+            continue
+
         episode["object_category"] = obj_cat
         episode["start_recep_category"] = start_rec_cat
         episode["goal_recep_category"] = goal_rec_cat
