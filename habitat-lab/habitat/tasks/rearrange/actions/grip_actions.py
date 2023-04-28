@@ -228,11 +228,9 @@ class GazeGraspAction(MagicGraspAction):
                     "This robot does not have GazeGraspAction."
                 )
 
-        sim_observations = self._sim._sensor_suite.get_observations(
-            self._sim.get_sensor_observations()
-        )
+
         if isinstance(self._sim.robot, StretchRobot):
-            panoptic_img = sim_observations["robot_head_panoptic"]
+            panoptic_img = self._task._cur_observations["robot_head_panoptic"]
         else:
             raise NotImplementedError(
                 "This robot dose not have GazeGraspAction."
@@ -248,11 +246,7 @@ class GazeGraspAction(MagicGraspAction):
         else:
             # check if any pixel within the center square has a valid pixel
             if isinstance(self._sim.robot, StretchRobot):
-                obj_seg = self._task.sensor_suite.get_observations(
-                    observations=sim_observations,
-                    episode=self._sim.ep_info,
-                    task=self._task,
-                )["object_segmentation"]
+                obj_seg = self._task._cur_observations["object_segmentation"]
             else:
                 raise NotImplementedError(
                     "This robot dose not have GazeGraspAction."
