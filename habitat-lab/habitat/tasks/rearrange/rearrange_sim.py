@@ -128,7 +128,7 @@ class RearrangeSim(HabitatSim):
         self._step_physics = self.habitat_config.step_physics
         self._kinematic_mode = self.habitat_config.kinematic_mode
         self._backend_runtime_perf_stat_names = (
-            super().get_runtime_perf_stat_names()
+            # super().get_runtime_perf_stat_names()
         )
         self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
