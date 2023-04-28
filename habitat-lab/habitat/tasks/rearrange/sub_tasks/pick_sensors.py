@@ -5,6 +5,9 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import magnum as mn
+import numpy as np
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.nav.nav import DistanceToGoal, DistanceToGoalReward
@@ -16,12 +19,13 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     RobotForce,
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
-import magnum as mn
-import numpy as np
-import habitat_sim
-from habitat.tasks.rearrange.utils import get_camera_transform
+from habitat.tasks.rearrange.utils import (
+    UsesRobotInterface,
+    get_camera_transform,
+    rearrange_logger,
+)
 from habitat.utils.geometry_utils import cosine
+
 
 @registry.register_measure
 class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
@@ -156,10 +160,6 @@ class RearrangePickReward(RearrangeReward):
             **kwargs,
         )
 
-
-
-
-
     def get_camera_angle_reward(self, obj_pos):
         """Calculates angle between gripper line-of-sight and given global position."""
 
@@ -174,14 +174,18 @@ class RearrangePickReward(RearrangeReward):
 
         return reward
 
-
     def closest_goal_position(self, episode):
         # Find the goal that is closest based on l2-distance
-        targets = np.array([goal.position for goal in episode.candidate_objects])
-        closest_goal_index = np.argmin(np.linalg.norm(np.expand_dims(self._sim.robot.base_pos, 0) - targets, axis=1))
+        targets = np.array(
+            [goal.position for goal in episode.candidate_objects]
+        )
+        closest_goal_index = np.argmin(
+            np.linalg.norm(
+                np.expand_dims(self._sim.robot.base_pos, 0) - targets, axis=1
+            )
+        )
         targ = targets[closest_goal_index]
         return targ
-
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         super().update_metric(
@@ -253,10 +257,17 @@ class RearrangePickReward(RearrangeReward):
                 self._metric -= self._dist_reward * dist_to_goal
             # Ensure no object is picked, cur_dist is not stale and that agent is within
             # self._angle_reward_min_dist of a goal
-            if not did_pick and self.cur_dist != -1 and self.cur_dist < self._angle_reward_min_dist:
+            if (
+                not did_pick
+                and self.cur_dist != -1
+                and self.cur_dist < self._angle_reward_min_dist
+            ):
                 # closest based on l2 distance
                 closest_pos = self.closest_goal_position(episode)
-                self._metric += self._angle_reward_scale * self.get_camera_angle_reward(closest_pos)
+                self._metric += (
+                    self._angle_reward_scale
+                    * self.get_camera_angle_reward(closest_pos)
+                )
         self.cur_dist = dist_to_goal
 
         if not cur_picked and self._prev_picked:

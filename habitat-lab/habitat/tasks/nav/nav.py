@@ -1111,8 +1111,12 @@ class MoveForwardAction(SimulatorTaskAction):
         trans = self._sim.robot.base_transformation
         local_pos = np.array([actuation, 0, 0])
         global_pos = trans.transform_point(local_pos)
-        active_island_idx = self._sim.navmesh_classification_results["active_island"]
-        snapped_global_pos = self._sim.pathfinder.snap_point(global_pos, island_index=active_island_idx)
+        active_island_idx = self._sim.navmesh_classification_results[
+            "active_island"
+        ]
+        snapped_global_pos = self._sim.pathfinder.snap_point(
+            global_pos, island_index=active_island_idx
+        )
 
         self._sim.robot.base_pos = snapped_global_pos
         return self._sim.step(HabitatSimActions.move_forward)

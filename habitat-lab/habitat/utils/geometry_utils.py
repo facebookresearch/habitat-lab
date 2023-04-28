@@ -120,5 +120,6 @@ def agent_state_target2ref(
 def cosine(v1, v2):
     return np.clip(np.dot(v1, v2), -1.0, 1.0)
 
+
 def angle_between(v1, v2):
     return np.arccos(cosine(v1, v2))

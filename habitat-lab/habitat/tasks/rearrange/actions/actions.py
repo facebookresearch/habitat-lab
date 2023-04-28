@@ -460,13 +460,24 @@ class ArmEEAction(RobotAction):
                 global_pos, self._sim.viz_ids["ee_target"]
             )
 
+
 class Controller:
     """
-        A controller that takes the input of the waypoints and
-        produces the velocity command.
+    A controller that takes the input of the waypoints and
+    produces the velocity command.
     """
-    def __init__(self, v_max, w_max, lin_gain=5, ang_gain=5, \
-            lin_error_tol=0.05, ang_error_tol=0.05, max_heading_ang=np.pi/10, track_yaw=True):
+
+    def __init__(
+        self,
+        v_max,
+        w_max,
+        lin_gain=5,
+        ang_gain=5,
+        lin_error_tol=0.05,
+        ang_error_tol=0.05,
+        max_heading_ang=np.pi / 10,
+        track_yaw=True,
+    ):
         # If we want track yaw or not
         self.track_yaw = track_yaw
 
@@ -499,7 +510,9 @@ class Controller:
         Updates error based on robot localization
         """
         # We compute the base pose error and the function return list of integer
-        base_pose_err = self._transform_global_to_base(self.base_pose_goal, base_pose, sim)
+        base_pose_err = self._transform_global_to_base(
+            self.base_pose_goal, base_pose, sim
+        )
 
         if not self.track_yaw:
             base_pose_err[2] = 0.0
@@ -518,7 +531,9 @@ class Controller:
         return v * np.sign(base_pose_err)
 
     @staticmethod
-    def _turn_rate_limit(lin_err, heading_diff, w_max, max_heading_ang, tol=0.0):
+    def _turn_rate_limit(
+        lin_err, heading_diff, w_max, max_heading_ang, tol=0.0
+    ):
         """
         Compute velocity limit that prevents path from overshooting goal
         heading error decrease rate > linear error decrease rate
@@ -563,14 +578,16 @@ class Controller:
 
             # Compute linear velocity and allow the agent to move backward
             v_raw = self._velocity_feedback_control(
-                np.sign(base_pose_err[0])*lin_err_abs, self.acc_lin, self.v_max
+                np.sign(base_pose_err[0]) * lin_err_abs,
+                self.acc_lin,
+                self.v_max,
             )
 
             v_limit = self._turn_rate_limit(
                 lin_err_abs,
                 heading_err_abs,
                 self.w_max / 2.0,
-                max_heading_ang = self.max_heading_ang,
+                max_heading_ang=self.max_heading_ang,
                 tol=self.lin_error_tol,
             )
 
@@ -608,7 +625,7 @@ class Controller:
         )
 
         error_t = base_pose[2] - current_pose[2]
-        error_t = (error_t + np.pi) % (2.0*np.pi) - np.pi
+        error_t = (error_t + np.pi) % (2.0 * np.pi) - np.pi
         error_x = goal_pos[0]
         error_y = goal_pos[1]
 
@@ -620,7 +637,6 @@ class Controller:
         """
         base_pose_err = self._compute_error_pose(base_pose, sim)
         return self._feedback_controller(base_pose_err)
-
 
 
 # TODO: Remove this once Teleport Action is merged.
@@ -641,20 +657,22 @@ class BaseWaypointVelAction(RobotAction):
         self.base_vel_ctrl.controlling_ang_vel = True
         self.base_vel_ctrl.ang_vel_is_local = True
         # Initialize the controller
-        max_lin_speed = 30 # real Stretch max linear velocity
-        max_ang_speed = 20.94 # real Stretch max angular velocity
-        lin_speed_gain = 10000.0 # the linear gain
-        ang_speed_gain = 10000.0 # the angular gain
-        lin_tol = 0.001 # 5cm linear error tol
-        ang_tol = 0.001 # 5cm angular error tol
-        max_heading_ang = np.pi/10.0
-        self.controller = Controller(v_max=max_lin_speed, \
-            w_max=max_ang_speed, \
-            lin_gain=lin_speed_gain, \
-            ang_gain=ang_speed_gain,\
-            lin_error_tol=lin_tol,\
+        max_lin_speed = 30  # real Stretch max linear velocity
+        max_ang_speed = 20.94  # real Stretch max angular velocity
+        lin_speed_gain = 10000.0  # the linear gain
+        ang_speed_gain = 10000.0  # the angular gain
+        lin_tol = 0.001  # 5cm linear error tol
+        ang_tol = 0.001  # 5cm angular error tol
+        max_heading_ang = np.pi / 10.0
+        self.controller = Controller(
+            v_max=max_lin_speed,
+            w_max=max_ang_speed,
+            lin_gain=lin_speed_gain,
+            ang_gain=ang_speed_gain,
+            lin_error_tol=lin_tol,
             ang_error_tol=ang_tol,
-            max_heading_ang=max_heading_ang)
+            max_heading_ang=max_heading_ang,
+        )
 
     @property
     def action_space(self):
@@ -676,7 +694,7 @@ class BaseWaypointVelAction(RobotAction):
         }
 
     def _set_robot_state(self, set_dat):
-        """"
+        """ "
         Keep track of robot's basic info
         """
         self.cur_robot.sim_obj.joint_positions = set_dat["forces"]
@@ -697,7 +715,6 @@ class BaseWaypointVelAction(RobotAction):
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
 
-
         target_rigid_state = self.base_vel_ctrl.integrate_transform(
             1 / ctrl_freq, rigid_state
         )
@@ -715,9 +732,7 @@ class BaseWaypointVelAction(RobotAction):
             # If so we have to revert back to the previous transform
             self._sim.internal_step(-1)
             # colls = get_collisions()
-            did_coll, _ = rearrange_collision(
-                self._sim, count_obj_colls=False
-            )
+            did_coll, _ = rearrange_collision(self._sim, count_obj_colls=False)
             if did_coll:
                 # Don't allow the step, revert back.
                 self._set_robot_state(before_trans_state)
@@ -744,7 +759,7 @@ class BaseWaypointVelAction(RobotAction):
         # Get the global pos from the local target waypoints
         global_pos = trans.transform_point(np.array([lin_pos, 0, 0]))
         # Get the target rotation
-        target_theta = float(self._sim.robot.base_rot)+ang_pos
+        target_theta = float(self._sim.robot.base_rot) + ang_pos
 
         # Set the goal
         base_pose_goal = [

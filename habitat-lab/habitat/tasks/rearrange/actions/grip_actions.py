@@ -10,20 +10,18 @@ import magnum as mn
 import numpy as np
 from gym import spaces
 
+from habitat.core.registry import registry
 from habitat.robots.spot_robot import SpotRobot
 from habitat.robots.stretch_robot import StretchRobot
-from habitat.core.registry import registry
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
     coll_name_matches,
-    get_camera_transform
+    get_camera_transform,
 )
 from habitat.utils.geometry_utils import angle_between
 
-from habitat.robots.spot_robot import SpotRobot
-from habitat.robots.stretch_robot import StretchRobot
 
 class GripSimulatorTaskAction(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
@@ -37,6 +35,11 @@ class GripSimulatorTaskAction(RobotAction):
 
 @registry.register_task_action
 class MagicGraspAction(GripSimulatorTaskAction):
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim: RearrangeSim = sim
+        self._grasp_thresh_dist = config.grasp_thresh_dist
+
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -181,13 +184,12 @@ class GazeGraspAction(MagicGraspAction):
         self._instance_ids_start = sim.habitat_config.instance_ids_start
         self._grasp_thresh_dist = config.grasp_thresh_dist
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
-        self._distance_from = getattr(config, 'gaze_distance_from', 'camera')
+        self._distance_from = getattr(config, "gaze_distance_from", "camera")
         self._center_square_width = config.gaze_center_square_width
 
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
-
 
     def get_camera_object_angle(self, obj_pos):
         """Calculates angle between gripper line-of-sight and given global position."""
@@ -203,10 +205,9 @@ class GazeGraspAction(MagicGraspAction):
 
         return obj_angle
 
-
     def determine_center_object(self):
         cam_pos = None
-        if self._distance_from == 'camera':
+        if self._distance_from == "camera":
             """Determine if an object is at the center of the frame and in range"""
             if isinstance(self._sim.robot, SpotRobot):
                 cam_pos = (
@@ -228,25 +229,30 @@ class GazeGraspAction(MagicGraspAction):
                 )
 
         sim_observations = self._sim._sensor_suite.get_observations(
-                self._sim.get_sensor_observations()
-            )
+            self._sim.get_sensor_observations()
+        )
         if isinstance(self._sim.robot, StretchRobot):
-            panoptic_img = sim_observations['robot_head_panoptic']
+            panoptic_img = sim_observations["robot_head_panoptic"]
         else:
             raise NotImplementedError(
                 "This robot dose not have GazeGraspAction."
-        )
+            )
 
         height, width = panoptic_img.shape[:2]
 
         if self._center_square_width == 1:
-            center_obj_id = panoptic_img[height // 2,  width // 2] - self._instance_ids_start
+            center_obj_id = (
+                panoptic_img[height // 2, width // 2]
+                - self._instance_ids_start
+            )
         else:
             # check if any pixel within the center square has a valid pixel
             if isinstance(self._sim.robot, StretchRobot):
                 obj_seg = self._task.sensor_suite.get_observations(
-                    observations=sim_observations
-                , episode=self._sim.ep_info, task=self._task)['object_segmentation']
+                    observations=sim_observations,
+                    episode=self._sim.ep_info,
+                    task=self._task,
+                )["object_segmentation"]
             else:
                 raise NotImplementedError(
                     "This robot dose not have GazeGraspAction."
@@ -254,11 +260,16 @@ class GazeGraspAction(MagicGraspAction):
             s = int(self._center_square_width)
             h_off = height // 2 - s // 2
             w_off = width // 2 - s // 2
-            center_square = obj_seg[h_off:h_off + s,  w_off: w_off + s]
+            center_square = obj_seg[h_off : h_off + s, w_off : w_off + s]
             panoptic_masked = panoptic_img.squeeze(2) * obj_seg
             if np.sum(center_square) > 1:
-                panoptic_center = panoptic_masked[h_off:h_off + s,  w_off: w_off + s]
-                center_obj_id = panoptic_center[panoptic_center > 0][0] - self._instance_ids_start
+                panoptic_center = panoptic_masked[
+                    h_off : h_off + s, w_off : w_off + s
+                ]
+                center_obj_id = (
+                    panoptic_center[panoptic_center > 0][0]
+                    - self._instance_ids_start
+                )
             else:
                 center_obj_id = None
 
@@ -267,9 +278,9 @@ class GazeGraspAction(MagicGraspAction):
             rom = self._sim.get_rigid_object_manager()
             # Skip if not in distance range
             obj_pos = rom.get_object_by_id(center_obj_id).translation
-            if self._distance_from == 'camera':
+            if self._distance_from == "camera":
                 dist = np.linalg.norm(obj_pos - cam_pos)
-            elif self._distance_from == 'agent':
+            elif self._distance_from == "agent":
                 agent_pos = self._sim.robot.base_pos
                 dist = np.linalg.norm(np.array(obj_pos - agent_pos)[[0, 2]])
             else:
