@@ -23,4 +23,3 @@ habitat_baselines:
             nav_to_obj:
               skill_name: "NoopSkillPolicy"
               max_skill_steps: 1
-
