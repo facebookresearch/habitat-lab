@@ -623,7 +623,7 @@ class Controller:
 
 
 
-
+# TODO: Remove this once Teleport Action is merged.
 @registry.register_task_action
 class BaseWaypointVelAction(RobotAction):
     """

@@ -21,6 +21,9 @@ from habitat.core.logging import HabitatLogger
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
 
+from habitat.robots.spot_robot import SpotRobot
+from habitat.robots.stretch_robot import StretchRobot
+
 rearrange_logger = HabitatLogger(
     name="rearrange_task",
     level=int(os.environ.get("HABITAT_REARRANGE_LOG", logging.ERROR)),
@@ -163,6 +166,30 @@ def rearrange_collision(
             robot_scene_colls=min(robot_scene_colls, 1),
         )
     return coll_details.total_collisions > 0, coll_details
+
+
+def get_camera_transform(sim):
+    if isinstance(sim.robot, SpotRobot):
+        cam_info = sim.robot.params.cameras[
+            "articulated_agent_arm_depth"
+        ]
+    elif isinstance(sim.robot, StretchRobot):
+        cam_info = sim.robot.params.cameras["robot_head"]
+    else:
+        raise NotImplementedError(
+            "This robot does not have GazeGraspAction."
+        )
+
+    # Get the camera's attached link
+    link_trans = sim.robot.sim_obj.get_link_scene_node(
+        cam_info.attached_link_id
+    ).transformation
+    # Get the camera offset transformation
+    offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
+    cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
+
+    return cam_trans
+
 
 
 def convert_legacy_cfg(obj_list):

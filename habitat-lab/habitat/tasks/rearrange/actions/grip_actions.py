@@ -18,8 +18,12 @@ from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
     coll_name_matches,
+    get_camera_transform
 )
+from habitat.utils.geometry_utils import angle_between
 
+from habitat.robots.spot_robot import SpotRobot
+from habitat.robots.stretch_robot import StretchRobot
 
 class GripSimulatorTaskAction(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
@@ -179,51 +183,26 @@ class GazeGraspAction(MagicGraspAction):
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
         self._distance_from = getattr(config, 'gaze_distance_from', 'camera')
         self._center_square_width = config.gaze_center_square_width
+
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
 
-    @staticmethod
-    def angle_between(v1, v2):
-        cosine = np.clip(np.dot(v1, v2), -1.0, 1.0)
-        object_angle = np.arccos(cosine)
-        return object_angle
 
     def get_camera_object_angle(self, obj_pos):
         """Calculates angle between gripper line-of-sight and given global position."""
 
         # Get the camera transformation
-        cam_T = self.get_camera_transform()
+        cam_T = get_camera_transform(self._sim)
         # Get object location in camera frame
         cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
 
         # Get angle between (normalized) location and the vector that the camera should
         # look at
-        obj_angle = self.angle_between(cam_obj_pos, self.center_cone_vector)
+        obj_angle = angle_between(cam_obj_pos, self.center_cone_vector)
 
         return obj_angle
 
-    def get_camera_transform(self):
-        if isinstance(self._sim.robot, SpotRobot):
-            cam_info = self._sim.robot.params.cameras[
-                "articulated_agent_arm_depth"
-            ]
-        elif isinstance(self._sim.robot, StretchRobot):
-            cam_info = self._sim.robot.params.cameras["robot_head"]
-        else:
-            raise NotImplementedError(
-                "This robot does not have GazeGraspAction."
-            )
-
-        # Get the camera's attached link
-        link_trans = self._sim.robot.sim_obj.get_link_scene_node(
-            cam_info.attached_link_id
-        ).transformation
-        # Get the camera offset transformation
-        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
-
-        return cam_trans
 
     def determine_center_object(self):
         cam_pos = None
@@ -248,10 +227,11 @@ class GazeGraspAction(MagicGraspAction):
                     "This robot does not have GazeGraspAction."
                 )
 
-        if isinstance(self._sim.robot, StretchRobot):
-            panoptic_img = self._sim._sensor_suite.get_observations(
+        sim_observations = self._sim._sensor_suite.get_observations(
                 self._sim.get_sensor_observations()
-            )['robot_head_panoptic']
+            )
+        if isinstance(self._sim.robot, StretchRobot):
+            panoptic_img = sim_observations['robot_head_panoptic']
         else:
             raise NotImplementedError(
                 "This robot dose not have GazeGraspAction."
@@ -265,7 +245,7 @@ class GazeGraspAction(MagicGraspAction):
             # check if any pixel within the center square has a valid pixel
             if isinstance(self._sim.robot, StretchRobot):
                 obj_seg = self._task.sensor_suite.get_observations(
-                    observations=self._sim.get_sensor_observations()
+                    observations=sim_observations
                 , episode=self._sim.ep_info, task=self._task)['object_segmentation']
             else:
                 raise NotImplementedError(

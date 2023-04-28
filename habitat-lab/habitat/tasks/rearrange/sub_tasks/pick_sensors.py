@@ -20,6 +20,8 @@ from habitat.tasks.rearrange.utils import UsesRobotInterface, rearrange_logger
 import magnum as mn
 import numpy as np
 import habitat_sim
+from habitat.tasks.rearrange.utils import get_camera_transform
+from habitat.utils.geometry_utils import cosine
 
 @registry.register_measure
 class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
@@ -155,36 +157,23 @@ class RearrangePickReward(RearrangeReward):
         )
 
 
-    @staticmethod
-    def cosine(v1, v2):
-        return np.clip(np.dot(v1, v2), -1.0, 1.0)
+
 
 
     def get_camera_angle_reward(self, obj_pos):
         """Calculates angle between gripper line-of-sight and given global position."""
 
         # Get the camera transformation
-        cam_T = self.get_camera_transform()
+        cam_T = get_camera_transform(self._sim)
         # Get object location in camera frame
         cam_obj_pos = cam_T.inverted().transform_point(obj_pos).normalized()
 
         # Get angle between (normalized) location and the vector that the camera should
         # look at
-        reward = self.cosine(cam_obj_pos, mn.Vector3(0, 1, 0))
+        reward = cosine(cam_obj_pos, mn.Vector3(0, 1, 0))
 
         return reward
 
-    def get_camera_transform(self):
-        cam_info = self._sim.robot.params.cameras["robot_head"]
-
-        # Get the camera's attached link
-        link_trans = self._sim.robot.sim_obj.get_link_scene_node(
-            cam_info.attached_link_id
-        ).transformation
-        # Get the camera offset transformation
-        offset_trans = mn.Matrix4.translation(cam_info.cam_offset_pos)
-        cam_trans = link_trans @ offset_trans @ cam_info.relative_transform
-        return cam_trans
 
     def closest_goal_position(self, episode):
         # Find the goal that is closest based on l2-distance
