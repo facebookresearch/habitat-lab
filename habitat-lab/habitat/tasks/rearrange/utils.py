@@ -425,12 +425,12 @@ def place_robot_at_closest_point(
     if agent is None:
         agent = sim.articulated_agent
 
+    agent_pos = sim.safe_snap_point(target_position)
     if not sim.is_point_within_bounds(target_position):
         rearrange_logger.error(
-            f"Object {target_position} is out of bounds but trying to set robot position"
+            f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
         )
 
-    agent_pos = sim.safe_snap_point(target_position)
     desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
 
     return agent_pos, desired_angle, False

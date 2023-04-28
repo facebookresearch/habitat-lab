@@ -119,10 +119,30 @@ predicates:
             obj: at_entity
 
 actions:
-  - name: nav
+  - name: nav_to_goal
     parameters:
       - name: obj
-        expr_type: obj_type
+        expr_type: movable_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition:
+      # The robot cannot be holding the object that it wants to navigate to.
+      expr_type: NAND
+      sub_exprs:
+        - holding(obj, robot)
+    postcondition:
+      - robot_at(obj, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+  - name: nav_to_obj
+    parameters:
+      - name: obj
+        expr_type: goal_entity_type
       - name: robot
         expr_type: robot_entity_type
     precondition: null

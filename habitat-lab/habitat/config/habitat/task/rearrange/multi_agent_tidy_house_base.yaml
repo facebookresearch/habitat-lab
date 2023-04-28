@@ -57,3 +57,4 @@ measurements:
     must_call_stop: False
   cooperate_subgoal_reward:
     stage_sparse_reward: 1.0
+    end_on_collide: True

@@ -72,6 +72,8 @@ class BaselinesController(Controller):
                 "habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills.nav_to_obj.skill_name=OracleNavPolicy",
                 "habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills.nav_to_obj.obs_skill_inputs=[obj_start_sensor, abs_obj_start_sensor, obj_goal_sensor, abs_obj_goal_sensor]",
                 "habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills.nav_to_obj.max_skill_steps=300",
+                f"habitat.task.task_spec={env._config.task.task_spec}",
+                f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
             ],
         )
         policy_cls = baseline_registry.get_policy(

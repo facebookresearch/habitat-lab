@@ -15,7 +15,6 @@ defaults:
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat/task/measurements:
     - composite_subgoal_reward
-    - runtime_perf_stats
   - /habitat/task/lab_sensors:
     - multi_agent_all_predicates
     - other_agent_gps
@@ -31,26 +30,22 @@ habitat:
 
   gym:
     obs_keys:
-      - agent_0_head_depth
-      - agent_0_relative_resting_position
       - agent_0_obj_start_sensor
       - agent_0_obj_goal_sensor
       - agent_0_obj_start_gps_compass
       - agent_0_obj_goal_gps_compass
       - agent_0_joint
       - agent_0_is_holding
-      - agent_0_ee_pos
+      - agent_0_multi_agent_all_predicates
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
-      - agent_1_head_depth
-      - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
       - agent_1_obj_goal_sensor
       - agent_1_obj_start_gps_compass
       - agent_1_obj_goal_gps_compass
       - agent_1_joint
       - agent_1_is_holding
-      - agent_1_ee_pos
+      - agent_1_multi_agent_all_predicates
       - agent_1_localization_sensor
       - agent_1_other_agent_gps
   simulator:
@@ -83,19 +78,15 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'tb'
+  writer_type: 'wb'
 
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
     run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
-  profiling:
-    enable_perf_logger: True
-    perf_logger_skip_interval: 20
-
   eval:
-    should_load_ckpt: True
+    should_load_ckpt: False
     video_option: ["disk"]
 
   rl:
@@ -107,13 +98,13 @@ habitat_baselines:
         hierarchical_policy:
           high_level_policy:
             policy_input_keys:
-              - "head_depth"
               - "joint"
               - "is_holding"
               - "obj_start_sensor"
               - "obj_goal_sensor"
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
+              - "multi_agent_all_predicates"
               - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
@@ -125,13 +116,13 @@ habitat_baselines:
         hierarchical_policy:
           high_level_policy:
             policy_input_keys:
-              - "head_depth"
               - "joint"
               - "is_holding"
               - "obj_start_sensor"
               - "obj_goal_sensor"
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
+              - "multi_agent_all_predicates"
               - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:

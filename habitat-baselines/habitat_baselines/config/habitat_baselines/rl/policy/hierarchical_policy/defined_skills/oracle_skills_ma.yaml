@@ -55,7 +55,7 @@ nav_to_obj:
   apply_postconds: True
   force_end_on_timeout: False
   obs_skill_input_dim: 2
-  pddl_action_names: ["nav", "nav_to_receptacle_by_name"]
+  pddl_action_names: ["nav_to_obj", "nav_to_goal", "nav_to_receptacle_by_name"]
 
 reset_arm:
   skill_name: "ResetArmSkill"

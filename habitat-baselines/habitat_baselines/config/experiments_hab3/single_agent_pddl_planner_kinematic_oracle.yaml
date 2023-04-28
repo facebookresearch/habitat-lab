@@ -1,0 +1,23 @@
+# @package _global_
+
+defaults:
+  - single_agent_kinematic_oracle
+  - /habitat/task/lab_sensors:
+    - all_predicates
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hab3_planner
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - all_predicates
