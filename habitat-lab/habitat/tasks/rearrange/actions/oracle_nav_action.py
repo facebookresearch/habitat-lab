@@ -101,15 +101,23 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._prev_ep_id = self._task._episode_id
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
-        if nav_to_target_idx not in self._targets:
-            nav_to_obj = self._poss_entities[nav_to_target_idx]
+        nav_to_obj = self._poss_entities[nav_to_target_idx]
+        if (
+            nav_to_target_idx not in self._targets
+            or "robot" in nav_to_obj.name
+        ):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
             )
+            if "robot" in nav_to_obj.name:
+                # Safety margin between the human and the robot
+                sample_distance = 1.0
+            else:
+                sample_distance = self._config.spawn_max_dist_to_obj
             start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
-                self._config.spawn_max_dist_to_obj,
+                sample_distance,
                 self._sim,
                 self._config.num_spawn_attempts,
                 1,
@@ -141,6 +149,22 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         if not found_path:
             return [agent_pos, point]
         return path.points
+
+    def _update_controller_to_navmesh(self):
+        trans = self.cur_articulated_agent.sim_obj.transformation
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        target_rigid_state_trans = (
+            self.humanoid_controller.obj_transform_base.translation
+        )
+        end_pos = self._sim.step_filter(
+            rigid_state.translation, target_rigid_state_trans
+        )
+
+        # Offset the base
+        end_pos -= self.cur_articulated_agent.params.base_offset
+        self.humanoid_controller.obj_transform_base.translation = end_pos
 
     def step(self, *args, is_last_action, **kwargs):
         nav_to_target_idx = kwargs[
@@ -230,6 +254,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 else:
                     self.humanoid_controller.calculate_stop_pose()
 
+                self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[
                     f"{self._action_arg_prefix}human_joints_trans"
