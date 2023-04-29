@@ -649,7 +649,7 @@ if __name__ == "__main__":
         help="If specified, use the specified viewport height for the debug third-person camera",
     )
     # temp argument:
-    # allowes to swith between oracle baseline nav
+    # allowes to switch between oracle baseline nav
     # and random base vel action
     parser.add_argument(
         "--sample-random-basenine-base-vel",
