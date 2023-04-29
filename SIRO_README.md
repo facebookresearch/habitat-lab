@@ -17,6 +17,26 @@ Project-specific README for SIRo.
     * Manually download `humanoids_skinned.zip` from [this link](https://drive.google.com/file/d/19gUvwaxJpd-Z6Djq8kmCpYotduwZvOfZ/view?usp=sharing) and uncompress to `data`
 1. Download other required datasets:
     * `python -m habitat_sim.utils.datasets_download --uids ycb hab_fetch hab_spot_arm replica_cad_dataset rearrange_pick_dataset_v0 rearrange_dataset_v1 --data-path data/`
+1. Optional: install the Floorplanner Dataset below.
+
+# Floorplanner Dataset
+
+FP is actually four distinct pieces: Floorplanner scenes, Amazon-Berkeley objects, Google Scanned objects, and Floorplanner episodes.
+
+1. Download Floorplanner Scenes: [fpss_osmm.zip](https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
+2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
+3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
+4. Extract these into `habitat-lab/data` as follows: 
+```
+cd data
+unzip ~/Downloads/fpss_osmm.zip
+mv fpss_osmm fpss
+cd objects
+tar -xvf ~/Downloads/google_object_dataset.tar.gz
+tar -xvf ~/Downloads/amazon_berkeley.tar.gz
+cd ../datasets
+unzip ~/Downloads/floorplanner.zip
+```
 
 # Sandbox Tool
 
@@ -65,17 +85,8 @@ python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluat
 
 To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the following instruction
 
-Dataset
-1. Download the asset from the [Google Drive](https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
-2. Unzip the file and put it in `habitat_lab/habitat-lab/data/fpss`
-3. Download the amazon and google objects from the [Google Drive](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB?usp=share_link)
-4. Put them in `habitat_lab/habitat-lab/data/objects`
-5. Download the episode (there is only single scene) from the [Google Drive](https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
-6. Unzip it and put them in `habitat-lab/habitat-lab/data/datasets/floorplanner/`
-
-Program
-7. Assume you have already setup the habitat, then `cd habitat-lab/`
-8. `srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 python -u habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml habitat_baselines.num_environments=1`
+1. Download Floorplanner Dataset (see above).
+1. From `habitat-lab` directory, `srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 python -u habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml habitat_baselines.num_environments=1`
 
 or for running HRL fix policy
 `python habitat-baselines/habitat_baselines/run.py --config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat.task.measurements.force_terminate.max_accum_force=-1.0 habitat.task.measurements.force_terminate.max_instant_force=-1.0 habitat_baselines.num_environments=1 habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills`
