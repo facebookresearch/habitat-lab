@@ -6,10 +6,10 @@
 
 
 from typing import Dict
-from habitat.core.dataset import Episode
 
 import numpy as np
 
+from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import DynNavRLEnv
 
@@ -41,7 +41,9 @@ class CatDynNavRLEnv(DynNavRLEnv):
             obj = rom.get_object_by_handle(obj_handle)
             user_attr_keys = obj.user_attributes.get_subconfig_keys()
             if any(key.startswith("receptacle_") for key in user_attr_keys):
-                self._receptacle_semantic_ids[obj.object_id] = obj.creation_attributes.semantic_id
+                self._receptacle_semantic_ids[
+                    obj.object_id
+                ] = obj.creation_attributes.semantic_id
 
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None
@@ -49,19 +51,25 @@ class CatDynNavRLEnv(DynNavRLEnv):
         # learn nav to pick skill if not holding object currently
         if start_hold_obj_idx is None and not self._goal_type != 'ovmm':
             # starting positions of candidate objects
-            all_pos = np.stack([
-                view_point.agent_state.position \
-                for goal in episode.candidate_objects \
-                for view_point in goal.view_points
-            ], axis=0)
+            all_pos = np.stack(
+                [
+                    view_point.agent_state.position
+                    for goal in episode.candidate_objects
+                    for view_point in goal.view_points
+                ],
+                axis=0,
+            )
             if force_idx is not None:
                 raise NotImplementedError
         else:
             # positions of candidate goal receptacles
-            all_pos = np.stack([
-                view_point.agent_state.position \
-                for goal in episode.candidate_goal_receps \
-                for view_point in goal.view_points
-            ], axis=0)
+            all_pos = np.stack(
+                [
+                    view_point.agent_state.position
+                    for goal in episode.candidate_goal_receps
+                    for view_point in goal.view_points
+                ],
+                axis=0,
+            )
 
         return all_pos
