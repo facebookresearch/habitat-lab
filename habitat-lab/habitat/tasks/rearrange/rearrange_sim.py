@@ -262,11 +262,14 @@ class RearrangeSim(HabitatSim):
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
+        self.agents_mgr.pre_obj_clear()
         self._clear_objects(should_add_objects)
 
         super().reconfigure(config, should_close_on_new_scene=False)
         self._try_acquire_context()
-        self.agents_mgr.reconfigure(new_scene)
+
+        if new_scene:
+            self.agents_mgr.on_new_scene()
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}

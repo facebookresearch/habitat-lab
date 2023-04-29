@@ -101,21 +101,33 @@ class ArticulatedAgentManager:
                 )
             )
 
-    def reconfigure(self, is_new_scene: bool):
+    def on_new_scene(self) -> None:
+        """
+        Call on a new scene. This will destroy and re-create the robot
+        simulator instances.
+        """
         ao_mgr = self._sim.get_articulated_object_manager()
         for agent_data in self._all_agent_data:
-            if is_new_scene:
-                agent_data.grasp_mgr.reconfigure()
-                if (
-                    agent_data.articulated_agent.sim_obj is not None
-                    and agent_data.articulated_agent.sim_obj.is_alive
-                ):
-                    ao_mgr.remove_object_by_id(
-                        agent_data.articulated_agent.sim_obj.object_id
-                    )
+            agent_data.grasp_mgr.reconfigure()
+            if (
+                agent_data.articulated_agent.sim_obj is not None
+                and agent_data.articulated_agent.sim_obj.is_alive
+            ):
+                ao_mgr.remove_object_by_id(
+                    agent_data.articulated_agent.sim_obj.object_id
+                )
 
-                agent_data.articulated_agent.reconfigure()
+            agent_data.articulated_agent.reconfigure()
 
+    def pre_obj_clear(self) -> None:
+        """
+        Must call before all objects in the scene are removed before the next
+        episode. This will reset the grasp constraints and any references to
+        previously existing objects.
+        """
+
+        for agent_data in self._all_agent_data:
+            agent_data.grasp_mgr.reconfigure()
             for grasp_manager in agent_data.grasp_mgrs:
                 grasp_manager.reset()
 
