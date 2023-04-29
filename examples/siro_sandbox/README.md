@@ -6,8 +6,9 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 ## Known Issues
-* The policy-driven agent doesn't seem to be working in terms of producing interesting actions. As a placeholder, I've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
-* One-time visual flicker shortly after app startup on Mac
+* The policy-driven agent isn't working in terms of producing interesting actions. As a placeholder, we've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
+* One-time visual flicker shortly after app startup
+* When using Floorplanner scenes (see below), the app has very bad runtime perf on older Macbooks (2021 is fine; 2019 is bad).
 * Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode).
 
 ## Running HITL eval with a user-controlled humanoid and policy-driven Fetch or Spot
@@ -45,6 +46,10 @@ python examples/siro_sandbox/sandbox_app.py \
     2. hold Q and move mouse
 * `M` to reset to a new episode.
 
+## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
+
+TODO
+
 ## Debugging visual sensors
 
 Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
@@ -54,7 +59,7 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
 Add `--debug-third-person-width 600` to enable the debug third-person camera. Like all visual sensors, this is simulator-rendered, unlike the main sandbox app viewport, which is replay-rendered.
 
 ## Uning FP dataset
-To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md#spot-robot) and run any of the above Sandbox launch command with the following config overrides:
+To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
 ```
 ...
 --cfg-opts \
