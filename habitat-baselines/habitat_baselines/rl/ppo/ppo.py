@@ -184,7 +184,7 @@ class PPO(nn.Module, Updater):
             batch["prev_actions"],
             batch["masks"],
             batch["actions"],
-            batch["rnn_build_seq_info"],
+            batch.get("rnn_build_seq_info", None),
         )
 
         ratio = torch.exp(action_log_probs - batch["action_log_probs"])

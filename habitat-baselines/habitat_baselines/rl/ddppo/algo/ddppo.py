@@ -23,16 +23,30 @@ def _recursive_apply(inp, fn):
         return fn(inp)
 
 
+def _convert_to_numpy_safe(t):
+    if t is None:
+        return None
+    if t.device.type == "cpu":
+        return t.numpy()
+    return t
+
+
 def _cpu_to_numpy(inp):
-    return _recursive_apply(
-        inp, lambda t: t.numpy() if t.device.type == "cpu" else t
-    )
+    return _recursive_apply(inp, _convert_to_numpy_safe)
+
+
+def _numpy_to_cpu_safe(t):
+    if t is None:
+        return None
+    if isinstance(t, np.ndarray):
+        return torch.from_numpy(t)
+    return t
 
 
 def _numpy_to_cpu(inp):
     return _recursive_apply(
         inp,
-        lambda t: torch.from_numpy(t) if isinstance(t, np.ndarray) else t,
+        _numpy_to_cpu_safe,
     )
 
 
