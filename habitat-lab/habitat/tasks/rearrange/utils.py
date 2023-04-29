@@ -417,6 +417,8 @@ def get_robot_spawns(
     state = sim.capture_state()
     if agent is None:
         agent = sim.articulated_agent
+    start_rotation = agent.base_rot
+    start_position = agent.base_pos
 
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
@@ -424,6 +426,9 @@ def get_robot_spawns(
         start_position = sim.pathfinder.get_random_navigable_point_near(
             target_position, distance_threshold
         )
+        island_idx = sim.pathfinder.get_island(start_position)
+        if island_idx != sim.largest_island_idx:
+            continue
 
         relative_target = target_position - start_position
 

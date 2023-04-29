@@ -407,6 +407,13 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.island_radius(p) for p in self._navmesh_vertices
         ]
         self._max_island_size = max(self._island_sizes)
+        self._largest_island_idx = self.pathfinder.get_island(
+            self._navmesh_vertices[np.argmax(self._island_sizes)]
+        )
+
+    @property
+    def largest_island_idx(self) -> int:
+        return self._largest_island_idx
 
     def _clear_objects(self, should_add_objects: bool) -> None:
         rom = self.get_rigid_object_manager()

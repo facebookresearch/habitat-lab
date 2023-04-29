@@ -189,12 +189,12 @@ class PddlRobotState:
             else:
                 # Place some distance away from the object.
                 start_pos, start_rot, was_fail = get_robot_spawns(
-                    targ_pos,
-                    self.base_angle_noise,
-                    self.place_at_pos_dist,
-                    sim,
-                    sim_info.num_spawn_attempts,
-                    sim_info.physics_stability_steps,
+                    target_position=targ_pos,
+                    rotation_perturbation_noise=self.base_angle_noise,
+                    distance_threshold=self.place_at_pos_dist,
+                    sim=sim,
+                    num_spawn_attempts=sim_info.num_spawn_attempts,
+                    physics_stability_steps=sim_info.physics_stability_steps,
                 )
                 sim.articulated_agent.base_pos = start_pos
                 sim.articulated_agent.base_rot = start_rot
