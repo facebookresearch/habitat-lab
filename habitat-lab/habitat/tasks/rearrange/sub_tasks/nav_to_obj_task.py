@@ -61,6 +61,10 @@ class DynNavRLEnv(RearrangeTask):
     def nav_goal_pos(self):
         return self._nav_to_info.nav_goal_pos
 
+    @property
+    def is_nav_to_obj(self):
+        return self._config.object_in_hand_sample_prob == 0
+
     def set_args(self, obj, **kwargs):
         self.force_obj_to_idx = obj
         self.force_kwargs = kwargs

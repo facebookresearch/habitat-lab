@@ -289,7 +289,7 @@ class MotionPlanner:
                 self._run_cfg.video_dir,
                 "mp_fail",
                 robot_target.ee_target_pos,
-                f"ep{self._sim.ep_info['episode_id']}",
+                f"ep{self._sim.ep_info.episode_id}",
             )
 
         if joint_plan is not None:
@@ -368,7 +368,7 @@ class MotionPlanner:
         save_dir = osp.join(self._run_cfg.video_dir, "mp_plans")
         os.makedirs(save_dir, exist_ok=True)
         mp_name = "ep%s_%i_%.3f" % (
-            self._sim.ep_info["episode_id"],
+            self._sim.ep_info.episode_id,
             self._num_calls,
             dist_to_goal,
         )

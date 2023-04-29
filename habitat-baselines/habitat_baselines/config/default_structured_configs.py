@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import math
 from typing import Any, Dict, List, Tuple
 
 import attr
@@ -327,13 +326,6 @@ class RLConfig(HabitatBaselinesBaseConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class MLConfig(HabitatBaselinesBaseConfig):
-    """Modular learning config"""
-
-    policy: PolicyConfig = PolicyConfig()
-
-
-@attr.s(auto_attribs=True, slots=True)
 class ProfilingConfig(HabitatBaselinesBaseConfig):
     capture_start_step: int = -1
     num_steps_to_capture: int = -1
@@ -389,11 +381,6 @@ class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class HabitatBaselinesMLConfig(HabitatBaselinesConfig):
-    ml: MLConfig = MLConfig()
-
-
-@attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesILConfig(HabitatBaselinesConfig):
     il: Dict[str, Any] = dict()
 
@@ -408,11 +395,6 @@ cs.store(
     group="habitat_baselines",
     name="habitat_baselines_rl_config_base",
     node=HabitatBaselinesRLConfig(),
-)
-cs.store(
-    group="habitat_baselines",
-    name="habitat_baselines_ml_config_base",
-    node=HabitatBaselinesMLConfig(),
 )
 cs.store(
     group="habitat_baselines",

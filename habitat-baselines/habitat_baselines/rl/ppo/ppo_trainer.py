@@ -1191,7 +1191,7 @@ class PPOTrainer(BaseRLTrainer):
                             save_dir = os.path.dirname(save_dir)
                         np.save(
                             os.path.join(save_dir, "all_episode_stats.npy"),
-                            stats_episodes,
+                            np.array(stats_episodes),
                         )
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")

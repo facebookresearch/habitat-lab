@@ -412,6 +412,18 @@ class CameraPoseSensorConfig(LabSensorConfig):
     type: str = "CameraPoseSensor"
 
 @attr.s(auto_attribs=True, slots=True)
+class ReceptacleSegmentationSensorConfig(LabSensorConfig):
+    type: str = "ReceptacleSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CatNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "CatNavGoalSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
@@ -788,6 +800,11 @@ class PickDistanceToGoalRewardMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CatNavRotDistToGoalMeasurementConfig(MeasurementConfig):
+    type: str = "CatNavRotDistToGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1172,56 +1189,6 @@ class GymConfig(HabitatBaseConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class MLEnvConfig(HabitatBaseConfig):
-    """Modular learning env config"""
-
-    num_sem_categories: int = 5
-
-    min_depth: float = 0.0  # minimum depth forw depth sensor (in metres)
-    max_depth: float = 10.0  # maximum depth for depth sensor (in metres)
-    min_depth_replacement_value: int = 10000
-    max_depth_replacement_value: int = 10001
-
-    # semantic_map params
-    map_size_cm: int = 4800  # global map size (in centimeters)
-    map_resolution: int = 5  # size of map bins (in centimeters)
-    global_downscaling: int = 2  # ratio of global over local map
-    du_scale: int = 4  # frame downscaling before projecting to point cloud
-    cat_pred_threshold: float = 1.0  # number of depth points to be in bin to classify it as a certain semantic category
-    exp_pred_threshold: float = (
-        1.0  # number of depth points to be in bin to consider it as explored
-    )
-    map_pred_threshold: float = (
-        1.0  # number of depth points to be in bin to consider it as obstacle
-    )
-    vision_range: int = (
-        100  # diameter of local map region visible by the agent (in cells)
-    )
-
-    # planner params
-    collision_threshold: float = 0.20  # forward move distance under which we consider there's a collision (in meters)
-    obs_dilation_selem_radius: int = (
-        3  # radius (in cells) of obstacle dilation structuring element
-    )
-    goal_dilation_selem_radius: int = (
-        10  # radius (in cells) of goal dilation structuring element
-    )
-
-    # agent
-    max_steps: int = 500  # maximum number of steps before stopping an episode
-    panorama_start: bool = True
-    ground_truth_semantics: bool = True
-
-    # misc
-    dump_location: str = "data/modular_nav"
-    exp_name: str = "debug"
-
-    # visualization
-    visualize: bool = False
-    print_images: bool = True
-
-
-@attr.s(auto_attribs=True, slots=True)
 class HabitatConfig(HabitatBaseConfig):
     seed: int = 100
     # GymHabitatEnv works for all Habitat tasks, including Navigation and
@@ -1236,7 +1203,6 @@ class HabitatConfig(HabitatBaseConfig):
     # for example: `Cartpole-v0`
     env_task_gym_id: str = ""
     environment: EnvironmentConfig = EnvironmentConfig()
-    ml_environment: MLEnvConfig = MLEnvConfig()
     simulator: SimulatorConfig = SimulatorConfig()
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
@@ -1254,11 +1220,7 @@ cs.store(
     name="environment_config_schema",
     node=EnvironmentConfig,
 )
-cs.store(
-    group="habitat.environment",
-    name="environment_config_schema",
-    node=MLEnvConfig,
-)
+
 cs.store(
     package="habitat.task",
     group="habitat/task",
@@ -1652,6 +1614,18 @@ cs.store(
     name="camera_pose_sensor",
     node=CameraPoseSensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.receptacle_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="receptacle_segmentation_sensor",
+    node=ReceptacleSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.cat_nav_goal_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="cat_nav_goal_segmentation_sensor",
+    node=CatNavGoalSegmentationSensorConfig,
+)
 
 # Task Measurements
 cs.store(
@@ -1767,6 +1741,12 @@ cs.store(
     group="habitat/task/measurements",
     name="answer_accuracy",
     node=AnswerAccuracyMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
+    group="habitat/task/measurements",
+    name="cat_nav_rot_dist_to_goal",
+    node=CatNavRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",
