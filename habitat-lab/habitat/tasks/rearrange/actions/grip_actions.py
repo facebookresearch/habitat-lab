@@ -191,6 +191,7 @@ class GazeGraspAction(MagicGraspAction):
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
         self._distance_from = getattr(config, "gaze_distance_from", "camera")
         self._center_square_width = config.gaze_center_square_width
+        self._oracle_snap = config.oracle_snap
 
     @property
     def action_space(self):
@@ -233,9 +234,11 @@ class GazeGraspAction(MagicGraspAction):
                     "This robot does not have GazeGraspAction."
                 )
 
-
+        sim_observations = self._sim._sensor_suite.get_observations(
+            self._sim.get_sensor_observations()
+        )
         if isinstance(self._sim.robot, StretchRobot):
-            panoptic_img = self._task._cur_observations["robot_head_panoptic"]
+            panoptic_img = sim_observations["robot_head_panoptic"]
         else:
             raise NotImplementedError(
                 "This robot dose not have GazeGraspAction."
@@ -251,7 +254,11 @@ class GazeGraspAction(MagicGraspAction):
         else:
             # check if any pixel within the center square has a valid pixel
             if isinstance(self._sim.robot, StretchRobot):
-                obj_seg = self._task._cur_observations["object_segmentation"]
+                obj_seg = self._task.sensor_suite.get_observations(
+                    observations=sim_observations,
+                    episode=self._sim.ep_info,
+                    task=self._task,
+                )["object_segmentation"]
             else:
                 raise NotImplementedError(
                     "This robot dose not have GazeGraspAction."
@@ -294,7 +301,19 @@ class GazeGraspAction(MagicGraspAction):
 
         return None, None
 
+    def _oracle_snap(self):
+        """ Snaps closest valid object """
+        allowed_scene_obj_ids = [int(g.object_id) for g in self._sim.ep_info.candidate_objects]
+        closest = np.argmin(np.linalg.norm((self._sim.get_scene_pos()[allowed_scene_obj_ids] - self._sim.robot.base_pos)[:, [0, 2]], axis=1))
+        snap_obj_idx = np.array(self._sim.scene_obj_ids)[allowed_scene_obj_ids][closest]
+        self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
+
+
     def _grasp(self):
+        if self._oracle_snap:
+            self._oracle_snap()
+            return
+
         # Check if the object is in the center of the camera
         center_obj_idx, center_obj_pos = self.determine_center_object()
 

@@ -128,6 +128,7 @@ class ArmActionConfig(ActionConfig):
     wrong_grasp_should_end: bool = False
     gaze_distance_from: str = "camera"
     gaze_center_square_width: float = 1
+    oracle_snap: bool = False
 
 
 @attr.s(auto_attribs=True, slots=True)

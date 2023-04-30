@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange: modular_cat_nav_to_obj
+  - /benchmark/rearrange: ovmm
   - /habitat_baselines: habitat_baselines_rl_config_base
   - _self_
 

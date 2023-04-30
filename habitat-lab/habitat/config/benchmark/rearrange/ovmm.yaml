@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
-  - /habitat/task/rearrange: modular_cat_nav_to_obj
+  - /habitat/task/rearrange: ovmm
   - /habitat/dataset/rearrangement: floorplanner
   - _self_
 
@@ -65,7 +65,7 @@ habitat:
       enable_physics: True
     needs_markers: false
   dataset:
-    data_path: data/episodes/rearrange/minival/cat_rearrange_floorplanner.json.gz
+    data_path: data/datasets/new_episodes/cat_rearrange_floorplanner.json.gz
     type: ObjectRearrangeDataset-v0
   task:
     goal_type: 'ovmm'

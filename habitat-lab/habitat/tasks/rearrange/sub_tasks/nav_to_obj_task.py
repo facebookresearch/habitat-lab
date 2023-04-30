@@ -94,24 +94,11 @@ class DynNavRLEnv(RearrangeTask):
             nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
         return nav_to_pos
 
-    def _generate_nav_start_goal(self, episode, force_idx=None) -> NavToInfo:
+    def _generate_nav_start_goal(self, episode, nav_to_pos, start_hold_obj_idx=None) -> NavToInfo:
         """
         Returns the starting information for a navigate to object task.
         """
 
-        start_hold_obj_idx: Optional[int] = None
-
-        # Only change the scene if this skill is not running as a sub-task
-        if (
-            force_idx is None
-            and random.random() < self._config.object_in_hand_sample_prob
-            and self._goal_type != 'ovmm'
-        ):
-            start_hold_obj_idx = self._generate_snap_to_obj()
-
-        nav_to_pos = self._generate_nav_to_pos(
-            episode, start_hold_obj_idx=start_hold_obj_idx, force_idx=force_idx
-        )
 
         def filter_func(start_pos, _):
             if len(nav_to_pos.shape) == 1:
@@ -149,8 +136,22 @@ class DynNavRLEnv(RearrangeTask):
                 [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
             )
 
+        start_hold_obj_idx: Optional[int] = None
+
+        # Only change the scene if this skill is not running as a sub-task
+        if (
+            self.force_obj_to_idx is None
+            and random.random() < self._config.object_in_hand_sample_prob
+            and self._goal_type != 'ovmm'
+        ):
+            start_hold_obj_idx = self._generate_snap_to_obj()
+
+        nav_to_pos = self._generate_nav_to_pos(
+            episode, start_hold_obj_idx=start_hold_obj_idx, force_idx=self.force_obj_to_idx
+        )
+
         self._nav_to_info = self._generate_nav_start_goal(
-            episode, force_idx=self.force_obj_to_idx
+            episode, nav_to_pos, start_hold_obj_idx=start_hold_obj_idx
         )
         if self._pick_init:
             spawn_recs = [
