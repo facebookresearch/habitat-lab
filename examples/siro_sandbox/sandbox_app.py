@@ -30,7 +30,6 @@ import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
-    OracleNavActionConfig,
     PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
@@ -679,9 +678,9 @@ if __name__ == "__main__":
         sim_config = config.habitat.simulator
         task_config = config.habitat.task
         task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
-        task_config.actions[
-            "agent_1_oracle_nav_action"
-        ] = OracleNavActionConfig(agent_index=1)
+        # task_config.actions[
+        #     "agent_1_oracle_nav_action"
+        # ] = OracleNavActionConfig(agent_index=1)
 
         agent_config = get_agent_config(sim_config=sim_config)
 
