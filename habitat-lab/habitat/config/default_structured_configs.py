@@ -982,22 +982,22 @@ class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_head_rgb"
-    width: int = 640 # debug
-    height: int = 480 # debug
+    width: int = 256
+    height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "robot_head_depth"
-    width: int = 640 # debug
-    height: int = 480 # debug
+    width: int = 256
+    height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "robot_head_panoptic"
-    width: int = 640
-    height: int = 480
+    width: int = 256
+    height: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
