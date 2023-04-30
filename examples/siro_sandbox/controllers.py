@@ -488,7 +488,7 @@ class GuiHumanoidController(Controller):
             action_names.append(humanoidjoint_name)
             action_args.update(
                 {
-                    "agent_0_human_joints_trans": humanoidjoint_action,
+                    f"{agent_k}human_joints_trans": humanoidjoint_action,
                 }
             )
 
