@@ -488,6 +488,7 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
+                deterministic=self.config.habitat_baselines.rl.policy.deterministic_actions
             )
 
         self.pth_time += time.time() - t_sample_action
