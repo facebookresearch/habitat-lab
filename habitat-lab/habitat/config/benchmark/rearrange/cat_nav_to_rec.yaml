@@ -55,4 +55,4 @@ habitat:
   dataset:
     data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
     type: ObjectRearrangeDataset-v0
-    scenes_dir: "data/fpss/fphab/"
+    scenes_dir: data/fpss/fphab/

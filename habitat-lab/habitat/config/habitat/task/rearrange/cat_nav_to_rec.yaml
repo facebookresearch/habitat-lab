@@ -3,8 +3,10 @@
 defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
-    - base_velocity
-    - rearrange_stop
+    - move_forward
+    - turn_left
+    - turn_right
+    - stop
   - /habitat/task/measurements:
     - object_to_goal_distance
     - robot_force
