@@ -160,7 +160,7 @@ def bb_ray_prescreen(
     raycast_results = []
     gravity_dir = sim.get_gravity().normalized()
     object_local_to_global = obj.transformation
-    bb_corners = get_bb_corners(obj.collision_shape_aabb)
+    bb_corners = get_bb_corners(obj.root_scene_node.cumulative_bb)
     key_points = [mn.Vector3(0)] + bb_corners  # [COM, c0, c1 ...]
     support_impacts: Dict[int, mn.Vector3] = {}  # indexed by keypoints
     for ix, key_point in enumerate(key_points):
@@ -215,12 +215,6 @@ def bb_ray_prescreen(
         pass
     elif highest_support_impact_id == -1:
         margin_offset = sim.get_stage_initialization_template().margin
-    else:
-        margin_offset = (
-            -sim.get_rigid_object_manager()
-            .get_object_by_id(highest_support_impact_id)
-            .margin
-        )
 
     surface_snap_point = (
         None
@@ -342,7 +336,7 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.01)
+                (cp.contact_distance < -0.05)
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
