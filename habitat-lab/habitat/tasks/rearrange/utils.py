@@ -396,13 +396,16 @@ def place_agent_at_dist_from_pos(
     num_spawn_attempts: int,
     physics_stability_steps: int,
     agent: Optional[MobileManipulator] = None,
+    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
 ):
     """
     Places the robot at closest point if distance_threshold is -1.0 otherwise
     will place the robot at `distance_threshold` away.
     """
     if distance_threshold == -1.0:
-        return place_robot_at_closest_point(target_position, sim, agent=agent)
+        return place_robot_at_closest_point(
+            target_position, sim, navmesh_offset, agent=agent
+        )
     else:
         return get_robot_spawns(
             target_position,
@@ -416,7 +419,10 @@ def place_agent_at_dist_from_pos(
 
 
 def place_robot_at_closest_point(
-    target_position: np.ndarray, sim, agent: Optional[MobileManipulator] = None
+    target_position: np.ndarray,
+    sim,
+    navmesh_offset: Optional[List[Tuple[float, float]]] = None,
+    agent: Optional[MobileManipulator] = None,
 ):
     """
     Gets the agent's position and orientation at the closest point to the target position.
@@ -431,7 +437,53 @@ def place_robot_at_closest_point(
             f"Object {target_position} is out of bounds but trying to set robot position to {agent_pos}"
         )
 
+    # Get the normal agent position
+    agent_pos = sim.safe_snap_point(target_position)
     desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
+    # Cache the initial location of the agent
+    cache_pos = sim.articulated_agent.base_pos
+
+    accept_agent_center = []
+
+    if navmesh_offset is not None:
+        # Set the base pos of the agent
+        sim.articulated_agent.base_pos = agent_pos
+        # Project the nav pos
+        nav_pos_3d = [
+            np.array([xz[0], cache_pos[1], xz[1]]) for xz in navmesh_offset
+        ]
+        # Do transformation to get the location
+        center_pos_list = [
+            sim.articulated_agent.sim_obj.transformation.transform_point(xyz)
+            for xyz in nav_pos_3d
+        ]
+        for center_pos in center_pos_list:
+            # Update the transformation of the agent
+            sim.articulated_agent.base_pos = center_pos
+            # Get the transformation
+            trans = sim.articulated_agent.sim_obj.transformation
+            cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+            # Project the height
+            cur_pos = [
+                np.array([xz[0], cache_pos[1], xz[2]]) for xz in cur_pos
+            ]
+            is_navigable = [
+                sim.pathfinder.is_navigable(pos) for pos in cur_pos
+            ]
+            # Check if the robot can be placed in that location
+            if sum(is_navigable) == len(is_navigable):
+                accept_agent_center.append(np.array(center_pos))
+
+        # Revert back to the original location
+        sim.articulated_agent.base_pos = cache_pos
+
+        # Select the first one to be the center pose
+        if len(accept_agent_center) > 0:
+            return (
+                accept_agent_center[0],
+                sim.articulated_agent.base_rot,
+                False,
+            )
 
     return agent_pos, desired_angle, False
 
