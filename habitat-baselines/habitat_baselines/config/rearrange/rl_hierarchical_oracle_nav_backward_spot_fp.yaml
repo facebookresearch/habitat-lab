@@ -8,8 +8,7 @@
 
 defaults:
   - rl_hierarchical_oracle_nav_spot_fp
-  - /habitat/task/actions:
-    - oracle_nav_spot_action
+  - override /habitat/task/actions: oracle_nav_spot_action
   - _self_
 
 habitat:

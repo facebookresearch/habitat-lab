@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.actions.actions import (
 )
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
-from habitat_sim import VelocityControl
+from habitat_sim.physics import VelocityControl
 
 
 @registry.register_task_action
