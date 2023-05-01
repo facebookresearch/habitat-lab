@@ -151,20 +151,24 @@ def get_input_vel_ctlr(
     elif keys[pygame.K_n]:
         env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
+    disc_act = None
     if not_block_input:
         # Base control
         if keys[pygame.K_j]:
             # Left
             base_action = [0, 1]
+            disc_act = "turn_left"
         elif keys[pygame.K_l]:
             # Right
             base_action = [0, -1]
+            disc_act = "turn_right"
         elif keys[pygame.K_k]:
             # Back
             base_action = [-1, 0]
         elif keys[pygame.K_i]:
             # Forward
             base_action = [1, 0]
+            disc_act = "move_forward"
 
         if arm_action_space.shape[0] == 7:
             # Velocity control. A different key for each joint
@@ -350,7 +354,8 @@ def get_input_vel_ctlr(
     else:
         arm_action = [*arm_action, magic_grasp]
 
-    return step_env(env, name, args), arm_action, end_ep
+    return step_env(env, disc_act, {}), arm_action, end_ep
+    # return step_env(env, name, args), arm_action, end_ep
 
 
 def get_wrapped_prop(venv, prop):
