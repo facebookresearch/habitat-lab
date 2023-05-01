@@ -301,7 +301,7 @@ class GazeGraspAction(MagicGraspAction):
 
         return None, None
 
-    def _oracle_snap(self):
+    def _snap_closest_valid_object(self):
         """ Snaps closest valid object """
         allowed_scene_obj_ids = [int(g.object_id) for g in self._sim.ep_info.candidate_objects]
         closest = np.argmin(np.linalg.norm((self._sim.get_scene_pos()[allowed_scene_obj_ids] - self._sim.robot.base_pos)[:, [0, 2]], axis=1))
@@ -311,7 +311,7 @@ class GazeGraspAction(MagicGraspAction):
 
     def _grasp(self):
         if self._oracle_snap:
-            self._oracle_snap()
+            self._snap_closest_valid_object()
             return
 
         # Check if the object is in the center of the camera

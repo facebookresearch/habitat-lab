@@ -71,6 +71,7 @@ actions:
     gaze_distance_range: [0.1, 3.0]
     center_cone_angle_threshold: 90.0
     center_cone_vector: [0.0, 1.0, 0.0]
+    oracle_snap: True
   base_velocity:
     type: "BaseWaypointVelAction"
     lin_speed: 0.2500
