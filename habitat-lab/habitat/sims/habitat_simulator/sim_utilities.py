@@ -138,7 +138,7 @@ def bb_ray_prescreen(
     obj: habitat_sim.physics.ManagedRigidObject,
     support_obj_ids: Optional[List[int]] = None,
     check_all_corners: bool = False,
-    estimate_support_stability: bool = True,
+    estimate_support_stability: bool = False,
     support_stability_threshold: float = 0.1,
 ) -> Dict[str, Any]:
     """
