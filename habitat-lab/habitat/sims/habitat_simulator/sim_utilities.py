@@ -154,7 +154,7 @@ def bb_ray_prescreen(
         support_obj_ids = [-1]
     lowest_key_point: mn.Vector3 = None
     lowest_key_point_height = None
-    highest_support_impact: mn.Vector3 = None
+    highest_support_impact: Optional[mn.Vector3]
     highest_support_impact_height = None
     highest_support_impact_id = None
     raycast_results = []
