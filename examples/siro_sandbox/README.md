@@ -30,8 +30,8 @@ python examples/siro_sandbox/sandbox_app.py \
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
---humanoid-user-agent \
 --never-end \
+--gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml \
 --cfg-opts habitat.dataset.split=minival \
 --sample-random-basenine-base-vel
