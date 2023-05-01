@@ -27,7 +27,7 @@ python examples/siro_sandbox/sandbox_app.py \
 ```
 * To use Spot, run:
 ```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
 --never-end \
