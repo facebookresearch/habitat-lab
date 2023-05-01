@@ -13,10 +13,10 @@ hydra:
 habitat_baselines:
   log_interval: 1
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  tensorboard_dir: ""
-  eval_ckpt_path_dir: ""
-  checkpoint_folder: ""
-  log_file: ""
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
   evaluate: False
   writer_type: 'tb'
   num_environments: 2
