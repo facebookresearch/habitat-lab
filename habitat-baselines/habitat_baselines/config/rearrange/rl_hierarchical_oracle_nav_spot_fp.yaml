@@ -9,7 +9,7 @@
 defaults:
   - rl_hierarchical
   - /habitat/task/actions:
-    - oracle_nav_action
+    - oracle_nav_spot_action
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_
@@ -17,8 +17,19 @@ defaults:
 habitat:
   task:
     actions:
-      oracle_nav_action:
+      oracle_nav_spot_action:
+        type: OracleNavSpotAction
         spawn_max_dist_to_obj: -1.0
+        # For noncylinder action
+        allow_dyn_slide: True
+        enable_rotation_check_for_dyn_slide: False
+        collision_threshold: 0.02
+        navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        navmesh_offset_check: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        enable_lateral_move: False
+    robot_at_thresh: 3.0
+    enable_teleport_agent_pos: False
+
   gym:
     obs_keys:
       - head_depth
@@ -54,7 +65,7 @@ habitat:
       - "data/objects/amazon_berkeley/configs/"
       - "data/objects/google_object_dataset/configs/"
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/s108294897_176710602.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/s_minitrain.json.gz
 
 habitat_baselines:
   rl:

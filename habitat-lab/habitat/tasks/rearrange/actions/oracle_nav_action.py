@@ -454,6 +454,7 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
         curr_path_points = self._path_to_point(final_nav_targ)
         # Get the robot position
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+
         if curr_path_points is None:
             raise Exception
         else:

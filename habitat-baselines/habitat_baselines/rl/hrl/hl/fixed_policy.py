@@ -37,8 +37,10 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 hl_action.name,
                 [x.name for x in hl_action.param_values],
             )
-            # Filter out the correct action for the robot.
+            # Filter out the correct action for the robot
             robot_id = "robot_" + self._agent_name.split("_")[1]
+            if robot_id == "robot_agent":
+                robot_id = "robot_0"
             if robot_id in sol_action[1]:
                 solution_actions.append(sol_action)
 
@@ -47,7 +49,6 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
         # Add a wait action at the end.
         solution_actions.append(parse_func("wait(30)"))
-
         return solution_actions
 
     def apply_mask(self, mask):
@@ -116,5 +117,4 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 skill_args_data[batch_idx] = skill_args  # type: ignore[call-overload]
 
                 self._next_sol_idxs[batch_idx] += 1
-
         return next_skill, skill_args_data, immediate_end, {}
