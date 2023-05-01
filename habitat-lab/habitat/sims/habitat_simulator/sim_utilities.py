@@ -225,12 +225,6 @@ def bb_ray_prescreen(
         pass
     elif highest_support_impact_id == -1:
         margin_offset = sim.get_stage_initialization_template().margin
-    else:
-        margin_offset = (
-            -sim.get_rigid_object_manager()
-            .get_object_by_id(highest_support_impact_id)
-            .margin
-        )
 
     surface_snap_point = (
         None
@@ -352,7 +346,7 @@ def snap_down(
                 cp.object_id_a == obj.object_id
                 or cp.object_id_b == obj.object_id
             ) and (
-                (cp.contact_distance < -0.01)
+                (cp.contact_distance < -0.05)
                 or not (
                     cp.object_id_a in support_obj_ids
                     or cp.object_id_b in support_obj_ids
