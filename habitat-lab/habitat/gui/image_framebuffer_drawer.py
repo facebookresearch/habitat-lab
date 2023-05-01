@@ -10,8 +10,10 @@ import numpy as np
 
 class ImageFramebufferDrawer:
     def __init__(self, max_width=1440, max_height=1440):
-        size = mn.Vector2i(max_width, max_height)
+        self._max_width = max_width
+        self._max_height = max_height
 
+        size = mn.Vector2i(self._max_width, self._max_height)
         # pre-allocate texture and framebuffer
         self.texture = mn.gl.Texture2D()
         self.texture.set_storage(1, mn.gl.TextureFormat.RGBA8, size)
@@ -22,21 +24,20 @@ class ImageFramebufferDrawer:
         )
 
     def draw(self, pixel_data, dest_x, dest_y):
-        import torch  # lazy import; avoid torch dependency at file scope
-
-        if isinstance(pixel_data, (np.ndarray, torch.Tensor)):
-            assert len(pixel_data.shape) == 3 and (
-                pixel_data.shape[2] == 3 or pixel_data.shape[2] == 4
-            )
+        if isinstance(pixel_data, np.ndarray):
             assert (
-                pixel_data.dtype == np.uint8 or pixel_data.dtype == torch.uint8
+                pixel_data.dtype == np.uint8
+                and len(pixel_data.shape) == 3
+                and (pixel_data.shape[2] == 3 or pixel_data.shape[2] == 4)
             )
+
+            pixel_data_h, pixel_data_w, pixel_data_c = pixel_data.shape
             # todo: catch case where storage is not 0-dim-major?
             self.draw_bytearray(
                 bytearray_pixel_data=bytearray(pixel_data),
-                height=pixel_data.shape[0],
-                width=pixel_data.shape[1],
-                bytes_per_pixel=pixel_data.shape[2],
+                height=pixel_data_h,
+                width=pixel_data_w,
+                bytes_per_pixel=pixel_data_c,
                 dest_x=dest_x,
                 dest_y=dest_y,
             )
@@ -56,15 +57,23 @@ class ImageFramebufferDrawer:
         dest_x,
         dest_y,
     ):
-        # see max_width, max_height in constructor
-        assert width <= self.texture.image_size(0)[0]
-        assert height <= self.texture.image_size(0)[1]
-
+        assert height <= self._max_height and width <= self._max_width, (
+            f"Pixel data height={height}, width={width}, "
+            f"but ImageFramebufferDrawer max_height={self._max_height} "
+            f"and max_width={self._max_width}."
+        )
         assert len(bytearray_pixel_data) == width * height * bytes_per_pixel
         assert bytes_per_pixel == 3 or bytes_per_pixel == 4
 
+        # mn.ImageView2D expects four-byte-aligned rows by default
+        # we pass a pixel storage https://doc.magnum.graphics/python/magnum/PixelStorage/
+        # argument to alow drawing images of variable resolution
+        storage = mn.PixelStorage()
+        storage.alignment = 1
+
         size = mn.Vector2i(width, height)
         image = mn.ImageView2D(
+            storage,
             mn.PixelFormat.RGBA8_UNORM
             if bytes_per_pixel == 4
             else mn.PixelFormat.RGB8_UNORM,

@@ -127,7 +127,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
 
         # arrange debug images on right side of frame, tiled down from the top
         dest_y = self.window_size.y
-        for image in self._debug_images:
+        for _, image in self._debug_images:
             im_height, im_width, _ = image.shape
             self._image_drawer.draw(
                 image, self.window_size.x - im_width, dest_y - im_height
