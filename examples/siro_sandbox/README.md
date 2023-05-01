@@ -36,6 +36,17 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival \
 --sample-random-basenine-base-vel
 ```
+* Solo user-controlled humanoid mode:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--gui-controlled-agent-index 0 \
+--never-end \
+--cfg benchmark/rearrange/rearrange_easy_human.yaml \
+--cfg-opts habitat.dataset.split=minival
+```
+
 
 ## Controls
 * Mouse scroll wheel to zoom the camera in/out.
