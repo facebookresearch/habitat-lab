@@ -391,10 +391,12 @@ class GuiHumanoidController(Controller):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop):
+    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
         self._hint_walk_dir = walk_dir
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
+        self._cam_yaw = cam_yaw
+        self._cam_yaw_prev = 0.0
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -451,18 +453,30 @@ class GuiHumanoidController(Controller):
             env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
         if do_humanoidjoint_action:
-            humancontroller_base_user_input = [0, 0]
-            # temp keyboard controls to test humanoid controller
-            if gui_input.get_key(KeyNS.I):
-                # move in world-space x+ direction ("east")
-                humancontroller_base_user_input[0] += 1
-            if gui_input.get_key(KeyNS.K):
-                # move in world-space x- direction ("west")
-                humancontroller_base_user_input[0] -= 1
-
+            humancontroller_base_user_input = np.zeros(3)
             if self._hint_walk_dir:
                 humancontroller_base_user_input[0] += self._hint_walk_dir.x
-                humancontroller_base_user_input[1] += self._hint_walk_dir.z
+                humancontroller_base_user_input[2] += self._hint_walk_dir.z
+            else:
+                # temp keyboard controls to test humanoid controller
+                if gui_input.get_key(KeyNS.I):
+                    # move in world-space x+ direction ("east")
+                    humancontroller_base_user_input[0] += 1
+                if gui_input.get_key(KeyNS.K):
+                    # move in world-space x- direction ("west")
+                    humancontroller_base_user_input[0] -= 1
+
+                rot_y_rad = -(self._cam_yaw - self._cam_yaw_prev) + np.pi
+                rot_y_matrix = np.array(
+                    [
+                        [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
+                        [0, 1, 0],
+                        [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad)],
+                    ]
+                )
+                humancontroller_base_user_input = (
+                    rot_y_matrix @ humancontroller_base_user_input
+                )
 
         action_names = []
         action_args = {}
@@ -471,7 +485,7 @@ class GuiHumanoidController(Controller):
                 relative_pos = mn.Vector3(
                     humancontroller_base_user_input[0],
                     0,
-                    humancontroller_base_user_input[1],
+                    humancontroller_base_user_input[2],
                 )
                 # pose, root_trans = self._humanoid_controller.get_walk_pose(
                 #     relative_pos, distance_multiplier=1.0
