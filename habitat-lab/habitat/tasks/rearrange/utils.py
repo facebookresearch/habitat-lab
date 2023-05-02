@@ -443,39 +443,39 @@ def place_robot_at_closest_point(
     # Cache the initial location of the agent
     cache_pos = sim.articulated_agent.base_pos
 
+    # Make a copy of agent trans
+    trans = mn.Matrix4(sim.articulated_agent.sim_obj.transformation)
+
     accept_agent_center = []
 
     if navmesh_offset is not None:
         # Set the base pos of the agent
-        sim.articulated_agent.base_pos = agent_pos
+        trans.translation = agent_pos
         # Project the nav pos
         nav_pos_3d = [
             np.array([xz[0], cache_pos[1], xz[1]]) for xz in navmesh_offset
         ]
         # Do transformation to get the location
-        center_pos_list = [
-            sim.articulated_agent.sim_obj.transformation.transform_point(xyz)
-            for xyz in nav_pos_3d
-        ]
+        center_pos_list = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+
         for center_pos in center_pos_list:
             # Update the transformation of the agent
-            sim.articulated_agent.base_pos = center_pos
-            # Get the transformation
-            trans = sim.articulated_agent.sim_obj.transformation
+            trans.translation = center_pos
             cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
             # Project the height
             cur_pos = [
                 np.array([xz[0], cache_pos[1], xz[2]]) for xz in cur_pos
             ]
-            is_navigable = [
-                sim.pathfinder.is_navigable(pos) for pos in cur_pos
-            ]
-            # Check if the robot can be placed in that location
-            if sum(is_navigable) == len(is_navigable):
-                accept_agent_center.append(np.array(center_pos))
 
-        # Revert back to the original location
-        sim.articulated_agent.base_pos = cache_pos
+            is_collision = False
+            for pos in cur_pos:
+                if not sim.pathfinder.is_navigable(pos):
+                    is_collision = True
+                    break
+
+            # Save the non collision center_pos
+            if not is_collision:
+                accept_agent_center.append(np.array(center_pos))
 
         # Select the first one to be the center pose
         if len(accept_agent_center) > 0:

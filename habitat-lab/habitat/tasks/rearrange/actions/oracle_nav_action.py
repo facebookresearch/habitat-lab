@@ -271,18 +271,19 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 )
 
 
-class velocity_control:
+class SimpleVelocityControlEnv:
     """
-    Simple velocity control function
+    Simple velocity control enviornment
     """
 
-    def __init__(self):
+    def __init__(self, sim_freq=120.0):
         # the velocity control
         self.vel_control = VelocityControl()
         self.vel_control.controlling_lin_vel = True
         self.vel_control.controlling_ang_vel = True
         self.vel_control.lin_vel_is_local = True
         self.vel_control.ang_vel_is_local = True
+        self._sim_freq = sim_freq
 
     def act(self, sim, vel):
         linear_velocity = vel[0]
@@ -302,7 +303,7 @@ class velocity_control:
         )
 
         target_rigid_state = self.vel_control.integrate_transform(
-            1 / 120, rigid_state
+            1 / self._sim_freq, rigid_state
         )
 
         end_pos = target_rigid_state.translation
@@ -385,15 +386,13 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
             np.array([xz[0], self._sim.articulated_agent.base_pos[1], xz[2]])
             for xz in cur_pos
         ]
-        is_navigable = [
-            self._sim.pathfinder.is_navigable(pos) for pos in cur_pos
-        ]
 
-        # No collision for each navmesh circles
-        if sum(is_navigable) == len(self._config.navmesh_offset):
-            return False
+        for pos in cur_pos:  # noqa: SIM110
+            # Return true if the pathfinder says it is not navigable
+            if not self._sim.pathfinder.is_navigable(pos):
+                return True
 
-        return True
+        return False
 
     def rotation_collision_check(
         self,
@@ -404,7 +403,7 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
         """
         # Cache the original position
         ori_trans = self._sim.articulated_agent.sim_obj.transformation
-        vc = velocity_control()
+        vc = SimpleVelocityControlEnv(self._config.sim_freq)
         angle = float("inf")
         cur_pos = self._sim.articulated_agent.base_pos
         while abs(angle) > self._config.turn_thresh:

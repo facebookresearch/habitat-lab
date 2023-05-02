@@ -44,13 +44,14 @@ class OracleNavPolicy(NnSkillPolicy):
             filtered_action_space,
             batch_size,
         )
-        try:
-            self._oracle_nav_ac_idx, _ = find_action_range(
-                action_space, "oracle_nav_action"
-            )
-        except KeyError:
+
+        if "oracle_nav_spot_action" in task_config["actions"]:
             self._oracle_nav_ac_idx, _ = find_action_range(
                 action_space, "oracle_nav_spot_action"
+            )
+        else:
+            self._oracle_nav_ac_idx, _ = find_action_range(
+                action_space, "oracle_nav_action"
             )
 
         self._is_target_obj = None

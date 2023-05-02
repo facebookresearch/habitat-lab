@@ -365,6 +365,8 @@ class OracleNavSpotActionConfig(ActionConfig):
     navmesh_offset: Optional[List[float]] = None
     # The x and y locations of the clamped NavMesh position for placing the picking location
     navmesh_offset_check: Optional[List[float]] = None
+    # Simulation frequency for velocity control
+    sim_freq: float = 120.0
 
 
 # -----------------------------------------------------------------------------
