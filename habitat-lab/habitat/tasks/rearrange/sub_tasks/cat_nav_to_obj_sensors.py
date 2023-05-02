@@ -149,7 +149,7 @@ class ReceptacleSegmentationSensor(Sensor):
     ):
         obs = np.copy(observations["robot_head_panoptic"])
         obj_id_map = np.zeros(np.max(obs) + 1, dtype=np.int32)
-        for obj_id, semantic_id in task.receptacle_semantic_ids.items():
+        for obj_id, semantic_id in self._sim.receptacle_semantic_ids.items():
             instance_id = obj_id + self._instance_ids_start
             # Skip if receptacle is not in the agent's viewport
             if instance_id >= obj_id_map.shape[0]:

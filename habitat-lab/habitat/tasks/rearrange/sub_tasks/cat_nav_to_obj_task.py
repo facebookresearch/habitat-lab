@@ -23,27 +23,6 @@ class CatDynNavRLEnv(DynNavRLEnv):
             dataset=dataset,
             **kwargs,
         )
-        self._receptacle_semantic_ids: Dict[int, int] = {}
-
-    @property
-    def receptacle_semantic_ids(self):
-        return self._receptacle_semantic_ids
-
-    def reset(self, episode: Episode):
-        obs = super().reset(episode)
-        self._cache_receptacles()
-        return obs
-
-    def _cache_receptacles(self):
-        # TODO: potentially this is slow, get receptacle list from episode instead
-        rom = self._sim.get_rigid_object_manager()
-        for obj_handle in rom.get_object_handles():
-            obj = rom.get_object_by_handle(obj_handle)
-            user_attr_keys = obj.user_attributes.get_subconfig_keys()
-            if any(key.startswith("receptacle_") for key in user_attr_keys):
-                self._receptacle_semantic_ids[
-                    obj.object_id
-                ] = obj.creation_attributes.semantic_id
 
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None

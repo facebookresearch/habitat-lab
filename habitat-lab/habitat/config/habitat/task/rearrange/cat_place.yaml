@@ -21,6 +21,8 @@ defaults:
     - joint_velocity_sensor
     - is_holding_sensor
     - end_effector_sensor
+    - cat_nav_goal_segmentation_sensor
+    - receptacle_segmentation_sensor
     - relative_resting_pos_sensor
     - goal_receptacle_sensor
   - _self_

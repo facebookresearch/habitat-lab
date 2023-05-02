@@ -681,7 +681,7 @@ class BaseWaypointVelAction(RobotAction):
             {
                 self._action_arg_prefix
                 + "base_vel": spaces.Box(
-                    shape=(2,), low=-lim, high=lim, dtype=np.float32
+                    shape=(3,), low=-lim, high=lim, dtype=np.float32
                 )
             }
         )
@@ -743,14 +743,14 @@ class BaseWaypointVelAction(RobotAction):
             self.cur_grasp_mgr.update_object_to_grasp()
 
     def step(self, *args, is_last_action, **kwargs):
-        waypoint, sel = kwargs[self._action_arg_prefix + "base_vel"]
+        forward, turn, sel = kwargs[self._action_arg_prefix + "base_vel"]
         # Scale the target waypoints and the rotation of the robot
         if sel > 0:
-            lin_pos = np.clip(waypoint, -1, 1) * self._config.lin_speed
+            lin_pos = np.clip(forward, -1, 1) * self._config.lin_speed
             ang_pos = 0.0
         else:
             lin_pos = 0.0
-            ang_pos = np.clip(waypoint, -1, 1) * self._config.ang_speed
+            ang_pos = np.clip(turn, -1, 1) * self._config.ang_speed
         if not self._config.allow_back:
             lin_pos = np.maximum(lin_pos, 0)
 

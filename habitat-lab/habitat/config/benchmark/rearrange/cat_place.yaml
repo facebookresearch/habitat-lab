@@ -12,8 +12,8 @@ habitat:
     auto_name: Place
     obs_keys:
       - robot_head_depth
-      - robot_head_rgb
       - goal_receptacle
+      - cat_nav_goal_segmentation
       - joint
       - is_holding
       - relative_resting_position

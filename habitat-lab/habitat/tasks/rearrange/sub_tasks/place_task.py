@@ -12,6 +12,16 @@ from habitat.tasks.rearrange.sub_tasks.pick_task import RearrangePickTaskV1
 
 @registry.register_task(name="RearrangePlaceTask-v0")
 class RearrangePlaceTaskV1(RearrangePickTaskV1):
+    def __init__(self, *args, config, dataset=None, **kwargs):
+        self.is_nav_to_obj = False
+        super().__init__(
+            *args,
+            config=config,
+            dataset=dataset,
+            **kwargs,
+        )
+
+
     def _get_targ_pos(self, sim):
         return sim.get_targets()[1]
 
