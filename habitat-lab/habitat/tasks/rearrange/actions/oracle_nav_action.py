@@ -273,7 +273,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
 class SimpleVelocityControlEnv:
     """
-    Simple velocity control enviornment
+    Simple velocity control environment for moving agent
     """
 
     def __init__(self, sim_freq=120.0):
@@ -285,7 +285,7 @@ class SimpleVelocityControlEnv:
         self.vel_control.ang_vel_is_local = True
         self._sim_freq = sim_freq
 
-    def act(self, sim, vel):
+    def act(self, trans, vel):
         linear_velocity = vel[0]
         angular_velocity = vel[1]
         # Map velocity actions
@@ -295,29 +295,25 @@ class SimpleVelocityControlEnv:
         self.vel_control.angular_velocity = mn.Vector3(
             [0.0, angular_velocity, 0.0]
         )
-
-        trans = sim.articulated_agent.sim_obj.transformation
-
+        # Compute the rigid state
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
-
+        # Get the target rigit state based on the simulation frequency
         target_rigid_state = self.vel_control.integrate_transform(
             1 / self._sim_freq, rigid_state
         )
-
+        # Get the ending pos of the agent
         end_pos = target_rigid_state.translation
-
+        # Offset the height
         end_pos[1] = trans.translation[1]
-
+        # Construct the target trans
         target_trans = mn.Matrix4.from_(
             target_rigid_state.rotation.to_matrix(),
             target_rigid_state.translation,
         )
 
-        sim.articulated_agent.sim_obj.transformation = target_trans
-
-        return sim
+        return target_trans
 
 
 @registry.register_task_action
@@ -360,7 +356,7 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
                 self._config.num_spawn_attempts,
                 1,
                 self.cur_articulated_agent,
-                self._config.navmesh_offset_check,
+                self._config.navmesh_offset_for_agent_placement,
             )
             if np.isnan(start_pos).any():
                 print("start_pos contains NaN @oracle_nav_spot_action.py.")
@@ -372,12 +368,11 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
         return self._targets[nav_to_target_idx]
 
-    def is_collision(self) -> bool:
+    def is_collision(self, trans) -> bool:
         """
         The function checks if the agent collides with the object
         given the navmesh
         """
-        trans = self._sim.articulated_agent.sim_obj.transformation
         nav_pos_3d = [
             np.array([xz[0], 0.0, xz[1]]) for xz in self._config.navmesh_offset
         ]
@@ -399,36 +394,34 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
         next_pos,
     ):
         """
-        This function checks if the robot needs to do backup
+        This function checks if the robot needs to do backing-up action
         """
-        # Cache the original position
-        ori_trans = self._sim.articulated_agent.sim_obj.transformation
+        # Make a copy of agent trans
+        trans = mn.Matrix4(self._sim.articulated_agent.sim_obj.transformation)
+        # Initialize the velocity controller
         vc = SimpleVelocityControlEnv(self._config.sim_freq)
         angle = float("inf")
+        # Get the current location of the agent
         cur_pos = self._sim.articulated_agent.base_pos
+        # Set the trans to be agent location
+        trans.translation = self._sim.articulated_agent.base_pos
+
         while abs(angle) > self._config.turn_thresh:
             # Compute the robot facing orientation
             rel_pos = (next_pos - cur_pos)[[0, 2]]
             forward = np.array([1.0, 0, 0])
-            robot_forward = np.array(
-                self._sim.articulated_agent.base_transformation.transform_vector(
-                    forward
-                )
-            )
+            robot_forward = np.array(trans.transform_vector(forward))
             robot_forward = robot_forward[[0, 2]]
             angle = get_angle(robot_forward, rel_pos)
             vel = OracleNavAction._compute_turn(
                 rel_pos, self._config.turn_velocity, robot_forward
             )
-            self._sim = vc.act(self._sim, vel)
-            cur_pos = self._sim.articulated_agent.base_pos
-            if self.is_collision():
-                # Reset the agent position
-                self._sim.articulated_agent.sim_obj.transformation = ori_trans
+            trans = vc.act(trans, vel)
+            cur_pos = trans.translation
+
+            if self.is_collision(trans):
                 return True
 
-        # Reset the agent position
-        self._sim.articulated_agent.sim_obj.transformation = ori_trans
         return False
 
     def step(self, *args, is_last_action, **kwargs):
@@ -472,10 +465,10 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
             robot_forward = robot_forward[[0, 2]]
             rel_targ = rel_targ[[0, 2]]
             rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-
+            # Get the angles
             angle_to_target = get_angle(robot_forward, rel_targ)
             angle_to_obj = get_angle(robot_forward, rel_pos)
-
+            # Compute the distance
             dist_to_final_nav_targ = np.linalg.norm(
                 (final_nav_targ - robot_pos)[[0, 2]]
             )
@@ -502,17 +495,16 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
                 # Backward direction
                 forward = np.array([-1.0, 0, 0])
                 robot_forward = np.array(base_T.transform_vector(forward))
-                # Compute relative target.
+                # Compute relative target
                 rel_targ = cur_nav_targ - robot_pos
-
                 # Compute heading angle (2D calculation)
                 robot_forward = robot_forward[[0, 2]]
                 rel_targ = rel_targ[[0, 2]]
                 rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-
+                # Get the angles
                 angle_to_target = get_angle(robot_forward, rel_targ)
                 angle_to_obj = get_angle(robot_forward, rel_pos)
-
+                # Compute the distance
                 dist_to_final_nav_targ = np.linalg.norm(
                     (final_nav_targ - robot_pos)[[0, 2]]
                 )
@@ -524,7 +516,7 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
             if self.motion_type == "base_velocity":
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
-                        # Do not want to look at the object
+                        # Do not want to look at the object to reduce collision
                         vel = [0, 0]
                     elif angle_to_target < self._config.turn_thresh:
                         # Move towards the target

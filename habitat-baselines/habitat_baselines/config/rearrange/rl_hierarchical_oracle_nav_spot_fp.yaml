@@ -20,12 +20,17 @@ habitat:
       oracle_nav_spot_action:
         type: OracleNavSpotAction
         spawn_max_dist_to_obj: -1.0
-        # For noncylinder action
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
         allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
         enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
         collision_threshold: 0.02
+        # The navmesh offset for the action control
         navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
-        navmesh_offset_check: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
         enable_lateral_move: False
     robot_at_thresh: 3.0
     enable_teleport_agent_pos: False

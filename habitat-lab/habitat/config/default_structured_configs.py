@@ -350,7 +350,7 @@ class OracleNavSpotActionConfig(ActionConfig):
     # A value of -1.0 means we will get as close to the object as possible.
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
-    # For noncylinder action
+    # For noncylinder navmesh action
     # The max longitudinal and lateral linear speeds of the robot
     longitudinal_lin_speed: float = 10.0
     lateral_lin_speed: float = 10.0
@@ -363,8 +363,8 @@ class OracleNavSpotActionConfig(ActionConfig):
     enable_lateral_move: bool = False
     # The x and y locations of the clamped NavMesh position
     navmesh_offset: Optional[List[float]] = None
-    # The x and y locations of the clamped NavMesh position for placing the picking location
-    navmesh_offset_check: Optional[List[float]] = None
+    # The x and y locations of the clamped NavMesh position for placing and picking locations
+    navmesh_offset_for_agent_placement: Optional[List[float]] = None
     # Simulation frequency for velocity control
     sim_freq: float = 120.0
 
