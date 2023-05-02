@@ -30,7 +30,7 @@ class RearrangePickTaskV1(RearrangeTask):
             should_place_robot=False,
             **kwargs,
         )
-
+        self._spawn_reference = config.spawn_reference
         self.prev_colls = None
         self.force_set_idx = None
 
@@ -51,27 +51,31 @@ class RearrangePickTaskV1(RearrangeTask):
             sel_idx = np.random.randint(0, len(self._get_targ_pos(sim)))
         return sel_idx
 
-    def _get_spawn_recs(self, sim, episode):
-        return [
-            sim.receptacles[
-                episode.name_to_receptacle[
-                    list(sim.instance_handle_to_ref_handle.keys())[0]
-                ]
-            ]
-        ]
+    def _get_spawn_rec_goals(self, episode):
+        return episode.candidate_start_receps
+    
+
+    def get_spawn_ref_points(self, sim, episode, sel_idx):
+        # Return a tuple of numpy arrays, the first being the reference points for distance and the second being the reference points for angle 
+        if self._spawn_reference == 'receptacle_center':
+            recep_centers = np.array([g.position for g in self._get_spawn_rec_goals(episode)])
+            return recep_centers, recep_centers
+        elif self._spawn_reference == 'target':
+            # biased init wrt geogoal pick or place target
+            target_positions = self._get_targ_pos(sim)
+            target_positions = np.expand_dims(target_positions[sel_idx], axis=0)
+            return target_positions, target_positions
+        elif self._spawn_reference == 'view_points':
+            recep_view_points = np.array([v.agent_state.position for g in self._get_spawn_rec_goals(episode) for v in g.view_points])
+            recep_centers = np.array([g.position for g in self._get_spawn_rec_goals(episode) for v in g.view_points])
+            return recep_view_points, recep_centers
+        else:
+            raise ValueError(f"Unrecognized spawn reference {self._spawn_reference}") 
+
+
 
     def _gen_start_pos(self, sim, episode, sel_idx):
-        if self._config.biased_init:
-            target_positions = self._get_targ_pos(sim)
-            snap_pos = np.expand_dims(target_positions[sel_idx], axis=0)
-        else:
-            snap_pos = np.array(
-                [
-                    r.get_surface_center(sim)
-                    for r in self._get_spawn_recs(sim, episode)
-                ]
-            )
-
+        snap_pos, orient_pos = self.get_spawn_ref_points(sim, episode, sel_idx)
         start_pos, angle_to_obj, was_succ = get_robot_spawns(
             snap_pos,
             self._config.base_angle_noise,
@@ -79,6 +83,7 @@ class RearrangePickTaskV1(RearrangeTask):
             sim,
             self._config.num_spawn_attempts,
             self._config.physics_stability_steps,
+            orient_positions=orient_pos
         )
 
         if was_succ:

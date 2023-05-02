@@ -835,7 +835,7 @@ class TaskConfig(HabitatBaseConfig):
     # If true, does not care about navigability or collisions
     # with objects when spawning robot
     easy_init: bool = False
-    biased_init: bool = False
+    spawn_reference: str = "target"
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
     task_spec_base_path: str = "habitat/task/rearrange/pddl/"

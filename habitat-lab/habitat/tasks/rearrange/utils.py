@@ -415,6 +415,7 @@ def get_robot_spawns(
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
+    orient_positions: Optional[np.ndarray] = None,
 ):
     """
     Attempts to place the robot near the target position, facing towards it
@@ -425,24 +426,32 @@ def get_robot_spawns(
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check.
+    :param orient_positions: The positions to orient the robot towards. If None, the target position is used.
 
     :return: The robot's start position, rotation, and whether the placement was successful.
     """
 
     state = sim.capture_state()
+    if orient_positions is None:
+        orient_positions = target_positions
 
     # Try to place the robot.
     for i in range(num_spawn_attempts):
         sim.set_state(state)
+
+        # Randomly sample an index of target positions.
+        target_index = np.random.choice(target_positions.shape[0])
+
         target_position = target_positions[
-            np.random.choice(target_positions.shape[0])
+            target_index
         ]
+        orient_position = orient_positions[target_index]
         start_position = sim.pathfinder.get_random_navigable_point_near(
             target_position, distance_threshold,
             island_index=sim.navmesh_classification_results["active_island"]
         )
 
-        relative_target = target_position - start_position
+        relative_target = orient_position - start_position
 
         angle_to_object = get_angle_to_pos(relative_target)
 
