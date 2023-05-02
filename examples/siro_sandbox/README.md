@@ -6,14 +6,15 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 ## Known Issues
-* The policy-driven agent doesn't seem to be working in terms of producing interesting actions. As a placeholder, I've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
-* One-time visual flicker shortly after app startup on Mac
-* Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode)
+* The policy-driven agent isn't working in terms of producing interesting actions. As a placeholder, we've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
+* One-time visual flicker shortly after app startup
+* When using Floorplanner scenes (see below), the app has very bad runtime perf on older Macbooks (2021 is fine; 2019 is bad).
+* Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode).
 
 ## Running HITL eval with a user-controlled humanoid and policy-driven Fetch or Spot
 
-1. Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation).
-2. To use Fetch run:
+* Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation), including grabbing latest habitat-sim `main`.
+* To use Fetch, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -23,7 +24,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
 --cfg-opts habitat.dataset.split=minival
 ```
-3. To use Spot run (make sure you are using latest habitat-sim version):
+* To use Spot, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning
 python examples/siro_sandbox/sandbox_app.py \
@@ -34,9 +35,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival
 ```
 
-Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
-
-### Controls
+## Controls
 * Mouse scroll wheel to zoom the camera in/out.
 * Right-click on the floor and hold to move the humanoid.
 * Mouse-over an object. When you see a yellow highlight, left-click to grasp.
@@ -46,6 +45,29 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
     1. WASD keys
     2. hold Q and move mouse
 * `M` to reset to a new episode.
+
+## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
+
+TODO
+
+## Debugging visual sensors
+
+Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
+
+## Debugging simulator-rendering
+
+Add `--debug-third-person-width 600` to enable the debug third-person camera. Like all visual sensors, this is simulator-rendered, unlike the main sandbox app viewport, which is replay-rendered.
+
+## Uning FP dataset
+To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
+```
+...
+--cfg-opts \
+habitat.task.task_spec=rearrange_easy_fp \
+habitat.task.pddl_domain_def=fp \
++habitat.simulator.additional_object_paths="[data/objects/ycb/configs/, data/objects/amazon_berkeley/configs/, data/objects/google_object_dataset/configs/]" \
+habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/s108294897_176710602.json.gz
+```
 
 ## Testing BatchReplayRenderer
 

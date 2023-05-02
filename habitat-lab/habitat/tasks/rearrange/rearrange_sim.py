@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
+import time
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -122,7 +123,14 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.update_articulated_agent
         )
         self._step_physics = self.habitat_config.step_physics
+        self._additional_object_paths = (
+            self.habitat_config.additional_object_paths
+        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
+        self._backend_runtime_perf_stat_names = (
+            # super().get_runtime_perf_stat_names()
+        )
+        self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -246,26 +254,26 @@ class RearrangeSim(HabitatSim):
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
+        t_start = time.time()
+
         with read_write(config):
             config["scene"] = ep_info.scene_id
 
-        super().reconfigure(config, should_close_on_new_scene=False)
-
         self.ep_info = ep_info
-        self._try_acquire_context()
-
         new_scene = self.prev_scene_id != ep_info.scene_id
-
         if new_scene:
             self._prev_obj_names = None
 
-        self.agents_mgr.reconfigure(new_scene)
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
+
+        super().reconfigure(config, should_close_on_new_scene=False)
+        self._try_acquire_context()
+        self.agents_mgr.reconfigure(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -335,6 +343,7 @@ class RearrangeSim(HabitatSim):
                 node.semantic_id = (
                     obj.object_id + self.habitat_config.object_ids_start
                 )
+        self.add_perf_timing("reconfigure", t_start)
 
     def get_agent_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -391,7 +400,12 @@ class RearrangeSim(HabitatSim):
 
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+
+        if "fpss" in ep_info.scene_id.split("/"):
+            # For FP scenes, we use different path structure than for other scenes.
+            base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
+        else:
+            base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
         self.pathfinder.load_nav_mesh(navmesh_path)
@@ -495,16 +509,16 @@ class RearrangeSim(HabitatSim):
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
-                obj_attr_mgr = self.get_object_template_manager()
-                matching_templates = (
-                    obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
-                )
+                template = None
+                for obj_path in self._additional_object_paths:
+                    template = osp.join(obj_path, obj_handle)
+                    if osp.isfile(template):
+                        break
                 assert (
-                    len(matching_templates.values()) == 1
-                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
-                ro = rom.add_object_by_template_handle(
-                    list(matching_templates.keys())[0]
-                )
+                    template is not None
+                ), f"Could not find config file for object {obj_handle}"
+
+                ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
 
@@ -757,12 +771,21 @@ class RearrangeSim(HabitatSim):
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
+            t_start = time.time()
             self._prev_sim_obs = self.get_sensor_observations_async_finish()
+            self.add_perf_timing(
+                "get_sensor_observations_async_finish", t_start
+            )
+
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
+
+            t_start = time.time()
             self._prev_sim_obs = self.get_sensor_observations()
+            self.add_perf_timing("get_sensor_observations", t_start)
+
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         if self._enable_gfx_replay_save:
@@ -841,7 +864,9 @@ class RearrangeSim(HabitatSim):
         """
         # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
+            t_start = time.time()
             self.step_world(dt)
+            self.add_perf_timing("step_world", t_start)
 
     def get_targets(self) -> Tuple[np.ndarray, np.ndarray]:
         """Get a mapping of object ids to goal positions for rearrange targets.
@@ -878,3 +903,18 @@ class RearrangeSim(HabitatSim):
                 for idx in self._scene_obj_ids
             ]
         )
+
+    def add_perf_timing(self, desc, t_start):
+        self._extra_runtime_perf_stats[desc] = time.time() - t_start
+
+    def get_runtime_perf_stats(self):
+        names = self._backend_runtime_perf_stat_names
+        values = super().get_runtime_perf_stat_values()
+        stats_dict = dict(zip(names, values))
+
+        for name, value in self._extra_runtime_perf_stats.items():
+            stats_dict[name] = value
+        # clear this dict so we don't accidentally collect these twice
+        self._extra_runtime_perf_stats = {}
+
+        return stats_dict

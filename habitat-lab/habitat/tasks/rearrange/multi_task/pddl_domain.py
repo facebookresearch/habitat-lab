@@ -200,11 +200,13 @@ class PddlDomain:
         """
 
         self._constants: Dict[str, PddlEntity] = {}
-        for c in domain_def["constants"]:
-            self._constants[c["name"]] = PddlEntity(
-                c["name"],
-                self.expr_types[c["expr_type"]],
-            )
+        # For the scene that has not constants
+        if domain_def["constants"] is not None:
+            for c in domain_def["constants"]:
+                self._constants[c["name"]] = PddlEntity(
+                    c["name"],
+                    self.expr_types[c["expr_type"]],
+                )
 
     def register_type(self, expr_type: ExprType):
         """
@@ -378,6 +380,7 @@ class PddlDomain:
             num_spawn_attempts=self._config.num_spawn_attempts,
             physics_stability_steps=self._config.physics_stability_steps,
             receptacles=sim.receptacles,
+            recep_place_shrink_factor=self._config.recep_place_shrink_factor,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -435,10 +438,10 @@ class PddlDomain:
         all_entities = self.all_entities.values()
         true_preds: List[Predicate] = []
         for pred in self.predicates.values():
-            for entity_input in itertools.combinations(
+            for entity_input in itertools.permutations(
                 all_entities, pred.n_args
             ):
-                if not pred.are_args_compatible(entity_input):
+                if not pred.are_args_compatible(list(entity_input)):
                     continue
 
                 use_pred = pred.clone()

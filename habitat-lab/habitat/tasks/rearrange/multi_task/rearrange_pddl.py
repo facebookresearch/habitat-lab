@@ -117,9 +117,18 @@ def ensure_entity_lists_match(
     # Check types are compatible
     for arg, set_arg in zip(to_set, set_value):
         if not set_arg.expr_type.is_subtype_of(arg.expr_type):
-            raise ValueError(
-                f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
+            exception = (
+                set_arg.expr_type.name == "robot_entity_type"
+                and arg.expr_type.name == "static_obj_type"
+                or (
+                    set_arg.expr_type.name == "robot_entity_type"
+                    and arg.expr_type.name == "obj_type"
+                )
             )
+            if not exception:
+                raise ValueError(
+                    f"Arg type is incompatible \n{to_set}\n vs \n{set_value}"
+                )
 
 
 @dataclass
@@ -144,6 +153,7 @@ class PddlSimInfo:
 
     num_spawn_attempts: int
     physics_stability_steps: int
+    recep_place_shrink_factor: float
 
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]

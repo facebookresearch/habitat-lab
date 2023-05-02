@@ -108,6 +108,11 @@ class LogicalExpr:
     def __repr__(self):
         return f"({self._expr_type}: {self._sub_exprs}"
 
+    @property
+    def compact_str(self):
+        str_list = " ".join([expr.compact_str for expr in self._sub_exprs])
+        return f"({self._expr_type}: {str_list}"
+
     def clone(self) -> "LogicalExpr":
         return LogicalExpr(
             self._expr_type,

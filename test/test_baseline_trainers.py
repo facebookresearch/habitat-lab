@@ -72,9 +72,7 @@ def download_data():
     )
     + list(
         itertools.product(
-            [
-                "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
-            ],
+            ["test/config/habitat_baselines/ppo_pointnav_test.yaml"],
             [True],
             [
                 [],
@@ -134,7 +132,7 @@ def test_trainers(
 @pytest.mark.parametrize(
     "test_cfg_path",
     (
-        "test/ddppo_pointnav_test.yaml",
+        "test/config/habitat_baselines/ddppo_pointnav_test.yaml",
         "rearrange/rl_skill.yaml",
     ),
 )
@@ -174,7 +172,7 @@ def test_ver_trainer(
 
 def test_cpca():
     cfg = get_config(
-        "test/ppo_pointnav_test.yaml",
+        "test/config/habitat_baselines/ppo_pointnav_test.yaml",
         ["+habitat_baselines/rl/auxiliary_losses=cpca"],
     )
     assert "cpca" in cfg.habitat_baselines.rl.auxiliary_losses
@@ -189,7 +187,7 @@ def test_cpca():
     "test_cfg_path,mode",
     [
         [
-            "test/ppo_pointnav_test.yaml",
+            "test/config/habitat_baselines/ppo_pointnav_test.yaml",
             "train",
         ],
     ],
@@ -327,13 +325,19 @@ def test_eval_config():
         "habitat_baselines.load_resume_state_config=False",
     ]
 
-    ckpt_cfg = get_config("test/ppo_pointnav_test.yaml", ckpt_opts)
+    ckpt_cfg = get_config(
+        "test/config/habitat_baselines/ppo_pointnav_test.yaml", ckpt_opts
+    )
     assert ckpt_cfg.habitat_baselines.eval.video_option == []
 
-    eval_cfg = get_config("test/ppo_pointnav_test.yaml", eval_opts)
+    eval_cfg = get_config(
+        "test/config/habitat_baselines/ppo_pointnav_test.yaml", eval_opts
+    )
     assert eval_cfg.habitat_baselines.eval.video_option == ["disk"]
 
-    trainer = BaseRLTrainer(get_config("test/ppo_pointnav_test.yaml"))
+    trainer = BaseRLTrainer(
+        get_config("test/config/habitat_baselines/ppo_pointnav_test.yaml")
+    )
 
     returned_config = trainer._get_resume_state_config_or_new_config(
         resume_state_config=ckpt_cfg

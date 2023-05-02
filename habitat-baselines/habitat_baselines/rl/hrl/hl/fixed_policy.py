@@ -37,7 +37,10 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 hl_action.name,
                 [x.name for x in hl_action.param_values],
             )
-            solution_actions.append(sol_action)
+            # Filter out the correct action for the robot.
+            robot_id = "robot_" + self._agent_name.split("_")[1]
+            if robot_id in sol_action[1]:
+                solution_actions.append(sol_action)
 
             if self._config.add_arm_rest and i < (len(solution) - 1):
                 solution_actions.append(parse_func("reset_arm(0)"))
