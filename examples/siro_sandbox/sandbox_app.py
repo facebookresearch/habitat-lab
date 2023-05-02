@@ -74,25 +74,26 @@ class SandboxDriver(GuiAppDriver):
         self.ctrl_helper.on_environment_reset()
 
         self.cam_zoom_dist = 1.0
+        self._max_zoom_dist = 50.0
+        self._min_zoom_dist = 0.1
+
         self.gui_input = gui_input
 
         self._debug_line_render = None
         self._debug_images = args.debug_images
 
-        self.lookat = None
-        # lookat offset yaw (spin left/right) and pitch (up/down)
-        # to enable camera rotation and pitch control
-        # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
-        self._lookat_offset_yaw = 0.785
-        self._lookat_offset_pitch = 0.955
-
         self._held_target_obj_idx = None
         self._viz_anim_fraction = 0.0
 
         self.lookat = None
-        self._first_person_mode = False
-        self._first_person_yaw = 0.0
-        self._first_person_pitch = 0.0
+        self._first_person_mode = True
+        if self._first_person_mode:
+            self._lookat_offset_yaw = 0.0
+            self._lookat_offset_pitch = 0.0
+        else:
+            # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
+            self._lookat_offset_yaw = 0.785
+            self._lookat_offset_pitch = 0.955
 
     @property
     def lookat_offset_yaw(self):
@@ -307,18 +308,6 @@ class SandboxDriver(GuiAppDriver):
         if self.gui_input.get_key(GuiInput.KeyNS.D):
             self._lookat_offset_yaw += cam_rot_angle
 
-    def _first_person_pitch_and_yaw_wasd_control(self):
-        # update yaw and pitch uning WASD keys
-        cam_rot_angle = 0.1
-        if self.gui_input.get_key(GuiInput.KeyNS.W):
-            self._first_person_pitch -= cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.S):
-            self._first_person_pitch += cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.A):
-            self._first_person_yaw -= cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.D):
-            self._first_person_yaw += cam_rot_angle
-
     def _camera_pitch_and_yaw_mouse_control(self):
         # if Q is held update yaw and pitch
         # by scale * mouse relative position delta
@@ -451,10 +440,7 @@ class SandboxDriver(GuiAppDriver):
                 drop_pos,
             ) = self.viz_and_get_humanoid_hints()
             self.gui_agent_ctrl.set_act_hints(
-                walk_dir,
-                grasp_object_id,
-                drop_pos,
-                cam_yaw=self._first_person_yaw,
+                walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
             )
 
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
@@ -485,104 +471,48 @@ class SandboxDriver(GuiAppDriver):
                 self.cam_zoom_dist /= (
                     1.0 + self.gui_input.mouse_scroll_offset * zoom_sensitivity
                 )
-            max_zoom_dist = 50.0
-            min_zoom_dist = 0.1
             self.cam_zoom_dist = mn.math.clamp(
-                self.cam_zoom_dist, min_zoom_dist, max_zoom_dist
+                self.cam_zoom_dist, self._min_zoom_dist, self._max_zoom_dist
             )
 
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
-        self.first_person_mode = True
-        if self.first_person_mode:
-            assert agent_idx is not None
+        if agent_idx is None:
+            self._free_camera_lookat_control()
+            lookat = self.lookat
+        else:
+            # two ways for camera pitch and yaw control for UX comparison:
+            # 1) hold WASD keys
+            self._camera_pitch_and_yaw_wasd_control()
+            # 2) hold R and move mouse
+            self._camera_pitch_and_yaw_mouse_control()
+
             art_obj = (
                 self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
             )
             robot_root = art_obj.transformation
+            lookat = robot_root.translation + mn.Vector3(0, 1, 0)
 
-            # agent = self.get_sim().get_agent(0)
-            # head_depth = agent.scene_node.node_sensor_suite.get("head_depth")
-            # cam_transform = head_depth.node.absolute_transformation()
-            # cam_transform = cam_transform @ rot_y_matrix @ rot_z_matrix
-
-            cam_transform = robot_root
-            self._first_person_pitch_and_yaw_wasd_control()
-
-            rot_z_rad = self._first_person_pitch
-            rot_z_matrix = np.array(
-                [
-                    [1, 0, 0, 0],
-                    [0, np.cos(rot_z_rad), np.sin(rot_z_rad), 0],
-                    [0, -np.sin(rot_z_rad), np.cos(rot_z_rad), 0],
-                    [0, 0, 0, 1],
-                ]
-            )
-
-            rot_y_rad = -self._first_person_yaw
-            rot_y_matrix = mn.Matrix4(
-                np.array(
-                    [
-                        [np.cos(rot_y_rad), 0, np.sin(rot_y_rad), 0],
-                        [0, 1, 0, 0],
-                        [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad), 0],
-                        [0, 0, 0, 1],
-                    ]
-                )
-            )
-
-            flip_cam_y_rad = np.pi
-            flip_and_raise_y_matrix = mn.Matrix4(
-                np.array(
-                    [
-                        [np.cos(flip_cam_y_rad), 0, np.sin(flip_cam_y_rad), 0],
-                        [0, 1, 0, 1],
-                        [
-                            -np.sin(flip_cam_y_rad),
-                            0,
-                            np.cos(flip_cam_y_rad),
-                            0,
-                        ],
-                        [0, 0, 0, 1],
-                    ]
-                )
-            )
-            cam_transform = (
-                cam_transform
-                @ flip_and_raise_y_matrix
-                @ rot_y_matrix
-                @ rot_z_matrix
-            )
-
-        else:
-            if agent_idx is not None:
-                art_obj = (
-                    self.get_sim()
-                    .agents_mgr[agent_idx]
-                    .articulated_agent.sim_obj
-                )
-                robot_root = art_obj.transformation
-                lookat = robot_root.translation + mn.Vector3(0, 1, 0)
-                # two ways for camera pitch and yaw control for UX comparison:
-                # 1) hold WASD keys
-                self._camera_pitch_and_yaw_wasd_control()
-                # 2) hold R and move mouse
-                self._camera_pitch_and_yaw_mouse_control()
-            else:
-                self._free_camera_lookat_control()
-                lookat = self.lookat
-
-            offset = mn.Vector3(
-                np.cos(self.lookat_offset_yaw)
-                * np.cos(self.lookat_offset_pitch),
-                np.sin(self.lookat_offset_pitch),
-                np.sin(self.lookat_offset_yaw)
-                * np.cos(self.lookat_offset_pitch),
-            )
-            cam_transform = mn.Matrix4.look_at(
-                lookat + offset.normalized() * self.cam_zoom_dist,
-                lookat,
-                mn.Vector3(0, 1, 0),
-            )
+        offset = mn.Vector3(
+            np.cos(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
+            np.sin(self.lookat_offset_pitch),
+            np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
+        )
+        cam_zoom_dist = (
+            self._min_zoom_dist
+            if self._first_person_mode
+            else self.cam_zoom_dist
+        )
+        cam_transform = mn.Matrix4.look_at(
+            lookat,
+            lookat + offset.normalized() * cam_zoom_dist,
+            mn.Vector3(0, 1, 0),
+        )
+        # highlight the lookat translation as a red circle
+        self._debug_line_render.draw_circle(
+            lookat + offset.normalized() * cam_zoom_dist,
+            0.01,
+            mn.Color3(1, 0, 0),
+        )
 
         post_sim_update_dict["cam_transform"] = cam_transform
 

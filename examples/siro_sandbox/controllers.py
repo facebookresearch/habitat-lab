@@ -396,7 +396,6 @@ class GuiHumanoidController(Controller):
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
         self._cam_yaw = cam_yaw
-        self._cam_yaw_prev = 0.0
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -454,19 +453,20 @@ class GuiHumanoidController(Controller):
 
         if do_humanoidjoint_action:
             humancontroller_base_user_input = np.zeros(3)
+            # temp keyboard controls to test humanoid controller
+            if gui_input.get_key(KeyNS.I):
+                # move in world-space x+ direction ("east")
+                humancontroller_base_user_input[0] += 1
+            if gui_input.get_key(KeyNS.K):
+                # move in world-space x- direction ("west")
+                humancontroller_base_user_input[0] -= 1
+
             if self._hint_walk_dir:
                 humancontroller_base_user_input[0] += self._hint_walk_dir.x
                 humancontroller_base_user_input[2] += self._hint_walk_dir.z
-            else:
-                # temp keyboard controls to test humanoid controller
-                if gui_input.get_key(KeyNS.I):
-                    # move in world-space x+ direction ("east")
-                    humancontroller_base_user_input[0] += 1
-                if gui_input.get_key(KeyNS.K):
-                    # move in world-space x- direction ("west")
-                    humancontroller_base_user_input[0] -= 1
 
-                rot_y_rad = -(self._cam_yaw - self._cam_yaw_prev) + np.pi
+            else:
+                rot_y_rad = -self._cam_yaw + np.pi
                 rot_y_matrix = np.array(
                     [
                         [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
