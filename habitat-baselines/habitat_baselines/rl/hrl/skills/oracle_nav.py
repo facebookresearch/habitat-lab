@@ -45,9 +45,9 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
 
-        if "oracle_nav_spot_action" in task_config["actions"]:
+        if "oracle_nav_with_backing_up_action" in task_config["actions"]:
             self._oracle_nav_ac_idx, _ = find_action_range(
-                action_space, "oracle_nav_spot_action"
+                action_space, "oracle_nav_with_backing_up_action"
             )
         else:
             self._oracle_nav_ac_idx, _ = find_action_range(

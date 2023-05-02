@@ -327,15 +327,15 @@ class OracleNavActionConfig(ActionConfig):
 
 
 @dataclass
-class OracleNavSpotActionConfig(ActionConfig):
+class OracleNavWithBackingUpActionConfig(ActionConfig):
     """
-    Rearrangement Only, Oracle navigation action for Spot robotss.
+    Rearrangement Only, Oracle navigation action with backing-up motion.
     This action takes as input a discrete ID which refers to an object in the
     PDDL domain. The oracle navigation controller then computes the actions to
     navigate to that desired object.
     """
 
-    type: str = "OracleNavSpotAction"
+    type: str = "OracleNavWithBackingUpAction"
     # Whether the motion is in the form of base_velocity or human_joints
     motion_control: str = "base_velocity"
     num_joints: int = 17
@@ -1742,10 +1742,10 @@ cs.store(
     node=OracleNavActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.oracle_nav_spot_action",
+    package="habitat.task.actions.oracle_nav_with_backing_up_action",
     group="habitat/task/actions",
-    name="oracle_nav_spot_action",
-    node=OracleNavSpotActionConfig,
+    name="oracle_nav_with_backing_up_action",
+    node=OracleNavWithBackingUpActionConfig,
 )
 cs.store(
     package="habitat.task.actions.pddl_apply_action",

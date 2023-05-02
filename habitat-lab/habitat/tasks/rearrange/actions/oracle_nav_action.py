@@ -125,8 +125,6 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 1,
                 self.cur_articulated_agent,
             )
-            if np.isnan(start_pos).any():
-                print("start_pos contains NaN @oracle_nav_action.py.")
 
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
@@ -317,9 +315,9 @@ class SimpleVelocityControlEnv:
 
 
 @registry.register_task_action
-class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: ignore
+class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  # type: ignore
     """
-    Oracle nav action for Spot. This function allows the Spot to move
+    Oracle nav action with backing-up. This function allows the robot to move
     backward to avoid obstacles.
     """
 
@@ -333,7 +331,7 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
         return spaces.Dict(
             {
                 self._action_arg_prefix
-                + "oracle_nav_spot_action": spaces.Box(
+                + "oracle_nav_with_backing_up_action": spaces.Box(
                     shape=(1,),
                     low=np.finfo(np.float32).min,
                     high=np.finfo(np.float32).max,
@@ -358,8 +356,6 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
                 self.cur_articulated_agent,
                 self._config.navmesh_offset_for_agent_placement,
             )
-            if np.isnan(start_pos).any():
-                print("start_pos contains NaN @oracle_nav_spot_action.py.")
 
             if self.motion_type == "human_joints":
                 self.humanoid_controller.reset(
@@ -426,7 +422,7 @@ class OracleNavSpotAction(BaseVelNonCylinderAction, OracleNavAction):  # type: i
 
     def step(self, *args, is_last_action, **kwargs):
         nav_to_target_idx = kwargs[
-            self._action_arg_prefix + "oracle_nav_spot_action"
+            self._action_arg_prefix + "oracle_nav_with_backing_up_action"
         ]
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
             self._poss_entities
