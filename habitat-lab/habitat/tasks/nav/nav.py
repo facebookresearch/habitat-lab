@@ -1054,7 +1054,7 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
         for sensor_name in sensor_names:
             sensor = self._sim.agents[0]._sensors[sensor_name].node  # type: ignore
             sensor.rotation = sensor.rotation * mn.Quaternion.rotation(
-                mn.Rad(np.deg2rad(amount)), mn.Vector3.x_axis()
+                mn.Deg(amount), mn.Vector3.x_axis()
             )
 
 

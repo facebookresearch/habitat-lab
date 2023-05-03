@@ -33,7 +33,7 @@ class StrafeActionConfig(ActionConfig):
 def _strafe_body(
     sim,
     move_amount: float,
-    strafe_angle_degrees: float,
+    strafe_angle_deg: float,
     noise_amount: float,
 ):
     # Get the state of the agent
@@ -44,11 +44,11 @@ def _strafe_body(
         normalized_quaternion.imag, normalized_quaternion.real
     )
     forward = agent_mn_quat.transform_vector(-mn.Vector3.z_axis())
-    strafe_angle = np.deg2rad(strafe_angle_degrees)
     strafe_angle = np.random.uniform(
-        (1 - noise_amount) * strafe_angle, (1 + noise_amount) * strafe_angle
+        (1 - noise_amount) * strafe_angle_deg,
+        (1 + noise_amount) * strafe_angle_deg,
     )
-    strafe_angle = mn.Rad(strafe_angle)
+    strafe_angle = mn.Deg(strafe_angle)
     rotation = mn.Quaternion.rotation(strafe_angle, mn.Vector3.y_axis())
     move_amount = np.random.uniform(
         (1 - noise_amount) * move_amount, (1 + noise_amount) * move_amount
