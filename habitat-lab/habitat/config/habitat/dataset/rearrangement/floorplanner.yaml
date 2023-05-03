@@ -6,7 +6,7 @@ defaults:
 
 type: RearrangeDataset-v0
 split: minitrain
-data_path: data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner.json.gz
+data_path: data/episodes/rearrange/v2/{split}/cat_npz-exp.json.gz
 scenes_dir: "data/fpss/fphab"
-viewpoints_matrix_path: data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy
-transformations_matrix_path: data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy
+viewpoints_matrix_path: data/episodes/rearrange/v2/minitrain/cat_npz-exp-vps.npy
+transformations_matrix_path: data/episodes/rearrange/v2/minitrain/cat_npz-exp-trans.npy
