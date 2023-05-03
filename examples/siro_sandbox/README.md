@@ -79,6 +79,9 @@ If not set, it is assumed that scene is empty or all agents are policy-controlle
 
 **Note:** currentrly, only robot controllers can be policy-controlled (as for now they perform random actions). Policy-controlled humanoid controller is not implemented yet. So, if you want to test the free camera mode, make sure you are using robot-robot config as a `--cfg` argument value (for example, `--cfg benchmark/rearrange/rearrange_easy_fetch_and_fetch.yaml`).
 
+## Solo humanoid mode
+Set `--cfg benchmark/rearrange/rearrange_easy_human.yaml` to run app with only a user-controlled humanoid (no robot).
+
 ## Uning FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
 ```
