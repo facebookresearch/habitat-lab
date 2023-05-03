@@ -1,14 +1,53 @@
 ---
-dataset_path: "data/fphab-v0.2.0/hab-fp.scene_dataset_config.json"
+dataset_path: "data/fpss/fphab/fphab.scene_dataset_config.json"
 additional_object_paths:
-- data/objects/ycb/configs/
+# - data/objects/ycb/configs/
 - data/objects/amazon_berkeley/configs/
 - data/objects/google_object_dataset/configs/
+correct_unstable_results: True
 scene_sets:
   -
-    name: "any"
+    name: "microtrain"
     included_substrings:
-      - ""
+      - "106365897_174225972."
+    excluded_substrings:
+      - "NONE"
+  -
+    name: "minitrain"
+    included_substrings:
+      - "107734119_175999932."
+      - "104862660_172226844."
+      - "106365897_174225972."
+      - "108736722_177263382."
+      - "108294558_176710095."
+      - "103997460_171030507."
+      - "107733912_175999623."
+      - "106879023_174887148."
+      - "108294897_176710602."
+      - "104348133_171513054."
+      - "108736635_177263256."
+      - "103997460_171030507."
+      - "107734188_176000034."
+      - "104862513_172226580."
+      - "104862621_172226772."
+      - "103997970_171031287."
+      - "102344193."
+      - "108294870_176710551."
+      - "105515211_173104179."
+      - "108294870_176710551."
+    excluded_substrings:
+      - "NONE"
+  -
+    name: "minival"
+    included_substrings:
+      - "105515211_173104185."
+      - "106878915_174887025."
+      - "107734176_176000019."
+      - "102816216."
+      - "106879005_174887124."
+      - "107734338_176000244."
+      - "108736779_177263484."
+      - "106878867_174886977."
     excluded_substrings:
       - "NONE"
 
@@ -356,10 +395,13 @@ scene_sampler:
   type: subset
   params:
     scene_sets:
-    - any
+      - "microtrain"
+      - "minitrain"
+      - "minival"
 object_samplers:
 - name: train_set
   type: category_balanced
+  sampler_range: dynamic
   params:
     object_sets:
     - seen_action_figure
@@ -384,11 +426,91 @@ object_samplers:
     - seen_vase
     receptacle_sets:
     - hab2
-    num_samples:
-    - 60
-    - 80
     orientation_sampling: up
     nav_to_min_distance: 1.5
+# - name: val_set_clutter
+#   type: category_balanced
+#   sampler_range: dynamic
+#   params:
+#     object_sets:
+#     - test_unseen_action_figure
+#     - test_unseen_basket
+#     - test_unseen_book
+#     - test_unseen_bowl
+#     - test_unseen_can
+#     - test_unseen_can_opener
+#     - test_unseen_candle_holder
+#     - test_unseen_canister
+#     - test_unseen_dishtowel
+#     - test_unseen_hat
+#     - test_unseen_medicine_bottle
+#     - test_unseen_mouse_pad
+#     - test_unseen_pencil_case
+#     - test_unseen_plate
+#     - test_unseen_scissors
+#     - test_unseen_screwdriver
+#     - test_unseen_shoe
+#     - test_unseen_spatula
+#     - test_unseen_stuffed_toy
+#     - test_unseen_tape
+#     - test_unseen_vase
+#     - seen_action_figure
+#     - seen_basket
+#     - seen_book
+#     - seen_bowl
+#     - seen_candle_holder
+#     - seen_canister
+#     - seen_cup
+#     - seen_dishtowel
+#     - seen_hat
+#     - seen_medicine_bottle
+#     - seen_mouse_pad
+#     - seen_pencil_case
+#     - seen_plate
+#     - seen_shoe
+#     - seen_soap_dish
+#     - seen_sponge
+#     - seen_stuffed_toy
+#     - seen_sushi_mat
+#     - seen_tape
+#     - seen_vase
+#     receptacle_sets:
+#     - hab2
+#     orientation_sampling: up
+#     nav_to_min_distance: 1.5
+# - name: val_set_targets
+#   type: category_balanced
+#   sampler_range: fixed
+#   params:
+#     object_sets:
+#     - test_unseen_action_figure
+#     - test_unseen_basket
+#     - test_unseen_book
+#     - test_unseen_bowl
+#     - test_unseen_can
+#     - test_unseen_can_opener
+#     - test_unseen_candle_holder
+#     - test_unseen_canister
+#     - test_unseen_dishtowel
+#     - test_unseen_hat
+#     - test_unseen_medicine_bottle
+#     - test_unseen_mouse_pad
+#     - test_unseen_pencil_case
+#     - test_unseen_plate
+#     - test_unseen_scissors
+#     - test_unseen_screwdriver
+#     - test_unseen_shoe
+#     - test_unseen_spatula
+#     - test_unseen_stuffed_toy
+#     - test_unseen_tape
+#     - test_unseen_vase
+#     receptacle_sets:
+#     - hab2
+#     num_samples:
+#     - 1
+#     - 1
+#     orientation_sampling: up
+#     nav_to_min_distance: 1.5
 #- name: test_set
 #  type: category_balanced
 #  params:
@@ -444,10 +566,12 @@ object_samplers:
 object_target_samplers:
 - name: hab2
   type: uniform
+  sampler_range: fixed
   params:
     object_samplers:
     - train_set
-    #- test_set
+    # - val_set_clutter
+    # - val_set_targets
     receptacle_sets:
     - hab2
     num_samples:

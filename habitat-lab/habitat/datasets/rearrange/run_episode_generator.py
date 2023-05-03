@@ -259,6 +259,17 @@ if __name__ == "__main__":
         help="Limit to one of the scene set samplers. Used to differentiate scenes from training and eval.",
     )
     parser.add_argument(
+        "--limit-scene",
+        type=str,
+        default=None,
+        help="Limit to one of the scenes.",
+    )
+    parser.add_argument(
+        "--ignore-cache",
+        action="store_true",
+        help="Ignore cached navmeshes, viewpoints, etc. and recompute them.",
+    )
+    parser.add_argument(
         "--num-episodes",
         type=int,
         default=1,
@@ -289,6 +300,8 @@ if __name__ == "__main__":
         cfg=cfg,
         debug_visualization=args.debug,
         limit_scene_set=args.limit_scene_set,
+        limit_scene=args.limit_scene,
+        ignore_cache=args.ignore_cache,
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)

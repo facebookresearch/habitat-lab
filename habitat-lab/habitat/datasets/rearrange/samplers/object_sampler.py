@@ -37,7 +37,7 @@ class ObjectSampler:
         self,
         object_set: List[str],
         allowed_recep_set_names: List[str],
-        num_objects: Tuple[int, int] = (1, 1),
+        num_objects: Optional[Tuple[int, int]] = None,
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
@@ -60,8 +60,12 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
-        self.num_objects = num_objects  # tuple of [min,max] objects to sample
-        assert self.num_objects[1] >= self.num_objects[0]
+        if num_objects is not None:
+            self.set_num_samples(
+                num_objects
+            )  # tuple of [min,max] objects to sample
+        else:
+            self.num_objects = None
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
@@ -69,7 +73,6 @@ class ObjectSampler:
             sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
-        self.set_num_samples()
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -391,7 +394,12 @@ class ObjectSampler:
 
         return new_object, target_receptacle
 
-    def set_num_samples(self):
+    def set_num_samples(self, num_objects: Tuple[int, int] = None):
+        if num_objects is not None:
+            self.num_objects = num_objects
+            assert self.num_objects[1] >= self.num_objects[0]
+        if self.num_objects is None:
+            return
         self.target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
             if self.num_objects[1] > self.num_objects[0]
