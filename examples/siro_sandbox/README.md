@@ -58,6 +58,10 @@ python examples/siro_sandbox/sandbox_app.py \
     1. WASD keys
     2. hold R and move mouse
 * `M` to reset to a new episode.
+* For humanoid:
+    * I - walk forward in the camera yaw direction
+    * K - walk backward in the opposite to camera yaw direction
+    * (camera yaw and pitch control via keybord or mouse controls from the step above)
 
 ## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
 
@@ -80,6 +84,9 @@ If not set, it is assumed that scene is empty or all agents are policy-controlle
 
 ## Solo humanoid mode
 Set `--cfg benchmark/rearrange/rearrange_easy_human.yaml` to run app with only a user-controlled humanoid (no robot).
+
+## First-person humanoid control
+Add `--first-person-mode` to switch to first-person humanoid control mode.
 
 ## Uning FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
