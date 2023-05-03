@@ -35,6 +35,8 @@ reward_measure: place_reward
 success_measure: place_success
 success_reward: 10.0
 slack_reward: -0.005
+spawn_reference: view_points
+spawn_max_dists_to_obj: 0.0
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
 actions:

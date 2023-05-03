@@ -50,5 +50,4 @@ habitat:
       allow_sliding: False
       enable_physics: True
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
     type: ObjectRearrangeDataset-v0
