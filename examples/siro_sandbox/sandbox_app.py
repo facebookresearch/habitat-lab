@@ -353,11 +353,6 @@ class SandboxDriver(GuiAppDriver):
                 walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
             )
 
-        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
-        art_obj = (
-            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
-        )
-
         action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
 
         self.obs = self.env.step(action)
@@ -385,17 +380,17 @@ class SandboxDriver(GuiAppDriver):
                 self.cam_zoom_dist, self._min_zoom_dist, self._max_zoom_dist
             )
 
+        # two ways for camera pitch and yaw control for UX comparison:
+        # 1) hold WASD keys
+        self._camera_pitch_and_yaw_wasd_control()
+        # 2) hold R and move mouse
+        self._camera_pitch_and_yaw_mouse_control()
+
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
         if agent_idx is None:
             self._free_camera_lookat_control()
             lookat = self.lookat
         else:
-            # two ways for camera pitch and yaw control for UX comparison:
-            # 1) hold WASD keys
-            self._camera_pitch_and_yaw_wasd_control()
-            # 2) hold R and move mouse
-            self._camera_pitch_and_yaw_mouse_control()
-
             art_obj = (
                 self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
             )
