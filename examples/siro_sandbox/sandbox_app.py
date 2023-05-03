@@ -75,7 +75,7 @@ class SandboxDriver(GuiAppDriver):
 
         self.cam_zoom_dist = 1.0
         self._max_zoom_dist = 50.0
-        self._min_zoom_dist = 0.1
+        self._min_zoom_dist = 0.02
 
         self.gui_input = gui_input
 
@@ -86,14 +86,22 @@ class SandboxDriver(GuiAppDriver):
         self._viz_anim_fraction = 0.0
 
         self.lookat = None
-        self._first_person_mode = True
+        # lookat offset yaw (spin left/right) and pitch (up/down)
+        # to enable camera rotation and pitch control
+        self._first_person_mode = args.first_person_mode
         if self._first_person_mode:
             self._lookat_offset_yaw = 0.0
             self._lookat_offset_pitch = 0.0
+            # limit pith angle to +/- 45 degrees in first-person mode
+            self._min_lookat_offset_pitch = -0.785398 + 1e-5
+            self._max_lookat_offset_pitch = 0.785398 - 1e-5
         else:
             # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
             self._lookat_offset_yaw = 0.785
             self._lookat_offset_pitch = 0.955
+            # limit pith angle to +/- 90 degrees
+            self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
+            self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
 
     @property
     def lookat_offset_yaw(self):
@@ -101,7 +109,7 @@ class SandboxDriver(GuiAppDriver):
 
     @property
     def lookat_offset_pitch(self):
-        return self.to_zero_2pi_range(self._lookat_offset_pitch)
+        return self._lookat_offset_pitch
 
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
@@ -171,7 +179,11 @@ class SandboxDriver(GuiAppDriver):
             return None, None
 
         # hack move ray below ceiling (todo: base this on humanoid agent base y, so that it works in multi-floor homes)
-        raycast_start_y = 2.0
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
+        raycast_start_y = art_obj.transformation.translation[1]
         if ray.origin.y < raycast_start_y:
             return None, None
 
@@ -303,6 +315,11 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch -= cam_rot_angle
         if self.gui_input.get_key(GuiInput.KeyNS.S):
             self._lookat_offset_pitch += cam_rot_angle
+        self._lookat_offset_pitch = np.clip(
+            self._lookat_offset_pitch,
+            self._min_lookat_offset_pitch,
+            self._max_lookat_offset_pitch,
+        )
         if self.gui_input.get_key(GuiInput.KeyNS.A):
             self._lookat_offset_yaw -= cam_rot_angle
         if self.gui_input.get_key(GuiInput.KeyNS.D):
@@ -312,7 +329,7 @@ class SandboxDriver(GuiAppDriver):
         # if Q is held update yaw and pitch
         # by scale * mouse relative position delta
         if self.gui_input.get_key(GuiInput.KeyNS.R):
-            scale = 1 / 30
+            scale = 1 / 50
             self._lookat_offset_yaw += (
                 scale * self.gui_input._relative_mouse_position[0]
             )
@@ -402,13 +419,7 @@ class SandboxDriver(GuiAppDriver):
                 move[2] -= move_delta
 
             # align move forward direction with lookat direction
-            if self.lookat_offset_pitch >= -(
-                np.pi / 2
-            ) and self.lookat_offset_pitch <= (np.pi / 2):
-                rotation_rad = -self.lookat_offset_yaw
-            else:
-                rotation_rad = -self.lookat_offset_yaw + np.pi
-
+            rotation_rad = -self.lookat_offset_yaw
             rot_matrix = np.array(
                 [
                     [np.cos(rotation_rad), 0, np.sin(rotation_rad)],
@@ -492,26 +503,21 @@ class SandboxDriver(GuiAppDriver):
             robot_root = art_obj.transformation
             lookat = robot_root.translation + mn.Vector3(0, 1, 0)
 
+        if self._first_person_mode:
+            self.cam_zoom_dist = self._min_zoom_dist
+            lookat += 0.075 * robot_root.backward
+            lookat -= mn.Vector3(0, 0.2, 0)
+
         offset = mn.Vector3(
             np.cos(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
             np.sin(self.lookat_offset_pitch),
             np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
         )
-        cam_zoom_dist = (
-            self._min_zoom_dist
-            if self._first_person_mode
-            else self.cam_zoom_dist
-        )
+
         cam_transform = mn.Matrix4.look_at(
+            lookat + offset.normalized() * self.cam_zoom_dist,
             lookat,
-            lookat + offset.normalized() * cam_zoom_dist,
             mn.Vector3(0, 1, 0),
-        )
-        # highlight the lookat translation as a red circle
-        self._debug_line_render.draw_circle(
-            lookat + offset.normalized() * cam_zoom_dist,
-            0.01,
-            mn.Color3(1, 0, 0),
         )
 
         post_sim_update_dict["cam_transform"] = cam_transform
@@ -668,6 +674,12 @@ if __name__ == "__main__":
         default=0,
         type=int,
         help="If specified, use the specified viewport height for the debug third-person camera",
+    )
+    parser.add_argument(
+        "--first-person-mode",
+        action="store_true",
+        default=False,
+        help="Choose between classic and batch renderer",
     )
     # temp argument:
     # allowes to switch between oracle baseline nav
