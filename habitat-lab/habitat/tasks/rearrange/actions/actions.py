@@ -515,7 +515,7 @@ class BaseWaypointTeleportAction(RobotAction):
             move.append((end_pos[i] - goal_pos[i]).length())
 
         # For detection of linear or angualr velocities
-        # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
+        # There is a collision if the distance between the clamped navmesh position and target position is greater than the self._collision_threshold.
         diff = len([v for v in move if v > self._collision_threshold])
 
         if diff > 0:
