@@ -59,7 +59,6 @@ class BaselinesController(Controller):
         cfg_path,
         env,
         sample_random_baseline_base_vel=False,
-
     ):
         super().__init__(agent_idx, is_multi_agent)
 
