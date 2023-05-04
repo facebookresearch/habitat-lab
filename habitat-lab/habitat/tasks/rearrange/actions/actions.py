@@ -575,7 +575,6 @@ class BaseWaypointTeleportAction(RobotAction):
         self.cur_robot.sim_obj.transformation = new_target_trans
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
-            # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
     def step(self, *args, is_last_action, **kwargs):
