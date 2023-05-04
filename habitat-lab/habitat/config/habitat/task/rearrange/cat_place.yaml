@@ -46,6 +46,10 @@ actions:
     disable_grip: False
     delta_pos_limit: 0.0125
     ee_ctrl_lim: 0.015
+  base_velocity:
+    type: "BaseWaypointTeleportAction"
+    navmesh_offset: [[0.0, 0.0]]
+
 measurements:
   force_terminate:
     max_accum_force: 10_000.0
