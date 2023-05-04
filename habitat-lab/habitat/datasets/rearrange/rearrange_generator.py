@@ -248,6 +248,7 @@ class RearrangeEpisodeGenerator:
                 ] = samplers.ObjectSampler(
                     object_handles,
                     obj_sampler_info["params"]["receptacle_sets"],
+                    obj_sampler_info["sampler_range"],
                     num_samples,
                     obj_sampler_info["params"]["orientation_sampling"],
                     get_sample_region_ratios(obj_sampler_info),
@@ -285,6 +286,7 @@ class RearrangeEpisodeGenerator:
                     # Add object set later
                     [],
                     target_sampler_info["params"]["receptacle_sets"],
+                    target_sampler_info["sampler_range"],
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
@@ -571,19 +573,11 @@ class RearrangeEpisodeGenerator:
             except Exception as e:
                 os.unlink(receptacle_cache_path)
                 raise e
-        total_receptacle_area = sum(
-            rec.total_area for rec in viewable_receptacles
-        )
-        dynamic_num_objects_to_sample = (
-            int(np.floor(total_receptacle_area * 1.5)),
-            int(np.floor(total_receptacle_area * 2)),
-        )
+
         for sampler in itertools.chain(
             self._obj_samplers.values(), self._target_samplers.values()
         ):
-            sampler.receptacle_instances = viewable_receptacles
-            if sampler.num_objects is None:
-                sampler.set_num_samples(dynamic_num_objects_to_sample)
+            sampler.set_receptacle_instances(viewable_receptacles)
 
         target_receptacles = defaultdict(list)
         all_target_receptacles = []

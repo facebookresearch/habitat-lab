@@ -37,6 +37,7 @@ class ObjectSampler:
         self,
         object_set: List[str],
         allowed_recep_set_names: List[str],
+        sampler_range_type: str,
         num_objects: Optional[Tuple[int, int]] = None,
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
@@ -51,6 +52,7 @@ class ObjectSampler:
         self._allowed_recep_set_names = allowed_recep_set_names
         self._object_set_sample_probs = object_set_sample_probs
         self._recep_set_sample_probs = recep_set_sample_probs
+        self._sampler_range_type = sampler_range_type
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -60,12 +62,16 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
-        if num_objects is not None:
-            self.set_num_samples(
-                num_objects
-            )  # tuple of [min,max] objects to sample
+        if self._sampler_range_type == "dynamic":
+            self._num_objects = None
+        elif self._sampler_range_type == "fixed":
+            self.num_objects = num_objects  # tuple of [min,max] objects to sample
+            assert self.num_objects[1] >= self.num_objects[0]
+            self.set_num_samples()
         else:
-            self.num_objects = None
+            raise ValueError(
+                f"Sampler range type {self._sampler_range_type} not recognized."
+            )
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
@@ -85,7 +91,23 @@ class ObjectSampler:
         self.receptacle_instances = None
         self.receptacle_candidates = None
         # number of objects in the range should be reset each time
-        self.set_num_samples()
+        if self._sampler_range_type == "dynamic":
+            self._num_objects = None
+        else:
+            self.set_num_samples()
+
+    def set_receptacle_instances(self, receptacles: List[Receptacle]) -> None:
+        """
+        Set the receptacle instances to sample from.
+        """
+        self.receptacle_instances = receptacles
+        if self._sampler_range_type == "dynamic":
+            total_receptacle_area = sum(rec.total_area for rec in receptacles)
+            self.num_objects = (
+                int(np.floor(total_receptacle_area * 1.5)),
+                int(np.floor(total_receptacle_area * 2)),
+            )
+            self.set_num_samples()
 
     def sample_receptacle(
         self,
@@ -394,12 +416,7 @@ class ObjectSampler:
 
         return new_object, target_receptacle
 
-    def set_num_samples(self, num_objects: Tuple[int, int] = None):
-        if num_objects is not None:
-            self.num_objects = num_objects
-            assert self.num_objects[1] >= self.num_objects[0]
-        if self.num_objects is None:
-            return
+    def set_num_samples(self):
         self.target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
             if self.num_objects[1] > self.num_objects[0]
