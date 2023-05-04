@@ -23,7 +23,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
 --cfg-opts habitat.dataset.split=minival \
---sample-random-basenine-base-vel
+--sample-random-baseline-base-vel
 ```
 * To use Spot, run:
 ```
@@ -34,7 +34,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml \
 --cfg-opts habitat.dataset.split=minival \
---sample-random-basenine-base-vel
+--sample-random-baseline-base-vel
 ```
 
 ## Controls
@@ -46,6 +46,7 @@ python examples/siro_sandbox/sandbox_app.py \
 * Camera yaw and pitch control (TODO: decide which one has better UX):
     1. WASD keys
     2. hold R and move mouse
+* In [free camera mode](#gui-controlled-agents-and-free-camera-mode) use arrow keys to move the look-at point (camera yaw/pitch and zoom in/out controls are the same as in the steps above).
 * `M` to reset to a new episode.
 
 ## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)

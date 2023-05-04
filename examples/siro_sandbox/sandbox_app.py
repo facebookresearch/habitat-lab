@@ -652,7 +652,7 @@ if __name__ == "__main__":
     # allowes to switch between oracle baseline nav
     # and random base vel action
     parser.add_argument(
-        "--sample-random-basenine-base-vel",
+        "--sample-random-baseline-base-vel",
         action="store_true",
         default=False,
         help="Sample random BaselinesController base vel",

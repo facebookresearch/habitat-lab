@@ -57,7 +57,7 @@ class BaselinesController(Controller):
         is_multi_agent,
         cfg_path,
         env,
-        sample_random_basenine_base_vel=False,
+        sample_random_baseline_base_vel=False,
     ):
         super().__init__(agent_idx, is_multi_agent)
 
@@ -94,7 +94,7 @@ class BaselinesController(Controller):
         )
         self._action_shape, _ = get_action_space_info(self._gym_ac_space)
         self._step_i = 0
-        self._sample_random_basenine_base_vel = sample_random_basenine_base_vel
+        self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
 
     def act(self, obs, env):
         masks = torch.ones(
@@ -136,7 +136,7 @@ class BaselinesController(Controller):
         )
 
         # temp do random base actions
-        if self._sample_random_basenine_base_vel:
+        if self._sample_random_baseline_base_vel:
             action["action_args"]["base_vel"] = torch.rand_like(
                 action["action_args"]["base_vel"]
             )
@@ -513,7 +513,7 @@ class ControllerHelper:
                 is_multi_agent,
                 "rearrange/rl_hierarchical.yaml",
                 env,
-                sample_random_basenine_base_vel=args.sample_random_basenine_base_vel,
+                sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
             )
             for agent_index in range(self.n_robots)
             if agent_index != self._gui_controlled_agent_index
