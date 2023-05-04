@@ -252,6 +252,10 @@ if __name__ == "__main__":
         default="rearrange_ep_gen_output/",
         help="Relative path to output debug frames and videos.",
     )
+    # limit_scene_set can be used to generate scenes from a given split
+    # without caring about the actual distribution of episodes across each scene.
+    # limit_scene can be used to enforce equal number of episodes per scene
+    # and for easier parallelization.
     parser.add_argument(
         "--limit-scene-set",
         type=str,

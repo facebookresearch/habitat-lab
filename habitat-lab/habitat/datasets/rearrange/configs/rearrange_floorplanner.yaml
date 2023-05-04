@@ -428,6 +428,7 @@ object_samplers:
     - hab2
     orientation_sampling: up
     nav_to_min_distance: 1.5
+# TODO (Arun): Add way from CLI to switch between train and val object sets
 # - name: val_set_clutter
 #   type: category_balanced
 #   sampler_range: dynamic

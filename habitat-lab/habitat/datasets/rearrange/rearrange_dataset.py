@@ -45,6 +45,7 @@ class RearrangeEpisode(Episode):
     name_to_receptacle: Dict[str, str] = {}
 
 
+# TODO: Rename this and all other classes to OVMM*
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectRearrangeEpisode(RearrangeEpisode):
     r"""Specifies categories of the object, start and goal receptacles
