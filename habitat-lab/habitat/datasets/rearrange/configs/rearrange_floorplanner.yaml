@@ -1,7 +1,6 @@
 ---
 dataset_path: "data/fpss/fphab/fphab.scene_dataset_config.json"
 additional_object_paths:
-# - data/objects/ycb/configs/
 - data/objects/amazon_berkeley/configs/
 - data/objects/google_object_dataset/configs/
 correct_unstable_results: True
