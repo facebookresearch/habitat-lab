@@ -4,6 +4,23 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import sys
+
+try:
+    sys.path.remove("/Users/jimmytyyang/Habitat/habitat-lab")
+except Exception:
+    print("not in sys.path")
+sys.path.append("/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-lab")
+sys.path.append(
+    "/Users/jimmytyyang/habitat_lab_0301/habitat-lab/habitat-baselines"
+)
+import os
+
+os.environ["MAGNUM_LOG"] = "quiet"
+os.environ["HABITAT_SIM_LOG"] = "quiet"
+os.environ["HABITAT_ENV_DEBUG"] = "1"
+os.environ["HYDRA_FULL_ERROR"] = "1"
+
 import os
 import os.path as osp
 import random
