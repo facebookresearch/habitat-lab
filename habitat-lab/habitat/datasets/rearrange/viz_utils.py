@@ -1,6 +1,8 @@
 import math
+import os
 
 import cv2
+import imageio
 import magnum as mn
 import numpy as np
 
@@ -19,6 +21,120 @@ COLOR_PALETTE = {
     "pink": (255, 0, 127),
     "green": (0, 255, 0),
 }
+
+
+def save_viewpoint_frame(obs, obj_handle, obj_semantic_id, act_idx):
+    rgb_obs = np.ascontiguousarray(obs["color"][..., :3])
+    sem_obs = (obs["semantic"] == obj_semantic_id).astype(
+        np.uint8
+    ) * 255
+    contours, _ = cv2.findContours(
+        sem_obs, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
+    )
+    rgb_obs = cv2.drawContours(
+        rgb_obs, contours, -1, (0, 255, 0), 4
+    )
+    img_dir = "data/images/objnav_dataset_gen"
+    os.makedirs(img_dir, exist_ok=True)
+    imageio.imsave(
+        os.path.join(
+            img_dir,
+            f"{obj_handle}_{obj_semantic_id}_{x}_{z}_{act_idx}.png",
+        ),
+        rgb_obs,
+    )
+
+
+def save_topdown_map(
+    sim,
+    view_locations,
+    candidate_poses_ious_orig,
+    poses_type_counter,
+    object_handle,
+    object_position,
+    object_aabb,
+    object_semantic_id,
+    island_limit_radius
+):
+    object_position_on_floor = np.array(object_position).copy()
+    if len(view_locations) > 0:
+        object_position_on_floor[1] = view_locations[
+            0
+        ].agent_state.position[1]
+    else:
+        while True:
+            # TODO (Mukul): think of better way than ->
+            pf = sim.pathfinder
+            navigable_point = pf.get_random_navigable_point()
+            if pf.island_radius(navigable_point) >= island_limit_radius:
+                break
+
+        object_position_on_floor[1] = navigable_point[1]
+
+    topdown_map = get_topdown_map(
+        sim, start_pos=object_position_on_floor, marker=None
+    )
+
+    colors = list(COLOR_PALETTE.values())
+    for p in candidate_poses_ious_orig:
+        if p[0] < 0:
+            color = colors[p[-1].value - 1]
+        else:
+            color = COLOR_PALETTE["green"]
+
+        topdown_map = get_topdown_map(
+            sim,
+            start_pos=p[1],
+            topdown_map=topdown_map,
+            marker="circle",
+            radius=2,
+            color=color,
+        )
+
+    topdown_map = get_topdown_map(
+        sim,
+        start_pos=object_position_on_floor,
+        topdown_map=topdown_map,
+        marker="circle",
+        radius=6,
+        color=COLOR_PALETTE["red"],
+    )
+    topdown_map = draw_obj_bbox_on_topdown_map(
+        topdown_map, object_aabb, sim
+    )
+
+    if len(view_locations) == 0:
+        h = topdown_map.shape[0]
+        topdown_map = cv2.copyMakeBorder(
+            topdown_map,
+            0,
+            150,
+            0,
+            0,
+            cv2.BORDER_CONSTANT,
+            value=COLOR_PALETTE["white"],
+        )
+
+        for i, c in enumerate(poses_type_counter.items()):
+            line = f"{c[0].name}: {c[1]}/{len(candidate_poses_ious_orig)}"
+            color = colors[c[0].value - 1]
+            topdown_map = cv2.putText(
+                topdown_map,
+                line,
+                (10, h + 25 * i + 10),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.5,
+                color,
+                1,
+                cv2.LINE_AA,
+            )
+
+    img_dir = "data/images/objnav_dataset_gen/maps"
+    os.makedirs(img_dir, exist_ok=True)
+    imageio.imsave(
+        os.path.join(img_dir, f"{object_handle}_{object_semantic_id}.png"),
+        topdown_map,
+    )
 
 
 def get_topdown_map(
