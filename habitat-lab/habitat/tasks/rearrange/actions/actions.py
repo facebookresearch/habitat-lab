@@ -501,20 +501,17 @@ class BaseWaypointTeleportAction(RobotAction):
 
         # For step filter of offset positions
         end_pos = []
+        # Planar move distance clamped by NavMesh
+        move = []
         for i in range(num_check_cylinder):
             pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
-            # Sanitize the height
+            # Ignore any height differences that may pop up
             pos[1] = 0.0
             cur_pos[i][1] = 0.0
             goal_pos[i][1] = 0.0
             end_pos.append(pos)
-
-        # Planar move distance clamped by NavMesh
-        move = []
-        for i in range(num_check_cylinder):
             move.append((end_pos[i] - goal_pos[i]).length())
 
-        # For detection of linear or angualr velocities
         # There is a collision if the difference between the clamped NavMesh position and target position is too great for any point.
         diff = len([v for v in move if v > self._collision_threshold])
 
@@ -615,7 +612,7 @@ class BaseWaypointTeleportAction(RobotAction):
             lin_pos_x = 0
             lin_pos_z = 0
 
-        if not self._config.allow_back:
+        if not self._allow_back:
             lin_pos_x = np.maximum(lin_pos_x, 0)
 
         # Get the transformation of the robot
