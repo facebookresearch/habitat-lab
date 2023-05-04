@@ -506,6 +506,11 @@ class RearrangeSim(HabitatSim):
                 ), f"Could not find config file for object {obj_handle}"
 
                 ro = rom.add_object_by_template_handle(template)
+                
+                assert (
+                    ro is not None
+                ), f"Could not get rigid object {template}"
+                
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
 
