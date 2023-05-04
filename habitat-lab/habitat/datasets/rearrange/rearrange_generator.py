@@ -460,9 +460,17 @@ class RearrangeEpisodeGenerator:
         )
 
         scene_name = ep_scene_handle.split(".")[0]
-        navmesh_path = osp.join(
-            scene_base_dir, "navmeshes", scene_name + ".navmesh"
-        )
+        if "fphab" in scene_base_dir:
+            navmesh_path = osp.join(
+                scene_base_dir,
+                "navmeshes",
+                scene_name.split("/")[-1] + ".navmesh",
+            )
+        else:
+            navmesh_path = osp.join(
+                scene_base_dir, "navmeshes", scene_name + ".navmesh"
+            )
+
         self.sim.pathfinder.load_nav_mesh(navmesh_path)
 
         # prepare target samplers
