@@ -473,7 +473,6 @@ class BaseWaypointTeleportAction(RobotAction):
         self._allow_back = config.allow_back
         self._collision_threshold = config.collision_threshold
         self._navmesh_offset = config.navmesh_offset
-        self._allow_dyn_slide = config.allow_dyn_slide
         self._min_displacement = (
             config.min_displacement
         )  # minimum displacement
