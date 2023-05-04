@@ -184,7 +184,7 @@ class SandboxDriver(GuiAppDriver):
         hit_info = raycast_results.hits[0]
         # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
 
-        if self.gui_humanoid_ctrl.is_grasped:
+        if self.gui_agent_ctrl.is_grasped:
             assert self._held_target_obj_idx is not None
             self._debug_line_render.draw_circle(
                 hit_info.point, object_highlight_radius, object_color
@@ -694,7 +694,8 @@ if __name__ == "__main__":
                     )
                 }
             )
-            args.debug_images.append("agent_0_third_rgb")
+            agent_key = "" if len(sim_config.agents) == 1 else "agent_0_"
+            args.debug_images.append(f"{agent_key}third_rgb")
 
         # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
