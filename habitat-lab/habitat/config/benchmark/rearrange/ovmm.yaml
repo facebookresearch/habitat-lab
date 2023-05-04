@@ -69,3 +69,4 @@ habitat:
     type: ObjectRearrangeDataset-v0
   task:
     goal_type: 'ovmm'
+    place_init: True

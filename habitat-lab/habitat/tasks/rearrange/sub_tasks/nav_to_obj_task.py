@@ -14,8 +14,8 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger
-from habitat.tasks.rearrange.utils import get_robot_spawns
+from habitat.tasks.rearrange.utils import rearrange_logger, get_robot_spawns
+
 
 @dataclass
 class NavToInfo:
@@ -56,6 +56,10 @@ class DynNavRLEnv(RearrangeTask):
         self._min_start_distance = self._config.min_start_distance
         self._goal_type = config.goal_type
         self._pick_init = config.pick_init
+        self._place_init = config.place_init
+
+        assert not (self._pick_init and self._place_init), "Can init near either pick or place."
+
 
     @property
     def nav_goal_pos(self):
@@ -129,6 +133,7 @@ class DynNavRLEnv(RearrangeTask):
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
             camera_rot = -1.7375 if self._pick_init else 0.0
+            camera_rot = -1.7375 if self._place_init else 0.0
             sim.robot.arm_motor_pos = np.array(
                 [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
             )
@@ -187,6 +192,46 @@ class DynNavRLEnv(RearrangeTask):
                 sim.robot.base_rot = angle_to_obj + np.pi / 2
             else:
                 sim.robot.base_rot = angle_to_obj
+        elif self._place_init:
+
+            if isinstance(sim.robot, StretchRobot):
+                sim.robot.arm_motor_pos = np.array(
+                    # [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125] # gripper down
+                    [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125] # gripper straight out
+                )
+                sim.robot.arm_joint_pos = np.array(
+                    # [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
+                    [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125]
+                )
+
+            spawn_recs = [
+                sim.receptacles[r]
+                for r in sim.receptacles.keys()
+                if r in sim.valid_goal_rec_names]
+            
+            snap_pos = np.array(
+                [
+                    r.get_surface_center(sim)
+                    for r in spawn_recs
+                ]
+            )
+            start_pos, angle_to_obj, was_succ = get_robot_spawns(
+                target_positions=snap_pos,
+                # rotation_perturbation_noise=self._config.base_angle_noise,
+                rotation_perturbation_noise=0.0,
+                distance_threshold=self._config.spawn_max_dists_to_obj,
+                sim=sim,
+                num_spawn_attempts=self._config.num_spawn_attempts,
+                physics_stability_steps=self._config.physics_stability_steps,
+            )
+
+            if was_succ:
+                rearrange_logger.error(
+                    f"Episode {episode.episode_id} failed to place robot"
+                )
+
+            sim.robot.base_pos = start_pos
+            sim.robot.base_rot = angle_to_obj
         else:
             sim.robot.base_pos = self._nav_to_info.robot_start_pos
             sim.robot.base_rot = self._nav_to_info.robot_start_angle
