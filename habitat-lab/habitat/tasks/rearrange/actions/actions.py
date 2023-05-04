@@ -473,18 +473,23 @@ class BaseWaypointTeleportAction(RobotAction):
         self._collision_threshold = config.collision_threshold
         self._navmesh_offset = config.navmesh_offset
         self._allow_dyn_slide = config.allow_dyn_slide
-        # Initialize the controller
-        self._max_forward = config.max_forward  # maximum forward waypoint
-        self._max_turn = config.max_turn * np.pi / 180  # maximum turn waypoint
+        self._min_displacement = (
+            config.min_displacement
+        )  # minimum displacement
+        self._max_displacement_along_axis = config.max_displacement_along_axis
+        self._max_turn_radians = (
+            config.max_turn_degrees * np.pi / 180
+        )  # maximum turn waypoint
+        self._min_turn_radians = (
+            config.min_turn_degrees * np.pi / 180
+        )  # minimum turn waypoint
+        self._allow_lateral_movement = config.allow_lateral_movement
+        self._allow_simultaneous_turn = config.allow_simultaneous_turn
 
-    def collision_check(
-        self, trans, target_trans, target_rigid_state, compute_sliding=False
-    ):
+    def collision_check(self, trans, target_trans):
         """
         trans: the transformation of the current location of the robot
         target_trans: the transformation of the target location of the robot given the center original Navmesh
-        target_rigid_state: the target state of the robot given the center original Navmesh
-        compute_sliding: if we want to compute sliding or not
         """
         # Get the offset positions
         num_check_cylinder = len(self._navmesh_offset)
@@ -514,27 +519,28 @@ class BaseWaypointTeleportAction(RobotAction):
         diff = len([v for v in move if v > self._collision_threshold])
 
         if diff > 0:
-            # Wrap the move direction if we use sliding
-            # Find the largest diff moving direction, which means that there is a collision in that cylinder
-            if compute_sliding:
-                max_idx = np.argmax(move)
-                move_vec = end_pos[max_idx] - cur_pos[max_idx]
-                new_end_pos = trans.translation + move_vec
-                return True, mn.Matrix4.from_(
-                    target_rigid_state.rotation.to_matrix(), new_end_pos
-                )
             return True, trans
         else:
             return False, target_trans
 
     @property
     def action_space(self):
-        lim = 20
+        lim = 1
+        action_space_shape = 2  # for turning and moving forward
+        if self._allow_lateral_movement:
+            action_space_shape += 1  # for lateral movement
+        if not self._allow_simultaneous_turn:
+            action_space_shape += (
+                1  # for determining whether to turn or move forward
+            )
         return spaces.Dict(
             {
                 self._action_arg_prefix
                 + "base_vel": spaces.Box(
-                    shape=(2,), low=-lim, high=lim, dtype=np.float32
+                    shape=(action_space_shape,),
+                    low=-lim,
+                    high=lim,
+                    dtype=np.float32,
                 )
             }
         )
@@ -554,7 +560,7 @@ class BaseWaypointTeleportAction(RobotAction):
         self.cur_robot.sim_obj.joint_velocities = set_dat["vel"]
         self.cur_robot.sim_obj.joint_forces = set_dat["pos"]
 
-    def update_base(self, target_rigid_state, if_rotation):
+    def update_base(self, target_rigid_state):
         """
         Update the robot base
         """
@@ -565,14 +571,9 @@ class BaseWaypointTeleportAction(RobotAction):
             target_rigid_state.rotation.to_matrix(),
             target_rigid_state.translation,
         )
-        # We do sliding only if we allow the robot to do sliding and current
-        # robot is not rotating
-        compute_sliding = self._allow_dyn_slide and not if_rotation
         self.cur_robot.sim_obj.transformation = target_trans
         # Check if there is a collision
-        did_coll, new_target_trans = self.collision_check(
-            trans, target_trans, target_rigid_state, compute_sliding
-        )
+        _, new_target_trans = self.collision_check(trans, target_trans)
         # Update the base
         self.cur_robot.sim_obj.transformation = new_target_trans
         if self.cur_grasp_mgr.snap_idx is not None:
@@ -581,39 +582,63 @@ class BaseWaypointTeleportAction(RobotAction):
             self.cur_grasp_mgr.update_object_to_grasp()
 
     def step(self, *args, is_last_action, **kwargs):
-        waypoint, sel = kwargs[self._action_arg_prefix + "base_vel"]
-        # Select between move forward and turn and then scale the waypoint
-        if sel > 0:
-            lin_pos = np.clip(waypoint, -1, 1) * self._config.max_forward
-            ang_pos = 0.0
-        else:
-            lin_pos = 0.0
-            ang_pos = np.clip(waypoint, -1, 1) * self._config.max_turn
+        base_action = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_pos_x = base_action[0]
+        turn_offset = 1
+        lin_pos_z = 0.0
+        if self._allow_lateral_movement:
+            lin_pos_z = base_action[1]
+            turn_offset += 1
+        turn = base_action[turn_offset]
+        if not self._allow_simultaneous_turn:
+            # Select between translation and turn
+            sel = base_action[-1]
+            if sel > 0:
+                turn = 0
+            else:
+                lin_pos_x = 0
+                lin_pos_z = 0
+
+        # Scale the waypoint
+        lin_pos_x = (
+            np.clip(lin_pos_x, -1, 1) * self._max_displacement_along_axis
+        )
+        lin_pos_z = (
+            np.clip(lin_pos_z, -1, 1) * self._max_displacement_along_axis
+        )
+        ang_pos = np.clip(turn, -1, 1) * self._max_turn_radians
+
+        # Do not allow small movements
+        if np.abs(ang_pos) < self._min_turn_radians:
+            ang_pos = 0
+        if np.linalg.norm([lin_pos_x, lin_pos_z]) < self._min_displacement:
+            lin_pos_x = 0
+            lin_pos_z = 0
 
         if not self._config.allow_back:
-            lin_pos = np.maximum(lin_pos, 0)
+            lin_pos_x = np.maximum(lin_pos_x, 0)
+
         # Get the transformation of the robot
         base_trans = self._sim.robot.base_transformation
         obj_trans = self.cur_robot.sim_obj.transformation
-        if sel > 0:
-            # Get the global pos from the local target waypoints
-            target_pos = base_trans.transform_point(np.array([lin_pos, 0, 0]))
-            target_rot = obj_trans.rotation()
-        else:
-            target_pos = obj_trans.translation
-            rot_quat = mn.Quaternion(
-                mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
-            )
-            # Get the target rotation
-            target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
+        # Get the global pos from the local target waypoints
+        target_pos = base_trans.transform_point(
+            mn.Vector3([lin_pos_x, lin_pos_z, 0])
+        )
+        target_rot = obj_trans.rotation()
+        rot_quat = mn.Quaternion(
+            mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
+        )
+        # Get the target rotation
+        target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
 
         # combine target translation and rotation to get target rigid state
         target_rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(target_rot), target_pos
         )
 
-        if lin_pos != 0.0 or ang_pos != 0.0:
-            self.update_base(target_rigid_state, sel <= 0)
+        if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
+            self.update_base(target_rigid_state)
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)
         else:
