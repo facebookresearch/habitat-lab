@@ -85,6 +85,9 @@ class SandboxDriver(GuiAppDriver):
         self._lookat_offset_yaw = 0.785
         self._lookat_offset_pitch = 0.955
 
+        self._held_target_obj_idx = None
+        self._viz_anim_fraction = 0.0
+
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
@@ -93,23 +96,54 @@ class SandboxDriver(GuiAppDriver):
     def get_sim(self) -> Any:
         return self.env.task._sim
 
+    def draw_nav_hint_from_agent(self, end_pos, color):
+        agent_idx = 0
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
+        agent_pos = art_obj.transformation.translation
+        # todo: get forward_dir from FPS camera yaw, not art_obj.transformation
+        # (the problem with art_obj.transformation is that it includes a "wobble"
+        # introduced by the walk animation)
+        forward_dir = art_obj.transformation.transform_vector(
+            mn.Vector3(0, 0, 1)
+        )
+        forward_dir[1] = 0
+
+        self.draw_nav_hint(
+            agent_pos, forward_dir, end_pos, color, self._viz_anim_fraction
+        )
+
     def visualize_task(self):
         sim = self.get_sim()
         idxs, goal_pos = sim.get_targets()
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
 
-        for i in range(len(idxs)):
-            radius = 0.25
-            goal_color = mn.Color3(0, 153 / 255, 51 / 255)  # green
-            target_color = mn.Color4(1, 1, 1, 0.1)  # white, almost transparent
-            self._debug_line_render.draw_circle(
-                goal_pos[i], radius, goal_color
-            )
-            self._debug_line_render.draw_transformed_line(
-                target_pos[i], goal_pos[i], target_color, goal_color
-            )
-            # self._debug_line_render.draw_circle(target_pos[i], radius, goal_color)
+        if self._held_target_obj_idx != None:
+            color = mn.Color3(0, 255 / 255, 0)  # green
+            try:
+                target_idxs = np.where(idxs == self._held_target_obj_idx)
+                if len(target_idxs):
+                    self.draw_nav_hint_from_agent(
+                        mn.Vector3(goal_pos[target_idxs[0][0]]), color
+                    )
+            except ValueError:
+                pass
+        else:
+            for i in range(len(idxs)):
+                color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
+                this_target_pos = target_pos[i]
+                threshold = 0.2  # distance in meters
+                if (
+                    mn.Vector3(this_target_pos) - mn.Vector3(goal_pos[i])
+                ).length() < threshold:
+                    # object is already at goal pos
+                    continue
+                else:
+                    self.draw_nav_hint_from_agent(
+                        mn.Vector3(this_target_pos), color
+                    )
 
     def viz_and_get_grasp_drop_hints(self):
         object_color = mn.Color3(255 / 255, 255 / 255, 0)
@@ -142,6 +176,7 @@ class SandboxDriver(GuiAppDriver):
         # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
 
         if self.gui_humanoid_ctrl.is_grasped:
+            assert self._held_target_obj_idx is not None
             self._debug_line_render.draw_circle(
                 hit_info.point, object_highlight_radius, object_color
             )
@@ -149,6 +184,7 @@ class SandboxDriver(GuiAppDriver):
                 drop_pos = hit_info.point + mn.Vector3(
                     0, object_drop_height, 0
                 )
+                self._held_target_obj_idx = None
                 return None, drop_pos
         else:
             # Currently, it's too hard to select objects that are very small
@@ -180,6 +216,7 @@ class SandboxDriver(GuiAppDriver):
                             GuiInput.MouseNS.LEFT
                         ):
                             grasp_object_id = hit_info.object_id
+                            self._held_target_obj_idx = 0  # temp hack; no way to look this up currently from hit_info.object_id
                             return grasp_object_id, None
 
         return None, None
@@ -268,8 +305,72 @@ class SandboxDriver(GuiAppDriver):
                 scale * self.gui_input._relative_mouse_position[1]
             )
 
+    def draw_nav_hint(
+        self, start_pos, start_dir, end_pos, color, anim_fraction
+    ):
+        assert isinstance(start_pos, mn.Vector3)
+        assert isinstance(start_dir, mn.Vector3)
+        assert isinstance(end_pos, mn.Vector3)
+
+        bias_weight = 0.5
+        biased_dir = (
+            start_dir + (end_pos - start_pos).normalized() * bias_weight
+        ).normalized()
+
+        start_dir_weight = min(4.0, (end_pos - start_pos).length() / 2)
+        ctrl_pts = [
+            start_pos,
+            start_pos + biased_dir * start_dir_weight,
+            end_pos,
+            end_pos,
+        ]
+
+        steps_per_meter = 10
+        pad_meters = 1.0
+        alpha_ramp_dist = 1.0
+        num_steps = max(
+            2,
+            int(
+                ((end_pos - start_pos).length() + pad_meters) * steps_per_meter
+            ),
+        )
+
+        prev_pos = None
+        end_radius = 0.4
+
+        for step_idx in range(num_steps):
+            t = step_idx / (num_steps - 1) + anim_fraction * (
+                1 / (num_steps - 1)
+            )
+            pos = evaluate_cubic_bezier(ctrl_pts, t)
+
+            if (pos - end_pos).length() < end_radius:
+                break
+
+            if step_idx > 0:
+                alpha = min(1.0, (pos - start_pos).length() / alpha_ramp_dist)
+
+                radius = 0.05
+                num_segments = 12
+                # todo: use safe_normalize
+                normal = (pos - prev_pos).normalized()
+                color_with_alpha = mn.Color4(color)
+                color_with_alpha[3] *= alpha
+                self._debug_line_render.draw_circle(
+                    pos, radius, color_with_alpha, num_segments, normal
+                )
+            prev_pos = pos
+
+        self._debug_line_render.draw_circle(end_pos, end_radius, color, 24)
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
+
+        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
+        viz_anim_speed = 2.0
+        self._viz_anim_fraction = (
+            self._viz_anim_fraction + dt * viz_anim_speed
+        ) % 1.0
 
         (
             walk_dir,
@@ -314,7 +415,7 @@ class SandboxDriver(GuiAppDriver):
             self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
         )
         robot_root = art_obj.transformation
-        lookat = robot_root.translation + mn.Vector3(0, 1, 0)
+        lookat = robot_root.translation + mn.Vector3(0, 0.5, 0)
         # two ways for camera pitch and yaw control for UX comparison:
         # 1) hold WASD keys
         self._camera_pitch_and_yaw_wasd_control()
@@ -360,6 +461,22 @@ class SandboxDriver(GuiAppDriver):
         ]
 
         return post_sim_update_dict
+
+
+def evaluate_cubic_bezier(ctrl_pts, t):
+    assert len(ctrl_pts) == 4
+    weights = (
+        pow(1 - t, 3),
+        3 * t * pow(1 - t, 2),
+        3 * pow(t, 2) * (1 - t),
+        pow(t, 3),
+    )
+
+    result = weights[0] * ctrl_pts[0]
+    for i in range(1, 4):
+        result += weights[i] * ctrl_pts[i]
+
+    return result
 
 
 def parse_debug_third_person(args, framebuffer_size):
