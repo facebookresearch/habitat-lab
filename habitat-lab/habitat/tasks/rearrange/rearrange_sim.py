@@ -379,7 +379,7 @@ class RearrangeSim(HabitatSim):
 
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
-        base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+        base_dir = osp.dirname(osp.dirname(ep_info.scene_id))
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
         if osp.exists(navmesh_path):

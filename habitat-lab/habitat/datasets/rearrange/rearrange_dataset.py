@@ -4,14 +4,15 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
 
 import attr
 import numpy as np
 
 import habitat_sim.utils.datasets_download as data_downloader
-from habitat.core.dataset import Episode
+from habitat.core.dataset import Episode, EpisodeIterator
 from habitat.core.logging import logger
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
@@ -44,6 +45,7 @@ class RearrangeEpisode(Episode):
     name_to_receptacle: Dict[str, str] = {}
 
 
+# TODO: Rename this and all other classes to OVMM*
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectRearrangeEpisode(RearrangeEpisode):
     r"""Specifies categories of the object, start and goal receptacles
@@ -56,6 +58,7 @@ class ObjectRearrangeEpisode(RearrangeEpisode):
     start_recep_category: Optional[str] = None
     goal_recep_category: Optional[str] = None
     candidate_objects: Optional[List[ObjectGoal]] = None
+    candidate_objects_hard: Optional[List[ObjectGoal]] = None
     candidate_start_receps: Optional[List[ObjectGoal]] = None
     candidate_goal_receps: Optional[List[ObjectGoal]] = None
 
@@ -97,32 +100,97 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             self.episodes.append(rearrangement_episode)
 
 
+class ObjectRearrangeEpisodeIterator(EpisodeIterator[ObjectRearrangeEpisode]):
+    def __init__(
+        self,
+        viewpoints_matrix,
+        transformations_matrix,
+        episodes,
+        *args,
+        **kwargs
+    ):
+        self.viewpoints = viewpoints_matrix
+        self.transformations = transformations_matrix
+        self._vp_keys = [
+            "candidate_objects",
+            "candidate_objects_hard",
+            "candidate_goal_receps",
+        ]
+        super().__init__(episodes, *args, **kwargs)
+
+    def __next__(self) -> ObjectRearrangeEpisode:
+        # deepcopy is to avoid increasing memory as we iterate through the episodes
+        episode = cast(
+            ObjectRearrangeEpisode, copy.deepcopy(super().__next__())
+        )
+
+        deserialized_objs = []
+        for rigid_obj in episode.rigid_objs:
+            transform = np.vstack(
+                (self.transformations[rigid_obj[1]], [0, 0, 0, 1])
+            )
+            deserialized_objs.append((rigid_obj[0], transform))
+        episode.rigid_objs = deserialized_objs
+
+        for vp_key in self._vp_keys:
+            obj_goal: ObjectGoal
+            for obj_goal in getattr(episode, vp_key):
+                for vidx, view_idx in enumerate(obj_goal.view_points):
+                    view = self.viewpoints[view_idx]
+                    position, rotation, iou = (
+                        view[:3],
+                        view[3:7],
+                        view[7].item(),
+                    )
+                    agent_state = AgentState(position, rotation)
+                    obj_goal.view_points[vidx] = ObjectViewLocation(
+                        agent_state, iou
+                    )
+
+        return episode
+
+
 @registry.register_dataset(name="ObjectRearrangeDataset-v0")
 class ObjectRearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Object Rearrangement dataset."""
     obj_category_to_obj_category_id: Dict[str, int]
     recep_category_to_recep_category_id: Dict[str, int]
     episodes: List[ObjectRearrangeEpisode] = []  # type: ignore
+    viewpoints_matrix: np.ndarray
+    transformations_matrix: np.ndarray
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
-
-    def to_json(self) -> str:
-        result = DatasetFloatJSONEncoder().encode(self)
-        return result
 
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
         check_and_gen_physics_config()
 
         super().__init__(config)
+        if config is not None:
+            self.viewpoints_matrix = np.load(
+                self.config.viewpoints_matrix_path.format(split=self.config.split)
+            )
+            self.transformations_matrix = np.load(
+                self.config.transformations_matrix_path.format(split=self.config.split)
+            )
+
+    def get_episode_iterator(
+        self, *args: Any, **kwargs: Any
+    ) -> ObjectRearrangeEpisodeIterator:
+        return ObjectRearrangeEpisodeIterator(
+            self.viewpoints_matrix,
+            self.transformations_matrix,
+            self.episodes,
+            *args,
+            **kwargs
+        )
+
+    def to_json(self) -> str:
+        result = DatasetFloatJSONEncoder().encode(self)
+        return result
 
     @staticmethod
     def __deserialize_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
         g = ObjectGoal(**serialized_goal)
-
-        for vidx, view in enumerate(g.view_points):
-            view_location = ObjectViewLocation(**view)  # type: ignore
-            view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
-            g.view_points[vidx] = view_location
         return g
 
     def from_json(
@@ -144,6 +212,7 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
             rearrangement_episode.episode_id = str(i)
             for goal_type in [
                 "candidate_objects",
+                "candidate_objects_hard",
                 "candidate_start_receps",
                 "candidate_goal_receps",
             ]:

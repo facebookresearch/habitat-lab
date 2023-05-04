@@ -1,9 +1,9 @@
 import argparse
 import gzip
-import itertools
 import json
 import os
 import os.path as osp
+import pickle
 import re
 from typing import List, Set
 
@@ -13,18 +13,14 @@ import pandas as pd
 from tqdm import tqdm
 
 import habitat_sim
-from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
-from habitat.datasets.rearrange.geometry_utils import direction_to_quaternion
 from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
-from habitat.tasks.nav.object_nav_task import ObjectViewLocation
-from habitat.tasks.rearrange.utils import get_aabb
-from habitat.tasks.utils import compute_pixel_coverage
+from habitat.datasets.rearrange.viewpoints import (
+    generate_viewpoints,
+    populate_semantic_graph,
+)
 from habitat_sim.agent.agent import ActionSpec
 from habitat_sim.agent.controls import ActuationSpec
-from habitat_sim.utils.common import quat_to_coeffs
-
-ISLAND_RADIUS_LIMIT = 3.5
 
 
 def get_rec_category(rec_id, rec_category_mapping=None):
@@ -113,12 +109,19 @@ def get_obj_rec_cat_in_eps(
     return obj_cat, start_rec_cat, goal_rec_cat
 
 
-def read_obj_category_mapping(filename):
+def read_obj_category_mapping(filename, keep_only_recs=False):
+    """
+    Returns a mapping from object name to category.
+    Setting keep_only_recs to True keeps only receptacles.
+    """
     df = pd.read_csv(filename)
     name_key = "id" if "id" in df else "name"
     category_key = (
         "main_wnsynsetkey" if "main_wnsynsetkey" in df else "clean_category"
     )
+
+    if keep_only_recs:
+        df = df[df["hasReceptacles"] == True]
 
     df["category"] = (
         df[category_key]
@@ -128,35 +131,19 @@ def read_obj_category_mapping(filename):
     return dict(zip(df[name_key], df["category"]))
 
 
-def get_cats_list(
-    train_episodes_file, obj_category_mapping=None, rec_category_mapping=None
-):
+def get_cats_list(obj_category_mapping=None, rec_category_mapping=None):
     """
     Extracts the lists of object and receptacle categories from episodes and returns name to id mappings
     """
-    episodes = json.load(gzip.open(train_episodes_file))
-    obj_cats, rec_cats = set(), set()
-    o = list()
-    for episode in episodes["episodes"]:
-        obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
-            episode,
-            obj_category_mapping=obj_category_mapping,
-            rec_category_mapping=rec_category_mapping,
-        )
-        obj_cats.add(obj_cat)
-        rec_cats.add(start_rec_cat)
-        rec_cats.add(goal_rec_cat)
-        o.append(obj_cat)
-    obj_cats = sorted(obj_cats)
-    rec_cats = sorted(rec_cats)
-    obj_to_id_mapping = {cat: i for i, cat in enumerate(obj_cats)}
-    rec_to_id_mapping = {cat: i for i, cat in enumerate(rec_cats)}
-    return obj_to_id_mapping, rec_to_id_mapping
+    cat_to_id_mappings = []
+    for mapping in [obj_category_mapping, rec_category_mapping]:
+        cats = sorted(set(mapping.values()))
+        cat_to_id_mappings.append({cat: i for i, cat in enumerate(cats)})
+    return cat_to_id_mappings
 
 
-def collect_receptacle_goals(sim, rec_category_mapping=None):
+def collect_receptacle_goals(sim, receptacles, rec_category_mapping=None):
     recep_goals = []
-    receptacles = find_receptacles(sim)
     rom = sim.get_rigid_object_manager()
     aom = sim.get_articulated_object_manager()
 
@@ -212,20 +199,29 @@ def initialize_sim(
     backend_cfg.create_renderer = True
     backend_cfg.enable_physics = True
 
-    sensors = {
-        "semantic": {
-            "sensor_type": habitat_sim.SensorType.SEMANTIC,
-            "resolution": [256, 256],
-            "position": [0, 0, 0],
-            "orientation": [0, 0, 0.0],
-        },
-    }
     if debug_viz:
-        sensors["color"] = {
-            "sensor_type": habitat_sim.SensorType.COLOR,
-            "resolution": [256, 256],
-            "position": [0, 0, 0],
-            "orientation": [0, 0, 0.0],
+        sensors = {
+            "semantic": {
+                "sensor_type": habitat_sim.SensorType.SEMANTIC,
+                "resolution": [512, 512],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0.0],
+            },
+            "color": {
+                "sensor_type": habitat_sim.SensorType.COLOR,
+                "resolution": [512, 512],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0.0],
+            },
+        }
+    else:
+        sensors = {
+            "semantic": {
+                "sensor_type": habitat_sim.SensorType.SEMANTIC,
+                "resolution": [256, 256],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0.0],
+            },
         }
     sensor_specs = []
     for sensor_uuid, sensor_params in sensors.items():
@@ -242,9 +238,6 @@ def initialize_sim(
     agent_cfg = habitat_sim.agent.AgentConfiguration()
     agent_cfg.sensor_specifications = sensor_specs
     agent_cfg.action_space = {
-        "move_forward": ActionSpec("move_forward", ActuationSpec(amount=0.25)),
-        "turn_left": ActionSpec("turn_left", ActuationSpec(amount=10.0)),
-        "turn_right": ActionSpec("turn_right", ActuationSpec(amount=10.0)),
         "look_up": ActionSpec("look_up", ActuationSpec(amount=10.0)),
         "look_down": ActionSpec("look_down", ActuationSpec(amount=10.0)),
     }
@@ -277,12 +270,12 @@ def get_candidate_starts(
     start_rec_cat,
     obj_idx_to_name,
     name_to_receptacle,
-    obj_rearrange_easy=True,
     obj_category_mapping=None,
     rec_category_mapping=None,
     rec_to_parent_obj=None,
 ):
-    obj_goals = []
+    obj_goals_hard = []
+    obj_goals_easy = []
     for i, (obj, pos) in enumerate(objects):
         if (
             get_obj_category(
@@ -297,29 +290,41 @@ def get_candidate_starts(
                 "object_category": category,
                 "view_points": [],
             }
-            if not obj_rearrange_easy:
-                obj_goals.append(obj_goal)
-            else:
-                # use parent object name if it exists
-                rec_name = rec_to_parent_obj[
-                    name_to_receptacle[obj_idx_to_name[i]]
-                ]
-                # otherwise use receptacle name
-                if rec_name is None:
-                    rec_name = name_to_receptacle[obj_idx_to_name[i]]
-                recep_cat = get_rec_category(
-                    rec_name.split(":")[0],
-                    rec_category_mapping=rec_category_mapping,
-                )
-                if recep_cat == start_rec_cat:
-                    obj_goals.append(obj_goal)
-    return obj_goals
+            obj_goals_hard.append(obj_goal)
+            # use parent object name if it exists
+            rec_name = rec_to_parent_obj[
+                name_to_receptacle[obj_idx_to_name[i]]
+            ]
+            # otherwise use receptacle name
+            if rec_name is None:
+                rec_name = name_to_receptacle[obj_idx_to_name[i]]
+            recep_cat = get_rec_category(
+                rec_name.split(":")[0],
+                rec_category_mapping=rec_category_mapping,
+            )
+            if recep_cat == start_rec_cat:
+                obj_goals_easy.append(obj_goal)
+    return obj_goals_easy, obj_goals_hard
 
 
 def get_candidate_receptacles(recep_goals, goal_recep_category):
     return [
         g for g in recep_goals if g["object_category"] == goal_recep_category
     ]
+
+
+def load_receptacle_cache(scene, cache_dir, cache):
+    if scene in cache:
+        return cache
+
+    scene_name = osp.basename(scene).split(".")[0]
+    receptacle_cache_path = osp.join(cache_dir, scene_name + ".pkl")
+    assert osp.exists(
+        receptacle_cache_path
+    ), "Receptacle viewpoints cache file missing."
+    with open(receptacle_cache_path, "rb") as f:
+        cache[scene] = pickle.load(f)
+    return cache
 
 
 def load_objects(sim, objects, additional_obj_config_paths):
@@ -346,168 +351,15 @@ def load_objects(sim, objects, additional_obj_config_paths):
     return obj_idx_to_name
 
 
-def generate_viewpoints(
-    sim: habitat_sim.Simulator,
-    obj,
-    object_transform: mn.Matrix4 = None,
-    debug_viz: bool = False,
-) -> List[ObjectViewLocation]:
-    """Generates a list of viewpoints for an object.
-    A viewpoint is a 3D position and rotation from where the agent
-    can see the object. The viewpoints are generated by sampling
-    points on a grid around the object and then checking if the
-    agent can see the object from each point using its semantic
-    sensor."""
-    assert obj is not None
-
-    cached_obj_transform = obj.transformation
-    if object_transform:
-        obj.transformation = object_transform
-
-    object_id = obj.object_id
-    object_aabb = get_aabb(object_id, sim, transformed=True)
-    object_position = object_aabb.center()
-
-    center = np.array(obj.translation)
-    sizes = np.array(obj.root_scene_node.cumulative_bb.size())
-    rotation = obj.rotation
-    object_obb = habitat_sim.geo.OBB(center, sizes, rotation)
-
-    eps = 1e-5
-
-    object_nodes = obj.visual_scene_nodes
-    assert all(node.semantic_id == object_id + 1 for node in object_nodes)
-    semantic_id = object_nodes[0].semantic_id
-
-    object_nodes = obj.visual_scene_nodes
-    assert all(node.semantic_id == object_id + 1 for node in object_nodes)
-    semantic_id = object_nodes[0].semantic_id
-
-    max_distance = 1.0
-    cell_size = 0.3 / 2.0
-    x_len, _, z_len = object_aabb.size() / 2.0 + mn.Vector3(max_distance)
-    x_bxp = np.arange(-x_len, x_len + eps, step=cell_size) + object_position[0]
-    z_bxp = np.arange(-z_len, z_len + eps, step=cell_size) + object_position[2]
-    candidate_poses = [
-        np.array([x, object_position[1], z])
-        for x, z in itertools.product(x_bxp, z_bxp)
-    ]
-
-    def down_is_navigable(pt, search_dist=2.0):
-        pf = sim.pathfinder
-        delta_y = 0.05
-        max_steps = int(search_dist / delta_y)
-        step = 0
-        is_navigable = pf.is_navigable(pt, 2)
-        while not is_navigable:
-            pt[1] -= delta_y
-            is_navigable = pf.is_navigable(pt)
-            step += 1
-            if step == max_steps:
-                return False
-        return True
-
-    def _get_iou(x, y, z):
-        pt = np.array([x, y, z])
-
-        if not object_obb.distance(pt) <= max_distance:
-            return -0.5, pt, None, "Unknown error"
-
-        if not down_is_navigable(pt):
-            return -1.0, pt, None, "Down is not navigable"
-        pf = sim.pathfinder
-        pt = np.array(pf.snap_point(pt))
-        pt[1] += pf.nav_mesh_settings.agent_height
-
-        goal_direction = object_position - pt
-        goal_direction[1] = 0
-
-        q = direction_to_quaternion(goal_direction)
-
-        cov = 0
-        agent = sim.get_agent(0)
-        for act in [
-            "look_down",
-            "look_up",
-            "look_up",
-        ]:
-            agent.act(act)
-            for v in agent._sensors.values():
-                v.set_transformation_from_spec()
-            agent_state = agent.get_state()
-            agent_state.position = pt
-            agent_state.rotation = q
-            agent.set_state(agent_state, reset_sensors=False)
-            obs = sim.get_sensor_observations(0)
-            cov += compute_pixel_coverage(obs["semantic"], semantic_id)
-
-        if debug_viz:
-            import os
-
-            import cv2
-            import imageio
-
-            agent_state = agent.get_state()
-            agent_state.position = pt
-            agent_state.rotation = q
-            agent.set_state(agent_state, reset_sensors=False)
-            obs = sim.get_sensor_observations(0)
-            rgb_obs = np.ascontiguousarray(obs["color"][..., :3])
-            sem_obs = (obs["semantic"] == semantic_id).astype(np.uint8) * 255
-            contours, _ = cv2.findContours(
-                sem_obs, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
-            )
-            rgb_obs = cv2.drawContours(rgb_obs, contours, -1, (0, 255, 0), 4)
-            img_dir = "data/images/objnav_dataset_gen"
-            os.makedirs(img_dir, exist_ok=True)
-            imageio.imsave(
-                os.path.join(
-                    img_dir, f"{obj.handle}_{semantic_id}_{x}_{z}_.png"
-                ),
-                rgb_obs,
-            )
-
-        pt[1] -= pf.nav_mesh_settings.agent_height
-
-        return cov, pt, q, "Success"
-
-    candidate_poses_ious_orig = [_get_iou(*pos) for pos in candidate_poses]
-    n_unknown_rejected = 0
-    n_down_not_navigable_rejected = 0
-    for p in candidate_poses_ious_orig:
-        if p[-1] == "Unknown error":
-            n_unknown_rejected += 1
-        elif p[-1] == "Down is not navigable":
-            n_down_not_navigable_rejected += 1
-    candidate_poses_ious_orig_2 = [
-        p for p in candidate_poses_ious_orig if p[0] > 0
-    ]
-
-    # Reject candidate_poses that do not satisfy island radius constraints
-    candidate_poses_ious = [
-        p
-        for p in candidate_poses_ious_orig_2
-        if sim.pathfinder.island_radius(p[1]) >= ISLAND_RADIUS_LIMIT
-    ]
-
-    keep_thresh = 0.001
-    view_locations = [
-        ObjectViewLocation(
-            AgentState(pt.tolist(), quat_to_coeffs(q).tolist()), iou
-        )
-        for iou, pt, q, _ in candidate_poses_ious
-        if iou is not None and iou > keep_thresh
-    ]
-    view_locations = sorted(view_locations, reverse=True, key=lambda v: v.iou)
-
-    obj.transformation = cached_obj_transform
-
-    return view_locations
-
-
-def add_viewpoints(sim, episode, obj_idx_to_name, debug_viz=False):
+def add_viewpoints(
+    sim,
+    episode,
+    obj_idx_to_name,
+    rec_viewpoints,
+    rec_to_parent_obj,
+    debug_viz=False,
+):
     rom = sim.get_rigid_object_manager()
-    aom = sim.get_articulated_object_manager()
 
     for obj in episode["candidate_objects"]:
         obj_handle = obj_idx_to_name[int(obj["object_id"])]
@@ -520,28 +372,10 @@ def add_viewpoints(sim, episode, obj_idx_to_name, debug_viz=False):
             return False
 
     for rec in episode["candidate_goal_receps"]:
-        rec_id = int(rec["object_id"])
-        if aom.get_library_has_id(rec_id):
-            obj_mgr = aom
-        elif rom.get_library_has_id(rec_id):
-            obj_mgr = rom
-        sim_rec = obj_mgr.get_object_by_id(rec_id)
-        rec["view_points"] = generate_viewpoints(
-            sim, sim_rec, debug_viz=debug_viz
-        )
-        if len(rec["view_points"]) == 0:
-            print("Need at least 1 view point for receptacle")
-            return False
+        rec_handle = rec_to_parent_obj[rec["object_name"]]
+        rec["view_points"] = rec_viewpoints[rec_handle]
 
     return True
-
-
-def populate_semantic_graph(sim):
-    rom = sim.get_rigid_object_manager()
-    for handle in rom.get_object_handles():
-        obj = rom.get_object_by_handle(handle)
-        for node in obj.visual_scene_nodes:
-            node.semantic_id = obj.object_id + 1
 
 
 def load_navmesh(sim, scene):
@@ -562,7 +396,8 @@ def add_cat_fields_to_episodes(
     episodes_file,
     obj_to_id,
     rec_to_id,
-    obj_rearrange_easy=True,
+    rec_cache_dir,
+    num_episodes,
     obj_category_mapping=None,
     rec_category_mapping=None,
     enable_add_viewpoints=False,
@@ -574,6 +409,7 @@ def add_cat_fields_to_episodes(
     episodes = json.load(gzip.open(episodes_file))
     episodes["obj_category_to_obj_category_id"] = obj_to_id
     episodes["recep_category_to_recep_category_id"] = rec_to_id
+    receptacle_cache = {}
 
     sim = None
     sim = initialize_sim(
@@ -591,28 +427,36 @@ def add_cat_fields_to_episodes(
     new_episodes = {k: v for k, v in episodes.items()}
     new_episodes["episodes"] = []
 
+    if num_episodes == -1:
+        num_episodes = len(episodes["episodes"])
+
     for episode in tqdm(episodes["episodes"]):
+        scene_id = episode["scene_id"]
         sim = initialize_sim(
             sim,
             existing_rigid_objects,
-            episode["scene_id"],
+            scene_id,
             episode["scene_dataset_config"],
             episode["additional_obj_config_paths"],
             debug_viz,
         )
-        load_navmesh(sim, episode["scene_id"])
+        load_navmesh(sim, scene_id)
 
         rom = sim.get_rigid_object_manager()
         existing_rigid_objects = set(rom.get_object_handles())
 
         rec = find_receptacles(sim)
+        rec_viewpoints, _ = load_receptacle_cache(
+            scene_id, rec_cache_dir, receptacle_cache
+        )[scene_id]
+        rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
         rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
         obj_idx_to_name = load_objects(
             sim, episode["rigid_objs"], episode["additional_obj_config_paths"]
         )
         populate_semantic_graph(sim)
         all_rec_goals = collect_receptacle_goals(
-            sim, rec_category_mapping=rec_category_mapping
+            sim, rec, rec_category_mapping=rec_category_mapping
         )
         obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
             episode,
@@ -626,13 +470,15 @@ def add_cat_fields_to_episodes(
         episode["object_category"] = obj_cat
         episode["start_recep_category"] = start_rec_cat
         episode["goal_recep_category"] = goal_rec_cat
-        episode["candidate_objects"] = get_candidate_starts(
+        (
+            episode["candidate_objects"],
+            episode["candidate_objects_hard"],
+        ) = get_candidate_starts(
             episode["rigid_objs"],
             obj_cat,
             start_rec_cat,
             obj_idx_to_name,
             episode["name_to_receptacle"],
-            obj_rearrange_easy=obj_rearrange_easy,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
             rec_to_parent_obj=rec_to_parent_obj,
@@ -644,8 +490,14 @@ def add_cat_fields_to_episodes(
             all_rec_goals, goal_rec_cat
         )
         if enable_add_viewpoints and not add_viewpoints(
-            sim, episode, obj_idx_to_name, debug_viz
+            sim,
+            episode,
+            obj_idx_to_name,
+            rec_viewpoints,
+            rec_to_parent_obj,
+            debug_viz,
         ):
+            print("Skipping episode", episode["episode_id"])
             continue
         assert (
             len(episode["candidate_objects"]) > 0
@@ -653,6 +505,8 @@ def add_cat_fields_to_episodes(
             and len(episode["candidate_goal_receps"]) > 0
         )
         new_episodes["episodes"].append(episode)
+        if len(new_episodes["episodes"]) >= num_episodes:
+            break
     return new_episodes
 
 
@@ -674,9 +528,15 @@ if __name__ == "__main__":
     parser.add_argument(
         "--target_episodes_tag", type=str, default="categorical_rearrange_easy"
     )
+    parser.add_argument(
+        "--rec_cache_dir",
+        type=str,
+        default="data/cache/receptacle_viewpoints/fphab",
+        help="Path to cache where receptacle viewpoints were saved during first stage of episode generation"
+    )
     parser.add_argument("--obj_category_mapping_file", type=str, default=None)
     parser.add_argument("--rec_category_mapping_file", type=str, default=None)
-    parser.add_argument("--obj_rearrange_easy", type=bool, default=True)
+    parser.add_argument("--num_episodes", type=int, default=-1) # -1 uses all episodes
     parser.add_argument("--add_viewpoints", action="store_true")
     parser.add_argument("--debug_viz", action="store_true")
 
@@ -686,6 +546,8 @@ if __name__ == "__main__":
     source_episodes_tag = args.source_episodes_tag
     target_data_dir = args.target_data_dir
     target_episodes_tag = args.target_episodes_tag
+    rec_cache_dir = args.rec_cache_dir
+    num_episodes = args.num_episodes
 
     obj_category_mapping = None
     if args.obj_category_mapping_file is not None:
@@ -696,15 +558,10 @@ if __name__ == "__main__":
     rec_category_mapping = None
     if args.rec_category_mapping_file is not None:
         rec_category_mapping = read_obj_category_mapping(
-            args.rec_category_mapping_file
+            args.rec_category_mapping_file, keep_only_recs=True
         )
 
-    # Retrieve object and receptacle categories in train episodes
-    train_episode_file = osp.join(
-        source_data_dir, "train", f"{source_episodes_tag}.json.gz"
-    )
     obj_to_id, rec_to_id = get_cats_list(
-        train_episode_file,
         obj_category_mapping=obj_category_mapping,
         rec_category_mapping=rec_category_mapping,
     )
@@ -722,12 +579,15 @@ if __name__ == "__main__":
             episodes_file,
             obj_to_id,
             rec_to_id,
-            obj_rearrange_easy=args.obj_rearrange_easy,
+            rec_cache_dir,
+            num_episodes,
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
             enable_add_viewpoints=args.add_viewpoints,
             debug_viz=args.debug_viz,
         )
+
+        print(f"Number of episodes in {split}: {len(episodes['episodes'])}")
         episodes_json = DatasetFloatJSONEncoder().encode(episodes)
         os.makedirs(osp.join(target_data_dir, split), exist_ok=True)
         target_episodes_file = osp.join(

@@ -37,7 +37,8 @@ class ObjectSampler:
         self,
         object_set: List[str],
         allowed_recep_set_names: List[str],
-        num_objects: Tuple[int, int] = (1, 1),
+        sampler_range_type: str,
+        num_objects: Optional[Tuple[int, int]] = None,
         orientation_sample: Optional[str] = None,
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
@@ -51,6 +52,7 @@ class ObjectSampler:
         self._allowed_recep_set_names = allowed_recep_set_names
         self._object_set_sample_probs = object_set_sample_probs
         self._recep_set_sample_probs = recep_set_sample_probs
+        self._sampler_range_type = sampler_range_type
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -60,8 +62,19 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
-        self.num_objects = num_objects  # tuple of [min,max] objects to sample
-        assert self.num_objects[1] >= self.num_objects[0]
+        # type of sampler range: dynamic, fixed.
+        # - dynamic sets number of objects to sample based on total receptacle area
+        # - fixed sets number of objects to sample to the given range
+        if self._sampler_range_type == "dynamic":
+            self._num_objects = None
+        elif self._sampler_range_type == "fixed":
+            self.num_objects = num_objects  # tuple of [min,max] objects to sample
+            assert self.num_objects[1] >= self.num_objects[0]
+            self.set_num_samples()
+        else:
+            raise ValueError(
+                f"Sampler range type {self._sampler_range_type} not recognized."
+            )
         self.orientation_sample = (
             orientation_sample  # None, "up" (1D), "all" (rand quat)
         )
@@ -69,7 +82,6 @@ class ObjectSampler:
             sample_region_ratio = defaultdict(lambda: 1.0)
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
-        self.set_num_samples()
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -82,7 +94,23 @@ class ObjectSampler:
         self.receptacle_instances = None
         self.receptacle_candidates = None
         # number of objects in the range should be reset each time
-        self.set_num_samples()
+        if self._sampler_range_type == "dynamic":
+            self._num_objects = None
+        else:
+            self.set_num_samples()
+
+    def set_receptacle_instances(self, receptacles: List[Receptacle]) -> None:
+        """
+        Set the receptacle instances to sample from.
+        """
+        self.receptacle_instances = receptacles
+        if self._sampler_range_type == "dynamic":
+            total_receptacle_area = sum(rec.total_area for rec in receptacles)
+            self.num_objects = (
+                int(np.floor(total_receptacle_area * 1.5)),
+                int(np.floor(total_receptacle_area * 2)),
+            )
+            self.set_num_samples()
 
     def sample_receptacle(
         self,

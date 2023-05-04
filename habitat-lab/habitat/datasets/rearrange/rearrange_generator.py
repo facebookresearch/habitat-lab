@@ -7,6 +7,7 @@
 import itertools
 import os
 import os.path as osp
+import pickle
 import time
 from collections import defaultdict
 
@@ -37,9 +38,13 @@ from habitat.datasets.rearrange.samplers.receptacle import (
     ReceptacleTracker,
     find_receptacles,
     get_navigable_receptacles,
+    get_receptacle_viewpoints,
 )
+from habitat.datasets.rearrange.viewpoints import populate_semantic_graph
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
+from habitat_sim.agent.agent import ActionSpec
+from habitat_sim.agent.controls import ActuationSpec
 from habitat_sim.nav import NavMeshSettings
 
 
@@ -74,6 +79,8 @@ class RearrangeEpisodeGenerator:
         cfg: DictConfig,
         debug_visualization: bool = False,
         limit_scene_set: Optional[str] = None,
+        limit_scene: Optional[str] = None,
+        ignore_cache: bool = False,
     ) -> None:
         """
         Initialize the generator object for a particular configuration.
@@ -83,6 +90,8 @@ class RearrangeEpisodeGenerator:
         self.cfg = cfg
         self.start_cfg = self.cfg.copy()
         self._limit_scene_set = limit_scene_set
+        self._limit_scene = limit_scene
+        self._ignore_cache = ignore_cache
 
         # debug visualization settings
         self._render_debug_obs = self._make_debug_video = debug_visualization
@@ -198,13 +207,13 @@ class RearrangeEpisodeGenerator:
             assert "name" in obj_sampler_info
             assert "type" in obj_sampler_info
             assert "params" in obj_sampler_info
+            assert "sampler_range" in obj_sampler_info
             assert (
                 obj_sampler_info["name"] not in self._obj_samplers
             ), f"Duplicate object sampler name '{obj_sampler_info['name']}' in config."
             if obj_sampler_info["type"] in ["uniform", "category_balanced"]:
                 assert "object_sets" in obj_sampler_info["params"]
                 assert "receptacle_sets" in obj_sampler_info["params"]
-                assert "num_samples" in obj_sampler_info["params"]
                 assert "orientation_sampling" in obj_sampler_info["params"]
                 # merge and flatten object and receptacle sets
                 object_handles = [
@@ -226,15 +235,21 @@ class RearrangeEpisodeGenerator:
                         f"Found no object handles for {obj_sampler_info}"
                     )
 
+                if obj_sampler_info["sampler_range"] == "fixed":
+                    num_samples = (
+                        obj_sampler_info["params"]["num_samples"][0],
+                        obj_sampler_info["params"]["num_samples"][1],
+                    )
+                elif obj_sampler_info["sampler_range"] == "dynamic":
+                    num_samples = None
+
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
                     object_handles,
                     obj_sampler_info["params"]["receptacle_sets"],
-                    (
-                        obj_sampler_info["params"]["num_samples"][0],
-                        obj_sampler_info["params"]["num_samples"][1],
-                    ),
+                    obj_sampler_info["sampler_range"],
+                    num_samples,
                     obj_sampler_info["params"]["orientation_sampling"],
                     get_sample_region_ratios(obj_sampler_info),
                     obj_sampler_info["params"].get(
@@ -271,6 +286,7 @@ class RearrangeEpisodeGenerator:
                     # Add object set later
                     [],
                     target_sampler_info["params"]["receptacle_sets"],
+                    target_sampler_info["sampler_range"],
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
@@ -312,6 +328,12 @@ class RearrangeEpisodeGenerator:
 
             # cull duplicates
             unified_scene_set = sorted(set(unified_scene_set))
+            if self._limit_scene:
+                unified_scene_set = [
+                    scene
+                    for scene in unified_scene_set
+                    if self._limit_scene in scene
+                ]
             self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
         else:
             logger.error(
@@ -478,7 +500,7 @@ class RearrangeEpisodeGenerator:
         navmesh_path = osp.join(
             scene_base_dir, "navmeshes", scene_name + ".navmesh"
         )
-        if osp.exists(navmesh_path):
+        if osp.exists(navmesh_path) and not self._ignore_cache:
             self.sim.pathfinder.load_nav_mesh(navmesh_path)
         else:
             self.sim.navmesh_settings = NavMeshSettings()
@@ -508,23 +530,11 @@ class RearrangeEpisodeGenerator:
                 sampler_name
             ] = targ_sampler_cfg["params"]["object_samplers"]
 
-        receptacles = find_receptacles(self.sim)
-        navigable_receptacles = {}
+        viewable_receptacles = self.get_receptacles(scene_name)
         for sampler in itertools.chain(
             self._obj_samplers.values(), self._target_samplers.values()
         ):
-            nav_to_min_dist = sampler.nav_to_min_distance
-            if nav_to_min_dist not in navigable_receptacles:
-                navigable_receptacles[
-                    nav_to_min_dist
-                ] = get_navigable_receptacles(
-                    self.sim,
-                    receptacles,
-                    nav_to_min_dist,
-                )
-            sampler.receptacle_instances = navigable_receptacles[
-                nav_to_min_dist
-            ]
+            sampler.set_receptacle_instances(viewable_receptacles)
 
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
@@ -783,13 +793,20 @@ class RearrangeEpisodeGenerator:
         # For debugging visualizations place the default agent where you want the camera with local -Z oriented toward the point of focus.
         camera_resolution = [540, 720]
         sensors = {
-            "rgb": {
+            "semantic": {
+                "sensor_type": habitat_sim.SensorType.SEMANTIC,
+                "resolution": [256, 256],
+                "position": [0, 0, 0],
+                "orientation": [0, 0, 0.0],
+            },
+        }
+        if self._render_debug_obs:
+            sensors["rgb"] = {
                 "sensor_type": habitat_sim.SensorType.COLOR,
                 "resolution": camera_resolution,
                 "position": [0, 0, 0],
                 "orientation": [0, 0, 0.0],
             }
-        }
 
         backend_cfg = habitat_sim.SimulatorConfiguration()
         backend_cfg.scene_dataset_config_file = dataset_path
@@ -816,6 +833,10 @@ class RearrangeEpisodeGenerator:
 
         agent_cfg = habitat_sim.agent.AgentConfiguration()
         agent_cfg.sensor_specifications = sensor_specs
+        agent_cfg.action_space = {
+            "look_up": ActionSpec("look_up", ActuationSpec(amount=10.0)),
+            "look_down": ActionSpec("look_down", ActuationSpec(amount=10.0)),
+        }
 
         hab_cfg = habitat_sim.Configuration(backend_cfg, [agent_cfg])
         if self.sim is None:
@@ -1000,3 +1021,54 @@ class RearrangeEpisodeGenerator:
 
         # return success or failure
         return success
+
+    def get_receptacles(self, scene_name):
+        """
+        Find navigable and viewable receptacles and get their viewpoints
+        """
+        dataset_name = osp.basename(self.cfg.dataset_path).split(".", 1)[0]
+        receptacle_cache_path = osp.join(
+            "data/cache/receptacle_viewpoints",
+            dataset_name,
+            scene_name + ".pkl",
+        )
+        if osp.exists(receptacle_cache_path) and not self._ignore_cache:
+            with open(receptacle_cache_path, "rb") as f:
+                _, viewable_receptacle_names = pickle.load(f)
+            receptacles = find_receptacles(self.sim)
+            viewable_receptacles = [
+                rec
+                for rec in receptacles
+                if rec.name in viewable_receptacle_names
+            ]
+            logger.info(
+                f"{len(viewable_receptacles)} viewable receptacles found in cache."
+            )
+        else:
+            receptacles = find_receptacles(self.sim)
+            navigable_receptacles = get_navigable_receptacles(
+                self.sim, receptacles
+            )
+            populate_semantic_graph(self.sim)
+            (
+                receptacle_viewpoints,
+                viewable_receptacles,
+            ) = get_receptacle_viewpoints(self.sim, navigable_receptacles)
+            viewable_receptacle_names = {
+                rec.name for rec in viewable_receptacles
+            }
+            logger.info(
+                f"{len(viewable_receptacles)}/{len(receptacles)} viewable receptacles found."
+            )
+
+            os.makedirs(osp.dirname(receptacle_cache_path), exist_ok=True)
+            try:
+                with open(receptacle_cache_path, "wb") as f:
+                    pickle.dump(
+                        (receptacle_viewpoints, viewable_receptacle_names), f
+                    )
+            except Exception as e:
+                os.unlink(receptacle_cache_path)
+                raise e
+
+        return viewable_receptacles
