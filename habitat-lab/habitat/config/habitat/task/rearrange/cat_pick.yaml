@@ -52,11 +52,7 @@ actions:
     ee_ctrl_lim: 0.015
   base_velocity:
     type: "BaseWaypointTeleportAction"
-    max_forward: 0.2500
-    max_turn: 0.1745
-    allow_dyn_slide: False
-    collision_threshold: 1e-5
-    navmesh_offset: [[0.0, 0.0], [-0.09, 0.08], [-0.09, -0.08], [0.12, 0.095], [0.12, -0.095], [0.12, 0.0], [-0.09, 0.0], [0.015, -0.09], [0.015, 0.10]]
+    navmesh_offset: [[0.0, 0.0]]
 
 measurements:
   force_terminate:
