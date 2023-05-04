@@ -116,7 +116,9 @@ def read_obj_category_mapping(filename, keep_only_recs=False):
     """
     df = pd.read_csv(filename)
     name_key = "id" if "id" in df else "name"
-    category_key = "wnsynsetkey" if "wnsynsetkey" in df else "clean_category"
+    category_key = (
+        "main_wnsynsetkey" if "main_wnsynsetkey" in df else "clean_category"
+    )
 
     if keep_only_recs:
         df = df[df["hasReceptacles"] == True]
@@ -461,6 +463,10 @@ def add_cat_fields_to_episodes(
             obj_category_mapping=obj_category_mapping,
             rec_category_mapping=rec_category_mapping,
         )
+
+        if start_rec_cat == goal_rec_cat:
+            continue
+
         episode["object_category"] = obj_cat
         episode["start_recep_category"] = start_rec_cat
         episode["goal_recep_category"] = goal_rec_cat

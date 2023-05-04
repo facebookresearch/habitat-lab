@@ -6,6 +6,78 @@ import numpy as np
 import habitat_sim
 
 
+def is_collision(sim, pos, navmesh_offset, rotation_consider) -> bool:
+    """
+    The function checks if the agent collides with the object
+    """
+
+    sim.agents[0].scene_node.translation = pos
+
+    # Rotate the agent given the angles
+    for angle in rotation_consider:
+        sim.agents[0].scene_node.rotation = mn.Quaternion.rotation(  # type: ignore
+            mn.Rad(angle * np.pi), mn.Vector3(0, 1, 0)
+        )
+        trans = sim.agents[0].scene_node.transformation
+        nav_pos_3d = [
+            np.array([xz[0], pos[1], xz[1]]) for xz in navmesh_offset
+        ]
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+
+        is_navigable = [sim.pathfinder.is_navigable(pos) for pos in cur_pos]
+
+        # No collision for each navmesh circles given the particular angle
+        if sum(is_navigable) == len(navmesh_offset):
+            return False
+
+    return True
+
+
+def is_navigable_given_robot_navmesh(
+    sim,
+    start_pos,
+    goal_pos,
+    check_every_distance=0.3,
+    navmesh_offset=([0, 0], [0.25, 0], [-0.25, 0]),
+    rotation_consider=(0.0, 0.25, 0.5, 0.75),
+) -> bool:
+    """
+    Return True if the robot can navigate from point A
+    to point B given the configuration of the navmesh.
+
+    We first get the points in the path. Then we do
+    interpolation to get the points given the distance threshold.
+    Then, for each point, we rotate the robot to see if there is a
+    single pose that can fit the robot into the space given the navmesh.
+    """
+
+    # Get the path finder
+    pf = sim.pathfinder
+    # Init the shortest path
+    path = habitat_sim.ShortestPath()
+    # Set the locations
+    path.requested_start = start_pos
+    path.requested_end = goal_pos
+    # Path the path
+    pf.find_path(path)
+    points = path.points
+
+    for i in range(len(points) - 1):
+        cur_pos = points[i]
+        next_pos = points[i + 1]
+        while np.linalg.norm(cur_pos - next_pos) >= check_every_distance:
+            # Check the collision
+            if is_collision(sim, cur_pos, navmesh_offset, rotation_consider):
+                return False
+            # Get the directional vector
+            dir_vec = next_pos - cur_pos
+            # Get the scalar for the next point
+            s = check_every_distance / np.linalg.norm(dir_vec)
+            cur_pos = cur_pos + s * dir_vec
+
+    return True
+
+
 def is_accessible(sim, point, nav_to_min_distance) -> bool:
     """
     Return True if the point is within a threshold distance of the nearest

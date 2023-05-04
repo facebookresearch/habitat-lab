@@ -432,7 +432,7 @@ class TriangleMeshReceptacle(Receptacle):
             []
         )  # normalized float weights for each triangle for sampling
         assert len(mesh_data[1]) % 3 == 0, "must be triangles"
-        self._total_area = 0
+        self._total_area = 0.0
         triangles = []
         for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
@@ -440,7 +440,7 @@ class TriangleMeshReceptacle(Receptacle):
             w2 = v[2] - v[1]
             triangles.append(v)
             self.area_weighted_accumulator.append(
-                0.5 * np.linalg.norm(np.cross(w1, w2))
+                float(0.5 * np.linalg.norm(np.cross(w1, w2)))
             )
             self._total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
