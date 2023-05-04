@@ -26,8 +26,7 @@ FP is actually four distinct pieces: Floorplanner scenes, Amazon-Berkeley object
 
 1. Download Floorplanner Scenes: [fpss_osmm.zip](https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
 2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
-3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
-3-1. (May 1 2023 update): [floorplanner.zip](https://drive.google.com/file/d/1MqhYVnnry3zHj3oqsqbUqy29aAJXz-C5/view?usp=sharing) We generate 100 episodes (nav-pick-place for two objects) using 18 scenes. This dataset is called `s_minitrain.json.gz`
+3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1MqhYVnnry3zHj3oqsqbUqy29aAJXz-C5/view?usp=sharing) We generate 100 episodes (nav-pick-place for two objects) using 18 scenes. This dataset is called `s_minitrain.json.gz`
 4. Extract these into `habitat-lab/data` as follows:
 ```
 cd data

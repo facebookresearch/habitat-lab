@@ -444,7 +444,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
 
         if curr_path_points is None:
-            raise Exception
+            raise RuntimeError("Pathfinder returns empty list")
         else:
             # Compute distance and angle to target
             if len(curr_path_points) == 1:
