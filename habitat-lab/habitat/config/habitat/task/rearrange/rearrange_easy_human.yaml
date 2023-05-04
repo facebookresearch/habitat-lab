@@ -1,0 +1,40 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions:
+    - humanoidjoint_action
+  - /habitat/task/measurements:
+    - object_to_goal_distance
+    - articulated_agent_force
+    - force_terminate
+    - articulated_agent_colls
+    - composite_success
+    - num_steps
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+  - _self_
+
+type: RearrangeCompositeTask-v0
+reward_measure: composite_success
+success_measure: composite_success
+success_reward: 100.0
+slack_reward: -0.01
+end_on_success: True
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: False
+task_spec: rearrange_easy
+measurements:
+  force_terminate:
+    max_accum_force: 100000.0
+    max_instant_force: 10000.0
+  composite_success:
+    must_call_stop: False
