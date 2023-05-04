@@ -62,6 +62,9 @@ class ObjectSampler:
         ] = None  # the specific receptacle instances relevant to this sampler
         self.max_sample_attempts = 100  # number of distinct object|receptacle pairings to try before giving up
         self.max_placement_attempts = 50  # number of times to attempt a single object|receptacle placement pairing
+        # type of sampler range: dynamic, fixed.
+        # - dynamic sets number of objects to sample based on total receptacle area
+        # - fixed sets number of objects to sample to the given range
         if self._sampler_range_type == "dynamic":
             self._num_objects = None
         elif self._sampler_range_type == "fixed":
