@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, List, Optional
 
 import gym.spaces as spaces
 import magnum as mn
@@ -51,7 +51,14 @@ def clean_dict(d, remove_prefix):
 
 
 class BaselinesController(Controller):
-    def __init__(self, agent_idx, is_multi_agent, cfg_path, env):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        cfg_path,
+        env,
+        sample_random_baseline_base_vel=False,
+    ):
         super().__init__(agent_idx, is_multi_agent)
 
         config = get_baselines_config(
@@ -59,8 +66,8 @@ class BaselinesController(Controller):
             [
                 # "habitat_baselines/rl/policy=hl_fixed",
                 # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
-                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 "habitat_baselines.num_environments=1",
+                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 f"habitat.task.task_spec={env._config.task.task_spec}",
                 f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
             ],
@@ -87,6 +94,7 @@ class BaselinesController(Controller):
         )
         self._action_shape, _ = get_action_space_info(self._gym_ac_space)
         self._step_i = 0
+        self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
 
     def act(self, obs, env):
         masks = torch.ones(
@@ -128,9 +136,10 @@ class BaselinesController(Controller):
         )
 
         # temp do random base actions
-        action["action_args"]["base_vel"] = torch.rand_like(
-            action["action_args"]["base_vel"]
-        )
+        if self._sample_random_baseline_base_vel:
+            action["action_args"]["base_vel"] = torch.rand_like(
+                action["action_args"]["base_vel"]
+            )
 
         def change_ac_name(k):
             if "pddl" in k:
@@ -479,7 +488,7 @@ class GuiHumanoidController(Controller):
             action_names.append(humanoidjoint_name)
             action_args.update(
                 {
-                    "agent_0_human_joints_trans": humanoidjoint_action,
+                    f"{agent_k}human_joints_trans": humanoidjoint_action,
                 }
             )
 
@@ -493,37 +502,63 @@ class GuiHumanoidController(Controller):
 
 class ControllerHelper:
     def __init__(self, env, args, gui_input):
+        self._env = env
         self.n_robots = len(env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
+        self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
-        self._env = env
-
-        gui_controller: Controller = None
-        if args.humanoid_user_agent:
-            gui_controller = GuiHumanoidController(
-                0, is_multi_agent, gui_input, env, args.walk_pose_path
-            )
-        else:
-            gui_controller = GuiRobotController(0, is_multi_agent, gui_input)
-
-        self.controllers = []
-        self.n_robots = self.n_robots
-        self.all_hxs = [None for _ in range(self.n_robots)]
-        self.active_controllers = [0, 1]
-        self.controllers = [
-            gui_controller,
+        self.controllers: List[Controller] = [
             BaselinesController(
-                1,
+                agent_index,
                 is_multi_agent,
                 "rearrange/rl_hierarchical.yaml",
                 env,
-            ),
+                sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
+            )
+            for agent_index in range(self.n_robots)
+            if agent_index != self._gui_controlled_agent_index
         ]
 
-    def get_gui_humanoid_controller(self):
-        if isinstance(self.controllers[0], GuiHumanoidController):
-            return self.controllers[0]
-        return None
+        if self._gui_controlled_agent_index is not None:
+            agent_name = self._env.sim.habitat_config.agents_order[
+                self._gui_controlled_agent_index
+            ]
+            articulated_agent_type = self._env.sim.habitat_config.agents[
+                agent_name
+            ].articulated_agent_type
+
+            gui_agent_controller: Controller
+            if articulated_agent_type == "KinematicHumanoid":
+                gui_agent_controller = GuiHumanoidController(
+                    agent_idx=self._gui_controlled_agent_index,
+                    is_multi_agent=is_multi_agent,
+                    gui_input=gui_input,
+                    env=self._env,
+                    walk_pose_path=args.walk_pose_path,
+                )
+            else:
+                gui_agent_controller = GuiRobotController(
+                    agent_idx=self._gui_controlled_agent_index,
+                    is_multi_agent=is_multi_agent,
+                    gui_input=gui_input,
+                )
+            self.controllers.insert(
+                self._gui_controlled_agent_index, gui_agent_controller
+            )
+
+        self.all_hxs = [None for _ in range(self.n_robots)]
+        self.active_controllers = list(
+            range(len(self.controllers))
+        )  # assuming all controllers are active
+
+    def get_gui_agent_controller(self) -> Optional[Controller]:
+        if self._gui_controlled_agent_index is None:
+            return None
+
+        return self.controllers[self._gui_controlled_agent_index]
+
+    def get_gui_controlled_agent_index(self) -> Optional[int]:
+        return self._gui_controlled_agent_index
 
     def update(self, obs):
         all_names = []

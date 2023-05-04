@@ -19,19 +19,31 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
---humanoid-user-agent \
 --never-end \
+--gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_fetch.yaml \
---cfg-opts habitat.dataset.split=minival
+--cfg-opts habitat.dataset.split=minival \
+--sample-random-baseline-base-vel
 ```
 * To use Spot, run:
 ```
-HABITAT_SIM_LOG=warning MAGNUM_LOG=warning
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
 --disable-inverse-kinematics \
---humanoid-user-agent \
 --never-end \
+--gui-controlled-agent-index 0 \
 --cfg benchmark/rearrange/rearrange_easy_human_and_spot.yaml \
+--cfg-opts habitat.dataset.split=minival \
+--sample-random-baseline-base-vel
+```
+* Solo user-controlled humanoid mode:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--gui-controlled-agent-index 0 \
+--never-end \
+--cfg benchmark/rearrange/rearrange_easy_human.yaml \
 --cfg-opts habitat.dataset.split=minival
 ```
 
@@ -44,7 +56,8 @@ python examples/siro_sandbox/sandbox_app.py \
     * Left-click again to drop the object anywhere in the scene.
 * Camera yaw and pitch control (TODO: decide which one has better UX):
     1. WASD keys
-    2. hold Q and move mouse
+    2. hold R and move mouse
+* In [free camera mode](#gui-controlled-agents-and-free-camera-mode) use arrow keys to move the look-at point (camera yaw/pitch and zoom in/out controls are the same as in the steps above).
 * `M` to reset to a new episode.
 
 ## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
@@ -58,6 +71,16 @@ Add `--debug-images` argument followed by the camera sensors ids to enable debug
 ## Debugging simulator-rendering
 
 Add `--debug-third-person-width 600` to enable the debug third-person camera. Like all visual sensors, this is simulator-rendered, unlike the main sandbox app viewport, which is replay-rendered.
+
+## GUI-controlled agents and free camera mode
+Add `--gui-controlled-agent-index` followed by the agent's index you want to control via GUI (for example, `--gui-controlled-agent-index 0` to control the first agent).
+
+If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents.
+
+**Note:** currentrly, only robot controllers can be policy-controlled (as for now they perform random actions). Policy-controlled humanoid controller is not implemented yet. So, if you want to test the free camera mode, make sure you are using robot-robot config as a `--cfg` argument value (for example, `--cfg benchmark/rearrange/rearrange_easy_fetch_and_fetch.yaml`).
+
+## Solo humanoid mode
+Set `--cfg benchmark/rearrange/rearrange_easy_human.yaml` to run app with only a user-controlled humanoid (no robot).
 
 ## Uning FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
