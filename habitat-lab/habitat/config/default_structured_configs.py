@@ -102,6 +102,15 @@ class VelocityControlActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 @attr.s(auto_attribs=True, slots=True)
 class ArmActionConfig(ActionConfig):
+    r"""
+    In Rearrangement tasks only, the action that will move the robot arm around. The action represents to delta angle (in radians) of each joint.
+
+    :property grasp_thresh_dist: The grasp action will only work on the closest object if its distance to the end effector is smaller than this value. Only for `MagicGraspAction` grip_controller.
+    :property grip_controller: Can either be None,  `MagicGraspAction` or `SuctionGraspAction`. If None, the arm will be unable to grip object. Magic grasp will grasp the object if the end effector is within grasp_thresh_dist of an object, with `SuctionGraspAction`, the object needs to be in contact with the end effector.
+    :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
+    :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
+    :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
+    """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
     grip_controller: Optional[str] = None
@@ -113,6 +122,12 @@ class ArmActionConfig(ActionConfig):
     ee_ctrl_lim: float = 0.015
     should_clip: bool = False
     render_ee_target: bool = False
+    gaze_distance_range: Optional[List[float]] = None
+    center_cone_angle_threshold: float = 0.0
+    center_cone_vector: Optional[List[float]] = None
+    wrong_grasp_should_end: bool = False
+    gaze_distance_from: str = "camera"
+    gaze_center_square_width: float = 1
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -392,6 +407,18 @@ class ObjectSegmentationSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class ReceptacleSegmentationSensorConfig(LabSensorConfig):
+    type: str = "ReceptacleSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CatNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "CatNavGoalSegmentationSensor"
+    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
@@ -652,6 +679,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     wrong_pick_should_end: bool = True
     object_goal: bool = False
     sparse_reward: bool = False
+    angle_reward_min_dist: float = 0.0
+    angle_reward_scale: float = 1.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -761,6 +790,11 @@ class PickDistanceToGoalRewardMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CatNavRotDistToGoalMeasurementConfig(MeasurementConfig):
+    type: str = "CatNavRotDistToGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1530,6 +1564,18 @@ cs.store(
     name="object_segmentation_sensor",
     node=ObjectSegmentationSensorConfig,
 )
+cs.store(
+    package="habitat.task.lab_sensors.receptacle_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="receptacle_segmentation_sensor",
+    node=ReceptacleSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.cat_nav_goal_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="cat_nav_goal_segmentation_sensor",
+    node=CatNavGoalSegmentationSensorConfig,
+)
 
 # Task Measurements
 cs.store(
@@ -1645,6 +1691,12 @@ cs.store(
     group="habitat/task/measurements",
     name="answer_accuracy",
     node=AnswerAccuracyMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
+    group="habitat/task/measurements",
+    name="cat_nav_rot_dist_to_goal",
+    node=CatNavRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",

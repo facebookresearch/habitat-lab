@@ -2,23 +2,24 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_nav_to_rec
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
+  - /habitat/task/rearrange: cat_gaze
   - /habitat/dataset/rearrangement: floorplanner
   - _self_
 
 habitat:
   gym:
-    auto_name: NavToObj
+    auto_name: Pick
     obs_keys:
-      - robot_head_depth
       - robot_head_rgb
-      - goal_receptacle
-      - robot_start_gps
-      - robot_start_compass
+      - robot_head_depth
+      - obj_start_sensor
+      - object_embedding
       - joint
+      - is_holding
+      - relative_resting_position
   environment:
-    max_episode_steps: 400
+    max_episode_steps: 300
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
@@ -26,8 +27,12 @@ habitat:
       - data/objects/amazon_berkeley/configs/
       - data/objects/google_object_dataset/configs/
     debug_render_goal: False
+    debug_render: False
+    needs_markers: False
     concur_render: True
     auto_sleep: True
+    requires_textures: False
+    kinematic_mode: True
     agents:
       main_agent:
         radius: 0.3
@@ -35,10 +40,6 @@ habitat:
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
         sim_sensors:
-           head_rgb_sensor:
-             height: 256
-             width: 256
-             hfov: 42
            head_depth_sensor:
              height: 256
              width: 256
@@ -50,7 +51,7 @@ habitat:
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
-    needs_markers: false
+
   dataset:
     data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
     type: ObjectRearrangeDataset-v0

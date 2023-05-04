@@ -12,6 +12,7 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import rearrange_logger
 
@@ -52,9 +53,15 @@ class DynNavRLEnv(RearrangeTask):
         self.robot_start_position = None
         self.robot_start_rotation = None
 
+        self._min_start_distance = self._config.min_start_distance
+
     @property
     def nav_goal_pos(self):
         return self._nav_to_info.nav_goal_pos
+
+    @property
+    def is_nav_to_obj(self):
+        return self._config.object_in_hand_sample_prob == 0
 
     def set_args(self, obj, **kwargs):
         self.force_obj_to_idx = obj
@@ -109,10 +116,7 @@ class DynNavRLEnv(RearrangeTask):
             else:
                 goals = nav_to_pos
             distance = self._sim.geodesic_distance(start_pos, goals, episode)
-            return (
-                distance != np.inf
-                and distance > self._config.min_start_distance
-            )
+            return distance != np.inf and distance > self._min_start_distance
 
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
             filter_func=filter_func
@@ -128,6 +132,15 @@ class DynNavRLEnv(RearrangeTask):
     def reset(self, episode: Episode):
         sim = self._sim
         super().reset(episode, fetch_observations=False)
+
+        # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
+        if isinstance(sim.robot, StretchRobot):
+            sim.robot.arm_motor_pos = np.array(
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
+            )
+            sim.robot.arm_joint_pos = np.array(
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
+            )
 
         self._nav_to_info = self._generate_nav_start_goal(
             episode, force_idx=self.force_obj_to_idx

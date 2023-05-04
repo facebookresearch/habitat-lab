@@ -1002,7 +1002,7 @@ class DistanceToGoal(Measure):
         if self._distance_to == "VIEW_POINTS":
             self._episode_view_points = [
                 view_point.agent_state.position
-                for goal in episode.goals
+                for goal in getattr(episode, self._goals_attr)
                 for view_point in goal.view_points
             ]
         self.update_metric(episode=episode, *args, **kwargs)  # type: ignore
@@ -1106,6 +1106,19 @@ class MoveForwardAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        actuation = self._sim.config.agents[0].action_space[1].actuation.amount
+
+        trans = self._sim.robot.base_transformation
+        local_pos = np.array([actuation, 0, 0])
+        global_pos = trans.transform_point(local_pos)
+        active_island_idx = self._sim.navmesh_classification_results[
+            "active_island"
+        ]
+        snapped_global_pos = self._sim.pathfinder.snap_point(
+            global_pos, island_index=active_island_idx
+        )
+
+        self._sim.robot.base_pos = snapped_global_pos
         return self._sim.step(HabitatSimActions.move_forward)
 
 
@@ -1115,6 +1128,18 @@ class TurnLeftAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        actuation = self._sim.config.agents[0].action_space[2].actuation.amount
+        if "robot_start_angle" not in dir(self._sim):
+            self._sim.robot_start_angle = kwargs[
+                "task"
+            ]._nav_to_info.robot_start_angle
+            self._sim.current_angle = self._sim.robot_start_angle
+
+        self._sim.updated_angle = (
+            self._sim.current_angle + actuation * np.pi / 180
+        )
+        self._sim.robot.base_rot = self._sim.updated_angle
+        self._sim.current_angle = self._sim.updated_angle
         return self._sim.step(HabitatSimActions.turn_left)
 
 
@@ -1124,6 +1149,20 @@ class TurnRightAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+        actuation = self._sim.config.agents[0].action_space[2].actuation.amount
+        if "robot_start_angle" not in dir(self._sim):
+            self._sim.robot_start_angle = kwargs[
+                "task"
+            ]._nav_to_info.robot_start_angle
+            self._sim.current_angle = self._sim.robot_start_angle
+
+        self._sim.updated_angle = (
+            self._sim.current_angle - actuation * np.pi / 180
+        )
+
+        self._sim.robot.base_rot = self._sim.updated_angle
+        self._sim.current_angle = self._sim.updated_angle
+
         return self._sim.step(HabitatSimActions.turn_right)
 
 

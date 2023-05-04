@@ -4,11 +4,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import itertools
 import os
 import os.path as osp
 import time
 from collections import defaultdict
-import itertools
 
 try:
     from collections import Sequence
@@ -26,8 +26,10 @@ import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.config import DictConfig
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import (
+    compute_navmesh_island_classifications,
+)
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-from habitat.datasets.rearrange.navmesh_utils import compute_navmesh_island_classifications
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
     Receptacle,
@@ -508,15 +510,21 @@ class RearrangeEpisodeGenerator:
 
         receptacles = find_receptacles(self.sim)
         navigable_receptacles = {}
-        for sampler in itertools.chain(self._obj_samplers.values(), self._target_samplers.values()):
+        for sampler in itertools.chain(
+            self._obj_samplers.values(), self._target_samplers.values()
+        ):
             nav_to_min_dist = sampler.nav_to_min_distance
             if nav_to_min_dist not in navigable_receptacles:
-                navigable_receptacles[nav_to_min_dist] = get_navigable_receptacles(
+                navigable_receptacles[
+                    nav_to_min_dist
+                ] = get_navigable_receptacles(
                     self.sim,
                     receptacles,
                     nav_to_min_dist,
                 )
-            sampler.receptacle_instances = navigable_receptacles[nav_to_min_dist]
+            sampler.receptacle_instances = navigable_receptacles[
+                nav_to_min_dist
+            ]
 
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
