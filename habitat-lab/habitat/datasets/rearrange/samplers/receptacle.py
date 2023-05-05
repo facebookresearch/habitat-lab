@@ -499,6 +499,7 @@ class TriangleMeshReceptacle(Receptacle):
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
 
+        # TODO: Remove dependency on trimesh
         self.trimesh = trimesh.Trimesh(
             **trimesh.triangles.to_kwargs(triangles)
         )
