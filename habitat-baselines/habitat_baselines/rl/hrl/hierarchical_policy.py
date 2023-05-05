@@ -194,7 +194,7 @@ class HierarchicalPolicy(nn.Module, Policy):
 
     @property
     def should_load_agent_state(self):
-        return True
+        return self._high_level_policy.should_load_agent_state
 
     def parameters(self):
         return self._high_level_policy.parameters()
