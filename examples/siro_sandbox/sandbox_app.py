@@ -18,7 +18,7 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
 from functools import wraps
-from typing import Any
+from typing import Any, List
 
 import magnum as mn
 import numpy as np
@@ -102,6 +102,10 @@ class SandboxDriver(GuiAppDriver):
             # limit pith angle to +/- 90 degrees
             self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
             self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
+
+        self._enable_gfx_replay_save: bool = args.enable_gfx_replay_save
+        self._gfx_replay_save_path: str = args.gfx_replay_save_path
+        self._recording_keyframes: List[str] = []
 
     @property
     def lookat_offset_yaw(self):
@@ -309,8 +313,9 @@ class SandboxDriver(GuiAppDriver):
         return walk_dir, grasp_object_id, drop_pos
 
     def _camera_pitch_and_yaw_wasd_control(self):
-        # update yaw and pitch uning WASD keys
+        # update yaw and pitch using WASD keys
         cam_rot_angle = 0.1
+
         if self.gui_input.get_key(GuiInput.KeyNS.W):
             self._lookat_offset_pitch -= cam_rot_angle
         if self.gui_input.get_key(GuiInput.KeyNS.S):
@@ -435,8 +440,31 @@ class SandboxDriver(GuiAppDriver):
             self.lookat, 0.03, mn.Color3(1, 0, 0)
         )
 
+    def _save_recorded_keyframes_to_file(self):
+        # Consolidate recorded keyframes into a single json string
+        # self._recording_keyframes format:
+        #     List['{"keyframe": {...}', '{"keyframe": {...}', ...]
+        # Output format:
+        #     '{"keyframes": [{...}, {...}, ...]}'
+        json_keyframes = "".join(
+            keyframe[12:-1] + ","
+            for keyframe in self._recording_keyframes[:-1]
+        )
+        json_keyframes += self._recording_keyframes[-1:][0][
+            12:-1
+        ]  # Last element without trailing comma
+        json_content = '{{"keyframes": [{}]}}'.format(json_keyframes)
+
+        # Save keyframes to file
+        with open(self._gfx_replay_save_path, "w") as json_file:
+            json_file.write(json_content)
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
+
+        # Capture gfx-replay file
+        if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
+            self._save_recorded_keyframes_to_file()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -517,11 +545,13 @@ class SandboxDriver(GuiAppDriver):
 
         post_sim_update_dict["cam_transform"] = cam_transform
 
-        post_sim_update_dict[
-            "keyframes"
-        ] = (
+        keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
+        post_sim_update_dict["keyframes"] = keyframes
+        if self._enable_gfx_replay_save:
+            for keyframe in keyframes:
+                self._recording_keyframes.append(keyframe)
 
         def depth_to_rgb(obs):
             converted_obs = np.concatenate(
@@ -531,7 +561,7 @@ class SandboxDriver(GuiAppDriver):
 
         # reference code for visualizing a camera sensor in the app GUI
         assert set(self._debug_images).issubset(set(self.obs.keys())), (
-            f"Cemara sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
+            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
             f"not in available sensors ids: {list(self.obs.keys())}"
         )
         debug_images = (
@@ -677,13 +707,25 @@ if __name__ == "__main__":
         help="Choose between classic and batch renderer",
     )
     # temp argument:
-    # allowes to switch between oracle baseline nav
+    # allowed to switch between oracle baseline nav
     # and random base vel action
     parser.add_argument(
         "--sample-random-baseline-base-vel",
         action="store_true",
         default=False,
         help="Sample random BaselinesController base vel",
+    )
+    parser.add_argument(
+        "--enable-gfx-replay-save",
+        action="store_true",
+        default=False,
+        help="Save the gfx-replay keyframes to file. Use --gfx-replay-save-path to specify the save location.",
+    )
+    parser.add_argument(
+        "--gfx-replay-save-path",
+        default="./data/gfx-replay.json",
+        type=str,
+        help="Path where the captured graphics replay file is saved.",
     )
 
     args = parser.parse_args()

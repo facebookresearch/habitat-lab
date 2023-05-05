@@ -81,7 +81,7 @@ Add `--gui-controlled-agent-index` followed by the agent's index you want to con
 
 If not set, it is assumed that scene is empty or all agents are policy-controlled. App switches to free camera mode in this case. User-controlled free camera lets the user observe the scene (instead of controlling one of the agents). For instance, one use case is to (eventually) observe policy-controlled agents.
 
-**Note:** currentrly, only robot controllers can be policy-controlled (as for now they perform random actions). Policy-controlled humanoid controller is not implemented yet. So, if you want to test the free camera mode, make sure you are using robot-robot config as a `--cfg` argument value (for example, `--cfg benchmark/rearrange/rearrange_easy_fetch_and_fetch.yaml`).
+**Note:** Currently, only robot controllers can be policy-controlled (as for now they perform random actions). Policy-controlled humanoid controller is not implemented yet. So, if you want to test the free camera mode, make sure you are using robot-robot config as a `--cfg` argument value (for example, `--cfg benchmark/rearrange/rearrange_easy_fetch_and_fetch.yaml`).
 
 ## Solo humanoid mode
 Set `--cfg benchmark/rearrange/rearrange_easy_human.yaml` to run app with only a user-controlled humanoid (no robot).
@@ -89,7 +89,7 @@ Set `--cfg benchmark/rearrange/rearrange_easy_human.yaml` to run app with only a
 ## First-person humanoid control
 Add `--first-person-mode` to switch to first-person humanoid control mode.
 
-## Uning FP dataset
+## Using FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
 ```
 ...
@@ -99,6 +99,9 @@ habitat.task.pddl_domain_def=fp \
 +habitat.simulator.additional_object_paths="[data/objects/ycb/configs/, data/objects/amazon_berkeley/configs/, data/objects/google_object_dataset/configs/]" \
 habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/s108294897_176710602.json.gz
 ```
+
+## Capturing Gfx-Replay Files
+Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording can be enabled with the `--enable-gfx-replay-save` argument. Capturing starts at the first frame and ends (is saved) when pressing the period (`.`) key. The `--gfx-replay-save-path` argument can be set to specify a custom save location.
 
 ## Testing BatchReplayRenderer
 

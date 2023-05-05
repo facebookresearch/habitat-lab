@@ -31,7 +31,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         cfg.num_environments = 1
         cfg.standalone = False  # Context is owned by the GLFW window
         camera_sensor_spec = habitat_sim.CameraSensorSpec()
-        camera_sensor_spec.senπsor_type = habitat_sim.SensorType.COLOR
+        camera_sensor_spec.sensor_type = habitat_sim.SensorType.COLOR
         camera_sensor_spec.uuid = self._sensor_uuid
         if viewport_rect:
             # unfortunately, at present, we only support a viewport rect placed
