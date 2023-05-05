@@ -849,7 +849,7 @@ class TaskConfig(HabitatBaseConfig):
     # Spawn parameters
     physics_stability_steps: int = 1
     num_spawn_attempts: int = 200
-    spawn_max_dists_to_obj: float = 2.0
+    spawn_max_dists_to_obj: float = 1.0
     base_angle_noise: float = 0.523599
     # EE sample parameters
     ee_sample_factor: float = 0.2
@@ -881,6 +881,7 @@ class TaskConfig(HabitatBaseConfig):
     actions: Dict[str, ActionConfig] = MISSING
     goal_type: str = "object_on_recep"
     pick_init: bool = False
+    place_init: bool = False
 
 
 @attr.s(auto_attribs=True, slots=True)

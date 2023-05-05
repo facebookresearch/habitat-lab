@@ -340,6 +340,7 @@ class ArmRelPosReducedActionStretch(RobotAction):
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
 
         self.cur_robot.arm_motor_pos = set_arm_pos
+        self.cur_robot.arm_joint_pos = set_arm_pos
 
 
 @registry.register_task_action
