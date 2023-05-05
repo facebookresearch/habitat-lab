@@ -1,17 +1,18 @@
 ---
     #dataset_path: "data/fphab-v0.2.0/hab-fp.scene_dataset_config.json"
-    dataset_path: "data/fpss/fphab/fphab.scene_dataset_config.json"
+    dataset_path: "data/fpss/fphab/fphab-uncluttered.scene_dataset_config.json"
     #dataset_path: /Users/jimmytyyang/habitat_lab_0301/FP/fpss/fphab/fphab.scene_dataset_config.json"
     additional_object_paths:
     - data/objects/ycb/configs/
-    - data/objects/amazon_berkeley/configs/
-    - data/objects/google_object_dataset/configs/"
+    # - data/objects/amazon_berkeley/configs/
+    # - data/objects/google_object_dataset/configs/"
     scene_sets:
       -
         name: "any"
         included_substrings:
           #- "102344115"
-          - "108294558_176710095"
+          #- "108294558_176710095"
+          - "105515211_173104179"
           #- "108294897_176710602"
           #- "102344307"
           #- "102815859"
@@ -476,8 +477,8 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 2
-        - 2
+        - 3
+        - 5
         orientation_sampling: up
         nav_to_min_distance: 1.5
 

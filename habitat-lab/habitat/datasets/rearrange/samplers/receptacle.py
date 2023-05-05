@@ -699,16 +699,10 @@ def parse_receptacles_from_user_config(
                     )
                 )
             elif mesh_receptacle_id_string in sub_config_key:
-                if "fphab" in parent_template_directory:
-                    mesh_file = os.path.join(
-                        parent_template_directory,
-                        sub_config.get("mesh_filepath").split("/")[-1],
-                    )
-                else:
-                    mesh_file = os.path.join(
-                        parent_template_directory,
-                        sub_config.get("mesh_filepath"),
-                    )
+                mesh_file = os.path.join(
+                    parent_template_directory,
+                    sub_config.get("mesh_filepath"),
+                )
                 assert os.path.exists(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
