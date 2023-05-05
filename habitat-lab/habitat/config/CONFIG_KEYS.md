@@ -36,6 +36,7 @@ There are many different Tasks determined by the `habitat.task.type` config:
 | Key | Description |
 | --- | --- |
 |habitat.task.type | The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`.
+|habitat.task.physics_target_sps |  The size of each simulator physics update will be 1 / physics_target_sps. |
 |habitat.task.reward_measure | The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements`, see below for a list of available measurements). For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.|
 |habitat.task.success_measure | The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration (under `habitat.task.measurements`, see below for a list of available measurements). If the measurement has a non-zero value, the episode is considered a success. |
 |habitat.task.end_on_success | If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)|

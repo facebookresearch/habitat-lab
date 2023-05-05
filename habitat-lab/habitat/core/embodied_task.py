@@ -237,6 +237,10 @@ class EmbodiedTask:
         self._config = config
         self._sim = sim
         self._dataset = dataset
+        self._physics_target_sps = config.physics_target_sps
+        assert (
+            self._physics_target_sps > 0
+        ), "physics_target_sps must be positive"
 
         self.measurements = Measurements(
             self._init_entities(
@@ -327,7 +331,7 @@ class EmbodiedTask:
                 action_name, action, episode
             )
 
-        self._sim.step_physics(1.0 / 60.0)  # type:ignore
+        self._sim.step_physics(1.0 / self._physics_target_sps)  # type:ignore
 
         if observations is None:
             observations = self._sim.step(None)

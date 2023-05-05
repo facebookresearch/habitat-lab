@@ -1077,6 +1077,7 @@ class TaskConfig(HabitatBaseConfig):
     The definition of the task in Habitat.
 
     :property type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+    :property physics_target_sps: The size of each simulator physics update will be 1 / physics_target_sps.
     :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
     :property success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :property end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
@@ -1103,6 +1104,7 @@ class TaskConfig(HabitatBaseConfig):
     -   Rearrangement reach : `RearrangeReachTask-v0`
     -   Rearrangement composite tasks : `RearrangeCompositeTask-v0`
     """
+    physics_target_sps: float = 60.0
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
     success_reward: float = 2.5
