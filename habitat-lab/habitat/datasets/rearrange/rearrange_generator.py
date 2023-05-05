@@ -500,6 +500,9 @@ class RearrangeEpisodeGenerator:
                 obj_sampler_name = random.choice(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 )
+
+                sampler = self._obj_samplers[obj_sampler_name]
+                new_receptacle = None
                 try:
                     new_receptacle = sampler.sample_receptacle(
                         self.sim, recep_tracker
