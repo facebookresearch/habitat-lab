@@ -500,19 +500,14 @@ class RearrangeEpisodeGenerator:
                 obj_sampler_name = random.choice(
                     targ_sampler_name_to_obj_sampler_names[sampler_name]
                 )
-                sampler = self._obj_samplers[obj_sampler_name]
-                new_receptacle = None
-                new_receptacle = sampler.sample_receptacle(
-                    self.sim, recep_tracker
-                )
-                # try:
-                #     new_receptacle = sampler.sample_receptacle(
-                #         self.sim, recep_tracker
-                #     )
-                # except AssertionError:
-                #     # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
-                #     failed_samplers[obj_sampler_name]
-                #     continue
+                try:
+                    new_receptacle = sampler.sample_receptacle(
+                        self.sim, recep_tracker
+                    )
+                except AssertionError:
+                    # No receptacle instances found matching this sampler's requirements, likely ran out of allocations and a different sampler should be tried
+                    failed_samplers[obj_sampler_name]
+                    continue
 
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
