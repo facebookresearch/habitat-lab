@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import random
 import time
@@ -25,6 +26,9 @@ import habitat.sims.habitat_simulator.sim_utilities as sutils
 import habitat_sim
 from habitat.config import DictConfig
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import (
+    is_navigable_given_robot_navmesh,
+)
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.datasets.rearrange.samplers.receptacle import (
     OnTopOfReceptacle,
@@ -35,6 +39,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
+from habitat_sim.nav import NavMeshSettings
 
 
 def get_sample_region_ratios(load_dict) -> Dict[str, float]:
@@ -471,7 +476,24 @@ class RearrangeEpisodeGenerator:
                 scene_base_dir, "navmeshes", scene_name + ".navmesh"
             )
 
-        self.sim.pathfinder.load_nav_mesh(navmesh_path)
+        # Load navmesh
+        if not self.cfg.regenerate_new_mesh:
+            self.sim.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            self.sim.navmesh_settings = NavMeshSettings()
+            self.sim.navmesh_settings.set_defaults()
+            self.sim.navmesh_settings.agent_radius = self.cfg.agent_radius
+            self.sim.navmesh_settings.agent_height = self.cfg.agent_height
+            self.sim.navmesh_settings.agent_max_climb = (
+                self.cfg.agent_max_climb
+            )
+            self.sim.recompute_navmesh(
+                self.sim.pathfinder,
+                self.sim.navmesh_settings,
+                include_static_objects=True,
+            )
+            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+            self.sim.pathfinder.save_nav_mesh(navmesh_path)
 
         # prepare target samplers
         self._get_object_target_samplers()
@@ -669,6 +691,25 @@ class RearrangeEpisodeGenerator:
                 )
                 if dist < self.cfg.min_dist_from_start_to_goal:
                     return None
+
+                # Add check for checking if the robot can navigate from start to goal
+                # given the navmesh of the robot
+                if self.cfg.check_navigable:
+                    collision_rate = is_navigable_given_robot_navmesh(
+                        self.sim,
+                        match_obj.translation,
+                        new_target_obj.translation,
+                        self.cfg.navmesh_offset,
+                        self.cfg.angle_threshold,
+                        self.cfg.angular_velocity,
+                        self.cfg.distance_threshold,
+                        self.cfg.linear_velocity,
+                    )
+                    if (
+                        collision_rate
+                        >= self.cfg.max_collision_rate_for_navigable
+                    ):
+                        return None
 
             # cache transforms and add visualizations
             for i, (instance_handle, value) in enumerate(

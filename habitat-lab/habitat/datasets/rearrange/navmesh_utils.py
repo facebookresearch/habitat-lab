@@ -1,29 +1,34 @@
-from typing import List
-
 import magnum as mn
 import numpy as np
 
 import habitat_sim
+from habitat.tasks.utils import get_angle
+from habitat_sim.physics import VelocityControl
 
 
-def is_collision(sim, navmesh_offset) -> bool:
+def is_collision(sim, trans, navmesh_offset) -> bool:
     """
     The function checks if the agent collides with the object
+    given the navmesh
     """
-
-    trans = sim.agents[0].scene_node.transformation
     nav_pos_3d = [np.array([xz[0], 0.0, xz[1]]) for xz in navmesh_offset]
     cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
-    is_navigable = [sim.pathfinder.is_navigable(pos) for pos in cur_pos]
+    cur_pos = [
+        np.array([xz[0], trans.translation[1], xz[2]]) for xz in cur_pos
+    ]
 
-    # No collision for each navmesh circles
-    if sum(is_navigable) == len(navmesh_offset):
-        return False
+    for pos in cur_pos:  # noqa: SIM110
+        # Return true if the pathfinder says it is not navigable
+        if not sim.pathfinder.is_navigable(pos):
+            return True
 
-    return True
+    return False
 
 
 def compute_turn(rel, turn_vel, robot_forward):
+    """
+    Computing the turnning velocity given the relative position
+    """
     is_left = np.cross(robot_forward, rel) > 0
     if is_left:
         vel = [0, -turn_vel]
@@ -32,20 +37,21 @@ def compute_turn(rel, turn_vel, robot_forward):
     return vel
 
 
-from habitat_sim.physics import VelocityControl
+class SimpleVelocityControlEnv:
+    """
+    A simple environment to control the velocity of the robot
+    """
 
-
-class velocity_control:
-    def __init__(self):
+    def __init__(self, sim_freq=120.0):
         # the velocity control
         self.vel_control = VelocityControl()
         self.vel_control.controlling_lin_vel = True
         self.vel_control.controlling_ang_vel = True
         self.vel_control.lin_vel_is_local = True
         self.vel_control.ang_vel_is_local = True
+        self._sim_freq = sim_freq
 
-    def act(self, sim, vel):
-        ori_height = sim.agents[0].scene_node.translation[1]
+    def act(self, trans, vel):
         linear_velocity = vel[0]
         angular_velocity = vel[1]
         # Map velocity actions
@@ -55,20 +61,25 @@ class velocity_control:
         self.vel_control.angular_velocity = mn.Vector3(
             [0.0, angular_velocity, 0.0]
         )
-
-        trans = sim.agents[0].scene_node.transformation
-        current_rigid_state = habitat_sim.RigidState(
+        # Compute the rigid state
+        rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
         )
-        # manually integrate the current_rigid_state
-        goal_rigid_state = self.vel_control.integrate_transform(
-            1.0 / 60.0, current_rigid_state
+        # Get the target rigit state based on the simulation frequency
+        target_rigid_state = self.vel_control.integrate_transform(
+            1 / self._sim_freq, rigid_state
+        )
+        # Get the ending pos of the agent
+        end_pos = target_rigid_state.translation
+        # Offset the height
+        end_pos[1] = trans.translation[1]
+        # Construct the target trans
+        target_trans = mn.Matrix4.from_(
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
         )
 
-        goal_rigid_state.translation[1] = ori_height
-        sim.agents[0].scene_node.translation = goal_rigid_state.translation
-        sim.agents[0].scene_node.rotation = goal_rigid_state.rotation
-        return sim
+        return target_trans
 
 
 def is_navigable_given_robot_navmesh(
@@ -84,11 +95,6 @@ def is_navigable_given_robot_navmesh(
     """
     Return True if the robot can navigate from point A
     to point B given the configuration of the navmesh.
-
-    We first get the points in the path. Then we do
-    interpolation to get the points given the distance threshold.
-    Then, for each point, we rotate the robot to see if there is a
-    single pose that can fit the robot into the space given the navmesh.
     """
 
     # Get the path finder
@@ -100,56 +106,67 @@ def is_navigable_given_robot_navmesh(
     path.requested_end = goal_pos
     # Find the path
     pf.find_path(path)
-    points = path.points
+    curr_path_points = path.points
     # Set the initial position
-    sim.agents[0].scene_node.translation = points[0]
-
+    trans = mn.Matrix4(sim.agents[0].scene_node.transformation)
+    trans.translation = curr_path_points[0]
+    # Get the robot position
+    robot_pos = np.array(trans.translation)
+    # Get the navigation target
+    final_nav_targ = np.array(curr_path_points[-1])
+    obj_targ_pos = np.array(curr_path_points[-1])
     # the velocity control
-    vc = velocity_control()
+    vc = SimpleVelocityControlEnv()
 
-    # Number of collision
+    at_goal = False
+
     collision = []
-    for i in range(len(points) - 1):
-        # Get the current location
-        cur_pos = points[i]
-        sim.agents[0].scene_node.translation = cur_pos
-        # Get the next location
-        next_pos = points[i + 1]
 
-        # Failure detection counter
-        while_counter = 0
-        angle = float("inf")
-        while abs(angle) > angle_threshold:
-            # Compute the robot facing orientation
-            rel_pos = (next_pos - cur_pos)[[0, 2]]
-            forward = np.array([1.0, 0, 0])
-            robot_forward = np.array(
-                sim.agents[0].scene_node.transformation.transform_vector(
-                    forward
-                )
-            )
-            robot_forward = robot_forward[[0, 2]]
-            angle = np.cross(robot_forward, rel_pos)
-            vel = compute_turn(rel_pos, angular_velocity, robot_forward)
-            sim = vc.act(sim, vel)
-            cur_pos = sim.agents[0].scene_node.translation
-            collision.append(is_collision(sim, navmesh_offset))
-            while_counter += 1
-            if while_counter >= 1000:
-                return 1.0
+    while not at_goal:
+        # Find the path
+        path.requested_start = robot_pos
+        path.requested_end = goal_pos
+        pf.find_path(path)
+        curr_path_points = path.points
+        cur_nav_targ = curr_path_points[1]
+        forward = np.array([1.0, 0, 0])
+        robot_forward = np.array(trans.transform_vector(forward))
+        # Compute relative target
+        rel_targ = cur_nav_targ - robot_pos
 
-        # Failure detection counter
-        while_counter = 0
-        dis = np.linalg.norm((next_pos - cur_pos)[[0, 2]])
-        while abs(dis) > distance_threshold:
-            vel = [linear_velocity, 0]
-            sim = vc.act(sim, vel)
-            cur_pos = sim.agents[0].scene_node.translation
-            dis = np.linalg.norm((next_pos - cur_pos)[[0, 2]])
-            collision.append(is_collision(sim, navmesh_offset))
-            while_counter += 1
-            if while_counter >= 1000:
-                return 1.0
+        # Compute heading angle (2D calculation)
+        robot_forward = robot_forward[[0, 2]]
+        rel_targ = rel_targ[[0, 2]]
+        rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+        # Get the angles
+        angle_to_target = get_angle(robot_forward, rel_targ)
+        angle_to_obj = get_angle(robot_forward, rel_pos)
+        # Compute the distance
+        dist_to_final_nav_targ = np.linalg.norm(
+            (final_nav_targ - robot_pos)[[0, 2]]
+        )
+        at_goal = (
+            dist_to_final_nav_targ < distance_threshold
+            and angle_to_obj < angle_threshold
+        )
+
+        if not at_goal:
+            if dist_to_final_nav_targ < distance_threshold:
+                # Do not want to look at the object to reduce collision
+                vel = [0, 0]
+                at_goal = True
+            elif angle_to_target < angle_threshold:
+                # Move towards the target
+                vel = [linear_velocity, 0]
+            else:
+                # Look at the target waypoint.
+                vel = compute_turn(rel_targ, angular_velocity, robot_forward)
+        else:
+            vel = [0, 0]
+
+        trans = vc.act(trans, vel)
+        robot_pos = trans.translation
+        collision.append(is_collision(sim, trans, navmesh_offset))
 
     return np.average(collision)
 
@@ -173,112 +190,3 @@ def is_accessible(sim, point, nav_to_min_distance) -> bool:
         dist < nav_to_min_distance
         and island_idx == sim.navmesh_classification_results["active_island"]
     )
-
-
-def compute_navmesh_island_classifications(
-    sim: habitat_sim.Simulator, active_indoor_threshold=0.85, debug=False
-):
-    """
-    Classify navmeshes as outdoor or indoor and find the largest indoor island.
-    active_indoor_threshold is acceptacle indoor|outdoor ration for an active island (for example to allow some islands with a small porch or skylight)
-    """
-    if not sim.pathfinder.is_loaded:
-        sim.navmesh_classification_results = None
-        print("No NavMesh loaded to visualize.")
-        return
-
-    sim.navmesh_classification_results = {}
-
-    sim.navmesh_classification_results["active_island"] = -1
-    sim.navmesh_classification_results[
-        "active_indoor_threshold"
-    ] = active_indoor_threshold
-    active_island_size = 0
-    number_of_indoor = 0
-    sim.navmesh_classification_results["island_info"] = {}
-    sim.indoor_islands = []
-
-    for island_ix in range(sim.pathfinder.num_islands):
-        sim.navmesh_classification_results["island_info"][island_ix] = {}
-        sim.navmesh_classification_results["island_info"][island_ix][
-            "indoor"
-        ] = island_indoor_metric(sim=sim, island_ix=island_ix)
-        if (
-            sim.navmesh_classification_results["island_info"][island_ix][
-                "indoor"
-            ]
-            > active_indoor_threshold
-        ):
-            number_of_indoor += 1
-            sim.indoor_islands.append(island_ix)
-        island_size = sim.pathfinder.island_area(island_ix)
-        if (
-            active_island_size < island_size
-            and sim.navmesh_classification_results["island_info"][island_ix][
-                "indoor"
-            ]
-            > active_indoor_threshold
-        ):
-            active_island_size = island_size
-            sim.navmesh_classification_results["active_island"] = island_ix
-    if debug:
-        print(
-            f"Found active island {sim.navmesh_classification_results['active_island']} with area {active_island_size}."
-        )
-        print(
-            f"     Found {number_of_indoor} indoor islands out of {sim.pathfinder.num_islands} total."
-        )
-    for island_ix in range(sim.pathfinder.num_islands):
-        island_info = sim.navmesh_classification_results["island_info"][
-            island_ix
-        ]
-        info_str = f"    {island_ix}: indoor ratio = {island_info['indoor']}, area = {sim.pathfinder.island_area(island_ix)}"
-        if sim.navmesh_classification_results["active_island"] == island_ix:
-            info_str += "  -- active--"
-    if debug:
-        print(info_str)
-
-
-def island_indoor_metric(
-    sim: habitat_sim.Simulator,
-    island_ix: int,
-    num_samples=100,
-    jitter_dist=0.1,
-    max_tries=1000,
-) -> float:
-    """
-    Compute a heuristic for ratio of an island inside vs. outside based on checking whether there is a roof over a set of sampled navmesh points.
-    """
-
-    assert sim.pathfinder.is_loaded
-    assert sim.pathfinder.num_islands > island_ix
-
-    # collect jittered samples
-    samples: List[np.ndarray] = []
-    for _sample_ix in range(max_tries):
-        new_sample = sim.pathfinder.get_random_navigable_point(
-            island_index=island_ix
-        )
-        too_close = False
-        for prev_sample in samples:
-            dist_to = np.linalg.norm(prev_sample - new_sample)
-            if dist_to < jitter_dist:
-                too_close = True
-                break
-        if not too_close:
-            samples.append(new_sample)
-        if len(samples) >= num_samples:
-            break
-
-    # classify samples
-    indoor_count = 0
-    for sample in samples:
-        raycast_results = sim.cast_ray(
-            habitat_sim.geo.Ray(sample, mn.Vector3(0, 1, 0))
-        )
-        if raycast_results.has_hits():
-            # assume any hit indicates "indoor"
-            indoor_count += 1
-
-    # return the ration of indoor to outdoor as the metric
-    return indoor_count / len(samples)

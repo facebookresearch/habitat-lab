@@ -217,6 +217,29 @@ class RearrangeEpisodeGeneratorConfig:
     #  }
     markers: List[Any] = field(default_factory=list)
 
+    # If we want to re-generate the nav mesh or not
+    regenerate_new_mesh: bool = True
+    # The radius of the agent in meters
+    agent_radius: float = 0.25
+    # The height of the agent in meters
+    agent_height: float = 0.7
+    # The max climb of the agent
+    agent_max_climb: float = 0.01
+    # If we want to check the navigability of the robot
+    check_navigable: bool = False
+    # The navmesh setting of the robot
+    navmesh_offset: List[Any] = field(default_factory=list)
+    # The angle threshold of the robot
+    angle_threshold: float = 0.1
+    # The angualr velocity of the robot
+    angular_velocity: float = 10
+    # The distance threshold of the robot
+    distance_threshold: float = 0.2
+    # The linear velocity of the robot
+    linear_velocity: float = 10.0
+    # The collision rate for navigation
+    max_collision_rate_for_navigable: float = 0.5
+
 
 def get_config_defaults() -> "DictConfig":
     """

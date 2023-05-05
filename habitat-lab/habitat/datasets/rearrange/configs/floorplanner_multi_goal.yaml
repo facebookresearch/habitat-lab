@@ -484,13 +484,13 @@
 
     correct_unstable_results: True
 
-    # regenerate_new_mesh: True
-    # agent_radius: 0.55 #0.25 <- spot normal
+    regenerate_new_mesh: True
+    agent_radius: 0.25
 
-    # check_navigable: False
-    # navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
-    # max_collision_rate_for_navigable: 0.3
-    # angle_threshold: 0.26
-    # angular_velocity: 1.0
-    # distance_threshold: 0.5
-    # linear_velocity: 1.0
+    check_navigable: True
+    navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
+    max_collision_rate_for_navigable: 0.3
+    angle_threshold: 0.26
+    angular_velocity: 1.0
+    distance_threshold: 0.5
+    linear_velocity: 1.0
