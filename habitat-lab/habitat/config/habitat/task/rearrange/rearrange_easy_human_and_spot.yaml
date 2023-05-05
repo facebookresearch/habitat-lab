@@ -2,10 +2,17 @@
 
 defaults:
   - /habitat/task: task_config_base
-  - /habitat/task/actions@actions.agent_0_humanoidjoint_action: humanoidjoint_action
+  # - /habitat/task/actions@actions.agent_0_humanoidjoint_action: humanoidjoint_action
+  # - /habitat/task/actions@actions: oracle_nav_action
+  - /habitat/task/actions@actions.agent_0_arm_action: arm_action
+  - /habitat/task/actions@actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@actions.agent_0_oracle_nav_action: oracle_nav_action
+  - /habitat/task/actions@actions.agent_1_oracle_nav_action: oracle_nav_action
   - /habitat/task/actions@actions.agent_1_arm_action: arm_action
   - /habitat/task/actions@actions.agent_1_base_velocity_non_cylinder: base_velocity_non_cylinder
   - /habitat/task/actions@actions.agent_1_rearrange_stop: rearrange_stop
+
   - /habitat/task/measurements:
     - object_to_goal_distance
     - articulated_agent_force
@@ -37,8 +44,18 @@ task_spec: rearrange_easy
 actions:
   # Actions are defined per agent. Unlike the sensors, actions are not
   # automatically duplicated per agent.
-  agent_0_humanoidjoint_action:
+  # agent_0_humanoidjoint_action:
+  #   agent_index : 0
+  agent_0_arm_action:
     agent_index : 0
+  agent_0_base_velocity:
+    agent_index : 0
+  agent_0_rearrange_stop:
+    agent_index : 0
+  agent_0_oracle_nav_action:
+    agent_index : 0
+  agent_1_oracle_nav_action:
+    agent_index : 1
   agent_1_arm_action:
     agent_index : 1
     arm_controller: "ArmRelPosMaskAction"

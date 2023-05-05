@@ -67,13 +67,24 @@ class BaselinesController(Controller):
     ):
         super().__init__(agent_idx, is_multi_agent)
 
+        print(cfg_path)
         config = get_baselines_config(
             cfg_path,
             [
                 # "habitat_baselines/rl/policy=hl_fixed",
                 # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
                 "habitat_baselines.num_environments=1",
-                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
+                # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
+                f"habitat.task.task_spec={env._config.task.task_spec}",
+                f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
+            ]
+            if "single_agent_pddl_planner_kinematic_oracle_humanoid"
+            in cfg_path
+            else [
+                # "habitat_baselines/rl/policy=hl_fixed",
+                # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
+                "habitat_baselines.num_environments=1",
+                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills_ma",
                 f"habitat.task.task_spec={env._config.task.task_spec}",
                 f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
             ],
@@ -83,7 +94,11 @@ class BaselinesController(Controller):
         )
         self._env_ac = env.action_space
         env_obs = env.observation_space
-        self._agent_k = f"agent_{agent_idx}_"
+        if self._is_multi_agent:
+            self._agent_k = f"agent_{self._agent_idx}_"
+        else:
+            self._agent_k = ""
+
         if is_multi_agent:
             self._env_ac = clean_dict(self._env_ac, self._agent_k)
             env_obs = clean_dict(env_obs, self._agent_k)
@@ -130,9 +145,10 @@ class BaselinesController(Controller):
         obs = flatten_dict(obs)
         obs = TensorDict(
             {
-                k[len(self._agent_k) :]: torch.tensor(v).unsqueeze(0)
+                k[
+                    len(self._agent_k) if k.startswith(self._agent_k) else 0 :
+                ]: torch.tensor(v).unsqueeze(0)
                 for k, v in obs.items()
-                if k.startswith(self._agent_k)
             }
         )
         with torch.no_grad():
@@ -506,19 +522,29 @@ class GuiHumanoidController(GuiController):
 class ControllerHelper:
     def __init__(self, env, args, gui_input):
         self._env = env
-        self.n_robots = len(env._sim.agents_mgr)
-        is_multi_agent = self.n_robots > 1
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
+        sim_agents_configs = self._env.sim.habitat_config.agents
+        n_agents = len(
+            sim_agents_configs
+        )  # or self.n_robots = len(env._sim.agents_mgr)
+        is_multi_agent = n_agents > 1
 
         self.controllers: List[Controller] = [
             BaselinesController(
-                agent_index,
-                is_multi_agent,
-                "rearrange/rl_hierarchical.yaml",
-                env,
+                agent_idx=agent_index,
+                is_multi_agent=is_multi_agent,
+                cfg_path=(
+                    "experiments_hab3/single_agent_pddl_planner_kinematic_oracle_humanoid.yaml"
+                    if agent_config.articulated_agent_type
+                    == "KinematicHumanoid"
+                    else "rearrange/rl_hierarchical.yaml"
+                ),
+                env=env,
                 sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
             )
-            for agent_index in range(self.n_robots)
+            for agent_index, (_, agent_config) in enumerate(
+                sim_agents_configs.items()
+            )
             if agent_index != self._gui_controlled_agent_index
         ]
 
@@ -549,7 +575,7 @@ class ControllerHelper:
                 self._gui_controlled_agent_index, gui_agent_controller
             )
 
-        self.all_hxs = [None for _ in range(self.n_robots)]
+        self.all_hxs = [None for _ in range(n_agents)]
         self.active_controllers = list(
             range(len(self.controllers))
         )  # assuming all controllers are active

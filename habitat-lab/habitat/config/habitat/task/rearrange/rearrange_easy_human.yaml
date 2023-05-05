@@ -2,8 +2,8 @@
 
 defaults:
   - /habitat/task: task_config_base
-  - /habitat/task/actions:
-    - humanoidjoint_action
+  # - /habitat/task/actions:
+  #   - humanoidjoint_action
   - /habitat/task/measurements:
     - object_to_goal_distance
     - articulated_agent_force
@@ -21,6 +21,7 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
+    - all_predicates
   - _self_
 
 type: RearrangeCompositeTask-v0

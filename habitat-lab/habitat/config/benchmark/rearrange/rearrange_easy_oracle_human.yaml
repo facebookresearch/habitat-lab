@@ -1,0 +1,59 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
+  - /habitat/task/rearrange: rearrange_easy_human
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - all_predicates
+  - /habitat/dataset/rearrangement: replica_cad
+  - /habitat/task/actions:
+    - base_velocity
+    - rearrange_stop
+    - pddl_apply_action
+    - oracle_nav_action
+  - _self_
+
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_head_depth
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_joint
+  environment:
+    max_episode_steps: 1500
+  task:
+    actions:
+      oracle_nav_action:
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1.0
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+    grasp_impulse: 10000.0
+    hold_thresh: 0.2
+    agents_order:
+      - agent_0
+    agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/replica_cad/rearrange/v1/{split}/rearrange_easy.json.gz
