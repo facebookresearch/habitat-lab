@@ -550,7 +550,8 @@ class SandboxDriver(GuiAppDriver):
         )
         post_sim_update_dict["keyframes"] = keyframes
         if self._enable_gfx_replay_save:
-            self._recording_keyframes.append(keyframes[0])
+            for keyframe in keyframes:
+                self._recording_keyframes.append(keyframe)
 
         def depth_to_rgb(obs):
             converted_obs = np.concatenate(
