@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 import habitat.gym.gym_wrapper as gym_wrapper
+import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
@@ -390,10 +391,11 @@ class GuiHumanoidController(Controller):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop):
+    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
         self._hint_walk_dir = walk_dir
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
+        self._cam_yaw = cam_yaw
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
@@ -420,6 +422,25 @@ class GuiHumanoidController(Controller):
                 grasp_object_id
             )
             rigid_obj.translation = drop_pos
+
+    def _update_controller_to_navmesh(self):
+        # prevents humanoid agent from stepping through the walls and obstacles
+        # https://github.com/facebookresearch/habitat-lab/blob/2b7eaf9266a8916c0851c79043236ff2e55eaca0/habitat-lab/habitat/tasks/rearrange/actions/oracle_nav_action.py#L153
+        articulated_agent = self.get_articulated_agent()
+        trans = articulated_agent.sim_obj.transformation
+        rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
+        )
+        target_rigid_state_trans = (
+            self._humanoid_controller.obj_transform_base.translation
+        )
+        end_pos = self._env._sim.step_filter(
+            rigid_state.translation, target_rigid_state_trans
+        )
+
+        # Offset the base
+        end_pos -= articulated_agent.params.base_offset
+        self._humanoid_controller.obj_transform_base.translation = end_pos
 
     def act(self, obs, env):
         self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
@@ -450,7 +471,7 @@ class GuiHumanoidController(Controller):
             env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
         if do_humanoidjoint_action:
-            humancontroller_base_user_input = [0, 0]
+            humancontroller_base_user_input = np.zeros(3)
             # temp keyboard controls to test humanoid controller
             if gui_input.get_key(KeyNS.I):
                 # move in world-space x+ direction ("east")
@@ -461,17 +482,26 @@ class GuiHumanoidController(Controller):
 
             if self._hint_walk_dir:
                 humancontroller_base_user_input[0] += self._hint_walk_dir.x
-                humancontroller_base_user_input[1] += self._hint_walk_dir.z
+                humancontroller_base_user_input[2] += self._hint_walk_dir.z
+
+            else:
+                rot_y_rad = -self._cam_yaw + np.pi
+                rot_y_matrix = np.array(
+                    [
+                        [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
+                        [0, 1, 0],
+                        [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad)],
+                    ]
+                )
+                humancontroller_base_user_input = (
+                    rot_y_matrix @ humancontroller_base_user_input
+                )
 
         action_names = []
         action_args = {}
         if do_humanoidjoint_action:
             if True:
-                relative_pos = mn.Vector3(
-                    humancontroller_base_user_input[0],
-                    0,
-                    humancontroller_base_user_input[1],
-                )
+                relative_pos = mn.Vector3(humancontroller_base_user_input)
                 # pose, root_trans = self._humanoid_controller.get_walk_pose(
                 #     relative_pos, distance_multiplier=1.0
                 # )
@@ -480,6 +510,7 @@ class GuiHumanoidController(Controller):
                 # )
                 # Use the controller
                 self._humanoid_controller.calculate_walk_pose(relative_pos)
+                self._update_controller_to_navmesh()
                 humanoidjoint_action = self._humanoid_controller.get_pose()
             else:
                 pass
