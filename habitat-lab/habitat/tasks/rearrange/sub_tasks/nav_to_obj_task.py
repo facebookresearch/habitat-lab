@@ -132,8 +132,7 @@ class DynNavRLEnv(RearrangeTask):
 
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
-            camera_rot = -1.7375 if self._pick_init else 0.0
-            camera_rot = -1.7375 if self._place_init else 0.0
+            camera_rot = -1.7375 if self._pick_init or self._place_init else 0.0
             sim.robot.arm_motor_pos = np.array(
                 [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
             )
@@ -173,7 +172,7 @@ class DynNavRLEnv(RearrangeTask):
                 ]
             )
 
-            start_pos, angle_to_obj, was_succ = get_robot_spawns(
+            start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
                 snap_pos,
                 self._config.base_angle_noise,
                 self._config.spawn_max_dists_to_obj,
@@ -182,7 +181,7 @@ class DynNavRLEnv(RearrangeTask):
                 self._config.physics_stability_steps,
             )
 
-            if was_succ:
+            if was_unsucc:
                 rearrange_logger.error(
                     f"Episode {episode.episode_id} failed to place robot"
                 )
@@ -196,11 +195,9 @@ class DynNavRLEnv(RearrangeTask):
 
             if isinstance(sim.robot, StretchRobot):
                 sim.robot.arm_motor_pos = np.array(
-                    # [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125] # gripper down
                     [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125] # gripper straight out
                 )
                 sim.robot.arm_joint_pos = np.array(
-                    # [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
                     [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125]
                 )
 
@@ -215,17 +212,16 @@ class DynNavRLEnv(RearrangeTask):
                     for r in spawn_recs
                 ]
             )
-            start_pos, angle_to_obj, was_succ = get_robot_spawns(
+            start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
                 target_positions=snap_pos,
-                # rotation_perturbation_noise=self._config.base_angle_noise,
-                rotation_perturbation_noise=0.0,
+                rotation_perturbation_noise=self._config.base_angle_noise,
                 distance_threshold=self._config.spawn_max_dists_to_obj,
                 sim=sim,
                 num_spawn_attempts=self._config.num_spawn_attempts,
                 physics_stability_steps=self._config.physics_stability_steps,
             )
 
-            if was_succ:
+            if was_unsucc:
                 rearrange_logger.error(
                     f"Episode {episode.episode_id} failed to place robot"
                 )
