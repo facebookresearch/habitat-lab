@@ -539,6 +539,8 @@
 
     regenerate_new_mesh: True
     agent_radius: 0.25
+    agent_height: 1.41
+    agent_max_climb: 0.01
 
     check_navigable: True
     navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]

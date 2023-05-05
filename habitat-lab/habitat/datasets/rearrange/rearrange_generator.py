@@ -30,12 +30,13 @@ from habitat.datasets.rearrange.navmesh_utils import (
     is_navigable_given_robot_navmesh,
 )
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-from habitat.datasets.rearrange.samplers.receptacle import (
+from habitat.datasets.rearrange.samplers.receptacle import (  # get_receptacle_viewpoints,
     OnTopOfReceptacle,
     Receptacle,
     ReceptacleSet,
     ReceptacleTracker,
     find_receptacles,
+    get_navigable_receptacles,
 )
 from habitat.sims.habitat_simulator.debug_visualizer import DebugVisualizer
 from habitat.utils.common import cull_string_list_by_substrings
@@ -537,7 +538,12 @@ class RearrangeEpisodeGenerator:
                 if recep_tracker.allocate_one_placement(new_receptacle):
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
-                new_target_receptacles.append(new_receptacle)
+                new_receptacle = get_navigable_receptacles(
+                    self.sim, [new_receptacle]
+                )  # type: ignore
+                # _, new_receptacle = get_receptacle_viewpoints(self.sim, new_receptacle)
+                if len(new_receptacle) != 0:  # type: ignore
+                    new_target_receptacles.append(new_receptacle[0])  # type: ignore
 
             target_receptacles[obj_sampler_name].extend(new_target_receptacles)
             all_target_receptacles.extend(new_target_receptacles)
@@ -548,8 +554,9 @@ class RearrangeEpisodeGenerator:
         for sampler, (sampler_name, num_targets) in zip(
             self._target_samplers.values(), target_numbers.items()
         ):
-            new_goal_receptacles = []
-            for _ in range(num_targets):
+            new_goal_receptacles = []  # type: ignore
+            # for _ in range(num_targets):
+            while len(new_goal_receptacles) < num_targets:
                 new_receptacle = sampler.sample_receptacle(
                     self.sim,
                     recep_tracker,
@@ -560,7 +567,11 @@ class RearrangeEpisodeGenerator:
                     # used up new_receptacle, need to recompute the sampler's receptacle_candidates
                     sampler.receptacle_candidates = None
 
-                new_goal_receptacles.append(new_receptacle)
+                new_receptacle = get_navigable_receptacles(
+                    self.sim, [new_receptacle]
+                )  # type: ignore
+                if len(new_receptacle) != 0:  # type: ignore
+                    new_goal_receptacles.append(new_receptacle[0])  # type: ignore
 
             goal_receptacles[sampler_name] = new_goal_receptacles
             all_goal_receptacles.extend(new_goal_receptacles)

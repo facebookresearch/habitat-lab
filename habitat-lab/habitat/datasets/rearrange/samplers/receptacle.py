@@ -16,10 +16,14 @@ import corrade as cr
 import magnum as mn
 import numpy as np
 import trimesh
+from tqdm import tqdm
 
 import habitat_sim
 from habitat.core.logging import logger
+from habitat.datasets.rearrange.navmesh_utils import is_accessible
+from habitat.datasets.rearrange.viewpoints import generate_viewpoints
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
+from habitat.tasks.rearrange.utils import get_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 
 # global module singleton for mesh importing instantiated upon first import
@@ -373,8 +377,6 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-
-        # Init the trimesh
         self.trimesh = trimesh.Trimesh(
             **trimesh.triangles.to_kwargs(triangles)
         )
@@ -908,3 +910,99 @@ class ReceptacleTracker:
                     ]
             return True
         return False
+
+
+def get_obj_manager_for_receptacle(
+    sim: habitat_sim.Simulator, receptacle: Receptacle
+):
+    if receptacle.is_parent_object_articulated:
+        obj_mgr = sim.get_articulated_object_manager()
+    else:
+        obj_mgr = sim.get_rigid_object_manager()
+    return obj_mgr
+
+
+def get_receptacle_viewpoints(
+    sim: habitat_sim.Simulator,
+    receptacles: List[Receptacle],
+    debug_viz: bool = False,
+):
+    viewpoints = {}
+    viewable_receptacles = []
+    logger.info("Getting receptacle viewpoints...")
+    for receptacle in tqdm(receptacles):
+        handle = receptacle.parent_object_handle
+        if handle in viewpoints:
+            continue
+        obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
+        receptacle_obj = obj_mgr.get_object_by_handle(handle)
+        receptacle_viewpoints = generate_viewpoints(
+            sim, receptacle_obj, debug_viz=debug_viz
+        )
+        if len(receptacle_viewpoints) > 0:
+            viewpoints[handle] = receptacle_viewpoints
+            viewable_receptacles.append(receptacle)
+    return viewpoints, viewable_receptacles
+
+
+def get_navigable_receptacles(
+    sim: habitat_sim.Simulator,
+    receptacles: List[Receptacle],
+) -> List[Receptacle]:
+    """Given a list of receptacles, return the ones that are navigable from the given navmesh island"""
+    navigable_receptacles: List[Receptacle] = []
+    for receptacle in receptacles:
+        obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
+        receptacle_obj = obj_mgr.get_object_by_handle(
+            receptacle.parent_object_handle
+        )
+        receptacle_bb = get_aabb(
+            receptacle_obj.object_id, sim, transformed=True
+        )
+
+        if (
+            receptacle_bb.size_y()
+            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
+        ):
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+            )
+            continue
+
+        bounds = receptacle.bounds  # type: ignore
+        if bounds.size_x() < 0.3 or bounds.size_z() < 0.3:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping."
+            )
+            continue
+
+        recep_points = [
+            receptacle_bb.back_bottom_left,
+            receptacle_bb.back_bottom_right,
+            receptacle_bb.front_bottom_left,
+            receptacle_bb.front_bottom_right,
+        ]
+        # At least 2 corners should be accessible
+        corners_accessible = (
+            sum(
+                is_accessible(sim, point, nav_to_min_distance=1.5)
+                for point in recep_points
+            )
+            >= 2
+        )
+
+        if not corners_accessible:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible."
+            )
+            continue
+        else:
+            logger.info(
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is accessible."
+            )
+            navigable_receptacles.append(receptacle)
+
+    logger.info(
+        f"Found {len(navigable_receptacles)}/{len(receptacles)} accessible receptacles."
+    )
+    return navigable_receptacles

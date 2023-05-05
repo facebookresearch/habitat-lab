@@ -222,7 +222,7 @@ class RearrangeEpisodeGeneratorConfig:
     # The radius of the agent in meters
     agent_radius: float = 0.25
     # The height of the agent in meters
-    agent_height: float = 0.7
+    agent_height: float = 0.61
     # The max climb of the agent
     agent_max_climb: float = 0.01
     # If we want to check the navigability of the robot

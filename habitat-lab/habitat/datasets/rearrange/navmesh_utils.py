@@ -107,6 +107,8 @@ def is_navigable_given_robot_navmesh(
     # Find the path
     pf.find_path(path)
     curr_path_points = path.points
+    if len(curr_path_points) == 0:
+        return 1.0
     # Set the initial position
     trans = mn.Matrix4(sim.agents[0].scene_node.transformation)
     trans.translation = curr_path_points[0]
@@ -184,9 +186,10 @@ def is_accessible(sim, point, nav_to_min_distance) -> bool:
     if nav_to_min_distance == -1:
         return True
     snapped = sim.pathfinder.snap_point(point)
-    island_idx: int = sim.pathfinder.get_island(snapped)
+    # island_idx: int = sim.pathfinder.get_island(snapped)
     dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
     return (
-        dist < nav_to_min_distance
-        and island_idx == sim.navmesh_classification_results["active_island"]
+        dist
+        < nav_to_min_distance
+        # and island_idx == sim.navmesh_classification_results["active_island"]
     )
