@@ -18,11 +18,11 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
 from functools import wraps
-from typing import Any
+from typing import Any, List
 
 import magnum as mn
 import numpy as np
-from controllers import ControllerHelper
+from controllers import ControllerHelper, GuiHumanoidController
 from magnum.platform.glfw import Application
 
 import habitat
@@ -30,7 +30,6 @@ import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
-    OracleNavActionConfig,
     PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
@@ -70,20 +69,51 @@ class SandboxDriver(GuiAppDriver):
 
         self.ctrl_helper = ControllerHelper(self.env, args, gui_input)
 
-        self.gui_humanoid_ctrl = self.ctrl_helper.get_gui_humanoid_controller()
+        self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
 
         self.ctrl_helper.on_environment_reset()
 
         self.cam_zoom_dist = 1.0
+        self._max_zoom_dist = 50.0
+        self._min_zoom_dist = 0.02
+
         self.gui_input = gui_input
 
         self._debug_line_render = None
         self._debug_images = args.debug_images
+
+        self._held_target_obj_idx = None
+        self._viz_anim_fraction = 0.0
+
+        self.lookat = None
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
-        # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
-        self._lookat_offset_yaw = 0.785
-        self._lookat_offset_pitch = 0.955
+        self._first_person_mode = args.first_person_mode
+        if self._first_person_mode:
+            self._lookat_offset_yaw = 0.0
+            self._lookat_offset_pitch = 0.0
+            # limit pith angle to +/- 45 degrees in first-person mode
+            self._min_lookat_offset_pitch = -0.785398 + 1e-5
+            self._max_lookat_offset_pitch = 0.785398 - 1e-5
+        else:
+            # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
+            self._lookat_offset_yaw = 0.785
+            self._lookat_offset_pitch = 0.955
+            # limit pith angle to +/- 90 degrees
+            self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
+            self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
+
+        self._enable_gfx_replay_save: bool = args.enable_gfx_replay_save
+        self._gfx_replay_save_path: str = args.gfx_replay_save_path
+        self._recording_keyframes: List[str] = []
+
+    @property
+    def lookat_offset_yaw(self):
+        return self.to_zero_2pi_range(self._lookat_offset_yaw)
+
+    @property
+    def lookat_offset_pitch(self):
+        return self._lookat_offset_pitch
 
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
@@ -93,23 +123,54 @@ class SandboxDriver(GuiAppDriver):
     def get_sim(self) -> Any:
         return self.env.task._sim
 
+    def draw_nav_hint_from_agent(self, end_pos, color):
+        agent_idx = 0
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
+        agent_pos = art_obj.transformation.translation
+        # todo: get forward_dir from FPS camera yaw, not art_obj.transformation
+        # (the problem with art_obj.transformation is that it includes a "wobble"
+        # introduced by the walk animation)
+        forward_dir = art_obj.transformation.transform_vector(
+            mn.Vector3(0, 0, 1)
+        )
+        forward_dir[1] = 0
+
+        self.draw_nav_hint(
+            agent_pos, forward_dir, end_pos, color, self._viz_anim_fraction
+        )
+
     def visualize_task(self):
         sim = self.get_sim()
         idxs, goal_pos = sim.get_targets()
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
 
-        for i in range(len(idxs)):
-            radius = 0.25
-            goal_color = mn.Color3(0, 153 / 255, 51 / 255)  # green
-            target_color = mn.Color4(1, 1, 1, 0.1)  # white, almost transparent
-            self._debug_line_render.draw_circle(
-                goal_pos[i], radius, goal_color
-            )
-            self._debug_line_render.draw_transformed_line(
-                target_pos[i], goal_pos[i], target_color, goal_color
-            )
-            # self._debug_line_render.draw_circle(target_pos[i], radius, goal_color)
+        if self._held_target_obj_idx != None:
+            color = mn.Color3(0, 255 / 255, 0)  # green
+            try:
+                target_idxs = np.where(idxs == self._held_target_obj_idx)
+                if len(target_idxs):
+                    self.draw_nav_hint_from_agent(
+                        mn.Vector3(goal_pos[target_idxs[0][0]]), color
+                    )
+            except ValueError:
+                pass
+        else:
+            for i in range(len(idxs)):
+                color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
+                this_target_pos = target_pos[i]
+                threshold = 0.2  # distance in meters
+                if (
+                    mn.Vector3(this_target_pos) - mn.Vector3(goal_pos[i])
+                ).length() < threshold:
+                    # object is already at goal pos
+                    continue
+                else:
+                    self.draw_nav_hint_from_agent(
+                        mn.Vector3(this_target_pos), color
+                    )
 
     def viz_and_get_grasp_drop_hints(self):
         object_color = mn.Color3(255 / 255, 255 / 255, 0)
@@ -122,7 +183,11 @@ class SandboxDriver(GuiAppDriver):
             return None, None
 
         # hack move ray below ceiling (todo: base this on humanoid agent base y, so that it works in multi-floor homes)
-        raycast_start_y = 2.0
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
+        raycast_start_y = art_obj.transformation.translation[1]
         if ray.origin.y < raycast_start_y:
             return None, None
 
@@ -141,7 +206,8 @@ class SandboxDriver(GuiAppDriver):
         hit_info = raycast_results.hits[0]
         # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
 
-        if self.gui_humanoid_ctrl.is_grasped:
+        if self.gui_agent_ctrl.is_grasped:
+            assert self._held_target_obj_idx is not None
             self._debug_line_render.draw_circle(
                 hit_info.point, object_highlight_radius, object_color
             )
@@ -149,6 +215,7 @@ class SandboxDriver(GuiAppDriver):
                 drop_pos = hit_info.point + mn.Vector3(
                     0, object_drop_height, 0
                 )
+                self._held_target_obj_idx = None
                 return None, drop_pos
         else:
             # Currently, it's too hard to select objects that are very small
@@ -180,6 +247,7 @@ class SandboxDriver(GuiAppDriver):
                             GuiInput.MouseNS.LEFT
                         ):
                             grasp_object_id = hit_info.object_id
+                            self._held_target_obj_idx = 0  # temp hack; no way to look this up currently from hit_info.object_id
                             return grasp_object_id, None
 
         return None, None
@@ -198,7 +266,7 @@ class SandboxDriver(GuiAppDriver):
         dist_to_floor_y = (ray.origin.y - floor_y) / -ray.direction.y
         target_on_floor = ray.origin + ray.direction * dist_to_floor_y
 
-        agent_idx = 0
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
         art_obj = (
             self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
         )
@@ -245,22 +313,28 @@ class SandboxDriver(GuiAppDriver):
         return walk_dir, grasp_object_id, drop_pos
 
     def _camera_pitch_and_yaw_wasd_control(self):
-        # update yaw and pitch uning WASD keys
-        cam_rot_angle = 0.05
+        # update yaw and pitch using WASD keys
+        cam_rot_angle = 0.1
+
         if self.gui_input.get_key(GuiInput.KeyNS.W):
-            self._lookat_offset_pitch += cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.S):
             self._lookat_offset_pitch -= cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.S):
+            self._lookat_offset_pitch += cam_rot_angle
+        self._lookat_offset_pitch = np.clip(
+            self._lookat_offset_pitch,
+            self._min_lookat_offset_pitch,
+            self._max_lookat_offset_pitch,
+        )
         if self.gui_input.get_key(GuiInput.KeyNS.A):
-            self._lookat_offset_yaw += cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.D):
             self._lookat_offset_yaw -= cam_rot_angle
+        if self.gui_input.get_key(GuiInput.KeyNS.D):
+            self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
         # if Q is held update yaw and pitch
         # by scale * mouse relative position delta
-        if self.gui_input.get_key(GuiInput.KeyNS.Q):
-            scale = 1 / 30
+        if self.gui_input.get_key(GuiInput.KeyNS.R):
+            scale = 1 / 50
             self._lookat_offset_yaw += (
                 scale * self.gui_input._relative_mouse_position[0]
             )
@@ -268,17 +342,145 @@ class SandboxDriver(GuiAppDriver):
                 scale * self.gui_input._relative_mouse_position[1]
             )
 
+    def draw_nav_hint(
+        self, start_pos, start_dir, end_pos, color, anim_fraction
+    ):
+        assert isinstance(start_pos, mn.Vector3)
+        assert isinstance(start_dir, mn.Vector3)
+        assert isinstance(end_pos, mn.Vector3)
+
+        bias_weight = 0.5
+        biased_dir = (
+            start_dir + (end_pos - start_pos).normalized() * bias_weight
+        ).normalized()
+
+        start_dir_weight = min(4.0, (end_pos - start_pos).length() / 2)
+        ctrl_pts = [
+            start_pos,
+            start_pos + biased_dir * start_dir_weight,
+            end_pos,
+            end_pos,
+        ]
+
+        steps_per_meter = 10
+        pad_meters = 1.0
+        alpha_ramp_dist = 1.0
+        num_steps = max(
+            2,
+            int(
+                ((end_pos - start_pos).length() + pad_meters) * steps_per_meter
+            ),
+        )
+
+        prev_pos = None
+        end_radius = 0.4
+
+        for step_idx in range(num_steps):
+            t = step_idx / (num_steps - 1) + anim_fraction * (
+                1 / (num_steps - 1)
+            )
+            pos = evaluate_cubic_bezier(ctrl_pts, t)
+
+            if (pos - end_pos).length() < end_radius:
+                break
+
+            if step_idx > 0:
+                alpha = min(1.0, (pos - start_pos).length() / alpha_ramp_dist)
+
+                radius = 0.05
+                num_segments = 12
+                # todo: use safe_normalize
+                normal = (pos - prev_pos).normalized()
+                color_with_alpha = mn.Color4(color)
+                color_with_alpha[3] *= alpha
+                self._debug_line_render.draw_circle(
+                    pos, radius, color_with_alpha, num_segments, normal
+                )
+            prev_pos = pos
+
+        self._debug_line_render.draw_circle(end_pos, end_radius, color, 24)
+
+    def _free_camera_lookat_control(self):
+        if self.lookat is None:
+            # init lookat
+            self.lookat = np.array(
+                self.get_sim().sample_navigable_point()
+            ) + np.array([0, 1, 0])
+        else:
+            # update lookat
+            move_delta = 0.1
+            move = np.zeros(3)
+            if self.gui_input.get_key(GuiInput.KeyNS.UP):
+                move[0] -= move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.DOWN):
+                move[0] += move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.E):
+                move[1] += move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.Q):
+                move[1] -= move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.LEFT):
+                move[2] += move_delta
+            if self.gui_input.get_key(GuiInput.KeyNS.RIGHT):
+                move[2] -= move_delta
+
+            # align move forward direction with lookat direction
+            rotation_rad = -self.lookat_offset_yaw
+            rot_matrix = np.array(
+                [
+                    [np.cos(rotation_rad), 0, np.sin(rotation_rad)],
+                    [0, 1, 0],
+                    [-np.sin(rotation_rad), 0, np.cos(rotation_rad)],
+                ]
+            )
+
+            self.lookat += mn.Vector3(rot_matrix @ move)
+
+        # highlight the lookat translation as a red circle
+        self._debug_line_render.draw_circle(
+            self.lookat, 0.03, mn.Color3(1, 0, 0)
+        )
+
+    def _save_recorded_keyframes_to_file(self):
+        # Consolidate recorded keyframes into a single json string
+        # self._recording_keyframes format:
+        #     List['{"keyframe": {...}', '{"keyframe": {...}', ...]
+        # Output format:
+        #     '{"keyframes": [{...}, {...}, ...]}'
+        json_keyframes = "".join(
+            keyframe[12:-1] + ","
+            for keyframe in self._recording_keyframes[:-1]
+        )
+        json_keyframes += self._recording_keyframes[-1:][0][
+            12:-1
+        ]  # Last element without trailing comma
+        json_content = '{{"keyframes": [{}]}}'.format(json_keyframes)
+
+        # Save keyframes to file
+        with open(self._gfx_replay_save_path, "w") as json_file:
+            json_file.write(json_content)
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
 
-        (
-            walk_dir,
-            grasp_object_id,
-            drop_pos,
-        ) = self.viz_and_get_humanoid_hints()
-        self.gui_humanoid_ctrl.set_act_hints(
-            walk_dir, grasp_object_id, drop_pos
-        )
+        # Capture gfx-replay file
+        if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
+            self._save_recorded_keyframes_to_file()
+
+        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
+        viz_anim_speed = 2.0
+        self._viz_anim_fraction = (
+            self._viz_anim_fraction + dt * viz_anim_speed
+        ) % 1.0
+
+        if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
+            (
+                walk_dir,
+                grasp_object_id,
+                drop_pos,
+            ) = self.viz_and_get_humanoid_hints()
+            self.gui_agent_ctrl.set_act_hints(
+                walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
+            )
 
         action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
 
@@ -303,42 +505,53 @@ class SandboxDriver(GuiAppDriver):
                 self.cam_zoom_dist /= (
                     1.0 + self.gui_input.mouse_scroll_offset * zoom_sensitivity
                 )
-            max_zoom_dist = 50.0
-            min_zoom_dist = 0.1
             self.cam_zoom_dist = mn.math.clamp(
-                self.cam_zoom_dist, min_zoom_dist, max_zoom_dist
+                self.cam_zoom_dist, self._min_zoom_dist, self._max_zoom_dist
             )
 
-        agent_idx = 0
-        art_obj = (
-            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
-        )
-        robot_root = art_obj.transformation
-        lookat = robot_root.translation + mn.Vector3(0, 1, 0)
         # two ways for camera pitch and yaw control for UX comparison:
         # 1) hold WASD keys
         self._camera_pitch_and_yaw_wasd_control()
-        # 2) hold Q and move mouse
+        # 2) hold R and move mouse
         self._camera_pitch_and_yaw_mouse_control()
+
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        if agent_idx is None:
+            self._free_camera_lookat_control()
+            lookat = self.lookat
+        else:
+            art_obj = (
+                self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+            )
+            robot_root = art_obj.transformation
+            lookat = robot_root.translation + mn.Vector3(0, 1, 0)
+
+        if self._first_person_mode:
+            self.cam_zoom_dist = self._min_zoom_dist
+            lookat += 0.075 * robot_root.backward
+            lookat -= mn.Vector3(0, 0.2, 0)
+
         offset = mn.Vector3(
-            np.cos(self._lookat_offset_yaw)
-            * np.cos(self._lookat_offset_pitch),
-            np.sin(self._lookat_offset_pitch),
-            np.sin(self._lookat_offset_yaw)
-            * np.cos(self._lookat_offset_pitch),
+            np.cos(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
+            np.sin(self.lookat_offset_pitch),
+            np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
         )
+
         cam_transform = mn.Matrix4.look_at(
             lookat + offset.normalized() * self.cam_zoom_dist,
             lookat,
             mn.Vector3(0, 1, 0),
         )
+
         post_sim_update_dict["cam_transform"] = cam_transform
 
-        post_sim_update_dict[
-            "keyframes"
-        ] = (
+        keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
+        post_sim_update_dict["keyframes"] = keyframes
+        if self._enable_gfx_replay_save:
+            for keyframe in keyframes:
+                self._recording_keyframes.append(keyframe)
 
         def depth_to_rgb(obs):
             converted_obs = np.concatenate(
@@ -348,7 +561,7 @@ class SandboxDriver(GuiAppDriver):
 
         # reference code for visualizing a camera sensor in the app GUI
         assert set(self._debug_images).issubset(set(self.obs.keys())), (
-            f"Cemara sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
+            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
             f"not in available sensors ids: {list(self.obs.keys())}"
         )
         debug_images = (
@@ -360,6 +573,31 @@ class SandboxDriver(GuiAppDriver):
         ]
 
         return post_sim_update_dict
+
+    @staticmethod
+    def to_zero_2pi_range(radians):
+        """Helper method to properly clip radians to [0, 2pi] range."""
+        return (
+            (2 * np.pi) - ((-radians) % (2 * np.pi))
+            if radians < 0
+            else radians % (2 * np.pi)
+        )
+
+
+def evaluate_cubic_bezier(ctrl_pts, t):
+    assert len(ctrl_pts) == 4
+    weights = (
+        pow(1 - t, 3),
+        3 * t * pow(1 - t, 2),
+        3 * pow(t, 2) * (1 - t),
+        pow(t, 3),
+    )
+
+    result = weights[0] * ctrl_pts[0]
+    for i in range(1, 4):
+        result += weights[i] * ctrl_pts[i]
+
+    return result
 
 
 def parse_debug_third_person(args, framebuffer_size):
@@ -404,10 +642,15 @@ if __name__ == "__main__":
         help="Vertical resolution of the window.",
     )
     parser.add_argument(
-        "--humanoid-user-agent",
-        action="store_true",
-        default=False,
-        help="Set to true if the user-controlled agent is a humanoid. Set to false if the user-controlled agent is a robot.",
+        "--gui-controlled-agent-index",
+        type=int,
+        default=None,
+        help=(
+            "GUI-controlled agent index (must be >= 0 and < number of agents). "
+            "Defaults to None, indicating that all the agents are policy-controlled. "
+            "If none of the agents is GUI-controlled, the camera is switched to 'free camera' mode "
+            "that lets the user observe the scene (instead of controlling one of the agents)"
+        ),
     )
     parser.add_argument(
         "--disable-inverse-kinematics",
@@ -457,6 +700,34 @@ if __name__ == "__main__":
         type=int,
         help="If specified, use the specified viewport height for the debug third-person camera",
     )
+    parser.add_argument(
+        "--first-person-mode",
+        action="store_true",
+        default=False,
+        help="Choose between classic and batch renderer",
+    )
+    # temp argument:
+    # allowed to switch between oracle baseline nav
+    # and random base vel action
+    parser.add_argument(
+        "--sample-random-baseline-base-vel",
+        action="store_true",
+        default=False,
+        help="Sample random BaselinesController base vel",
+    )
+    parser.add_argument(
+        "--enable-gfx-replay-save",
+        action="store_true",
+        default=False,
+        help="Save the gfx-replay keyframes to file. Use --gfx-replay-save-path to specify the save location.",
+    )
+    parser.add_argument(
+        "--gfx-replay-save-path",
+        default="./data/gfx-replay.json",
+        type=str,
+        help="Path where the captured graphics replay file is saved.",
+    )
+
     args = parser.parse_args()
 
     glfw_config = Application.Configuration()
@@ -478,9 +749,9 @@ if __name__ == "__main__":
         sim_config = config.habitat.simulator
         task_config = config.habitat.task
         task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
-        task_config.actions[
-            "agent_1_oracle_nav_action"
-        ] = OracleNavActionConfig(agent_index=1)
+        # task_config.actions[
+        #     "agent_1_oracle_nav_action"
+        # ] = OracleNavActionConfig(agent_index=1)
 
         agent_config = get_agent_config(sim_config=sim_config)
 
@@ -494,7 +765,8 @@ if __name__ == "__main__":
                     )
                 }
             )
-            args.debug_images.append("agent_0_third_rgb")
+            agent_key = "" if len(sim_config.agents) == 1 else "agent_0_"
+            args.debug_images.append(f"{agent_key}third_rgb")
 
         # Code below is ported from interactive_play.py. I'm not sure what it is for.
         if True:
@@ -525,7 +797,15 @@ if __name__ == "__main__":
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
-    framebuffer_size = gui_app_wrapper.get_framebuffer_size()
+    assert (
+        args.gui_controlled_agent_index is None
+        or args.gui_controlled_agent_index >= 0
+        and args.gui_controlled_agent_index
+        < len(config.habitat.simulator.agents)
+    ), (
+        f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
+        f"must be >= 0 and < number of agents ({len(config.habitat.simulator.agents)})"
+    )
 
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
 
