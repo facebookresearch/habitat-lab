@@ -252,11 +252,26 @@ if __name__ == "__main__":
         default="rearrange_ep_gen_output/",
         help="Relative path to output debug frames and videos.",
     )
+    # limit_scene_set can be used to generate scenes from a given split
+    # without caring about the actual distribution of episodes across each scene.
+    # limit_scene can be used to enforce equal number of episodes per scene
+    # and for easier parallelization.
     parser.add_argument(
         "--limit-scene-set",
         type=str,
         default=None,
         help="Limit to one of the scene set samplers. Used to differentiate scenes from training and eval.",
+    )
+    parser.add_argument(
+        "--limit-scene",
+        type=str,
+        default=None,
+        help="Limit to one of the scenes.",
+    )
+    parser.add_argument(
+        "--ignore-cache",
+        action="store_true",
+        help="Ignore cached navmeshes, viewpoints, etc. and recompute them.",
     )
     parser.add_argument(
         "--num-episodes",
@@ -289,6 +304,8 @@ if __name__ == "__main__":
         cfg=cfg,
         debug_visualization=args.debug,
         limit_scene_set=args.limit_scene_set,
+        limit_scene=args.limit_scene,
+        ignore_cache=args.ignore_cache,
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)

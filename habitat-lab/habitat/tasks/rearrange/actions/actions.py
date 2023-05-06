@@ -505,227 +505,83 @@ class ArmEEAction(RobotAction):
             )
 
 
-class Controller:
-    """
-    A controller that takes the input of the waypoints and
-    produces the velocity command.
-    """
-
-    def __init__(
-        self,
-        v_max,
-        w_max,
-        lin_gain=5,
-        ang_gain=5,
-        lin_error_tol=0.05,
-        ang_error_tol=0.05,
-        max_heading_ang=np.pi / 10,
-        track_yaw=True,
-    ):
-        # If we want track yaw or not
-        self.track_yaw = track_yaw
-
-        # Parameter of the controller
-        self.v_max = v_max
-        self.w_max = w_max
-
-        self.lin_error_tol = lin_error_tol
-        self.ang_error_tol = ang_error_tol
-
-        self.acc_lin = lin_gain
-        self.acc_ang = ang_gain
-
-        self.max_heading_ang = max_heading_ang
-
-        # Initialize the parameters
-        self.base_pose_goal = np.zeros(3)
-        self.base_velocity_goal = np.zeros(3)
-
-    def set_goal(self, goal, vel_goal=None):
-        """
-        Set the goal of the agent
-        """
-        self.base_pose_goal = goal
-        if vel_goal is not None:
-            self.base_velocity_goal = vel_goal
-
-    def _compute_error_pose(self, base_pose, sim=None):
-        """
-        Updates error based on robot localization
-        """
-        # We compute the base pose error and the function return list of integer
-        base_pose_err = self._transform_global_to_base(
-            self.base_pose_goal, base_pose, sim
-        )
-
-        if not self.track_yaw:
-            base_pose_err[2] = 0.0
-
-        return base_pose_err
-
-    @staticmethod
-    def _velocity_feedback_control(base_pose_err, a, v_max):
-        """
-        Computes velocity based on distance from target.
-        Used for both linear and angular motion.
-        Current implementation: Trapezoidal velocity profile
-        """
-        t = np.sqrt(2.0 * abs(base_pose_err) / a)
-        v = min(a * t, v_max)
-        return v * np.sign(base_pose_err)
-
-    @staticmethod
-    def _turn_rate_limit(
-        lin_err, heading_diff, w_max, max_heading_ang, tol=0.0
-    ):
-        """
-        Compute velocity limit that prevents path from overshooting goal
-        heading error decrease rate > linear error decrease rate
-        (w - v * np.sin(phi) / D) / phi > v * np.cos(phi) / D
-        v < (w / phi) / (np.sin(phi) / D / phi + np.cos(phi) / D)
-        v < w * D / (np.sin(phi) + phi * np.cos(phi))
-        (D = linear error, phi = angular error)
-        """
-        assert lin_err >= 0.0
-        assert heading_diff >= 0.0
-
-        if heading_diff > max_heading_ang:
-            return 0.0
-        else:
-            return (
-                w_max
-                * lin_err
-                / (
-                    np.sin(heading_diff)
-                    + heading_diff * np.cos(heading_diff)
-                    + 1e-5
-                )
-            )
-
-    def _feedback_controller(self, base_pose_err):
-        """
-        Feedback controllers
-        """
-        v_cmd = w_cmd = 0
-
-        lin_err_abs = np.linalg.norm(base_pose_err[0:2])
-        ang_err = base_pose_err[2]
-
-        # Go to goal XY position if not there yet
-        if lin_err_abs > self.lin_error_tol:
-            heading_err = np.arctan2(base_pose_err[1], base_pose_err[0])
-            heading_err_abs = abs(heading_err)
-
-            if abs(heading_err_abs - np.pi) <= 0.01:
-                heading_err_abs = 0
-                heading_err = 0
-
-            # Compute linear velocity and allow the agent to move backward
-            v_raw = self._velocity_feedback_control(
-                np.sign(base_pose_err[0]) * lin_err_abs,
-                self.acc_lin,
-                self.v_max,
-            )
-
-            v_limit = self._turn_rate_limit(
-                lin_err_abs,
-                heading_err_abs,
-                self.w_max / 2.0,
-                max_heading_ang=self.max_heading_ang,
-                tol=self.lin_error_tol,
-            )
-
-            # Clip the speed
-            v_cmd = np.clip(v_raw, -v_limit, v_limit)
-
-            # Compute angular velocity
-            w_cmd = self._velocity_feedback_control(
-                heading_err, self.acc_ang, self.w_max
-            )
-
-        # Rotate to correct yaw if yaw tracking is on and XY position is at goal
-        elif abs(ang_err) > self.ang_error_tol and self.track_yaw:
-            # Compute angular velocity
-            w_cmd = self._velocity_feedback_control(
-                ang_err, self.acc_ang, self.w_max
-            )
-
-        return v_cmd, w_cmd
-
-    def _transform_global_to_base(self, base_pose, current_pose, sim=None):
-        """
-        Transforms the point cloud into geocentric frame to account for
-        camera position
-        Input:
-            base_pose                     : target goal ...x3
-            current_pose            : base position (x, y, theta (radians))
-        Output:
-            base_pose : ...x3
-        """
-
-        trans = sim.robot.base_transformation
-        goal_pos = trans.inverted().transform_point(
-            np.array([base_pose[0], sim.robot.base_pos[1], base_pose[1]])
-        )
-
-        error_t = base_pose[2] - current_pose[2]
-        error_t = (error_t + np.pi) % (2.0 * np.pi) - np.pi
-        error_x = goal_pos[0]
-        error_y = goal_pos[1]
-
-        return [error_x, error_y, error_t]
-
-    def forward(self, base_pose, sim):
-        """
-        Generate the velocity command
-        """
-        base_pose_err = self._compute_error_pose(base_pose, sim)
-        return self._feedback_controller(base_pose_err)
-
-
-# TODO: Remove this once Teleport Action is merged.
 @registry.register_task_action
-class BaseWaypointVelAction(RobotAction):
+class BaseWaypointTeleportAction(RobotAction):
     """
-    The robot base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
-    Optionally cull states with active collisions if config parameter `allow_dyn_slide` is True
-    The robot is given a target waypoint and output a velocity command
+    The robot is teleported to the target waypoints while being constrained to the navmesh. In one step, The robot can only move forward or turn.
     """
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
-        self.base_vel_ctrl = habitat_sim.physics.VelocityControl()
-        self.base_vel_ctrl.controlling_lin_vel = True
-        self.base_vel_ctrl.lin_vel_is_local = True
-        self.base_vel_ctrl.controlling_ang_vel = True
-        self.base_vel_ctrl.ang_vel_is_local = True
-        # Initialize the controller
-        max_lin_speed = 30  # real Stretch max linear velocity
-        max_ang_speed = 20.94  # real Stretch max angular velocity
-        lin_speed_gain = 10000.0  # the linear gain
-        ang_speed_gain = 10000.0  # the angular gain
-        lin_tol = 0.001  # 5cm linear error tol
-        ang_tol = 0.001  # 5cm angular error tol
-        max_heading_ang = np.pi / 10.0
-        self.controller = Controller(
-            v_max=max_lin_speed,
-            w_max=max_ang_speed,
-            lin_gain=lin_speed_gain,
-            ang_gain=ang_speed_gain,
-            lin_error_tol=lin_tol,
-            ang_error_tol=ang_tol,
-            max_heading_ang=max_heading_ang,
-        )
+        self._allow_back = config.allow_back
+        self._collision_threshold = config.collision_threshold
+        self._navmesh_offset = config.navmesh_offset
+        self._min_displacement = (
+            config.min_displacement
+        )  # minimum displacement
+        self._max_displacement_along_axis = config.max_displacement_along_axis
+        self._max_turn_radians = (
+            config.max_turn_degrees * np.pi / 180
+        )  # maximum turn waypoint
+        self._min_turn_radians = (
+            config.min_turn_degrees * np.pi / 180
+        )  # minimum turn waypoint
+        self._allow_lateral_movement = config.allow_lateral_movement
+        self._allow_simultaneous_turn = config.allow_simultaneous_turn
+
+    def collision_check(self, trans, target_trans):
+        """
+        trans: the transformation of the current location of the robot
+        target_trans: the transformation of the target location of the robot given the center original Navmesh
+        """
+        # Get the offset positions
+        num_check_cylinder = len(self._navmesh_offset)
+        nav_pos_3d = [
+            np.array([xz[0], xz[1], 0.0]) for xz in self._navmesh_offset
+        ]
+        cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
+        goal_pos = [target_trans.transform_point(xyz) for xyz in nav_pos_3d]
+
+        # For step filter of offset positions
+        end_pos = []
+        # Planar move distance clamped by NavMesh
+        move = []
+        for i in range(num_check_cylinder):
+            pos = self._sim.step_filter(cur_pos[i], goal_pos[i])
+            # Ignore any height differences that may pop up
+            pos[1] = 0.0
+            cur_pos[i][1] = 0.0
+            goal_pos[i][1] = 0.0
+            end_pos.append(pos)
+            move.append((end_pos[i] - goal_pos[i]).length())
+
+        # There is a collision if the distance between the clamped navmesh position and target position is greater than the self._collision_threshold.
+        diff = len([v for v in move if v > self._collision_threshold])
+
+        if diff > 0:
+            return True, trans
+        else:
+            return False, target_trans
 
     @property
     def action_space(self):
-        lim = 20
+        lim = 1
+        action_space_shape = 2  # for turning and moving forward
+        if self._allow_lateral_movement:
+            action_space_shape += 1  # for lateral movement
+        if not self._allow_simultaneous_turn:
+            action_space_shape += (
+                1  # for determining whether to turn or move forward
+            )
         return spaces.Dict(
             {
                 self._action_arg_prefix
                 + "base_vel": spaces.Box(
-                    shape=(2,), low=-lim, high=lim, dtype=np.float32
+                    shape=(action_space_shape,),
+                    low=-lim,
+                    high=lim,
+                    dtype=np.float32,
                 )
             }
         )
@@ -738,97 +594,91 @@ class BaseWaypointVelAction(RobotAction):
         }
 
     def _set_robot_state(self, set_dat):
-        """ "
+        """
         Keep track of robot's basic info
         """
         self.cur_robot.sim_obj.joint_positions = set_dat["forces"]
         self.cur_robot.sim_obj.joint_velocities = set_dat["vel"]
         self.cur_robot.sim_obj.joint_forces = set_dat["pos"]
 
-    def update_base(self):
+    def update_base(self, target_rigid_state):
         """
         Update the robot base
         """
 
-        ctrl_freq = self._sim.ctrl_freq
-
-        before_trans_state = self._capture_robot_state()
-
         trans = self.cur_robot.sim_obj.transformation
-        rigid_state = habitat_sim.RigidState(
-            mn.Quaternion.from_matrix(trans.rotation()), trans.translation
-        )
-
-        target_rigid_state = self.base_vel_ctrl.integrate_transform(
-            1 / ctrl_freq, rigid_state
-        )
-        end_pos = self._sim.step_filter(
-            rigid_state.translation, target_rigid_state.translation
-        )
 
         target_trans = mn.Matrix4.from_(
-            target_rigid_state.rotation.to_matrix(), end_pos
+            target_rigid_state.rotation.to_matrix(),
+            target_rigid_state.translation,
         )
         self.cur_robot.sim_obj.transformation = target_trans
-
-        if not self._config.get("allow_dyn_slide", True):
-            # Check if in the new robot state the arm collides with anything.
-            # If so we have to revert back to the previous transform
-            self._sim.internal_step(-1)
-            # colls = get_collisions()
-            did_coll, _ = rearrange_collision(self._sim, count_obj_colls=False)
-            if did_coll:
-                # Don't allow the step, revert back.
-                self._set_robot_state(before_trans_state)
-                self.cur_robot.sim_obj.transformation = trans
+        # Check if there is a collision
+        _, new_target_trans = self.collision_check(trans, target_trans)
+        # Update the base
+        self.cur_robot.sim_obj.transformation = new_target_trans
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
-            # object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
     def step(self, *args, is_last_action, **kwargs):
-        waypoint, sel = kwargs[self._action_arg_prefix + "base_vel"]
-        # Scale the target waypoints and the rotation of the robot
-        if sel > 0:
-            lin_pos = np.clip(waypoint, -1, 1) * self._config.lin_speed
-            ang_pos = 0.0
-        else:
-            lin_pos = 0.0
-            ang_pos = np.clip(waypoint, -1, 1) * self._config.ang_speed
-        if not self._config.allow_back:
-            lin_pos = np.maximum(lin_pos, 0)
+        base_action = kwargs[self._action_arg_prefix + "base_vel"]
+        lin_pos_x = base_action[0]
+        turn_offset = 1
+        lin_pos_z = 0.0
+        if self._allow_lateral_movement:
+            lin_pos_z = base_action[1]
+            turn_offset += 1
+        turn = base_action[turn_offset]
+        if not self._allow_simultaneous_turn:
+            # Select between translation and turn
+            sel = base_action[-1]
+            if sel > 0:
+                turn = 0
+            else:
+                lin_pos_x = 0
+                lin_pos_z = 0
+
+        # Scale the waypoint
+        lin_pos_x = (
+            np.clip(lin_pos_x, -1, 1) * self._max_displacement_along_axis
+        )
+        lin_pos_z = (
+            np.clip(lin_pos_z, -1, 1) * self._max_displacement_along_axis
+        )
+        ang_pos = np.clip(turn, -1, 1) * self._max_turn_radians
+
+        # Do not allow small movements
+        if np.abs(ang_pos) < self._min_turn_radians:
+            ang_pos = 0
+        if np.linalg.norm([lin_pos_x, lin_pos_z]) < self._min_displacement:
+            lin_pos_x = 0
+            lin_pos_z = 0
+
+        if not self._allow_back:
+            lin_pos_x = np.maximum(lin_pos_x, 0)
 
         # Get the transformation of the robot
-        trans = self._sim.robot.base_transformation
+        base_trans = self._sim.robot.base_transformation
+        obj_trans = self.cur_robot.sim_obj.transformation
         # Get the global pos from the local target waypoints
-        global_pos = trans.transform_point(np.array([lin_pos, 0, 0]))
+        target_pos = base_trans.transform_point(
+            mn.Vector3([lin_pos_x, lin_pos_z, 0])
+        )
+        target_rot = obj_trans.rotation()
+        rot_quat = mn.Quaternion(
+            mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
+        )
         # Get the target rotation
-        target_theta = float(self._sim.robot.base_rot) + ang_pos
+        target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
 
-        # Set the goal
-        base_pose_goal = [
-            global_pos[0],
-            global_pos[2],
-            target_theta,
-        ]
-        self.controller.set_goal(base_pose_goal)
+        # combine target translation and rotation to get target rigid state
+        target_rigid_state = habitat_sim.RigidState(
+            mn.Quaternion.from_matrix(target_rot), target_pos
+        )
 
-        # Get the current position
-        base_pose = [
-            self._sim.robot.base_pos[0],
-            self._sim.robot.base_pos[2],
-            float(self._sim.robot.base_rot),
-        ]
-        # Get the velocity cmd
-        base_action = self.controller.forward(base_pose, self._sim)
-
-        # Feed them into habitat's velocity controller
-        self.base_vel_ctrl.linear_velocity = mn.Vector3(base_action[0], 0, 0)
-        self.base_vel_ctrl.angular_velocity = mn.Vector3(0, base_action[1], 0)
-
-        if lin_pos != 0.0 or ang_pos != 0.0:
-            self.update_base()
-
+        if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
+            self.update_base(target_rigid_state)
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)
         else:
