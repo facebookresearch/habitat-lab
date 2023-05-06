@@ -52,9 +52,23 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         num_envs = self._agents[0]._num_envs
         device = self._agents[0]._device
 
-        behav_ids = torch.randint(
-            0, self._pop_config.behavior_latent_dim, (num_envs,), device=device
-        )
+        if self._pop_config.force_all_agents:
+            if num_envs != self._pop_config.behavior_latent_dim:
+                raise ValueError(
+                    f"Must have num_envs={num_envs} equal to behavior latent dim={self._pop_config.behavior_latent_dim}"
+                )
+            behav_ids = torch.arange(
+                start=0,
+                end=self._pop_config.behavior_latent_dim,
+                device=device,
+            )
+        else:
+            behav_ids = torch.randint(
+                0,
+                self._pop_config.behavior_latent_dim,
+                (num_envs,),
+                device=device,
+            )
         self._behav_latents = F.one_hot(
             behav_ids, self._pop_config.behavior_latent_dim
         ).float()
