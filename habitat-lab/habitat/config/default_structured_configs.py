@@ -1170,8 +1170,8 @@ class DatasetConfig(HabitatBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ObjectRearrangeDatasetConfig(DatasetConfig):
     type: str = "ObjectRearrangeDataset-v1"
-    viewpoints_matrix_path: str = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
-    transformations_matrix_path: str = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
+    viewpoints_matrix_path: Optional[str] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
+    transformations_matrix_path: Optional[str] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
 
 
 @attr.s(auto_attribs=True, slots=True)
