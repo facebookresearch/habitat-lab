@@ -67,5 +67,8 @@ habitat:
   dataset:
     data_path: data/episodes/rearrange/minival/cat_rearrange_floorplanner.json.gz
     type: ObjectRearrangeDataset-v0
+    viewpoints_matrix_path: null
+    transformations_matrix_path: null
+
   task:
     goal_type: 'ovmm'

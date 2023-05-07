@@ -73,10 +73,8 @@ actions:
     center_cone_vector: [0.0, 1.0, 0.0]
     oracle_snap: True
   base_velocity:
-    type: "BaseWaypointVelAction"
-    lin_speed: 0.2500
-    ang_speed: 0.1745
-    allow_dyn_slide: False
+    type: "BaseWaypointTeleportAction"
+    navmesh_offset: [[0.0, 0.0]]
 measurements:
   force_terminate:
     max_accum_force: -1.0

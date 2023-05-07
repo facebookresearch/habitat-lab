@@ -35,10 +35,6 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 object_in_hand_sample_prob: 1.0
-actions:
-  base_velocity:
-    type: "BaseWaypointTeleportAction"
-    navmesh_offset: [[0.0, 0.0]]
 
 measurements:
   force_terminate:
