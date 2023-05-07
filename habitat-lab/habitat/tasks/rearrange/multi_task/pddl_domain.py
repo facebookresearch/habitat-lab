@@ -612,6 +612,9 @@ class PddlDomain:
         expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
         assigns = []
         for poss_input in itertools.product(*all_matching_entities):
+            if len(set(poss_input)) != len(poss_input):
+                # Each of the `input` entries refers to a distinct entity.
+                continue
             assert len(poss_input) == len(expr.inputs)
             sub_dict = dict(zip(expr.inputs, poss_input))
             assigns.append(sub_dict)

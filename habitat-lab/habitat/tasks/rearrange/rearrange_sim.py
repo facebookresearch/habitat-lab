@@ -549,9 +549,17 @@ class RearrangeSim(HabitatSim):
             recep = cast(AABBReceptacle, recep)
             local_bounds = recep.bounds
             global_T = recep.get_global_transform(self)
+            # Some coordinates may be flipped by the global transformation,
+            # mixing the minimum and maximum bound coordinates.
+            bounds = np.stack(
+                [
+                    global_T.transform_point(local_bounds.min),
+                    global_T.transform_point(local_bounds.max),
+                ],
+                axis=0,
+            )
             self._receptacles[recep.name] = mn.Range3D(
-                global_T.transform_point(local_bounds.min),
-                global_T.transform_point(local_bounds.max),
+                np.min(bounds, axis=0), np.max(bounds, axis=0)
             )
 
         ao_mgr = self.get_articulated_object_manager()

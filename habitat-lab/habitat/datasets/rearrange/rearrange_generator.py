@@ -981,7 +981,7 @@ class RearrangeEpisodeGenerator:
         detailed_receptacle_stability_report += (
             "\n----------------------------------------"
         )
-        logger.info(detailed_receptacle_stability_report)
+        logger.warning(detailed_receptacle_stability_report)
 
         # generate debug images of all final object placements
         if self._render_debug_obs and success:
