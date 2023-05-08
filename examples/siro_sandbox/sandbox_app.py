@@ -92,16 +92,20 @@ class SandboxDriver(GuiAppDriver):
         if self._first_person_mode:
             self._lookat_offset_yaw = 0.0
             self._lookat_offset_pitch = 0.0
-            # limit pith angle to +/- 45 degrees in first-person mode
-            self._min_lookat_offset_pitch = -0.785398 + 1e-5
-            self._max_lookat_offset_pitch = 0.785398 - 1e-5
+            self._min_lookat_offset_pitch = (
+                -max(min(np.radians(args.max_look_up_angle), np.pi / 2), 0)
+                + 1e-7
+            )
+            self._max_lookat_offset_pitch = (
+                -min(max(np.radians(args.min_look_down_angle), -np.pi / 2), 0)
+                - 1e-7
+            )
         else:
             # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
             self._lookat_offset_yaw = 0.785
             self._lookat_offset_pitch = 0.955
-            # limit pith angle to +/- 90 degrees
-            self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
-            self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
+            self._min_lookat_offset_pitch = -np.pi / 2 + 1e-7
+            self._max_lookat_offset_pitch = np.pi / 2 + 1e-7
 
         self._enable_gfx_replay_save: bool = args.enable_gfx_replay_save
         self._gfx_replay_save_path: str = args.gfx_replay_save_path
@@ -211,7 +215,7 @@ class SandboxDriver(GuiAppDriver):
             self._debug_line_render.draw_circle(
                 hit_info.point, object_highlight_radius, object_color
             )
-            if self.gui_input.get_mouse_button_down(GuiInput.MouseNS.LEFT):
+            if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                 drop_pos = hit_info.point + mn.Vector3(
                     0, object_drop_height, 0
                 )
@@ -243,9 +247,7 @@ class SandboxDriver(GuiAppDriver):
                             object_highlight_radius,
                             object_color,
                         )
-                        if self.gui_input.get_mouse_button_down(
-                            GuiInput.MouseNS.LEFT
-                        ):
+                        if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                             grasp_object_id = hit_info.object_id
                             self._held_target_obj_idx = 0  # temp hack; no way to look this up currently from hit_info.object_id
                             return grasp_object_id, None
@@ -297,10 +299,9 @@ class SandboxDriver(GuiAppDriver):
             path_points, path_endpoint_radius, path_color
         )
 
-        if (
-            self.gui_input.get_mouse_button(GuiInput.MouseNS.RIGHT)
-            or self.gui_input.get_key(GuiInput.KeyNS.SPACE)
-        ) and len(path.points) >= 2:
+        if (self.gui_input.get_mouse_button(GuiInput.MouseNS.RIGHT)) and len(
+            path.points
+        ) >= 2:
             walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
             return walk_dir
 
@@ -313,12 +314,12 @@ class SandboxDriver(GuiAppDriver):
         return walk_dir, grasp_object_id, drop_pos
 
     def _camera_pitch_and_yaw_wasd_control(self):
-        # update yaw and pitch using WASD keys
+        # update yaw and pitch using ADIK keys
         cam_rot_angle = 0.1
 
-        if self.gui_input.get_key(GuiInput.KeyNS.W):
+        if self.gui_input.get_key(GuiInput.KeyNS.I):
             self._lookat_offset_pitch -= cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.S):
+        if self.gui_input.get_key(GuiInput.KeyNS.K):
             self._lookat_offset_pitch += cam_rot_angle
         self._lookat_offset_pitch = np.clip(
             self._lookat_offset_pitch,
@@ -331,9 +332,9 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
-        # if Q is held update yaw and pitch
+        # if mouse left button is held update yaw and pitch
         # by scale * mouse relative position delta
-        if self.gui_input.get_key(GuiInput.KeyNS.R):
+        if self.gui_input.get_mouse_button(GuiInput.MouseNS.LEFT):
             scale = 1 / 50
             self._lookat_offset_yaw += (
                 scale * self.gui_input._relative_mouse_position[0]
@@ -410,17 +411,17 @@ class SandboxDriver(GuiAppDriver):
             # update lookat
             move_delta = 0.1
             move = np.zeros(3)
-            if self.gui_input.get_key(GuiInput.KeyNS.UP):
+            if self.gui_input.get_key(GuiInput.KeyNS.W):
                 move[0] -= move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.DOWN):
+            if self.gui_input.get_key(GuiInput.KeyNS.S):
                 move[0] += move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.E):
+            if self.gui_input.get_key(GuiInput.KeyNS.O):
                 move[1] += move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.Q):
+            if self.gui_input.get_key(GuiInput.KeyNS.P):
                 move[1] -= move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.LEFT):
+            if self.gui_input.get_key(GuiInput.KeyNS.J):
                 move[2] += move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.RIGHT):
+            if self.gui_input.get_key(GuiInput.KeyNS.L):
                 move[2] -= move_delta
 
             # align move forward direction with lookat direction
@@ -510,9 +511,9 @@ class SandboxDriver(GuiAppDriver):
             )
 
         # two ways for camera pitch and yaw control for UX comparison:
-        # 1) hold WASD keys
+        # 1) press/hold ADIK keys
         self._camera_pitch_and_yaw_wasd_control()
-        # 2) hold R and move mouse
+        # 2) press left mouse button and move mouse
         self._camera_pitch_and_yaw_mouse_control()
 
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
@@ -699,6 +700,18 @@ if __name__ == "__main__":
         default=0,
         type=int,
         help="If specified, use the specified viewport height for the debug third-person camera",
+    )
+    parser.add_argument(
+        "--max-look-up-angle",
+        default=np.pi,
+        type=float,
+        help="Look up angle limit.",
+    )
+    parser.add_argument(
+        "--min-look-down-angle",
+        default=-np.pi,
+        type=float,
+        help="Look down angle limit.",
     )
     parser.add_argument(
         "--first-person-mode",
