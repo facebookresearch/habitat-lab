@@ -929,17 +929,15 @@ def get_navigable_receptacles(
             receptacle_bb.front_bottom_right,
         ]
         # At least 2 corners should be accessible
-        corners_accessible = (
-            sum(
-                is_accessible(sim, point, nav_to_min_distance=1.5)
-                for point in recep_points
-            )
-            >= 2
+        num_corners_accessible = sum(
+            is_accessible(sim, point, nav_to_min_distance=1.5)
+            for point in recep_points
         )
 
-        if not corners_accessible:
+        if not num_corners_accessible >= 2:
             logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible."
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible. "
+                f"Number of corners accessible: {num_corners_accessible}"
             )
             continue
         else:

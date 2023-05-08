@@ -154,6 +154,7 @@ class RearrangeEpisodeGenerator:
             )
 
         # object sets
+        object_template_handles = self.sim.get_object_template_manager().get_template_handles()
         for object_set in self.cfg.object_sets:
             assert "name" in object_set
             assert (
@@ -169,9 +170,9 @@ class RearrangeEpisodeGenerator:
             self._obj_sets[
                 object_set["name"]
             ] = cull_string_list_by_substrings(
-                self.sim.get_object_template_manager().get_template_handles(),
-                object_set["included_substrings"],
-                object_set["excluded_substrings"],
+                object_template_handles,
+                OmegaConf.to_container(object_set["included_substrings"]),
+                OmegaConf.to_container(object_set["excluded_substrings"]),
             )
 
         # receptacle sets
