@@ -14,22 +14,23 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
-    - rot_dist_to_goal
-    - dist_to_goal
-    # TODO: inconsistent naming succ vs succcess, rearrange prefix
-    - nav_to_pos_succ
     - does_want_terminate
-    - rearrange_nav_to_obj_success
-    - bad_called_terminate
-    - rearrange_nav_to_obj_reward
     - num_steps
     - obj_anywhere_on_goal
     - end_effector_to_rest_distance
     - did_pick_object
     - pick_success
     - place_success
-    - pick_nav_to_pos_succ
-    - rearrange_pick_nav_to_obj_success
+    - dist_to_pick_goal
+    - rot_dist_to_pick_goal
+    - nav_to_pick_succ
+    - nav_orient_to_pick_succ
+    - dist_to_place_goal
+    - rot_dist_to_place_goal
+    - nav_to_place_succ
+    - nav_orient_to_place_succ
+    - pick_nav_to_place_succ
+    - pick_nav_orient_to_place_succ
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
@@ -49,8 +50,8 @@ defaults:
   - _self_
 
 type: CatNavToObjTask-v0
-reward_measure: nav_to_obj_reward
-success_measure: nav_to_obj_success
+reward_measure: place_success
+success_measure: place_success
 success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True
@@ -85,6 +86,14 @@ measurements:
   place_success:
     place_anywhere: True
     ee_resting_success_threshold: 100
+  dist_to_pick_goal:
+    use_shortest_path_cache: False # when caching, the same set of goals are used throughout
+  dist_to_place_goal:
+    use_shortest_path_cache: False # when caching, the same set of goals are used throughout
+  nav_orient_to_pick_succ:
+    must_call_stop: False
+  nav_orient_to_place_succ:
+    must_call_stop: False
 lab_sensors:
   joint_sensor:
     dimensionality: 10

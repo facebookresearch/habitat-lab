@@ -127,7 +127,9 @@ class ArmAction(RobotAction):
 
 @registry.register_task_action
 class ExtendArmAction(RobotAction):
-
+    """
+        The arm is raised and extended outwards fully.
+    """
     def step(self, *args, is_last_action, **kwargs):
         extend = kwargs.get("extend_arm", [-1.0])
         if extend[0] > 0:
@@ -140,7 +142,9 @@ class ExtendArmAction(RobotAction):
 
 @registry.register_task_action
 class FaceArmAction(RobotAction):
-
+    """
+        The camera joints are set such that the camera points towards the arm. Used when the agent switches from navigation mode to manipulation mode
+    """
     def step(self, *args, is_last_action, **kwargs):
         face = kwargs.get("face_arm", [-1.0])
         if face[0] > 0:
@@ -157,6 +161,9 @@ class FaceArmAction(RobotAction):
 
 @registry.register_task_action
 class ResetJointsAction(RobotAction):
+    """
+        The arm and camera joints are reset to resting position. The camera faces the base and is tilted downwards. The arm is retracted with the gripper facing downwards. Used for switching to navigation mode.
+    """
     def step(self, *args, is_last_action, **kwargs):
         reset = kwargs.get("reset_joints", [-1.0])
         if reset[0] > 0:

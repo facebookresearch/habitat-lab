@@ -172,7 +172,7 @@ class RearrangeTask(NavigationTask):
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()
         self.prev_coll_accum = CollisionDetails()
-        self.should_end = False
+        self._should_end = False
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:

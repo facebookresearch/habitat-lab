@@ -73,7 +73,7 @@ class RearrangePickTaskV1(RearrangeTask):
                 ]
             )
 
-        start_pos, angle_to_obj, was_succ = get_robot_spawns(
+        start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
             snap_pos,
             self._config.base_angle_noise,
             self._config.spawn_max_dists_to_obj,
@@ -82,7 +82,7 @@ class RearrangePickTaskV1(RearrangeTask):
             self._config.physics_stability_steps,
         )
 
-        if was_succ:
+        if was_unsucc:
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )

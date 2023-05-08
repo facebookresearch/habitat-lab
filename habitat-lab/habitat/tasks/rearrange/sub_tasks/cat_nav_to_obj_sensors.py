@@ -167,6 +167,10 @@ class CatNavRotDistToGoal(RotDistToGoal):
         self._is_nav_to_obj = task.is_nav_to_obj
         super().__init__(*args, sim=sim, **kwargs)
 
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return CatNavRotDistToGoal.cls_uuid
+
     def _get_targ(self, task, episode):
         if self._is_nav_to_obj:
             goals = episode.candidate_objects
