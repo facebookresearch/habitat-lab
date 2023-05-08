@@ -554,6 +554,11 @@ class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class HasFinishedOracleNavSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedOracleNavSensor"
+
+
+@dataclass
 class OtherAgentGpsConfig(LabSensorConfig):
     type: str = "OtherAgentGps"
 
@@ -1335,8 +1340,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
-    width: int = 512
-    height: int = 512
+    width: int = 256
+    height: int = 256
 
 
 @dataclass
@@ -1942,6 +1947,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="multi_agent_all_predicates",
     node=MultiAgentGlobalPredicatesSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_oracle_nav",
+    group="habitat/task/lab_sensors",
+    name="has_finished_oracle_nav",
+    node=HasFinishedOracleNavSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",
