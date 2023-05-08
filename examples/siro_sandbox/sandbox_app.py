@@ -342,6 +342,11 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch += (
                 scale * self.gui_input._relative_mouse_position[1]
             )
+            self._lookat_offset_pitch = np.clip(
+                self._lookat_offset_pitch,
+                self._min_lookat_offset_pitch,
+                self._max_lookat_offset_pitch,
+            )
 
     def draw_nav_hint(
         self, start_pos, start_dir, end_pos, color, anim_fraction
