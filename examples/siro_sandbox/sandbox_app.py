@@ -94,18 +94,18 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch = 0.0
             self._min_lookat_offset_pitch = (
                 -max(min(np.radians(args.max_look_up_angle), np.pi / 2), 0)
-                + 1e-7
+                + 1e-5
             )
             self._max_lookat_offset_pitch = (
                 -min(max(np.radians(args.min_look_down_angle), -np.pi / 2), 0)
-                - 1e-7
+                - 1e-5
             )
         else:
             # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
             self._lookat_offset_yaw = 0.785
             self._lookat_offset_pitch = 0.955
-            self._min_lookat_offset_pitch = -np.pi / 2 + 1e-7
-            self._max_lookat_offset_pitch = np.pi / 2 + 1e-7
+            self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
+            self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
 
         self._enable_gfx_replay_save: bool = args.enable_gfx_replay_save
         self._gfx_replay_save_path: str = args.gfx_replay_save_path
@@ -708,13 +708,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max-look-up-angle",
-        default=np.pi,
+        default=90,
         type=float,
         help="Look up angle limit.",
     )
     parser.add_argument(
         "--min-look-down-angle",
-        default=-np.pi,
+        default=-90,
         type=float,
         help="Look down angle limit.",
     )
