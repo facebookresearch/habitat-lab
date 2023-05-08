@@ -104,5 +104,5 @@ habitat_baselines:
               nav_to_obj:
                 skill_name: "OracleNavPolicy"
                 obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-                max_skill_steps: 1500
+                max_skill_steps: 2500
                 stop_thresh: 0.5
