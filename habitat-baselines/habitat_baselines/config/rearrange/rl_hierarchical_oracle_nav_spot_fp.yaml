@@ -21,6 +21,9 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - navigation_target_position_sensor
+  - /habitat/task/measurements:
+    - composite_subgoal_reward
+    - articulated_agent_colls
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_
