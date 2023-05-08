@@ -48,13 +48,13 @@ class OracleNavPolicy(NnSkillPolicy):
         )
 
         if "oracle_nav_with_backing_up_action" in task_config["actions"]:
-            self._oracle_nav_ac_idx, _ = find_action_range(
-                action_space, "oracle_nav_with_backing_up_action"
-            )
+            action_name = "oracle_nav_with_backing_up_action"
         else:
-            self._oracle_nav_ac_idx, _ = find_action_range(
-                action_space, "oracle_nav_action"
-            )
+            action_name = "oracle_nav_action"
+
+        self._oracle_nav_ac_idx, _ = find_action_range(
+            action_space, action_name
+        )
 
         self._is_target_obj = None
         self._targ_obj_idx = None
