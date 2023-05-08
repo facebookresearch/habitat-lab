@@ -17,6 +17,7 @@ import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
+from habitat.tasks.rearrange.utils import rearrange_collision
 from habitat.utils.common import flatten_dict
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import TensorDict
@@ -426,7 +427,14 @@ class GuiHumanoidController(Controller):
     def _update_controller_to_navmesh(self):
         # prevents humanoid agent from stepping through the walls and obstacles
         # https://github.com/facebookresearch/habitat-lab/blob/2b7eaf9266a8916c0851c79043236ff2e55eaca0/habitat-lab/habitat/tasks/rearrange/actions/oracle_nav_action.py#L153
+        sim = self._env._sim
         articulated_agent = self.get_articulated_agent()
+        before_trans_state = {
+            "forces": articulated_agent.sim_obj.joint_forces,
+            "vel": articulated_agent.sim_obj.joint_velocities,
+            "pos": articulated_agent.sim_obj.joint_positions,
+        }
+
         trans = articulated_agent.sim_obj.transformation
         rigid_state = habitat_sim.RigidState(
             mn.Quaternion.from_matrix(trans.rotation()), trans.translation
@@ -434,13 +442,33 @@ class GuiHumanoidController(Controller):
         target_rigid_state_trans = (
             self._humanoid_controller.obj_transform_base.translation
         )
-        end_pos = self._env._sim.step_filter(
+        end_pos = sim.step_filter(
             rigid_state.translation, target_rigid_state_trans
         )
 
         # Offset the base
         end_pos -= articulated_agent.params.base_offset
         self._humanoid_controller.obj_transform_base.translation = end_pos
+
+        if True:
+            # Check if in the new articulated_agent state the arm collides with anything.
+            # If so we have to revert back to the previous transform
+            sim.internal_step(-1)
+            did_coll, _ = rearrange_collision(
+                sim=sim, count_obj_colls=True, agent_idx=self.agent_idx
+            )
+            if did_coll:
+                # Don't allow the step, revert back.
+                articulated_agent.sim_obj.joint_positions = before_trans_state[
+                    "forces"
+                ]
+                articulated_agent.sim_obj.joint_velocities = (
+                    before_trans_state["vel"]
+                )
+                articulated_agent.sim_obj.joint_forces = before_trans_state[
+                    "pos"
+                ]
+                articulated_agent.sim_obj.transformation = trans
 
     def act(self, obs, env):
         self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
