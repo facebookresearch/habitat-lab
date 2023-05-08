@@ -50,7 +50,6 @@ habitat:
         turn_thresh: 0.1
         dist_thresh: 0.5
     robot_at_thresh: 3.0
-    enable_teleport_agent_pos: True
 
   gym:
     obs_keys:
@@ -67,6 +66,7 @@ habitat:
       - navigation_target_position_sensor
 
   environment:
+    # On average, a single nav-pick-place takes about 750 steps
     max_episode_steps: 5000
 
   simulator:
@@ -106,3 +106,5 @@ habitat_baselines:
                 obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
                 max_skill_steps: 2500
                 stop_thresh: 0.5
+                # We do not want Spot to teleport when it is near target receptacles
+                apply_postconds: False

@@ -434,8 +434,8 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 return self._sim.step(HabitatSimActions.base_velocity)
             else:
                 return {}
-        nav_to_target_idx = int(nav_to_target_idx[0]) - 1
 
+        nav_to_target_idx = int(nav_to_target_idx[0]) - 1
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
             nav_to_target_idx
         )

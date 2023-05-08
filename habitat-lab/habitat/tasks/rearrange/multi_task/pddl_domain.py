@@ -381,7 +381,6 @@ class PddlDomain:
             physics_stability_steps=self._config.physics_stability_steps,
             receptacles=sim.receptacles,
             recep_place_shrink_factor=self._config.recep_place_shrink_factor,
-            enable_teleport_agent_pos=self._config.enable_teleport_agent_pos,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():

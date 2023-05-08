@@ -183,10 +183,8 @@ class PddlRobotState:
                 agent=agent,
             )
 
-            # We only teleport the agent when it is allowed
-            if sim_info.enable_teleport_agent_pos:
-                agent.base_pos = start_pos
-                agent.base_rot = start_rot
+            agent.base_pos = start_pos
+            agent.base_rot = start_rot
 
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")

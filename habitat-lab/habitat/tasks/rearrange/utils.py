@@ -478,8 +478,6 @@ def place_robot_at_closest_point_with_navmesh(
     ]
     # Do transformation to get the location
     center_pos_list = [trans.transform_point(xyz) for xyz in nav_pos_3d]
-    # Consider the current location of the agent
-    center_pos_list += [cache_pos]
 
     for center_pos in center_pos_list:
         # Update the transformation of the agent

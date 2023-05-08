@@ -155,8 +155,6 @@ class PddlSimInfo:
     physics_stability_steps: int
     recep_place_shrink_factor: float
 
-    enable_teleport_agent_pos: bool
-
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
 

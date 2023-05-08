@@ -1250,8 +1250,6 @@ class TaskConfig(HabitatBaseConfig):
     robot_at_thresh: float = 2.0
     actions: Dict[str, ActionConfig] = MISSING
 
-    enable_teleport_agent_pos: bool = True
-
 
 @dataclass
 class SimulatorSensorConfig(HabitatBaseConfig):
