@@ -24,6 +24,7 @@ defaults:
   - /habitat/task/measurements:
     - composite_subgoal_reward
     - articulated_agent_colls
+    - contact_test_stats
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_

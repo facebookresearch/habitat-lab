@@ -772,6 +772,15 @@ class RobotCollisionsMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class ContactTestStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+
+    """
+    type: str = "ContactTestStats"
+
+
+@dataclass
 class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
     r"""
     In rearrangement only. The distance between the target object and the goal position for the object.
@@ -2151,6 +2160,12 @@ cs.store(
     group="habitat/task/measurements",
     name="articulated_agent_colls",
     node=RobotCollisionsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.contact_test_stats",
+    group="habitat/task/measurements",
+    name="contact_test_stats",
+    node=ContactTestStatsMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.object_to_goal_distance",

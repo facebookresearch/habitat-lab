@@ -1058,3 +1058,32 @@ class BadCalledTerminate(Measure):
         ].get_metric()
 
         self._metric = (not is_succ) and does_action_want_stop
+
+
+@registry.register_measure
+class ContactTestStats(Measure):
+    """
+    Did agent collide with objects?
+    """
+
+    cls_uuid: str = "contact_test_stats"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ContactTestStats.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        self._contact_flag = []
+        self._metric = 0
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        flag = self._sim.contact_test(
+            self._sim.articulated_agent.get_robot_sim_id()
+        )
+        self._contact_flag.append(flag)
+        self._metric = np.average(self._contact_flag)
