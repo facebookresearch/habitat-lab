@@ -185,7 +185,6 @@ class PddlRobotState:
 
             agent.base_pos = start_pos
             agent.base_rot = start_rot
-
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
 
