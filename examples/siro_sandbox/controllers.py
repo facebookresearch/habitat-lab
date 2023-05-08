@@ -473,11 +473,11 @@ class GuiHumanoidController(Controller):
         if do_humanoidjoint_action:
             humancontroller_base_user_input = np.zeros(3)
             # temp keyboard controls to test humanoid controller
-            if gui_input.get_key(KeyNS.I):
-                # move in world-space x+ direction ("east")
+            if gui_input.get_key(KeyNS.W):
+                # walk forward in the camera yaw direction
                 humancontroller_base_user_input[0] += 1
-            if gui_input.get_key(KeyNS.K):
-                # move in world-space x- direction ("west")
+            if gui_input.get_key(KeyNS.S):
+                # walk forward in the opposite to camera yaw direction
                 humancontroller_base_user_input[0] -= 1
 
             if self._hint_walk_dir:
