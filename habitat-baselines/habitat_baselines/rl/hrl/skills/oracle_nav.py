@@ -110,7 +110,7 @@ class OracleNavPolicy(NnSkillPolicy):
         finish_oracle_nav = observations[
             HasFinishedOracleNavSensor.cls_uuid
         ].cpu()
-        ret = finish_oracle_nav[batch_idx].to(torch.bool)
+        ret = finish_oracle_nav.to(torch.bool)[:, 0]
         return ret
 
     def _parse_skill_arg(self, skill_arg):

@@ -1053,4 +1053,4 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         nav_action = self._task.actions[
             f"agent_{self.agent_id}_oracle_nav_action"
         ]
-        return np.array(nav_action.skill_done, dtype=np.float32)
+        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
