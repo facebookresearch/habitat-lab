@@ -648,6 +648,11 @@ class LocalizationSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class NavigationTargetPositionSensorConfig(LabSensorConfig):
+    type: str = "NavigationTargetPositionSensor"
+
+
+@dataclass
 class QuestionSensorConfig(LabSensorConfig):
     type: str = "QuestionSensor"
 
@@ -1897,6 +1902,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="localization_sensor",
     node=LocalizationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.navigation_target_position_sensor",
+    group="habitat/task/lab_sensors",
+    name="navigation_target_position_sensor",
+    node=NavigationTargetPositionSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_sensor",

@@ -424,6 +424,39 @@ class LocalizationSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class NavigationTargetPositionSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    The navigation target position
+    """
+
+    cls_uuid = "navigation_target_position_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavigationTargetPositionSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        at_goal = (
+            kwargs["task"].actions["oracle_nav_with_backing_up_action"].at_goal
+        )
+        return np.array([at_goal])
+
+
+@registry.register_sensor
 class IsHoldingSensor(UsesArticulatedAgentInterface, Sensor):
     """
     Binary if the robot is holding an object or grasped onto an articulated object.

@@ -10,6 +10,17 @@ defaults:
   - rl_hierarchical
   - /habitat/task/actions:
     - oracle_nav_with_backing_up_action
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - navigation_target_position_sensor
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_
@@ -32,8 +43,10 @@ habitat:
         # The navmesh offset for the agent placement
         navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
         enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
     robot_at_thresh: 3.0
-    enable_teleport_agent_pos: False
+    enable_teleport_agent_pos: True
 
   gym:
     obs_keys:
@@ -47,6 +60,11 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
+      - navigation_target_position_sensor
+
+  environment:
+    max_episode_steps: 5000
+
   simulator:
     habitat_sim_v0:
       allow_sliding: True
@@ -70,7 +88,7 @@ habitat:
       - "data/objects/amazon_berkeley/configs/"
       - "data/objects/google_object_dataset/configs/"
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/s_minitrain.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/s105515211_173104179_0505.json.gz
 
 habitat_baselines:
   rl:
@@ -82,4 +100,5 @@ habitat_baselines:
               nav_to_obj:
                 skill_name: "OracleNavPolicy"
                 obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-                max_skill_steps: 300
+                max_skill_steps: 1500
+                stop_thresh: 0.5

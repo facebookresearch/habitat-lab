@@ -326,6 +326,9 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         if self.motion_type == "base_velocity":
             BaseVelNonCylinderAction.__init__(self, *args, **kwargs, task=task)
 
+        # Define the navigation target
+        self.at_goal = False
+
     @property
     def action_space(self):
         return spaces.Dict(
@@ -511,9 +514,12 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
             if self.motion_type == "base_velocity":
                 if not at_goal:
+                    self.at_goal = False
                     if dist_to_final_nav_targ < self._config.dist_thresh:
-                        # Do not want to look at the object to reduce collision
-                        vel = [0, 0]
+                        # Look at the object
+                        vel = OracleNavAction._compute_turn(
+                            rel_pos, self._config.turn_velocity, robot_forward
+                        )
                     elif angle_to_target < self._config.turn_thresh:
                         # Move towards the target
                         vel = [self._config.forward_velocity, 0]
@@ -523,6 +529,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                             rel_targ, self._config.turn_velocity, robot_forward
                         )
                 else:
+                    self.at_goal = True
                     vel = [0, 0]
 
                 if need_move_backward:

@@ -8,7 +8,9 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
+from habitat.tasks.rearrange.rearrange_sensors import (
+    NavigationTargetPositionSensor,
+)
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -57,6 +59,8 @@ class OracleNavPolicy(NnSkillPolicy):
         self._is_target_obj = None
         self._targ_obj_idx = None
         self._prev_pos = [None for _ in range(self._batch_size)]
+
+        self.at_goal = False
 
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
@@ -118,14 +122,13 @@ class OracleNavPolicy(NnSkillPolicy):
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool)
 
-        cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
-
-        for i, batch_i in enumerate(batch_idx):
-            prev_pos = self._prev_pos[batch_i]
-            if prev_pos is not None:
-                movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
-                ret[i] = movement < self._config.stop_thresh
-            self._prev_pos[batch_i] = cur_pos[i]
+        at_goal = observations[NavigationTargetPositionSensor.cls_uuid].cpu()
+        for i in range(len(batch_idx)):
+            if at_goal[i] and not self.at_goal:
+                ret[i] = True
+                self.at_goal = True
+            else:
+                self.at_goal = False
 
         return ret
 
