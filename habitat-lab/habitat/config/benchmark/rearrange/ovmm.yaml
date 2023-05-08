@@ -23,7 +23,6 @@ habitat:
       - object_segmentation
       - start_recep_segmentation
       - goal_recep_segmentation
-      - object_category
       - camera_pose
       - object_embedding
       - is_holding
@@ -42,7 +41,7 @@ habitat:
     kinematic_mode: True
     agents:
       main_agent:
-        radius: 0.25
+        radius: 0.3
         height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"

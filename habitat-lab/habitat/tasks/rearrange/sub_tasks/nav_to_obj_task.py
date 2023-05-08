@@ -150,7 +150,7 @@ class DynNavRLEnv(RearrangeTask):
         if (
             self.force_obj_to_idx is None
             and random.random() < self._config.object_in_hand_sample_prob
-            and self._goal_type != 'ovmm'
+            and self._goal_type != 'ovmm' # for end-to-end ovmm task, spawn wrt start receptacle [TODO: remove]
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
@@ -162,6 +162,7 @@ class DynNavRLEnv(RearrangeTask):
             episode, nav_to_pos, start_hold_obj_idx=start_hold_obj_idx
         )
         if self._pick_init:
+            # spawn agent close to and oriented to pick object for pick testing, [wip]: moving to ovmm_task.py
             spawn_recs = [
                 sim.receptacles[
                     episode.name_to_receptacle[
@@ -196,7 +197,7 @@ class DynNavRLEnv(RearrangeTask):
             else:
                 sim.robot.base_rot = angle_to_obj
         elif self._place_init:
-
+            # spawn agent close to and oriented towards goal receptacle for place testing, [wip]: moving to ovmm_task.py
             if isinstance(sim.robot, StretchRobot):
                 sim.robot.arm_motor_pos = np.array(
                     [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125] # gripper straight out
