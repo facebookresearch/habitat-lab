@@ -248,6 +248,7 @@ class RearrangeEpisodeGenerator:
                 ] = samplers.ObjectSampler(
                     object_handles,
                     obj_sampler_info["params"]["receptacle_sets"],
+                    obj_sampler_info["sampler_range"],
                     num_samples,
                     obj_sampler_info["params"]["orientation_sampling"],
                     get_sample_region_ratios(obj_sampler_info),
@@ -285,6 +286,7 @@ class RearrangeEpisodeGenerator:
                     # Add object set later
                     [],
                     target_sampler_info["params"]["receptacle_sets"],
+                    target_sampler_info["sampler_range"],
                     (
                         target_sampler_info["params"]["num_samples"][0],
                         target_sampler_info["params"]["num_samples"][1],
@@ -562,28 +564,11 @@ class RearrangeEpisodeGenerator:
                 f"{len(viewable_receptacles)}/{len(receptacles)} viewable receptacles found."
             )
 
-            os.makedirs(osp.dirname(receptacle_cache_path), exist_ok=True)
-            try:
-                with open(receptacle_cache_path, "wb") as f:
-                    pickle.dump(
-                        (receptacle_viewpoints, viewable_receptacle_names), f
-                    )
-            except Exception as e:
-                os.unlink(receptacle_cache_path)
-                raise e
-        total_receptacle_area = sum(
-            rec.total_area for rec in viewable_receptacles
-        )
-        dynamic_num_objects_to_sample = (
-            int(np.floor(total_receptacle_area * 1.5)),
-            int(np.floor(total_receptacle_area * 2)),
-        )
+        viewable_receptacles = self.get_receptacles(scene_name)
         for sampler in itertools.chain(
             self._obj_samplers.values(), self._target_samplers.values()
         ):
-            sampler.receptacle_instances = viewable_receptacles
-            if sampler.num_objects is None:
-                sampler.set_num_samples(dynamic_num_objects_to_sample)
+            sampler.set_receptacle_instances(viewable_receptacles)
 
         target_receptacles = defaultdict(list)
         all_target_receptacles = []
@@ -1070,3 +1055,54 @@ class RearrangeEpisodeGenerator:
 
         # return success or failure
         return success
+
+    def get_receptacles(self, scene_name):
+        """
+        Find navigable and viewable receptacles and get their viewpoints
+        """
+        dataset_name = osp.basename(self.cfg.dataset_path).split(".", 1)[0]
+        receptacle_cache_path = osp.join(
+            "data/cache/receptacle_viewpoints",
+            dataset_name,
+            scene_name + ".pkl",
+        )
+        if osp.exists(receptacle_cache_path) and not self._ignore_cache:
+            with open(receptacle_cache_path, "rb") as f:
+                _, viewable_receptacle_names = pickle.load(f)
+            receptacles = find_receptacles(self.sim)
+            viewable_receptacles = [
+                rec
+                for rec in receptacles
+                if rec.name in viewable_receptacle_names
+            ]
+            logger.info(
+                f"{len(viewable_receptacles)} viewable receptacles found in cache."
+            )
+        else:
+            receptacles = find_receptacles(self.sim)
+            navigable_receptacles = get_navigable_receptacles(
+                self.sim, receptacles
+            )
+            populate_semantic_graph(self.sim)
+            (
+                receptacle_viewpoints,
+                viewable_receptacles,
+            ) = get_receptacle_viewpoints(self.sim, navigable_receptacles)
+            viewable_receptacle_names = {
+                rec.name for rec in viewable_receptacles
+            }
+            logger.info(
+                f"{len(viewable_receptacles)}/{len(receptacles)} viewable receptacles found."
+            )
+
+            os.makedirs(osp.dirname(receptacle_cache_path), exist_ok=True)
+            try:
+                with open(receptacle_cache_path, "wb") as f:
+                    pickle.dump(
+                        (receptacle_viewpoints, viewable_receptacle_names), f
+                    )
+            except Exception as e:
+                os.unlink(receptacle_cache_path)
+                raise e
+
+        return viewable_receptacles

@@ -1,11 +1,8 @@
 import itertools
-import os
 from collections import Counter
 from enum import Enum, auto
 from typing import List
 
-import cv2
-import imageio
 import magnum as mn
 import numpy as np
 
@@ -13,9 +10,8 @@ import habitat_sim
 from habitat.core.simulator import AgentState
 from habitat.datasets.rearrange.geometry_utils import direction_to_quaternion
 from habitat.datasets.rearrange.viz_utils import (
-    COLOR_PALETTE,
-    draw_obj_bbox_on_topdown_map,
-    get_topdown_map,
+    save_viewpoint_frame,
+    save_topdown_map,
 )
 from habitat.tasks.nav.object_nav_task import ObjectViewLocation
 from habitat.tasks.rearrange.utils import get_aabb
@@ -146,25 +142,7 @@ def generate_viewpoints(
             cov += compute_pixel_coverage(obs["semantic"], semantic_id)
 
             if debug_viz:
-                rgb_obs = np.ascontiguousarray(obs["color"][..., :3])
-                sem_obs = (obs["semantic"] == semantic_id).astype(
-                    np.uint8
-                ) * 255
-                contours, _ = cv2.findContours(
-                    sem_obs, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
-                )
-                rgb_obs = cv2.drawContours(
-                    rgb_obs, contours, -1, (0, 255, 0), 4
-                )
-                img_dir = "data/images/objnav_dataset_gen"
-                os.makedirs(img_dir, exist_ok=True)
-                imageio.imsave(
-                    os.path.join(
-                        img_dir,
-                        f"{obj.handle}_{semantic_id}_{x}_{z}_{act_idx}.png",
-                    ),
-                    rgb_obs,
-                )
+                save_viewpoint_frame(obs, obj.handle, semantic_id, act_idx)
 
         pt[1] -= pf.nav_mesh_settings.agent_height
 
@@ -189,84 +167,16 @@ def generate_viewpoints(
     view_locations = sorted(view_locations, reverse=True, key=lambda v: v.iou)
 
     if debug_viz and len(view_locations) == 0:
-        object_position_on_floor = np.array(object_position).copy()
-        if len(view_locations) > 0:
-            object_position_on_floor[1] = view_locations[
-                0
-            ].agent_state.position[1]
-        else:
-            while True:
-                # TODO: think of better way than ->
-                pf = sim.pathfinder
-                navigable_point = pf.get_random_navigable_point()
-                if pf.island_radius(navigable_point) >= ISLAND_RADIUS_LIMIT:
-                    break
-
-            object_position_on_floor[1] = navigable_point[1]
-
-        topdown_map = get_topdown_map(
-            sim, start_pos=object_position_on_floor, marker=None
-        )
-
-        colors = list(COLOR_PALETTE.values())
-        for p in candidate_poses_ious_orig:
-            if p[0] < 0:
-                color = colors[p[-1].value - 1]
-            else:
-                color = COLOR_PALETTE["green"]
-
-            topdown_map = get_topdown_map(
-                sim,
-                start_pos=p[1],
-                topdown_map=topdown_map,
-                marker="circle",
-                radius=2,
-                color=color,
-            )
-
-        topdown_map = get_topdown_map(
+        save_topdown_map(
             sim,
-            start_pos=object_position_on_floor,
-            topdown_map=topdown_map,
-            marker="circle",
-            radius=6,
-            color=COLOR_PALETTE["red"],
-        )
-        topdown_map = draw_obj_bbox_on_topdown_map(
-            topdown_map, object_aabb, sim
-        )
-
-        if len(view_locations) == 0:
-            h = topdown_map.shape[0]
-            topdown_map = cv2.copyMakeBorder(
-                topdown_map,
-                0,
-                150,
-                0,
-                0,
-                cv2.BORDER_CONSTANT,
-                value=COLOR_PALETTE["white"],
-            )
-
-            for i, c in enumerate(poses_type_counter.items()):
-                line = f"{c[0].name}: {c[1]}/{len(candidate_poses_ious_orig)}"
-                color = colors[c[0].value - 1]
-                topdown_map = cv2.putText(
-                    topdown_map,
-                    line,
-                    (10, h + 25 * i + 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    color,
-                    1,
-                    cv2.LINE_AA,
-                )
-
-        img_dir = "data/images/objnav_dataset_gen/maps"
-        os.makedirs(img_dir, exist_ok=True)
-        imageio.imsave(
-            os.path.join(img_dir, f"{obj.handle}_{semantic_id}.png"),
-            topdown_map,
+            view_locations,
+            candidate_poses_ious_orig,
+            poses_type_counter,
+            obj.handle,
+            object_position,
+            object_aabb,
+            semantic_id,
+            ISLAND_RADIUS_LIMIT,
         )
 
     obj.transformation = cached_obj_transform

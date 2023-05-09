@@ -110,6 +110,10 @@ def get_obj_rec_cat_in_eps(
 
 
 def read_obj_category_mapping(filename, keep_only_recs=False):
+    """
+    Returns a mapping from object name to category.
+    Setting keep_only_recs to True keeps only receptacles.
+    """
     df = pd.read_csv(filename)
     name_key = "id" if "id" in df else "name"
     category_key = (
@@ -528,10 +532,11 @@ if __name__ == "__main__":
         "--rec_cache_dir",
         type=str,
         default="data/cache/receptacle_viewpoints/fphab",
+        help="Path to cache where receptacle viewpoints were saved during first stage of episode generation"
     )
     parser.add_argument("--obj_category_mapping_file", type=str, default=None)
     parser.add_argument("--rec_category_mapping_file", type=str, default=None)
-    parser.add_argument("--num_episodes", type=int, default=-1)
+    parser.add_argument("--num_episodes", type=int, default=-1) # -1 uses all episodes
     parser.add_argument("--add_viewpoints", action="store_true")
     parser.add_argument("--debug_viz", action="store_true")
 

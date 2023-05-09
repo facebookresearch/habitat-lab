@@ -45,6 +45,7 @@ class RearrangeEpisode(Episode):
     name_to_receptacle: Dict[str, str] = {}
 
 
+# TODO: Rename this and all other classes to OVMM*
 @attr.s(auto_attribs=True, kw_only=True)
 class ObjectRearrangeEpisode(RearrangeEpisode):
     r"""Specifies categories of the object, start and goal receptacles
@@ -166,10 +167,10 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         super().__init__(config)
         if config is not None:
             self.viewpoints_matrix = np.load(
-                self.config.viewpoints_matrix_path
+                self.config.viewpoints_matrix_path.format(split=self.config.split)
             )
             self.transformations_matrix = np.load(
-                self.config.transformations_matrix_path
+                self.config.transformations_matrix_path.format(split=self.config.split)
             )
 
     def get_episode_iterator(

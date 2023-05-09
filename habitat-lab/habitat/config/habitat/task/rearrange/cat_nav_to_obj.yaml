@@ -40,6 +40,7 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 object_in_hand_sample_prob: 0.0
+
 measurements:
   force_terminate:
     max_accum_force: 10_000.0

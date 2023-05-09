@@ -137,6 +137,14 @@ class BaseVelocityActionConfig(ActionConfig):
     ang_speed: float = 10.0
     allow_dyn_slide: bool = True
     allow_back: bool = True
+    collision_threshold: float = 1e-5
+    navmesh_offset: Optional[List[float]] = None
+    min_displacement: float = 0.1  # minimum displacement that is allowed
+    max_displacement_along_axis: float = 1.0  # maximum displacement
+    max_turn_degrees: float = 180.0  # maximum turn waypoint
+    min_turn_degrees: float = 5.0  # minimum turn waypoint
+    allow_lateral_movement: bool = True  # whether to allow lateral movement
+    allow_simultaneous_turn: bool = True  # whether to allow simultaneous turn
 
 
 @attr.s(auto_attribs=True, slots=True)
