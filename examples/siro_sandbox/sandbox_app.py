@@ -73,6 +73,7 @@ class SandboxDriver(GuiAppDriver):
 
         self.ctrl_helper.on_environment_reset()
 
+        self.cam_transform = None
         self.cam_zoom_dist = 1.0
         self._max_zoom_dist = 50.0
         self._min_zoom_dist = 0.02
@@ -127,22 +128,28 @@ class SandboxDriver(GuiAppDriver):
     def get_sim(self) -> Any:
         return self.env.task._sim
 
-    def draw_nav_hint_from_agent(self, end_pos, color):
-        agent_idx = 0
+    def draw_nav_hint_from_agent(self, end_pos, end_radius, color):
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        assert agent_idx is not None
         art_obj = (
             self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
         )
         agent_pos = art_obj.transformation.translation
-        # todo: get forward_dir from FPS camera yaw, not art_obj.transformation
+        # get forward_dir from FPS camera yaw, not art_obj.transformation
         # (the problem with art_obj.transformation is that it includes a "wobble"
         # introduced by the walk animation)
-        forward_dir = art_obj.transformation.transform_vector(
-            mn.Vector3(0, 0, 1)
-        )
+        transformation = self.cam_transform or art_obj.transformation
+        forward_dir = transformation.transform_vector(-mn.Vector3(0, 0, 1))
         forward_dir[1] = 0
+        forward_dir = forward_dir.normalized()
 
         self.draw_nav_hint(
-            agent_pos, forward_dir, end_pos, color, self._viz_anim_fraction
+            agent_pos,
+            forward_dir,
+            end_pos,
+            end_radius,
+            color,
+            self._viz_anim_fraction,
         )
 
     def visualize_task(self):
@@ -150,15 +157,27 @@ class SandboxDriver(GuiAppDriver):
         idxs, goal_pos = sim.get_targets()
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
+        end_radius = self.env._config.task.obj_succ_thresh
 
         if self._held_target_obj_idx != None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             try:
-                target_idxs = np.where(idxs == self._held_target_obj_idx)
+                (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
                 if len(target_idxs):
+                    goal_position = goal_pos[target_idxs[0]]
                     self.draw_nav_hint_from_agent(
-                        mn.Vector3(goal_pos[target_idxs[0][0]]), color
+                        mn.Vector3(goal_position), end_radius, color
                     )
+                    self._debug_line_render.draw_circle(
+                        goal_position, end_radius, color, 24
+                    )
+                    # reference code to display a box
+                    # box_size = 0.3
+                    # self._debug_line_render.draw_box(
+                    #     goal_position - box_size / 2,
+                    #     goal_position + box_size / 2,
+                    #     color
+                    # )
             except ValueError:
                 pass
         else:
@@ -173,7 +192,13 @@ class SandboxDriver(GuiAppDriver):
                     continue
                 else:
                     self.draw_nav_hint_from_agent(
-                        mn.Vector3(this_target_pos), color
+                        mn.Vector3(this_target_pos), end_radius, color
+                    )
+                    box_size = 0.3
+                    self._debug_line_render.draw_box(
+                        this_target_pos - box_size / 2,
+                        this_target_pos + box_size / 2,
+                        color,
                     )
 
     def viz_and_get_grasp_drop_hints(self):
@@ -249,7 +274,9 @@ class SandboxDriver(GuiAppDriver):
                         )
                         if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                             grasp_object_id = hit_info.object_id
-                            self._held_target_obj_idx = 0  # temp hack; no way to look this up currently from hit_info.object_id
+                            self._held_target_obj_idx = (
+                                sim.scene_obj_ids.index(hit_info.object_id)
+                            )
                             return grasp_object_id, None
 
         return None, None
@@ -349,7 +376,7 @@ class SandboxDriver(GuiAppDriver):
             )
 
     def draw_nav_hint(
-        self, start_pos, start_dir, end_pos, color, anim_fraction
+        self, start_pos, start_dir, end_pos, end_radius, color, anim_fraction
     ):
         assert isinstance(start_pos, mn.Vector3)
         assert isinstance(start_dir, mn.Vector3)
@@ -379,8 +406,6 @@ class SandboxDriver(GuiAppDriver):
         )
 
         prev_pos = None
-        end_radius = 0.4
-
         for step_idx in range(num_steps):
             t = step_idx / (num_steps - 1) + anim_fraction * (
                 1 / (num_steps - 1)
@@ -403,8 +428,6 @@ class SandboxDriver(GuiAppDriver):
                     pos, radius, color_with_alpha, num_segments, normal
                 )
             prev_pos = pos
-
-        self._debug_line_render.draw_circle(end_pos, end_radius, color, 24)
 
     def _free_camera_lookat_control(self):
         if self.lookat is None:
@@ -543,13 +566,13 @@ class SandboxDriver(GuiAppDriver):
             np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
         )
 
-        cam_transform = mn.Matrix4.look_at(
+        self.cam_transform = mn.Matrix4.look_at(
             lookat + offset.normalized() * self.cam_zoom_dist,
             lookat,
             mn.Vector3(0, 1, 0),
         )
 
-        post_sim_update_dict["cam_transform"] = cam_transform
+        post_sim_update_dict["cam_transform"] = self.cam_transform
 
         keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
