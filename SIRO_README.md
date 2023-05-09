@@ -26,7 +26,7 @@ FP is actually four distinct pieces: Floorplanner scenes, Amazon-Berkeley object
 
 1. Download Floorplanner Scenes: [fpss_osmm.zip](https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
 2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
-3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
+3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1MqhYVnnry3zHj3oqsqbUqy29aAJXz-C5/view?usp=sharing) We generate 100 episodes (nav-pick-place for two objects) using 18 scenes. This dataset is called `s_minitrain.json.gz`
 4. Extract these into `habitat-lab/data` as follows:
 ```
 cd data
@@ -83,6 +83,9 @@ To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the
 
 or for running HRL fix policy
 `python habitat-baselines/habitat_baselines/run.py --config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat.task.measurements.force_terminate.max_accum_force=-1.0 habitat.task.measurements.force_terminate.max_instant_force=-1.0 habitat_baselines.num_environments=1 habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills`
+
+or for running HRL human-robot fix policy (multi-agent setting)
+`python habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat_baselines.num_environments=1`
 
 TODO
 1. Generate more scenes

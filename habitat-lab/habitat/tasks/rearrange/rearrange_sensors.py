@@ -424,6 +424,50 @@ class LocalizationSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class NavigationTargetPositionSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    To check if the agent is in the goal or not
+    """
+
+    cls_uuid = "navigation_target_position_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavigationTargetPositionSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        action_name = "oracle_nav_with_backing_up_action"
+        task = kwargs["task"]
+        if (
+            "agent_"
+            + str(self.agent_id)
+            + "_oracle_nav_with_backing_up_action"
+            in task.actions
+        ):
+            action_name = (
+                "agent_"
+                + str(self.agent_id)
+                + "_oracle_nav_with_backing_up_action"
+            )
+        at_goal = task.actions[action_name].at_goal
+        return np.array([at_goal])
+
+
+@registry.register_sensor
 class IsHoldingSensor(UsesArticulatedAgentInterface, Sensor):
     """
     Binary if the robot is holding an object or grasped onto an articulated object.
@@ -1050,9 +1094,49 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        if self.agent_id is None:
-            use_k = f"oracle_nav_action"
-        else:
+        if self.agent_id is not None:
             use_k = f"agent_{self.agent_id}_oracle_nav_action"
+            if (
+                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
+                in self._task.actions
+            ):
+                use_k = (
+                    f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
+                )
+        else:
+            use_k = "oracle_nav_action"
+            if "oracle_nav_with_backing_up_action" in self._task.actions:
+                use_k = "oracle_nav_with_backing_up_action"
+
         nav_action = self._task.actions[use_k]
+
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+
+
+@registry.register_measure
+class ContactTestStats(Measure):
+    """
+    Did agent collide with objects?
+    """
+
+    cls_uuid: str = "contact_test_stats"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ContactTestStats.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        self._contact_flag = []
+        self._metric = 0
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        flag = self._sim.contact_test(
+            self._sim.articulated_agent.get_robot_sim_id()
+        )
+        self._contact_flag.append(flag)
+        self._metric = np.average(self._contact_flag)

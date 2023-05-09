@@ -326,6 +326,49 @@ class OracleNavActionConfig(ActionConfig):
     num_spawn_attempts: int = 200
 
 
+@dataclass
+class OracleNavWithBackingUpActionConfig(ActionConfig):
+    """
+    Rearrangement Only, Oracle navigation action with backing-up motion.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "OracleNavWithBackingUpAction"
+    # Whether the motion is in the form of base_velocity or human_joints
+    motion_control: str = "base_velocity"
+    num_joints: int = 17
+    turn_velocity: float = 1.0
+    forward_velocity: float = 1.0
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+    # A value of -1.0 means we will get as close to the object as possible.
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
+    # For noncylinder navmesh action
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
+    # If the condition of sliding includs the checking of rotation
+    enable_rotation_check_for_dyn_slide: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # The x and y locations of the clamped NavMesh position for placing and picking locations
+    navmesh_offset_for_agent_placement: Optional[List[float]] = None
+    # Simulation frequency for velocity control
+    sim_freq: float = 120.0
+
+
 # -----------------------------------------------------------------------------
 # # EQA actions
 # -----------------------------------------------------------------------------
@@ -610,6 +653,11 @@ class LocalizationSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class NavigationTargetPositionSensorConfig(LabSensorConfig):
+    type: str = "NavigationTargetPositionSensor"
+
+
+@dataclass
 class QuestionSensorConfig(LabSensorConfig):
     type: str = "QuestionSensor"
 
@@ -726,6 +774,15 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 @dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
+
+
+@dataclass
+class ContactTestStatsMeasurementConfig(MeasurementConfig):
+    r"""
+    Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
+
+    """
+    type: str = "ContactTestStats"
 
 
 @dataclass
@@ -1702,6 +1759,12 @@ cs.store(
     node=OracleNavActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.oracle_nav_with_backing_up_action",
+    group="habitat/task/actions",
+    name="oracle_nav_with_backing_up_action",
+    node=OracleNavWithBackingUpActionConfig,
+)
+cs.store(
     package="habitat.task.actions.pddl_apply_action",
     group="habitat/task/actions",
     name="pddl_apply_action",
@@ -1851,6 +1914,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="localization_sensor",
     node=LocalizationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.navigation_target_position_sensor",
+    group="habitat/task/lab_sensors",
+    name="navigation_target_position_sensor",
+    node=NavigationTargetPositionSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.target_start_sensor",
@@ -2100,6 +2169,12 @@ cs.store(
     group="habitat/task/measurements",
     name="articulated_agent_colls",
     node=RobotCollisionsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.contact_test_stats",
+    group="habitat/task/measurements",
+    name="contact_test_stats",
+    node=ContactTestStatsMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.object_to_goal_distance",

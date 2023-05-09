@@ -47,8 +47,18 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
 
+        match = [
+            val
+            for key, val in task_config["actions"].items()
+            if "oracle_nav_with_backing_up_action" in key
+        ]
+        if len(match) != 0:
+            action_name = "oracle_nav_with_backing_up_action"
+        else:
+            action_name = "oracle_nav_action"
+
         self._oracle_nav_ac_idx, _ = find_action_range(
-            action_space, "oracle_nav_action"
+            action_space, action_name
         )
 
     def set_pddl_problem(self, pddl_prob):
