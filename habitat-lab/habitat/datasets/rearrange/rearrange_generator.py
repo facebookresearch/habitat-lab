@@ -155,7 +155,9 @@ class RearrangeEpisodeGenerator:
             )
 
         # object sets
-        object_template_handles = self.sim.get_object_template_manager().get_template_handles()
+        object_template_handles = (
+            self.sim.get_object_template_manager().get_template_handles()
+        )
         for object_set in self.cfg.object_sets:
             assert "name" in object_set
             assert (
@@ -706,15 +708,19 @@ class RearrangeEpisodeGenerator:
         # sample goal positions for target objects after all other clutter is placed and validated
         handle_to_obj = {obj.handle: obj for obj in self.ep_sampled_objects}
         for sampler_name, target_sampler in self._target_samplers.items():
-            obj_sampler_name = targ_sampler_name_to_obj_sampler_names[
+            sampler_target_receptacles = []
+            for obj_sampler_name in targ_sampler_name_to_obj_sampler_names[
                 sampler_name
-            ][0]
+            ]:
+                sampler_target_receptacles.extend(
+                    target_receptacles[obj_sampler_name]
+                )
             new_target_objects = target_sampler.sample(
                 self.sim,
                 recep_tracker,
                 snap_down=True,
                 vdb=self.vdb,
-                target_receptacles=target_receptacles[obj_sampler_name],
+                target_receptacles=sampler_target_receptacles,
                 goal_receptacles=goal_receptacles[sampler_name],
                 object_to_containing_receptacle=self.object_to_containing_receptacle,
             )
@@ -733,11 +739,8 @@ class RearrangeEpisodeGenerator:
                     return None
 
             # cache transforms and add visualizations
-            for i, (instance_handle, value) in enumerate(
-                new_target_objects.items()
-            ):
+            for instance_handle, value in new_target_objects.items():
                 target_object, target_receptacle = value
-                target_receptacles[obj_sampler_name][i] = target_receptacle
                 assert (
                     instance_handle not in self.episode_data["sampled_targets"]
                 ), f"Duplicate target for instance '{instance_handle}'."
