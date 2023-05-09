@@ -1097,15 +1097,11 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         if self.agent_id is not None:
             action_name = f"agent_{self.agent_id}_oracle_nav_action"
             if (
-                "agent_"
-                + str(self.agent_id)
-                + "_oracle_nav_with_backing_up_action"
+                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
                 in self._task.actions
             ):
                 action_name = (
-                    "agent_"
-                    + str(self.agent_id)
-                    + "_oracle_nav_with_backing_up_action"
+                    f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
                 )
         else:
             action_name = "oracle_nav_action"
