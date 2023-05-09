@@ -177,21 +177,18 @@ class GuiApplication(InputHandlerApplication):
                 )
 
             self._last_draw_event_time = curr_time
-            if self._debug_counter >= 100:
+            if self._debug_counter >= 10:
                 elapsed = curr_time - self._debug_timer
                 self._debug_sps = self._debug_counter / elapsed
                 self._debug_timer = curr_time
                 self._debug_counter = 0
 
         for _ in range(num_sim_updates):
-            self._app_renderer._text_drawer.add_text(
-                "SPS:\n"
-                f"  Target: {self._target_sps}\n"
-                f"  Debug: {self._debug_sps:.1f}"
-            )
             post_sim_update_dict = self._driver.sim_update(sim_dt)
             self._sim_input.on_frame_end()
             self._app_renderer.post_sim_update(post_sim_update_dict)
+
+        self._app_renderer._text_drawer.add_text(f"SPS: {self._debug_sps:.1f}")
 
         render_dt = 1 / 60.0  # todo: drive correctly
         did_render = self._app_renderer.render_update(render_dt)
