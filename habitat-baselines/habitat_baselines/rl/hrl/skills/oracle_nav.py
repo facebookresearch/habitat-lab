@@ -9,6 +9,7 @@ import torch
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
+    LocalizationSensor,
     NavigationTargetPositionSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
@@ -127,13 +128,25 @@ class OracleNavPolicy(NnSkillPolicy):
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool)
 
-        at_goal = observations[NavigationTargetPositionSensor.cls_uuid].cpu()
-        for i in range(len(batch_idx)):
-            if at_goal[i] and not self._at_goal:
-                ret[i] = True
-                self._at_goal = True
-            else:
-                self._at_goal = False
+        if NavigationTargetPositionSensor.cls_uuid in observations:
+            at_goal = observations[
+                NavigationTargetPositionSensor.cls_uuid
+            ].cpu()
+            for i in range(len(batch_idx)):
+                if at_goal[i] and not self._at_goal:
+                    ret[i] = True
+                    self._at_goal = True
+                else:
+                    self._at_goal = False
+        else:
+            cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
+
+            for i, batch_i in enumerate(batch_idx):
+                prev_pos = self._prev_pos[batch_i]
+                if prev_pos is not None:
+                    movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
+                    ret[i] = movement < self._config.stop_thresh
+                self._prev_pos[batch_i] = cur_pos[i]
 
         return ret
 
