@@ -378,9 +378,9 @@ class MultiUpdater(Updater):
         for agent_i, (rollout, updater) in enumerate(
             zip(rollouts._active_storages, self._active_updaters)
         ):
-            if len(list(updater.parameters())):
+            if len(list(updater.parameters())) > 0:
                 agent_losses = updater.update(rollout)
-                add_agent_names(losses, agent_losses, agent_i)
+                add_agent_names(agent_losses, losses, agent_i)
         return losses
 
     @classmethod

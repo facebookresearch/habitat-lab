@@ -34,6 +34,7 @@ class HrlRolloutStorage(RolloutStorage):
         self._num_envs = num_envs
         self._cur_step_idxs = torch.zeros(self._num_envs, dtype=torch.long)
         self._last_should_inserts = None
+        self._current_step = {}
         assert (
             not self.is_double_buffered
         ), "HRL storage does not support double buffered sampling"
@@ -93,6 +94,7 @@ class HrlRolloutStorage(RolloutStorage):
         current_step = TensorDict(
             {k: v for k, v in current_step.items() if v is not None}
         )
+        self._current_step.update(next_step)
 
         if should_inserts is None:
             should_inserts = self._last_should_inserts
@@ -230,13 +232,11 @@ class HrlRolloutStorage(RolloutStorage):
         raise ValueError()
 
     def get_current_step(self, env_slice, buffer_index):
-        # Ignore `env_slice` since we assume that double buffer sampling is not
-        # supported.
-        env_idxs = torch.arange(self._num_envs)
-        return self.buffers[
-            self._cur_step_idxs[env_slice],
-            env_idxs,
-        ]
+        return TensorDict(self._current_step)
+
+    def insert_first_observations(self, batch):
+        super().insert_first_observations(batch)
+        self._current_step = self.buffers[0]
 
     def get_last_step(self):
         env_idxs = torch.arange(self._num_envs)
