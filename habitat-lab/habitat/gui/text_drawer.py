@@ -72,16 +72,6 @@ class TextDrawer:
         )
         self._window_text.reserve(self._max_display_text_chars)
 
-        # make magnum text background transparent
-        mn.gl.Renderer.enable(mn.gl.Renderer.Feature.BLENDING)
-        mn.gl.Renderer.set_blend_function(
-            mn.gl.Renderer.BlendFunction.ONE,
-            mn.gl.Renderer.BlendFunction.ONE_MINUS_SOURCE_ALPHA,
-        )
-        mn.gl.Renderer.set_blend_equation(
-            mn.gl.Renderer.BlendEquation.ADD, mn.gl.Renderer.BlendEquation.ADD
-        )
-
     def add_text(
         self,
         text_to_add,
@@ -109,6 +99,16 @@ class TextDrawer:
         self._text_transform_pairs.append((text_to_add, window_text_transform))
 
     def draw_text(self):
+        # make magnum text background transparent
+        mn.gl.Renderer.enable(mn.gl.Renderer.Feature.BLENDING)
+        mn.gl.Renderer.set_blend_function(
+            mn.gl.Renderer.BlendFunction.ONE,
+            mn.gl.Renderer.BlendFunction.ONE_MINUS_SOURCE_ALPHA,
+        )
+        mn.gl.Renderer.set_blend_equation(
+            mn.gl.Renderer.BlendEquation.ADD, mn.gl.Renderer.BlendEquation.ADD
+        )
+
         """Draws collected text on the screen"""
         self._shader.bind_vector_texture(self._glyph_cache.texture)
         for text_to_draw, transform in self._text_transform_pairs:
@@ -117,3 +117,8 @@ class TextDrawer:
             self._window_text.render(text_to_draw)
             self._shader.draw(self._window_text.mesh)
         self._text_transform_pairs.clear()
+
+        # sloppy: disable blending here so that other rendering subsystems (e.g.
+        # DebugLineRender) will be forced to enable and configure blending when they
+        # render
+        mn.gl.Renderer.disable(mn.gl.Renderer.Feature.BLENDING)
