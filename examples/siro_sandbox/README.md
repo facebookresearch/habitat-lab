@@ -36,7 +36,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival \
 --sample-random-baseline-base-vel
 ```
-* Solo user-controlled humanoid mode:
+* Solo user-controlled humanoid mode, with sliding enabled:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -44,7 +44,8 @@ python examples/siro_sandbox/sandbox_app.py \
 --gui-controlled-agent-index 0 \
 --never-end \
 --cfg benchmark/rearrange/rearrange_easy_human.yaml \
---cfg-opts habitat.dataset.split=minival
+--cfg-opts habitat.dataset.split=minival \
+habitat.simulator.habitat_sim_v0.allow_sliding=True
 ```
 
 
