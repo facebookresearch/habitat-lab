@@ -311,7 +311,7 @@ class SandboxDriver(GuiAppDriver):
         path.requested_end = snapped_pos
         found_path = pathfinder.find_path(path)
 
-        if not found_path:
+        if not found_path or len(path.points) < 2:
             return None
 
         path_points = []
