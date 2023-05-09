@@ -141,7 +141,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         percent_done_fn: Callable[[], float],
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
-        agent_count_idxs = []
+        agent_count_idxs = [0]
         agents = []
         for agent_i in range(self._pop_config.num_agent_types):
             num_agents_type = self._pop_config.num_pool_agents_per_type[
@@ -150,7 +150,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent_count_idxs.append(num_agents_type)
 
             for agent_type_i in range(num_agents_type):
-                agent_ct = agent_i * num_agents_type + agent_type_i
+                agent_ct = agent_i * agent_count_idxs[agent_i] + agent_type_i
 
                 use_resume_state = None
                 if resume_state is not None:
@@ -188,7 +188,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                         agent_name,
                     )
                 )
-        return agents, agent_count_idxs
+        return agents, agent_count_idxs[1:]
 
     def _create_single_agent(
         self,
