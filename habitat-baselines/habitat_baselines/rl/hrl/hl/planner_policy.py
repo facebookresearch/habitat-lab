@@ -79,7 +79,6 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         sol_nodes = []
         while len(stack) != 0:
             cur_node = stack.popleft()
-            # print(f"Cur visited size {len(visited)}, depth {cur_node.depth}")
 
             if cur_node.depth > self._max_search_depth:
                 break
@@ -143,29 +142,41 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         for path in paths:
             all_ac_seqs.append([node.action for node in path])
         # Sort by the length of the action sequence
-        return sorted(all_ac_seqs, key=lambda x: len(x))
+        full_plans = sorted(all_ac_seqs, key=lambda x: len(x))
+
+        # Each full plan will be a permutation of the other full plans.
+        plans = full_plans[1:]
+        # Only extract subsequences from 1 of the plans.
+        full_plan = full_plans[0]
+        for num_subplans in range(
+            0, len(full_plan) + 1, self._config.plan_split_len
+        ):
+            if num_subplans == 0:
+                plans.append([])
+                continue
+            for start_i in range(0, len(full_plan), num_subplans):
+                plans.append(full_plan[start_i : start_i + num_subplans])
+        return plans
 
     def _replan(self, pred_vals):
         plans = self._get_all_plans(pred_vals)
+
         # Just return the shortest plan for now.
-        return plans[0]
+        return plans[self._config.plan_idx]
 
     def _get_plan_action(self, pred_vals, batch_idx):
         if self._should_replan[batch_idx]:
-            print("replanning")
             self._plans[batch_idx] = self._replan(pred_vals)
             self._next_sol_idxs[batch_idx] = 0
         cur_plan = self._plans[batch_idx]
 
         cur_idx = self._next_sol_idxs[batch_idx]
-        print("At index ", cur_idx)
         if cur_idx >= len(cur_plan):
             cur_ac = None
         else:
             cur_ac = cur_plan[cur_idx]
 
         self._next_sol_idxs[batch_idx] += 1
-        print(f"Got action {cur_ac}")
         return cur_ac
 
     def get_next_skill(

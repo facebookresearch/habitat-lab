@@ -51,6 +51,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         )
         self._prev_ep_id = None
         self._targets = {}
+        self.skill_done = False
 
     @staticmethod
     def _compute_turn(rel, turn_vel, robot_forward):
@@ -101,6 +102,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         if self._task._episode_id != self._prev_ep_id:
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
+        self.skill_done = False
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         nav_to_obj = self._poss_entities[nav_to_target_idx]
@@ -167,6 +169,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self.humanoid_controller.obj_transform_base.translation = end_pos
 
     def step(self, *args, is_last_action, **kwargs):
+        self.skill_done = False
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_action"
         ]
@@ -232,6 +235,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                         )
                 else:
                     vel = [0, 0]
+                    self.skill_done = True
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
@@ -253,7 +257,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                         )
                 else:
                     self.humanoid_controller.calculate_stop_pose()
-
+                    self.skill_done = True
                 self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[

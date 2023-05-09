@@ -9,8 +9,7 @@ import torch
 
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
-    LocalizationSensor,
-    NavigationTargetPositionSensor,
+    HasFinishedOracleNavSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
@@ -62,12 +61,6 @@ class OracleNavPolicy(NnSkillPolicy):
             action_space, action_name
         )
 
-        self._is_target_obj = None
-        self._targ_obj_idx = None
-        self._prev_pos = [None for _ in range(self._batch_size)]
-
-        self._at_goal = False
-
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
         self._all_entities = self._pddl_problem.get_ordered_entities_list()
@@ -83,9 +76,6 @@ class OracleNavPolicy(NnSkillPolicy):
         self._is_target_obj = None
         self._targ_obj_idx = None
         self._prev_angle = {}
-
-        for i in batch_idx:
-            self._prev_pos[i] = None
 
         ret = super().on_enter(
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
@@ -127,27 +117,10 @@ class OracleNavPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         ret = torch.zeros(masks.shape[0], dtype=torch.bool)
-
-        if NavigationTargetPositionSensor.cls_uuid in observations:
-            at_goal = observations[
-                NavigationTargetPositionSensor.cls_uuid
-            ].cpu()
-            for i in range(len(batch_idx)):
-                if at_goal[i] and not self._at_goal:
-                    ret[i] = True
-                    self._at_goal = True
-                else:
-                    self._at_goal = False
-        else:
-            cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
-
-            for i, batch_i in enumerate(batch_idx):
-                prev_pos = self._prev_pos[batch_i]
-                if prev_pos is not None:
-                    movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
-                    ret[i] = movement < self._config.stop_thresh
-                self._prev_pos[batch_i] = cur_pos[i]
-
+        finish_oracle_nav = observations[
+            HasFinishedOracleNavSensor.cls_uuid
+        ].cpu()
+        ret = finish_oracle_nav.to(torch.bool)[:, 0]
         return ret
 
     def _parse_skill_arg(self, skill_arg):

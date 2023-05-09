@@ -7,11 +7,17 @@ hierarchical_policy:
   high_level_policy:
     name: "PlannerHighLevelPolicy"
     allowed_actions:
-      - nav
+      - nav_to_receptacle_by_name
+      - nav_to_goal
+      - nav_to_obj
       - pick
       - place
-      - nav_to_receptacle_by_name
     allow_other_place: False
     max_search_depth: 8
     is_reactive: False
+    # This is the number of non-overlapping steps to sub-sample from each
+    # planned sequence (so the agent only does a part of the overall task).
+    plan_split_len: 4
+    # The index of which plan to take.
+    plan_idx: 0
   defined_skills: {}
