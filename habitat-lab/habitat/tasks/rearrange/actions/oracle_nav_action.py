@@ -377,7 +377,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         ]
         cur_pos = [trans.transform_point(xyz) for xyz in nav_pos_3d]
         cur_pos = [
-            np.array([xz[0], self._sim.articulated_agent.base_pos[1], xz[2]])
+            np.array([xz[0], self.cur_articulated_agent.base_pos[1], xz[2]])
             for xz in cur_pos
         ]
 
@@ -396,14 +396,14 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         This function checks if the robot needs to do backing-up action
         """
         # Make a copy of agent trans
-        trans = mn.Matrix4(self._sim.articulated_agent.sim_obj.transformation)
+        trans = mn.Matrix4(self.cur_articulated_agent.sim_obj.transformation)
         # Initialize the velocity controller
         vc = SimpleVelocityControlEnv(self._config.sim_freq)
         angle = float("inf")
         # Get the current location of the agent
-        cur_pos = self._sim.articulated_agent.base_pos
+        cur_pos = self.cur_articulated_agent.base_pos
         # Set the trans to be agent location
-        trans.translation = self._sim.articulated_agent.base_pos
+        trans.translation = self.cur_articulated_agent.base_pos
 
         while abs(angle) > self._config.turn_thresh:
             # Compute the robot facing orientation
@@ -544,6 +544,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 # Update the humanoid base
                 self.humanoid_controller.obj_transform_base = base_T
                 if not at_goal:
+                    self.at_goal = False
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
                         self.humanoid_controller.calculate_turn_pose(
@@ -555,6 +556,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                             mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
                         )
                 else:
+                    self.at_goal = True
                     self.humanoid_controller.calculate_stop_pose()
 
                 self._update_controller_to_navmesh()

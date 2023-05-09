@@ -47,7 +47,12 @@ class OracleNavPolicy(NnSkillPolicy):
             batch_size,
         )
 
-        if "oracle_nav_with_backing_up_action" in task_config["actions"]:
+        match = [
+            val
+            for key, val in task_config["actions"].items()
+            if "oracle_nav_with_backing_up_action" in key
+        ]
+        if len(match) != 0:
             action_name = "oracle_nav_with_backing_up_action"
         else:
             action_name = "oracle_nav_action"
@@ -60,7 +65,7 @@ class OracleNavPolicy(NnSkillPolicy):
         self._targ_obj_idx = None
         self._prev_pos = [None for _ in range(self._batch_size)]
 
-        self.at_goal = False
+        self._at_goal = False
 
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
@@ -124,11 +129,11 @@ class OracleNavPolicy(NnSkillPolicy):
 
         at_goal = observations[NavigationTargetPositionSensor.cls_uuid].cpu()
         for i in range(len(batch_idx)):
-            if at_goal[i] and not self.at_goal:
+            if at_goal[i] and not self._at_goal:
                 ret[i] = True
-                self.at_goal = True
+                self._at_goal = True
             else:
-                self.at_goal = False
+                self._at_goal = False
 
         return ret
 

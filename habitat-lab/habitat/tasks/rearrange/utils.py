@@ -466,9 +466,9 @@ def place_robot_at_closest_point_with_navmesh(
     desired_angle = get_angle_to_pos(np.array(target_position - agent_pos))
 
     # Cache the initial location of the agent
-    cache_pos = sim.articulated_agent.base_pos
+    cache_pos = agent.base_pos
     # Make a copy of agent trans
-    trans = mn.Matrix4(sim.articulated_agent.sim_obj.transformation)
+    trans = mn.Matrix4(agent.sim_obj.transformation)
 
     # Set the base pos of the agent
     trans.translation = agent_pos
@@ -495,7 +495,7 @@ def place_robot_at_closest_point_with_navmesh(
         if not is_collision:
             return (
                 np.array(center_pos),
-                sim.articulated_agent.base_rot,
+                agent.base_rot,
                 False,
             )
 

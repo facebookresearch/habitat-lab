@@ -426,7 +426,7 @@ class LocalizationSensor(UsesArticulatedAgentInterface, Sensor):
 @registry.register_sensor
 class NavigationTargetPositionSensor(UsesArticulatedAgentInterface, Sensor):
     """
-    The navigation target position
+    To check if the agent is in the goal or not
     """
 
     cls_uuid = "navigation_target_position_sensor"
@@ -450,9 +450,20 @@ class NavigationTargetPositionSensor(UsesArticulatedAgentInterface, Sensor):
         )
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        at_goal = (
-            kwargs["task"].actions["oracle_nav_with_backing_up_action"].at_goal
-        )
+        action_name = "oracle_nav_with_backing_up_action"
+        task = kwargs["task"]
+        if (
+            "agent_"
+            + str(self.agent_id)
+            + "_oracle_nav_with_backing_up_action"
+            in task.actions
+        ):
+            action_name = (
+                "agent_"
+                + str(self.agent_id)
+                + "_oracle_nav_with_backing_up_action"
+            )
+        at_goal = task.actions[action_name].at_goal
         return np.array([at_goal])
 
 
