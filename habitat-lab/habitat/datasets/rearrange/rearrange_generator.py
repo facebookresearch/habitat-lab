@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
+from omegaconf import OmegaConf
 from tqdm import tqdm
 
 import habitat.datasets.rearrange.samplers as samplers
