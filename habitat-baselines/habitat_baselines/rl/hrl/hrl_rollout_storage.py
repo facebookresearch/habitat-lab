@@ -87,11 +87,16 @@ class HrlRolloutStorage(RolloutStorage):
             value_preds=value_preds,
         )
 
+        current_obs = dict(observations=next_observations)
+
         next_step = TensorDict(
             {k: v for k, v in next_step.items() if v is not None}
         )
         current_step = TensorDict(
             {k: v for k, v in current_step.items() if v is not None}
+        )
+        current_obs = TensorDict(
+            {k: v for k, v in current_obs.items() if v is not None}
         )
 
         if should_inserts is None:
@@ -101,11 +106,22 @@ class HrlRolloutStorage(RolloutStorage):
         # Starts as shape [batch_size, 1]
         should_inserts = should_inserts.flatten()
 
+        env_idxs = torch.arange(self._num_envs)
+
+        # # Always add observation to current step
+        if (~should_inserts).sum() > 0:
+            self.buffers.set(
+                (
+                    self._cur_step_idxs[~should_inserts],
+                    env_idxs[~should_inserts],
+                ),
+                current_obs[~should_inserts],
+                strict=False,
+            )
+
         if should_inserts.sum() == 0:
             self._last_should_inserts = should_inserts
             return
-
-        env_idxs = torch.arange(self._num_envs)
 
         if rewards is not None:
             rewards = rewards.to(self.device)
