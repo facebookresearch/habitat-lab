@@ -37,6 +37,12 @@ class Controller(ABC):
         pass
 
 
+class GuiController(Controller):
+    def __init__(self, agent_idx, is_multi_agent, gui_input):
+        super().__init__(agent_idx, is_multi_agent)
+        self._gui_input = gui_input
+
+
 def clean_dict(d, remove_prefix):
     ret_d = {}
     for k, v in d.spaces.items():
@@ -156,11 +162,7 @@ class BaselinesController(Controller):
         return action, False, False, action_data.rnn_hidden_states
 
 
-class GuiRobotController(Controller):
-    def __init__(self, agent_idx, is_multi_agent, gui_input):
-        super().__init__(agent_idx, is_multi_agent)
-        self._gui_input = gui_input
-
+class GuiRobotController(GuiController):
     def act(self, obs, env):
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
@@ -327,21 +329,19 @@ class GuiRobotController(Controller):
         )
 
 
-class GuiHumanoidController(Controller):
+class GuiHumanoidController(GuiController):
     def __init__(
         self, agent_idx, is_multi_agent, gui_input, env, walk_pose_path
     ):
-        self.agent_idx = agent_idx
-        super().__init__(self.agent_idx, is_multi_agent)
+        super().__init__(agent_idx, is_multi_agent, gui_input)
         self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
         self._env = env
-        self._gui_input = gui_input
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
 
     def get_articulated_agent(self):
-        return self._env._sim.agents_mgr[self.agent_idx].articulated_agent
+        return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
 
     def on_environment_reset(self):
         super().on_environment_reset()
@@ -399,7 +399,7 @@ class GuiHumanoidController(Controller):
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
-        grasp_mgr = agents_mgr._all_agent_data[self.agent_idx].grasp_mgr
+        grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
         return grasp_mgr
 
     @property
