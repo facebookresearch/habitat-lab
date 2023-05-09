@@ -33,7 +33,7 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             and action_args["grip_action"] >= 0
         )
 
-    def _get_spawn_rec_goals(self, episode):
+    def _get_spawn_goals(self, episode):
         return episode.candidate_goal_receps
 
     def reset(self, episode: Episode):
