@@ -332,6 +332,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
         # Define the navigation target
         self.at_goal = False
+        self.skill_done = False
 
     @property
     def action_space(self):
@@ -428,6 +429,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         return False
 
     def step(self, *args, is_last_action, **kwargs):
+        self.skill_done = False
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_with_backing_up_action"
         ]
@@ -534,6 +536,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                         )
                 else:
                     self.at_goal = True
+                    self.skill_done = True
                     vel = [0, 0]
 
                 if need_move_backward:
@@ -561,6 +564,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                         )
                 else:
                     self.at_goal = True
+                    self.skill_done = True
                     self.humanoid_controller.calculate_stop_pose()
 
                 self._update_controller_to_navmesh()

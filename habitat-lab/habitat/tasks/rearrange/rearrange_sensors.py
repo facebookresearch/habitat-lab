@@ -1094,9 +1094,26 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        nav_action = self._task.actions[
-            f"agent_{self.agent_id}_oracle_nav_action"
-        ]
+        if self.agent_id is not None:
+            action_name = f"agent_{self.agent_id}_oracle_nav_action"
+            if (
+                "agent_"
+                + str(self.agent_id)
+                + "_oracle_nav_with_backing_up_action"
+                in self._task.actions
+            ):
+                action_name = (
+                    "agent_"
+                    + str(self.agent_id)
+                    + "_oracle_nav_with_backing_up_action"
+                )
+        else:
+            action_name = "oracle_nav_action"
+            if "oracle_nav_with_backing_up_action" in self._task.actions:
+                action_name = "oracle_nav_with_backing_up_action"
+
+        nav_action = self._task.actions[action_name]
+
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
 
 

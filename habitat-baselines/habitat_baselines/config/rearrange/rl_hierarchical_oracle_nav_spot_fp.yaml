@@ -20,7 +20,7 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
-    - navigation_target_position_sensor
+    - has_finished_oracle_nav
   - /habitat/task/measurements:
     - composite_subgoal_reward
     - articulated_agent_colls
@@ -63,7 +63,7 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
-      - navigation_target_position_sensor
+      - has_finished_oracle_nav
 
   environment:
     # On average, a single nav-pick-place takes about 750 steps
