@@ -84,6 +84,9 @@ To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the
 or for running HRL fix policy
 `python habitat-baselines/habitat_baselines/run.py --config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat.task.measurements.force_terminate.max_accum_force=-1.0 habitat.task.measurements.force_terminate.max_instant_force=-1.0 habitat_baselines.num_environments=1 habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills`
 
+or for running HRL human-robot fix policy (multi-agent setting)
+`python habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat_baselines.num_environments=1`
+
 TODO
 1. Generate more scenes
 2. Fix Spot robot navmesh issue
