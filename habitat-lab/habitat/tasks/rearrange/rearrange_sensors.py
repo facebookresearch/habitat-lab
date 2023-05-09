@@ -1050,7 +1050,9 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        nav_action = self._task.actions[
-            f"agent_{self.agent_id}_oracle_nav_action"
-        ]
+        if self.agent_id is None:
+            use_k = f"oracle_nav_action"
+        else:
+            use_k = f"agent_{self.agent_id}_oracle_nav_action"
+        nav_action = self._task.actions[use_k]
         return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
