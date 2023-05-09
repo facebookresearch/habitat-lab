@@ -141,6 +141,7 @@ class SandboxDriver(GuiAppDriver):
         transformation = self.cam_transform or art_obj.transformation
         forward_dir = transformation.transform_vector(-mn.Vector3(0, 0, 1))
         forward_dir[1] = 0
+        forward_dir = forward_dir.normalized()
 
         self.draw_nav_hint(
             agent_pos,
@@ -170,6 +171,7 @@ class SandboxDriver(GuiAppDriver):
                     self._debug_line_render.draw_circle(
                         goal_position, end_radius, color, 24
                     )
+                    # reference code to display a box
                     # box_size = 0.3
                     # self._debug_line_render.draw_box(
                     #     goal_position - box_size / 2,
@@ -192,7 +194,6 @@ class SandboxDriver(GuiAppDriver):
                     self.draw_nav_hint_from_agent(
                         mn.Vector3(this_target_pos), end_radius, color
                     )
-                    # self._debug_line_render.draw_circle(this_target_pos, end_radius, color, 24)
                     box_size = 0.3
                     self._debug_line_render.draw_box(
                         this_target_pos - box_size / 2,
