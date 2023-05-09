@@ -123,6 +123,7 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         self._replay_renderer.render(mn.gl.default_framebuffer)
 
         # draws text collected in self._text_drawer._text_transform_pairs on the screen
+        mn.gl.default_framebuffer.bind()
         self._text_drawer.draw_text()
 
         # arrange debug images on right side of frame, tiled down from the top
