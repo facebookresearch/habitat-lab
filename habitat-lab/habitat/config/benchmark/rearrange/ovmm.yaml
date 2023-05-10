@@ -23,6 +23,7 @@ habitat:
       - object_segmentation
       - start_recep_segmentation
       - goal_recep_segmentation
+      - object_category
       - camera_pose
       - object_embedding
       - is_holding

@@ -34,6 +34,7 @@ defaults:
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
+    - object_category_sensor
     - start_receptacle_sensor
     - goal_receptacle_sensor
     - object_segmentation_sensor
