@@ -36,6 +36,7 @@ from habitat.config.default_structured_configs import (
 from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
+from habitat.gui.text_drawer import TextOnScreenAlignment
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
@@ -87,6 +88,12 @@ class SandboxDriver(GuiAppDriver):
         self._viz_anim_fraction = 0.0
 
         self.lookat = None
+
+        if self.is_free_camera_mode() and args.first_person_mode:
+            raise RuntimeError(
+                "--first-person-mode must be used with --gui-controlled-agent-index"
+            )
+
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
         self._first_person_mode = args.first_person_mode
@@ -112,6 +119,8 @@ class SandboxDriver(GuiAppDriver):
         self._gfx_replay_save_path: str = args.gfx_replay_save_path
         self._recording_keyframes: List[str] = []
 
+        self._cursor_style = None
+
     @property
     def lookat_offset_yaw(self):
         return self.to_zero_2pi_range(self._lookat_offset_yaw)
@@ -123,6 +132,12 @@ class SandboxDriver(GuiAppDriver):
     def set_debug_line_render(self, debug_line_render):
         self._debug_line_render = debug_line_render
         self._debug_line_render.set_line_width(3)
+
+    def set_text_drawer(self, text_drawer):
+        self._text_drawer = text_drawer
+
+    def is_free_camera_mode(self):
+        return self.ctrl_helper.get_gui_controlled_agent_index() is None
 
     # trying to get around mypy complaints about missing sim attributes
     def get_sim(self) -> Any:
@@ -165,9 +180,10 @@ class SandboxDriver(GuiAppDriver):
                 (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
                 if len(target_idxs):
                     goal_position = goal_pos[target_idxs[0]]
-                    self.draw_nav_hint_from_agent(
-                        mn.Vector3(goal_position), end_radius, color
-                    )
+                    if not self.is_free_camera_mode():
+                        self.draw_nav_hint_from_agent(
+                            mn.Vector3(goal_position), end_radius, color
+                        )
                     self._debug_line_render.draw_circle(
                         goal_position, end_radius, color, 24
                     )
@@ -191,9 +207,10 @@ class SandboxDriver(GuiAppDriver):
                     # object is already at goal pos
                     continue
                 else:
-                    self.draw_nav_hint_from_agent(
-                        mn.Vector3(this_target_pos), end_radius, color
-                    )
+                    if not self.is_free_camera_mode():
+                        self.draw_nav_hint_from_agent(
+                            mn.Vector3(this_target_pos), end_radius, color
+                        )
                     box_size = 0.3
                     self._debug_line_render.draw_box(
                         this_target_pos - box_size / 2,
@@ -336,7 +353,11 @@ class SandboxDriver(GuiAppDriver):
 
     def viz_and_get_humanoid_hints(self):
         grasp_object_id, drop_pos = self.viz_and_get_grasp_drop_hints()
-        walk_dir = self.viz_and_get_humanoid_walk_dir()
+        walk_dir = (
+            self.viz_and_get_humanoid_walk_dir()
+            if not self._first_person_mode
+            else None
+        )
 
         return walk_dir, grasp_object_id, drop_pos
 
@@ -359,15 +380,21 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
-        # if mouse left button is held update yaw and pitch
-        # by scale * mouse relative position delta
-        if self.gui_input.get_mouse_button(GuiInput.MouseNS.LEFT):
+        enable_mouse_control = (
+            self._first_person_mode
+            and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
+        ) or (
+            not self._first_person_mode
+            and self.gui_input.get_mouse_button(GuiInput.MouseNS.LEFT)
+        )
+        if enable_mouse_control:
+            # update yaw and pitch by scale * mouse relative position delta
             scale = 1 / 50
             self._lookat_offset_yaw += (
-                scale * self.gui_input._relative_mouse_position[0]
+                scale * self.gui_input.relative_mouse_position[0]
             )
             self._lookat_offset_pitch += (
-                scale * self.gui_input._relative_mouse_position[1]
+                scale * self.gui_input.relative_mouse_position[1]
             )
             self._lookat_offset_pitch = np.clip(
                 self._lookat_offset_pitch,
@@ -488,6 +515,62 @@ class SandboxDriver(GuiAppDriver):
         with open(self._gfx_replay_save_path, "w") as json_file:
             json_file.write(json_content)
 
+    def _update_cursor_style(self, post_sim_update_dict):
+        do_update_cursor = False
+        if self._cursor_style is None:
+            if self._first_person_mode:
+                self._cursor_style = Application.Cursor.HIDDEN_LOCKED
+            else:
+                self._cursor_style = Application.Cursor.ARROW
+            do_update_cursor = True
+        else:
+            if self._first_person_mode and self.gui_input.get_mouse_button(
+                GuiInput.MouseNS.LEFT
+            ):
+                # toggle cursor mode
+                self._cursor_style = (
+                    Application.Cursor.HIDDEN_LOCKED
+                    if self._cursor_style == Application.Cursor.ARROW
+                    else Application.Cursor.ARROW
+                )
+                do_update_cursor = True
+
+        if do_update_cursor:
+            post_sim_update_dict["application_cursor"] = self._cursor_style
+
+    def _update_text(self):
+        def get_grasp_release_controls_text():
+            if self._held_target_obj_idx is not None:
+                return "Spacebar: put down\n"
+            else:
+                return "Spacebar: pick up\n"
+
+        s = ""
+        s += "ESC: exit\n"
+        s += "M: next episode\n"
+
+        if self._first_person_mode:
+            s += "Left-click: toggle cursor\n"
+            s += "A, D: turn\n"
+            s += "W, S: walk\n"
+            s += get_grasp_release_controls_text()
+        # third-person mode
+        elif not self.is_free_camera_mode():
+            s += "Left-click + drag: rotate camera\n"
+            s += "Right-click: walk\n"
+            s += "A, D: turn\n"
+            s += "W, S: walk\n"
+            s += "Scroll: zoom\n"
+            s += get_grasp_release_controls_text()
+        else:
+            s += "Left-click + drag: rotate camera\n"
+            s += "A, D: turn camera\n"
+            s += "W, S: pan camera\n"
+            s += "O, P: raise or lower camera\n"
+            s += "Scroll: zoom\n"
+
+        self._text_drawer.add_text(s, TextOnScreenAlignment.TOP_LEFT)
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
 
@@ -511,11 +594,20 @@ class SandboxDriver(GuiAppDriver):
                 walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
             )
 
-        action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
+        # Navmesh visualization only works in the debub third-person view
+        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
+        # visualization is only implemented for simulator-rendering, not replay-
+        # rendering.
+        if self.gui_input.get_key_down(GuiInput.KeyNS.N):
+            self.env._sim.navmesh_visualization = (  # type: ignore
+                not self.env._sim.navmesh_visualization  # type: ignore
+            )
+
+        action = self.ctrl_helper.update(self.obs)
 
         self.obs = self.env.step(action)
 
-        if reset_ep:
+        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
             self.obs = self.env.reset()
             self.ctrl_helper.on_environment_reset()
 
@@ -574,6 +666,11 @@ class SandboxDriver(GuiAppDriver):
 
         post_sim_update_dict["cam_transform"] = self.cam_transform
 
+        self._update_cursor_style(post_sim_update_dict)
+
+        if self.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            post_sim_update_dict["application_exit"] = True
+
         keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
@@ -600,6 +697,8 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict["debug_images"] = [
             np.flipud(image) for image in debug_images
         ]
+
+        self._update_text()
 
         return post_sim_update_dict
 
@@ -731,13 +830,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--max-look-up-angle",
-        default=90,
+        default=15,
         type=float,
         help="Look up angle limit.",
     )
     parser.add_argument(
         "--min-look-down-angle",
-        default=-90,
+        default=-60,
         type=float,
         help="Look down angle limit.",
     )
@@ -874,5 +973,7 @@ if __name__ == "__main__":
     driver.set_debug_line_render(
         app_renderer._replay_renderer.debug_line_render(0)
     )
+    # sloppy: provide app renderer's text_drawer to our driver
+    driver.set_text_drawer(app_renderer._text_drawer)
 
     gui_app_wrapper.exec()
