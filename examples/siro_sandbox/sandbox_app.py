@@ -599,7 +599,9 @@ class SandboxDriver(GuiAppDriver):
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
         if self.gui_input.get_key_down(GuiInput.KeyNS.N):
+            # type: ignore
             self.env._sim.navmesh_visualization = (
+                # type: ignore
                 not self.env._sim.navmesh_visualization
             )
 
