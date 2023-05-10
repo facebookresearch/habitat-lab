@@ -152,17 +152,21 @@ class BaseVelocityActionConfig(ActionConfig):
 class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class ExtendArmActionConfig(ActionConfig):
     type: str = "ExtendArmAction"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class ResetJointsActionConfig(ActionConfig):
     type: str = "ResetJointsAction"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class FaceArmActionConfig(ActionConfig):
     type: str = "FaceArmAction"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class OracleNavActionConfig(ActionConfig):
@@ -417,17 +421,21 @@ class ObjectSegmentationSensorConfig(LabSensorConfig):
     blank_out_prob: float = 0.0
     dimensionality: int = 256
 
+
 @attr.s(auto_attribs=True, slots=True)
 class StartRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
     type: str = "StartRecepSegmentationSensor"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class GoalRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
     type: str = "GoalRecepSegmentationSensor"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class CameraPoseSensorConfig(LabSensorConfig):
     type: str = "CameraPoseSensor"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class ReceptacleSegmentationSensorConfig(LabSensorConfig):
@@ -654,37 +662,48 @@ class DistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
 class DistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
     type: str = "DistToPlaceGoal"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class CatNavRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
     type: str = "CatNavRotDistToGoal"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class RotDistToPickGoalMeasurementConfig(CatNavRotDistToGoalMeasurementConfig):
     type: str = "RotDistToPickGoal"
 
+
 @attr.s(auto_attribs=True, slots=True)
-class RotDistToPlaceGoalMeasurementConfig(CatNavRotDistToGoalMeasurementConfig):
+class RotDistToPlaceGoalMeasurementConfig(
+    CatNavRotDistToGoalMeasurementConfig
+):
     type: str = "RotDistToPlaceGoal"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
     type: str = "NavToPickSucc"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class NavOrientToPickSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
     type: str = "NavOrientToPickSucc"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class NavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
     type: str = "NavToPlaceSucc"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class NavOrientToPlaceSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
     type: str = "NavOrientToPlaceSucc"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class PickNavToPlaceSuccMeasurementConfig(MeasurementConfig):
     type: str = "PickNavToPlaceSucc"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class PickNavOrientToPlaceSuccMeasurementConfig(MeasurementConfig):
@@ -862,7 +881,6 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
 
 
-
 @attr.s(auto_attribs=True, slots=True)
 class TaskConfig(HabitatBaseConfig):
     reward_measure: Optional[str] = None
@@ -926,6 +944,7 @@ class TaskConfig(HabitatBaseConfig):
     goal_type: str = "object_on_recep"
     pick_init: bool = False
     place_init: bool = False
+    camera_tilt: float = -0.7125
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1239,8 +1258,12 @@ class DatasetConfig(HabitatBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ObjectRearrangeDatasetConfig(DatasetConfig):
     type: str = "ObjectRearrangeDataset-v1"
-    viewpoints_matrix_path: Optional[str] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
-    transformations_matrix_path: Optional[str] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
+    viewpoints_matrix_path: Optional[
+        str
+    ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
+    transformations_matrix_path: Optional[
+        str
+    ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
 
 
 @attr.s(auto_attribs=True, slots=True)

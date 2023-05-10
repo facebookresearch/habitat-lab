@@ -14,7 +14,7 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger, get_robot_spawns
+from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 
 
 @dataclass
@@ -58,8 +58,11 @@ class DynNavRLEnv(RearrangeTask):
         self._pick_init = config.pick_init
         self._place_init = config.place_init
 
-        assert not (self._pick_init and self._place_init), "Can init near either pick or place."
+        assert not (
+            self._pick_init and self._place_init
+        ), "Can init near either pick or place."
 
+        self._camera_tilt = config.camera_tilt
 
     @property
     def nav_goal_pos(self):
@@ -71,7 +74,10 @@ class DynNavRLEnv(RearrangeTask):
 
     @property
     def should_end(self) -> bool:
-        return self._should_end or self.actions["rearrange_stop"].does_want_terminate
+        return (
+            self._should_end
+            or self.actions["rearrange_stop"].does_want_terminate
+        )
 
     def set_args(self, obj, **kwargs):
         self.force_obj_to_idx = obj
@@ -102,11 +108,12 @@ class DynNavRLEnv(RearrangeTask):
             nav_to_pos = all_pos[np.random.randint(0, len(all_pos))]
         return nav_to_pos
 
-    def _generate_nav_start_goal(self, episode, nav_to_pos, start_hold_obj_idx=None) -> NavToInfo:
+    def _generate_nav_start_goal(
+        self, episode, nav_to_pos, start_hold_obj_idx=None
+    ) -> NavToInfo:
         """
         Returns the starting information for a navigate to object task.
         """
-
 
         def filter_func(start_pos, _):
             if len(nav_to_pos.shape) == 1:
@@ -114,10 +121,7 @@ class DynNavRLEnv(RearrangeTask):
             else:
                 goals = nav_to_pos
             distance = self._sim.geodesic_distance(start_pos, goals, episode)
-            return (
-                distance != np.inf
-                and distance > self._min_start_distance
-            )
+            return distance != np.inf and distance > self._min_start_distance
 
         robot_pos, robot_angle = self._sim.set_robot_base_to_random_point(
             filter_func=filter_func
@@ -136,12 +140,16 @@ class DynNavRLEnv(RearrangeTask):
 
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
-            camera_rot = -1.7375 if self._pick_init or self._place_init else 0.0
+            camera_rot = (
+                -1.7375 if self._pick_init or self._place_init else 0.0
+            )
             sim.robot.arm_motor_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
+                [0.0] * 4
+                + [0.775, 0.0, -1.57000005, 0.0, camera_rot, self._camera_tilt]
             )
             sim.robot.arm_joint_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_rot, -0.7125]
+                [0.0] * 4
+                + [0.775, 0.0, -1.57000005, 0.0, camera_rot, self._camera_tilt]
             )
 
         start_hold_obj_idx: Optional[int] = None
@@ -150,12 +158,15 @@ class DynNavRLEnv(RearrangeTask):
         if (
             self.force_obj_to_idx is None
             and random.random() < self._config.object_in_hand_sample_prob
-            and self._goal_type != 'ovmm' # for end-to-end ovmm task, spawn wrt start receptacle [TODO: remove]
+            and self._goal_type
+            != "ovmm"  # for end-to-end ovmm task, spawn wrt start receptacle [TODO: remove]
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
         nav_to_pos = self._generate_nav_to_pos(
-            episode, start_hold_obj_idx=start_hold_obj_idx, force_idx=self.force_obj_to_idx
+            episode,
+            start_hold_obj_idx=start_hold_obj_idx,
+            force_idx=self.force_obj_to_idx,
         )
 
         self._nav_to_info = self._generate_nav_start_goal(
@@ -171,10 +182,7 @@ class DynNavRLEnv(RearrangeTask):
                 ]
             ]
             snap_pos = np.array(
-                [
-                    r.get_surface_center(sim)
-                    for r in spawn_recs
-                ]
+                [r.get_surface_center(sim) for r in spawn_recs]
             )
 
             start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
@@ -200,7 +208,15 @@ class DynNavRLEnv(RearrangeTask):
             # spawn agent close to and oriented towards goal receptacle for place testing, [wip]: moving to ovmm_task.py
             if isinstance(sim.robot, StretchRobot):
                 sim.robot.arm_motor_pos = np.array(
-                    [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125] # gripper straight out
+                    [0.0] * 4
+                    + [
+                        0.775,
+                        0.0,
+                        0.0,
+                        0.0,
+                        0.0,
+                        -0.7125,
+                    ]  # gripper straight out
                 )
                 sim.robot.arm_joint_pos = np.array(
                     [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125]
@@ -209,13 +225,11 @@ class DynNavRLEnv(RearrangeTask):
             spawn_recs = [
                 sim.receptacles[r]
                 for r in sim.receptacles.keys()
-                if r in sim.valid_goal_rec_names]
-            
+                if r in sim.valid_goal_rec_names
+            ]
+
             snap_pos = np.array(
-                [
-                    r.get_surface_center(sim)
-                    for r in spawn_recs
-                ]
+                [r.get_surface_center(sim) for r in spawn_recs]
             )
             start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
                 target_positions=snap_pos,
