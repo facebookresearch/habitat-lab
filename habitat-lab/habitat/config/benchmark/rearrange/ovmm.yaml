@@ -28,6 +28,8 @@ habitat:
       - object_embedding
       - is_holding
       - relative_resting_position
+      - cat_nav_goal_segmentation
+      - receptacle_segmentation
   environment:
     max_episode_steps: 1250
   simulator:
