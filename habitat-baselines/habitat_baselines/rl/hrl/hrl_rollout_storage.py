@@ -232,13 +232,11 @@ class HrlRolloutStorage(RolloutStorage):
         raise ValueError()
 
     def get_current_step(self, env_slice, buffer_index):
-        # Ignore `env_slice` since we assume that double buffer sampling is not
-        # supported.
-        env_idxs = torch.arange(self._num_envs)
-        return self.buffers[
-            self._cur_step_idxs[env_slice],
-            env_idxs,
-        ]
+        return TensorDict(self._current_step)
+
+    def insert_first_observations(self, batch):
+        super().insert_first_observations(batch)
+        self._current_step = self.buffers[0]
 
     def get_last_step(self):
         env_idxs = torch.arange(self._num_envs)

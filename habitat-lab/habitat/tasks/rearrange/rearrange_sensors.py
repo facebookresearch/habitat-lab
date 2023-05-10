@@ -426,6 +426,50 @@ class LocalizationSensor(UsesArticulatedAgentInterface, Sensor):
 
 
 @registry.register_sensor
+class NavigationTargetPositionSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    To check if the agent is in the goal or not
+    """
+
+    cls_uuid = "navigation_target_position_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+
+    def _get_uuid(self, *args, **kwargs):
+        return NavigationTargetPositionSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(1,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        action_name = "oracle_nav_with_backing_up_action"
+        task = kwargs["task"]
+        if (
+            "agent_"
+            + str(self.agent_id)
+            + "_oracle_nav_with_backing_up_action"
+            in task.actions
+        ):
+            action_name = (
+                "agent_"
+                + str(self.agent_id)
+                + "_oracle_nav_with_backing_up_action"
+            )
+        at_goal = task.actions[action_name].at_goal
+        return np.array([at_goal])
+
+
+@registry.register_sensor
 class IsHoldingSensor(UsesArticulatedAgentInterface, Sensor):
     """
     Binary if the robot is holding an object or grasped onto an articulated object.
@@ -1029,30 +1073,72 @@ class BadCalledTerminate(Measure):
         self._metric = (not is_succ) and does_action_want_stop
 
 
+@registry.register_sensor
+class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    """
+
+    cls_uuid: str = "has_finished_oracle_nav"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return HasFinishedOracleNavSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if self.agent_id is not None:
+            use_k = f"agent_{self.agent_id}_oracle_nav_action"
+            if (
+                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
+                in self._task.actions
+            ):
+                use_k = (
+                    f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
+                )
+        else:
+            use_k = "oracle_nav_action"
+            if "oracle_nav_with_backing_up_action" in self._task.actions:
+                use_k = "oracle_nav_with_backing_up_action"
+
+        nav_action = self._task.actions[use_k]
+
+        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+
+
 @registry.register_measure
-class RuntimePerfStats(Measure):
-    cls_uuid: str = "habitat_perf"
+class ContactTestStats(Measure):
+    """
+    Did agent collide with objects?
+    """
+
+    cls_uuid: str = "contact_test_stats"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return RuntimePerfStats.cls_uuid
+        return ContactTestStats.cls_uuid
 
-    def __init__(self, sim, config, *args, **kwargs):
-        self._sim = sim
-        self._sim.enable_perf_logging()
-        self._disable_logging = config.disable_logging
-        super().__init__()
+    def reset_metric(self, *args, task, **kwargs):
+        self._contact_flag = []
+        self._metric = 0
 
-    def reset_metric(self, *args, **kwargs):
-        self._metric_queue = defaultdict(deque)
-        self._metric = {}
-
-    def update_metric(self, *args, task, **kwargs):
-        for k, v in self._sim.get_runtime_perf_stats().items():
-            self._metric_queue[k].append(v)
-        if self._disable_logging:
-            self._metric = {}
-        else:
-            self._metric = {
-                k: np.mean(v) for k, v in self._metric_queue.items()
-            }
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        flag = self._sim.contact_test(
+            self._sim.articulated_agent.get_robot_sim_id()
+        )
+        self._contact_flag.append(flag)
+        self._metric = np.average(self._contact_flag)
