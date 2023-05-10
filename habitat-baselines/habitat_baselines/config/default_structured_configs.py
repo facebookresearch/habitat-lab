@@ -374,6 +374,9 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     agent_sample_interval: int = 20
     # A value of -1 means not configured.
     behavior_latent_dim: int = -1
+    # Configuration option for evaluating BDP. If True, then include all
+    # behavior agent IDs in the batch. If False, then we will randomly sample IDs.
+    force_all_agents: bool = False
     discrim_reward_weight: float = 1.0
     allow_self_play: bool = False
     self_play_batched: bool = False

@@ -102,6 +102,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
 
         self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
 
+    @property
+    def should_load_agent_state(self):
+        return True
+
     def get_termination(
         self,
         observations,
