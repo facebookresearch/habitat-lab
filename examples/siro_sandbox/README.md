@@ -50,24 +50,7 @@ habitat.simulator.habitat_sim_v0.allow_sliding=True
 
 
 ## Controls
-* Mouse scroll wheel to zoom the camera in/out.
-* Right-click on the floor and hold to move the humanoid.
-* Mouse-over an object. When you see a yellow highlight, press SPACE to grasp.
-    * Note grasping isn't restricted to proximity to the humanoid.
-    * Press SPACE again to drop the object anywhere in the scene.
-* Camera yaw and pitch control (TODO: decide which one has better UX):
-    1. Press/hold AD keys to look left/right, IK keys to look up/down.
-    2. Hold mouse left button and move mouse.
-* In [free camera mode](#gui-controlled-agents-and-free-camera-mode) use WSJLOP keys to move the look-at point forward/backward/left/right/up/down. Camera yaw/pitch and zoom in/out controls are the same as in the steps above.
-* `M` to reset to a new episode.
-* For humanoid:
-    * W - walk forward in the camera yaw direction
-    * S - walk backward in the opposite to camera yaw direction
-    * (camera yaw and pitch control via keybord or mouse controls from the steps above)
-
-## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
-
-TODO
+* See on-screen help text for keyboard and mouse controls
 
 ## Debugging visual sensors
 
