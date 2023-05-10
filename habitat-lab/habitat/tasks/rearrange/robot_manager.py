@@ -156,7 +156,7 @@ class RobotManager:
     def first_setup(self):
         for robot_data in self._all_robot_data:
             ik_arm_urdf = robot_data.cfg.ik_arm_urdf
-            if ik_arm_urdf not in [None, 'None'] and self._is_pb_installed:
+            if ik_arm_urdf is not None and self._is_pb_installed:
                 robot_data._ik_helper = IkHelper(
                     robot_data.cfg.ik_arm_urdf,
                     robot_data.start_js,
