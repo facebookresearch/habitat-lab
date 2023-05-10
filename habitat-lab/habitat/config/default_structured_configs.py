@@ -145,6 +145,9 @@ class BaseVelocityActionConfig(ActionConfig):
     min_turn_degrees: float = 5.0  # minimum turn waypoint
     allow_lateral_movement: bool = True  # whether to allow lateral movement
     allow_simultaneous_turn: bool = True  # whether to allow simultaneous turn
+    discrete_movement: bool = (
+        False  # whether to move/rotate only in discrete steps
+    )
 
 
 @attr.s(auto_attribs=True, slots=True)
