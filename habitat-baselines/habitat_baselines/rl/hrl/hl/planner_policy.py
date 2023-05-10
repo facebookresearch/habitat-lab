@@ -142,7 +142,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         for path in paths:
             all_ac_seqs.append([node.action for node in path])
         # Sort by the length of the action sequence
-        full_plans = sorted(all_ac_seqs, key=lambda x: len(x))
+        full_plans = sorted(all_ac_seqs, key=len)
 
         # Each full plan will be a permutation of the other full plans.
         plans = full_plans[1:]
