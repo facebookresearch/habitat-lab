@@ -125,12 +125,16 @@ class ObjectRearrangeEpisodeIterator(EpisodeIterator[ObjectRearrangeEpisode]):
         )
 
         deserialized_objs = []
-        for rigid_obj in episode.rigid_objs:
-            transform = np.vstack(
-                (self.transformations[rigid_obj[1]], [0, 0, 0, 1])
-            )
-            deserialized_objs.append((rigid_obj[0], transform))
-        episode.rigid_objs = deserialized_objs
+        if self.transformations is not None:
+            for rigid_obj in episode.rigid_objs:
+                transform = np.vstack(
+                    (self.transformations[rigid_obj[1]], [0, 0, 0, 1])
+                )
+                deserialized_objs.append((rigid_obj[0], transform))
+            episode.rigid_objs = deserialized_objs
+
+        if self.viewpoints is None:
+            return episode
 
         for vp_key in self._vp_keys:
             obj_goal: ObjectGoal
@@ -156,8 +160,8 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
     obj_category_to_obj_category_id: Dict[str, int]
     recep_category_to_recep_category_id: Dict[str, int]
     episodes: List[ObjectRearrangeEpisode] = []  # type: ignore
-    viewpoints_matrix: np.ndarray
-    transformations_matrix: np.ndarray
+    viewpoints_matrix: np.ndarray = None
+    transformations_matrix: np.ndarray = None
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
@@ -166,12 +170,18 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
 
         super().__init__(config)
         if config is not None:
-            self.viewpoints_matrix = np.load(
-                self.config.viewpoints_matrix_path.format(split=self.config.split)
-            )
-            self.transformations_matrix = np.load(
-                self.config.transformations_matrix_path.format(split=self.config.split)
-            )
+            if self.config.viewpoints_matrix_path is not None:
+                self.viewpoints_matrix = np.load(
+                    self.config.viewpoints_matrix_path.format(
+                        split=self.config.split
+                    )
+                )
+            if self.config.transformations_matrix_path is not None:
+                self.transformations_matrix = np.load(
+                    self.config.transformations_matrix_path.format(
+                        split=self.config.split
+                    )
+                )
 
     def get_episode_iterator(
         self, *args: Any, **kwargs: Any
@@ -188,9 +198,14 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
         return result
 
-    @staticmethod
-    def __deserialize_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
+    def __deserialize_goal(self, serialized_goal: Dict[str, Any]) -> ObjectGoal:
         g = ObjectGoal(**serialized_goal)
+        if self.viewpoints_matrix is None:
+            # if the view points are not cached separately, read from original episodes
+            for vidx, view in enumerate(g.view_points):
+                view_location = ObjectViewLocation(**view)  # type: ignore
+                view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
+                g.view_points[vidx] = view_location
         return g
 
     def from_json(
