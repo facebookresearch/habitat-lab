@@ -10,6 +10,8 @@ defaults:
   - rl_hierarchical
   - /habitat/task/actions:
     - oracle_nav_action
+  - /habitat/task/lab_sensors:
+    - has_finished_oracle_nav
   - _self_
 
 habitat:
@@ -29,6 +31,7 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
+      - has_finished_oracle_nav
   simulator:
     habitat_sim_v0:
       allow_sliding: True
@@ -44,3 +47,18 @@ habitat_baselines:
                 skill_name: "OracleNavPolicy"
                 obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
                 max_skill_steps: 300
+          high_level_policy:
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "joint"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
