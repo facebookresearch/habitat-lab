@@ -73,6 +73,7 @@ class SandboxDriver(GuiAppDriver):
 
         self.ctrl_helper.on_environment_reset()
 
+        self.cam_transform = None
         self.cam_zoom_dist = 1.0
         self._max_zoom_dist = 50.0
         self._min_zoom_dist = 0.02
@@ -92,14 +93,18 @@ class SandboxDriver(GuiAppDriver):
         if self._first_person_mode:
             self._lookat_offset_yaw = 0.0
             self._lookat_offset_pitch = 0.0
-            # limit pith angle to +/- 45 degrees in first-person mode
-            self._min_lookat_offset_pitch = -0.785398 + 1e-5
-            self._max_lookat_offset_pitch = 0.785398 - 1e-5
+            self._min_lookat_offset_pitch = (
+                -max(min(np.radians(args.max_look_up_angle), np.pi / 2), 0)
+                + 1e-5
+            )
+            self._max_lookat_offset_pitch = (
+                -min(max(np.radians(args.min_look_down_angle), -np.pi / 2), 0)
+                - 1e-5
+            )
         else:
             # (computed from previously hardcoded mn.Vector3(0.5, 1, 0.5).normalized())
             self._lookat_offset_yaw = 0.785
             self._lookat_offset_pitch = 0.955
-            # limit pith angle to +/- 90 degrees
             self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
             self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
 
@@ -123,22 +128,28 @@ class SandboxDriver(GuiAppDriver):
     def get_sim(self) -> Any:
         return self.env.task._sim
 
-    def draw_nav_hint_from_agent(self, end_pos, color):
-        agent_idx = 0
+    def draw_nav_hint_from_agent(self, end_pos, end_radius, color):
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        assert agent_idx is not None
         art_obj = (
             self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
         )
         agent_pos = art_obj.transformation.translation
-        # todo: get forward_dir from FPS camera yaw, not art_obj.transformation
+        # get forward_dir from FPS camera yaw, not art_obj.transformation
         # (the problem with art_obj.transformation is that it includes a "wobble"
         # introduced by the walk animation)
-        forward_dir = art_obj.transformation.transform_vector(
-            mn.Vector3(0, 0, 1)
-        )
+        transformation = self.cam_transform or art_obj.transformation
+        forward_dir = transformation.transform_vector(-mn.Vector3(0, 0, 1))
         forward_dir[1] = 0
+        forward_dir = forward_dir.normalized()
 
         self.draw_nav_hint(
-            agent_pos, forward_dir, end_pos, color, self._viz_anim_fraction
+            agent_pos,
+            forward_dir,
+            end_pos,
+            end_radius,
+            color,
+            self._viz_anim_fraction,
         )
 
     def visualize_task(self):
@@ -146,15 +157,27 @@ class SandboxDriver(GuiAppDriver):
         idxs, goal_pos = sim.get_targets()
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
+        end_radius = self.env._config.task.obj_succ_thresh
 
         if self._held_target_obj_idx != None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             try:
-                target_idxs = np.where(idxs == self._held_target_obj_idx)
+                (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
                 if len(target_idxs):
+                    goal_position = goal_pos[target_idxs[0]]
                     self.draw_nav_hint_from_agent(
-                        mn.Vector3(goal_pos[target_idxs[0][0]]), color
+                        mn.Vector3(goal_position), end_radius, color
                     )
+                    self._debug_line_render.draw_circle(
+                        goal_position, end_radius, color, 24
+                    )
+                    # reference code to display a box
+                    # box_size = 0.3
+                    # self._debug_line_render.draw_box(
+                    #     goal_position - box_size / 2,
+                    #     goal_position + box_size / 2,
+                    #     color
+                    # )
             except ValueError:
                 pass
         else:
@@ -169,7 +192,13 @@ class SandboxDriver(GuiAppDriver):
                     continue
                 else:
                     self.draw_nav_hint_from_agent(
-                        mn.Vector3(this_target_pos), color
+                        mn.Vector3(this_target_pos), end_radius, color
+                    )
+                    box_size = 0.3
+                    self._debug_line_render.draw_box(
+                        this_target_pos - box_size / 2,
+                        this_target_pos + box_size / 2,
+                        color,
                     )
 
     def viz_and_get_grasp_drop_hints(self):
@@ -211,7 +240,7 @@ class SandboxDriver(GuiAppDriver):
             self._debug_line_render.draw_circle(
                 hit_info.point, object_highlight_radius, object_color
             )
-            if self.gui_input.get_mouse_button_down(GuiInput.MouseNS.LEFT):
+            if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                 drop_pos = hit_info.point + mn.Vector3(
                     0, object_drop_height, 0
                 )
@@ -243,11 +272,11 @@ class SandboxDriver(GuiAppDriver):
                             object_highlight_radius,
                             object_color,
                         )
-                        if self.gui_input.get_mouse_button_down(
-                            GuiInput.MouseNS.LEFT
-                        ):
+                        if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                             grasp_object_id = hit_info.object_id
-                            self._held_target_obj_idx = 0  # temp hack; no way to look this up currently from hit_info.object_id
+                            self._held_target_obj_idx = (
+                                sim.scene_obj_ids.index(hit_info.object_id)
+                            )
                             return grasp_object_id, None
 
         return None, None
@@ -282,7 +311,7 @@ class SandboxDriver(GuiAppDriver):
         path.requested_end = snapped_pos
         found_path = pathfinder.find_path(path)
 
-        if not found_path:
+        if not found_path or len(path.points) < 2:
             return None
 
         path_points = []
@@ -297,10 +326,9 @@ class SandboxDriver(GuiAppDriver):
             path_points, path_endpoint_radius, path_color
         )
 
-        if (
-            self.gui_input.get_mouse_button(GuiInput.MouseNS.RIGHT)
-            or self.gui_input.get_key(GuiInput.KeyNS.SPACE)
-        ) and len(path.points) >= 2:
+        if (self.gui_input.get_mouse_button(GuiInput.MouseNS.RIGHT)) and len(
+            path.points
+        ) >= 2:
             walk_dir = mn.Vector3(path.points[1]) - mn.Vector3(path.points[0])
             return walk_dir
 
@@ -313,12 +341,12 @@ class SandboxDriver(GuiAppDriver):
         return walk_dir, grasp_object_id, drop_pos
 
     def _camera_pitch_and_yaw_wasd_control(self):
-        # update yaw and pitch using WASD keys
+        # update yaw and pitch using ADIK keys
         cam_rot_angle = 0.1
 
-        if self.gui_input.get_key(GuiInput.KeyNS.W):
+        if self.gui_input.get_key(GuiInput.KeyNS.I):
             self._lookat_offset_pitch -= cam_rot_angle
-        if self.gui_input.get_key(GuiInput.KeyNS.S):
+        if self.gui_input.get_key(GuiInput.KeyNS.K):
             self._lookat_offset_pitch += cam_rot_angle
         self._lookat_offset_pitch = np.clip(
             self._lookat_offset_pitch,
@@ -331,9 +359,9 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
-        # if Q is held update yaw and pitch
+        # if mouse left button is held update yaw and pitch
         # by scale * mouse relative position delta
-        if self.gui_input.get_key(GuiInput.KeyNS.R):
+        if self.gui_input.get_mouse_button(GuiInput.MouseNS.LEFT):
             scale = 1 / 50
             self._lookat_offset_yaw += (
                 scale * self.gui_input._relative_mouse_position[0]
@@ -341,9 +369,14 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch += (
                 scale * self.gui_input._relative_mouse_position[1]
             )
+            self._lookat_offset_pitch = np.clip(
+                self._lookat_offset_pitch,
+                self._min_lookat_offset_pitch,
+                self._max_lookat_offset_pitch,
+            )
 
     def draw_nav_hint(
-        self, start_pos, start_dir, end_pos, color, anim_fraction
+        self, start_pos, start_dir, end_pos, end_radius, color, anim_fraction
     ):
         assert isinstance(start_pos, mn.Vector3)
         assert isinstance(start_dir, mn.Vector3)
@@ -373,8 +406,6 @@ class SandboxDriver(GuiAppDriver):
         )
 
         prev_pos = None
-        end_radius = 0.4
-
         for step_idx in range(num_steps):
             t = step_idx / (num_steps - 1) + anim_fraction * (
                 1 / (num_steps - 1)
@@ -398,8 +429,6 @@ class SandboxDriver(GuiAppDriver):
                 )
             prev_pos = pos
 
-        self._debug_line_render.draw_circle(end_pos, end_radius, color, 24)
-
     def _free_camera_lookat_control(self):
         if self.lookat is None:
             # init lookat
@@ -410,17 +439,17 @@ class SandboxDriver(GuiAppDriver):
             # update lookat
             move_delta = 0.1
             move = np.zeros(3)
-            if self.gui_input.get_key(GuiInput.KeyNS.UP):
+            if self.gui_input.get_key(GuiInput.KeyNS.W):
                 move[0] -= move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.DOWN):
+            if self.gui_input.get_key(GuiInput.KeyNS.S):
                 move[0] += move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.E):
+            if self.gui_input.get_key(GuiInput.KeyNS.O):
                 move[1] += move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.Q):
+            if self.gui_input.get_key(GuiInput.KeyNS.P):
                 move[1] -= move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.LEFT):
+            if self.gui_input.get_key(GuiInput.KeyNS.J):
                 move[2] += move_delta
-            if self.gui_input.get_key(GuiInput.KeyNS.RIGHT):
+            if self.gui_input.get_key(GuiInput.KeyNS.L):
                 move[2] -= move_delta
 
             # align move forward direction with lookat direction
@@ -510,9 +539,9 @@ class SandboxDriver(GuiAppDriver):
             )
 
         # two ways for camera pitch and yaw control for UX comparison:
-        # 1) hold WASD keys
+        # 1) press/hold ADIK keys
         self._camera_pitch_and_yaw_wasd_control()
-        # 2) hold R and move mouse
+        # 2) press left mouse button and move mouse
         self._camera_pitch_and_yaw_mouse_control()
 
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
@@ -537,13 +566,13 @@ class SandboxDriver(GuiAppDriver):
             np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
         )
 
-        cam_transform = mn.Matrix4.look_at(
+        self.cam_transform = mn.Matrix4.look_at(
             lookat + offset.normalized() * self.cam_zoom_dist,
             lookat,
             mn.Vector3(0, 1, 0),
         )
 
-        post_sim_update_dict["cam_transform"] = cam_transform
+        post_sim_update_dict["cam_transform"] = self.cam_transform
 
         keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
@@ -699,6 +728,18 @@ if __name__ == "__main__":
         default=0,
         type=int,
         help="If specified, use the specified viewport height for the debug third-person camera",
+    )
+    parser.add_argument(
+        "--max-look-up-angle",
+        default=90,
+        type=float,
+        help="Look up angle limit.",
+    )
+    parser.add_argument(
+        "--min-look-down-angle",
+        default=-90,
+        type=float,
+        help="Look down angle limit.",
     )
     parser.add_argument(
         "--first-person-mode",

@@ -36,7 +36,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival \
 --sample-random-baseline-base-vel
 ```
-* Solo user-controlled humanoid mode:
+* Solo user-controlled humanoid mode, with sliding enabled:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -44,25 +44,26 @@ python examples/siro_sandbox/sandbox_app.py \
 --gui-controlled-agent-index 0 \
 --never-end \
 --cfg benchmark/rearrange/rearrange_easy_human.yaml \
---cfg-opts habitat.dataset.split=minival
+--cfg-opts habitat.dataset.split=minival \
+habitat.simulator.habitat_sim_v0.allow_sliding=True
 ```
 
 
 ## Controls
 * Mouse scroll wheel to zoom the camera in/out.
 * Right-click on the floor and hold to move the humanoid.
-* Mouse-over an object. When you see a yellow highlight, left-click to grasp.
+* Mouse-over an object. When you see a yellow highlight, press SPACE to grasp.
     * Note grasping isn't restricted to proximity to the humanoid.
-    * Left-click again to drop the object anywhere in the scene.
+    * Press SPACE again to drop the object anywhere in the scene.
 * Camera yaw and pitch control (TODO: decide which one has better UX):
-    1. WASD keys
-    2. hold R and move mouse
-* In [free camera mode](#gui-controlled-agents-and-free-camera-mode) use arrow keys to move the look-at point (camera yaw/pitch and zoom in/out controls are the same as in the steps above).
+    1. Press/hold AD keys to look left/right, IK keys to look up/down.
+    2. Hold mouse left button and move mouse.
+* In [free camera mode](#gui-controlled-agents-and-free-camera-mode) use WSJLOP keys to move the look-at point forward/backward/left/right/up/down. Camera yaw/pitch and zoom in/out controls are the same as in the steps above.
 * `M` to reset to a new episode.
 * For humanoid:
-    * I - walk forward in the camera yaw direction
-    * K - walk backward in the opposite to camera yaw direction
-    * (camera yaw and pitch control via keybord or mouse controls from the step above)
+    * W - walk forward in the camera yaw direction
+    * S - walk backward in the opposite to camera yaw direction
+    * (camera yaw and pitch control via keybord or mouse controls from the steps above)
 
 ## Collecting a rearrange demonstration with a solo user-controlled humanoid (no robot agent)
 
@@ -86,8 +87,8 @@ If not set, it is assumed that scene is empty or all agents are policy-controlle
 ## Solo humanoid mode
 Set `--cfg benchmark/rearrange/rearrange_easy_human.yaml` to run app with only a user-controlled humanoid (no robot).
 
-## First-person humanoid control
-Add `--first-person-mode` to switch to first-person humanoid control mode.
+## First-person view humanoid control
+Add `--first-person-mode` to switch to first-person view humanoid control mode. Use  `--max-look-up-angle` and `--min-look-down-angle` arguments to limit humanoid's look up/down angle. For example, `--max-look-up-angle 0 --min-look-down-angle -45` to let the humanoid look down -45 degrees.
 
 ## Using FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides:
