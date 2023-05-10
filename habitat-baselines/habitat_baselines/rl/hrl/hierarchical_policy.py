@@ -436,8 +436,6 @@ class HierarchicalPolicy(nn.Module, Policy):
             },
         )
         for skill_id, (batch_ids, dat) in grouped_skills.items():
-            # TODO: either change name of the function or assign actions somewhere
-            # else. Updating actions in should_terminate is counterintuitive
             (
                 self._cur_call_high_level[batch_ids],
                 bad_should_terminate[batch_ids],
