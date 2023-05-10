@@ -158,7 +158,7 @@ class BaselinesController(Controller):
             change_ac_name(k): v.cpu().numpy()
             for k, v in action["action_args"].items()
         }
-        return action, False, False, action_data.rnn_hidden_states
+        return action, action_data.rnn_hidden_states
 
 
 class GuiRobotController(GuiController):
@@ -194,14 +194,8 @@ class GuiRobotController(GuiController):
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        should_end = False
-        should_reset = False
-
-        if gui_input.get_key_down(KeyNS.ESC):
-            should_end = True
-        elif gui_input.get_key_down(KeyNS.M):
-            should_reset = True
-        elif gui_input.get_key_down(KeyNS.N):
+        # todo: remove this or fix navmesh visualization (doesn't work with replay-rendering)
+        if gui_input.get_key_down(KeyNS.N):
             env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
         if base_action is not None:
@@ -320,12 +314,7 @@ class GuiRobotController(GuiController):
         if len(action_names) == 0:
             raise ValueError("No active actions for human controller.")
 
-        return (
-            {"action": action_names, "action_args": action_args},
-            should_reset,
-            should_end,
-            {},
-        )
+        return ({"action": action_names, "action_args": action_args}, {})
 
 
 class GuiHumanoidController(GuiController):
@@ -439,14 +428,7 @@ class GuiHumanoidController(GuiController):
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        should_end = False
-        should_reset = False
-
-        if gui_input.get_key_down(KeyNS.ESC):
-            should_end = True
-        elif gui_input.get_key_down(KeyNS.M):
-            should_reset = True
-        elif gui_input.get_key_down(KeyNS.N):
+        if gui_input.get_key_down(KeyNS.N):
             # todo: move outside this controller
             env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
@@ -522,12 +504,7 @@ class GuiHumanoidController(GuiController):
                 }
             )
 
-        return (
-            {"action": action_names, "action_args": action_args},
-            should_reset,
-            should_end,
-            {},
-        )
+        return ({"action": action_names, "action_args": action_args}, {})
 
 
 class ControllerHelper:
@@ -593,21 +570,17 @@ class ControllerHelper:
     def update(self, obs):
         all_names = []
         all_args = {}
-        end_play = False
-        reset_ep = False
         for i in self.active_controllers:
             (
                 ctrl_action,
-                ctrl_reset_ep,
-                ctrl_end_play,
                 self.all_hxs[i],
-            ) = self.controllers[i].act(obs, self._env)
-            end_play = end_play or ctrl_end_play
-            reset_ep = reset_ep or ctrl_reset_ep
+            ) = self.controllers[
+                i
+            ].act(obs, self._env)
             all_names.extend(ctrl_action["action"])
             all_args.update(ctrl_action["action_args"])
         action = {"action": tuple(all_names), "action_args": all_args}
-        return action, end_play, reset_ep
+        return action
 
     def on_environment_reset(self):
         for i in self.active_controllers:

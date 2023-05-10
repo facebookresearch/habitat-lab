@@ -88,6 +88,12 @@ class SandboxDriver(GuiAppDriver):
         self._viz_anim_fraction = 0.0
 
         self.lookat = None
+
+        if self.is_free_camera_mode() and args.first_person_mode:
+            raise RuntimeError(
+                "--first-person-mode must be used with --gui-controlled-agent-index"
+            )
+
         # lookat offset yaw (spin left/right) and pitch (up/down)
         # to enable camera rotation and pitch control
         self._first_person_mode = args.first_person_mode
@@ -130,6 +136,9 @@ class SandboxDriver(GuiAppDriver):
     def set_text_drawer(self, text_drawer):
         self._text_drawer = text_drawer
 
+    def is_free_camera_mode(self):
+        return self.ctrl_helper.get_gui_controlled_agent_index() is None
+
     # trying to get around mypy complaints about missing sim attributes
     def get_sim(self) -> Any:
         return self.env.task._sim
@@ -171,9 +180,10 @@ class SandboxDriver(GuiAppDriver):
                 (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
                 if len(target_idxs):
                     goal_position = goal_pos[target_idxs[0]]
-                    self.draw_nav_hint_from_agent(
-                        mn.Vector3(goal_position), end_radius, color
-                    )
+                    if not self.is_free_camera_mode():
+                        self.draw_nav_hint_from_agent(
+                            mn.Vector3(goal_position), end_radius, color
+                        )
                     self._debug_line_render.draw_circle(
                         goal_position, end_radius, color, 24
                     )
@@ -197,9 +207,10 @@ class SandboxDriver(GuiAppDriver):
                     # object is already at goal pos
                     continue
                 else:
-                    self.draw_nav_hint_from_agent(
-                        mn.Vector3(this_target_pos), end_radius, color
-                    )
+                    if not self.is_free_camera_mode():
+                        self.draw_nav_hint_from_agent(
+                            mn.Vector3(this_target_pos), end_radius, color
+                        )
                     box_size = 0.3
                     self._debug_line_render.draw_box(
                         this_target_pos - box_size / 2,
@@ -528,19 +539,35 @@ class SandboxDriver(GuiAppDriver):
             post_sim_update_dict["application_cursor"] = self._cursor_style
 
     def _update_text(self):
-        s = "ESC: exit\n"
+        def get_grasp_release_controls_text():
+            if self._held_target_obj_idx is not None:
+                return "Spacebar: put down\n"
+            else:
+                return "Spacebar: pick up\n"
+
+        s = ""
+        s += "ESC: exit\n"
+        s += "M: next episode\n"
+
         if self._first_person_mode:
             s += "Left-click: toggle cursor\n"
-        else:
+            s += "A, D: turn\n"
+            s += "W, S: walk\n"
+            s += get_grasp_release_controls_text()
+        # third-person mode
+        elif not self.is_free_camera_mode():
             s += "Left-click + drag: rotate camera\n"
             s += "Right-click: walk\n"
+            s += "A, D: turn\n"
+            s += "W, S: walk\n"
             s += "Scroll: zoom\n"
-        s += "A, D: turn\n"
-        s += "W, S: walk\n"
-        if self._held_target_obj_idx is not None:
-            s += "Spacebar: put down\n"
+            s += get_grasp_release_controls_text()
         else:
-            s += "Spacebar: pick up\n"
+            s += "Left-click + drag: rotate camera\n"
+            s += "A, D: turn camera\n"
+            s += "W, S: pan camera\n"
+            s += "O, P: raise or lower camera\n"
+            s += "Scroll: zoom\n"
 
         self._text_drawer.add_text(s, TextOnScreenAlignment.TOP_LEFT)
 
@@ -567,11 +594,11 @@ class SandboxDriver(GuiAppDriver):
                 walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
             )
 
-        action, end_play, reset_ep = self.ctrl_helper.update(self.obs)
+        action = self.ctrl_helper.update(self.obs)
 
         self.obs = self.env.step(action)
 
-        if reset_ep:
+        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
             self.obs = self.env.reset()
             self.ctrl_helper.on_environment_reset()
 
