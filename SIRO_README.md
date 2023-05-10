@@ -22,21 +22,32 @@ Project-specific README for SIRo.
 
 # Floorplanner Dataset
 
-FP is actually four distinct pieces: Floorplanner scenes, Amazon-Berkeley objects, Google Scanned objects, and Floorplanner episodes.
+FP is actually five distinct pieces: (1) Floorplanner scenes, (2) Amazon-Berkeley objects, (3) Google Scanned objects, (4) Floorplanner scenes, and (5) Floorplanner episodes. (assuming you already have ycb objects)
 
-1. Download Floorplanner Scenes: [fpss_osmm.zip](https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
-2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
-3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1Guxn6v2SC5kAtouwMs1DkBJMK3WW0die/view?usp=sharing)
-4. Extract these into `habitat-lab/data` as follows:
+1. Download Floorplanner Scenes:
 ```
-cd data
-unzip ~/Downloads/fpss_osmm.zip
-mv fpss_osmm fpss
+# Go to the habitat data directory
+cd habitat-lab/data
+# Make sure you have git-lfs installed
+git lfs install
+# Clone dataset, and it will take a while to finish
+git clone https://huggingface.co/datasets/fpss/fphab
+# change the name, and Floorplanner Scenes is ready to use
+mv fphab fpss
+```
+2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
+3. Extract these two object datasets into `habitat-lab/data` as follows:
+```
 cd objects
 tar -xvf ~/Downloads/google_object_dataset.tar.gz
 tar -xvf ~/Downloads/amazon_berkeley.tar.gz
-cd ../datasets
-unzip ~/Downloads/floorplanner.zip
+```
+4. Download FP episodes:
+```
+# Go to the habitat datasets directory
+cd habitat-lab/data/datasets
+# Clone dataset
+git clone https://github.com/jimmytyyang/floorplanner.git
 ```
 
 # Sandbox Tool
