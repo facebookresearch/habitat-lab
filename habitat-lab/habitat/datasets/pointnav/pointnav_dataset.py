@@ -7,7 +7,8 @@
 import gzip
 import json
 import os
-from typing import TYPE_CHECKING, List, Optional
+import pickle
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 from habitat.config import read_write
 from habitat.core.dataset import ALL_SCENES_MASK, Dataset
@@ -90,6 +91,19 @@ class PointNavDatasetV1(Dataset):
         scenes.sort()
         return scenes
 
+    def _load_from_file(self, fname: str, scenes_dir: str) -> None:
+        """
+        Load the data from a file into `self.episodes`. This can load `.pickle`
+        or `.json.gz` file formats.
+        """
+
+        if fname.endswith(".pickle"):
+            with open(fname, "rb") as f:
+                self.from_binary(pickle.load(f), scenes_dir=scenes_dir)
+        else:
+            with gzip.open(fname, "rt") as f:
+                self.from_json(f.read(), scenes_dir=scenes_dir)
+
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.episodes = []
 
@@ -97,8 +111,8 @@ class PointNavDatasetV1(Dataset):
             return
 
         datasetfile_path = config.data_path.format(split=config.split)
-        with gzip.open(datasetfile_path, "rt") as f:
-            self.from_json(f.read(), scenes_dir=config.scenes_dir)
+
+        self._load_from_file(datasetfile_path, config.scenes_dir)
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
@@ -119,13 +133,21 @@ class PointNavDatasetV1(Dataset):
                 scene_filename = self.content_scenes_path.format(
                     data_path=dataset_dir, scene=scene
                 )
-                with gzip.open(scene_filename, "rt") as f:
-                    self.from_json(f.read(), scenes_dir=config.scenes_dir)
+
+                self._load_from_file(scene_filename, config.scenes_dir)
 
         else:
             self.episodes = list(
                 filter(self.build_content_scenes_filter(config), self.episodes)
             )
+
+    def to_binary(self) -> Dict[str, Any]:
+        raise NotImplementedError()
+
+    def from_binary(
+        self, data_dict: Dict[str, Any], scenes_dir: Optional[str] = None
+    ) -> None:
+        raise NotImplementedError()
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
