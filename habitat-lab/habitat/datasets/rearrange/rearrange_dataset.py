@@ -93,8 +93,8 @@ class RearrangeDatasetV0(PointNavDatasetV1):
                 ret_d[access_idx(k, name_to_idx)] = v
             return ret_d
 
-        all_transforms = []
-        name_to_idx = {}
+        all_transforms: List[Any] = []
+        name_to_idx: Dict[str, int] = {}
         all_eps = []
 
         for ep in self.episodes:
