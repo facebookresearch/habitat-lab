@@ -594,6 +594,15 @@ class SandboxDriver(GuiAppDriver):
                 walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
             )
 
+        # Navmesh visualization only works in the debub third-person view
+        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
+        # visualization is only implemented for simulator-rendering, not replay-
+        # rendering.
+        if self.gui_input.get_key_down(GuiInput.KeyNS.N):
+            self.env._sim.navmesh_visualization = (
+                not self.env._sim.navmesh_visualization
+            )
+
         action = self.ctrl_helper.update(self.obs)
 
         self.obs = self.env.step(action)

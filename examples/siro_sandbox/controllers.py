@@ -194,10 +194,6 @@ class GuiRobotController(GuiController):
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        # todo: remove this or fix navmesh visualization (doesn't work with replay-rendering)
-        if gui_input.get_key_down(KeyNS.N):
-            env._sim.navmesh_visualization = not env._sim.navmesh_visualization
-
         if base_action is not None:
             # Base control
             base_action = [0, 0]
