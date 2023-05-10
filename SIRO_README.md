@@ -49,6 +49,7 @@ cd habitat-lab/data/datasets
 # Clone dataset
 git clone https://github.com/jimmytyyang/floorplanner.git
 ```
+5. Now you should be able to use FP. For more detail (e.g., stats, train-test split), please read [here](https://docs.google.com/document/d/11m66SUawGPFxWYHN2E8rDw3g679dpiBf8Es-o3PRl5I/edit?usp=sharing).
 
 # Sandbox Tool
 
