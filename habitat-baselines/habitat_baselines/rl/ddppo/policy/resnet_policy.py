@@ -148,11 +148,13 @@ class ResNetEncoder(nn.Module):
     ):
         super().__init__()
         self.no_downscaling = no_downscaling
+        # Goal/privileged information sensors
+        skip_sensors = {ImageGoalSensor.cls_uuid, "robot_head_panoptic"}
         # Determine which visual observations are present
         self.visual_keys = [
             k
             for k, v in observation_space.spaces.items()
-            if len(v.shape) > 1 and k != ImageGoalSensor.cls_uuid
+            if len(v.shape) > 1 and k not in skip_sensors
         ]
         self.key_needs_rescaling = {k: None for k in self.visual_keys}
         for k, v in observation_space.spaces.items():
