@@ -45,8 +45,8 @@ actions:
     type: "ArmAction"
     arm_controller: "ArmRelPosReducedActionStretch"
     grip_controller: "GazeGraspAction"
-    arm_joint_mask: [0,0,0,0,0,0,0,0,0,0]
-    arm_joint_dimensionality: 0
+    arm_joint_mask: [0,0,0,0,0,0,0,0,0,1]
+    arm_joint_dimensionality: 1
     grasp_thresh_dist: 0.15
     disable_grip: False
     delta_pos_limit: 0.0125
