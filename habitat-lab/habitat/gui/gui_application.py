@@ -12,6 +12,7 @@ import magnum as mn
 from magnum.platform.glfw import Application
 
 from habitat.gui.gui_input import GuiInput
+from habitat.gui.text_drawer import TextOnScreenAlignment
 
 
 class GuiAppDriver:
@@ -145,6 +146,13 @@ class GuiApplication(InputHandlerApplication):
     def get_framebuffer_size(self):
         return self.framebuffer_size
 
+    def _post_sim_update(self, post_sim_update_dict):
+        if "application_cursor" in post_sim_update_dict:
+            self.cursor = post_sim_update_dict["application_cursor"]
+
+        if "application_exit" in post_sim_update_dict:
+            self.exit(0)
+
     def draw_event(self):
         # tradeoff between responsiveness and simulation speed
         max_sim_updates_per_render = 1
@@ -186,9 +194,14 @@ class GuiApplication(InputHandlerApplication):
         for _ in range(num_sim_updates):
             post_sim_update_dict = self._driver.sim_update(sim_dt)
             self._sim_input.on_frame_end()
+            self._post_sim_update(post_sim_update_dict)
             self._app_renderer.post_sim_update(post_sim_update_dict)
 
-        self._app_renderer._text_drawer.add_text(f"SPS: {self._debug_sps:.1f}")
+        self._app_renderer._text_drawer.add_text(
+            f"SPS: {self._debug_sps:.1f}",
+            TextOnScreenAlignment.BOTTOM_LEFT,
+            text_delta_y=20,
+        )
 
         render_dt = 1 / 60.0  # todo: drive correctly
         did_render = self._app_renderer.render_update(render_dt)
