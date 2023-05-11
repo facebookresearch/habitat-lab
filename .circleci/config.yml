@@ -251,6 +251,8 @@ jobs:
           name: Display dependency versions
           no_output_timeout: 20m
           command: |
+              . activate habitat
+
               echo "pip freeze"
               pip freeze
 
