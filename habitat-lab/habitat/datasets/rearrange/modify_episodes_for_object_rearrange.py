@@ -438,7 +438,6 @@ def add_cat_fields_to_episodes(
     with tqdm(total=num_episodes) as pbar:
         for episode in episodes["episodes"]:
             scene_id = episode["scene_id"]
-            episode["additional_obj_config_paths"] = ['data/objects/amazon_berkeley/configs/', 'data/objects/google_scanned/configs/', 'data/objects/ai2thorhab/configs/objects', 'data/objects/floorplanner/configs/objects']
             sim = initialize_sim(
                 sim,
                 existing_rigid_objects,
@@ -459,7 +458,9 @@ def add_cat_fields_to_episodes(
             rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
             rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
             obj_idx_to_name = load_objects(
-                sim, episode["rigid_objs"], episode["additional_obj_config_paths"]
+                sim,
+                episode["rigid_objs"],
+                episode["additional_obj_config_paths"],
             )
             populate_semantic_graph(sim)
             all_rec_goals = collect_receptacle_goals(
@@ -476,7 +477,10 @@ def add_cat_fields_to_episodes(
 
             episode["object_category"] = obj_cat
             episode["start_recep_category"] = start_rec_cat
-            name_to_receptacle = {k: v.split("|", 1)[1] for k, v in episode["name_to_receptacle"].items()}
+            name_to_receptacle = {
+                k: v.split("|", 1)[1]
+                for k, v in episode["name_to_receptacle"].items()
+            }
             try:
                 episode["goal_recep_category"] = goal_rec_cat
                 (
@@ -545,11 +549,13 @@ if __name__ == "__main__":
         "--rec_cache_dir",
         type=str,
         default="data/cache/receptacle_viewpoints/fphab",
-        help="Path to cache where receptacle viewpoints were saved during first stage of episode generation"
+        help="Path to cache where receptacle viewpoints were saved during first stage of episode generation",
     )
     parser.add_argument("--obj_category_mapping_file", type=str, default=None)
     parser.add_argument("--rec_category_mapping_file", type=str, default=None)
-    parser.add_argument("--num_episodes", type=int, default=-1) # -1 uses all episodes
+    parser.add_argument(
+        "--num_episodes", type=int, default=-1
+    )  # -1 uses all episodes
     parser.add_argument("--add_viewpoints", action="store_true")
     parser.add_argument("--debug_viz", action="store_true")
 
