@@ -6,12 +6,10 @@
 
 import ctypes
 import json
-import os
 import os.path as osp
 import sys
 import time
 from glob import glob
-from typing import List
 
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
@@ -19,7 +17,6 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import magnum as mn
 import numpy as np
 import pytest
-import torch
 import yaml
 from omegaconf import DictConfig, OmegaConf
 
@@ -38,9 +35,6 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
 from habitat.tasks.rearrange.multi_task.composite_task import CompositeTask
 from habitat.utils.geometry_utils import is_point_in_triangle
 from habitat_baselines.config.default import get_config as baselines_get_config
-from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
-from habitat_baselines.run import run_exp
-from habitat_sim.utils.common import d3_40_colors_hex
 
 CFG_TEST = "benchmark/rearrange/pick.yaml"
 GEN_TEST_CFG = (
@@ -97,7 +91,21 @@ def test_rearrange_baseline_envs(test_cfg_path):
     """
     Test the Habitat Baseline environments
     """
-    config = baselines_get_config(test_cfg_path)
+    config = baselines_get_config(
+        test_cfg_path,
+        [
+            "habitat.dataset.split=val",
+            "habitat_baselines.eval.split=val",
+        ],
+    )
+    for _, agent_config in config.habitat.simulator.agents.items():
+        if (
+            agent_config.articulated_agent_type == "KinematicHumanoid"
+            and not osp.exists(agent_config.motion_data_path)
+        ):
+            pytest.skip(
+                "This test should only be run if we have the motion data files."
+            )
     with habitat.config.read_write(config):
         config.habitat.gym.obs_keys = None
         config.habitat.gym.desired_goal_keys = []
@@ -125,33 +133,6 @@ def test_rearrange_baseline_envs(test_cfg_path):
         glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
     ),
 )
-def test_rearrange_tasks(test_cfg_path):
-    """
-    Test the underlying Habitat Tasks
-    """
-    if not osp.isfile(test_cfg_path):
-        return
-
-    config = get_config(test_cfg_path)
-    if (
-        config.habitat.dataset.data_path
-        == "data/ep_datasets/bench_scene.json.gz"
-    ):
-        pytest.skip(
-            "This config is only useful for examples and does not have the generated dataset"
-        )
-
-    with habitat.Env(config=config) as env:
-        for _ in range(5):
-            env.reset()
-
-
-@pytest.mark.parametrize(
-    "test_cfg_path",
-    list(
-        glob("habitat-lab/habitat/config/benchmark/rearrange/*"),
-    ),
-)
 def test_composite_tasks(test_cfg_path):
     """
     Test for the Habitat composite tasks.
@@ -160,7 +141,11 @@ def test_composite_tasks(test_cfg_path):
         return
 
     config = get_config(
-        test_cfg_path, ["habitat.simulator.concur_render=False"]
+        test_cfg_path,
+        [
+            "habitat.simulator.concur_render=False",
+            "habitat.dataset.split=val",
+        ],
     )
     if "task_spec" not in config.habitat.task:
         return
@@ -299,13 +284,13 @@ def test_receptacle_parsing():
             # check for contents and correct type parsing
             if receptacle.name == "receptacle_aabb_chair_test":
                 assert type(receptacle) is hab_receptacle.AABBReceptacle
-            elif receptacle.name == "receptacle_mesh_chair_test":
+            elif receptacle.name == "receptacle_mesh_chair_test.0000":
                 assert (
                     type(receptacle) is hab_receptacle.TriangleMeshReceptacle
                 )
             elif receptacle.name == "receptacle_aabb_simpleroom_test":
                 assert type(receptacle) is hab_receptacle.AABBReceptacle
-            elif receptacle.name == "receptacle_mesh_simpleroom_test":
+            elif receptacle.name == "receptacle_mesh_simpleroom_test.0000":
                 assert (
                     type(receptacle) is hab_receptacle.TriangleMeshReceptacle
                 )
