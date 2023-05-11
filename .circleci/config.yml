@@ -86,6 +86,10 @@ jobs:
           command: |
               echo $(date +%F) > ./date
               echo $(git ls-remote https://github.com/facebookresearch/habitat-sim.git HEAD | awk '{ print $1}') > ./hsim_sha
+
+              echo $PWD
+              cat ./hsim_sha
+
               wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh
               sudo mkdir /opt/cmake
               sudo sh ./cmake-3.13.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
@@ -279,6 +283,7 @@ jobs:
 
               echo "###########"
               echo "habitat-sim commit"
+              echo $PWD
               cat ./hsim_sha
 
       - run:
