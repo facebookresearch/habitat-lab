@@ -13,6 +13,8 @@ import ctypes
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
 
+from habitat_baselines.config.default import get_config as get_baselines_config
+
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
@@ -65,10 +67,12 @@ class SandboxDriver(GuiAppDriver):
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
                 True
             )
+            config.habitat.simulator.concur_render = False
+
         self.env = habitat.Env(config=config)
         self.obs = self.env.reset()
 
-        self.ctrl_helper = ControllerHelper(self.env, args, gui_input)
+        self.ctrl_helper = ControllerHelper(self.env, config, args, gui_input)
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
 
@@ -883,7 +887,8 @@ if __name__ == "__main__":
         debug_third_person_height,
     ) = parse_debug_third_person(args, framebuffer_size)
 
-    config = habitat.get_config(args.cfg, args.cfg_opts)
+    config = get_baselines_config(args.cfg, args.cfg_opts)
+    # config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
         env_config = config.habitat.environment
         sim_config = config.habitat.simulator
