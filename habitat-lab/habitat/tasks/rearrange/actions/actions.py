@@ -351,6 +351,62 @@ class ArmRelPosReducedActionStretch(RobotAction):
 
 
 @registry.register_task_action
+class ArmAbsPosReducedActionStretch(RobotAction):
+    """
+    The arm motor targets are set to the joint values specified by the
+    action and the mask. This function is used for Stretch.
+    The extension rolls (if set) rolls over to the other joints
+    """
+
+    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self.last_arm_action = None
+        self._arm_joint_mask = self._config.arm_joint_mask
+
+    @property
+    def action_space(self):
+        return spaces.Box(
+            shape=(self._config.arm_joint_dimensionality,),
+            low=0,
+            high=1,
+            dtype=np.float32,
+        )
+
+    def step(self, abs_pos, *args, **kwargs):
+        # Expand abs_pos based on mask
+        expanded_abs_pos = np.zeros(len(self._arm_joint_mask))
+        src_idx = 0
+        tgt_idx = 0
+        for mask in self._arm_joint_mask:
+            if mask == 0:
+                tgt_idx += 1
+                continue
+            expanded_abs_pos[tgt_idx] = abs_pos[src_idx]
+            tgt_idx += 1
+            src_idx += 1
+
+        min_limit, max_limit = self.cur_robot.arm_joint_limits
+        # no clipping, we directly set the arm
+        set_arm_pos = expanded_abs_pos
+        # Perform roll over to the joints so that the user cannot control
+        # the motor 2, 3, 4 for the arm.
+        if expanded_abs_pos[0] >= 0:
+            for i in range(3):
+                if set_arm_pos[i] > max_limit[i]:
+                    set_arm_pos[i + 1] += set_arm_pos[i] - max_limit[i]
+                    set_arm_pos[i] = max_limit[i]
+        else:
+            for i in range(3):
+                if set_arm_pos[i] < min_limit[i]:
+                    set_arm_pos[i + 1] -= min_limit[i] - set_arm_pos[i]
+                    set_arm_pos[i] = min_limit[i]
+        set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+
+        self.cur_robot.arm_motor_pos = set_arm_pos
+        self.cur_robot.arm_joint_pos = set_arm_pos
+
+
+@registry.register_task_action
 class BaseVelAction(RobotAction):
     """
     The robot base motion is constrained to the NavMesh and controlled with velocity commands integrated with the VelocityControl interface.
