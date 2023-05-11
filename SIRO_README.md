@@ -22,7 +22,7 @@ Project-specific README for SIRo.
 
 # Floorplanner Dataset
 
-FP is actually five distinct pieces: (1) Floorplanner scenes, (2) Amazon-Berkeley objects, (3) Google Scanned objects, (4) Floorplanner scenes, and (5) Floorplanner episodes. (assuming you already have ycb objects)
+FP is actually four distinct pieces: (1) Floorplanner scenes, (2) Amazon-Berkeley objects, (3) Google Scanned objects, and (4) Floorplanner episodes. (YCB objects should have been already downloaded as part of the earlier SIRo install steps)
 
 1. Download Floorplanner Scenes:
 ```
