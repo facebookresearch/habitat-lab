@@ -1105,7 +1105,7 @@ class AgentConfig(HabitatBaseConfig):
     joint_start_noise: float = 0.1
     robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     robot_type: str = "FetchRobot"
-    ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    ik_arm_urdf: Optional[str] = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 
 
 @attr.s(auto_attribs=True, slots=True)
