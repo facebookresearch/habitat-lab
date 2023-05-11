@@ -19,7 +19,6 @@ from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.utils.common import flatten_dict
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import TensorDict
-from habitat_baselines.config.default import get_config as get_baselines_config
 from habitat_baselines.utils.common import get_action_space_info
 
 
