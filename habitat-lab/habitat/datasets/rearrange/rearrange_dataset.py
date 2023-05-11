@@ -167,8 +167,6 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
         check_and_gen_physics_config()
-
-        super().__init__(config)
         if config is not None:
             if self.config.viewpoints_matrix_path is not None:
                 self.viewpoints_matrix = np.load(
@@ -182,6 +180,8 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                         split=self.config.split
                     )
                 )
+        super().__init__(config)
+
 
     def get_episode_iterator(
         self, *args: Any, **kwargs: Any
