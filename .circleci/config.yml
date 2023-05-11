@@ -86,8 +86,6 @@ jobs:
           command: |
               echo $(date +%F) > ./date
               echo $(git ls-remote https://github.com/facebookresearch/habitat-sim.git HEAD | awk '{ print $1}') > ./hsim_sha
-
-              echo $PWD
               cat ./hsim_sha
 
               wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh
@@ -272,7 +270,7 @@ jobs:
           no_output_timeout: 20m
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-lab
+              . activate habitat
 
               echo "pip freeze"
               pip freeze
@@ -283,7 +281,6 @@ jobs:
 
               echo "###########"
               echo "habitat-sim commit"
-              echo $PWD
               cat ./hsim_sha
 
       - run:
