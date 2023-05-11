@@ -172,11 +172,15 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         if config is not None:
             if self.config.viewpoints_matrix_path is not None:
                 self.viewpoints_matrix = np.load(
-                    self.config.viewpoints_matrix_path.format(split=self.config.split)
+                    self.config.viewpoints_matrix_path.format(
+                        split=self.config.split
+                    )
                 )
             if self.config.transformations_matrix_path is not None:
                 self.transformations_matrix = np.load(
-                    self.config.transformations_matrix_path.format(split=self.config.split)
+                    self.config.transformations_matrix_path.format(
+                        split=self.config.split
+                    )
                 )
 
     def get_episode_iterator(
