@@ -143,6 +143,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.9
                 . activate habitat
+                conda install -q -y mkl==2021.4.0
                 conda install -q -y -c conda-forge ninja ccache
                 pip install pytest-sugar>=0.9.6 mock cython pygame flaky pytest pytest-mock pytest-cov psutil
               fi
