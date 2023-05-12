@@ -1349,6 +1349,7 @@ class HabitatSimV0Config(HabitatBaseConfig):
     gpu_gpu: bool = False
     # Whether the agent slides on collisions
     allow_sliding: bool = True
+    include_static_objects_in_navmesh: bool = False
     frustum_culling: bool = True
     enable_physics: bool = False
     physics_config_file: str = "./data/default.physics_config.json"
