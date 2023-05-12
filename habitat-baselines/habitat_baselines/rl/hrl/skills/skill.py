@@ -200,14 +200,16 @@ class SkillPolicy(Policy):
             else:
                 is_skill_done = is_skill_done | over_max_len
 
-        is_skill_done |= hl_wants_skill_term
-
+        # Apply the postconds based on the skill termination, not if the HL policy wanted to terminate.
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
             if self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
+
+        # Also terminate the skill if the HL policy wanted termination.
+        is_skill_done |= hl_wants_skill_term
 
         return is_skill_done, bad_terminate, new_actions
 

@@ -86,7 +86,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._cur_skills: np.ndarray = np.full(
             (self._num_envs,), -1, dtype=np.int32
         )
-        self._cur_call_high_level: torch.BoolTensor = torch.zeros(
+        # Init with True so we always call the HL policy during the first step
+        # it runs.
+        self._cur_call_high_level: torch.BoolTensor = torch.ones(
             (self._num_envs,), dtype=torch.bool
         )
 
