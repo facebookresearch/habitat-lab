@@ -442,13 +442,11 @@ class CameraPoseSensorConfig(LabSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ReceptacleSegmentationSensorConfig(LabSensorConfig):
     type: str = "ReceptacleSegmentationSensor"
-    dimensionality: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavGoalSegmentationSensorConfig(LabSensorConfig):
     type: str = "OvmmNavGoalSegmentationSensor"
-    dimensionality: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)

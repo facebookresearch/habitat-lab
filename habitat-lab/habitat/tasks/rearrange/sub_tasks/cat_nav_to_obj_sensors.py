@@ -32,7 +32,6 @@ class OvmmNavGoalSegmentationSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
-        self._dimensionality = self._config.dimensionality
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
@@ -113,7 +112,7 @@ class OvmmNavGoalSegmentationSensor(Sensor):
 @registry.register_sensor
 class ReceptacleSegmentationSensor(Sensor):
     cls_uuid: str = "receptacle_segmentation"
-
+    panoptic_uuid: str = "robot_head_panoptic"
     def __init__(
         self,
         sim,
@@ -122,9 +121,9 @@ class ReceptacleSegmentationSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
-        self._dimensionality = self._config.dimensionality
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self.resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -136,8 +135,8 @@ class ReceptacleSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._dimensionality,
-                self._dimensionality,
+                self.resolution[0],
+                self.resolution[1],
                 1,
             ),
             low=np.iinfo(np.uint32).min,
@@ -148,7 +147,7 @@ class ReceptacleSegmentationSensor(Sensor):
     def get_observation(
         self, observations, *args, episode, task: CatDynNavRLEnv, **kwargs
     ):
-        obs = np.copy(observations["robot_head_panoptic"])
+        obs = np.copy(observations[self.panoptic_uuid])
         obj_id_map = np.zeros(np.max(obs) + 1, dtype=np.int32)
         for obj_id, semantic_id in task.receptacle_semantic_ids.items():
             instance_id = obj_id + self._instance_ids_start
