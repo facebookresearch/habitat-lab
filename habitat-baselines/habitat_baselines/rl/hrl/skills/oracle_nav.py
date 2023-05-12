@@ -142,6 +142,10 @@ class OracleNavPolicy(NnSkillPolicy):
 
         return OracleNavPolicy.OracleNavActionArgs(match_i)
 
+    @property
+    def required_obs_keys(self):
+        return [HasFinishedOracleNavSensor.cls_uuid]
+
     def _internal_act(
         self,
         observations,
