@@ -24,7 +24,7 @@ defaults:
     - joint_sensor
     - joint_velocity_sensor
     - start_receptacle_sensor
-    - cat_nav_goal_segmentation_sensor
+    - ovmm_nav_goal_segmentation_sensor
     - receptacle_segmentation_sensor
     - object_embedding_sensor
     - robot_start_gps_sensor

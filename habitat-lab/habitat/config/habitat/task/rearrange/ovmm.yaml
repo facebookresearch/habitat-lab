@@ -42,7 +42,7 @@ defaults:
     - end_effector_sensor
     - relative_resting_pos_sensor
     - is_holding_sensor
-    - cat_nav_goal_segmentation_sensor
+    - ovmm_nav_goal_segmentation_sensor
     - receptacle_segmentation_sensor
   - _self_
 

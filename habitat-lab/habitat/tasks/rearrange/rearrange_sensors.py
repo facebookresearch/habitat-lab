@@ -162,7 +162,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 @registry.register_sensor
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
-
+    panoptic_uuid: str = "robot_head_panoptic"
     def __init__(
         self,
         sim,
@@ -171,10 +171,11 @@ class ObjectSegmentationSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
-        self._dimensionality = self._config.dimensionality
         self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
+
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -186,8 +187,8 @@ class ObjectSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._dimensionality,
-                self._dimensionality,
+                self._resolution[0],
+                self._resolution[1],
                 1,
             ),
             low=0,
@@ -198,15 +199,15 @@ class ObjectSegmentationSensor(Sensor):
     def get_observation(self, observations, *args, episode, task, **kwargs):
         if np.random.random() < self._blank_out_prob:
             return np.zeros_like(
-                observations["robot_head_panoptic"], dtype=np.uint8
+                observations[self.panoptic_uuid], dtype=np.uint8
             )
         else:
             segmentation_sensor = np.zeros_like(
-                observations["robot_head_panoptic"], dtype=np.uint8
+                observations[self.panoptic_uuid], dtype=np.uint8
             )
             for g in episode.candidate_objects:
                 segmentation_sensor = segmentation_sensor | (
-                    observations["robot_head_panoptic"]
+                    observations[self.panoptic_uuid]
                     == self._sim.scene_obj_ids[int(g.object_id)]
                     + self._instance_ids_start
                 )
@@ -223,15 +224,15 @@ class RecepSegmentationSensor(ObjectSegmentationSensor):
         recep_goals = self._get_recep_goals(episode)
         if np.random.random() < self._config.blank_out_prob:
             return np.zeros_like(
-                observations["robot_head_panoptic"], dtype=np.uint8
+                observations[self.panoptic_uuid], dtype=np.uint8
             )
         else:
             segmentation_sensor = np.zeros_like(
-                observations["robot_head_panoptic"], dtype=np.uint8
+                observations[self.panoptic_uuid], dtype=np.uint8
             )
             for g in recep_goals:
                 segmentation_sensor = segmentation_sensor | (
-                    observations["robot_head_panoptic"]
+                    observations[self.panoptic_uuid]
                     == int(g.object_id)
                     + self._sim.habitat_config.instance_ids_start
                 )

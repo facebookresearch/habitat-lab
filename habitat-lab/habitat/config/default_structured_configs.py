@@ -422,7 +422,6 @@ class ObjectEmbeddingSensorConfig(LabSensorConfig):
 class ObjectSegmentationSensorConfig(LabSensorConfig):
     type: str = "ObjectSegmentationSensor"
     blank_out_prob: float = 0.0
-    dimensionality: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -447,8 +446,8 @@ class ReceptacleSegmentationSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class CatNavGoalSegmentationSensorConfig(LabSensorConfig):
-    type: str = "CatNavGoalSegmentationSensor"
+class OvmmNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "OvmmNavGoalSegmentationSensor"
     dimensionality: int = 256
 
 
@@ -1691,10 +1690,10 @@ cs.store(
     node=ReceptacleSegmentationSensorConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.cat_nav_goal_segmentation_sensor",
+    package="habitat.task.lab_sensors.ovmm_nav_goal_segmentation_sensor",
     group="habitat/task/lab_sensors",
-    name="cat_nav_goal_segmentation_sensor",
-    node=CatNavGoalSegmentationSensorConfig,
+    name="ovmm_nav_goal_segmentation_sensor",
+    node=OvmmNavGoalSegmentationSensorConfig,
 )
 
 # Task Measurements

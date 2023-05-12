@@ -19,9 +19,9 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import RotDistToGoal
 
 
 @registry.register_sensor
-class CatNavGoalSegmentationSensor(Sensor):
-    cls_uuid: str = "cat_nav_goal_segmentation"
-
+class OvmmNavGoalSegmentationSensor(Sensor):
+    cls_uuid: str = "ovmm_nav_goal_segmentation"
+    panoptic_uuid: str = "robot_head_panoptic"
     def __init__(
         self,
         sim,
@@ -36,6 +36,7 @@ class CatNavGoalSegmentationSensor(Sensor):
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
+        self.resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
         self._num_channels = 2 if self._is_nav_to_obj else 1
         super().__init__(config=config)
 
@@ -48,8 +49,8 @@ class CatNavGoalSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._dimensionality,
-                self._dimensionality,
+                self.resolution[0],
+                self.resolution[1],
                 self._num_channels,
             ),
             low=0,
@@ -79,10 +80,10 @@ class CatNavGoalSegmentationSensor(Sensor):
     def get_observation(
         self, observations, *args, episode, task: CatDynNavRLEnv, **kwargs
     ):
-        pan_obs = observations["robot_head_panoptic"]
+        pan_obs = observations[self.panoptic_uuid]
         max_obs_val = np.max(pan_obs)
         obs = np.zeros(
-            (pan_obs.shape[0], pan_obs.shape[1], self._num_channels),
+            (self.resolution[0], self.resolution[1], self._num_channels),
             dtype=np.int32,
         )
         if self._is_nav_to_obj:
