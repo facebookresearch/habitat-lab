@@ -18,16 +18,14 @@ defaults:
     - did_pick_object
     - pick_success
     - place_success
-    - dist_to_pick_goal
-    - rot_dist_to_pick_goal
-    - nav_to_pick_succ
-    - nav_orient_to_pick_succ
-    - dist_to_place_goal
-    - rot_dist_to_place_goal
-    - nav_to_place_succ
-    - nav_orient_to_place_succ
-    - pick_nav_to_place_succ
-    - pick_nav_orient_to_place_succ
+    - ovmm_dist_to_pick_goal
+    - ovmm_rot_dist_to_pick_goal
+    - ovmm_nav_to_pick_succ
+    - ovmm_nav_orient_to_pick_succ
+    - ovmm_dist_to_place_goal
+    - ovmm_rot_dist_to_place_goal
+    - ovmm_nav_to_place_succ
+    - ovmm_nav_orient_to_place_succ
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor

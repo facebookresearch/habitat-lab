@@ -159,9 +159,13 @@ class ReceptacleSegmentationSensor(Sensor):
         return obs
 
 
+
 @registry.register_measure
-class CatNavRotDistToGoal(RotDistToGoal):
-    cls_uuid: str = "cat_nav_rot_dist_to_goal"
+class OvmmRotDistToGoal(RotDistToGoal):
+    """
+    Computes angle between the agent's heading direction and the direction from agent to object. Selects the object with the closest viewpoint for computing this angle.  
+    """
+    cls_uuid: str = "ovmm_rot_dist_to_goal"
 
     def __init__(self, *args, sim, config, dataset, task, **kwargs):
         self._is_nav_to_obj = task.is_nav_to_obj
@@ -169,7 +173,7 @@ class CatNavRotDistToGoal(RotDistToGoal):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return CatNavRotDistToGoal.cls_uuid
+        return OvmmRotDistToGoal.cls_uuid
 
     def _get_targ(self, task, episode):
         if self._is_nav_to_obj:

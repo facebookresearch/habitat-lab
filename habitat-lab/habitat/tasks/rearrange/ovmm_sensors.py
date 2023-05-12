@@ -17,17 +17,18 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToGoal
 )
 from habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_sensors import (
-    CatNavRotDistToGoal
+    OvmmRotDistToGoal
 )
 import numpy as np
 
 # Sensors for measuring success to pick goals
 @registry.register_measure
-class DistToPickGoal(DistToGoal):
-    cls_uuid: str = "dist_to_pick_goal"
+class OvmmDistToPickGoal(DistToGoal):
+    """Distance to the closest viewpoint of a candidate pick object"""
+    cls_uuid: str = "ovmm_dist_to_pick_goal"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return DistToPickGoal.cls_uuid
+        return OvmmDistToPickGoal.cls_uuid
     def _get_goals(self, task, episode):
         return np.stack(
                 [
@@ -39,47 +40,51 @@ class DistToPickGoal(DistToGoal):
         )
 
 @registry.register_measure
-class RotDistToPickGoal(CatNavRotDistToGoal, Measure):
-    cls_uuid: str = "rot_dist_to_pick_goal"
+class OvmmRotDistToPickGoal(OvmmRotDistToGoal, Measure):
+    """Angle between agent's forward vector and the vector from agent's position to the closest candidate pick object"""
+    cls_uuid: str = "ovmm_rot_dist_to_pick_goal"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return RotDistToPickGoal.cls_uuid
+        return OvmmRotDistToPickGoal.cls_uuid
     def __init__(self, *args, sim, config, dataset, task, **kwargs):
         super().__init__(*args, sim=sim, config=config, dataset=dataset, task=task, **kwargs)
         self._is_nav_to_obj = True
 
 
 @registry.register_measure
-class NavToPickSucc(NavToPosSucc):
-    cls_uuid: str = "nav_to_pick_succ"
+class OvmmNavToPickSucc(NavToPosSucc):
+    """Whether the agent has navigated within `success_distance` of the closest viewpoint of a candidate pick object"""
+    cls_uuid: str = "ovmm_nav_to_pick_succ"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return NavToPickSucc.cls_uuid
+        return OvmmNavToPickSucc.cls_uuid
     @property
     def _dist_to_goal_cls_uuid(self):
-        return DistToPickGoal.cls_uuid
+        return OvmmDistToPickGoal.cls_uuid
 
 
 @registry.register_measure
-class NavOrientToPickSucc(NavToObjSuccess):
-    cls_uuid: str = "nav_orient_to_pick_succ"
+class OvmmNavOrientToPickSucc(NavToObjSuccess):
+    """Whether the agent has navigated within `success_distance` of the closest viewpoint of a candidate pick object and oriented itself within `success_angle` of the object"""
+    cls_uuid: str = "ovmm_nav_orient_to_pick_succ"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return NavOrientToPickSucc.cls_uuid
+        return OvmmNavOrientToPickSucc.cls_uuid
     @property
     def _nav_to_pos_succ_cls_uuid(self):
-        return NavToPickSucc.cls_uuid
+        return OvmmNavToPickSucc.cls_uuid
     @property
     def _rot_dist_to_goal_cls_uuid(self):
-        return RotDistToPickGoal.cls_uuid
+        return OvmmRotDistToPickGoal.cls_uuid
 
 # Sensors for measuring success to place goals
 @registry.register_measure
-class DistToPlaceGoal(DistToGoal):
-    cls_uuid: str = "dist_to_place_goal"
+class OvmmDistToPlaceGoal(DistToGoal):
+    """Distance to the closest viewpoint of a candidate place receptacle"""
+    cls_uuid: str = "ovmm_dist_to_place_goal"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return DistToPlaceGoal.cls_uuid
+        return OvmmDistToPlaceGoal.cls_uuid
     def _get_goals(self, task, episode):
         return np.stack(
                 [
@@ -91,97 +96,39 @@ class DistToPlaceGoal(DistToGoal):
         )
 
 @registry.register_measure
-class RotDistToPlaceGoal(CatNavRotDistToGoal):
-    cls_uuid: str = "rot_dist_to_place_goal"
+class OvmmRotDistToPlaceGoal(OvmmRotDistToGoal):
+    """Angle between agent's forward vector and the vector from agent's position to the center of the closest candidate place receptacle"""
+    cls_uuid: str = "ovmm_rot_dist_to_place_goal"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return RotDistToPlaceGoal.cls_uuid
+        return OvmmRotDistToPlaceGoal.cls_uuid
     def __init__(self, *args, sim, config, dataset, task, **kwargs):
         super().__init__(*args, sim=sim, config=config, dataset=dataset, task=task, **kwargs)
         self._is_nav_to_obj = False
 
 
 @registry.register_measure
-class NavToPlaceSucc(NavToPosSucc):
-    cls_uuid: str = "nav_to_place_succ"
+class OvmmNavToPlaceSucc(NavToPosSucc):
+    """Whether the agent has navigated within `success_distance` of the center of the closest candidate place receptacle"""
+    cls_uuid: str = "ovmm_nav_to_place_succ"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return NavToPlaceSucc.cls_uuid
+        return OvmmNavToPlaceSucc.cls_uuid
     @property
     def _dist_to_goal_cls_uuid(self):
-        return DistToPlaceGoal.cls_uuid
+        return OvmmDistToPlaceGoal.cls_uuid
 
 
 @registry.register_measure
-class NavOrientToPlaceSucc(NavToObjSuccess):
-    cls_uuid: str = "nav_orient_to_place_succ"
+class OvmmNavOrientToPlaceSucc(NavToObjSuccess):
+    """Whether the agent has navigated within `success_distance` of the center of the closest candidate place receptacle and oriented itself within `success_angle` of the receptacle"""
+    cls_uuid: str = "ovmm_nav_orient_to_place_succ"
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return NavOrientToPlaceSucc.cls_uuid
+        return OvmmNavOrientToPlaceSucc.cls_uuid
     @property
     def _nav_to_pos_succ_cls_uuid(self):
-        return NavToPlaceSucc.cls_uuid
+        return OvmmNavToPlaceSucc.cls_uuid
     @property
     def _rot_dist_to_goal_cls_uuid(self):
-        return RotDistToPlaceGoal.cls_uuid
-
-
-@registry.register_measure
-class PickNavToPlaceSucc(Measure):
-    cls_uuid: str = "pick_nav_to_place_succ"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return PickNavToPlaceSucc.cls_uuid
-
-    def reset_metric(self, *args, task, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [NavToPlaceSucc.cls_uuid, DidPickObjectMeasure.cls_uuid],
-        )
-        self.update_metric(*args, task=task, **kwargs)
-
-    def __init__(self, *args, config, **kwargs):
-        self._config = config
-        super().__init__(*args, config=config, **kwargs)
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        nav_to_pos_success = task.measurements.measures[
-            NavToPlaceSucc.cls_uuid
-        ].get_metric()
-
-        did_pick_object = task.measurements.measures[
-            DidPickObjectMeasure.cls_uuid
-        ].get_metric()
-        self._metric = nav_to_pos_success and did_pick_object
-
-
-@registry.register_measure
-class PickNavOrientToPlaceSucc(Measure):
-    cls_uuid: str = "pick_nav_orient_to_place_succ"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return PickNavOrientToPlaceSucc.cls_uuid
-
-    def reset_metric(self, *args, task, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [NavOrientToPlaceSucc.cls_uuid, DidPickObjectMeasure.cls_uuid],
-        )
-        self.update_metric(*args, task=task, **kwargs)
-
-    def __init__(self, *args, config, **kwargs):
-        self._config = config
-        super().__init__(*args, config=config, **kwargs)
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        nav_to_obj_success = task.measurements.measures[
-            NavOrientToPlaceSucc.cls_uuid
-        ].get_metric()
-
-        did_pick_object = task.measurements.measures[
-            DidPickObjectMeasure.cls_uuid
-        ].get_metric()
-        self._metric = nav_to_obj_success and did_pick_object
-
+        return OvmmRotDistToPlaceGoal.cls_uuid

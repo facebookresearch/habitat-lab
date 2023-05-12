@@ -657,60 +657,50 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class DistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
-    type: str = "DistToPickGoal"
+class OvmmDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OvmmDistToPickGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class DistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
-    type: str = "DistToPlaceGoal"
+class OvmmDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OvmmDistToPlaceGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class CatNavRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
-    type: str = "CatNavRotDistToGoal"
+class OvmmRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
+    type: str = "OvmmRotDistToGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class RotDistToPickGoalMeasurementConfig(CatNavRotDistToGoalMeasurementConfig):
-    type: str = "RotDistToPickGoal"
+class OvmmRotDistToPickGoalMeasurementConfig(OvmmRotDistToGoalMeasurementConfig):
+    type: str = "OvmmRotDistToPickGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class RotDistToPlaceGoalMeasurementConfig(
-    CatNavRotDistToGoalMeasurementConfig
+class OvmmRotDistToPlaceGoalMeasurementConfig(
+    OvmmRotDistToGoalMeasurementConfig
 ):
-    type: str = "RotDistToPlaceGoal"
+    type: str = "OvmmRotDistToPlaceGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class NavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
-    type: str = "NavToPickSucc"
+class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OvmmNavToPickSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class NavOrientToPickSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
-    type: str = "NavOrientToPickSucc"
+class OvmmNavOrientToPickSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
+    type: str = "OvmmNavOrientToPickSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class NavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
-    type: str = "NavToPlaceSucc"
+class OvmmNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OvmmNavToPlaceSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class NavOrientToPlaceSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
-    type: str = "NavOrientToPlaceSucc"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class PickNavToPlaceSuccMeasurementConfig(MeasurementConfig):
-    type: str = "PickNavToPlaceSucc"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class PickNavOrientToPlaceSuccMeasurementConfig(MeasurementConfig):
-    type: str = "PickNavOrientToPlaceSucc"
+class OvmmNavOrientToPlaceSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
+    type: str = "OvmmNavOrientToPlaceSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1825,8 +1815,8 @@ cs.store(
 cs.store(
     package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
     group="habitat/task/measurements",
-    name="cat_nav_rot_dist_to_goal",
-    node=CatNavRotDistToGoalMeasurementConfig,
+    name="ovmm_rot_dist_to_goal",
+    node=OvmmRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",
@@ -1969,62 +1959,50 @@ cs.store(
 cs.store(
     package="habitat.task.measurements.dist_to_pick_goal",
     group="habitat/task/measurements",
-    name="dist_to_pick_goal",
-    node=DistToPickGoalMeasurementConfig,
+    name="ovmm_dist_to_pick_goal",
+    node=OvmmDistToPickGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.dist_to_place_goal",
     group="habitat/task/measurements",
-    name="dist_to_place_goal",
-    node=DistToPlaceGoalMeasurementConfig,
+    name="ovmm_dist_to_place_goal",
+    node=OvmmDistToPlaceGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_pick_goal",
     group="habitat/task/measurements",
-    name="rot_dist_to_pick_goal",
-    node=RotDistToPickGoalMeasurementConfig,
+    name="ovmm_rot_dist_to_pick_goal",
+    node=OvmmRotDistToPickGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_place_goal",
     group="habitat/task/measurements",
-    name="rot_dist_to_place_goal",
-    node=RotDistToPlaceGoalMeasurementConfig,
+    name="ovmm_rot_dist_to_place_goal",
+    node=OvmmRotDistToPlaceGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_to_pick_succ",
     group="habitat/task/measurements",
-    name="nav_to_pick_succ",
-    node=NavToPickSuccMeasurementConfig,
+    name="ovmm_nav_to_pick_succ",
+    node=OvmmNavToPickSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_to_place_succ",
     group="habitat/task/measurements",
-    name="nav_to_place_succ",
-    node=NavToPlaceSuccMeasurementConfig,
+    name="ovmm_nav_to_place_succ",
+    node=OvmmNavToPlaceSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_pick_succ",
     group="habitat/task/measurements",
-    name="nav_orient_to_pick_succ",
-    node=NavOrientToPickSuccMeasurementConfig,
+    name="ovmm_nav_orient_to_pick_succ",
+    node=OvmmNavOrientToPickSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_place_succ",
     group="habitat/task/measurements",
-    name="nav_orient_to_place_succ",
-    node=NavOrientToPlaceSuccMeasurementConfig,
-)
-cs.store(
-    package="habitat.task.measurements.pick_nav_to_place_succ",
-    group="habitat/task/measurements",
-    name="pick_nav_to_place_succ",
-    node=PickNavToPlaceSuccMeasurementConfig,
-)
-cs.store(
-    package="habitat.task.measurements.pick_nav_orient_to_place_succ",
-    group="habitat/task/measurements",
-    name="pick_nav_orient_to_place_succ",
-    node=PickNavOrientToPlaceSuccMeasurementConfig,
+    name="ovmm_nav_orient_to_place_succ",
+    node=OvmmNavOrientToPlaceSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_reach_reward",

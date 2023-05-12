@@ -12,7 +12,7 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
-    - cat_nav_rot_dist_to_goal
+    - ovmm_rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
     - does_want_terminate

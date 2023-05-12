@@ -13,7 +13,6 @@ from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
 from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
-import habitat.robots.stretch_robot as robot_class
 
 
 @registry.register_task(name="RearrangePickTask-v0")
