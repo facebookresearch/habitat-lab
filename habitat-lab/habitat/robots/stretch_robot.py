@@ -12,6 +12,16 @@ from habitat.robots.mobile_manipulator import (
 )
 
 
+class StretchJointStates:
+    """Joint states for the Stretch robot in different stages of the task."""
+    # TODO: Match with pregrasp from home-robot
+    PRE_GRASP = np.array(
+        [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+            )
+    NAVIGATION = np.array(
+        [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, 0.0, -0.7125]
+    )
+
 class StretchRobot(MobileManipulator):
     def _get_fetch_params(self):
         return MobileManipulatorParams(

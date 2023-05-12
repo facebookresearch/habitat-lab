@@ -12,7 +12,7 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.robots.stretch_robot import StretchRobot
+from habitat.robots.stretch_robot import StretchRobot, StretchJointStates
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 
@@ -140,17 +140,12 @@ class DynNavRLEnv(RearrangeTask):
 
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
-            camera_rot = (
-                -1.7375 if self._pick_init or self._place_init else 0.0
-            )
-            sim.robot.arm_motor_pos = np.array(
-                [0.0] * 4
-                + [0.775, 0.0, -1.57000005, 0.0, camera_rot, self._camera_tilt]
-            )
-            sim.robot.arm_joint_pos = np.array(
-                [0.0] * 4
-                + [0.775, 0.0, -1.57000005, 0.0, camera_rot, self._camera_tilt]
-            )
+            sim.robot.arm_motor_pos = StretchJointStates.NAVIGATION
+            sim.robot.arm_joint_pos = StretchJointStates.NAVIGATION
+            # set camera tilt, which is the the last joint of the arm
+            sim.robot.arm_motor_pos[-1] = self._camera_tilt
+            sim.robot.arm_joint_pos[-1] = self._camera_tilt
+
 
         start_hold_obj_idx: Optional[int] = None
 
@@ -199,29 +194,13 @@ class DynNavRLEnv(RearrangeTask):
                     f"Episode {episode.episode_id} failed to place robot"
                 )
             sim.robot.base_pos = start_pos
-            # in the case of Stretch, rotate base so that the arm faces the target location
-            if isinstance(self._sim.robot, StretchRobot):
-                sim.robot.base_rot = angle_to_obj + np.pi / 2
-            else:
-                sim.robot.base_rot = angle_to_obj
+            sim.robot.base_rot = angle_to_obj
         elif self._place_init:
             # spawn agent close to and oriented towards goal receptacle for place testing, [wip]: moving to ovmm_task.py
             if isinstance(sim.robot, StretchRobot):
-                sim.robot.arm_motor_pos = np.array(
-                    [0.0] * 4
-                    + [
-                        0.775,
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                        -0.7125,
-                    ]  # gripper straight out
-                )
-                sim.robot.arm_joint_pos = np.array(
-                    [0.0] * 4 + [0.775, 0.0, 0.0, 0.0, 0.0, -0.7125]
-                )
-
+                # gripper straight out
+                sim.robot.arm_motor_pos[6] = 0.0
+                sim.robot.arm_joint_pos[6] = 0.0
             spawn_recs = [
                 sim.receptacles[r]
                 for r in sim.receptacles.keys()
@@ -262,6 +241,7 @@ class DynNavRLEnv(RearrangeTask):
                 start_quat.scalar,
             ]
         )
+
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
                 raise ValueError(
