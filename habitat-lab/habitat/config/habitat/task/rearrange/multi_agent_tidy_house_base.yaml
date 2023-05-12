@@ -32,7 +32,7 @@ type: RearrangeCompositeTask-v0
 reward_measure: cooperate_subgoal_reward
 success_measure: composite_success
 success_reward: 5.0
-slack_reward: -0.01
+slack_reward: -0.005
 end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
@@ -40,21 +40,37 @@ task_spec: multi_agent_tidy_house
 actions:
   # Actions are defined per agent. Unlike the sensors, actions are not
   # automatically duplicated per agent.
+
+  # agent 0 navigation settings
   agent_0_oracle_nav_action:
     agent_index : 0
     spawn_max_dist_to_obj: -1.0
+    lin_speed: 40.0
+    ang_speed: 20.0
+  agent_0_base_velocity:
+    agent_index: 0
+    lin_speed: 40.0
+    ang_speed: 20.0
+
+  # agent 1 navigation settings
   agent_1_base_velocity:
     agent_index : 1
+    lin_speed: 40.0
+    ang_speed: 20.0
+  agent_1_oracle_nav_action:
+    agent_index : 1
+    spawn_max_dist_to_obj: -1.0
+    lin_speed: 40.0
+    ang_speed: 20.0
+
   agent_1_rearrange_stop:
     agent_index : 1
   agent_1_pddl_apply_action:
     agent_index : 1
-  agent_1_oracle_nav_action:
-    agent_index : 1
-    spawn_max_dist_to_obj: -1.0
 measurements:
   composite_success:
     must_call_stop: False
   cooperate_subgoal_reward:
     stage_sparse_reward: 1.0
     end_on_collide: True
+    collide_penalty: 0.5

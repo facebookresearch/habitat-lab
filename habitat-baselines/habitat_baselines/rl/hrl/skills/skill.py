@@ -72,6 +72,10 @@ class SkillPolicy(Policy):
             action_space, "rearrange_stop"
         )
 
+    @property
+    def required_obs_keys(self) -> List[str]:
+        return []
+
     def _internal_log(self, s):
         baselines_logger.debug(
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
