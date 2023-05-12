@@ -26,14 +26,18 @@ FP is actually four distinct pieces: (1) Floorplanner scenes, (2) Amazon-Berkele
 
 1. Download Floorplanner Scenes:
 ```
-# Go to the habitat data directory
+# 1. Go to the habitat data directory
 cd habitat-lab/data
-# Make sure you have git-lfs installed
+# 2. Install Git LFS from https://git-lfs.com/ (if not installed yet)
+# 3. Set up Git LFS for your user account (if not set up yet)
 git lfs install
-# Clone dataset, and it will take a while to finish
+# 4. Clone dataset (it will take a while to finish)
 git clone https://huggingface.co/datasets/fpss/fphab
-# change the name, and Floorplanner Scenes is ready to use
+# 5. Change the name, and Floorplanner Scenes is ready to use
 mv fphab fpss
+# 6. Sanity check for one of the scenes (this should open FP scene in the habitat viewer)
+# ./build/viewer if compiling locally
+habitat-viewer --enable-physics --dataset /path/to/data/fpss/fphab/fphab.scene_dataset_config.json -- 108294897_176710602.scene_instance.json
 ```
 2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
 3. Extract these two object datasets into `habitat-lab/data` as follows:
