@@ -1386,24 +1386,6 @@ cs.store(
     node=RearrangeStopActionConfig,
 )
 cs.store(
-    package="habitat.task.actions.extend_arm",
-    group="habitat/task/actions",
-    name="extend_arm",
-    node=ExtendArmActionConfig,
-)
-cs.store(
-    package="habitat.task.actions.reset_joints",
-    group="habitat/task/actions",
-    name="reset_joints",
-    node=ResetJointsActionConfig,
-)
-cs.store(
-    package="habitat.task.actions.face_arm",
-    group="habitat/task/actions",
-    name="face_arm",
-    node=FaceArmActionConfig,
-)
-cs.store(
     package="habitat.task.actions.answer",
     group="habitat/task/actions",
     name="answer",

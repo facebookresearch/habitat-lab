@@ -126,56 +126,6 @@ class ArmAction(RobotAction):
 
 
 @registry.register_task_action
-class ExtendArmAction(RobotAction):
-    """
-        The arm is raised and extended outwards fully.
-    """
-    def step(self, *args, is_last_action, **kwargs):
-        extend = kwargs.get("extend_arm", [-1.0])
-        if extend[0] > 0:
-            self._sim.robot.arm_motor_pos = [0.13] * 4 + [1.0] + self._sim.robot.arm_motor_pos[5:].tolist()
-            self._sim.robot.arm_joint_pos = [0.13] * 4 + [1.0] + self._sim.robot.arm_motor_pos[5:].tolist()
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.arm_action)
-        else:
-            return {}
-
-@registry.register_task_action
-class FaceArmAction(RobotAction):
-    """
-        The camera joints are set such that the camera points towards the arm. Used when the agent switches from navigation mode to manipulation mode
-    """
-    def step(self, *args, is_last_action, **kwargs):
-        face = kwargs.get("face_arm", [-1.0])
-        if face[0] > 0:
-            motor_pos = self._sim.robot.arm_motor_pos.tolist()
-            joint_pos = self._sim.robot.arm_motor_pos.tolist()
-            motor_pos[8] = -1.7375
-            joint_pos[8] = -1.7375
-            self._sim.robot.arm_motor_pos = motor_pos
-            self._sim.robot.arm_joint_pos = joint_pos
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.arm_action)
-        else:
-            return {}
-
-@registry.register_task_action
-class ResetJointsAction(RobotAction):
-    """
-        The arm and camera joints are reset to resting position. The camera faces the base and is tilted downwards. The arm is retracted with the gripper facing downwards. Used for switching to navigation mode.
-    """
-    def step(self, *args, is_last_action, **kwargs):
-        reset = kwargs.get("reset_joints", [-1.0])
-        if reset[0] > 0:
-            self._sim.robot.arm_motor_pos = [0, 0, 0, 0, 0.775, 0, -1.57000005, 0, 0.0, -0.7125]
-            self._sim.robot.arm_joint_pos = [0, 0, 0, 0, 0.775, 0, -1.57000005, 0, 0.0, -0.7125]
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.arm_action)
-        else:
-            return {}
-
-
-@registry.register_task_action
 class ArmRelPosAction(RobotAction):
     """
     The arm motor targets are offset by the delta joint values specified by the
