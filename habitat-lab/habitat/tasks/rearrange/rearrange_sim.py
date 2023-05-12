@@ -122,6 +122,9 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.update_articulated_agent
         )
         self._step_physics = self.habitat_config.step_physics
+        self._additional_object_paths = (
+            self.habitat_config.additional_object_paths
+        )
         self._kinematic_mode = self.habitat_config.kinematic_mode
 
     @property
@@ -249,17 +252,10 @@ class RearrangeSim(HabitatSim):
         with read_write(config):
             config["scene"] = ep_info.scene_id
 
-        super().reconfigure(config, should_close_on_new_scene=False)
-
         self.ep_info = ep_info
-        self._try_acquire_context()
-
         new_scene = self.prev_scene_id != ep_info.scene_id
-
         if new_scene:
             self._prev_obj_names = None
-
-        self.agents_mgr.reconfigure(new_scene)
 
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
@@ -267,6 +263,10 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names = obj_names
 
         self._clear_objects(should_add_objects)
+
+        super().reconfigure(config, should_close_on_new_scene=False)
+        self._try_acquire_context()
+        self.agents_mgr.reconfigure(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -496,16 +496,16 @@ class RearrangeSim(HabitatSim):
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
             if should_add_objects:
-                obj_attr_mgr = self.get_object_template_manager()
-                matching_templates = (
-                    obj_attr_mgr.get_templates_by_handle_substring(obj_handle)
-                )
+                template = None
+                for obj_path in self._additional_object_paths:
+                    template = osp.join(obj_path, obj_handle)
+                    if osp.isfile(template):
+                        break
                 assert (
-                    len(matching_templates.values()) == 1
-                ), f"Object attributes not uniquely matched to shortened handle. '{obj_handle}' matched to {matching_templates}. TODO: relative paths as handles should fix some duplicates. For now, try renaming objects to avoid collision."
-                ro = rom.add_object_by_template_handle(
-                    list(matching_templates.keys())[0]
-                )
+                    template is not None
+                ), f"Could not find config file for object {obj_handle}"
+
+                ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
 

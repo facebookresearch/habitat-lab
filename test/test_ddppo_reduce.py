@@ -94,7 +94,7 @@ def _worker_fn(
     rollouts.advance_rollout()
 
     # Get a single batch
-    batch = next(rollouts.recurrent_generator(rollouts.buffers["returns"], 1))
+    batch = next(rollouts.data_generator(rollouts.buffers["returns"], 1))
 
     # Call eval actions through the internal wrapper that is used in
     # agent.update
