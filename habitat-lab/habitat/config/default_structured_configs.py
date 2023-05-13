@@ -487,7 +487,7 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the joint positions of the robot.
     """
     type: str = "HumanoidJointSensor"
-    dimensionality: int = 17 * 4
+    dimensionality: int = 54 * 4
 
 
 @dataclass

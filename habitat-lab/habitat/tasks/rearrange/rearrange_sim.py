@@ -77,7 +77,7 @@ class RearrangeSim(HabitatSim):
                         ] = sensor_config
 
         super().__init__(config)
-
+        self.gfx_count = 0
         self.first_setup = True
         self.ep_info: Optional[RearrangeEpisode] = None
         self.prev_loaded_navmesh = None
@@ -246,6 +246,8 @@ class RearrangeSim(HabitatSim):
             m.update()
 
     def reset(self):
+        self.gfx_count = 0
+        
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
@@ -789,7 +791,9 @@ class RearrangeSim(HabitatSim):
             obs = self._sensor_suite.get_observations(self._prev_sim_obs)
 
         if self._enable_gfx_replay_save:
-            self.gfx_replay_manager.save_keyframe()
+            if self.ep_info.episode_id == "524":
+                self.gfx_replay_manager.save_keyframe()
+                self.gfx_count += 1
 
         if self._needs_markers:
             self._update_markers()

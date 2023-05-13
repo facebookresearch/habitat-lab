@@ -543,15 +543,31 @@ class GfxReplayMeasure(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        if not task._is_episode_active and self._enable_gfx_replay_save:
+        # print('update', task._is_episode_active)
+        # breakpoint()
+
+        print(self._sim.gfx_count)
+        # print(self._sim.gfx_count)
+        if self._sim.gfx_count == 480: # not task._is_episode_active and self._enable_gfx_replay_save:
             self._metric = (
                 self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
             )
+            # print(self._sim.gfx_count)
+            if self._sim.gfx_count == 480:
+                import json
+                # breakpoint()
+                with open("mikael4_episode_long.replay.json", 'w+') as f:
+                    f.write(json.dumps(json.loads(self._metric), indent=2))
+                print("SAVED")
+            breakpoint()
+            
         else:
             self._metric = ""
 
     def get_metric(self, force_get=False):
+        # breakpoint()
         if force_get and self._enable_gfx_replay_save:
+            # print("getting")
             return (
                 self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
             )
