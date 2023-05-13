@@ -32,6 +32,8 @@ class RearrangePickTaskV1(RearrangeTask):
         )
         self._spawn_reference = config.spawn_reference
         self._spawn_reference_sampling = config.spawn_reference_sampling
+        self._start_in_manip_mode = config.start_in_manip_mode
+        self._camera_tilt = config.camera_tilt
         self.prev_colls = None
         self.force_set_idx = None
 
@@ -140,18 +142,22 @@ class RearrangePickTaskV1(RearrangeTask):
 
         sel_idx = self._sample_idx(sim)
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
+        camera_pan = 0.0
+        if self._start_in_manip_mode:
+            # turn camera to face the arm
+            camera_pan =  -1.57
         if isinstance(sim.robot, StretchRobot):
             sim.robot.arm_motor_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_pan, self._camera_tilt]
             )
             sim.robot.arm_joint_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, -1.7375, -0.7125]
+                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_pan, self._camera_tilt]
             )
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos
-        # in the case of Stretch, rotate base so that the arm faces the target location
-        if isinstance(self._sim.robot, StretchRobot):
+        if isinstance(self._sim.robot, StretchRobot) and self._start_in_manip_mode:
+            # in the case of Stretch, rotate base so that the arm faces the target location
             sim.robot.base_rot = start_rot + np.pi / 2
         else:
             sim.robot.base_rot = start_rot

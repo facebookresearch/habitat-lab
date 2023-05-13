@@ -861,7 +861,8 @@ class TaskConfig(HabitatBaseConfig):
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = []
     actions: Dict[str, ActionConfig] = MISSING
-
+    start_in_manip_mode: bool = False
+    camera_tilt: float =  -0.7125
 
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorSensorConfig(HabitatBaseConfig):
