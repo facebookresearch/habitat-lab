@@ -546,7 +546,7 @@ class GfxReplayMeasure(Measure):
         # print('update', task._is_episode_active)
         # breakpoint()
 
-        print(self._sim.gfx_count)
+        # print(self._sim.gfx_count)
         # print(self._sim.gfx_count)
         if self._sim.gfx_count == 480: # not task._is_episode_active and self._enable_gfx_replay_save:
             self._metric = (

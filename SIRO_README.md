@@ -72,6 +72,10 @@ sh eval_sweep.sh
 
 You will be prompted to enter a directory `$SWEEP_SUBDIR` name where the checkpoints and config files are saved (normally in the format `name/yyyy-dd-mm/hh-mm-ss`). The script will generate videos of evaluation at `$SWEEP_SUBDIR/0/video`.
 
+To a long rearrangement (such as the one used in the RLR demo) we use this:
+```
+HABITAT_ENV_DEBUG=1  MAGNUM_LOG=quiet HABITAT_SIM_LOG=quiet python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/multi_agent_kin_oracle habitat_baselines.video_dir=../videos/test_planner_5 habitat_baselines.num_environments=1 habitat_baselines.writer_type=tb  habitat_baselines.test_episode_count=20 habitat_baselines.evaluate=True +habitat.task.gfx_replay_dir=gfx_replay
+```
 # Spot robot
 
 ## Testing the Spot
