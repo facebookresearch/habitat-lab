@@ -77,7 +77,7 @@ class ResizeShortestEdge(ObservationTransformer):
         size: int,
         channels_last: bool = True,
         trans_keys: Tuple[str, ...] = ("rgb", "depth", "semantic"),
-        semantic_keys: Tuple[str] = ("semantic"),
+        semantic_keys: Tuple[str] = ("semantic",),
     ):
         """Args:
         size: The size you want to resize the shortest edge to

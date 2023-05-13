@@ -16,7 +16,6 @@ from habitat.robots.spot_robot import SpotRobot
 from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
     coll_name_matches,

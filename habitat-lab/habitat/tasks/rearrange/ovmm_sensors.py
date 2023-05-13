@@ -17,7 +17,6 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToObjSuccess,
     NavToPosSucc,
 )
-from habitat.tasks.rearrange.sub_tasks.pick_sensors import DidPickObjectMeasure
 
 
 # Sensors for measuring success to pick goals
