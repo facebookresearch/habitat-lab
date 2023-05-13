@@ -4,16 +4,13 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import json
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-import corrade as cr
 import magnum as mn
 import numpy as np
 import trimesh
@@ -26,10 +23,6 @@ from habitat.datasets.rearrange.viewpoints import generate_viewpoints
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
 from habitat.tasks.nav.object_nav_task import ObjectViewLocation
 from habitat.tasks.rearrange.utils import get_aabb
-from habitat.utils.geometry_utils import random_triangle_point
-
-# global module singleton for mesh importing instantiated upon first import
-_manager = mn.trade.ImporterManager()
 
 
 class Receptacle(ABC):
@@ -64,15 +57,6 @@ class Receptacle(ABC):
         self.up_axis = nonzero_indices[0]
         self.parent_object_handle = parent_object_handle
         self.parent_link = parent_link
-
-        # The unique name of this Receptacle instance in the current scene.
-        # This name is a combination of the object instance name and Receptacle name.
-        self.unique_name = ""
-        if self.parent_object_handle is None:
-            # this is a stage receptacle
-            self.unique_name = "stage|" + self.name
-        else:
-            self.unique_name = self.parent_object_handle + "|" + self.name
 
     @property
     def is_parent_object_articulated(self):
@@ -109,24 +93,20 @@ class Receptacle(ABC):
         """
         Isolates boilerplate necessary to extract receptacle global transform of the Receptacle at the current state.
         """
-        # handle global parent
         if self.parent_object_handle is None:
             # global identify by default
             return mn.Matrix4.identity_init()
-
-        # handle RigidObject parent
-        if not self.is_parent_object_articulated:
+        elif not self.is_parent_object_articulated:
             obj_mgr = sim.get_rigid_object_manager()
             obj = obj_mgr.get_object_by_handle(self.parent_object_handle)
             # NOTE: we use absolute transformation from the 2nd visual node (scaling node) and root of all render assets to correctly account for any COM shifting, re-orienting, or scaling which has been applied.
             return obj.visual_scene_nodes[1].absolute_transformation()
-
-        # handle ArticulatedObject parent
-        ao_mgr = sim.get_articulated_object_manager()
-        obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
-        return obj.get_link_scene_node(
-            self.parent_link
-        ).absolute_transformation()
+        else:
+            ao_mgr = sim.get_articulated_object_manager()
+            obj = ao_mgr.get_object_by_handle(self.parent_object_handle)
+            return obj.get_link_scene_node(
+                self.parent_link
+            ).absolute_transformation()
 
     def get_local_transform(self, sim: habitat_sim.Simulator) -> mn.Matrix4:
         """
@@ -180,17 +160,12 @@ class Receptacle(ABC):
         return []
 
     @abstractmethod
-    def debug_draw(
-        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
-    ) -> None:
+    def debug_draw(self, sim, color=None) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
+        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
-
-        :param sim: Simulator must be provided.
-        :param color: Optionally provide wireframe color, otherwise magenta.
         """
-        raise NotImplementedError
 
 
 class OnTopOfReceptacle(Receptacle):
@@ -221,15 +196,11 @@ class OnTopOfReceptacle(Receptacle):
 
         return mn.Matrix4([[targ_T[j][i] for j in range(4)] for i in range(4)])
 
-    def debug_draw(
-        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
-    ) -> None:
+    def debug_draw(self, sim, color=None) -> None:
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
+        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
-
-        :param sim: Simulator must be provided.
-        :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # TODO:
 
@@ -419,15 +390,11 @@ class AABBReceptacle(Receptacle):
             )
         return [box_obj]
 
-    def debug_draw(
-        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
-    ) -> None:
+    def debug_draw(self, sim, color=None):
         """
         Render the AABBReceptacle with DebugLineRender utility at the current frame.
+        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
-
-        :param sim: Simulator must be provided.
-        :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # draw the box
         if color is None:
@@ -439,15 +406,6 @@ class AABBReceptacle(Receptacle):
         # TODO: test this
 
 
-def assert_triangles(indices: List[int]) -> None:
-    """
-    Assert that an index array is divisible by 3 as a heuristic for triangle-only faces.
-    """
-    assert (
-        len(indices) % 3 == 0
-    ), "TriangleMeshReceptacles must be exclusively composed of triangles. The provided mesh_data is not."
-
-
 class TriangleMeshReceptacle(Receptacle):
     """
     Defines a Receptacle surface as a triangle mesh.
@@ -457,37 +415,32 @@ class TriangleMeshReceptacle(Receptacle):
     def __init__(
         self,
         name: str,
-        mesh_data: mn.trade.MeshData,
+        mesh_data: Tuple[List[Any], List[Any]],  # vertices, indices
         parent_object_handle: str = None,
         parent_link: Optional[int] = None,
         up: Optional[mn.Vector3] = None,
     ) -> None:
         """
-        Initialize the TriangleMeshReceptacle from mesh data and pre-compute the area weighted accumulator.
-
         :param name: The name of the Receptacle. Should be unique and descriptive for any one object.
-        :param mesh_data: The Receptacle's mesh data. A magnum.trade.MeshData object (indices len divisible by 3).
+        :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         :param parent_object_handle: The rigid or articulated object instance handle for the parent object to which the Receptacle is attached. None for globally defined stage Receptacles.
         :param parent_link: Index of the link to which the Receptacle is attached if the parent is an ArticulatedObject. -1 denotes the base link. None for rigid objects and stage Receptables.
-        :param up: The "up" direction of the Receptacle in local AABB space. Used for optionally culling receptacles in un-supportive states such as inverted surfaces.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
         self.mesh_data = mesh_data
         self.area_weighted_accumulator = (
             []
         )  # normalized float weights for each triangle for sampling
-        assert_triangles(mesh_data.indices)
-
-        # pre-compute the normalized cumulative area of all triangle faces for later sampling
-        self._total_area = 0
+        assert len(mesh_data[1]) % 3 == 0, "must be triangles"
+        self._total_area = 0.0
         triangles = []
-        for f_ix in range(int(len(mesh_data.indices) / 3)):
+        for f_ix in range(int(len(mesh_data[1]) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
             triangles.append(v)
             self.area_weighted_accumulator.append(
-                0.5 * mn.math.cross(w1, w2).length()
+                float(0.5 * np.linalg.norm(np.cross(w1, w2)))
             )
             self._total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
@@ -498,8 +451,6 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-
-        # TODO: Remove dependency on trimesh
         self.trimesh = trimesh.Trimesh(
             **trimesh.triangles.to_kwargs(triangles)
         )
@@ -512,38 +463,29 @@ class TriangleMeshReceptacle(Receptacle):
     def bounds(self) -> mn.Range3D:
         return mn.Range3D(self.trimesh.bounds)
 
-    def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
-        """
-        Get all three vertices of a mesh triangle given it's face index as a list of numpy arrays.
-
-        :param f_ix: The index of the mesh triangle.
-        """
-        verts: List[mn.Vector3] = []
+    def get_face_verts(self, f_ix):
+        verts = []
         for ix in range(3):
-            index = int(f_ix * 3 + ix)
-            v_ix = self.mesh_data.indices[index]
             verts.append(
-                self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)[v_ix]
+                np.array(
+                    self.mesh_data[0][self.mesh_data[1][int(f_ix * 3 + ix)]]
+                )
             )
         return verts
 
-    def sample_area_weighted_triangle(self) -> int:
+    def sample_area_weighted_triangle(self):
         """
         Isolates the area weighted triangle sampling code.
-
-        Returns a random triangle index sampled with area weighting.
         """
 
-        def find_ge(a: List[Any], x) -> Any:
+        def find_ge(a, x):
             "Find leftmost item greater than or equal to x"
             from bisect import bisect_left
 
             i = bisect_left(a, x)
             if i != len(a):
                 return i
-            raise ValueError(
-                f"Value '{x}' is greater than all items in the list. Maximum value should be <1."
-            )
+            raise ValueError
 
         # first area weighted sampling of a triangle
         sample_val = random.random()
@@ -586,47 +528,46 @@ class TriangleMeshReceptacle(Receptacle):
         tri_index = self.sample_area_weighted_triangle()
 
         # then sample a random point in the triangle
+        # https://math.stackexchange.com/questions/538458/how-to-sample-points-on-a-triangle-surface-in-3d
+        coef1 = random.random()
+        coef2 = random.random()
+        if coef1 + coef2 >= 1:
+            coef1 = 1 - coef1
+            coef2 = 1 - coef2
         v = self.get_face_verts(f_ix=tri_index)
-        rand_point = random_triangle_point(v[0], v[1], v[2])
+        rand_point = v[0] + coef1 * (v[1] - v[0]) + coef2 * (v[2] - v[0])
 
         return rand_point
 
-    def debug_draw(
-        self, sim: habitat_sim.Simulator, color: Optional[mn.Color4] = None
-    ) -> None:
+    def debug_draw(self, sim, color=None):
         """
         Render the Receptacle with DebugLineRender utility at the current frame.
         Draws the Receptacle mesh.
+        Simulator must be provided. If color is provided, the debug render will use it.
         Must be called after each frame is rendered, before querying the image data.
-
-        :param sim: Simulator must be provided.
-        :param color: Optionally provide wireframe color, otherwise magenta.
         """
         # draw all mesh triangles
         if color is None:
             color = mn.Color4.magenta()
         dblr = sim.get_debug_line_render()
-        dblr.push_transform(self.get_global_transform(sim))
-        assert_triangles(self.mesh_data.indices)
-        for face in range(int(len(self.mesh_data.indices) / 3)):
+        gt = self.get_global_transform(sim)
+        assert len(self.mesh_data[1]) % 3 == 0, "must be triangles"
+        for face in range(int(len(self.mesh_data[1]) / 3)):
             verts = self.get_face_verts(f_ix=face)
             for edge in range(3):
                 dblr.draw_transformed_line(
-                    verts[edge], verts[(edge + 1) % 3], color
+                    gt.transform_point(verts[edge]),
+                    gt.transform_point(verts[(edge + 1) % 3]),
+                    color,
                 )
-        dblr.pop_transform()
 
 
-def get_all_scenedataset_receptacles(
-    sim: habitat_sim.Simulator,
-) -> Dict[str, Dict[str, List[str]]]:
+def get_all_scenedataset_receptacles(sim) -> Dict[str, Dict[str, List[str]]]:
     """
     Scrapes the active SceneDataset from a Simulator for all receptacle names defined in rigid/articulated object and stage templates for investigation and preview purposes.
     Note this will not include scene-specific overrides defined in scene_config.json files. Only receptacles defined in object_config.json, ao_config.json, and stage_config.json files or added programmatically to associated Attributes objects will be found.
 
     Returns a dict with keys {"stage", "rigid", "articulated"} mapping object template handles to lists of receptacle names.
-
-    :param sim: Simulator must be provided.
     """
     # cache the rigid and articulated receptacles seperately
     receptacles: Dict[str, Dict[str, List[str]]] = {
@@ -675,85 +616,17 @@ def get_all_scenedataset_receptacles(
     return receptacles
 
 
-def filter_interleave_mesh(mesh: mn.trade.MeshData) -> mn.trade.MeshData:
+def import_tri_mesh_ply(ply_file: str) -> Tuple[List[mn.Vector3], List[int]]:
     """
-    Filter all but position data and interleave a mesh to reduce overall memory footprint.
-    Convert triangle like primitives into triangles and assert only triangles remain.
-
-    NOTE: Modifies the mesh data in-place
-    :return: The modified mesh for easy of use.
+    Returns a Tuple of (verts,indices) from a ply mesh.
+    NOTE: the input PLY must contain only triangles.
     """
-
-    # convert to triangles and validate the result
-    if mesh.primitive in [
-        mn.MeshPrimitive.TRIANGLE_STRIP,
-        mn.MeshPrimitive.TRIANGLE_FAN,
-    ]:
-        mesh = mn.meshtools.generate_indices(mesh)
-    assert (
-        mesh.primitive == mn.MeshPrimitive.TRIANGLES
-    ), "Must be a triangle mesh."
-
-    # filter out all but positions (and indices) from the mesh
-    mesh = mn.meshtools.filter_only_attributes(
-        mesh, [mn.trade.MeshAttribute.POSITION]
-    )
-
-    # reformat the mesh data after filtering
-    mesh = mn.meshtools.interleave(mesh, mn.meshtools.InterleaveFlags.NONE)
-
-    return mesh
-
-
-def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
-    """
-    Returns a list of MeshData objects from a mesh asset using magnum trade importer.
-
-    :param mesh_file: The input meshes file. NOTE: must contain only triangles.
-    """
-    importer = _manager.load_and_instantiate("AnySceneImporter")
-    importer.open_file(mesh_file)
-
-    mesh_data: List[mn.trade.MeshData] = []
-
-    # import mesh data and pre-process
-    mesh_data = [
-        filter_interleave_mesh(importer.mesh(mesh_ix))
-        for mesh_ix in range(importer.mesh_count)
-    ]
-
-    # if there is a scene defined, apply any transformations
-    if importer.scene_count > 0:
-        scene_id = importer.default_scene
-        # If there's no default scene, load the first one
-        if scene_id == -1:
-            scene_id = 0
-
-        scene = importer.scene(scene_id)
-
-        # Mesh referenced by mesh_assignments[i] has a corresponding transform in
-        # mesh_transformations[i]. Association to a particular node ID is stored in
-        # scene.mapping(mn.trade.SceneField.MESH)[i], but it's not needed for anything
-        # here.
-        mesh_assignments: cr.containers.StridedArrayView1D = scene.field(
-            mn.trade.SceneField.MESH
-        )
-        mesh_transformations: List[
-            mn.Matrix4
-        ] = mn.scenetools.flatten_transformation_hierarchy3d(
-            scene, mn.trade.SceneField.MESH
-        )
-        assert len(mesh_assignments) == len(mesh_transformations)
-
-        # A mesh can be referenced by multiple nodes, so this can't operate in-place.
-        # i.e., len(mesh_data) likely changes after this step
-        mesh_data = [
-            mn.meshtools.transform3d(mesh_data[mesh_id], transformation)
-            for mesh_id, transformation in zip(
-                mesh_assignments, mesh_transformations
-            )
-        ]
-
+    mesh_data: Tuple[List[mn.Vector3], List[int]] = ([], [])
+    trimesh_data = trimesh.load(ply_file)
+    mesh_data[0].extend(map(mn.Vector3, trimesh_data.vertices))
+    for face in trimesh_data.faces:
+        assert len(face) == 3, f"Faces must be triangles. '{ply_file}' {face}"
+        mesh_data[1].extend(map(int, face))
     return mesh_data
 
 
@@ -763,7 +636,7 @@ def parse_receptacles_from_user_config(
     parent_template_directory: str = "",
     valid_link_names: Optional[List[str]] = None,
     ao_uniform_scaling: float = 1.0,
-) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
+) -> List[Union[Receptacle, AABBReceptacle]]:
     """
     Parse receptacle metadata from the provided user subconfig object.
 
@@ -859,21 +732,17 @@ def parse_receptacles_from_user_config(
                     mesh_file
                 ), f"Configured receptacle mesh asset '{mesh_file}' not found."
                 # TODO: build the mesh_data entry from scale and mesh
-                mesh_data: List[mn.trade.MeshData] = import_tri_mesh(mesh_file)
+                mesh_data = import_tri_mesh_ply(mesh_file)
 
-                for mix, single_mesh_data in enumerate(mesh_data):
-                    single_receptacle_name = (
-                        receptacle_name + "." + str(mix).rjust(4, "0")
+                receptacles.append(
+                    TriangleMeshReceptacle(
+                        name=receptacle_name,
+                        mesh_data=mesh_data,
+                        up=up,
+                        parent_object_handle=parent_object_handle,
+                        parent_link=parent_link_ix,
                     )
-                    receptacles.append(
-                        TriangleMeshReceptacle(
-                            name=single_receptacle_name,
-                            mesh_data=single_mesh_data,
-                            up=up,
-                            parent_object_handle=parent_object_handle,
-                            parent_link=parent_link_ix,
-                        )
-                    )
+                )
             else:
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
@@ -929,15 +798,17 @@ def get_navigable_receptacles(
             receptacle_bb.front_bottom_right,
         ]
         # At least 2 corners should be accessible
-        num_corners_accessible = sum(
-            is_accessible(sim, point, nav_to_min_distance=1.5)
-            for point in recep_points
+        corners_accessible = (
+            sum(
+                is_accessible(sim, point, nav_to_min_distance=1.5)
+                for point in recep_points
+            )
+            >= 2
         )
 
-        if not num_corners_accessible >= 2:
+        if not corners_accessible:
             logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible. "
-                f"Number of corners accessible: {num_corners_accessible}"
+                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is not accessible."
             )
             continue
         else:
@@ -977,11 +848,9 @@ def get_receptacle_viewpoints(
 
 def find_receptacles(
     sim: habitat_sim.Simulator,
-) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
+) -> List[Union[Receptacle, AABBReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
-
-    :param sim: Simulator must be provided.
     """
 
     obj_mgr = sim.get_rigid_object_manager()
@@ -1051,16 +920,11 @@ class ReceptacleSet:
 class ReceptacleTracker:
     def __init__(
         self,
-        max_objects_per_receptacle: Dict[str, int],
+        max_objects_per_receptacle,
         receptacle_sets: Dict[str, ReceptacleSet],
     ):
-        """
-        :param max_objects_per_receptacle: A Dict mapping receptacle unique names to the remaining number of objects allowed in the receptacle.
-        :param receptacle_sets: Dict mapping ReceptacleSet name to its dataclass.
-        """
-        self._receptacle_counts: Dict[str, int] = max_objects_per_receptacle
-        # deep copy ReceptacleSets because they may be modified by allocations
-        self._receptacle_sets: Dict[str, ReceptacleSet] = {
+        self._receptacle_counts = dict(max_objects_per_receptacle)
+        self._receptacle_sets = {
             k: deepcopy(v) for k, v in receptacle_sets.items()
         }
 
@@ -1068,67 +932,14 @@ class ReceptacleTracker:
     def recep_sets(self) -> Dict[str, ReceptacleSet]:
         return self._receptacle_sets
 
-    def init_scene_filters(
-        self, mm: habitat_sim.metadata.MetadataMediator, scene_handle: str
-    ) -> None:
-        """
-        Initialize the scene specific filter strings from metadata.
-        Looks for a filter file defined for the scene, loads filtered strings and adds them to the exclude list of all ReceptacleSets.
-
-        :param mm: The active MetadataMediator instance from which to load the filter data.
-        :param scene_handle: The handle of the currently instantiated scene.
-        """
-        scene_user_defined = mm.get_scene_user_defined(scene_handle)
-        filtered_unique_names = []
-        if scene_user_defined is not None and scene_user_defined.has_value(
-            "scene_filter_file"
-        ):
-            scene_filter_file = scene_user_defined.get("scene_filter_file")
-            # construct the dataset level path for the filter data file
-            scene_filter_file = os.path.join(
-                os.path.dirname(mm.active_dataset), scene_filter_file
-            )
-            with open(scene_filter_file, "r") as f:
-                filter_json = json.load(f)
-                for filter_type in [
-                    "manually_filtered",
-                    "access_filtered",
-                    "stability_filtered",
-                    "height_filtered",
-                ]:
-                    for filtered_unique_name in filter_json[filter_type]:
-                        filtered_unique_names.append(filtered_unique_name)
-            # add exclusion filters to all receptacles sets
-            for _, r_set in self._receptacle_sets.items():
-                r_set.excluded_receptacle_substrings.extend(
-                    filtered_unique_names
-                )
-            logger.debug(
-                f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
-            )
-
-    def inc_count(self, recep_name: str) -> None:
-        """
-        Increment allowed objects for a Receptacle.
-        :param recep_name: The unique name of the Receptacle.
-        """
+    def inc_count(self, recep_name):
         if recep_name in self._receptacle_counts:
             self._receptacle_counts[recep_name] += 1
 
-    def allocate_one_placement(self, allocated_receptacle: Receptacle) -> bool:
-        """
-        Record that a Receptacle has been allocated for one new object placement.
-        If the Receptacle has a configured maximum number of remaining object placements, decrement that counter.
-        If the Receptacle has no remaining allocations after this one, remove it from any existing ReceptacleSets to prevent it being sampled in the future.
-
-        :param new_receptacle: The Receptacle with a new allocated object placement.
-
-        :return: Whether or not the Receptacle has run out of remaining allocations.
-        """
-        recep_name = allocated_receptacle.unique_name
+    def update_receptacle_tracking(self, new_receptacle: Receptacle):
+        recep_name = new_receptacle.name
         if recep_name not in self._receptacle_counts:
             return False
-        # decrement remaining allocations
         self._receptacle_counts[recep_name] -= 1
         if self._receptacle_counts[recep_name] < 0:
             raise ValueError(f"Receptacle count for {recep_name} is invalid")

@@ -1,16 +1,11 @@
 import argparse
-import ctypes
 import gzip
 import json
 import os
 import os.path as osp
 import pickle
 import re
-import sys
 from typing import List, Set
-
-flags = sys.getdlopenflags()
-sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import magnum as mn
 import numpy as np
@@ -122,7 +117,7 @@ def read_obj_category_mapping(filename, keep_only_recs=False):
     df = pd.read_csv(filename)
     name_key = "id" if "id" in df else "name"
     category_key = (
-        "main_category" if "main_category" in df else "clean_category"
+        "main_wnsynsetkey" if "main_wnsynsetkey" in df else "clean_category"
     )
 
     if keep_only_recs:
@@ -435,95 +430,83 @@ def add_cat_fields_to_episodes(
     if num_episodes == -1:
         num_episodes = len(episodes["episodes"])
 
-    with tqdm(total=num_episodes) as pbar:
-        for episode in episodes["episodes"]:
-            scene_id = episode["scene_id"]
-            sim = initialize_sim(
-                sim,
-                existing_rigid_objects,
-                scene_id,
-                episode["scene_dataset_config"],
-                episode["additional_obj_config_paths"],
-                debug_viz,
-            )
-            load_navmesh(sim, scene_id)
+    for episode in tqdm(episodes["episodes"]):
+        scene_id = episode["scene_id"]
+        sim = initialize_sim(
+            sim,
+            existing_rigid_objects,
+            scene_id,
+            episode["scene_dataset_config"],
+            episode["additional_obj_config_paths"],
+            debug_viz,
+        )
+        load_navmesh(sim, scene_id)
 
-            rom = sim.get_rigid_object_manager()
-            existing_rigid_objects = set(rom.get_object_handles())
+        rom = sim.get_rigid_object_manager()
+        existing_rigid_objects = set(rom.get_object_handles())
 
-            rec = find_receptacles(sim)
-            rec_viewpoints, _ = load_receptacle_cache(
-                scene_id, rec_cache_dir, receptacle_cache
-            )[scene_id]
-            rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
-            rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
-            obj_idx_to_name = load_objects(
-                sim,
-                episode["rigid_objs"],
-                episode["additional_obj_config_paths"],
-            )
-            populate_semantic_graph(sim)
-            all_rec_goals = collect_receptacle_goals(
-                sim, rec, rec_category_mapping=rec_category_mapping
-            )
-            obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
-                episode,
-                obj_category_mapping=obj_category_mapping,
-                rec_category_mapping=rec_category_mapping,
-            )
+        rec = find_receptacles(sim)
+        rec_viewpoints, _ = load_receptacle_cache(
+            scene_id, rec_cache_dir, receptacle_cache
+        )[scene_id]
+        rec = [r for r in rec if r.parent_object_handle in rec_viewpoints]
+        rec_to_parent_obj = {r.name: r.parent_object_handle for r in rec}
+        obj_idx_to_name = load_objects(
+            sim, episode["rigid_objs"], episode["additional_obj_config_paths"]
+        )
+        populate_semantic_graph(sim)
+        all_rec_goals = collect_receptacle_goals(
+            sim, rec, rec_category_mapping=rec_category_mapping
+        )
+        obj_cat, start_rec_cat, goal_rec_cat = get_obj_rec_cat_in_eps(
+            episode,
+            obj_category_mapping=obj_category_mapping,
+            rec_category_mapping=rec_category_mapping,
+        )
 
-            if start_rec_cat == goal_rec_cat:
-                continue
+        if start_rec_cat == goal_rec_cat:
+            continue
 
-            episode["object_category"] = obj_cat
-            episode["start_recep_category"] = start_rec_cat
-            name_to_receptacle = {
-                k: v.split("|", 1)[1]
-                for k, v in episode["name_to_receptacle"].items()
-            }
-            try:
-                episode["goal_recep_category"] = goal_rec_cat
-                (
-                    episode["candidate_objects"],
-                    episode["candidate_objects_hard"],
-                ) = get_candidate_starts(
-                    episode["rigid_objs"],
-                    obj_cat,
-                    start_rec_cat,
-                    obj_idx_to_name,
-                    name_to_receptacle,
-                    obj_category_mapping=obj_category_mapping,
-                    rec_category_mapping=rec_category_mapping,
-                    rec_to_parent_obj=rec_to_parent_obj,
-                )
-            except KeyError:
-                print("Skipping episode", episode["episode_id"])
-                continue
-            episode["candidate_start_receps"] = get_candidate_receptacles(
-                all_rec_goals, start_rec_cat
-            )
-            episode["candidate_goal_receps"] = get_candidate_receptacles(
-                all_rec_goals, goal_rec_cat
-            )
-            if enable_add_viewpoints and not add_viewpoints(
-                sim,
-                episode,
-                obj_idx_to_name,
-                rec_viewpoints,
-                rec_to_parent_obj,
-                debug_viz,
-            ):
-                print("Skipping episode", episode["episode_id"])
-                continue
-            assert (
-                len(episode["candidate_objects"]) > 0
-                and len(episode["candidate_start_receps"]) > 0
-                and len(episode["candidate_goal_receps"]) > 0
-            )
-            new_episodes["episodes"].append(episode)
-            pbar.update()
-            if len(new_episodes["episodes"]) >= num_episodes:
-                break
+        episode["object_category"] = obj_cat
+        episode["start_recep_category"] = start_rec_cat
+        episode["goal_recep_category"] = goal_rec_cat
+        (
+            episode["candidate_objects"],
+            episode["candidate_objects_hard"],
+        ) = get_candidate_starts(
+            episode["rigid_objs"],
+            obj_cat,
+            start_rec_cat,
+            obj_idx_to_name,
+            episode["name_to_receptacle"],
+            obj_category_mapping=obj_category_mapping,
+            rec_category_mapping=rec_category_mapping,
+            rec_to_parent_obj=rec_to_parent_obj,
+        )
+        episode["candidate_start_receps"] = get_candidate_receptacles(
+            all_rec_goals, start_rec_cat
+        )
+        episode["candidate_goal_receps"] = get_candidate_receptacles(
+            all_rec_goals, goal_rec_cat
+        )
+        if enable_add_viewpoints and not add_viewpoints(
+            sim,
+            episode,
+            obj_idx_to_name,
+            rec_viewpoints,
+            rec_to_parent_obj,
+            debug_viz,
+        ):
+            print("Skipping episode", episode["episode_id"])
+            continue
+        assert (
+            len(episode["candidate_objects"]) > 0
+            and len(episode["candidate_start_receps"]) > 0
+            and len(episode["candidate_goal_receps"]) > 0
+        )
+        new_episodes["episodes"].append(episode)
+        if len(new_episodes["episodes"]) >= num_episodes:
+            break
     return new_episodes
 
 
@@ -549,13 +532,11 @@ if __name__ == "__main__":
         "--rec_cache_dir",
         type=str,
         default="data/cache/receptacle_viewpoints/fphab",
-        help="Path to cache where receptacle viewpoints were saved during first stage of episode generation",
+        help="Path to cache where receptacle viewpoints were saved during first stage of episode generation"
     )
     parser.add_argument("--obj_category_mapping_file", type=str, default=None)
     parser.add_argument("--rec_category_mapping_file", type=str, default=None)
-    parser.add_argument(
-        "--num_episodes", type=int, default=-1
-    )  # -1 uses all episodes
+    parser.add_argument("--num_episodes", type=int, default=-1) # -1 uses all episodes
     parser.add_argument("--add_viewpoints", action="store_true")
     parser.add_argument("--debug_viz", action="store_true")
 
