@@ -12,7 +12,7 @@ import numpy as np
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.robots.stretch_robot import StretchRobot, StretchJointStates
+from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 
@@ -145,7 +145,6 @@ class DynNavRLEnv(RearrangeTask):
             # set camera tilt, which is the the last joint of the arm
             sim.robot.arm_motor_pos[-1] = self._camera_tilt
             sim.robot.arm_joint_pos[-1] = self._camera_tilt
-
 
         start_hold_obj_idx: Optional[int] = None
 

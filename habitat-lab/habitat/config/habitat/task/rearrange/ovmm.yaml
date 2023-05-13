@@ -77,7 +77,7 @@ measurements:
   force_terminate:
     max_accum_force: -1.0
     max_instant_force: -1.0
-  pick_success: 
+  pick_success:
     object_goal: True
     ee_resting_success_threshold: 100
   place_success:

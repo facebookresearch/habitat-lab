@@ -186,7 +186,7 @@ class DistToGoal(Measure):
             observations=observations,
             **kwargs,
         )
-    
+
     def _get_goals(self, task, episode):
         if len(task.nav_goal_pos.shape) == 1:
             goals = np.expand_dims(task.nav_goal_pos, axis=0)
@@ -197,7 +197,9 @@ class DistToGoal(Measure):
     def _get_cur_geo_dist(self, task, episode):
         goals = self._get_goals(task, episode)
         distance_to_target = self._sim.geodesic_distance(
-            self._sim.robot.base_pos, goals, episode=episode if self._use_shortest_path_cache else None
+            self._sim.robot.base_pos,
+            goals,
+            episode=episode if self._use_shortest_path_cache else None,
         )
         if distance_to_target == np.inf:
             distance_to_target = self._prev_dist
@@ -342,7 +344,9 @@ class NavToPosSucc(Measure):
         self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        dist = task.measurements.measures[self._dist_to_goal_cls_uuid].get_metric()
+        dist = task.measurements.measures[
+            self._dist_to_goal_cls_uuid
+        ].get_metric()
         self._metric = dist < self._success_distance
 
 
@@ -367,7 +371,6 @@ class NavToObjSuccess(Measure):
         self._success_angle_dist = self._config.success_angle_dist
         self._must_call_stop = self._config.must_call_stop
         super().__init__(*args, config=config, **kwargs)
-
 
     @property
     def _nav_to_pos_succ_cls_uuid(self):

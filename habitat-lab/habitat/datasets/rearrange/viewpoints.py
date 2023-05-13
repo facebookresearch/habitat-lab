@@ -10,8 +10,8 @@ import habitat_sim
 from habitat.core.simulator import AgentState
 from habitat.datasets.rearrange.geometry_utils import direction_to_quaternion
 from habitat.datasets.rearrange.viz_utils import (
-    save_viewpoint_frame,
     save_topdown_map,
+    save_viewpoint_frame,
 )
 from habitat.tasks.nav.object_nav_task import ObjectViewLocation
 from habitat.tasks.rearrange.utils import get_aabb

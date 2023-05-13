@@ -163,6 +163,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
     panoptic_uuid: str = "robot_head_panoptic"
+
     def __init__(
         self,
         sim,
@@ -174,7 +175,12 @@ class ObjectSegmentationSensor(Sensor):
         self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
-        self._resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
+        self._resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
 
         super().__init__(config=config)
 
@@ -213,6 +219,7 @@ class ObjectSegmentationSensor(Sensor):
                 )
             return segmentation_sensor
 
+
 @registry.register_sensor
 class RecepSegmentationSensor(ObjectSegmentationSensor):
     cls_uuid: str = "recep_segmentation"
@@ -238,15 +245,19 @@ class RecepSegmentationSensor(ObjectSegmentationSensor):
                 )
             return segmentation_sensor
 
+
 @registry.register_sensor
 class StartRecepSegmentationSensor(RecepSegmentationSensor):
     cls_uuid: str = "start_recep_segmentation"
+
     def _get_recep_goals(self, episode):
         return episode.candidate_start_receps
+
 
 @registry.register_sensor
 class GoalRecepSegmentationSensor(RecepSegmentationSensor):
     cls_uuid: str = "goal_recep_segmentation"
+
     def _get_recep_goals(self, episode):
         return episode.candidate_goal_receps
 
@@ -1237,9 +1248,9 @@ class CameraPoseSensor(Sensor):
 
         return spaces.Box(
             low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max, 
-            shape=(4, 4), 
-            dtype=np.float32
+            high=np.finfo(np.float32).max,
+            shape=(4, 4),
+            dtype=np.float32,
         )
 
     def get_observation(
@@ -1248,4 +1259,6 @@ class CameraPoseSensor(Sensor):
         *args: Any,
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
-        return self._sim._sensors["robot_head_rgb"]._sensor_object.node.transformation
+        return self._sim._sensors[
+            "robot_head_rgb"
+        ]._sensor_object.node.transformation

@@ -68,7 +68,9 @@ class ObjectSampler:
         if self._sampler_range_type == "dynamic":
             self._num_objects = None
         elif self._sampler_range_type == "fixed":
-            self.num_objects = num_objects  # tuple of [min,max] objects to sample
+            self.num_objects = (
+                num_objects  # tuple of [min,max] objects to sample
+            )
             assert self.num_objects[1] >= self.num_objects[0]
             self.set_num_samples()
         else:

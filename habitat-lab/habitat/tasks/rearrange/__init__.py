@@ -16,11 +16,11 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.actions.pddl_actions
     import habitat.tasks.rearrange.multi_task.composite_sensors
     import habitat.tasks.rearrange.multi_task.composite_task
+    import habitat.tasks.rearrange.ovmm_sensors
     import habitat.tasks.rearrange.rearrange_sensors
     import habitat.tasks.rearrange.rearrange_task
     import habitat.tasks.rearrange.sub_tasks.articulated_object_sensors
     import habitat.tasks.rearrange.sub_tasks.articulated_object_task
-    import habitat.tasks.rearrange.ovmm_sensors
     import habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_sensors
     import habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors

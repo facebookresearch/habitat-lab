@@ -25,15 +25,11 @@ COLOR_PALETTE = {
 
 def save_viewpoint_frame(obs, obj_handle, obj_semantic_id, act_idx):
     rgb_obs = np.ascontiguousarray(obs["color"][..., :3])
-    sem_obs = (obs["semantic"] == obj_semantic_id).astype(
-        np.uint8
-    ) * 255
+    sem_obs = (obs["semantic"] == obj_semantic_id).astype(np.uint8) * 255
     contours, _ = cv2.findContours(
         sem_obs, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
     )
-    rgb_obs = cv2.drawContours(
-        rgb_obs, contours, -1, (0, 255, 0), 4
-    )
+    rgb_obs = cv2.drawContours(rgb_obs, contours, -1, (0, 255, 0), 4)
     img_dir = "data/images/objnav_dataset_gen"
     os.makedirs(img_dir, exist_ok=True)
     imageio.imsave(
@@ -54,13 +50,11 @@ def save_topdown_map(
     object_position,
     object_aabb,
     object_semantic_id,
-    island_limit_radius
+    island_limit_radius,
 ):
     object_position_on_floor = np.array(object_position).copy()
     if len(view_locations) > 0:
-        object_position_on_floor[1] = view_locations[
-            0
-        ].agent_state.position[1]
+        object_position_on_floor[1] = view_locations[0].agent_state.position[1]
     else:
         while True:
             # TODO (Mukul): think of better way than ->
@@ -99,9 +93,7 @@ def save_topdown_map(
         radius=6,
         color=COLOR_PALETTE["red"],
     )
-    topdown_map = draw_obj_bbox_on_topdown_map(
-        topdown_map, object_aabb, sim
-    )
+    topdown_map = draw_obj_bbox_on_topdown_map(topdown_map, object_aabb, sim)
 
     if len(view_locations) == 0:
         h = topdown_map.shape[0]

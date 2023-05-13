@@ -9,8 +9,8 @@ from typing import Optional, Union
 import magnum as mn
 import numpy as np
 from gym import spaces
-import habitat_sim
 
+import habitat_sim
 from habitat.core.registry import registry
 from habitat.robots.spot_robot import SpotRobot
 from habitat.robots.stretch_robot import StretchRobot
@@ -22,8 +22,6 @@ from habitat.tasks.rearrange.utils import (
     coll_name_matches,
     get_camera_transform,
 )
-from habitat.robots.stretch_robot import StretchRobot
-from habitat.robots.spot_robot import SpotRobot
 from habitat.utils.geometry_utils import angle_between
 
 
@@ -35,7 +33,6 @@ class GripSimulatorTaskAction(RobotAction):
     @property
     def requires_action(self):
         return self.action_space is not None
-
 
 
 @registry.register_task_action
@@ -302,12 +299,23 @@ class GazeGraspAction(MagicGraspAction):
         return None, None
 
     def _snap_closest_valid_object(self):
-        """ Snaps closest valid object """
-        allowed_scene_obj_ids = [int(g.object_id) for g in self._sim.ep_info.candidate_objects]
-        closest = np.argmin(np.linalg.norm((self._sim.get_scene_pos()[allowed_scene_obj_ids] - self._sim.robot.base_pos)[:, [0, 2]], axis=1))
-        snap_obj_idx = np.array(self._sim.scene_obj_ids)[allowed_scene_obj_ids][closest]
+        """Snaps closest valid object"""
+        allowed_scene_obj_ids = [
+            int(g.object_id) for g in self._sim.ep_info.candidate_objects
+        ]
+        closest = np.argmin(
+            np.linalg.norm(
+                (
+                    self._sim.get_scene_pos()[allowed_scene_obj_ids]
+                    - self._sim.robot.base_pos
+                )[:, [0, 2]],
+                axis=1,
+            )
+        )
+        snap_obj_idx = np.array(self._sim.scene_obj_ids)[
+            allowed_scene_obj_ids
+        ][closest]
         self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
-
 
     def _grasp(self):
         if self._oracle_snap:

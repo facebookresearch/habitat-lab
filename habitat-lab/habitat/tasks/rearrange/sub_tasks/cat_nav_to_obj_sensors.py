@@ -22,6 +22,7 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import RotDistToGoal
 class OvmmNavGoalSegmentationSensor(Sensor):
     cls_uuid: str = "ovmm_nav_goal_segmentation"
     panoptic_uuid: str = "robot_head_panoptic"
+
     def __init__(
         self,
         sim,
@@ -35,7 +36,12 @@ class OvmmNavGoalSegmentationSensor(Sensor):
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
-        self.resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
+        self.resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
         self._num_channels = 2 if self._is_nav_to_obj else 1
         super().__init__(config=config)
 
@@ -113,6 +119,7 @@ class OvmmNavGoalSegmentationSensor(Sensor):
 class ReceptacleSegmentationSensor(Sensor):
     cls_uuid: str = "receptacle_segmentation"
     panoptic_uuid: str = "robot_head_panoptic"
+
     def __init__(
         self,
         sim,
@@ -123,7 +130,12 @@ class ReceptacleSegmentationSensor(Sensor):
         self._config = config
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
-        self.resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
+        self.resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -159,12 +171,12 @@ class ReceptacleSegmentationSensor(Sensor):
         return obs
 
 
-
 @registry.register_measure
 class OvmmRotDistToGoal(RotDistToGoal):
     """
-    Computes angle between the agent's heading direction and the direction from agent to object. Selects the object with the closest viewpoint for computing this angle.  
+    Computes angle between the agent's heading direction and the direction from agent to object. Selects the object with the closest viewpoint for computing this angle.
     """
+
     cls_uuid: str = "ovmm_rot_dist_to_goal"
 
     def __init__(self, *args, sim, config, dataset, task, **kwargs):
