@@ -96,10 +96,11 @@ class HumanoidRearrangeController:
             walk_data["stop_pose"]["joints"].reshape(-1),
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
-        self.draw_fps = draw_fps
         self.dist_per_step_size = (
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
+
+        self.draw_fps = draw_fps
 
         # These two matrices store the global transformation of the base
         # as well as the transformation caused by the walking gait
@@ -110,6 +111,15 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+
+    def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
+        seconds_per_step = 1.0 / ctrl_freq
+        meters_per_step = lin_speed * seconds_per_step
+        frames_per_step = meters_per_step / self.dist_per_step_size
+        self.draw_fps = self.walk_motion.fps / frames_per_step
+        rotate_amount = ang_speed
+        self.turning_step_amount = rotate_amount
+        self.threshold_rotate_not_move = rotate_amount
 
     def reset(self, base_transformation) -> None:
         """Reset the joints on the human. (Put in rest state)"""
