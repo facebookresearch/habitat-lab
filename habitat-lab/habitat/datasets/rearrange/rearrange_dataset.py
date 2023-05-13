@@ -172,11 +172,15 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         if config is not None:
             if self.config.viewpoints_matrix_path is not None:
                 self.viewpoints_matrix = np.load(
-                    self.config.viewpoints_matrix_path.format(split=self.config.split)
+                    self.config.viewpoints_matrix_path.format(
+                        split=self.config.split
+                    )
                 )
             if self.config.transformations_matrix_path is not None:
                 self.transformations_matrix = np.load(
-                    self.config.transformations_matrix_path.format(split=self.config.split)
+                    self.config.transformations_matrix_path.format(
+                        split=self.config.split
+                    )
                 )
 
     def get_episode_iterator(
@@ -194,14 +198,14 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
         return result
 
-    @staticmethod
-    def __deserialize_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
+    def __deserialize_goal(self, serialized_goal: Dict[str, Any]) -> ObjectGoal:
         g = ObjectGoal(**serialized_goal)
-        # if the view points are not cached separately, read from original episodes
-        for vidx, view in enumerate(g.view_points):
-            view_location = ObjectViewLocation(**view)  # type: ignore
-            view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
-            g.view_points[vidx] = view_location
+        if self.viewpoints_matrix is None:
+            # if the view points are not cached separately, read from original episodes
+            for vidx, view in enumerate(g.view_points):
+                view_location = ObjectViewLocation(**view)  # type: ignore
+                view_location.agent_state = AgentState(**view_location.agent_state)  # type: ignore
+                g.view_points[vidx] = view_location
         return g
 
     def from_json(

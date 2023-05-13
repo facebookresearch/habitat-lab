@@ -145,6 +145,9 @@ class BaseVelocityActionConfig(ActionConfig):
     min_turn_degrees: float = 5.0  # minimum turn waypoint
     allow_lateral_movement: bool = True  # whether to allow lateral movement
     allow_simultaneous_turn: bool = True  # whether to allow simultaneous turn
+    discrete_movement: bool = (
+        False  # whether to move/rotate only in discrete steps
+    )
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1170,8 +1173,12 @@ class DatasetConfig(HabitatBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ObjectRearrangeDatasetConfig(DatasetConfig):
     type: str = "ObjectRearrangeDataset-v1"
-    viewpoints_matrix_path: Optional[str] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
-    transformations_matrix_path: Optional[str] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
+    viewpoints_matrix_path: Optional[
+        str
+    ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
+    transformations_matrix_path: Optional[
+        str
+    ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
 
 
 @attr.s(auto_attribs=True, slots=True)

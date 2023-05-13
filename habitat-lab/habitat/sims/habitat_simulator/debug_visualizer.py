@@ -30,6 +30,10 @@ class DebugVisualizer:
         """
         Initialize the debugger provided a Simulator and the uuid of the debug sensor.
         NOTE: Expects the debug sensor attached to and coincident with agent 0's frame.
+
+        :param sim: Simulator instance must be provided for attachment.
+        :param output_path: Directory path for saving debug images and videos.
+        :param default_sensor_uuid: Which sensor uuid to use for debug image rendering.
         """
         self.sim = sim
         self.output_path = output_path
@@ -46,6 +50,11 @@ class DebugVisualizer:
     ) -> None:
         """
         Point the debug camera at a target.
+        Standard look_at function syntax.
+
+        :param look_at: 3D global position to point the camera towards.
+        :param look_from: 3D global position of the camera.
+        :param look_up: 3D global "up" vector for aligning the camera roll.
         """
         agent = self.sim.get_agent(0)
         camera_pos = (
@@ -76,6 +85,10 @@ class DebugVisualizer:
         Render a debug observation of the current state and cache it.
         Optionally configure the camera transform.
         Optionally provide an alternative observation cache.
+
+        :param look_at: 3D global position to point the camera towards.
+        :param look_from: 3D global position of the camera.
+        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self._debug_obs.
         """
         if look_at is not None:
             self.look_at(look_at, look_from)
@@ -94,8 +107,15 @@ class DebugVisualizer:
         show: bool = True,
     ) -> str:
         """
-        Get an observation and save it to file.
+        Render an observation and save it to file.
         Return the filepath.
+
+        :param output_path: Optional directory path for saving debug images and videos. Otherwise use self.output_path.
+        :param prefix: Optional prefix for output filename. Filename format: "<prefix>month_day_year_hourminutesecondmicrosecond.png"
+        :param look_at: 3D global position to point the camera towards.
+        :param look_from: 3D global position of the camera.
+        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self._debug_obs.
+        :param show: If True, open the image immediately.
         """
         obs_cache = []
         self.get_observation(look_at, look_from, obs_cache)
@@ -105,7 +125,9 @@ class DebugVisualizer:
         check_make_dir(output_path)
         from habitat_sim.utils import viz_utils as vut
 
-        image = vut.observation_to_image(obs_cache[0]["rgb"], "color")
+        image = vut.observation_to_image(
+            obs_cache[0][self.default_sensor_uuid], "color"
+        )
         from datetime import datetime
 
         # filename format "prefixmonth_day_year_hourminutesecondmicrosecond.png"
@@ -119,9 +141,11 @@ class DebugVisualizer:
     def render_debug_lines(
         self,
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
-    ):
+    ) -> None:
         """
-        Draw a set of debug lines with accomanying colors.
+        Draw a set of debug lines with accompanying colors.
+
+        :param debug_lines: A set of debug line strips with accompanying colors. Each list entry contains a list of points and a color.
         """
         # support None input to make useage easier elsewhere
         if debug_lines is not None:
@@ -136,6 +160,28 @@ class DebugVisualizer:
                         color,
                     )
 
+    def render_debug_circles(
+        self,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
+    ) -> None:
+        """
+        Draw a set of debug circles with accompanying colors.
+
+        :param debug_circles: A list of debug line render circle Tuples, each with (center, radius, normal, color).
+        """
+        # support None input to make useage easier elsewhere
+        if debug_circles is not None:
+            for center, radius, normal, color in debug_circles:
+                self.debug_line_render.draw_circle(
+                    translation=center,
+                    radius=radius,
+                    color=color,
+                    num_segments=12,
+                    normal=normal,
+                )
+
     def peek_rigid_object(
         self,
         obj: habitat_sim.physics.ManagedRigidObject,
@@ -143,11 +189,23 @@ class DebugVisualizer:
         peek_all_axis: bool = False,
         additional_savefile_prefix="",
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
         show: bool = False,
     ) -> str:
         """
-        Specialization to peek a rigid object.
-        See _peek_object.
+        Helper function to generate image(s) of an object for contextual debugging purposes.
+        Specialization to peek a rigid object. See _peek_object.
+        Compute a camera placement to view an object. Show/save an observation. Return the filepath.
+
+        :param obj: The ManagedRigidObject to peek.
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
         """
 
         return self._peek_object(
@@ -157,6 +215,7 @@ class DebugVisualizer:
             peek_all_axis,
             additional_savefile_prefix,
             debug_lines,
+            debug_circles,
             show,
         )
 
@@ -167,11 +226,23 @@ class DebugVisualizer:
         peek_all_axis: bool = False,
         additional_savefile_prefix="",
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
         show: bool = False,
     ) -> str:
         """
-        Specialization to peek an articulated object.
-        See _peek_object.
+        Helper function to generate image(s) of an object for contextual debugging purposes.
+        Specialization to peek an articulated object. See _peek_object.
+        Compute a camera placement to view an object. Show/save an observation. Return the filepath.
+
+        :param obj: The ManagedArticulatedObject to peek.
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
         """
         from habitat.sims.habitat_simulator.sim_utilities import (
             get_ao_global_bb,
@@ -186,6 +257,7 @@ class DebugVisualizer:
             peek_all_axis,
             additional_savefile_prefix,
             debug_lines,
+            debug_circles,
             show,
         )
 
@@ -200,17 +272,104 @@ class DebugVisualizer:
         peek_all_axis: bool = False,
         additional_savefile_prefix="",
         debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
         show: bool = False,
     ) -> str:
         """
-        Compute a camera placement to view an object and show/save an observation.
-        Return the filepath.
-        If peek_all_axis, then create a merged 3x2 matrix of images looking at the object from all angles.
-        debug_lines: optionally provide a list of debug line render tuples, each with a sequence of points and a color. These will be displayed in all peek images.
+        Internal helper function to generate image(s) of an object for contextual debugging purposes.
+        Compute a camera placement to view an object. Show/save an observation. Return the filepath.
+
+        :param obj: The ManagedRigidObject or ManagedArticulatedObject to peek.
+        :param obj_bb: The object's bounding box (provided by consumer functions.)
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
         """
         obj_abs_transform = obj.root_scene_node.absolute_transformation()
-        look_at = obj_abs_transform.translation
-        bb_size = obj_bb.size()
+        return self._peek_bb(
+            bb_name=obj.handle,
+            bb=obj_bb,
+            world_transform=obj_abs_transform,
+            cam_local_pos=cam_local_pos,
+            peek_all_axis=peek_all_axis,
+            additional_savefile_prefix=additional_savefile_prefix,
+            debug_lines=debug_lines,
+            debug_circles=debug_circles,
+            show=show,
+        )
+
+    def peek_scene(
+        self,
+        cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
+        show: bool = False,
+    ) -> str:
+        """
+        Helper function to generate image(s) of the scene for contextual debugging purposes.
+        Specialization to peek a scene. See _peek_bb.
+        Compute a camera placement to view the scene. Show/save an observation. Return the filepath.
+
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
+        """
+        return self._peek_bb(
+            bb_name=self.sim.curr_scene_name,
+            bb=self.sim.get_active_scene_graph().get_root_node().cumulative_bb,
+            world_transform=mn.Matrix4.identity_init(),
+            cam_local_pos=cam_local_pos,
+            peek_all_axis=peek_all_axis,
+            additional_savefile_prefix=additional_savefile_prefix,
+            debug_lines=debug_lines,
+            debug_circles=debug_circles,
+            show=show,
+        )
+
+    def _peek_bb(
+        self,
+        bb_name: str,
+        bb: mn.Range3D,
+        world_transform: Optional[mn.Matrix4] = None,
+        cam_local_pos: Optional[mn.Vector3] = None,
+        peek_all_axis: bool = False,
+        additional_savefile_prefix="",
+        debug_lines: Optional[List[Tuple[List[mn.Vector3], mn.Color4]]] = None,
+        debug_circles: Optional[
+            List[Tuple[mn.Vector3, float, mn.Vector3, mn.Color4]]
+        ] = None,
+        show: bool = False,
+    ) -> str:
+        """
+        Internal helper function to generate image(s) of any bb for contextual debugging purposes.
+        Compute a camera placement to view the bb. Show/save an observation. Return the filepath.
+
+        :param bb_name: The name of the entity we're peeking for filepath naming.
+        :param bb: The entity's bounding box (provided by consumer functions.)
+        :param world_transform: The entity's world transform provided by consumer functions, default identity.
+        :param cam_local_pos: Optionally provide a camera location in location local coordinates. Otherwise offset along local -Z axis from the object.
+        :param peek_all_axis: Optionally create a merged 3x2 matrix of images looking at the object from all angles.
+        :param additional_savefile_prefix: Optionally provide an additional prefix for the save filename to differentiate the images.
+        :param debug_lines: Optionally provide a list of debug line render tuples, each with a list of points and a color. These will be displayed in all peek images.
+        :param debug_circles: Optionally provide a list of debug line render circle Tuples, each with (center, radius, normal, color). These will be displayed in all peek images.
+        :param show: If True, open and display the image immediately.
+        """
+        if world_transform is None:
+            world_transform = mn.Matrix4.identity_init()
+        look_at = world_transform.transform_point(bb.center())
+        bb_size = bb.size()
         # TODO: query fov and aspect from the camera spec
         fov = 90
         aspect = 0.75
@@ -225,13 +384,14 @@ class DebugVisualizer:
             cam_local_pos = mn.Vector3(0, 0, -1)
         if not peek_all_axis:
             look_from = (
-                obj_abs_transform.transform_vector(cam_local_pos).normalized()
+                world_transform.transform_vector(cam_local_pos).normalized()
                 * distance
                 + look_at
             )
             self.render_debug_lines(debug_lines)
+            self.render_debug_circles(debug_circles)
             return self.save_observation(
-                prefix=additional_savefile_prefix + "peek_" + obj.handle,
+                prefix=additional_savefile_prefix + "peek_" + bb_name,
                 look_at=look_at,
                 look_from=look_from,
                 show=show,
@@ -243,11 +403,12 @@ class DebugVisualizer:
             axis_vec = mn.Vector3()
             axis_vec[axis % 3] = 1 if axis // 3 == 0 else -1
             look_from = (
-                obj_abs_transform.transform_vector(axis_vec).normalized()
+                world_transform.transform_vector(axis_vec).normalized()
                 * distance
                 + look_at
             )
             self.render_debug_lines(debug_lines)
+            self.render_debug_circles(debug_circles)
             self.get_observation(look_at, look_from, axis_obs)
         # stitch images together
         stitched_image = None
@@ -256,7 +417,9 @@ class DebugVisualizer:
         from habitat_sim.utils import viz_utils as vut
 
         for ix, obs in enumerate(axis_obs):
-            image = vut.observation_to_image(obs["rgb"], "color")
+            image = vut.observation_to_image(
+                obs[self.default_sensor_uuid], "color"
+            )
             if stitched_image is None:
                 stitched_image = Image.new(
                     image.mode, (image.size[0] * 3, image.size[1] * 2)
@@ -270,7 +433,7 @@ class DebugVisualizer:
             stitched_image.show()
         save_path = os.path.join(
             self.output_path,
-            additional_savefile_prefix + "peek_6x_" + obj.handle + ".png",
+            additional_savefile_prefix + "peek_6x_" + bb_name + ".png",
         )
         stitched_image.save(save_path)
         return save_path
@@ -283,8 +446,14 @@ class DebugVisualizer:
         obs_cache: Optional[List[Any]] = None,
     ) -> None:
         """
-        Produce a video from a set of debug observations.
+        Produce and save a video from a set of debug observations.
+
+        :param output_path: Optional directory path for saving the video. Otherwise use self.output_path.
+        :param prefix: Optional prefix for output filename. Filename format: "<output_path><prefix><timestamp>"
+        :param fps: Framerate of the video. Defaults to 4FPS expecting disjoint still frames.
+        :param obs_cache: Optioanlly provide an external observation cache datastructure in place of self._debug_obs.
         """
+
         if output_path is None:
             output_path = self.output_path
 
