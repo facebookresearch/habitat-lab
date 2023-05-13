@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, List, Optional
 
 import gym.spaces as spaces
 import magnum as mn
@@ -36,6 +36,12 @@ class Controller(ABC):
         pass
 
 
+class GuiController(Controller):
+    def __init__(self, agent_idx, is_multi_agent, gui_input):
+        super().__init__(agent_idx, is_multi_agent)
+        self._gui_input = gui_input
+
+
 def clean_dict(d, remove_prefix):
     ret_d = {}
     for k, v in d.spaces.items():
@@ -51,7 +57,14 @@ def clean_dict(d, remove_prefix):
 
 
 class BaselinesController(Controller):
-    def __init__(self, agent_idx, is_multi_agent, cfg_path, env):
+    def __init__(
+        self,
+        agent_idx,
+        is_multi_agent,
+        cfg_path,
+        env,
+        sample_random_baseline_base_vel=False,
+    ):
         super().__init__(agent_idx, is_multi_agent)
 
         config = get_baselines_config(
@@ -59,8 +72,8 @@ class BaselinesController(Controller):
             [
                 # "habitat_baselines/rl/policy=hl_fixed",
                 # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
-                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 "habitat_baselines.num_environments=1",
+                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
                 f"habitat.task.task_spec={env._config.task.task_spec}",
                 f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
             ],
@@ -87,6 +100,7 @@ class BaselinesController(Controller):
         )
         self._action_shape, _ = get_action_space_info(self._gym_ac_space)
         self._step_i = 0
+        self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
 
     def act(self, obs, env):
         masks = torch.ones(
@@ -128,9 +142,10 @@ class BaselinesController(Controller):
         )
 
         # temp do random base actions
-        action["action_args"]["base_vel"] = torch.rand_like(
-            action["action_args"]["base_vel"]
-        )
+        if self._sample_random_baseline_base_vel:
+            action["action_args"]["base_vel"] = torch.rand_like(
+                action["action_args"]["base_vel"]
+            )
 
         def change_ac_name(k):
             if "pddl" in k:
@@ -143,14 +158,10 @@ class BaselinesController(Controller):
             change_ac_name(k): v.cpu().numpy()
             for k, v in action["action_args"].items()
         }
-        return action, False, False, action_data.rnn_hidden_states
+        return action, action_data.rnn_hidden_states
 
 
-class GuiRobotController(Controller):
-    def __init__(self, agent_idx, is_multi_agent, gui_input):
-        super().__init__(agent_idx, is_multi_agent)
-        self._gui_input = gui_input
-
+class GuiRobotController(GuiController):
     def act(self, obs, env):
         if self._is_multi_agent:
             agent_k = f"agent_{self._agent_idx}_"
@@ -182,16 +193,6 @@ class GuiRobotController(Controller):
 
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
-
-        should_end = False
-        should_reset = False
-
-        if gui_input.get_key_down(KeyNS.ESC):
-            should_end = True
-        elif gui_input.get_key_down(KeyNS.M):
-            should_reset = True
-        elif gui_input.get_key_down(KeyNS.N):
-            env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
         if base_action is not None:
             # Base control
@@ -309,29 +310,22 @@ class GuiRobotController(Controller):
         if len(action_names) == 0:
             raise ValueError("No active actions for human controller.")
 
-        return (
-            {"action": action_names, "action_args": action_args},
-            should_reset,
-            should_end,
-            {},
-        )
+        return ({"action": action_names, "action_args": action_args}, {})
 
 
-class GuiHumanoidController(Controller):
+class GuiHumanoidController(GuiController):
     def __init__(
         self, agent_idx, is_multi_agent, gui_input, env, walk_pose_path
     ):
-        self.agent_idx = agent_idx
-        super().__init__(self.agent_idx, is_multi_agent)
+        super().__init__(agent_idx, is_multi_agent, gui_input)
         self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
         self._env = env
-        self._gui_input = gui_input
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
 
     def get_articulated_agent(self):
-        return self._env._sim.agents_mgr[self.agent_idx].articulated_agent
+        return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
 
     def on_environment_reset(self):
         super().on_environment_reset()
@@ -381,14 +375,15 @@ class GuiHumanoidController(Controller):
         )
         return humanoidjoint_action
 
-    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop):
+    def set_act_hints(self, walk_dir, grasp_obj_idx, do_drop, cam_yaw=None):
         self._hint_walk_dir = walk_dir
         self._hint_grasp_obj_idx = grasp_obj_idx
         self._hint_drop_pos = do_drop
+        self._cam_yaw = cam_yaw
 
     def _get_grasp_mgr(self):
         agents_mgr = self._env._sim.agents_mgr
-        grasp_mgr = agents_mgr._all_agent_data[self.agent_idx].grasp_mgr
+        grasp_mgr = agents_mgr._all_agent_data[self._agent_idx].grasp_mgr
         return grasp_mgr
 
     @property
@@ -429,48 +424,70 @@ class GuiHumanoidController(Controller):
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
 
-        should_end = False
-        should_reset = False
-
-        if gui_input.get_key_down(KeyNS.ESC):
-            should_end = True
-        elif gui_input.get_key_down(KeyNS.M):
-            should_reset = True
-        elif gui_input.get_key_down(KeyNS.N):
+        if gui_input.get_key_down(KeyNS.N):
             # todo: move outside this controller
             env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
         if do_humanoidjoint_action:
-            humancontroller_base_user_input = [0, 0]
+            humancontroller_base_user_input = np.zeros(3)
             # temp keyboard controls to test humanoid controller
-            if gui_input.get_key(KeyNS.I):
-                # move in world-space x+ direction ("east")
+            if gui_input.get_key(KeyNS.W):
+                # walk forward in the camera yaw direction
                 humancontroller_base_user_input[0] += 1
-            if gui_input.get_key(KeyNS.K):
-                # move in world-space x- direction ("west")
+            if gui_input.get_key(KeyNS.S):
+                # walk forward in the opposite to camera yaw direction
                 humancontroller_base_user_input[0] -= 1
 
             if self._hint_walk_dir:
                 humancontroller_base_user_input[0] += self._hint_walk_dir.x
-                humancontroller_base_user_input[1] += self._hint_walk_dir.z
+                humancontroller_base_user_input[2] += self._hint_walk_dir.z
+
+            else:
+                rot_y_rad = -self._cam_yaw + np.pi
+                rot_y_matrix = np.array(
+                    [
+                        [np.cos(rot_y_rad), 0, np.sin(rot_y_rad)],
+                        [0, 1, 0],
+                        [-np.sin(rot_y_rad), 0, np.cos(rot_y_rad)],
+                    ]
+                )
+                humancontroller_base_user_input = (
+                    rot_y_matrix @ humancontroller_base_user_input
+                )
 
         action_names = []
         action_args = {}
         if do_humanoidjoint_action:
             if True:
-                relative_pos = mn.Vector3(
-                    humancontroller_base_user_input[0],
-                    0,
-                    humancontroller_base_user_input[1],
+                relative_pos = mn.Vector3(humancontroller_base_user_input)
+
+                base_offset = self.get_articulated_agent().params.base_offset
+                # base_offset is basically the offset from the humanoid's root (often
+                # located near its pelvis) to the humanoid's feet (where it should
+                # snap to the navmesh), for example (0, -0.9, 0).
+                prev_query_pos = (
+                    self._humanoid_controller.obj_transform_base.translation
+                    + base_offset
                 )
-                # pose, root_trans = self._humanoid_controller.get_walk_pose(
-                #     relative_pos, distance_multiplier=1.0
-                # )
-                # humanoidjoint_action = self._humanoid_controller.vectorize_pose(
-                #     pose, root_trans
-                # )
-                # Use the controller
+
                 self._humanoid_controller.calculate_walk_pose(relative_pos)
+
+                # calculate_walk_pose has updated obj_transform_base.translation with
+                # desired motion, but this should be filtered (restricted to navmesh).
+                target_query_pos = (
+                    self._humanoid_controller.obj_transform_base.translation
+                    + base_offset
+                )
+                filtered_query_pos = self._env._sim.step_filter(
+                    prev_query_pos, target_query_pos
+                )
+                # fixup is the difference between the movement allowed by step_filter
+                # and the requested base movement.
+                fixup = filtered_query_pos - target_query_pos
+                self._humanoid_controller.obj_transform_base.translation += (
+                    fixup
+                )
+
                 humanoidjoint_action = self._humanoid_controller.get_pose()
             else:
                 pass
@@ -479,70 +496,87 @@ class GuiHumanoidController(Controller):
             action_names.append(humanoidjoint_name)
             action_args.update(
                 {
-                    "agent_0_human_joints_trans": humanoidjoint_action,
+                    f"{agent_k}human_joints_trans": humanoidjoint_action,
                 }
             )
 
-        return (
-            {"action": action_names, "action_args": action_args},
-            should_reset,
-            should_end,
-            {},
-        )
+        return ({"action": action_names, "action_args": action_args}, {})
 
 
 class ControllerHelper:
     def __init__(self, env, args, gui_input):
+        self._env = env
         self.n_robots = len(env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
+        self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
-        self._env = env
-
-        gui_controller: Controller = None
-        if args.humanoid_user_agent:
-            gui_controller = GuiHumanoidController(
-                0, is_multi_agent, gui_input, env, args.walk_pose_path
-            )
-        else:
-            gui_controller = GuiRobotController(0, is_multi_agent, gui_input)
-
-        self.controllers = []
-        self.n_robots = self.n_robots
-        self.all_hxs = [None for _ in range(self.n_robots)]
-        self.active_controllers = [0, 1]
-        self.controllers = [
-            gui_controller,
+        self.controllers: List[Controller] = [
             BaselinesController(
-                1,
+                agent_index,
                 is_multi_agent,
                 "rearrange/rl_hierarchical.yaml",
                 env,
-            ),
+                sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
+            )
+            for agent_index in range(self.n_robots)
+            if agent_index != self._gui_controlled_agent_index
         ]
 
-    def get_gui_humanoid_controller(self):
-        if isinstance(self.controllers[0], GuiHumanoidController):
-            return self.controllers[0]
-        return None
+        if self._gui_controlled_agent_index is not None:
+            agent_name = self._env.sim.habitat_config.agents_order[
+                self._gui_controlled_agent_index
+            ]
+            articulated_agent_type = self._env.sim.habitat_config.agents[
+                agent_name
+            ].articulated_agent_type
+
+            gui_agent_controller: Controller
+            if articulated_agent_type == "KinematicHumanoid":
+                gui_agent_controller = GuiHumanoidController(
+                    agent_idx=self._gui_controlled_agent_index,
+                    is_multi_agent=is_multi_agent,
+                    gui_input=gui_input,
+                    env=self._env,
+                    walk_pose_path=args.walk_pose_path,
+                )
+            else:
+                gui_agent_controller = GuiRobotController(
+                    agent_idx=self._gui_controlled_agent_index,
+                    is_multi_agent=is_multi_agent,
+                    gui_input=gui_input,
+                )
+            self.controllers.insert(
+                self._gui_controlled_agent_index, gui_agent_controller
+            )
+
+        self.all_hxs = [None for _ in range(self.n_robots)]
+        self.active_controllers = list(
+            range(len(self.controllers))
+        )  # assuming all controllers are active
+
+    def get_gui_agent_controller(self) -> Optional[Controller]:
+        if self._gui_controlled_agent_index is None:
+            return None
+
+        return self.controllers[self._gui_controlled_agent_index]
+
+    def get_gui_controlled_agent_index(self) -> Optional[int]:
+        return self._gui_controlled_agent_index
 
     def update(self, obs):
         all_names = []
         all_args = {}
-        end_play = False
-        reset_ep = False
         for i in self.active_controllers:
             (
                 ctrl_action,
-                ctrl_reset_ep,
-                ctrl_end_play,
                 self.all_hxs[i],
-            ) = self.controllers[i].act(obs, self._env)
-            end_play = end_play or ctrl_end_play
-            reset_ep = reset_ep or ctrl_reset_ep
+            ) = self.controllers[
+                i
+            ].act(obs, self._env)
             all_names.extend(ctrl_action["action"])
             all_args.update(ctrl_action["action_args"])
         action = {"action": tuple(all_names), "action_args": all_args}
-        return action, end_play, reset_ep
+        return action
 
     def on_environment_reset(self):
         for i in self.active_controllers:

@@ -33,6 +33,10 @@ class HighLevelPolicy(nn.Module):
         self._device = None
         self._agent_name = agent_name
 
+    @property
+    def should_load_agent_state(self):
+        return False
+
     def to(self, device):
         self._device = device
         return super().to(device)
