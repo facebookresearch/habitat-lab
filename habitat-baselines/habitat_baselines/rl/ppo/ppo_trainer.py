@@ -351,7 +351,7 @@ class PPOTrainer(BaseRLTrainer):
                 env_slice, buffer_index
             )
 
-            profiling_wrapper.range_push("compute actions")
+            # profiling_wrapper.range_push("compute actions")
 
             # Obtain lenghts
             step_batch_lens = {
@@ -367,7 +367,7 @@ class PPOTrainer(BaseRLTrainer):
                 **step_batch_lens,
             )
 
-        profiling_wrapper.range_pop()  # compute actions
+        # profiling_wrapper.range_pop()  # compute actions
 
         with self.timer.avg_time("obs_insert"):
             for index_env, act in zip(
@@ -475,12 +475,12 @@ class PPOTrainer(BaseRLTrainer):
 
         return env_slice.stop - env_slice.start
 
-    @profiling_wrapper.RangeContext("_collect_rollout_step")
+    # @profiling_wrapper.RangeContext("_collect_rollout_step")
     def _collect_rollout_step(self):
         self._compute_actions_and_step_envs()
         return self._collect_environment_result()
 
-    @profiling_wrapper.RangeContext("_update_agent")
+    # @profiling_wrapper.RangeContext("_update_agent")
     def _update_agent(self):
         with self.timer.avg_time("update_agent"):
             with inference_mode():
@@ -641,7 +641,7 @@ class PPOTrainer(BaseRLTrainer):
             * torch.distributed.get_world_size()
         )
 
-    @profiling_wrapper.RangeContext("train")
+    # @profiling_wrapper.RangeContext("train")
     def train(self) -> None:
         r"""Main method for training DD/PPO.
 
@@ -688,8 +688,8 @@ class PPOTrainer(BaseRLTrainer):
             else contextlib.suppress()
         ) as writer:
             while not self.is_done():
-                profiling_wrapper.on_start_step()
-                profiling_wrapper.range_push("train update")
+                # profiling_wrapper.on_start_step()
+                # profiling_wrapper.range_push("train update")
 
                 self._agent.pre_rollout()
 
@@ -715,7 +715,7 @@ class PPOTrainer(BaseRLTrainer):
                     )
 
                 if EXIT.is_set():
-                    profiling_wrapper.range_pop()  # train update
+                    # profiling_wrapper.range_pop()  # train update
 
                     self.envs.close()
 
@@ -725,9 +725,9 @@ class PPOTrainer(BaseRLTrainer):
 
                 self._agent.eval()
                 count_steps_delta = 0
-                profiling_wrapper.range_push("rollouts loop")
+                # profiling_wrapper.range_push("rollouts loop")
 
-                profiling_wrapper.range_push("_collect_rollout_step")
+                # profiling_wrapper.range_push("_collect_rollout_step")
                 for buffer_index in range(self._agent.nbuffers):
                     self._compute_actions_and_step_envs(buffer_index)
 
@@ -742,21 +742,21 @@ class PPOTrainer(BaseRLTrainer):
                             buffer_index
                         )
 
-                        if (buffer_index + 1) == self._agent.nbuffers:
-                            profiling_wrapper.range_pop()  # _collect_rollout_step
+                        # if (buffer_index + 1) == self._agent.nbuffers:
+                        # profiling_wrapper.range_pop()  # _collect_rollout_step
 
                         if not is_last_step:
-                            if (buffer_index + 1) == self._agent.nbuffers:
-                                profiling_wrapper.range_push(
-                                    "_collect_rollout_step"
-                                )
+                            # if (buffer_index + 1) == self._agent.nbuffers:
+                            #     profiling_wrapper.range_push(
+                            #         "_collect_rollout_step"
+                            #     )
 
                             self._compute_actions_and_step_envs(buffer_index)
 
                     if is_last_step:
                         break
 
-                profiling_wrapper.range_pop()  # rollouts loop
+                # profiling_wrapper.range_pop()  # rollouts loop
 
                 if self._is_distributed:
                     self.num_rollouts_done_store.add("num_done", 1)
@@ -782,7 +782,7 @@ class PPOTrainer(BaseRLTrainer):
                     )
                     count_checkpoints += 1
 
-                profiling_wrapper.range_pop()  # train update
+                # profiling_wrapper.range_pop()  # train update
 
             self.envs.close()
 

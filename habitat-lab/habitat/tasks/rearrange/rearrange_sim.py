@@ -908,13 +908,13 @@ class RearrangeSim(HabitatSim):
         self._extra_runtime_perf_stats[desc] = time.time() - t_start
 
     def get_runtime_perf_stats(self):
-        names = self._backend_runtime_perf_stat_names
-        values = super().get_runtime_perf_stat_values()
-        stats_dict = dict(zip(names, values))
+        # names = self._backend_runtime_perf_stat_names
+        # values = super().get_runtime_perf_stat_values()
+        # stats_dict = {}  # dict(zip(names, values))
 
-        for name, value in self._extra_runtime_perf_stats.items():
-            stats_dict[name] = value
+        # for name, value in self._extra_runtime_perf_stats.items():
+        #     stats_dict[name] = value
         # clear this dict so we don't accidentally collect these twice
         self._extra_runtime_perf_stats = {}
 
-        return stats_dict
+        return {}  # stats_dict

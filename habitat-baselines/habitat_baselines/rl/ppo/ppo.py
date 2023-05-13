@@ -14,7 +14,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from torch import Tensor
 
-from habitat.utils import profiling_wrapper
+# from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
@@ -302,7 +302,7 @@ class PPO(nn.Module, Updater):
         learner_metrics: Dict[str, List[Any]] = collections.defaultdict(list)
 
         for epoch in range(self.ppo_epoch):
-            profiling_wrapper.range_push("PPO.update epoch")
+            # profiling_wrapper.range_push("PPO.update epoch")
             data_generator = rollouts.data_generator(
                 advantages, self.num_mini_batch
             )
@@ -311,8 +311,7 @@ class PPO(nn.Module, Updater):
                 self._update_from_batch(
                     batch, epoch, rollouts, learner_metrics
                 )
-
-            profiling_wrapper.range_pop()  # PPO.update epoch
+            # profiling_wrapper.range_pop()  # PPO.update epoch
 
         self._set_grads_to_none()
 
