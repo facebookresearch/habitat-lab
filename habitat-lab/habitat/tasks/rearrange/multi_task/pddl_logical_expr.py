@@ -75,31 +75,36 @@ class LogicalExpr:
             self._expr_type == LogicalExprType.AND
             or self._expr_type == LogicalExprType.NAND
         ):
-            reduce_op = lambda x, y: x and y
-            init_value = True
+            result = True
+            for sub_expr in self._sub_exprs:
+                truth_val = is_true_fn(sub_expr)
+                assert isinstance(truth_val, bool)
+                result = result and truth_val
+                if not result:
+                    break
         elif (
             self._expr_type == LogicalExprType.OR
             or self._expr_type == LogicalExprType.NOR
         ):
-            reduce_op = lambda x, y: x or y
-            init_value = False
+            result = False
+            for sub_expr in self._sub_exprs:
+                truth_val = is_true_fn(sub_expr)
+                assert isinstance(truth_val, bool)
+                result = result and truth_val
+                if result:
+                    break
         else:
-            raise ValueError()
-        self.prev_truth_vals = [
-            is_true_fn(sub_expr) for sub_expr in self._sub_exprs
-        ]
+            raise ValueError(
+                f"Got unexpected expr_type: {self._expr_type} of type {type(self._expr_type)}"
+            )
 
-        ret = reduce(
-            reduce_op,
-            self.prev_truth_vals,
-            init_value,
-        )
         if (
             self._expr_type == LogicalExprType.NAND
             or self._expr_type == LogicalExprType.NOR
         ):
-            ret = not ret
-        return ret
+            # Invert the entire result.
+            result = not result
+        return result
 
     def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "LogicalExpr":
         self._sub_exprs = [e.sub_in(sub_dict) for e in self._sub_exprs]

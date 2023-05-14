@@ -84,7 +84,16 @@ class Predicate:
         """
         Returns if the predicate is satisfied in the current simulator state.
         """
-        return self._pddl_sim_state.is_true(sim_info)
+        self_repr = repr(self)
+        if (
+            sim_info.pred_truth_cache is not None
+            and self_repr in sim_info.pred_truth_cache
+        ):
+            return sim_info.pred_truth_cache[self_repr]
+        result = self._pddl_sim_state.is_true(sim_info)
+        if sim_info.pred_truth_cache is not None:
+            sim_info.pred_truth_cache[self_repr] = result
+        return result
 
     def set_state(self, sim_info: PddlSimInfo) -> None:
         """

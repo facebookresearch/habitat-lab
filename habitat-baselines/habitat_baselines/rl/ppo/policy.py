@@ -30,6 +30,8 @@ from habitat_baselines.utils.common import (
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+from habitat_baselines.utils.timing import g_timer
+
 
 @dataclass
 class PolicyActionData:
@@ -246,6 +248,7 @@ class NetPolicy(nn.Module, Policy):
             rnn_hidden_states=rnn_hidden_states,
         )
 
+    @g_timer.avg_time("net_policy.get_value", level=1)
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         features, _, _ = self.net(
             observations, rnn_hidden_states, prev_actions, masks
