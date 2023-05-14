@@ -75,12 +75,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         # Can map multiple skills to the same underlying skill controller.
         self._skill_redirects: Dict[int, int] = {}
 
-        if "rearrange_stop" not in action_space.spaces:
-            raise ValueError("Hierarchical policy requires the stop action")
-        self._stop_action_idx, _ = find_action_range(
-            action_space, "rearrange_stop"
-        )
-
         self._pddl = self._create_pddl(full_config, config)
         self._create_skills(
             {
@@ -102,13 +96,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         # Init with True so we always call the HL policy during the first step
         # it runs.
         self._cur_call_high_level: torch.BoolTensor = torch.ones(
-            (self._num_envs,), dtype=torch.bool
-        )
-
-        self._active_envs: torch.BoolTensor = torch.ones(
-            (self._num_envs,), dtype=torch.bool
-        )
-        self._cur_call_high_level: torch.BoolTensor = torch.zeros(
             (self._num_envs,), dtype=torch.bool
         )
 
@@ -164,6 +151,16 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._idx_to_name[skill_i] = skill_id
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
+
+        first_idx: Optional[int] = None
+        for skill_i, skill in self._skills.items():
+            if self._idx_to_name[skill_i] == "noop":
+                continue
+            if isinstance(skill, NoopSkillPolicy):
+                if first_idx is None:
+                    first_idx = skill_i
+                else:
+                    self._skill_redirects[skill_i] = first_idx
 
     def _get_hl_policy_cls(self, config):
         return eval(config.hierarchical_policy.high_level_policy.name)
@@ -231,10 +228,12 @@ class HierarchicalPolicy(nn.Module, Policy):
 
     @property
     def num_recurrent_layers(self):
-        return (
-            self._max_skill_rnn_layers
-            + self._high_level_policy.num_recurrent_layers
-        )
+        if self._high_level_policy.num_recurrent_layers != 0:
+            return self._high_level_policy.num_recurrent_layers
+        else:
+            return self._skills[
+                list(self._skills.keys())[0]
+            ].num_recurrent_layers
 
     @property
     def should_load_agent_state(self):
@@ -271,7 +270,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         ):
             if not should_add:
                 continue
-
             if cur_skill in self._skill_redirects:
                 cur_skill = self._skill_redirects[cur_skill]
             skill_to_batch[cur_skill].append(i)
@@ -310,7 +308,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         # Always call high-level if the episode is over.
         self._cur_call_high_level |= (~masks_cpu).view(-1)
 
-        skill_id = self._cur_skills[0].item()
         hl_terminate_episode, hl_info = self._update_skills(
             observations,
             rnn_hidden_states,
@@ -427,6 +424,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 deterministic,
                 log_info,
             )
+            new_skills = new_skills.numpy()
 
             sel_grouped_skills = self._broadcast_skill_ids(
                 new_skills,
@@ -453,6 +451,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                     )
             hl_info["actions"] = prev_actions
             hl_info["rnn_hidden_states"] = rnn_hidden_states
+
+            should_choose_new_skill = should_choose_new_skill.numpy()
             self._cur_skills = (
                 (~should_choose_new_skill) * self._cur_skills
             ) + (should_choose_new_skill * new_skills)
@@ -515,8 +515,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 batch_idx=batch_ids,
                 log_info=log_info,
                 skill_name=[
-                    self._idx_to_name[self._cur_skills[i].item()]
-                    for i in batch_ids
+                    self._idx_to_name[self._cur_skills[i]] for i in batch_ids
                 ],
             )
             actions[batch_ids] += new_actions

@@ -73,6 +73,10 @@ class SkillPolicy(Policy):
             action_space, "rearrange_stop"
         )
 
+    @property
+    def required_obs_keys(self) -> List[str]:
+        return []
+
     def _internal_log(self, s):
         baselines_logger.debug(
             f"Skill {self._config.skill_name} @ step {self._cur_skill_step}: {s}"
@@ -196,6 +200,9 @@ class SkillPolicy(Policy):
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
+
+        # Also terminate the skill if the HL policy wanted termination.
+        is_skill_done |= hl_wants_skill_term
 
         return is_skill_done, bad_terminate, new_actions
 
