@@ -419,12 +419,7 @@ class ObjectSampler:
 
         return new_object, target_receptacle
 
-    def set_num_samples(self, num_objects: Tuple[int, int] = None):
-        if num_objects is not None:
-            self.num_objects = num_objects
-            assert self.num_objects[1] >= self.num_objects[0]
-        if self.num_objects is None:
-            return
+    def set_num_samples(self):
         self.target_objects_number = (
             random.randrange(self.num_objects[0], self.num_objects[1])
             if self.num_objects[1] > self.num_objects[0]

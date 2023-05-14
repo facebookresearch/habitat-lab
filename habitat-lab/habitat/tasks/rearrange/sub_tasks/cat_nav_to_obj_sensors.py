@@ -21,7 +21,7 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import RotDistToGoal
 @registry.register_sensor
 class CatNavGoalSegmentationSensor(Sensor):
     cls_uuid: str = "cat_nav_goal_segmentation"
-
+    panoptic_uuid: str = "robot_head_panoptic"
     def __init__(
         self,
         sim,
@@ -37,6 +37,7 @@ class CatNavGoalSegmentationSensor(Sensor):
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
         self._num_channels = 2 if self._is_nav_to_obj else 1
+        self._resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -48,8 +49,8 @@ class CatNavGoalSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._dimensionality,
-                self._dimensionality,
+                self._resolution[0],
+                self._resolution[1],
                 self._num_channels,
             ),
             low=0,

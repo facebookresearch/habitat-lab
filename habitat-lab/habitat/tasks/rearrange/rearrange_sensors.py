@@ -162,7 +162,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 @registry.register_sensor
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
-
+    panoptic_uuid: str = "robot_head_panoptic"
     def __init__(
         self,
         sim,
@@ -175,6 +175,8 @@ class ObjectSegmentationSensor(Sensor):
         self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
+
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -186,8 +188,8 @@ class ObjectSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._dimensionality,
-                self._dimensionality,
+                self._resolution[0],
+                self._resolution[1],
                 1,
             ),
             low=0,

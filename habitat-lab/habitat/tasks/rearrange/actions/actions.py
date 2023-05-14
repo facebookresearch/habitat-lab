@@ -485,6 +485,7 @@ class BaseWaypointTeleportAction(RobotAction):
         )  # minimum turn waypoint
         self._allow_lateral_movement = config.allow_lateral_movement
         self._allow_simultaneous_turn = config.allow_simultaneous_turn
+        self._discrete_movement = config.discrete_movement
 
     def collision_check(self, trans, target_trans):
         """
@@ -595,7 +596,12 @@ class BaseWaypointTeleportAction(RobotAction):
                 lin_pos_x = 0
                 lin_pos_z = 0
 
-        # Scale the waypoint
+        if self._discrete_movement:
+            # Either move/rotate in one direction by fixed amount or do not move at all
+            lin_pos_x = np.sign(lin_pos_x) if lin_pos_x != 0 else 0
+            lin_pos_z = np.sign(lin_pos_z) if lin_pos_z != 0 else 0
+            turn = np.sign(turn) if turn != 0 else 0
+
         lin_pos_x = (
             np.clip(lin_pos_x, -1, 1) * self._max_displacement_along_axis
         )
