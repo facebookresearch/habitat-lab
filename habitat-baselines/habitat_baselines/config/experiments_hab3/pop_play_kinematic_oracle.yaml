@@ -153,7 +153,7 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1e-5
       max_grad_norm: 0.2
-      num_steps: 128
+      num_steps: 256
       use_gae: True
       gamma: 0.99
       tau: 0.95
