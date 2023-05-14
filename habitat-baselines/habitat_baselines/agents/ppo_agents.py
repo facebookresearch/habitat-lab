@@ -86,6 +86,7 @@ class PPOAgent(Agent):
             action_space=action_spaces,
             hidden_size=self.hidden_size,
             normalize_visual_inputs="rgb" in spaces,
+            device=self.device
         )
         self.actor_critic.to(self.device)
 
