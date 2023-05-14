@@ -247,9 +247,6 @@ class ResNetCLIPEncoder(nn.Module):
         self,
         observation_space: spaces.Dict,
         pooling="attnpool",
-        device: torch.device = torch.device(
-            "cuda" if torch.cuda.is_available() else "cpu"
-        ),
     ):
         super().__init__()
 
@@ -269,7 +266,7 @@ class ResNetCLIPEncoder(nn.Module):
         )
 
         if not self.is_blind:
-            model, preprocess = clip.load("RN50", device=device)
+            model, preprocess = clip.load("RN50")
 
             # expected input: C x H x W (np.uint8 in [0-255])
             self.preprocess = T.Compose(
@@ -376,7 +373,6 @@ class PointNavResNetNet(Net):
         fuse_keys: Optional[List[str]],
         force_blind_policy: bool = False,
         discrete_actions: bool = True,
-        device: torch.device = torch.device("cpu"),
     ):
         super().__init__()
         self.prev_action_embedding: nn.Module
@@ -549,7 +545,6 @@ class PointNavResNetNet(Net):
                 if not force_blind_policy
                 else spaces.Dict({}),
                 pooling="avgpool" if "avgpool" in backbone else "attnpool",
-                device=device,
             )
             if not self.visual_encoder.is_blind:
                 self.visual_fc = nn.Sequential(
