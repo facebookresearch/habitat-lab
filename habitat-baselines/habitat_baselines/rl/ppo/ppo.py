@@ -187,6 +187,7 @@ class PPO(nn.Module):
                     dist_entropy,
                     _,
                     aux_loss_res,
+                    action_distribution_data,
                 ) = self._evaluate_actions(
                     batch["observations"],
                     batch["recurrent_hidden_states"],
@@ -270,6 +271,8 @@ class PPO(nn.Module):
                         )
                     record_min_mean_max(orig_values, "value_pred")
                     record_min_mean_max(ratio, "prob_ratio")
+                    record_min_mean_max(action_distribution_data[0], "action_mean")
+                    record_min_mean_max(action_distribution_data[1], "action_std")
 
                     learner_metrics["value_loss"].append(value_loss)
                     learner_metrics["action_loss"].append(action_loss)
