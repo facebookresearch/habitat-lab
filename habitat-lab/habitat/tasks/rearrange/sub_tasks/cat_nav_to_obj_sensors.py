@@ -83,7 +83,7 @@ class CatNavGoalSegmentationSensor(Sensor):
         pan_obs = observations["robot_head_panoptic"]
         max_obs_val = np.max(pan_obs)
         obs = np.zeros(
-            (self._resolution[0], self._resolution[1], self._num_channels),
+            (pan_obs.shape[0], pan_obs.shape[1], self._num_channels),
             dtype=np.int32,
         )
         if self._is_nav_to_obj:

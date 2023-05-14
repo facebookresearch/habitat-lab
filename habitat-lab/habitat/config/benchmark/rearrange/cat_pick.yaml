@@ -36,16 +36,16 @@ habitat:
         robot_type: "StretchRobot"
         sim_sensors:
            head_rgb_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
            head_depth_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
            head_panoptic_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
     habitat_sim_v0:
       allow_sliding: False
