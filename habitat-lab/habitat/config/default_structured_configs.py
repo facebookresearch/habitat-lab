@@ -110,6 +110,7 @@ class ArmActionConfig(ActionConfig):
     :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
     :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
     :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
+    :property grasp_threshold: The gripper is enabled if `grip_action` is greather than `grasp_threshold`
     """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
@@ -128,7 +129,7 @@ class ArmActionConfig(ActionConfig):
     wrong_grasp_should_end: bool = False
     gaze_distance_from: str = "camera"
     gaze_center_square_width: float = 1
-
+    grasp_threshold: float = 0.0
 
 @attr.s(auto_attribs=True, slots=True)
 class BaseVelocityActionConfig(ActionConfig):

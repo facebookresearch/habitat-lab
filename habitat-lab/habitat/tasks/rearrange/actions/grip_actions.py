@@ -42,7 +42,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
         self._grasp_thresh_dist = config.grasp_thresh_dist
-
+        self._grasp_threshold = config.grasp_threshold
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -95,9 +95,9 @@ class MagicGraspAction(GripSimulatorTaskAction):
         if grip_action is None:
             return
         # TODO: This may not be ideal for training gaze, instead try to initialize the corresponding gaussian distribution
-        if grip_action >= -0.8 and not self.cur_grasp_mgr.is_grasped:
+        if grip_action >= self._grasp_threshold and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
-        elif grip_action < -0.8 and self.cur_grasp_mgr.is_grasped:
+        elif grip_action < self._grasp_threshold and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()
 
 
@@ -106,6 +106,7 @@ class SuctionGraspAction(MagicGraspAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
+        self._grasp_threshold = config.grasp_threshold
 
     def _grasp(self):
         attempt_snap_entity: Optional[Union[str, int]] = None
@@ -189,6 +190,7 @@ class GazeGraspAction(MagicGraspAction):
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
         self._distance_from = getattr(config, "gaze_distance_from", "camera")
         self._center_square_width = config.gaze_center_square_width
+        self._grasp_threshold = config.grasp_threshold
 
     @property
     def action_space(self):
@@ -317,8 +319,7 @@ class GazeGraspAction(MagicGraspAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-
-        if grip_action >= 0 and not self.cur_grasp_mgr.is_grasped:
+        if grip_action >= self._grasp_threshold and not self.cur_grasp_mgr.is_grasped:
             self._grasp()
-        elif grip_action < 0 and self.cur_grasp_mgr.is_grasped:
+        elif grip_action < self._grasp_threshold and self.cur_grasp_mgr.is_grasped:
             self._ungrasp()

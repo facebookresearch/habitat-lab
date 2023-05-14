@@ -55,6 +55,7 @@ actions:
     gaze_distance_range: [0.1, 3.0]
     center_cone_angle_threshold: 90.0
     center_cone_vector: [0.0, 1.0, 0.0]
+    grasp_threshold: 0.8
   base_velocity:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
