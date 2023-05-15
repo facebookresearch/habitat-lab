@@ -401,6 +401,7 @@ class PddlDomain:
                 # So action post conditions can use the entities which satisfy
                 # the pre-conditions.
                 new_ac.set_post_cond_search(assigns)
+
             self._actions[k] = new_ac
 
     @property

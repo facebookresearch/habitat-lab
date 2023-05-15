@@ -327,5 +327,5 @@ class SkillPolicy(Policy):
         raise NotImplementedError()
 
     @property
-    def required_obs_keys(self):
+    def required_obs_keys(self) -> List[str]:
         return []

@@ -67,7 +67,7 @@ def construct_envs(
         for scene in scenes:
             for split in scene_splits:
                 split.append(scene)
-    elif config.all_episodes_per_worker:
+    elif config.habitat_baselines.all_episodes_per_worker:
         for scene in scenes:
             for split in scene_splits:
                 split.append(scene)

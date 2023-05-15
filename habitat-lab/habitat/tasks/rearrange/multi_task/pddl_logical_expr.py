@@ -3,7 +3,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from enum import Enum
-from functools import reduce
 from typing import Dict, List, Optional, Union
 
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
@@ -37,6 +36,16 @@ class LogicalExpr:
         self._sub_exprs = sub_exprs
         self._inputs = inputs
         self._quantifier = quantifier
+        self._truth_vals: List[Optional[bool]] = []
+
+    @property
+    def prev_truth_vals(self) -> List[Optional[bool]]:
+        """
+        Sub-expression truth values for the last `self.is_true` computation. A
+        value of None is if the truth value was not computed (due to early
+        break).
+        """
+        return self._truth_vals
 
     @property
     def expr_type(self):
@@ -71,14 +80,17 @@ class LogicalExpr:
         return self._is_true(lambda p: p.is_true(sim_info))
 
     def _is_true(self, is_true_fn) -> bool:
+        self._truth_vals = [None for _ in range(len(self._sub_exprs))]
+
         if (
             self._expr_type == LogicalExprType.AND
             or self._expr_type == LogicalExprType.NAND
         ):
             result = True
-            for sub_expr in self._sub_exprs:
+            for i, sub_expr in enumerate(self._sub_exprs):
                 truth_val = is_true_fn(sub_expr)
                 assert isinstance(truth_val, bool)
+                self._truth_vals[i] = truth_val
                 result = result and truth_val
                 if not result:
                     break
@@ -87,10 +99,11 @@ class LogicalExpr:
             or self._expr_type == LogicalExprType.NOR
         ):
             result = False
-            for sub_expr in self._sub_exprs:
+            for i, sub_expr in enumerate(self._sub_exprs):
                 truth_val = is_true_fn(sub_expr)
                 assert isinstance(truth_val, bool)
-                result = result and truth_val
+                self._truth_vals[i] = truth_val
+                result = result or truth_val
                 if result:
                     break
         else:
@@ -116,7 +129,7 @@ class LogicalExpr:
     @property
     def compact_str(self):
         sub_s = ",".join([s.compact_str for s in self._sub_exprs])
-        return f"{self._expr_type}: {sub_s})"
+        return f"{self._expr_type.value}({sub_s})"
 
     def clone(self) -> "LogicalExpr":
         return LogicalExpr(

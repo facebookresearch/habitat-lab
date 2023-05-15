@@ -37,7 +37,7 @@ class HighLevelPolicy(nn.Module):
         raise NotImplementedError()
 
     @property
-    def should_load_agent_state(self):
+    def should_load_agent_state(self) -> bool:
         return False
 
     def evaluate_actions(

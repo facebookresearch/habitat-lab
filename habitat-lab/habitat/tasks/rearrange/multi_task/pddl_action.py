@@ -70,7 +70,7 @@ class PddlAction:
 
     def set_post_cond_search(
         self, post_cond_search: List[Dict[PddlEntity, PddlEntity]]
-    ):
+    ) -> None:
         self._post_cond_search = post_cond_search
 
     def apply_if_true(self, sim_info: PddlSimInfo) -> bool:
@@ -191,9 +191,10 @@ class PddlAction:
             for sat, assign in zip(
                 self._pre_cond.prev_truth_vals, self._post_cond_search
             ):
-                if sat:
+                if sat is not None and sat:
                     found_assign = assign
                     break
+            assert found_assign is not None
             # Clone and sub in so we don't overwrite the original predicates
             post_conds = [p.clone().sub_in(found_assign) for p in post_conds]
 
