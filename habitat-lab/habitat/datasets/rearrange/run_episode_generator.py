@@ -4,11 +4,16 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import ctypes
 import os
 import os.path as osp
 import random
+import sys
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, List
+
+flags = sys.getdlopenflags()
+sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import numpy as np
 from omegaconf import OmegaConf
@@ -51,7 +56,7 @@ class RearrangeEpisodeGeneratorConfig:
         default_factory=lambda: ["data/objects/ycb/"]
     )
     # optionally correct unstable states by removing extra unstable objects (within minimum samples limitations)
-    correct_unstable_results: bool = False
+    correct_unstable_results: bool = True
     # ----- resource set definitions ------
     # Define the sets of scenes, objects, and receptacles which can be sampled from.
     # The SceneDataset will be searched for resources of each type with handles containing ANY "included" substrings and NO "excluded" substrings.
