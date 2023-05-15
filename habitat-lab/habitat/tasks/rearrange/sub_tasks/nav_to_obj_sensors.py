@@ -208,8 +208,8 @@ class DistToGoal(Measure):
         return distance_to_target
 
     @staticmethod
-    def _get_uuid(self, *args, **kwargs):
-        return self.cls_uuid
+    def _get_uuid(*args, **kwargs):
+        return DistToGoal.cls_uuid
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = self._get_cur_geo_dist(task, episode)
@@ -334,7 +334,7 @@ class NavToPosSucc(Measure):
 
     @property
     def _dist_to_goal_cls_uuid(self):
-        return self._dist_to_goal_cls_uuid
+        return DistToGoal.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
