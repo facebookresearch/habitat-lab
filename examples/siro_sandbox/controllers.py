@@ -88,6 +88,7 @@ class BaselinesController(Controller):
             gym_obs_space,
             self._gym_ac_space,
             orig_action_space=self._env_ac,
+            agent_name=agent_name,
         )
         self._action_shape, _ = get_action_space_info(self._gym_ac_space)
         self._step_i = 0
@@ -151,6 +152,16 @@ class BaselinesController(Controller):
             for k, v in action["action_args"].items()
         }
         return action, action_data.rnn_hidden_states
+    
+    def on_environment_reset(self):
+        masks = torch.zeros(
+            (
+                1,
+                1,
+            ),
+            dtype=torch.bool,
+        )
+        self._actor_critic._high_level_policy.apply_mask(masks)
 
 
 class GuiRobotController(GuiController):
