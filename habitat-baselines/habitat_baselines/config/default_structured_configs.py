@@ -401,6 +401,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # path to ckpt or path to ckpts dir
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
+    all_episodes_per_worker: bool = False
     num_processes: int = -1  # deprecated
     rollout_storage_name: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"

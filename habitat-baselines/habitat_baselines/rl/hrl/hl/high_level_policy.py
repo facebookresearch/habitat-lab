@@ -36,6 +36,10 @@ class HighLevelPolicy(nn.Module):
     def get_value(self, observations, rnn_hidden_states, prev_actions, masks):
         raise NotImplementedError()
 
+    @property
+    def should_load_agent_state(self):
+        return False
+
     def evaluate_actions(
         self,
         observations,
@@ -50,6 +54,20 @@ class HighLevelPolicy(nn.Module):
     @property
     def num_recurrent_layers(self):
         return 0
+
+    def update_hidden_states(
+        self,
+        batch_ids: List[int],
+        old_rnn_hidden_states: torch.Tensor,
+        hl_info: Dict[str, Any],
+    ) -> torch.Tensor:
+        if old_rnn_hidden_states.shape[0] == len(batch_ids):
+            return hl_info["rnn_hidden_states"][batch_ids]
+        else:
+            old_rnn_hidden_states[batch_ids] = hl_info["rnn_hidden_states"][
+                batch_ids
+            ]
+            return old_rnn_hidden_states
 
     def parameters(self):
         return iter([nn.Parameter(torch.zeros((1,), device=self._device))])

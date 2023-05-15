@@ -67,6 +67,10 @@ def construct_envs(
         for scene in scenes:
             for split in scene_splits:
                 split.append(scene)
+    elif config.all_episodes_per_worker:
+        for scene in scenes:
+            for split in scene_splits:
+                split.append(scene)
     else:
         for idx, scene in enumerate(scenes):
             scene_splits[idx % len(scene_splits)].append(scene)

@@ -325,3 +325,7 @@ class SkillPolicy(Policy):
         deterministic=False,
     ) -> PolicyActionData:
         raise NotImplementedError()
+
+    @property
+    def required_obs_keys(self):
+        return []
