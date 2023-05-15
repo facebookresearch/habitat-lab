@@ -76,9 +76,9 @@ habitat:
   simulator:
     agents:
       agent_1:
-        articulated_agent_urdf: 'data/female2_0.urdf'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
         articulated_agent_type: KinematicHumanoid
-        motion_data_path: "data/walking_motion_processed_smplx.pkl"
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -97,7 +97,7 @@ habitat_baselines:
   eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
   checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
   log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
-  num_environments: 96
+  num_environments: 32
   num_updates: -1
   total_num_steps: 5.0e7
   log_interval: 1
