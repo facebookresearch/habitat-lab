@@ -121,6 +121,22 @@ habitat_baselines:
     policy:
       agent_0:
         hierarchical_policy:
+          high_level_policy:
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "joint"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
@@ -129,6 +145,22 @@ habitat_baselines:
               max_skill_steps: 300
       agent_1:
         hierarchical_policy:
+          high_level_policy:
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "joint"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
