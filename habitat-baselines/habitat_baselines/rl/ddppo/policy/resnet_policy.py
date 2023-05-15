@@ -148,7 +148,7 @@ class ResNetEncoder(nn.Module):
     ):
         super().__init__()
         self.no_downscaling = no_downscaling
-        # Goal/privileged information sensors
+        # Remove visual observations that contain goal/previleged information from the observation space
         skip_sensors = {ImageGoalSensor.cls_uuid, "robot_head_panoptic"}
         # Determine which visual observations are present
         self.visual_keys = [
