@@ -31,7 +31,7 @@ defaults:
   - _self_
 
 type: RearrangePickTask-v0
-base_angle_noise: 0.523599
+base_angle_noise: 0.08727 # 5 degrees
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 reward_measure: "pick_reward"
@@ -52,10 +52,11 @@ actions:
     disable_grip: False
     delta_pos_limit: 0.0125
     ee_ctrl_lim: 0.015
-    gaze_distance_range: [0.1, 3.0]
+    gaze_distance_range: [0.1, 0.8]
     center_cone_angle_threshold: 90.0
     center_cone_vector: [0.0, 1.0, 0.0]
     grasp_threshold: 0.8
+    gaze_distance_from: agent
   base_velocity:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
