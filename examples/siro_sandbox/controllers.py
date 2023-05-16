@@ -154,14 +154,7 @@ class BaselinesController(Controller):
         return action, action_data.rnn_hidden_states
     
     def on_environment_reset(self):
-        masks = torch.zeros(
-            (
-                1,
-                1,
-            ),
-            dtype=torch.bool,
-        )
-        self._actor_critic._high_level_policy.apply_mask(masks)
+        self._step_i = 0
 
 
 class GuiRobotController(GuiController):
