@@ -35,6 +35,9 @@ git lfs install
 git clone https://huggingface.co/datasets/fpss/fphab
 # 5. Change the name, and Floorplanner Scenes is ready to use
 mv fphab fpss
+*optionally, you can also do
+ln -s /path/to/fpss/fphab data/fpss
+to create a symlink
 # 6. Sanity check for one of the scenes (this should open FP scene in the habitat viewer)
 # ./build/viewer if compiling locally
 habitat-viewer --enable-physics --dataset /path/to/data/fpss/fphab/fphab.scene_dataset_config.json -- 108294897_176710602.scene_instance.json
