@@ -32,6 +32,7 @@ import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.config.default import get_agent_config
 from habitat.config.default_structured_configs import (
+    HumanoidJointActionConfig,
     PddlApplyActionConfig,
     ThirdRGBSensorConfig,
 )
@@ -70,6 +71,13 @@ class SandboxDriver(GuiAppDriver):
             config.habitat.simulator.concur_render = False
 
         self.env = habitat.Env(config=config)
+        if args.gui_controlled_agent_index is not None:
+            sim_config = config.habitat.simulator
+            gui_agent_key = sim_config.agents_order[args.gui_controlled_agent_index]
+            oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
+            if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
+                del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
+
         self.obs = self.env.reset()
 
         self.ctrl_helper = ControllerHelper(self.env, config, args, gui_input)
@@ -284,6 +292,7 @@ class SandboxDriver(GuiAppDriver):
                         )
                     )
                     assert rigid_obj
+                    rigid_obj.motion_type = habitat_sim.physics.MotionType.DYNAMIC
                     if (
                         rigid_obj.motion_type
                         == habitat_sim.physics.MotionType.DYNAMIC
@@ -890,9 +899,10 @@ if __name__ == "__main__":
     config = get_baselines_config(args.cfg, args.cfg_opts)
     # config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
-        env_config = config.habitat.environment
-        sim_config = config.habitat.simulator
-        task_config = config.habitat.task
+        habitat_config = config.habitat
+        env_config = habitat_config.environment
+        sim_config = habitat_config.simulator
+        task_config = habitat_config.task
         task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
         # task_config.actions[
         #     "agent_1_oracle_nav_action"
@@ -942,15 +952,37 @@ if __name__ == "__main__":
             )
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
-    assert (
-        args.gui_controlled_agent_index is None
-        or args.gui_controlled_agent_index >= 0
-        and args.gui_controlled_agent_index
-        < len(config.habitat.simulator.agents)
-    ), (
-        f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
-        f"must be >= 0 and < number of agents ({len(config.habitat.simulator.agents)})"
-    )
+        if args.gui_controlled_agent_index is not None:
+            assert (
+                args.gui_controlled_agent_index >= 0
+                and args.gui_controlled_agent_index
+                < len(sim_config.agents)
+            ), (
+                f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
+                f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
+            )
+            
+            gui_agent_key = sim_config.agents_order[args.gui_controlled_agent_index]
+            assert (
+                sim_config.agents[
+                    gui_agent_key
+                ].articulated_agent_type == "KinematicHumanoid"
+            ), "Only humanoid GUI control supported at the moment."
+            
+            task_actions = task_config.actions
+            gui_agent_actions = [
+                action_key for action_key in task_actions.keys() 
+                if action_key.startswith(gui_agent_key)
+            ]
+            for action_key in gui_agent_actions:
+                task_actions.pop(action_key)
+
+            task_actions[
+                f"{gui_agent_key}_humanoidjoint_action"
+            ] = HumanoidJointActionConfig(
+                agent_index=args.gui_controlled_agent_index
+            )
+
 
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
 
