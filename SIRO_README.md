@@ -68,15 +68,19 @@ see [Sandbox Tool Readme](./examples/siro_sandbox/README.md)
 
 ### Fetch-Fetch
 Fetch-Fetch in ReplicaCAD multi-agent training, single GPU. From `habitat-lab` directory:
-```
-HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle.yaml hydra/output=path
+```bash
+HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
+python habitat-baselines/habitat_baselines/run.py -m hydra/output=path \
+--config-name experiments_hab3/pop_play_kinematic_oracle.yaml
 ```
 This will create a directory `outputs/pop-play/<date>/<time>/0` and store data like checkpoints and logs into that folder. If you would like to edit the path where your run data is stored, you can edit `config/hydra/output/path.yaml` to take other paths.
 
 ### Fetch-Humanoid
 To run a Fetch-Humanoid Policy on ReplicaCAD, single GPU, you will need to run:
-```
-HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid.yaml hydra/output=path
+```bash
+HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
+python habitat-baselines/habitat_baselines/run.py -m hydra/output=path \
+--config-name experiments_hab3/pop_play_kinematic_oracle_humanoid.yaml
 ```
 Note that the default value for population here is [1,1], meaning that we will be training a single policy for each agent. The argument `rl.agent.num_pool_agents_per_type` can be changed to [1,8] for population based training, where the humanoid is samples from 8 policies.
 
@@ -98,10 +102,36 @@ You will be prompted to enter a directory `$SWEEP_SUBDIR` name where the checkpo
 To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the following instruction
 
 1. Download Floorplanner Dataset (see above).
-1. From `habitat-lab` directory, `srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 python -u habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml habitat_baselines.num_environments=1`
+1. From `habitat-lab` directory:
+```bash
+srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 \
+python -u habitat-baselines/habitat_baselines/run.py \
+--config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml \
+habitat_baselines.num_environments=1
+```
 
-or for running HRL fix policy
-`python habitat-baselines/habitat_baselines/run.py --config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat.task.measurements.force_terminate.max_accum_force=-1.0 habitat.task.measurements.force_terminate.max_instant_force=-1.0 habitat_baselines.num_environments=1 habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills`
+or for running HRL fix policy:
+```bash
+python habitat-baselines/habitat_baselines/run.py \
+--config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml \
+habitat_baselines.evaluate=True \
+habitat.simulator.kinematic_mode=True \
+habitat.simulator.step_physics=False \
+habitat.task.measurements.force_terminate.max_accum_force=-1.0 \
+habitat.task.measurements.force_terminate.max_instant_force=-1.0 \
+habitat_baselines.num_environments=1 \
+habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills
+```
+
+or for running HRL human-robot fix policy (multi-agent setting)
+```bash
+python habitat-baselines/habitat_baselines/run.py \
+--config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
+habitat_baselines.evaluate=True \
+habitat.simulator.kinematic_mode=True \
+habitat.simulator.step_physics=False \
+habitat_baselines.num_environments=1
+```
 
 TODO
 1. Generate more scenes

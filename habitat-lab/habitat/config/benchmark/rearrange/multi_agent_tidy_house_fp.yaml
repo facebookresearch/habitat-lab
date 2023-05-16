@@ -56,4 +56,4 @@ habitat:
       allow_sliding: False
       enable_physics: True
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/s108294897_176710602.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_v0.1.json.gz

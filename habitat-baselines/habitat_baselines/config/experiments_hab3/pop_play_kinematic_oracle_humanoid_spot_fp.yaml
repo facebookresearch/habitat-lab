@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange: multi_agent_tidy_house
+  - /benchmark/rearrange: multi_agent_tidy_house_fp
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /habitat/simulator/sim_sensors@habitat_baselines.eval.extra_sim_sensors.third_rgb_sensor: third_rgb_sensor
   - /habitat_baselines/rl/agent: pop_play
@@ -9,26 +9,44 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
-  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma
+  - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
     - composite_subgoal_reward
-    - runtime_perf_stats
   - /habitat/task/lab_sensors:
-    - multi_agent_all_predicates
-    - other_agent_gps
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - humanoid_joint_sensor
     - has_finished_oracle_nav
+  - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
+  - override /habitat/task/rearrange: multi_agent_tidy_house_base_spot
+  # For Spot observation space
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
   - _self_
 
 hydra:
   job:
-    name: 'pop_play'
+    name: 'pop_play_humanoid_spot_fp'
 
 habitat:
+  task:
+    actions:
+      agent_0_arm_action:
+        grip_controller: MagicGraspAction
+      agent_1_oracle_nav_with_backing_up_action:
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1
   environment:
-    max_episode_steps: 700
+    max_episode_steps: 5000
 
   gym:
     obs_keys:
@@ -42,7 +60,6 @@ habitat:
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor
-      - agent_0_other_agent_gps
       - agent_0_has_finished_oracle_nav
       - agent_1_head_depth
       - agent_1_relative_resting_position
@@ -50,13 +67,31 @@ habitat:
       - agent_1_obj_goal_sensor
       - agent_1_obj_start_gps_compass
       - agent_1_obj_goal_gps_compass
-      - agent_1_joint
       - agent_1_is_holding
       - agent_1_ee_pos
       - agent_1_localization_sensor
-      - agent_1_other_agent_gps
+      - agent_1_humanoid_joint_sensor
       - agent_1_has_finished_oracle_nav
   simulator:
+    # Add Spot robot agents
+    agents:
+      agent_0:
+        radius: 0.3
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+      agent_1:
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
+        articulated_agent_type: KinematicHumanoid
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -70,14 +105,14 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
-  num_environments: 4
+  # video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  # tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  # eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  # checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  # log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  num_environments: 32
   num_updates: -1
-  total_num_steps: 1.0e8
+  total_num_steps: 5.0e7
   log_interval: 1
   num_checkpoints: 10
   force_torch_single_threaded: True
@@ -86,62 +121,37 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'tb'
+  # writer_type: 'wb'
 
-  wb:
-    project_name: 'hab3'
-    entity: 'andrew-colab'
-    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
-
-  profiling:
-    enable_perf_logger: True
-    perf_logger_skip_interval: 20
+  # wb:
+  #   project_name: 'hab3'
+  #   entity: 'andrew-colab'
+  #   run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
-    should_load_ckpt: True
+    should_load_ckpt: False
     video_option: ["disk"]
 
   rl:
     agent:
-      num_pool_agents_per_type: [1, 8]
-      agent_sample_interval: 20
+      num_pool_agents_per_type: [1, 1]
     policy:
       agent_0:
         hierarchical_policy:
-          high_level_policy:
-            policy_input_keys:
-              - "head_depth"
-              - "joint"
-              - "is_holding"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
-              - "obj_start_gps_compass"
-              - "obj_goal_gps_compass"
-              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 300
+              max_skill_steps: 1500
       agent_1:
         hierarchical_policy:
-          high_level_policy:
-            policy_input_keys:
-              - "head_depth"
-              - "joint"
-              - "is_holding"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
-              - "obj_start_gps_compass"
-              - "obj_goal_gps_compass"
-              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 300
+              max_skill_steps: 1500
 
     ppo:
       # ppo params
@@ -153,7 +163,7 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1e-5
       max_grad_norm: 0.2
-      num_steps: 256
+      num_steps: 128
       use_gae: True
       gamma: 0.99
       tau: 0.95

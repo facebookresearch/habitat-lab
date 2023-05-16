@@ -27,6 +27,7 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - other_agent_gps
+    - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   - _self_
@@ -59,6 +60,7 @@ habitat:
       - agent_0_ee_pos
       - agent_0_localization_sensor
       - agent_0_other_agent_gps
+      - agent_0_has_finished_oracle_nav
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -70,6 +72,7 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_humanoid_joint_sensor
       - agent_1_other_agent_gps
+      - agent_1_has_finished_oracle_nav
   simulator:
     agents:
       agent_1:
@@ -144,6 +147,7 @@ habitat_baselines:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
+              stop_thresh: 0.00001
       agent_1:
         hierarchical_policy:
           # Override to use the oracle navigation skill (which will actually execute navigation).
@@ -168,6 +172,7 @@ habitat_baselines:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
+              stop_thresh: 0.00001
 
     ppo:
       # ppo params

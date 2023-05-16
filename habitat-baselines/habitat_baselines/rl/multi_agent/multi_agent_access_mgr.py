@@ -51,6 +51,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         self._agents = []
         self._agent_count_idxs = []
         self._pop_config = config.habitat_baselines.rl.agent
+        self._rnd = np.random.RandomState(seed=42)
 
         # Tracks if the agent storage is setup.
         self._is_post_init = False
@@ -141,7 +142,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         percent_done_fn: Callable[[], float],
         lr_schedule_fn: Optional[Callable[[float], float]] = None,
     ):
-        agent_count_idxs = []
+        agent_count_idxs = [0]
         agents = []
         for agent_i in range(self._pop_config.num_agent_types):
             num_agents_type = self._pop_config.num_pool_agents_per_type[
@@ -150,7 +151,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent_count_idxs.append(num_agents_type)
 
             for agent_type_i in range(num_agents_type):
-                agent_ct = agent_i * num_agents_type + agent_type_i
+                agent_ct = agent_i * agent_count_idxs[agent_i] + agent_type_i
 
                 use_resume_state = None
                 if resume_state is not None:
@@ -188,7 +189,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                         agent_name,
                     )
                 )
-        return agents, agent_count_idxs
+        return agents, agent_count_idxs[1:]
 
     def _create_single_agent(
         self,
@@ -233,7 +234,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 raise ValueError(
                     "The current code only supports sampling one agent of a given type at a time"
                 )
-            active_agents_type = np.random.choice(
+            active_agents_type = self._rnd.choice(
                 self._agent_count_idxs[agent_type_ind],
                 size=self._pop_config.num_active_agents_per_type[
                     agent_type_ind
@@ -293,6 +294,8 @@ class MultiAgentAccessMgr(AgentAccessMgr):
 
     def load_state_dict(self, state):
         for agent_i, agent in enumerate(self._agents):
+            if not agent.actor_critic.should_load_agent_state:
+                continue
             agent.load_state_dict(state[agent_i])
 
     def load_ckpt_state_dict(self, ckpt):
@@ -341,7 +344,23 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             self._num_updates % self._pop_config.agent_sample_interval == 0
             and self._pop_config.agent_sample_interval != -1
         ):
+            prev_rollouts = [
+                self._agents[i].rollouts for i in self._active_agents
+            ]
             self._sample_active()
+            cur_rollouts = [
+                self._agents[i].rollouts for i in self._active_agents
+            ]
+
+            # We just sampled new agents. We also need to reset the storage buffer current and starting state.
+            for prev_rollout, cur_rollout in zip(prev_rollouts, cur_rollouts):
+                # Need to call `insert_first` in case the rollout buffer has
+                # some special setup logic (like in `HrlRolloutStorage` for
+                # tracking the current step).
+                cur_rollout.insert_first_observations(
+                    prev_rollout.buffers["observations"][0]
+                )
+                cur_rollout.buffers[0] = prev_rollout.buffers[0]
 
     def pre_rollout(self):
         for agent in self._agents:
