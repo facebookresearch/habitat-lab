@@ -262,6 +262,7 @@ class SandboxDriver(GuiAppDriver):
             return None, None
 
         hit_info = raycast_results.hits[0]
+        # print([h.object_id for h in raycast_results.hits])
         # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
 
         if self.gui_agent_ctrl.is_grasped:
@@ -976,12 +977,12 @@ if __name__ == "__main__":
             for action_key in gui_agent_actions:
                 task_actions.pop(action_key)
 
+            action_prefix = f"{gui_agent_key}_" if len(sim_config.agents) > 1 else ""
             task_actions[
-                f"{gui_agent_key}_humanoidjoint_action"
+                f"{action_prefix}humanoidjoint_action"
             ] = HumanoidJointActionConfig(
                 agent_index=args.gui_controlled_agent_index
             )
-
 
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
 
