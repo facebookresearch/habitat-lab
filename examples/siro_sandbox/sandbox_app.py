@@ -292,7 +292,6 @@ class SandboxDriver(GuiAppDriver):
                         )
                     )
                     assert rigid_obj
-                    rigid_obj.motion_type = habitat_sim.physics.MotionType.DYNAMIC
                     if (
                         rigid_obj.motion_type
                         == habitat_sim.physics.MotionType.DYNAMIC
