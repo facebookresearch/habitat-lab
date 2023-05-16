@@ -22,22 +22,41 @@ Project-specific README for SIRo.
 
 # Floorplanner Dataset
 
-FP is actually four distinct pieces: Floorplanner scenes, Amazon-Berkeley objects, Google Scanned objects, and Floorplanner episodes.
+FP is actually four distinct pieces: (1) Floorplanner scenes, (2) Amazon-Berkeley objects, (3) Google Scanned objects, and (4) Floorplanner episodes. (YCB objects should have been already downloaded as part of the earlier SIRo install steps)
 
-1. Download Floorplanner Scenes: [fpss_osmm.zip](https://drive.google.com/file/d/1-utUMfUbbzg_zUE5GcGNdk1UEK6lSbXe/view?usp=sharing)
-2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
-3. Download FP episodes: [floorplanner.zip](https://drive.google.com/file/d/1MqhYVnnry3zHj3oqsqbUqy29aAJXz-C5/view?usp=sharing) We generate 100 episodes (nav-pick-place for two objects) using 18 scenes. This dataset is called `s_minitrain.json.gz`
-4. Extract these into `habitat-lab/data` as follows:
+1. Download Floorplanner Scenes:
 ```
-cd data
-unzip ~/Downloads/fpss_osmm.zip
-mv fpss_osmm fpss
+# 1. Go to the habitat data directory
+cd habitat-lab/data
+# 2. Install Git LFS from https://git-lfs.com/ (if not installed yet)
+# 3. Set up Git LFS for your user account (if not set up yet)
+git lfs install
+# 4. Clone dataset (it will take a while to finish)
+git clone https://huggingface.co/datasets/fpss/fphab
+# 5. Change the name, and Floorplanner Scenes is ready to use
+mv fphab fpss
+*optionally, you can also do
+ln -s /path/to/fpss/fphab data/fpss
+to create a symlink
+# 6. Sanity check for one of the scenes (this should open FP scene in the habitat viewer)
+# ./build/viewer if compiling locally
+habitat-viewer --enable-physics --dataset /path/to/data/fpss/fphab/fphab.scene_dataset_config.json -- 108294897_176710602.scene_instance.json
+```
+2. Download [Amazon and Google object archives](https://drive.google.com/drive/folders/1x6i3sDYheCWoi59lv27ZyPG4Ii2GhEZB)
+3. Extract these two object datasets into `habitat-lab/data` as follows:
+```
 cd objects
 tar -xvf ~/Downloads/google_object_dataset.tar.gz
 tar -xvf ~/Downloads/amazon_berkeley.tar.gz
-cd ../datasets
-unzip ~/Downloads/floorplanner.zip
 ```
+4. Download FP episodes:
+```
+# Go to the habitat datasets directory
+cd habitat-lab/data/datasets
+# Clone dataset
+git clone https://github.com/jimmytyyang/floorplanner.git
+```
+5. Now you should be able to use FP. For more detail (e.g., stats, train-test split), please read [here](https://docs.google.com/document/d/11m66SUawGPFxWYHN2E8rDw3g679dpiBf8Es-o3PRl5I/edit?usp=sharing).
 
 # Sandbox Tool
 
