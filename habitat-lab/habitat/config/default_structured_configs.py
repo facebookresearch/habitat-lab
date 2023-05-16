@@ -691,11 +691,11 @@ class OvmmRotDistToPlaceGoalMeasurementConfig(
 class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
     type: str = "OvmmNavToPickSucc"
 
+
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToObjSuccMeasurementConfig(
-    NavToObjSuccessMeasurementConfig
-):
+class OvmmNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
     type: str = "OvmmNavToObjSucc"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavOrientToPickSuccMeasurementConfig(

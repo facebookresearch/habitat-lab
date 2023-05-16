@@ -15,7 +15,11 @@ from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task import (
     CatDynNavRLEnv,
 )
-from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import RotDistToGoal, NavToObjSuccess, NavToObjReward
+from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
+    NavToObjReward,
+    NavToObjSuccess,
+    RotDistToGoal,
+)
 
 
 @registry.register_sensor
@@ -207,10 +211,11 @@ class OvmmRotDistToGoal(RotDistToGoal):
         targ = goal_pos[path.closest_end_point_index]
         return targ
 
+
 @registry.register_measure
 class OvmmNavToObjSucc(NavToObjSuccess):
     """Whether the agent has navigated within `success_distance` of the center of the closest candidate goal object and oriented itself within `success_angle` of the receptacle
-    
+
     Used for training nav skills used in OVMM baseline"""
 
     cls_uuid: str = "ovmm_nav_to_obj_success"
@@ -218,7 +223,6 @@ class OvmmNavToObjSucc(NavToObjSuccess):
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return OvmmNavToObjSucc.cls_uuid
-
 
     @property
     def _rot_dist_to_goal_cls_uuid(self):
@@ -236,7 +240,7 @@ class OvmmNavToObjReward(NavToObjReward):
     @property
     def _nav_to_obj_succ_cls_uuid(self):
         return OvmmNavToObjSucc.cls_uuid
-    
+
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OvmmRotDistToGoal.cls_uuid

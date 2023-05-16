@@ -8,7 +8,6 @@ import json
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union

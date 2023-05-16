@@ -153,7 +153,9 @@ class NavToObjReward(RearrangeReward):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = 0.0
-        cur_dist = task.measurements.measures[self._dist_to_goal_cls_uuid].get_metric()
+        cur_dist = task.measurements.measures[
+            self._dist_to_goal_cls_uuid
+        ].get_metric()
         if self._prev_dist < 0.0:
             dist_diff = 0.0
         else:
