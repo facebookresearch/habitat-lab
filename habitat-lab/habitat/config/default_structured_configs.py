@@ -1422,6 +1422,7 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    rest_pose_data: str = ""
 
 
 @dataclass
