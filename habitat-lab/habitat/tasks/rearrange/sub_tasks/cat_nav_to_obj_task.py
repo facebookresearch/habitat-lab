@@ -32,6 +32,14 @@ class CatDynNavRLEnv(DynNavRLEnv):
     def reset(self, episode: Episode):
         obs = super().reset(episode)
         self._cache_receptacles()
+        self._nav_to_obj_goal = np.stack(
+            [
+                view_point.agent_state.position
+                for goal in episode.candidate_objects
+                for view_point in goal.view_points
+            ],
+            axis=0,
+        )
         return obs
 
     def _cache_receptacles(self):

@@ -118,7 +118,7 @@ class ResizeShortestEdgeConfig(ObsTransformConfig):
         "depth",
         "semantic",
     )
-    semantic_key: str = "semantic"
+    semantic_keys: Tuple[str, ...] = ("semantic",)
 
 
 cs.store(

@@ -8,7 +8,6 @@ import json
 import os
 import random
 from abc import ABC, abstractmethod
-from collections import namedtuple
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -101,7 +100,6 @@ class Receptacle(ABC):
     ) -> mn.Vector3:
         """
         Sample a uniform random point within Receptacle in local space.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
 
@@ -165,7 +163,6 @@ class Receptacle(ABC):
     ) -> mn.Vector3:
         """
         Sample a uniform random point in the local Receptacle volume and then transform it into global space.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center.
         """
         local_sample = self.sample_uniform_local(sample_region_scale)
@@ -294,7 +291,6 @@ class AABBReceptacle(Receptacle):
     ) -> mn.Vector3:
         """
         Sample a uniform random point in the local AABB.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
         scaled_region = mn.Range3D.from_center(
@@ -574,7 +570,6 @@ class TriangleMeshReceptacle(Receptacle):
     ) -> mn.Vector3:
         """
         Sample a uniform random point from the mesh.
-
         :param sample_region_scale: defines a XZ scaling of the sample region around its center. For example to constrain object spawning toward the center of a receptacle.
         """
 
@@ -623,7 +618,6 @@ def get_all_scenedataset_receptacles(
     """
     Scrapes the active SceneDataset from a Simulator for all receptacle names defined in rigid/articulated object and stage templates for investigation and preview purposes.
     Note this will not include scene-specific overrides defined in scene_config.json files. Only receptacles defined in object_config.json, ao_config.json, and stage_config.json files or added programmatically to associated Attributes objects will be found.
-
     Returns a dict with keys {"stage", "rigid", "articulated"} mapping object template handles to lists of receptacle names.
 
     :param sim: Simulator must be provided.
@@ -766,13 +760,11 @@ def parse_receptacles_from_user_config(
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Parse receptacle metadata from the provided user subconfig object.
-
     :param user_subconfig: The Configuration object containing metadata parsed from the "user_defined" JSON field for rigid/articulated object and stage configs.
     :param parent_object_handle: The instance handle of the rigid or articulated object to which constructed Receptacles are attached. None or globally defined stage Receptacles.
     :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
     :param valid_link_names: An indexed list of link names for validating configured Receptacle attachments. Provided only for ArticulatedObjects.
     :param ao_uniform_scaling: Uniform scaling applied to the parent AO is applied directly to the Receptacle.
-
     Construct and return a list of Receptacle objects. Multiple Receptacles can be defined in a single user subconfig.
     """
     receptacles: List[

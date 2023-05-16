@@ -162,6 +162,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 @registry.register_sensor
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
+    panoptic_uuid: str = "robot_head_panoptic"
 
     def __init__(
         self,
@@ -171,10 +172,16 @@ class ObjectSegmentationSensor(Sensor):
         **kwargs: Any,
     ):
         self._config = config
-        self._dimensionality = self._config.dimensionality
         self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
+
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
@@ -186,8 +193,8 @@ class ObjectSegmentationSensor(Sensor):
     def _get_observation_space(self, *args, **kwargs):
         return spaces.Box(
             shape=(
-                self._dimensionality,
-                self._dimensionality,
+                self._resolution[0],
+                self._resolution[1],
                 1,
             ),
             low=0,
@@ -198,19 +205,61 @@ class ObjectSegmentationSensor(Sensor):
     def get_observation(self, observations, *args, episode, task, **kwargs):
         if np.random.random() < self._blank_out_prob:
             return np.zeros_like(
-                observations["robot_head_panoptic"], dtype=np.uint8
+                observations[self.panoptic_uuid], dtype=np.uint8
             )
         else:
             segmentation_sensor = np.zeros_like(
-                observations["robot_head_panoptic"], dtype=np.uint8
+                observations[self.panoptic_uuid], dtype=np.uint8
             )
             for g in episode.candidate_objects:
                 segmentation_sensor = segmentation_sensor | (
-                    observations["robot_head_panoptic"]
+                    observations[self.panoptic_uuid]
                     == self._sim.scene_obj_ids[int(g.object_id)]
                     + self._instance_ids_start
                 )
             return segmentation_sensor
+
+
+@registry.register_sensor
+class RecepSegmentationSensor(ObjectSegmentationSensor):
+    cls_uuid: str = "recep_segmentation"
+
+    def _get_recep_goals(self, episode):
+        raise NotImplementedError
+
+    def get_observation(self, observations, *args, episode, task, **kwargs):
+        recep_goals = self._get_recep_goals(episode)
+        if np.random.random() < self._config.blank_out_prob:
+            return np.zeros_like(
+                observations[self.panoptic_uuid], dtype=np.uint8
+            )
+        else:
+            segmentation_sensor = np.zeros_like(
+                observations[self.panoptic_uuid], dtype=np.uint8
+            )
+            for g in recep_goals:
+                segmentation_sensor = segmentation_sensor | (
+                    observations[self.panoptic_uuid]
+                    == int(g.object_id)
+                    + self._sim.habitat_config.instance_ids_start
+                )
+            return segmentation_sensor
+
+
+@registry.register_sensor
+class StartRecepSegmentationSensor(RecepSegmentationSensor):
+    cls_uuid: str = "start_recep_segmentation"
+
+    def _get_recep_goals(self, episode):
+        return episode.candidate_start_receps
+
+
+@registry.register_sensor
+class GoalRecepSegmentationSensor(RecepSegmentationSensor):
+    cls_uuid: str = "goal_recep_segmentation"
+
+    def _get_recep_goals(self, episode):
+        return episode.candidate_goal_receps
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -1170,3 +1219,46 @@ class BadCalledTerminate(Measure):
         ].get_metric()
 
         self._metric = (not is_succ) and does_action_want_stop
+
+
+@registry.register_sensor
+class CameraPoseSensor(Sensor):
+    cls_uuid: str = "camera_pose"
+
+    def __init__(
+        self,
+        sim,
+        config,
+        task,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        self._sim = sim
+        self._config = config
+        self._task = task
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def _get_sensor_type(self, *args: Any, **kwargs: Any):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args: Any, **kwargs: Any):
+
+        return spaces.Box(
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            shape=(4, 4),
+            dtype=np.float32,
+        )
+
+    def get_observation(
+        self,
+        observations,
+        *args: Any,
+        **kwargs: Any,
+    ) -> Optional[np.ndarray]:
+        return self._sim._sensors[
+            "robot_head_rgb"
+        ]._sensor_object.node.transformation

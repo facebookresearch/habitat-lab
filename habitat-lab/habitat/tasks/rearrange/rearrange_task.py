@@ -74,7 +74,6 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_robot = should_place_robot
-        self._cur_observations = None
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
@@ -173,7 +172,7 @@ class RearrangeTask(NavigationTask):
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()
         self.prev_coll_accum = CollisionDetails()
-        self.should_end = False
+        self._should_end = False
         self._done = False
         self._cur_episode_step = 0
         if fetch_observations:
@@ -190,7 +189,6 @@ class RearrangeTask(NavigationTask):
             observations=obs, episode=episode, task=self
         )
         obs.update(task_obs)
-        self._cur_observations = obs
         return obs
 
     def _is_violating_safe_drop(self, action_args):

@@ -2,25 +2,36 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_nav_to_obj
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
+  - /habitat/task/rearrange: ovmm
   - /habitat/dataset/rearrangement: hssd
   - _self_
 
 habitat:
+  seed: 7
   gym:
     auto_name: NavToObj
     obs_keys:
       - robot_head_depth
-      - object_embedding
-      - ovmm_nav_goal_segmentation
-      - receptacle_segmentation
+      - robot_head_rgb
+      - robot_third_rgb
       - start_receptacle
+      - goal_receptacle
       - robot_start_gps
       - robot_start_compass
       - joint
+      - object_segmentation
+      - start_recep_segmentation
+      - goal_recep_segmentation
+      - object_category
+      - camera_pose
+      - object_embedding
+      - is_holding
+      - relative_resting_position
+      - ovmm_nav_goal_segmentation
+      - receptacle_segmentation
   environment:
-    max_episode_steps: 400
+    max_episode_steps: 1250
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
@@ -29,10 +40,8 @@ habitat:
       - data/objects/ai2thorhab/configs/objects/
       - data/objects/floorplanner/configs/objects/
     debug_render_goal: False
-    debug_render: False
     concur_render: True
     auto_sleep: True
-    requires_textures: False
     kinematic_mode: True
     agents:
       main_agent:
@@ -40,16 +49,26 @@ habitat:
         height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
+        ik_arm_urdf: null
         sim_sensors:
+           head_rgb_sensor:
+             height: 640
+             width: 480
+             hfov: 42
            head_depth_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
            head_panoptic_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
     needs_markers: false
+  dataset:
+    split: val
+
+  task:
+    goal_type: 'ovmm'
