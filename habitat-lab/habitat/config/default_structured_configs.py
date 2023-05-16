@@ -1818,7 +1818,7 @@ cs.store(
     node=AnswerAccuracyMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
+    package="habitat.task.measurements.ovmm_rot_dist_to_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_goal",
     node=OvmmRotDistToGoalMeasurementConfig,

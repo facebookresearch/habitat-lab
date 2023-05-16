@@ -13,7 +13,7 @@ habitat:
     obs_keys:
       - robot_head_depth
       - object_embedding
-      - cat_nav_goal_segmentation
+      - ovmm_nav_goal_segmentation
       - receptacle_segmentation
       - start_receptacle
       - robot_start_gps
