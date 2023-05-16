@@ -654,6 +654,11 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
+    type: str = "OvmmNavToObjReward"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class OvmmDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
     type: str = "OvmmDistToPickGoal"
 
@@ -686,6 +691,11 @@ class OvmmRotDistToPlaceGoalMeasurementConfig(
 class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
     type: str = "OvmmNavToPickSucc"
 
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavToObjSuccMeasurementConfig(
+    NavToObjSuccessMeasurementConfig
+):
+    type: str = "OvmmNavToObjSucc"
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavOrientToPickSuccMeasurementConfig(
@@ -1962,6 +1972,12 @@ cs.store(
     node=DistToGoalMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.ovmm_nav_to_obj_reward",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_obj_reward",
+    node=OvmmNavToObjRewardMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.dist_to_pick_goal",
     group="habitat/task/measurements",
     name="ovmm_dist_to_pick_goal",
@@ -1996,6 +2012,12 @@ cs.store(
     group="habitat/task/measurements",
     name="ovmm_nav_to_place_succ",
     node=OvmmNavToPlaceSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_nav_to_obj_success",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_obj_success",
+    node=OvmmNavToObjSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_pick_succ",

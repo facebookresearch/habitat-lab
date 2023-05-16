@@ -120,13 +120,25 @@ class NavToObjReward(RearrangeReward):
     def _get_uuid(*args, **kwargs):
         return NavToObjReward.cls_uuid
 
+    @property
+    def _dist_to_goal_cls_uuid(self):
+        return DistToGoal.cls_uuid
+
+    @property
+    def _nav_to_obj_succ_cls_uuid(self):
+        return NavToObjSuccess.cls_uuid
+
+    @property
+    def _rot_dist_to_goal_cls_uuid(self):
+        return RotDistToGoal.cls_uuid
+
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
-                NavToObjSuccess.cls_uuid,
-                DistToGoal.cls_uuid,
-                RotDistToGoal.cls_uuid,
+                self._nav_to_obj_succ_cls_uuid,
+                self._dist_to_goal_cls_uuid,
+                self._rot_dist_to_goal_cls_uuid,
             ],
         )
         self._cur_angle_dist = -1.0
@@ -141,7 +153,7 @@ class NavToObjReward(RearrangeReward):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         reward = 0.0
-        cur_dist = task.measurements.measures[DistToGoal.cls_uuid].get_metric()
+        cur_dist = task.measurements.measures[self._dist_to_goal_cls_uuid].get_metric()
         if self._prev_dist < 0.0:
             dist_diff = 0.0
         else:
@@ -152,7 +164,7 @@ class NavToObjReward(RearrangeReward):
 
         if self._should_reward_turn and cur_dist < self._turn_reward_dist:
             angle_dist = task.measurements.measures[
-                RotDistToGoal.cls_uuid
+                self._rot_dist_to_goal_cls_uuid
             ].get_metric()
 
             if self._cur_angle_dist < 0:
