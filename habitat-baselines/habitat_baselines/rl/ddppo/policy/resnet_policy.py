@@ -8,7 +8,6 @@
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
-import clip
 import numpy as np
 import torch
 from gym import spaces
@@ -41,6 +40,11 @@ from habitat_baselines.utils.common import get_num_actions
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
+try:
+    import clip
+except ImportError:
+    clip = None
 
 
 @baseline_registry.register_policy
@@ -266,6 +270,11 @@ class ResNetCLIPEncoder(nn.Module):
         )
 
         if not self.is_blind:
+            if clip is None:
+                raise ImportError(
+                    "Need to install CLIP (run `pip install git+https://github.com/openai/CLIP.git@40f5484c1c74edd83cb9cf687c6ab92b28d8b656`)"
+                )
+
             model, preprocess = clip.load("RN50")
 
             # expected input: C x H x W (np.uint8 in [0-255])

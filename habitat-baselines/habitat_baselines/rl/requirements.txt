@@ -2,4 +2,3 @@ moviepy>=1.0.1
 torch>=1.3.1
 protobuf==3.20.1
 tensorboard==2.8.0
-git+https://github.com/openai/CLIP.git@40f5484c1c74edd83cb9cf687c6ab92b28d8b656
