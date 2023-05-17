@@ -19,7 +19,6 @@ from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.utils.common import flatten_dict
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.tensor_dict import TensorDict
-from habitat_baselines.config.default import get_config as get_baselines_config
 from habitat_baselines.utils.common import get_action_space_info
 
 
@@ -61,30 +60,22 @@ class BaselinesController(Controller):
         self,
         agent_idx,
         is_multi_agent,
-        cfg_path,
+        config,
         env,
         sample_random_baseline_base_vel=False,
     ):
         super().__init__(agent_idx, is_multi_agent)
-
-        config = get_baselines_config(
-            cfg_path,
-            [
-                # "habitat_baselines/rl/policy=hl_fixed",
-                # "habitat_baselines/rl/policy/hierarchical_policy/defined_skills=oracle_skills",
-                "habitat_baselines.num_environments=1",
-                "habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills=oracle_skills",
-                f"habitat.task.task_spec={env._config.task.task_spec}",
-                f"habitat.task.pddl_domain_def={env._config.task.pddl_domain_def}",
-            ],
-        )
+        agent_name = config.habitat.simulator.agents_order[agent_idx]
         policy_cls = baseline_registry.get_policy(
-            config.habitat_baselines.rl.policy.main_agent.name
+            config.habitat_baselines.rl.policy[agent_name].name
         )
         self._env_ac = env.action_space
         env_obs = env.observation_space
-        self._agent_k = f"agent_{agent_idx}_"
-        if is_multi_agent:
+        if self._is_multi_agent:
+            self._agent_k = f"agent_{self._agent_idx}_"
+        else:
+            self._agent_k = ""
+        if True:
             self._env_ac = clean_dict(self._env_ac, self._agent_k)
             env_obs = clean_dict(env_obs, self._agent_k)
 
@@ -97,6 +88,7 @@ class BaselinesController(Controller):
             gym_obs_space,
             self._gym_ac_space,
             orig_action_space=self._env_ac,
+            agent_name=agent_name,
         )
         self._action_shape, _ = get_action_space_info(self._gym_ac_space)
         self._step_i = 0
@@ -130,9 +122,10 @@ class BaselinesController(Controller):
         obs = flatten_dict(obs)
         obs = TensorDict(
             {
-                k[len(self._agent_k) :]: torch.tensor(v).unsqueeze(0)
+                k[
+                    len(self._agent_k) if k.startswith(self._agent_k) else 0 :
+                ]: torch.tensor(v).unsqueeze(0)
                 for k, v in obs.items()
-                if k.startswith(self._agent_k)
             }
         )
         with torch.no_grad():
@@ -159,6 +152,9 @@ class BaselinesController(Controller):
             for k, v in action["action_args"].items()
         }
         return action, action_data.rnn_hidden_states
+
+    def on_environment_reset(self):
+        self._step_i = 0
 
 
 class GuiRobotController(GuiController):
@@ -323,6 +319,7 @@ class GuiHumanoidController(GuiController):
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._cam_yaw = 0
 
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
@@ -334,6 +331,7 @@ class GuiHumanoidController(GuiController):
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
+        self._cam_yaw = 0
 
     def get_random_joint_action(self):
         # Add random noise to human arms but keep global transform
@@ -395,7 +393,7 @@ class GuiHumanoidController(GuiController):
             assert not self.is_grasped
             self._get_grasp_mgr().snap_to_obj(grasp_object_id)
 
-        elif drop_pos:
+        elif drop_pos is not None:
             assert self.is_grasped
             grasp_object_id = self._get_grasp_mgr().snap_idx
             self._get_grasp_mgr().desnap()
@@ -504,7 +502,7 @@ class GuiHumanoidController(GuiController):
 
 
 class ControllerHelper:
-    def __init__(self, env, args, gui_input):
+    def __init__(self, env, config, args, gui_input):
         self._env = env
         self.n_robots = len(env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
@@ -514,7 +512,8 @@ class ControllerHelper:
             BaselinesController(
                 agent_index,
                 is_multi_agent,
-                "rearrange/rl_hierarchical.yaml",
+                # "rearrange/rl_hierarchical.yaml",
+                config,
                 env,
                 sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
             )
