@@ -18,6 +18,7 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
+    - has_finished_oracle_nav
   - override /habitat/task/actions:
     - base_velocity
     - rearrange_stop
@@ -44,6 +45,7 @@ habitat:
       - humanoid_joint_sensor
       - localization_sensor
       - is_holding
+      - has_finished_oracle_nav
   simulator:
     agents:
       main_agent:
@@ -67,6 +69,7 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
+              - has_finished_oracle_nav
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"
