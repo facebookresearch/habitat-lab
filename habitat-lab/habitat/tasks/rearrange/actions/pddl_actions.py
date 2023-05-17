@@ -6,7 +6,6 @@ import numpy as np
 from gym import spaces
 
 from habitat.core.registry import registry
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.grip_actions import ArticulatedAgentAction
 
 
@@ -85,7 +84,7 @@ class PddlApplyAction(ArticulatedAgentAction):
 
             cur_i += action.n_args
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         self._prev_action = None
         apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
         self._was_prev_action_invalid = False
@@ -94,8 +93,3 @@ class PddlApplyAction(ArticulatedAgentAction):
         )
         if not inputs_outside:
             self._apply_action(apply_pddl_action)
-
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.arm_action)
-        else:
-            return {}
