@@ -153,6 +153,7 @@ habitat_baselines:
         hierarchical_policy:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           high_level_policy:
+            add_arm_rest: False
             allowed_actions:
               - nav_to_receptacle_by_name
               - nav_to_goal
