@@ -201,12 +201,6 @@ class SandboxDriver(GuiAppDriver):
                     self._debug_line_render.draw_circle(
                         goal_position, end_radius, color, 24
                     )
-                    # draw can place area
-                    can_place_position = goal_position.copy()
-                    can_place_position[1] = self.get_agent_feet_height()
-                    self._debug_line_render.draw_circle(
-                        can_place_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
-                    )
                     # reference code to display a box
                     # box_size = 0.3
                     # self._debug_line_render.draw_box(
@@ -214,6 +208,14 @@ class SandboxDriver(GuiAppDriver):
                     #     goal_position + box_size / 2,
                     #     color
                     # )
+                    if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
+                        # draw can place area
+                        can_place_position = goal_position.copy()
+                        can_place_position[1] = self.get_agent_feet_height()
+                        self._debug_line_render.draw_circle(
+                            can_place_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
+                        )
+
                     assert self._held_target_obj_idx is not None
                     if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                         translation = self.get_agent_translation()
@@ -255,12 +257,13 @@ class SandboxDriver(GuiAppDriver):
                         this_target_pos + box_size / 2,
                         color,
                     )
-                    # draw can grasp area
-                    can_grasp_position = this_target_pos.copy()
-                    can_grasp_position[1] = self.get_agent_feet_height()
-                    self._debug_line_render.draw_circle(
-                        can_grasp_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
-                    )
+                    if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
+                        # draw can grasp area
+                        can_grasp_position = this_target_pos.copy()
+                        can_grasp_position[1] = self.get_agent_feet_height()
+                        self._debug_line_render.draw_circle(
+                            can_grasp_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
+                        )
 
             # pick up an object
             if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
@@ -272,22 +275,22 @@ class SandboxDriver(GuiAppDriver):
                 if closet_obj_dist < self._can_grasp_place_threshold:
                     self._held_target_obj_idx = idxs[closet_obj_idx]
 
-        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
-        grasp_object_id = (
-            sim.scene_obj_ids[self._held_target_obj_idx] 
-            if self._held_target_obj_idx is not None  and not self.gui_agent_ctrl.is_grasped 
-            else None
-        )
+        if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
+            grasp_object_id = (
+                sim.scene_obj_ids[self._held_target_obj_idx] 
+                if self._held_target_obj_idx is not None  and not self.gui_agent_ctrl.is_grasped 
+                else None
+            )
 
-        walk_dir = (
-            self.viz_and_get_humanoid_walk_dir()
-            if not self._first_person_mode
-            else None
-        )
+            walk_dir = (
+                self.viz_and_get_humanoid_walk_dir()
+                if not self._first_person_mode
+                else None
+            )
 
-        self.gui_agent_ctrl.set_act_hints(
-            walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
-        )
+            self.gui_agent_ctrl.set_act_hints(
+                walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
+            )
 
     def get_grasped_objects_idxs(self):
         sim = self.get_sim()
@@ -388,9 +391,12 @@ class SandboxDriver(GuiAppDriver):
 
     def _camera_pitch_and_yaw_mouse_control(self):
         enable_mouse_control = self.gui_input.get_key(GuiInput.KeyNS.R) and (
-            self._first_person_mode
-            and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
-        ) or (not self._first_person_mode)
+            (
+                self._first_person_mode
+                and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
+            ) 
+            or (not self._first_person_mode)
+        )
         
         if enable_mouse_control:
             # update yaw and pitch by scale * mouse relative position delta
