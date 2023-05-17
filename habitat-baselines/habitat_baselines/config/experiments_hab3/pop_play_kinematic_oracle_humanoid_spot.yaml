@@ -91,7 +91,7 @@ habitat:
       agent_1:
         articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
         articulated_agent_type: 'KinematicHumanoid'
-        rest_pose_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
         motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1

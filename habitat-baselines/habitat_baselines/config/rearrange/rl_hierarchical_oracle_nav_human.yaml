@@ -47,16 +47,26 @@ habitat:
   simulator:
     agents:
       main_agent:
-        articulated_agent_urdf: 'data/female2_0.urdf'
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
         articulated_agent_type: KinematicHumanoid
-        rest_pose_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
-        motion_data_path: "data/walking_motion_processed_smplx.pkl"
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 
 habitat_baselines:
   rl:
     policy:
       main_agent:
         hierarchical_policy:
+          high_level_policy:
+            policy_input_keys:
+              - "head_depth"
+              - "humanoid_joint_sensor"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"

@@ -87,7 +87,6 @@ class HumanoidRearrangeController:
         with open(walk_pose_path, "rb") as f:
             walk_data = pkl.load(f)
         walk_info = walk_data["walk_motion"]
-
         self.walk_motion = Motion(
             walk_info["joints_array"],
             walk_info["transform_array"],
@@ -103,7 +102,6 @@ class HumanoidRearrangeController:
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
 
-        self.draw_fps = draw_fps
 
         # These two matrices store the global transformation of the base
         # as well as the transformation caused by the walking gait

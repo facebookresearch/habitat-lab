@@ -87,7 +87,7 @@ class KinematicHumanoid(MobileManipulator):
         """
         with open(rest_pose_path, 'rb') as f:
             rest_pose = pkl.load(f)
-
+            rest_pose = rest_pose["pose_motion"]
         self.rest_joints = list(rest_pose["joints_array"][0])
         self.rest_matrix = rest_pose["transform_array"][0]
     
