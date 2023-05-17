@@ -60,6 +60,7 @@ habitat_baselines:
       main_agent:
         hierarchical_policy:
           high_level_policy:
+            add_arm_rest: False
             policy_input_keys:
               - "head_depth"
               - "humanoid_joint_sensor"
