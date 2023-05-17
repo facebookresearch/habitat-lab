@@ -32,7 +32,7 @@ class KinematicHumanoid(MobileManipulator):
             wheel_mtr_vel_gain=None,
             wheel_mtr_max_impulse=None,
             ee_offset=[mn.Vector3(), mn.Vector3()],
-            ee_links=[20, 39],
+            ee_links=[20, 39], # Switch to 14-18 if using SMPL
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "head": ArticulatedAgentCameraParams(
