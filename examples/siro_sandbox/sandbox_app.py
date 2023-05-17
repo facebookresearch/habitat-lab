@@ -223,9 +223,7 @@ class SandboxDriver(GuiAppDriver):
                 assert self._held_target_obj_idx is not None
                 if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                     translation = self.get_agent_translation()
-                    dist_to_obj = np.linalg.norm(
-                        goal_position - translation
-                    )
+                    dist_to_obj = np.linalg.norm(goal_position - translation)
                     if dist_to_obj < self._can_grasp_place_threshold:
                         self._held_target_obj_idx = None
                         # object_drop_height = 0.15
@@ -972,13 +970,14 @@ if __name__ == "__main__":
             gui_agent_key = sim_config.agents_order[
                 args.gui_controlled_agent_index
             ]
-            if not (
+            if (
                 sim_config.agents[gui_agent_key].articulated_agent_type
-                == "KinematicHumanoid"
+                != "KinematicHumanoid"
             ):
                 print(
                     f"Selected agent for GUI control is of type {sim_config.agents[gui_agent_key].articulated_agent_type}, "
-                    "but only KinematicHumanoid is supported at the moment.")
+                    "but only KinematicHumanoid is supported at the moment."
+                )
                 exit()
 
             task_actions = task_config.actions
