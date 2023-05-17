@@ -720,7 +720,7 @@ class SandboxDriver(GuiAppDriver):
         tutorial_stages: List[TutorialStage] = []
 
         sim = self.get_sim()
-        camera_fov_deg = 90  # TODO: Assume this FOV
+        camera_fov_deg = 90  # TODO: Get the actual FOV
 
         # Scene overview
         scene_root_node = sim.get_active_scene_graph().get_root_node()
@@ -728,43 +728,29 @@ class SandboxDriver(GuiAppDriver):
         scene_top_down_lookat = _lookat_bounding_box_top_down(
             camera_fov_deg, scene_target_bb
         )
-
         tutorial_stages.append(
             TutorialStage(
                 stage_duration=5.0, next_lookat=scene_top_down_lookat
             )
         )
 
-        # Target focus
+        # Show all the targets
+        pathfinder = sim.pathfinder
         idxs, goal_pos = sim.get_targets()
         scene_positions = sim.get_scene_pos()
         target_positions = scene_positions[idxs]
         for target_pos in target_positions:
-            # target_pos = target_positions[i]
-            target_bb = mn.Range3D.from_center(
-                mn.Vector3(target_pos), mn.Vector3(0.5, 0.5, 0.5)
-            )  # Assume 1x1x1m bounding box
-            next_lookat = _lookat_bounding_box_top_down(
-                camera_fov_deg, target_bb
+            next_lookat = _lookat_point_from_closest_navmesh_pos(
+                mn.Vector3(target_pos), 0.75, 1.5, pathfinder
             )
             tutorial_stages.append(
                 TutorialStage(
-                    stage_duration=2.0,
-                    transition_duration=1.5,
+                    stage_duration=3.0,
+                    transition_duration=2.0,
                     prev_lookat=tutorial_stages[
                         len(tutorial_stages) - 1
                     ]._next_lookat,
                     next_lookat=next_lookat,
-                )
-            )
-            tutorial_stages.append(
-                TutorialStage(
-                    stage_duration=1.0,
-                    transition_duration=1.0,
-                    prev_lookat=tutorial_stages[
-                        len(tutorial_stages) - 1
-                    ]._next_lookat,
-                    next_lookat=scene_top_down_lookat,
                 )
             )
 
@@ -938,7 +924,46 @@ def _lookat_bounding_box_top_down(
         + abs(target_dimension / math.sin(camera_fov_rad / 2)),
         target_bb.center_z(),
     )
-    return (camera_position, target_bb.center() + mn.Vector3(0.0, 0.0, 0.0001))
+    epsilon = 0.0001  # Because of gimbal lock, we apply an epsilon bias to force a camera orientation
+    return (
+        camera_position,
+        target_bb.center() + mn.Vector3(0.0, 0.0, epsilon),
+    )
+
+
+def _lookat_point_from_closest_navmesh_pos(
+    target: mn.Vector3,
+    distance_from_target: float,
+    viewpoint_height: float,
+    pathfinder: habitat_sim.PathFinder,
+) -> Tuple[mn.Vector3, mn.Vector3]:
+    r"""
+    Creates look-at vectors for a viewing a point from a nearby navigable point (with a height offset).
+    Helps finding a viewpoint that is not occluded by a wall or other obstacle.
+    """
+    # Look up for a camera position by sampling radially around the target for a navigable position.
+    navigable_point = None
+    sample_count = 8
+    for i in range(sample_count):
+        radial_angle = i * 2.0 * math.pi / float(sample_count)
+        dist_x = math.sin(radial_angle) * distance_from_target
+        dist_z = math.cos(radial_angle) * distance_from_target
+        candidate = mn.Vector3(target.x + dist_x, target.y, target.z + dist_z)
+        if pathfinder.is_navigable(candidate, 3.0):
+            navigable_point = candidate
+
+    if navigable_point == None:
+        # Fallback to a default point
+        navigable_point = mn.Vector3(
+            target.x + distance_from_target, target.y, target.z
+        )
+
+    camera_position = mn.Vector3(
+        navigable_point.x,
+        navigable_point.y + viewpoint_height,
+        navigable_point.z,
+    )
+    return (camera_position, target)
 
 
 def parse_debug_third_person(args, framebuffer_size):
