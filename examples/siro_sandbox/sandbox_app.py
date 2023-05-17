@@ -132,6 +132,7 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self._cursor_style = None
+        self._can_grasp_place_threshold = args.can_grasp_place_threshold
 
     @property
     def lookat_offset_yaw(self):
@@ -185,7 +186,8 @@ class SandboxDriver(GuiAppDriver):
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
         end_radius = self.env._config.task.obj_succ_thresh
-
+        drop_pos=None
+        
         if self._held_target_obj_idx != None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             try:
@@ -199,6 +201,12 @@ class SandboxDriver(GuiAppDriver):
                     self._debug_line_render.draw_circle(
                         goal_position, end_radius, color, 24
                     )
+                    # draw can place area
+                    can_place_position = goal_position.copy()
+                    can_place_position[1] = self.get_agent_feet_height()
+                    self._debug_line_render.draw_circle(
+                        can_place_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
+                    )
                     # reference code to display a box
                     # box_size = 0.3
                     # self._debug_line_render.draw_box(
@@ -206,10 +214,28 @@ class SandboxDriver(GuiAppDriver):
                     #     goal_position + box_size / 2,
                     #     color
                     # )
+                    assert self._held_target_obj_idx is not None
+                    if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                        translation = self.get_agent_translation()
+                        dist_to_obj = np.linalg.norm(goal_position - translation)
+                        if dist_to_obj < self._can_grasp_place_threshold:
+                            self._held_target_obj_idx = None
+                            # object_drop_height = 0.15
+                            drop_pos = (
+                                goal_position 
+                                # + mn.Vector3(0, object_drop_height, 0)
+                            )
+        
             except ValueError:
                 pass
         else:
+            grasped_objects_idxs = self.get_grasped_objects_idxs()
+            # draw nav_hint and target box
             for i in range(len(idxs)):
+                # object is grasped
+                if i in grasped_objects_idxs:
+                    continue
+
                 color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
                 this_target_pos = target_pos[i]
                 threshold = 0.2  # distance in meters
@@ -229,87 +255,65 @@ class SandboxDriver(GuiAppDriver):
                         this_target_pos + box_size / 2,
                         color,
                     )
-
-    def viz_and_get_grasp_drop_hints(self):
-        object_color = mn.Color3(255 / 255, 255 / 255, 0)
-        object_highlight_radius = 0.1
-        object_drop_height = 0.15
-
-        ray = self.gui_input.mouse_ray
-
-        if not ray or ray.direction.y >= 0:
-            return None, None
-
-        # hack move ray below ceiling (todo: base this on humanoid agent base y, so that it works in multi-floor homes)
-        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
-        art_obj = (
-            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
-        )
-        raycast_start_y = art_obj.transformation.translation[1]
-        if ray.origin.y < raycast_start_y:
-            return None, None
-
-        dist_to_raycast_start_y = (
-            ray.origin.y - raycast_start_y
-        ) / -ray.direction.y
-        assert dist_to_raycast_start_y >= 0
-        adjusted_origin = ray.origin + ray.direction * dist_to_raycast_start_y
-        ray.origin = adjusted_origin
-
-        # reference code for casting a ray into the scene
-        raycast_results = self.get_sim().cast_ray(ray=ray)
-        if not raycast_results.has_hits():
-            return None, None
-
-        hit_info = raycast_results.hits[0]
-        # print([h.object_id for h in raycast_results.hits])
-        # self._debug_line_render.draw_circle(hit_info.point, 0.03, mn.Color3(1, 0, 0))
-
-        if self.gui_agent_ctrl.is_grasped:
-            assert self._held_target_obj_idx is not None
-            self._debug_line_render.draw_circle(
-                hit_info.point, object_highlight_radius, object_color
-            )
-            if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                drop_pos = hit_info.point + mn.Vector3(
-                    0, object_drop_height, 0
-                )
-                self._held_target_obj_idx = None
-                return None, drop_pos
-        else:
-            # Currently, it's too hard to select objects that are very small
-            # on-screen. Todo: use hit_info.point and search for nearest rigid object within
-            # X cm.
-            if hit_info.object_id != -1:
-                sim = self.get_sim()
-                rigid_obj_mgr = sim.get_rigid_object_manager()
-                is_rigid_obj = rigid_obj_mgr.get_library_has_id(
-                    hit_info.object_id
-                )
-                if is_rigid_obj:
-                    rigid_obj = (
-                        sim.get_rigid_object_manager().get_object_by_id(
-                            hit_info.object_id
-                        )
+                    # draw can grasp area
+                    can_grasp_position = this_target_pos.copy()
+                    can_grasp_position[1] = self.get_agent_feet_height()
+                    self._debug_line_render.draw_circle(
+                        can_grasp_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
                     )
-                    assert rigid_obj
-                    if (
-                        rigid_obj.motion_type
-                        == habitat_sim.physics.MotionType.DYNAMIC
-                    ):
-                        self._debug_line_render.draw_circle(
-                            rigid_obj.translation,
-                            object_highlight_radius,
-                            object_color,
-                        )
-                        if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                            grasp_object_id = hit_info.object_id
-                            self._held_target_obj_idx = (
-                                sim.scene_obj_ids.index(hit_info.object_id)
-                            )
-                            return grasp_object_id, None
 
-        return None, None
+            # pick up an object
+            if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                translation = self.get_agent_translation()
+                dist_to_objs = np.linalg.norm(target_pos - translation, axis=1)
+                closet_obj_idx = np.argmin(dist_to_objs)
+                closet_obj_dist = dist_to_objs[closet_obj_idx]
+
+                if closet_obj_dist < self._can_grasp_place_threshold:
+                    self._held_target_obj_idx = idxs[closet_obj_idx]
+
+        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        grasp_object_id = (
+            sim.scene_obj_ids[self._held_target_obj_idx] 
+            if self._held_target_obj_idx is not None  and not self.gui_agent_ctrl.is_grasped 
+            else None
+        )
+
+        walk_dir = (
+            self.viz_and_get_humanoid_walk_dir()
+            if not self._first_person_mode
+            else None
+        )
+
+        self.gui_agent_ctrl.set_act_hints(
+            walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
+        )
+
+    def get_grasped_objects_idxs(self):
+        sim = self.get_sim()
+        agents_mgr = sim.agents_mgr
+
+        grasped_objects_idxs = []
+        for agent_idx in range(self.ctrl_helper.n_robots):
+            if agent_idx == self.ctrl_helper.get_gui_controlled_agent_index:
+                continue
+            grasp_mgr = agents_mgr._all_agent_data[agent_idx].grasp_mgr
+            if grasp_mgr.is_grasped:
+                grasped_objects_idxs.append(
+                    sim.scene_obj_ids.index(grasp_mgr.snap_idx)
+                )
+        
+        return grasped_objects_idxs
+    
+    def get_agent_translation(self):
+        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        return self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+
+    def get_agent_feet_height(self):
+        assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
+        base_offset = self.gui_agent_ctrl.get_articulated_agent().params.base_offset
+        agent_feet_translation = self.get_agent_translation() + base_offset
+        return agent_feet_translation[1]
 
     def viz_and_get_humanoid_walk_dir(self):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
@@ -364,16 +368,6 @@ class SandboxDriver(GuiAppDriver):
 
         return None
 
-    def viz_and_get_humanoid_hints(self):
-        grasp_object_id, drop_pos = self.viz_and_get_grasp_drop_hints()
-        walk_dir = (
-            self.viz_and_get_humanoid_walk_dir()
-            if not self._first_person_mode
-            else None
-        )
-
-        return walk_dir, grasp_object_id, drop_pos
-
     def _camera_pitch_and_yaw_wasd_control(self):
         # update yaw and pitch using ADIK keys
         cam_rot_angle = 0.1
@@ -393,13 +387,11 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
-        enable_mouse_control = (
+        enable_mouse_control = self.gui_input.get_key(GuiInput.KeyNS.R) and (
             self._first_person_mode
             and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
-        ) or (
-            not self._first_person_mode
-            and self.gui_input.get_mouse_button(GuiInput.MouseNS.LEFT)
-        )
+        ) or (not self._first_person_mode)
+        
         if enable_mouse_control:
             # update yaw and pitch by scale * mouse relative position delta
             scale = 1 / 50
@@ -569,7 +561,7 @@ class SandboxDriver(GuiAppDriver):
             s += get_grasp_release_controls_text()
         # third-person mode
         elif not self.is_free_camera_mode():
-            s += "Left-click + drag: rotate camera\n"
+            s += "R + drag: rotate camera\n"
             s += "Right-click: walk\n"
             s += "A, D: turn\n"
             s += "W, S: walk\n"
@@ -597,15 +589,7 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction + dt * viz_anim_speed
         ) % 1.0
 
-        if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
-            (
-                walk_dir,
-                grasp_object_id,
-                drop_pos,
-            ) = self.viz_and_get_humanoid_hints()
-            self.gui_agent_ctrl.set_act_hints(
-                walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
-            )
+        self.visualize_task()
 
         # Navmesh visualization only works in the debub third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
@@ -623,8 +607,7 @@ class SandboxDriver(GuiAppDriver):
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
             self.obs = self.env.reset()
             self.ctrl_helper.on_environment_reset()
-
-        self.visualize_task()
+            self._held_target_obj_idx = None
 
         post_sim_update_dict = {}
 
@@ -858,6 +841,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Choose between classic and batch renderer",
+    )
+    parser.add_argument(
+        "--can-grasp-place-threshold",
+        default=1.0,
+        type=float,
+        help="Object grasp/place proximity threshold"
     )
     # temp argument:
     # allowed to switch between oracle baseline nav
