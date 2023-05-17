@@ -182,7 +182,7 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction,
         )
 
-    def visualize_task(self):
+    def visualize_task_and_set_act_hints(self):
         sim = self.get_sim()
         idxs, goal_pos = sim.get_targets()
         scene_pos = sim.get_scene_pos()
@@ -192,51 +192,47 @@ class SandboxDriver(GuiAppDriver):
 
         if self._held_target_obj_idx != None:
             color = mn.Color3(0, 255 / 255, 0)  # green
-            try:
-                (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
-                if len(target_idxs):
-                    goal_position = goal_pos[target_idxs[0]]
-                    if not self.is_free_camera_mode():
-                        self.draw_nav_hint_from_agent(
-                            mn.Vector3(goal_position), end_radius, color
-                        )
-                    self._debug_line_render.draw_circle(
-                        goal_position, end_radius, color, 24
+            (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
+            if len(target_idxs):
+                goal_position = goal_pos[target_idxs[0]]
+                if not self.is_free_camera_mode():
+                    self.draw_nav_hint_from_agent(
+                        mn.Vector3(goal_position), end_radius, color
                     )
-                    # reference code to display a box
-                    # box_size = 0.3
-                    # self._debug_line_render.draw_box(
-                    #     goal_position - box_size / 2,
-                    #     goal_position + box_size / 2,
-                    #     color
-                    # )
-                    if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
-                        # draw can place area
-                        can_place_position = goal_position.copy()
-                        can_place_position[1] = self.get_agent_feet_height()
-                        self._debug_line_render.draw_circle(
-                            can_place_position,
-                            1,
-                            mn.Color3(255 / 255, 255 / 255, 0),
-                            24,
-                        )
+                self._debug_line_render.draw_circle(
+                    goal_position, end_radius, color, 24
+                )
+                # reference code to display a box
+                # box_size = 0.3
+                # self._debug_line_render.draw_box(
+                #     goal_position - box_size / 2,
+                #     goal_position + box_size / 2,
+                #     color
+                # )
+                if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
+                    # draw can place area
+                    can_place_position = goal_position.copy()
+                    can_place_position[1] = self.get_agent_feet_height()
+                    self._debug_line_render.draw_circle(
+                        can_place_position,
+                        1,
+                        mn.Color3(255 / 255, 255 / 255, 0),
+                        24,
+                    )
 
-                    assert self._held_target_obj_idx is not None
-                    if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                        translation = self.get_agent_translation()
-                        dist_to_obj = np.linalg.norm(
-                            goal_position - translation
+                assert self._held_target_obj_idx is not None
+                if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                    translation = self.get_agent_translation()
+                    dist_to_obj = np.linalg.norm(
+                        goal_position - translation
+                    )
+                    if dist_to_obj < self._can_grasp_place_threshold:
+                        self._held_target_obj_idx = None
+                        # object_drop_height = 0.15
+                        drop_pos = (
+                            goal_position
+                            # + mn.Vector3(0, object_drop_height, 0)
                         )
-                        if dist_to_obj < self._can_grasp_place_threshold:
-                            self._held_target_obj_idx = None
-                            # object_drop_height = 0.15
-                            drop_pos = (
-                                goal_position
-                                # + mn.Vector3(0, object_drop_height, 0)
-                            )
-
-            except ValueError:
-                pass
         else:
             grasped_objects_idxs = self.get_grasped_objects_idxs()
             # draw nav_hint and target box
@@ -610,7 +606,7 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction + dt * viz_anim_speed
         ) % 1.0
 
-        self.visualize_task()
+        self.visualize_task_and_set_act_hints()
 
         # Navmesh visualization only works in the debub third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
@@ -963,21 +959,27 @@ if __name__ == "__main__":
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
         if args.gui_controlled_agent_index is not None:
-            assert (
+            if not (
                 args.gui_controlled_agent_index >= 0
                 and args.gui_controlled_agent_index < len(sim_config.agents)
-            ), (
-                f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
-                f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
-            )
+            ):
+                print(
+                    f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
+                    f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
+                )
+                exit()
 
             gui_agent_key = sim_config.agents_order[
                 args.gui_controlled_agent_index
             ]
-            assert (
+            if not (
                 sim_config.agents[gui_agent_key].articulated_agent_type
                 == "KinematicHumanoid"
-            ), "Only humanoid GUI control supported at the moment."
+            ):
+                print(
+                    f"Selected agent for GUI control is of type {sim_config.agents[gui_agent_key].articulated_agent_type}, "
+                    "but only KinematicHumanoid is supported at the moment.")
+                exit()
 
             task_actions = task_config.actions
             gui_agent_actions = [

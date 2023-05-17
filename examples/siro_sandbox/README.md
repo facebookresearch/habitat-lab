@@ -47,7 +47,8 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg experiments_hab3/single_agent_pddl_planner_kinematic_oracle_humanoid.yaml \
 --cfg-opts \
 habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1
+habitat_baselines.num_environments=1 \
+habitat.simulator.habitat_sim_v0.allow_sliding=True
 ```
 
 
