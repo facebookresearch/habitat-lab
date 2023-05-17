@@ -152,7 +152,7 @@ class BaselinesController(Controller):
             for k, v in action["action_args"].items()
         }
         return action, action_data.rnn_hidden_states
-    
+
     def on_environment_reset(self):
         self._step_i = 0
 

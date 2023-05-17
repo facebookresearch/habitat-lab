@@ -73,7 +73,9 @@ class SandboxDriver(GuiAppDriver):
         self.env = habitat.Env(config=config)
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
-            gui_agent_key = sim_config.agents_order[args.gui_controlled_agent_index]
+            gui_agent_key = sim_config.agents_order[
+                args.gui_controlled_agent_index
+            ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
@@ -186,8 +188,8 @@ class SandboxDriver(GuiAppDriver):
         scene_pos = sim.get_scene_pos()
         target_pos = scene_pos[idxs]
         end_radius = self.env._config.task.obj_succ_thresh
-        drop_pos=None
-        
+        drop_pos = None
+
         if self._held_target_obj_idx != None:
             color = mn.Color3(0, 255 / 255, 0)  # green
             try:
@@ -213,21 +215,26 @@ class SandboxDriver(GuiAppDriver):
                         can_place_position = goal_position.copy()
                         can_place_position[1] = self.get_agent_feet_height()
                         self._debug_line_render.draw_circle(
-                            can_place_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
+                            can_place_position,
+                            1,
+                            mn.Color3(255 / 255, 255 / 255, 0),
+                            24,
                         )
 
                     assert self._held_target_obj_idx is not None
                     if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                         translation = self.get_agent_translation()
-                        dist_to_obj = np.linalg.norm(goal_position - translation)
+                        dist_to_obj = np.linalg.norm(
+                            goal_position - translation
+                        )
                         if dist_to_obj < self._can_grasp_place_threshold:
                             self._held_target_obj_idx = None
                             # object_drop_height = 0.15
                             drop_pos = (
-                                goal_position 
+                                goal_position
                                 # + mn.Vector3(0, object_drop_height, 0)
                             )
-        
+
             except ValueError:
                 pass
         else:
@@ -262,7 +269,10 @@ class SandboxDriver(GuiAppDriver):
                         can_grasp_position = this_target_pos.copy()
                         can_grasp_position[1] = self.get_agent_feet_height()
                         self._debug_line_render.draw_circle(
-                            can_grasp_position, 1, mn.Color3(255 / 255, 255 / 255, 0), 24
+                            can_grasp_position,
+                            1,
+                            mn.Color3(255 / 255, 255 / 255, 0),
+                            24,
                         )
 
             # pick up an object
@@ -277,8 +287,9 @@ class SandboxDriver(GuiAppDriver):
 
         if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
             grasp_object_id = (
-                sim.scene_obj_ids[self._held_target_obj_idx] 
-                if self._held_target_obj_idx is not None  and not self.gui_agent_ctrl.is_grasped 
+                sim.scene_obj_ids[self._held_target_obj_idx]
+                if self._held_target_obj_idx is not None
+                and not self.gui_agent_ctrl.is_grasped
                 else None
             )
 
@@ -305,16 +316,20 @@ class SandboxDriver(GuiAppDriver):
                 grasped_objects_idxs.append(
                     sim.scene_obj_ids.index(grasp_mgr.snap_idx)
                 )
-        
+
         return grasped_objects_idxs
-    
+
     def get_agent_translation(self):
         assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
-        return self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+        return (
+            self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
+        )
 
     def get_agent_feet_height(self):
         assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
-        base_offset = self.gui_agent_ctrl.get_articulated_agent().params.base_offset
+        base_offset = (
+            self.gui_agent_ctrl.get_articulated_agent().params.base_offset
+        )
         agent_feet_translation = self.get_agent_translation() + base_offset
         return agent_feet_translation[1]
 
@@ -394,10 +409,10 @@ class SandboxDriver(GuiAppDriver):
             (
                 self._first_person_mode
                 and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
-            ) 
+            )
             or (not self._first_person_mode)
         )
-        
+
         if enable_mouse_control:
             # update yaw and pitch by scale * mouse relative position delta
             scale = 1 / 50
@@ -852,7 +867,7 @@ if __name__ == "__main__":
         "--can-grasp-place-threshold",
         default=1.0,
         type=float,
-        help="Object grasp/place proximity threshold"
+        help="Object grasp/place proximity threshold",
     )
     # temp argument:
     # allowed to switch between oracle baseline nav
@@ -950,29 +965,32 @@ if __name__ == "__main__":
         if args.gui_controlled_agent_index is not None:
             assert (
                 args.gui_controlled_agent_index >= 0
-                and args.gui_controlled_agent_index
-                < len(sim_config.agents)
+                and args.gui_controlled_agent_index < len(sim_config.agents)
             ), (
                 f"--gui-controlled-agent-index argument value ({args.gui_controlled_agent_index}) "
                 f"must be >= 0 and < number of agents ({len(sim_config.agents)})"
             )
-            
-            gui_agent_key = sim_config.agents_order[args.gui_controlled_agent_index]
+
+            gui_agent_key = sim_config.agents_order[
+                args.gui_controlled_agent_index
+            ]
             assert (
-                sim_config.agents[
-                    gui_agent_key
-                ].articulated_agent_type == "KinematicHumanoid"
+                sim_config.agents[gui_agent_key].articulated_agent_type
+                == "KinematicHumanoid"
             ), "Only humanoid GUI control supported at the moment."
-            
+
             task_actions = task_config.actions
             gui_agent_actions = [
-                action_key for action_key in task_actions.keys() 
+                action_key
+                for action_key in task_actions.keys()
                 if action_key.startswith(gui_agent_key)
             ]
             for action_key in gui_agent_actions:
                 task_actions.pop(action_key)
 
-            action_prefix = f"{gui_agent_key}_" if len(sim_config.agents) > 1 else ""
+            action_prefix = (
+                f"{gui_agent_key}_" if len(sim_config.agents) > 1 else ""
+            )
             task_actions[
                 f"{action_prefix}humanoidjoint_action"
             ] = HumanoidJointActionConfig(
