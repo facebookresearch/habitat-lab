@@ -65,6 +65,62 @@ class SandboxState(Enum):
     TUTORIAL = 2
 
 
+class TutorialStage:
+    _prev_lookat: Tuple[mn.Vector3, mn.Vector3]
+    _next_lookat: Tuple[mn.Vector3, mn.Vector3]
+    _transition_duration: float
+    _stage_duration: float
+    _elapsed_time: float
+
+    def __init__(
+        self,
+        stage_duration: float,
+        next_lookat: Tuple[mn.Vector3, mn.Vector3],
+        prev_lookat: Tuple[mn.Vector3, mn.Vector3] = None,
+        transition_duration: float = 0.0,
+    ) -> None:
+        self._transition_duration = transition_duration
+        self._stage_duration = stage_duration
+        self._prev_lookat = prev_lookat
+        self._next_lookat = next_lookat
+        self._elapsed_time = 0.0
+
+    def update(self, dt: float) -> None:
+        self._elapsed_time += dt
+
+    def get_look_at_matrix(self) -> mn.Matrix4:
+        # If there's no transition, return the next view
+        assert self._next_lookat
+        if not self._prev_lookat or self._transition_duration <= 0.0:
+            return mn.Matrix4.look_at(
+                self._next_lookat[0], self._next_lookat[1], mn.Vector3(0, 1, 0)
+            )
+        # Interpolate camera look-ats
+        t: float = (
+            _ease_fn_in_out_quat(
+                min(
+                    self._elapsed_time / self._transition_duration,
+                    1.0,
+                )
+            )
+            if self._transition_duration > 0.0
+            else 1.0
+        )
+        look_at: List[mn.Vector3] = []
+        for i in range(2):  # Only interpolate eye and target vectors
+            look_at.append(
+                mn.math.lerp(
+                    self._prev_lookat[i],
+                    self._next_lookat[i],
+                    t,
+                )
+            )
+        return mn.Matrix4.look_at(look_at[0], look_at[1], mn.Vector3(0, 1, 0))
+
+    def is_stage_completed(self) -> bool:
+        return self._elapsed_time >= self._stage_duration
+
+
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
     def __init__(self, args, config, gui_input):
@@ -134,6 +190,10 @@ class SandboxDriver(GuiAppDriver):
             if args.show_tutorial
             else SandboxState.SIMULATION
         )
+        self._tutorial_stages: List[TutorialStage] = (
+            self._generate_tutorial() if args.show_tutorial else None
+        )
+        self._tutorial_stage_index: int = 0
 
     @property
     def lookat_offset_yaw(self):
@@ -656,24 +716,112 @@ class SandboxDriver(GuiAppDriver):
             lookat[0], lookat[1], mn.Vector3(0, 1, 0)
         )
 
+    def _generate_tutorial(self) -> List[TutorialStage]:
+        tutorial_stages: List[TutorialStage] = []
+
+        sim = self.get_sim()
+        camera_fov_deg = 90  # TODO: Assume this FOV
+
+        # Scene overview
+        scene_root_node = sim.get_active_scene_graph().get_root_node()
+        scene_target_bb: mn.Range3D = scene_root_node.cumulative_bb
+        scene_top_down_lookat = _lookat_bounding_box_top_down(
+            camera_fov_deg, scene_target_bb
+        )
+
+        tutorial_stages.append(
+            TutorialStage(
+                stage_duration=5.0, next_lookat=scene_top_down_lookat
+            )
+        )
+
+        # Target focus
+        idxs, goal_pos = sim.get_targets()
+        scene_positions = sim.get_scene_pos()
+        target_positions = scene_positions[idxs]
+        for target_pos in target_positions:
+            # target_pos = target_positions[i]
+            target_bb = mn.Range3D.from_center(
+                mn.Vector3(target_pos), mn.Vector3(0.5, 0.5, 0.5)
+            )  # Assume 1x1x1m bounding box
+            next_lookat = _lookat_bounding_box_top_down(
+                camera_fov_deg, target_bb
+            )
+            tutorial_stages.append(
+                TutorialStage(
+                    stage_duration=2.0,
+                    transition_duration=1.5,
+                    prev_lookat=tutorial_stages[
+                        len(tutorial_stages) - 1
+                    ]._next_lookat,
+                    next_lookat=next_lookat,
+                )
+            )
+            tutorial_stages.append(
+                TutorialStage(
+                    stage_duration=1.0,
+                    transition_duration=1.0,
+                    prev_lookat=tutorial_stages[
+                        len(tutorial_stages) - 1
+                    ]._next_lookat,
+                    next_lookat=scene_top_down_lookat,
+                )
+            )
+
+        # Controlled agent focus
+        agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
+        assert agent_idx is not None
+        art_obj = (
+            self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+        )
+        agent_root_node = art_obj.get_link_scene_node(
+            -1
+        )  # Root link always has index -1
+        target_bb = mn.Range3D.from_center(
+            mn.Vector3(agent_root_node.absolute_translation),
+            mn.Vector3(1.0, 1.0, 1.0),
+        )  # Assume 2x2x2m bounding box
+        agent_lookat = _lookat_bounding_box_top_down(camera_fov_deg, target_bb)
+
+        tutorial_stages.append(
+            TutorialStage(
+                stage_duration=2.0,
+                transition_duration=1.0,
+                prev_lookat=tutorial_stages[
+                    len(tutorial_stages) - 1
+                ]._next_lookat,
+                next_lookat=agent_lookat,
+            )
+        )
+
+        # Transition from the avatar view to simulated view (e.g. first person)
+        tutorial_stages.append(
+            TutorialStage(
+                stage_duration=1.0,
+                transition_duration=1.0,
+                prev_lookat=tutorial_stages[
+                    len(tutorial_stages) - 1
+                ]._next_lookat,
+                next_lookat=self._create_camera_lookat(),
+            )
+        )
+
+        return tutorial_stages
+
     def _sim_update_tutorial(self, dt: float):
         # Keyframes are saved by RearrangeSim when stepping the environment.
         # Because the environment is not stepped in the tutorial, we need to save keyframes manually for replay rendering to work.
         self.get_sim().gfx_replay_manager.save_keyframe()
 
-        # TODO: Tutorial
-        scene_root_node = (
-            self.get_sim().get_active_scene_graph().get_root_node()
-        )
-        scene_target_bb: mn.Range3D = scene_root_node.cumulative_bb
-        scene_top_down_lookat = _lookat_bounding_box_top_down(
-            90, scene_target_bb
-        )
-        self.cam_transform = mn.Matrix4.look_at(
-            scene_top_down_lookat[0],
-            scene_top_down_lookat[1],
-            mn.Vector3(0, 1, 0),
-        )
+        assert self._tutorial_stage_index < len(self._tutorial_stages)
+        tutorial_stage = self._tutorial_stages[self._tutorial_stage_index]
+        tutorial_stage.update(dt)
+        self.cam_transform = tutorial_stage.get_look_at_matrix()
+
+        if tutorial_stage.is_stage_completed():
+            self._tutorial_stage_index += 1
+            if self._tutorial_stage_index >= len(self._tutorial_stages):
+                self._sandbox_state = SandboxState.SIMULATION
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
@@ -769,13 +917,20 @@ def _evaluate_cubic_bezier(ctrl_pts, t):
     return result
 
 
+def _ease_fn_in_out_quat(t: float):
+    if t < 0.5:
+        return 16 * t * pow(t, 4)
+    else:
+        return 1 - pow(-2 * t + 2, 4) / 2
+
+
 def _lookat_bounding_box_top_down(
-    camera_fov: float, target_bb: mn.Range3D
+    camera_fov_deg: float, target_bb: mn.Range3D
 ) -> Tuple[mn.Vector3, mn.Vector3]:
     r"""
-    Creates lookat vectors for a top-down camera such as the entire 'target_bb' bounding box is visible.
+    Creates look-at vectors for a top-down camera such as the entire 'target_bb' bounding box is visible.
     """
-    camera_fov_rad = radians(camera_fov)
+    camera_fov_rad = radians(camera_fov_deg)
     target_dimension = max(target_bb.size_x(), target_bb.size_z())
     camera_position = mn.Vector3(
         target_bb.center_x(),
