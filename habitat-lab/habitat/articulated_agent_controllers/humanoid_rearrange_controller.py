@@ -55,6 +55,10 @@ TURNING_STEP_AMOUNT = (
 THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
 EPS = 1e-5  # Distance at which we should stop
 
+# The frames per second we run the motion at, in relation to the FPS at which the motion was recorded.
+# If the motion was recorded at n * DEFAULT_DRAW_FPS, we will be advancing n frames on every env step
+DEFAULT_DRAW_FPS = 30
+
 
 class HumanoidRearrangeController:
     """
@@ -67,13 +71,12 @@ class HumanoidRearrangeController:
     def __init__(
         self,
         walk_pose_path,
-        draw_fps=30,
-        rotate_amount=20,
         base_offset=(0, 0.9, 0),
     ):
+        self.draw_fps = DEFAULT_DRAW_FPS
         self.min_angle_turn = MIN_ANGLE_TURN
-        self.turning_step_amount = rotate_amount
-        self.threshold_rotate_not_move = rotate_amount
+        self.turning_step_amount = TURNING_STEP_AMOUNT
+        self.threshold_rotate_not_move = TURNING_STEP_AMOUNT
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
@@ -96,7 +99,6 @@ class HumanoidRearrangeController:
             walk_data["stop_pose"]["joints"].reshape(-1),
             mn.Matrix4(walk_data["stop_pose"]["transform"]),
         )
-        self.draw_fps = draw_fps
         self.dist_per_step_size = (
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
@@ -110,6 +112,15 @@ class HumanoidRearrangeController:
 
         self.prev_orientation = None
         self.walk_mocap_frame = 0
+
+    def set_framerate_for_linspeed(self, lin_speed, ang_speed, ctrl_freq):
+        seconds_per_step = 1.0 / ctrl_freq
+        meters_per_step = lin_speed * seconds_per_step
+        frames_per_step = meters_per_step / self.dist_per_step_size
+        self.draw_fps = self.walk_motion.fps / frames_per_step
+        rotate_amount = ang_speed
+        self.turning_step_amount = rotate_amount
+        self.threshold_rotate_not_move = rotate_amount
 
     def reset(self, base_transformation) -> None:
         """Reset the joints on the human. (Put in rest state)"""
