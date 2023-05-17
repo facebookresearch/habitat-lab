@@ -51,6 +51,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         self._agents = []
         self._agent_count_idxs = []
         self._pop_config = config.habitat_baselines.rl.agent
+        self._rnd = np.random.RandomState(seed=42)
 
         # Tracks if the agent storage is setup.
         self._is_post_init = False
@@ -233,7 +234,7 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 raise ValueError(
                     "The current code only supports sampling one agent of a given type at a time"
                 )
-            active_agents_type = np.random.choice(
+            active_agents_type = self._rnd.choice(
                 self._agent_count_idxs[agent_type_ind],
                 size=self._pop_config.num_active_agents_per_type[
                     agent_type_ind

@@ -55,6 +55,10 @@ TURNING_STEP_AMOUNT = (
 THRESHOLD_ROTATE_NOT_MOVE = 20  # The rotation angle above which we should only walk as if rotating in place
 EPS = 1e-5  # Distance at which we should stop
 
+# The frames per second we run the motion at, in relation to the FPS at which the motion was recorded.
+# If the motion was recorded at n * DEFAULT_DRAW_FPS, we will be advancing n frames on every env step
+DEFAULT_DRAW_FPS = 30
+
 
 class HumanoidRearrangeController:
     """
@@ -67,13 +71,12 @@ class HumanoidRearrangeController:
     def __init__(
         self,
         walk_pose_path,
-        draw_fps=30,
-        rotate_amount=20,
         base_offset=(0, 0.9, 0),
     ):
+        self.draw_fps = DEFAULT_DRAW_FPS
         self.min_angle_turn = MIN_ANGLE_TURN
-        self.turning_step_amount = rotate_amount
-        self.threshold_rotate_not_move = rotate_amount
+        self.turning_step_amount = TURNING_STEP_AMOUNT
+        self.threshold_rotate_not_move = TURNING_STEP_AMOUNT
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
