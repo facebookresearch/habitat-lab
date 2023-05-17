@@ -867,6 +867,12 @@ if __name__ == "__main__":
         type=str,
         help="Path where the captured graphics replay file is saved.",
     )
+    parser.add_argument(
+        "--show-tutorial",
+        action="store_true",
+        default=False,
+        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+    )
 
     args = parser.parse_args()
 
