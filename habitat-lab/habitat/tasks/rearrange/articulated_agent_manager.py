@@ -91,12 +91,16 @@ class ArticulatedAgentManager:
                         if sensor_name.startswith(camera_prefix):
                             agent._cameras[camera_prefix].append(sensor_name)
 
+            if agent_cfg.joint_start_override is None:
+                use_arm_init = np.array(agent.params.arm_init_params)
+            else:
+                use_arm_init = np.array(agent_cfg.joint_start_override)
             self._all_agent_data.append(
                 ArticulatedAgentData(
                     articulated_agent=agent,
                     grasp_mgrs=grasp_managers,
                     cfg=agent_cfg,
-                    start_js=np.array(agent.params.arm_init_params),
+                    start_js=use_arm_init,
                     is_pb_installed=self._is_pb_installed,
                 )
             )
