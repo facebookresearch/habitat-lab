@@ -10,7 +10,7 @@ import numpy as np
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-from habitat.robots.stretch_robot import StretchRobot
+from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 
@@ -94,7 +94,7 @@ class RearrangePickTaskV1(RearrangeTask):
 
     def _gen_start_pos(self, sim, episode, sel_idx):
         snap_pos, orient_pos, sample_probs = self.get_spawn_reference_points(sim, episode, sel_idx)
-        start_pos, angle_to_obj, was_succ = get_robot_spawns(
+        start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
             snap_pos,
             self._config.base_angle_noise,
             self._config.spawn_max_dists_to_obj,
@@ -105,7 +105,7 @@ class RearrangePickTaskV1(RearrangeTask):
             sample_probs=sample_probs,
         )
 
-        if was_succ:
+        if was_unsucc:
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )
@@ -147,12 +147,9 @@ class RearrangePickTaskV1(RearrangeTask):
             # turn camera to face the arm
             camera_pan =  -1.57
         if isinstance(sim.robot, StretchRobot):
-            sim.robot.arm_motor_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_pan, self._camera_tilt]
-            )
-            sim.robot.arm_joint_pos = np.array(
-                [0.0] * 4 + [0.775, 0.0, -1.57000005, 0.0, camera_pan, self._camera_tilt]
-            )
+            sim.robot.arm_motor_pos = StretchJointStates.PRE_GRASP
+            sim.robot.arm_joint_pos = StretchJointStates.PRE_GRASP
+
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos

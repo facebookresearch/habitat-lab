@@ -13,9 +13,8 @@ from gym import spaces
 
 from habitat.robots.spot_robot import SpotRobot
 from habitat.robots.stretch_robot import StretchRobot
+import habitat_sim
 from habitat.core.registry import registry
-from habitat.robots.spot_robot import SpotRobot
-from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -191,6 +190,7 @@ class GazeGraspAction(MagicGraspAction):
         self._distance_from = getattr(config, "gaze_distance_from", "camera")
         self._center_square_width = config.gaze_center_square_width
         self._grasp_threshold = config.grasp_threshold
+        self._oracle_snap = config.oracle_snap
 
     @property
     def action_space(self):
@@ -300,7 +300,33 @@ class GazeGraspAction(MagicGraspAction):
 
         return None, None
 
+    def _snap_closest_valid_object(self):
+        """Snaps closest valid object"""
+        allowed_scene_obj_ids = [
+            int(g.object_id) for g in self._sim.ep_info.candidate_objects
+        ]
+        closest = np.argmin(
+            np.linalg.norm(
+                (
+                    self._sim.get_scene_pos()[allowed_scene_obj_ids]
+                    - self._sim.robot.base_pos
+                )[:, [0, 2]],
+                axis=1,
+            )
+        )
+        snap_obj_idx = np.array(self._sim.scene_obj_ids)[
+            allowed_scene_obj_ids
+        ][closest]
+        self._task._picked_object_idx = self._sim.scene_obj_ids.index(
+            snap_obj_idx
+        )
+        self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
+
     def _grasp(self):
+        if self._oracle_snap:
+            self._snap_closest_valid_object()
+            return
+
         # Check if the object is in the center of the camera
         center_obj_idx, center_obj_pos = self.determine_center_object()
 
@@ -317,9 +343,17 @@ class GazeGraspAction(MagicGraspAction):
             rel_pos=mn.Vector3(0.1, 0.0, 0.0),
             keep_T=keep_T,
         )
+        self._task._picked_object_idx = self._sim.scene_obj_ids.index(
+            center_obj_idx
+        )
         return
 
     def _ungrasp(self):
+        if self.cur_grasp_mgr.snap_idx != -1:
+            rom = self._sim.get_rigid_object_manager()
+            ro = rom.get_object_by_id(self.cur_grasp_mgr.snap_idx)
+            ro.motion_type = habitat_sim.physics.MotionType.DYNAMIC
+            ro.collidable = True
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):

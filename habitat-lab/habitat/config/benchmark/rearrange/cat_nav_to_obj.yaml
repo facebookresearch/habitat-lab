@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
   - /habitat/task/rearrange: cat_nav_to_obj
-  - /habitat/dataset/rearrangement: floorplanner
+  - /habitat/dataset/rearrangement: hssd
   - _self_
 
 habitat:
@@ -13,7 +13,7 @@ habitat:
     obs_keys:
       - robot_head_depth
       - object_embedding
-      - cat_nav_goal_segmentation
+      - ovmm_nav_goal_segmentation
       - receptacle_segmentation
       - start_receptacle
       - robot_start_gps
@@ -24,9 +24,10 @@ habitat:
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
-      - data/objects/ycb/configs/
       - data/objects/amazon_berkeley/configs/
-      - data/objects/google_object_dataset/configs/
+      - data/objects/google_scanned/configs/
+      - data/objects/ai2thorhab/configs/objects/
+      - data/objects/floorplanner/configs/objects/
     debug_render_goal: False
     debug_render: False
     concur_render: True
@@ -54,7 +55,3 @@ habitat:
       allow_sliding: False
       enable_physics: True
     needs_markers: false
-  dataset:
-    data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
-    type: ObjectRearrangeDataset-v0
-    scenes_dir: data/fpss/fphab/

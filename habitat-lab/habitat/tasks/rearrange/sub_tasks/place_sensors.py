@@ -44,26 +44,31 @@ class ObjAnywhereOnGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._sim.perform_discrete_collision_detection()
         cps = self._sim.get_physics_contact_points()
-
+        MAX_FLOOR_HEIGHT = 0.05
         self._metric = False
-        abs_obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
+        # Use the picked object if it exists, otherwise use the target object from geogoal episodes
+        picked_idx = task._picked_object_idx if task._picked_object_idx is not None else task.abs_targ_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
         for cp in cps:
             if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
                 if cp.contact_distance < -0.01:
                     self._metric = False
                 else:
                     other_obj_id = cp.object_id_a + cp.object_id_b - abs_obj_id
+                    # Get the contact point on the other object
+                    contact_point = (
+                        cp.position_on_a_in_ws
+                        if other_obj_id == cp.object_id_a
+                        else cp.position_on_b_in_ws
+                    )
                     # Check if the other object has an id that is acceptable
                     self._metric = (
                         other_obj_id in self._sim.valid_goal_rec_obj_ids
+                        and contact_point[1] >= MAX_FLOOR_HEIGHT # ensure that the object is not on the floor
                     )
                     # Additional check for receptacles that are not on a separate object
                     if self._metric and other_obj_id == -1:
-                        contact_point = (
-                            cp.position_on_a_in_ws
-                            if other_obj_id == cp.object_id_a
-                            else cp.position_on_b_in_ws
-                        )
+
                         for n, r in self._sim.receptacles.items():
                             if r.check_if_point_on_surface(
                                 self._sim, contact_point
@@ -74,7 +79,6 @@ class ObjAnywhereOnGoal(Measure):
                                 break
                     if self._metric:
                         return
-
 
 
 @registry.register_measure
@@ -228,31 +232,24 @@ class PlaceReward(RearrangeReward):
         
         self._metric = reward
 
-
 @registry.register_measure
-class PlaceSuccess(Measure):
-    cls_uuid: str = "place_success"
+class PlacementStability(Measure):
+    cls_uuid: str = "placement_stability"
 
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
-        self._ee_resting_success_threshold = (
-            self._config.ee_resting_success_threshold
-        )
+        self._stability_steps = config.stability_steps
         self._place_anywhere = self._config.place_anywhere
         self._sim = sim
+        self._curr_stability_steps = 0
         super().__init__(**kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return PlaceSuccess.cls_uuid
+        return PlacementStability.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
-        task.measurements.check_measure_dependencies(
-            self.uuid,
-            [
-                EndEffectorToRestDistance.cls_uuid,
-            ],
-        )
+        self._curr_stability_steps = 0
         if self._place_anywhere:
             task.measurements.check_measure_dependencies(
                 self.uuid,
@@ -285,7 +282,83 @@ class PlaceSuccess(Measure):
                 ObjAtGoal.cls_uuid
             ].get_metric()[str(task.abs_targ_idx)]
         is_holding = self._sim.grasp_mgr.is_grasped
+        if is_obj_at_goal and not is_holding:
+            self._curr_stability_steps += 1 # increment
+        else:
+            self._curr_stability_steps = 0 # reset
+        # if the object remained stable for the required number of steps, then the placement is stable
+        self._metric = self._curr_stability_steps >= self._stability_steps
 
+
+@registry.register_measure
+class PlaceSuccess(Measure):
+    cls_uuid: str = "place_success"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._ee_resting_success_threshold = (
+            self._config.ee_resting_success_threshold
+        )
+        self._place_anywhere = self._config.place_anywhere
+        self._check_stability = self._config.check_stability
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PlaceSuccess.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                EndEffectorToRestDistance.cls_uuid,
+            ],
+        )
+        if self._place_anywhere:
+            task.measurements.check_measure_dependencies(
+                self.uuid,
+                [
+                    ObjAnywhereOnGoal.cls_uuid,
+                ],
+            )
+        else:
+            task.measurements.check_measure_dependencies(
+                self.uuid,
+                [
+                    ObjAtGoal.cls_uuid,
+                ],
+            )
+        if self._check_stability:
+            task.measurements.check_measure_dependencies(
+                self.uuid,
+                [
+                    PlacementStability.cls_uuid,
+                ],
+            )
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        if self._place_anywhere:
+            is_obj_at_goal = task.measurements.measures[
+                ObjAnywhereOnGoal.cls_uuid
+            ].get_metric()
+        else:
+            is_obj_at_goal = task.measurements.measures[
+                ObjAtGoal.cls_uuid
+            ].get_metric()[str(task.abs_targ_idx)]
+        is_holding = self._sim.grasp_mgr.is_grasped
+        is_stable = True
+        if self._check_stability:
+            is_stable = task.measurements.measures[
+                PlacementStability.cls_uuid
+            ].get_metric()
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
@@ -294,4 +367,5 @@ class PlaceSuccess(Measure):
             not is_holding
             and is_obj_at_goal
             and ee_to_rest_distance < self._ee_resting_success_threshold
+            and is_stable
         )

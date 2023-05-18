@@ -13,6 +13,7 @@ defaults:
     - end_effector_to_goal_distance
     - object_to_goal_distance
     - obj_anywhere_on_goal
+    - placement_stability
     - place_success
     - place_reward
     - num_steps
@@ -21,7 +22,7 @@ defaults:
     - joint_velocity_sensor
     - is_holding_sensor
     - end_effector_sensor
-    - cat_nav_goal_segmentation_sensor
+    - ovmm_nav_goal_segmentation_sensor
     - receptacle_segmentation_sensor
     - relative_resting_pos_sensor
     - goal_receptacle_sensor
@@ -62,9 +63,12 @@ measurements:
     max_instant_force: 10_000.0
   place_success:
     place_anywhere: True
+    check_stability: False
   place_reward:
     place_anywhere: True
     sparse_reward: False
+  placement_stability:
+    place_anywhere: True
 lab_sensors:
   joint_sensor:
     dimensionality: 10

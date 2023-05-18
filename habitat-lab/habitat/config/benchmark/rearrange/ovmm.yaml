@@ -3,22 +3,35 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_pick
+  - /habitat/task/rearrange: ovmm
   - /habitat/dataset/rearrangement: hssd
   - _self_
 
 habitat:
+  seed: 7
   gym:
-    auto_name: Pick
+    auto_name: NavToObj
     obs_keys:
-      - robot_head_rgb
       - robot_head_depth
-      - object_embedding
+      - robot_head_rgb
+      - robot_third_rgb
+      - start_receptacle
+      - goal_receptacle
+      - robot_start_gps
+      - robot_start_compass
       - joint
+      - object_segmentation
+      - start_recep_segmentation
+      - goal_recep_segmentation
+      - object_category
+      - camera_pose
+      - object_embedding
       - is_holding
       - relative_resting_position
+      - ovmm_nav_goal_segmentation
+      - receptacle_segmentation
   environment:
-    max_episode_steps: 300
+    max_episode_steps: 1250
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
@@ -26,15 +39,17 @@ habitat:
       - data/objects/google_scanned/configs/
       - data/objects/ai2thorhab/configs/objects/
       - data/objects/floorplanner/configs/objects/
-    needs_markers: False
+    debug_render_goal: False
     concur_render: True
     auto_sleep: True
+    kinematic_mode: True
     agents:
       main_agent:
         radius: 0.3
         height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
+        ik_arm_urdf: null
         sim_sensors:
            head_rgb_sensor:
              height: 640
@@ -51,3 +66,9 @@ habitat:
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
+    needs_markers: false
+  dataset:
+    split: val
+
+  task:
+    goal_type: 'ovmm'
