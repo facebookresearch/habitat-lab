@@ -384,9 +384,28 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             sensor_specifications.append(sim_sensor_cfg)
 
         agent_config.sensor_specifications = sensor_specifications
-        agent_config.action_space = registry.get_action_space_configuration(
-            self.habitat_config.action_space_config
-        )(self.habitat_config).get()
+
+        agent_config.action_space = {
+            0: habitat_sim.ActionSpec("stop"),
+            1: habitat_sim.ActionSpec(
+                "move_forward",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.forward_step_size
+                ),
+            ),
+            2: habitat_sim.ActionSpec(
+                "turn_left",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.turn_angle
+                ),
+            ),
+            3: habitat_sim.ActionSpec(
+                "turn_right",
+                habitat_sim.ActuationSpec(
+                    amount=self.habitat_config.turn_angle
+                ),
+            ),
+        }
 
         return habitat_sim.Configuration(sim_config, [agent_config])
 
@@ -426,8 +445,13 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         else:
             return self._sensor_suite.get_observations(sim_obs)
 
-    def step(self, action: Union[str, np.ndarray, int]) -> Observations:
-        sim_obs = super().step(action)
+    def step(
+        self, action: Optional[Union[str, np.ndarray, int]]
+    ) -> Observations:
+        if action is None:
+            sim_obs = self.get_sensor_observations()
+        else:
+            sim_obs = super().step(action)
         self._prev_sim_obs = sim_obs
         if self.config.enable_batch_renderer:
             self.add_keyframe_to_observations(sim_obs)

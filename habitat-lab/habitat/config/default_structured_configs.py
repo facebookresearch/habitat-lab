@@ -146,8 +146,15 @@ class EmptyActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 # # NAVIGATION actions
 # -----------------------------------------------------------------------------
+
+
 @dataclass
-class MoveForwardActionConfig(ActionConfig):
+class DiscreteNavigationActionConfig(ActionConfig):
+    tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
+
+
+@dataclass
+class MoveForwardActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will move the robot forward by
     a fixed amount determined by the SimulatorConfig.forward_step_size amount.
@@ -156,7 +163,7 @@ class MoveForwardActionConfig(ActionConfig):
 
 
 @dataclass
-class TurnLeftActionConfig(ActionConfig):
+class TurnLeftActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the left
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
@@ -165,7 +172,7 @@ class TurnLeftActionConfig(ActionConfig):
 
 
 @dataclass
-class TurnRightActionConfig(ActionConfig):
+class TurnRightActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot to the right
     by a fixed amount determined by the SimulatorConfig.turn_angle amount.
@@ -174,7 +181,7 @@ class TurnRightActionConfig(ActionConfig):
 
 
 @dataclass
-class LookUpActionConfig(ActionConfig):
+class LookUpActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot's camera up
     by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
@@ -183,7 +190,7 @@ class LookUpActionConfig(ActionConfig):
 
 
 @dataclass
-class LookDownActionConfig(ActionConfig):
+class LookDownActionConfig(DiscreteNavigationActionConfig):
     r"""
     In Navigation tasks only, this discrete action will rotate the robot's camera down
     by a fixed amount determined by the SimulatorConfig.tilt_angle amount.
@@ -1070,6 +1077,7 @@ class TaskConfig(HabitatBaseConfig):
     The definition of the task in Habitat.
 
     :property type: The registered task that will be used. For example : `InstanceImageNav-v1` or `ObjectNav-v1`
+    :property physics_target_sps: The size of each simulator physics update will be 1 / physics_target_sps.
     :property reward_measure: The name of the Measurement that will correspond to the reward of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. For example, `distance_to_goal_reward` for navigation or `place_reward` for the rearrangement place task.
     :property success_measure: The name of the Measurement that will correspond to the success criteria of the robot. This value must be a key present in the dictionary of Measurements in the habitat configuration. If the measurement has a non-zero value, the episode is considered a success.
     :property end_on_success: If True, the episode will end when the success measure indicates success. Otherwise the episode will go on (this is useful when doing hierarchical learning and the robot has to explicitly decide when to change policies)
@@ -1096,6 +1104,7 @@ class TaskConfig(HabitatBaseConfig):
     -   Rearrangement reach : `RearrangeReachTask-v0`
     -   Rearrangement composite tasks : `RearrangeCompositeTask-v0`
     """
+    physics_target_sps: float = 60.0
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
     success_reward: float = 2.5
@@ -1361,9 +1370,8 @@ class HabitatSimV0Config(HabitatBaseConfig):
 @dataclass
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
-    action_space_config: str = "v0"
-    action_space_config_arguments: Dict[str, Any] = field(default_factory=dict)
     forward_step_size: float = 0.25  # in metres
+    turn_angle: int = 10  # angle to rotate left or right in degrees
     create_renderer: bool = False
     requires_textures: bool = True
     # Sleep options
@@ -1385,8 +1393,6 @@ class SimulatorConfig(HabitatBaseConfig):
     # otherwise it leads to circular references:
     #
     seed: int = II("habitat.seed")
-    turn_angle: int = 10  # angle to rotate left or right in degrees
-    tilt_angle: int = 15  # angle to tilt the camera up or down in degrees
     default_agent_id: int = 0
     debug_render: bool = False
     debug_render_articulated_agent: bool = False

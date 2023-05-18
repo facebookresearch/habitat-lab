@@ -1040,6 +1040,24 @@ class DistanceToGoalReward(Measure):
         self._previous_distance = distance_to_target
 
 
+class NavigationMovementAgentAction(SimulatorTaskAction):
+    def __init__(self, *args, config, sim, **kwargs):
+        super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._sim = sim
+        self._tilt_angle = config.tilt_angle
+
+    def _move_camera_vertical(self, amount: float):
+        assert (
+            len(self._sim.agents) == 1  # type: ignore
+        ), "For navigation tasks, there can be only one agent in the scene"
+        sensor_names = list(self._sim.agents[0]._sensors.keys())  # type: ignore
+        for sensor_name in sensor_names:
+            sensor = self._sim.agents[0]._sensors[sensor_name].node  # type: ignore
+            sensor.rotation = sensor.rotation * mn.Quaternion.rotation(
+                mn.Deg(amount), mn.Vector3.x_axis()
+            )
+
+
 @registry.register_task_action
 class MoveForwardAction(SimulatorTaskAction):
     name: str = "move_forward"
@@ -1066,6 +1084,7 @@ class TurnRightAction(SimulatorTaskAction):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
+
         return self._sim.step(HabitatSimActions.turn_right)
 
 
@@ -1081,25 +1100,24 @@ class StopAction(SimulatorTaskAction):
         ``step``.
         """
         task.is_stop_called = True  # type: ignore
-        return self._sim.get_observations_at()  # type: ignore
 
 
 @registry.register_task_action
-class LookUpAction(SimulatorTaskAction):
+class LookUpAction(NavigationMovementAgentAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.look_up)
+        self._move_camera_vertical(self._tilt_angle)
 
 
 @registry.register_task_action
-class LookDownAction(SimulatorTaskAction):
+class LookDownAction(NavigationMovementAgentAction):
     def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        return self._sim.step(HabitatSimActions.look_down)
+        self._move_camera_vertical(-self._tilt_angle)
 
 
 @registry.register_task_action
@@ -1127,10 +1145,10 @@ class TeleportAction(SimulatorTaskAction):
             rotation = list(rotation)
 
         if not self._sim.is_navigable(position):
-            return self._sim.get_observations_at()  # type: ignore
+            return
 
-        return self._sim.get_observations_at(
-            position=position, rotation=rotation, keep_agent_at_new_pose=True
+        self._sim.set_agent_state(  # type:ignore
+            position, rotation, reset_sensors=False
         )
 
     @property
@@ -1235,7 +1253,7 @@ class VelocityAction(SimulatorTaskAction):
             and abs(angular_velocity) < self.min_abs_ang_speed
         ):
             task.is_stop_called = True  # type: ignore
-            return self._sim.get_observations_at(position=None, rotation=None)
+            return
 
         angular_velocity = np.deg2rad(angular_velocity)
         self.vel_control.linear_velocity = np.array(
@@ -1275,7 +1293,7 @@ class VelocityAction(SimulatorTaskAction):
             goal_rigid_state.rotation.scalar,
         ]
 
-        # Check if a collision occured
+        # Check if a collision occurred
         dist_moved_before_filter = (
             goal_rigid_state.translation - agent_state.position
         ).dot()
@@ -1289,16 +1307,11 @@ class VelocityAction(SimulatorTaskAction):
         EPS = 1e-5
         collided = (dist_moved_after_filter + EPS) < dist_moved_before_filter
 
-        agent_observations = self._sim.get_observations_at(
-            position=final_position,
-            rotation=final_rotation,
-            keep_agent_at_new_pose=True,
+        self._sim.set_agent_state(  # type:ignore
+            final_position, final_rotation, reset_sensors=False
         )
-
         # TODO: Make a better way to flag collisions
         self._sim._prev_sim_obs["collided"] = collided  # type: ignore
-
-        return agent_observations
 
 
 @registry.register_task(name="Nav-v0")

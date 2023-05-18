@@ -53,11 +53,12 @@ jobs:
       - run:
           name: Combine precommit config and python versions for caching
           command: |
+            echo $(date +%F) > ./date
             cat .pre-commit-config.yaml > pre-commit-deps.txt
             python -VV >> pre-commit-deps.txt
       - restore_cache:
           keys:
-          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+          - v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}-{{ checksum "./date" }}
 
       - run:
           name: Install Dependencies
@@ -68,7 +69,7 @@ jobs:
       - save_cache:
           paths:
             - ~/.cache/pre-commit
-          key: v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}
+          key: v1-precommit-deps-{{ checksum "pre-commit-deps.txt" }}-{{ checksum "./date" }}
 
       - run:
           name: Check Code Style using pre-commit
@@ -83,7 +84,10 @@ jobs:
           name: Install cmake
           no_output_timeout: 5m
           command: |
+              echo $(date +%F) > ./date
               echo $(git ls-remote https://github.com/facebookresearch/habitat-sim.git HEAD | awk '{ print $1}') > ./hsim_sha
+              cat ./hsim_sha
+
               wget https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-Linux-x86_64.sh
               sudo mkdir /opt/cmake
               sudo sh ./cmake-3.13.4-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
@@ -125,7 +129,7 @@ jobs:
       # Restore Conda cache
       - restore_cache:
           keys:
-            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
+            - conda-{{ checksum "habitat-lab/.circleci/config.yml" }}-{{ checksum "./date" }}
       - run:
           name: Install conda and dependencies
           no_output_timeout: 20m
@@ -139,6 +143,7 @@ jobs:
                 export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
                 conda create -y -n habitat python=3.9
                 . activate habitat
+                conda install -q -y mkl==2021.4.0
                 conda install -q -y -c conda-forge ninja ccache
                 pip install pytest-sugar>=0.9.6 mock cython pygame flaky pytest pytest-mock pytest-cov psutil
               fi
@@ -160,10 +165,10 @@ jobs:
               python -c 'import torch; print("Has cuda?", torch.cuda.is_available()); print("torch version:", torch.__version__);'
       - restore_cache:
           keys:
-            - v1-habitat-sim-{{ checksum "./hsim_sha" }}
+            - v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
       - restore_cache:
           keys:
-            - ccache-{{ arch }}-main
+            - ccache-{{ arch }}-main-{{ checksum "./date" }}
           paths:
             - /home/circleci/.ccache
       - run:
@@ -237,12 +242,12 @@ jobs:
               . activate habitat; cd habitat-sim
               python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
       - save_cache:
-          key: v1-habitat-sim-{{ checksum "./hsim_sha" }}
+          key: v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
           background: true
           paths:
             - ./habitat-sim
       - save_cache:
-          key: ccache-{{ arch }}-main
+          key: ccache-{{ arch }}-main-{{ checksum "./date" }}
           background: true
           paths:
             - /home/circleci/.ccache
@@ -257,10 +262,32 @@ jobs:
               pip install -e habitat-lab
               pip install -e habitat-baselines
       - save_cache:
-          key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}
+          key: conda-{{ checksum "habitat-lab/.circleci/config.yml" }}-{{ checksum "./date" }}
           background: true
           paths:
             - ~/miniconda
+      - run:
+          name: Display dependency versions
+          no_output_timeout: 20m
+          command: |
+              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
+              . activate habitat
+
+              export CONDA_ENV_DUMP=conda_env_dump.log
+
+              echo "pip freeze"           | tee -a $CONDA_ENV_DUMP
+              pip freeze                  | tee -a $CONDA_ENV_DUMP
+
+              echo "###########"          | tee -a $CONDA_ENV_DUMP
+              echo "conda list"           | tee -a $CONDA_ENV_DUMP
+              conda list                  | tee -a $CONDA_ENV_DUMP
+
+              echo "###########"          | tee -a $CONDA_ENV_DUMP
+              echo "habitat-sim commit"   | tee -a $CONDA_ENV_DUMP
+              cat ./hsim_sha              | tee -a $CONDA_ENV_DUMP
+
+      - store_artifacts:
+          path: conda_env_dump.log  # This is the list of modules in conda and pip
       - run:
           name: Run api tests
           no_output_timeout: 120m

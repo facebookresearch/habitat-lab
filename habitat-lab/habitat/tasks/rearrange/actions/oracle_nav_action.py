@@ -10,7 +10,6 @@ from gym import spaces
 import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
@@ -138,17 +137,14 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             return [agent_pos, point]
         return path.points
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         nav_to_target_idx = kwargs[
             self._action_arg_prefix + "oracle_nav_action"
         ]
         if nav_to_target_idx <= 0 or nav_to_target_idx > len(
             self._poss_entities
         ):
-            if is_last_action:
-                return self._sim.step(HabitatSimActions.base_velocity)
-            else:
-                return {}
+            return
         nav_to_target_idx = int(nav_to_target_idx[0]) - 1
 
         final_nav_targ, obj_targ_pos = self._get_target_for_idx(
@@ -203,9 +199,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                 else:
                     vel = [0, 0]
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
-                return BaseVelAction.step(
-                    self, *args, is_last_action=is_last_action, **kwargs
-                )
+                BaseVelAction.step(self, *args, **kwargs)
+                return
 
             elif self.motion_type == "human_joints":
                 # Update the humanoid base
@@ -229,9 +224,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
                     f"{self._action_arg_prefix}human_joints_trans"
                 ] = base_action
 
-                return HumanoidJointAction.step(
-                    self, *args, is_last_action=is_last_action, **kwargs
-                )
+                HumanoidJointAction.step(self, *args, **kwargs)
+                return
             else:
                 raise ValueError(
                     "Unrecognized motion type for oracle nav action"

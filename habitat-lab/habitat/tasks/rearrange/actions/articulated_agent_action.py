@@ -21,7 +21,7 @@ class ArticulatedAgentAction(SimulatorTaskAction):
     @property
     def _articulated_agent_mgr(self):
         """
-        Underlying articulated_agent mananger for the articulated_agent instance the action is attached to.
+        Underlying articulated_agent manager for the articulated_agent instance the action is attached to.
         """
         return self._sim.agents_mgr[self._agent_index]
 

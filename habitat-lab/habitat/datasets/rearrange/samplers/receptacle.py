@@ -776,6 +776,14 @@ def find_receptacles(
             )
         )
 
+    # check for non-unique naming mistakes in user dataset
+    for rec_ix in range(len(receptacles)):
+        rec1_unique_name = receptacles[rec_ix].unique_name
+        for rec_ix2 in range(rec_ix + 1, len(receptacles)):
+            assert (
+                rec1_unique_name != receptacles[rec_ix2].unique_name
+            ), "Two Receptacles found with the same unique name '{rec1_unique_name}'. Likely indicates multiple receptacle entries with the same name in the same config."
+
     return receptacles
 
 
