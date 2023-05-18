@@ -216,12 +216,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
-        optim_state = self._updater.optimizer.state_dict() if self._updater.optimizer is not None else None
-        print("self._updater.optimizer.state_dict()", self._updater.optimizer.state_dict())
-        print("optim_state", optim_state)
         ret = {
             "state_dict": self._actor_critic.state_dict(),
-            "optim_state": optim_state,
+            "optim_state": self._updater.optimizer.state_dict() if self._updater.optimizer is not None else None,
         }
         if self._lr_scheduler is not None:
             ret["lr_sched_state"] = (self._lr_scheduler.state_dict(),)
