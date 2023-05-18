@@ -293,6 +293,13 @@ class SandboxDriver(GuiAppDriver):
 
         return drop_pos
 
+    def is_target_object_at_goal_position(self, target_obj_idx):
+        this_target_pos = self.get_target_object_position(target_obj_idx)
+        end_radius = self.env._config.task.obj_succ_thresh
+        return (
+            this_target_pos - self._goal_positions[target_obj_idx]
+        ).length() < end_radius
+
     def update_task(self):
         end_radius = self.env._config.task.obj_succ_thresh
 
@@ -307,17 +314,13 @@ class SandboxDriver(GuiAppDriver):
                 continue
 
             color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
-            this_target_pos = self.get_target_object_position(i)
-            threshold = end_radius
-            if (
-                this_target_pos - mn.Vector3(self._goal_positions[i])
-            ).length() < threshold:
-                # object is already at goal pos
+            if self.is_target_object_at_goal_position(i):
                 continue
 
             self._num_remaining_objects += 1
 
             if self._held_target_obj_idx is None:
+                this_target_pos = self.get_target_object_position(i)
                 box_half_size = 0.15
                 box_offset = mn.Vector3(
                     box_half_size, box_half_size, box_half_size
