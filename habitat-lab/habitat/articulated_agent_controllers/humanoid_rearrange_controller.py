@@ -87,7 +87,6 @@ class HumanoidRearrangeController:
         with open(walk_pose_path, "rb") as f:
             walk_data = pkl.load(f)
         walk_info = walk_data["walk_motion"]
-
         self.walk_motion = Motion(
             walk_info["joints_array"],
             walk_info["transform_array"],
