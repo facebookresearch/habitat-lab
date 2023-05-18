@@ -141,11 +141,11 @@ class BaseVelocityActionConfig(ActionConfig):
     collision_threshold: float = 1e-5
     navmesh_offset: Optional[List[float]] = None
     min_displacement: float = 0.1  # minimum displacement that is allowed
-    max_displacement_along_axis: float = 1.0  # maximum displacement
-    max_turn_degrees: float = 180.0  # maximum turn waypoint
+    max_displacement_along_axis: float = 0.25  # maximum displacement
+    max_turn_degrees: float = 30.0  # maximum turn waypoint
     min_turn_degrees: float = 5.0  # minimum turn waypoint
-    allow_lateral_movement: bool = True  # whether to allow lateral movement
-    allow_simultaneous_turn: bool = True  # whether to allow simultaneous turn
+    allow_lateral_movement: bool = False  # whether to allow lateral movement
+    allow_simultaneous_turn: bool = False  # whether to allow simultaneous turn
     discrete_movement: bool = (
         False  # whether to move/rotate only in discrete steps
     )
