@@ -11,7 +11,8 @@ defaults:
   - /habitat/task/actions:
     - oracle_nav_soc_action
   - /habitat/task/lab_sensors:
-    - has_finished_oracle_nav
+    #- has_finished_oracle_nav
+    - has_finished_oracle_nav_soc
   - _self_
 
 habitat:
@@ -31,7 +32,8 @@ habitat:
       - is_holding
       - ee_pos
       - localization_sensor
-      - has_finished_oracle_nav
+      #- has_finished_oracle_nav
+      - has_finished_oracle_nav_soc
   simulator:
     habitat_sim_v0:
       allow_sliding: True

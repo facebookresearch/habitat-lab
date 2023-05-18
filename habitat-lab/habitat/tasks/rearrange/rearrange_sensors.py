@@ -1040,7 +1040,7 @@ class HasFinishedOracleNavSocSensor(UsesArticulatedAgentInterface, Sensor):
         super().__init__(config=config)
 
     def _get_uuid(self, *args, **kwargs):
-        return HasFinishedOracleNavSensor.cls_uuid
+        return HasFinishedOracleNavSocSensor.cls_uuid
 
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
