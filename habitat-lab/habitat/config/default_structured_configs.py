@@ -950,7 +950,8 @@ class TaskConfig(HabitatBaseConfig):
     goal_type: str = "object_on_recep"
     pick_init: bool = False
     place_init: bool = False
-    camera_tilt: float = -0.7125
+    camera_tilt: float = -0.5236
+    receptacle_categories_file: str = ""
 
 
 @attr.s(auto_attribs=True, slots=True)
