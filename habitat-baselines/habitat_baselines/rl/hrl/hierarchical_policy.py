@@ -24,12 +24,14 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     HighLevelPolicy,
     NeuralHighLevelPolicy,
     PlannerHighLevelPolicy,
+    SocNavHumanHighLevelPolicy
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
     NavSkillPolicy,
     NoopSkillPolicy,
     OracleNavPolicy,
+    OracleNavSocPolicy,
     PickSkillPolicy,
     PlaceSkillPolicy,
     ResetArmSkill,
@@ -65,6 +67,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         super().__init__()
 
         self._action_space = action_space
+        #import ipdb; ipdb.set_trace()
         self._num_envs: int = num_envs
 
         # Maps (skill idx -> skill)
@@ -101,6 +104,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
         )
+        #self._stop_action_idx = 39
+        #self._stop_action_idx = 38
 
     def _create_skills(
         self, skills, observation_space, action_space, full_config
@@ -128,6 +133,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                 self._idx_to_name[skill_i] = skill_id
                 self._skills[skill_i] = skill_policy
                 skill_i += 1
+            #import ipdb; ipdb.set_trace()
+        #print("self name to idx is ", self._name_to_idx)
 
     def _get_hl_policy_cls(self, config):
         return eval(config.hierarchical_policy.high_level_policy.name)
@@ -280,6 +287,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 "masks": masks,
             },
         )
+        #print("grouped skills keys are ", grouped_skills.keys()) #keys are dict_keys([8.0]) for nav
         for skill_id, (batch_ids, batch_dat) in grouped_skills.items():
             action_data = self._skills[skill_id].act(
                 observations=batch_dat["observations"],
@@ -307,8 +315,9 @@ class HierarchicalPolicy(nn.Module, Policy):
             actions,
             log_info,
         )
-
+        #print("hl terminate ep is ", hl_terminate_episode)
         should_terminate_episode = bad_should_terminate | hl_terminate_episode
+        #print("should terminate episode ", should_terminate_episode)
         if should_terminate_episode.sum() > 0:
             # End the episode where requested.
             for batch_idx in torch.nonzero(should_terminate_episode):
@@ -319,7 +328,9 @@ class HierarchicalPolicy(nn.Module, Policy):
             "actions": actions,
         }
         action_kwargs.update(hl_info)
-
+        #print("Act is called")
+        #print("stop idx is ", self._stop_action_idx)
+        #print("action is  ", actions[0, self._stop_action_idx])
         return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
@@ -355,6 +366,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         # the next skill.
         hl_terminate_episode = torch.zeros(self._num_envs, dtype=torch.bool)
         hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
+        #print("should choose new skill ", should_choose_new_skill.sum()>0) #This is many times false and not always called
         if should_choose_new_skill.sum() > 0:
             (
                 new_skills,
@@ -370,7 +382,13 @@ class HierarchicalPolicy(nn.Module, Policy):
                 deterministic,
                 log_info,
             )
-
+            self.skill_print = self._skills
+            print("next skill: ", new_skills)
+            print("hl terminate episode is ", hl_terminate_episode)
+            # print("new skill args: ", new_skill_args)
+            # print("hl_info: ", hl_info)
+            # print("hl_terminate_episode: ", hl_terminate_episode)
+            # print("all the skills are ", self.skill_print)
             sel_grouped_skills = self._broadcast_skill_ids(
                 new_skills,
                 sel_dat={},
@@ -426,6 +444,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._cur_skills,
             log_info,
         )
+        #print("hl got termination ", hl_wants_skill_term)
 
         # Check if skills should terminate.
         bad_should_terminate: torch.BoolTensor = torch.zeros(
@@ -445,6 +464,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         for skill_id, (batch_ids, dat) in grouped_skills.items():
             # TODO: either change name of the function or assign actions somewhere
             # else. Updating actions in should_terminate is counterintuitive
+            skills = self._skills
+            #print("skill id is ", skill_id)
+            #print("self._skills is ", skills)
             (
                 self._cur_call_high_level[batch_ids],
                 bad_should_terminate[batch_ids],

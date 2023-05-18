@@ -1025,3 +1025,37 @@ class BadCalledTerminate(Measure):
         ].get_metric()
 
         self._metric = (not is_succ) and does_action_want_stop
+
+@registry.register_sensor
+class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    """
+
+    cls_uuid: str = "has_finished_oracle_nav"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return HasFinishedOracleNavSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if "oracle_nav_soc_action" in self._task.actions:
+            nav_action = self._task.actions[
+                "oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"#"oracle_nav_soc_action" #f"agent_{self.agent_id}_oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"
+            ]
+        else:
+            nav_action = self._task.actions[
+                f"agent_{self.agent_id}_oracle_nav_soc_action"
+            ]
+        #print("skill done? ", nav_action.skill_done)
+        return np.array(nav_action.skill_done, dtype=np.float32)

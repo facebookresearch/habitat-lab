@@ -12,6 +12,7 @@ from habitat_baselines.rl.hrl.skills.place import PlaceSkillPolicy
 from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
 from habitat_baselines.rl.hrl.skills.wait import WaitSkillPolicy
+from habitat_baselines.rl.hrl.skills.oracle_nav_soc import OracleNavSocPolicy
 
 __all__ = [
     "ArtObjSkillPolicy",
@@ -24,4 +25,5 @@ __all__ = [
     "SkillPolicy",
     "WaitSkillPolicy",
     "NoopSkillPolicy",
+    "OracleNavSocPolicy"
 ]
