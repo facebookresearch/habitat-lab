@@ -28,7 +28,7 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - has_finished_oracle_nav
-    - has_finished_oracle_nav_soc
+    #- has_finished_oracle_nav_soc
   - _self_
 
 type: RearrangeCompositeTask-v0

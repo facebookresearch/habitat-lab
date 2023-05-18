@@ -1029,7 +1029,7 @@ class BadCalledTerminate(Measure):
 @registry.register_sensor
 class HasFinishedOracleNavSocSensor(UsesArticulatedAgentInterface, Sensor):
     """
-    Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
+    Returns 1 if the agent has finished the oracle nav soc action. Returns 0 otherwise.
     """
 
     cls_uuid: str = "has_finished_oracle_nav_soc"
@@ -1059,6 +1059,8 @@ class HasFinishedOracleNavSocSensor(UsesArticulatedAgentInterface, Sensor):
                     f"agent_{self.agent_id}_oracle_nav_soc_action"
                 ]
             else:
+                print("agent id is ", self.agent_id)
+                print("actions are ", self._task.actions)
                 raise Exception("Action nonexisistent")
         return np.array(nav_action.skill_done, dtype=np.float32)
 
@@ -1067,7 +1069,7 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
     """
     Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
     """
-
+    print("Initialized!")
     cls_uuid: str = "has_finished_oracle_nav" #"has_finished_oracle_nav"
 
     def __init__(self, sim, config, *args, task, **kwargs):
@@ -1090,10 +1092,18 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
             nav_action = self._task.actions[
                 "oracle_nav_action"#f"agent_{self.agent_id}_oracle_nav_action"#"oracle_nav_soc_action" #f"agent_{self.agent_id}_oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"
             ]
+        elif "oracle_nav_soc_action" in self._task.actions:
+            nav_action = self._task.actions[
+                "oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"#"oracle_nav_soc_action" #f"agent_{self.agent_id}_oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"
+            ]
         else:
             if f"agent_{self.agent_id}_oracle_nav_action" in self._task.actions:
                 nav_action = self._task.actions[
                     f"agent_{self.agent_id}_oracle_nav_action"
+                ]
+            elif f"agent_{self.agent_id}_oracle_nav_soc_action" in self._task.actions:
+                nav_action = self._task.actions[
+                    f"agent_{self.agent_id}_oracle_nav_soc_action"
                 ]
             else:
                 raise Exception("Action nonexisistent")

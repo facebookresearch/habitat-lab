@@ -27,10 +27,10 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
-    - has_finished_oracle_nav_soc
+    #- has_finished_oracle_nav_soc
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
-  #- /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
+  # - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
   # - override /habitat/task/actions:
   #   - base_velocity
   #   - rearrange_stop
@@ -51,9 +51,9 @@ habitat:
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
-      # agent_0_oracle_nav_action:
-      #   agent_index : 0
-      #   spawn_max_dist_to_obj: -1.0
+      agent_0_oracle_nav_action:
+        agent_index : 0
+        spawn_max_dist_to_obj: -1.0
       agent_1_oracle_nav_soc_action:
         agent_index: 1
         motion_control: human_joints
@@ -88,7 +88,8 @@ habitat:
       - agent_1_ee_pos
       - agent_1_localization_sensor
       - agent_1_humanoid_joint_sensor
-      - agent_1_has_finished_oracle_nav_soc
+      - agent_1_has_finished_oracle_nav
+      #- agent_1_has_finished_oracle_nav_soc
   simulator:
     agents:
       agent_0:

@@ -51,6 +51,7 @@ class OracleNavPolicy(NnSkillPolicy):
         self._oracle_nav_ac_idx, _ = find_action_range(
             action_space, "oracle_nav_action"
         )
+        #prit("Oracle nav initialized!")
 
         self._is_target_obj = None
         self._targ_obj_idx = None
@@ -124,6 +125,7 @@ class OracleNavPolicy(NnSkillPolicy):
         #         movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
         #         ret[i] = movement < self._config.stop_thresh
         #     self._prev_pos[batch_i] = cur_pos[i]
+        print("oracle nav!", HasFinishedOracleNavSensor.cls_uuid)
         finish_oracle_nav = observations[
             HasFinishedOracleNavSensor.cls_uuid
         ].cpu()
