@@ -50,6 +50,7 @@ __all__ = [
     "HumanoidJointActionConfig",
     "RearrangeStopActionConfig",
     "OracleNavActionConfig",
+    "OracleNavSocActionConfig",
     # REARRANGEMENT LAB SENSORS
     "RelativeRestingPositionSensorConfig",
     "IsHoldingSensorConfig",
@@ -554,6 +555,10 @@ class TargetCurrentSensorConfig(LabSensorConfig):
 @dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
+
+@dataclass
+class HasFinishedOracleNavSocSensorConfig(LabSensorConfig):
+    type: str = "HasFinishedOracleNavSocSensor"
 
 
 @dataclass
@@ -1931,6 +1936,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.has_finished_oracle_nav_soc",
+    group="habitat/task/lab_sensors",
+    name="has_finished_oracle_nav_soc",
+    node=HasFinishedOracleNavSocSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.is_holding_sensor",

@@ -10,7 +10,7 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed # monolithic
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed #hl_fixed #hab3_hl_neural
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_socnav_human #hl_fixed #hl_fixed #hab3_hl_neural
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
@@ -27,9 +27,16 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
+    - has_finished_oracle_nav_soc
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
-  - /habitat/task/actions@actions.agent_0_oracle_nav_action: oracle_nav_action
-  - /habitat/task/actions@actions.agent_1_oracle_nav_action: oracle_nav_action
+  # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
+  #- /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
+  # - override /habitat/task/actions:
+  #   - base_velocity
+  #   - rearrange_stop
+  #   - pddl_apply_action
+  #   - oracle_nav_action
+  #   - oracle_nav_soc_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   # For Spot observation space
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
@@ -44,10 +51,11 @@ habitat:
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
-      agent_0_oracle_nav_action:
-        agent_index : 0
-        spawn_max_dist_to_obj: -1.0
-      agent_1_oracle_nav_action:
+      # agent_0_oracle_nav_action:
+      #   agent_index : 0
+      #   spawn_max_dist_to_obj: -1.0
+      agent_1_oracle_nav_soc_action:
+        agent_index: 1
         motion_control: human_joints
         spawn_max_dist_to_obj: 1.7
     measurements:
@@ -80,7 +88,7 @@ habitat:
       - agent_1_ee_pos
       - agent_1_localization_sensor
       - agent_1_humanoid_joint_sensor
-      - agent_1_has_finished_oracle_nav
+      - agent_1_has_finished_oracle_nav_soc
   simulator:
     agents:
       agent_0:
@@ -142,14 +150,14 @@ habitat_baselines:
       agent_1:
         hierarchical_policy:
           high_level_policy:
-            name: "FixedHighLevelPolicy"
+            name: "SocNavHumanHighLevelPolicy" #"FixedHighLevelPolicy"
             add_arm_rest: False
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
-              skill_name: "OracleNavPolicy"
+              skill_name: "OracleNavSocPolicy" #"OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 300
+              max_skill_steps: 1000 #300
               ignore_grip: True
       agent_0:
         hierarchical_policy:

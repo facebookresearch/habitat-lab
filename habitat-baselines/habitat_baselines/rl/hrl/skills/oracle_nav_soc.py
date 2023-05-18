@@ -10,7 +10,7 @@ import torch
 from habitat.core.spaces import ActionSpace
 #from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
-    HasFinishedOracleNavSensor,
+    HasFinishedOracleNavSocSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
@@ -130,7 +130,7 @@ class OracleNavSocPolicy(NnSkillPolicy):
         #     self._prev_pos[batch_i] = cur_pos[i]
 
         finish_oracle_nav = observations[
-            HasFinishedOracleNavSensor.cls_uuid
+            HasFinishedOracleNavSocSensor.cls_uuid
         ].cpu()
         ret = finish_oracle_nav[batch_idx].to(torch.bool)
         #print("Oracle nav soc ret is ", ret)

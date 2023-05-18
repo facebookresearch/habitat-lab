@@ -9,7 +9,8 @@ defaults:
   - /habitat/task/actions@actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@actions.agent_1_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@actions.agent_1_oracle_nav_action: oracle_nav_action
+  #- /habitat/task/actions@actions.agent_1_oracle_nav_action: oracle_nav_action
+  - /habitat/task/actions@actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
   - /habitat/task/measurements:
     - composite_success
     - num_steps
@@ -26,6 +27,7 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
+    - has_finished_oracle_nav
   - _self_
 
 type: RearrangeCompositeTask-v0
@@ -49,7 +51,7 @@ actions:
     agent_index : 1
   agent_1_pddl_apply_action:
     agent_index : 1
-  agent_1_oracle_nav_action:
+  agent_1_oracle_nav_soc_action:
     agent_index : 1
     spawn_max_dist_to_obj: -1.0
 measurements:

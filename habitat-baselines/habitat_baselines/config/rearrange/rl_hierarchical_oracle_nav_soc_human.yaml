@@ -18,7 +18,8 @@ defaults:
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
-    - has_finished_oracle_nav
+    #- has_finished_oracle_nav
+    - has_finished_oracle_nav_soc
   - override /habitat/task/actions:
     - base_velocity
     - rearrange_stop
@@ -45,7 +46,7 @@ habitat:
       - humanoid_joint_sensor
       - localization_sensor
       - is_holding
-      - has_finished_oracle_nav
+      - has_finished_oracle_nav_soc
   simulator:
     agents:
       main_agent:
