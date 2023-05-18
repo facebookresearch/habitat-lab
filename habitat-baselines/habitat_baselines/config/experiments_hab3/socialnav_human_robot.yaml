@@ -109,8 +109,8 @@ habitat_baselines:
   writer_type: 'wb'
 
   wb:
-    project_name: 'hab3'
-    entity: 'andrew-colab'
+    project_name: 'social_navigation'
+    entity: 'tgervet'
     run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
