@@ -50,7 +50,7 @@ actions:
     arm_joint_dimensionality: 5
     grasp_thresh_dist: 0.15
     disable_grip: False
-    delta_pos_limit: 0.0125
+    delta_pos_limit: 0.1
     ee_ctrl_lim: 0.015
     grasp_threshold: -0.8
   base_velocity:
@@ -63,7 +63,7 @@ measurements:
     max_instant_force: 10_000.0
   place_success:
     place_anywhere: True
-    check_stability: False
+    check_stability: True
   place_reward:
     place_anywhere: True
     sparse_reward: False
