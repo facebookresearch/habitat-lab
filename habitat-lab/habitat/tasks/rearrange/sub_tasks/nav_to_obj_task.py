@@ -63,7 +63,7 @@ class DynNavRLEnv(RearrangeTask):
         ), "Can init near either pick or place."
 
         self._camera_tilt = config.camera_tilt
-
+        self._start_in_manip_mode = config.start_in_manip_mode
     @property
     def nav_goal_pos(self):
         return self._nav_to_info.nav_goal_pos
@@ -206,16 +206,16 @@ class DynNavRLEnv(RearrangeTask):
                 if r in sim.valid_goal_rec_names
             ]
 
-            snap_pos = np.array(
-                [r.get_surface_center(sim) for r in spawn_recs]
-            )
+            snap_pos = np.array([v.agent_state.position for g in episode.candidate_goal_receps for v in g.view_points])
+            recep_centers = np.array([g.position for g in episode.candidate_goal_receps for _ in g.view_points])
             start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
                 target_positions=snap_pos,
-                rotation_perturbation_noise=self._config.base_angle_noise,
-                distance_threshold=self._config.spawn_max_dists_to_obj,
+                rotation_perturbation_noise=0.0,
+                distance_threshold=0.0,
                 sim=sim,
                 num_spawn_attempts=self._config.num_spawn_attempts,
                 physics_stability_steps=self._config.physics_stability_steps,
+                orient_positions=recep_centers,
             )
 
             if was_unsucc:
@@ -227,9 +227,12 @@ class DynNavRLEnv(RearrangeTask):
             sim.robot.base_rot = angle_to_obj
             abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
             sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
+            if isinstance(self._sim.robot, StretchRobot) and self._start_in_manip_mode:
+                sim.robot.base_rot = angle_to_obj + np.pi / 2
         else:
             sim.robot.base_pos = self._nav_to_info.robot_start_pos
             sim.robot.base_rot = self._nav_to_info.robot_start_angle
+
         self.robot_start_position = sim.robot.sim_obj.translation
         start_quat = sim.robot.sim_obj.rotation
         self.robot_start_rotation = np.array(

@@ -317,6 +317,9 @@ class GazeGraspAction(MagicGraspAction):
         snap_obj_idx = np.array(self._sim.scene_obj_ids)[
             allowed_scene_obj_ids
         ][closest]
+        self._task._picked_object_idx = self._sim.scene_obj_ids.index(
+            snap_obj_idx
+        )
         self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
 
     def _grasp(self):
@@ -339,6 +342,9 @@ class GazeGraspAction(MagicGraspAction):
             force=True,
             rel_pos=mn.Vector3(0.1, 0.0, 0.0),
             keep_T=keep_T,
+        )
+        self._task._picked_object_idx = self._sim.scene_obj_ids.index(
+            center_obj_idx
         )
         return
 

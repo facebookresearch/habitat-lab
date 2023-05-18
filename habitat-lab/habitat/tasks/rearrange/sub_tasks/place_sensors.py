@@ -44,26 +44,31 @@ class ObjAnywhereOnGoal(Measure):
     def update_metric(self, *args, episode, task, observations, **kwargs):
         self._sim.perform_discrete_collision_detection()
         cps = self._sim.get_physics_contact_points()
-
+        MAX_FLOOR_HEIGHT = 0.05
         self._metric = False
-        abs_obj_id = self._sim.scene_obj_ids[task.abs_targ_idx]
+        # Use the picked object if it exists, otherwise use the target object from geogoal episodes
+        picked_idx = task.picked_object_idx if task.picked_object_idx is not None else task.abs_targ_idx
+        abs_obj_id = self._sim.scene_obj_ids[task.picked_object_idx]
         for cp in cps:
             if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
                 if cp.contact_distance < -0.01:
                     self._metric = False
                 else:
                     other_obj_id = cp.object_id_a + cp.object_id_b - abs_obj_id
+                    # Get the contact point on the other object
+                    contact_point = (
+                        cp.position_on_a_in_ws
+                        if other_obj_id == cp.object_id_a
+                        else cp.position_on_b_in_ws
+                    )
                     # Check if the other object has an id that is acceptable
                     self._metric = (
                         other_obj_id in self._sim.valid_goal_rec_obj_ids
+                        and contact_point[1] >= MAX_FLOOR_HEIGHT # ensure that the object is not on the floor
                     )
                     # Additional check for receptacles that are not on a separate object
                     if self._metric and other_obj_id == -1:
-                        contact_point = (
-                            cp.position_on_a_in_ws
-                            if other_obj_id == cp.object_id_a
-                            else cp.position_on_b_in_ws
-                        )
+
                         for n, r in self._sim.receptacles.items():
                             if r.check_if_point_on_surface(
                                 self._sim, contact_point
