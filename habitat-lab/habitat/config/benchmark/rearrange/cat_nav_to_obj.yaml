@@ -12,7 +12,6 @@ habitat:
     auto_name: NavToObj
     obs_keys:
       - robot_head_depth
-      - robot_head_panoptic
       - object_embedding
       - cat_nav_goal_segmentation
       - receptacle_segmentation
@@ -58,3 +57,4 @@ habitat:
   dataset:
     data_path: data/datasets/floorplanner/rearrange/v1/{split}/categorical_rearrange_easy.json.gz
     type: ObjectRearrangeDataset-v0
+    scenes_dir: data/fpss/fphab/
