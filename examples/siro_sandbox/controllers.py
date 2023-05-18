@@ -333,6 +333,7 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        assert not self.is_grasped
 
     def get_random_joint_action(self):
         # Add random noise to human arms but keep global transform
