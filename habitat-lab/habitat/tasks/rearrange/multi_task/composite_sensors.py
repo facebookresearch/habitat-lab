@@ -313,6 +313,9 @@ class SocialNavReward(Measure):
     def update_metric(self, *args, task, **kwargs):
         self._metric = 0.0
 
+        # position_human = kwargs["observations"]["agent_1_localization_sensor"][
+        #     :3
+        # ]
         position_human = np.array([1.4949119, 0.1212318, 0.01207453])
         position_robot = kwargs["observations"]["agent_0_localization_sensor"][
             :3
