@@ -267,16 +267,24 @@ class SandboxDriver(GuiAppDriver):
                 # pick up an object
                 if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
                     translation = self.get_agent_translation()
-                    # todo: compare distance in xz plane (ignore y)
-                    target_positions = self.get_target_object_positions()
-                    dist_to_objs = np.linalg.norm(
-                        target_positions - translation, axis=1
-                    )
-                    closet_obj_idx = np.argmin(dist_to_objs)
-                    closet_obj_dist = dist_to_objs[closet_obj_idx]
 
-                    if closet_obj_dist < self._can_grasp_place_threshold:
-                        self._held_target_obj_idx = closet_obj_idx
+                    min_dist = self._can_grasp_place_threshold
+                    min_i = None
+                    for i in range(len(self._target_obj_ids)):
+                        if self.is_target_object_at_goal_position(i):
+                            continue
+
+                        this_target_pos = self.get_target_object_position(i)
+                        # compute distance in xz plane
+                        offset = this_target_pos - translation
+                        offset.y = 0
+                        dist_xz = offset.length()
+                        if dist_xz < min_dist:
+                            min_dist = dist_xz
+                            min_i = i
+
+                    if min_i is not None:
+                        self._held_target_obj_idx = min_i
                         grasp_object_id = self._target_obj_ids[
                             self._held_target_obj_idx
                         ]
