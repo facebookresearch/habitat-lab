@@ -7,7 +7,7 @@ import os.path as osp
 import pickle
 import re
 import sys
-from typing import List, Set
+from typing import Any, Dict, List, Set
 
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
@@ -19,6 +19,9 @@ from tqdm import tqdm
 
 import habitat_sim
 from habitat.core.utils import DatasetFloatJSONEncoder
+from habitat.datasets.rearrange.navmesh_utils import (
+    compute_navmesh_island_classifications,
+)
 from habitat.datasets.rearrange.samplers.receptacle import find_receptacles
 from habitat.datasets.rearrange.viewpoints import (
     generate_viewpoints,
@@ -326,7 +329,7 @@ def load_receptacle_cache(scene, cache_dir, cache):
     receptacle_cache_path = osp.join(cache_dir, scene_name + ".pkl")
     assert osp.exists(
         receptacle_cache_path
-    ), "Receptacle viewpoints cache file missing."
+    ), f"Receptacle viewpoints cache file missing: {receptacle_cache_path}"
     with open(receptacle_cache_path, "rb") as f:
         cache[scene] = pickle.load(f)
     return cache
@@ -395,6 +398,7 @@ def load_navmesh(sim, scene):
         raise RuntimeError(
             f"No navmesh found for scene {scene}, please generate one."
         )
+    compute_navmesh_island_classifications(sim)
 
 
 def add_cat_fields_to_episodes(
@@ -414,7 +418,7 @@ def add_cat_fields_to_episodes(
     episodes = json.load(gzip.open(episodes_file))
     episodes["obj_category_to_obj_category_id"] = obj_to_id
     episodes["recep_category_to_recep_category_id"] = rec_to_id
-    receptacle_cache = {}
+    receptacle_cache: Dict[str, Any] = {}
 
     sim = None
     sim = initialize_sim(
