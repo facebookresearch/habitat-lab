@@ -102,7 +102,6 @@ class HumanoidRearrangeController:
             self.walk_motion.displacement[-1] / self.walk_motion.num_poses
         )
 
-
         # These two matrices store the global transformation of the base
         # as well as the transformation caused by the walking gait
         # We initialize them to identity

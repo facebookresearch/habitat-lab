@@ -107,7 +107,7 @@ habitat_baselines:
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
-  
+
   evaluate: False
   writer_type: 'wb'
 

@@ -2,11 +2,11 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import pickle as pkl
 from typing import List
 
 import magnum as mn
 import numpy as np
-import pickle as pkl
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import (
@@ -32,7 +32,7 @@ class KinematicHumanoid(MobileManipulator):
             wheel_mtr_vel_gain=None,
             wheel_mtr_max_impulse=None,
             ee_offset=[mn.Vector3(), mn.Vector3()],
-            ee_links=[20, 39], # Switch to 14-18 if using SMPL
+            ee_links=[20, 39],  # Switch to 14-18 if using SMPL
             ee_constraint=np.zeros((2, 2, 3)),
             cameras={
                 "head": ArticulatedAgentCameraParams(
@@ -57,7 +57,12 @@ class KinematicHumanoid(MobileManipulator):
         )
 
     def __init__(
-        self, urdf_path, sim, limit_robo_joints=False, fixed_base=False, rest_pose_path=None
+        self,
+        urdf_path,
+        sim,
+        limit_robo_joints=False,
+        fixed_base=False,
+        rest_pose_path=None,
     ):
         super().__init__(
             self._get_humanoid_params(),
@@ -65,7 +70,7 @@ class KinematicHumanoid(MobileManipulator):
             sim,
             limit_robo_joints,
             fixed_base,
-            maintain_link_order=True
+            maintain_link_order=True,
         )
 
         # The offset and base transform are used so that the
@@ -81,16 +86,15 @@ class KinematicHumanoid(MobileManipulator):
         self.rest_matrix = mn.Matrix4()
 
     def set_rest_pose_path(self, rest_pose_path):
-        """ Sets the parameters that indicate the reset state of the agent. Note that this function overrides
-            _get_X_params, which is used to set parameters of the robots, but the parameters are so large that
-            it is better to put that on a file 
+        """Sets the parameters that indicate the reset state of the agent. Note that this function overrides
+        _get_X_params, which is used to set parameters of the robots, but the parameters are so large that
+        it is better to put that on a file
         """
-        with open(rest_pose_path, 'rb') as f:
+        with open(rest_pose_path, "rb") as f:
             rest_pose = pkl.load(f)
             rest_pose = rest_pose["pose_motion"]
         self.rest_joints = list(rest_pose["joints_array"][0])
         self.rest_matrix = rest_pose["transform_array"][0]
-    
 
     @property
     def inverse_offset_transform(self):
@@ -154,9 +158,9 @@ class KinematicHumanoid(MobileManipulator):
             joint_list = self.rest_joints
         else:
             joint_list = self.sim_obj.joint_positions
-        
+
         offset_transform = mn.Matrix4()  # self.rest_matrix
-        
+
         self.set_joint_transform(
             joint_list, offset_transform, self.base_transformation
         )

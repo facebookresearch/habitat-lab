@@ -39,7 +39,9 @@ from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from habitat.gui.text_drawer import TextOnScreenAlignment
 
 # Please reach out to the paper authors to obtain this file
-DEFAULT_POSE_PATH = "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+DEFAULT_POSE_PATH = (
+    "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+)
 
 DEFAULT_CFG = "benchmark/rearrange/rearrange_easy_human_and_fetch.yaml"
 
