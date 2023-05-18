@@ -76,7 +76,6 @@ class ObjAnywhereOnGoal(Measure):
                         return
 
 
-
 @registry.register_measure
 class PlaceReward(RearrangeReward):
     cls_uuid: str = "place_reward"

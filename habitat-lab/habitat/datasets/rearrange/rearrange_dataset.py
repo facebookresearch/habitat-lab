@@ -167,7 +167,6 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
         check_and_gen_physics_config()
-
         if config is not None:
             if self.config.viewpoints_matrix_path is not None:
                 self.viewpoints_matrix = np.load(
@@ -182,7 +181,6 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                     )
                 )
         super().__init__(config)
-
 
     def get_episode_iterator(
         self, *args: Any, **kwargs: Any
@@ -199,7 +197,9 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
         result = DatasetFloatJSONEncoder().encode(self)
         return result
 
-    def __deserialize_goal(self, serialized_goal: Dict[str, Any]) -> ObjectGoal:
+    def __deserialize_goal(
+        self, serialized_goal: Dict[str, Any]
+    ) -> ObjectGoal:
         g = ObjectGoal(**serialized_goal)
         if self.viewpoints_matrix is None:
             # if the view points are not cached separately, read from original episodes
@@ -241,4 +241,9 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                             for g in episode[goal_type]
                         ],
                     )
-            self.episodes.append(rearrangement_episode)
+
+            if (
+                len(self.config.episode_ids) == 0
+                or i in self.config.episode_ids
+            ):
+                self.episodes.append(rearrangement_episode)

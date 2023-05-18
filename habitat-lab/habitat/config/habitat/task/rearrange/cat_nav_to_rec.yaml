@@ -10,27 +10,27 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
-    - cat_nav_rot_dist_to_goal
+    - ovmm_rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ
     - does_want_terminate
-    - rearrange_nav_to_obj_success
+    - ovmm_nav_to_obj_success
     - bad_called_terminate
-    - rearrange_nav_to_obj_reward
+    - ovmm_nav_to_obj_reward
     - num_steps
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
     - goal_receptacle_sensor
-    - cat_nav_goal_segmentation_sensor
+    - ovmm_nav_goal_segmentation_sensor
     - receptacle_segmentation_sensor
     - robot_start_gps_sensor
     - robot_start_compass_sensor
   - _self_
 
 type: CatNavToObjTask-v0
-reward_measure: nav_to_obj_reward
-success_measure: nav_to_obj_success
+reward_measure: ovmm_nav_to_obj_reward
+success_measure: ovmm_nav_to_obj_success
 success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True

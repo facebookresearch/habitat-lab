@@ -130,6 +130,8 @@ class ArmActionConfig(ActionConfig):
     gaze_distance_from: str = "camera"
     gaze_center_square_width: float = 1
     grasp_threshold: float = 0.0
+    oracle_snap: bool = False
+
 
 @attr.s(auto_attribs=True, slots=True)
 class BaseVelocityActionConfig(ActionConfig):
@@ -154,6 +156,21 @@ class BaseVelocityActionConfig(ActionConfig):
 @attr.s(auto_attribs=True, slots=True)
 class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class ExtendArmActionConfig(ActionConfig):
+    type: str = "ExtendArmAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class ResetJointsActionConfig(ActionConfig):
+    type: str = "ResetJointsAction"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class FaceArmActionConfig(ActionConfig):
+    type: str = "FaceArmAction"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -399,7 +416,7 @@ class StartReceptacleSensorConfig(LabSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ObjectEmbeddingSensorConfig(LabSensorConfig):
     type: str = "ObjectEmbeddingSensor"
-    embeddings_file: str = "clip_embeddings.pickle"
+    embeddings_file: str = "data/objects/clip_embeddings.pickle"
     dimensionality: int = 512
 
 
@@ -407,19 +424,31 @@ class ObjectEmbeddingSensorConfig(LabSensorConfig):
 class ObjectSegmentationSensorConfig(LabSensorConfig):
     type: str = "ObjectSegmentationSensor"
     blank_out_prob: float = 0.0
-    dimensionality: int = 256
+
+
+@attr.s(auto_attribs=True, slots=True)
+class StartRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
+    type: str = "StartRecepSegmentationSensor"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class GoalRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
+    type: str = "GoalRecepSegmentationSensor"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class CameraPoseSensorConfig(LabSensorConfig):
+    type: str = "CameraPoseSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
 class ReceptacleSegmentationSensorConfig(LabSensorConfig):
     type: str = "ReceptacleSegmentationSensor"
-    dimensionality: int = 256
 
 
 @attr.s(auto_attribs=True, slots=True)
-class CatNavGoalSegmentationSensorConfig(LabSensorConfig):
-    type: str = "CatNavGoalSegmentationSensor"
-    dimensionality: int = 256
+class OvmmNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "OvmmNavGoalSegmentationSensor"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -585,6 +614,7 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
+    use_shortest_path_cache: bool = True
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -623,6 +653,69 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
     # distance in radians.
     success_angle_dist: float = 0.261799
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
+    type: str = "OvmmNavToObjReward"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OvmmDistToPickGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OvmmDistToPlaceGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
+    type: str = "OvmmRotDistToGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmRotDistToPickGoalMeasurementConfig(
+    OvmmRotDistToGoalMeasurementConfig
+):
+    type: str = "OvmmRotDistToPickGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmRotDistToPlaceGoalMeasurementConfig(
+    OvmmRotDistToGoalMeasurementConfig
+):
+    type: str = "OvmmRotDistToPlaceGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OvmmNavToPickSucc"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
+    type: str = "OvmmNavToObjSucc"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavOrientToPickSuccMeasurementConfig(
+    NavToObjSuccessMeasurementConfig
+):
+    type: str = "OvmmNavOrientToPickSucc"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OvmmNavToPlaceSucc"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmNavOrientToPlaceSuccMeasurementConfig(
+    NavToObjSuccessMeasurementConfig
+):
+    type: str = "OvmmNavOrientToPlaceSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -797,11 +890,6 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class CatNavRotDistToGoalMeasurementConfig(MeasurementConfig):
-    type: str = "CatNavRotDistToGoal"
-
-
-@attr.s(auto_attribs=True, slots=True)
 class TaskConfig(HabitatBaseConfig):
     reward_measure: Optional[str] = None
     success_measure: Optional[str] = None
@@ -831,7 +919,7 @@ class TaskConfig(HabitatBaseConfig):
     # Spawn parameters
     physics_stability_steps: int = 1
     num_spawn_attempts: int = 200
-    spawn_max_dists_to_obj: float = 2.0
+    spawn_max_dists_to_obj: float = 1.0
     base_angle_noise: float = 0.523599
     spawn_reference: str = "target"
     spawn_reference_sampling: str = "uniform"
@@ -864,6 +952,11 @@ class TaskConfig(HabitatBaseConfig):
     actions: Dict[str, ActionConfig] = MISSING
     start_in_manip_mode: bool = False
     camera_tilt: float =  -0.7125
+    goal_type: str = "object_on_recep"
+    pick_init: bool = False
+    place_init: bool = False
+    camera_tilt: float = -0.7125
+
 
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorSensorConfig(HabitatBaseConfig):
@@ -1020,7 +1113,9 @@ class AgentConfig(HabitatBaseConfig):
     joint_start_noise: float = 0.1
     robot_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     robot_type: str = "FetchRobot"
-    ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    ik_arm_urdf: Optional[
+        str
+    ] = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1166,6 +1261,7 @@ class DatasetConfig(HabitatBaseConfig):
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
     content_scenes: List[str] = ["*"]
+    episode_ids: List[int] = []
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
@@ -1224,6 +1320,7 @@ cs.store(
     name="environment_config_schema",
     node=EnvironmentConfig,
 )
+
 cs.store(
     package="habitat.task",
     group="habitat/task",
@@ -1590,16 +1687,34 @@ cs.store(
     node=ObjectSegmentationSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.start_recep_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="start_recep_segmentation_sensor",
+    node=StartRecepSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.goal_recep_segmentation_sensor",
+    group="habitat/task/lab_sensors",
+    name="goal_recep_segmentation_sensor",
+    node=GoalRecepSegmentationSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.camera_pose_sensor",
+    group="habitat/task/lab_sensors",
+    name="camera_pose_sensor",
+    node=CameraPoseSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.receptacle_segmentation_sensor",
     group="habitat/task/lab_sensors",
     name="receptacle_segmentation_sensor",
     node=ReceptacleSegmentationSensorConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.cat_nav_goal_segmentation_sensor",
+    package="habitat.task.lab_sensors.ovmm_nav_goal_segmentation_sensor",
     group="habitat/task/lab_sensors",
-    name="cat_nav_goal_segmentation_sensor",
-    node=CatNavGoalSegmentationSensorConfig,
+    name="ovmm_nav_goal_segmentation_sensor",
+    node=OvmmNavGoalSegmentationSensorConfig,
 )
 
 # Task Measurements
@@ -1718,10 +1833,10 @@ cs.store(
     node=AnswerAccuracyMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.measurements.cat_nav_rot_dist_to_goal",
+    package="habitat.task.measurements.ovmm_rot_dist_to_goal",
     group="habitat/task/measurements",
-    name="cat_nav_rot_dist_to_goal",
-    node=CatNavRotDistToGoalMeasurementConfig,
+    name="ovmm_rot_dist_to_goal",
+    node=OvmmRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",
@@ -1860,6 +1975,66 @@ cs.store(
     group="habitat/task/measurements",
     name="dist_to_goal",
     node=DistToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_nav_to_obj_reward",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_obj_reward",
+    node=OvmmNavToObjRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.dist_to_pick_goal",
+    group="habitat/task/measurements",
+    name="ovmm_dist_to_pick_goal",
+    node=OvmmDistToPickGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.dist_to_place_goal",
+    group="habitat/task/measurements",
+    name="ovmm_dist_to_place_goal",
+    node=OvmmDistToPlaceGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rot_dist_to_pick_goal",
+    group="habitat/task/measurements",
+    name="ovmm_rot_dist_to_pick_goal",
+    node=OvmmRotDistToPickGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.rot_dist_to_place_goal",
+    group="habitat/task/measurements",
+    name="ovmm_rot_dist_to_place_goal",
+    node=OvmmRotDistToPlaceGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nav_to_pick_succ",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_pick_succ",
+    node=OvmmNavToPickSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nav_to_place_succ",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_place_succ",
+    node=OvmmNavToPlaceSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_nav_to_obj_success",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_obj_success",
+    node=OvmmNavToObjSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nav_orient_to_pick_succ",
+    group="habitat/task/measurements",
+    name="ovmm_nav_orient_to_pick_succ",
+    node=OvmmNavOrientToPickSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.nav_orient_to_place_succ",
+    group="habitat/task/measurements",
+    name="ovmm_nav_orient_to_place_succ",
+    node=OvmmNavOrientToPlaceSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_reach_reward",
