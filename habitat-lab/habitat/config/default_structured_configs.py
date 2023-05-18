@@ -1254,6 +1254,7 @@ class TaskConfig(HabitatBaseConfig):
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
     actions: Dict[str, ActionConfig] = MISSING
+    max_objects: int = 0
 
 
 @dataclass
