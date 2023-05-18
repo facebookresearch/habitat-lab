@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import json
 import os
 import random
 from abc import ABC, abstractmethod
@@ -56,6 +57,15 @@ class Receptacle(ABC):
         self.up_axis = nonzero_indices[0]
         self.parent_object_handle = parent_object_handle
         self.parent_link = parent_link
+
+        # The unique name of this Receptacle instance in the current scene.
+        # This name is a combination of the object instance name and Receptacle name.
+        self.unique_name = ""
+        if self.parent_object_handle is None:
+            # this is a stage receptacle
+            self.unique_name = "stage|" + self.name
+        else:
+            self.unique_name = self.parent_object_handle + "|" + self.name
 
     @property
     def is_parent_object_articulated(self):
@@ -766,6 +776,14 @@ def find_receptacles(
             )
         )
 
+    # check for non-unique naming mistakes in user dataset
+    for rec_ix in range(len(receptacles)):
+        rec1_unique_name = receptacles[rec_ix].unique_name
+        for rec_ix2 in range(rec_ix + 1, len(receptacles)):
+            assert (
+                rec1_unique_name != receptacles[rec_ix2].unique_name
+            ), "Two Receptacles found with the same unique name '{rec1_unique_name}'. Likely indicates multiple receptacle entries with the same name in the same config."
+
     return receptacles
 
 
@@ -787,7 +805,7 @@ class ReceptacleTracker:
         receptacle_sets: Dict[str, ReceptacleSet],
     ):
         """
-        :param max_objects_per_receptacle: A Dict mapping receptacle names to the remaining number of objects allowed in the receptacle.
+        :param max_objects_per_receptacle: A Dict mapping receptacle unique names to the remaining number of objects allowed in the receptacle.
         :param receptacle_sets: Dict mapping ReceptacleSet name to its dataclass.
         """
         self._receptacle_counts: Dict[str, int] = max_objects_per_receptacle
@@ -800,10 +818,49 @@ class ReceptacleTracker:
     def recep_sets(self) -> Dict[str, ReceptacleSet]:
         return self._receptacle_sets
 
+    def init_scene_filters(
+        self, mm: habitat_sim.metadata.MetadataMediator, scene_handle: str
+    ) -> None:
+        """
+        Initialize the scene specific filter strings from metadata.
+        Looks for a filter file defined for the scene, loads filtered strings and adds them to the exclude list of all ReceptacleSets.
+
+        :param mm: The active MetadataMediator instance from which to load the filter data.
+        :param scene_handle: The handle of the currently instantiated scene.
+        """
+        scene_user_defined = mm.get_scene_user_defined(scene_handle)
+        filtered_unique_names = []
+        if scene_user_defined is not None and scene_user_defined.has_value(
+            "scene_filter_file"
+        ):
+            scene_filter_file = scene_user_defined.get("scene_filter_file")
+            # construct the dataset level path for the filter data file
+            scene_filter_file = os.path.join(
+                os.path.dirname(mm.active_dataset), scene_filter_file
+            )
+            with open(scene_filter_file, "r") as f:
+                filter_json = json.load(f)
+                for filter_type in [
+                    "manually_filtered",
+                    "access_filtered",
+                    "stability_filtered",
+                    "height_filtered",
+                ]:
+                    for filtered_unique_name in filter_json[filter_type]:
+                        filtered_unique_names.append(filtered_unique_name)
+            # add exclusion filters to all receptacles sets
+            for _, r_set in self._receptacle_sets.items():
+                r_set.excluded_receptacle_substrings.extend(
+                    filtered_unique_names
+                )
+            logger.debug(
+                f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
+            )
+
     def inc_count(self, recep_name: str) -> None:
         """
         Increment allowed objects for a Receptacle.
-        :param recep_name: The name of the Receptacle.
+        :param recep_name: The unique name of the Receptacle.
         """
         if recep_name in self._receptacle_counts:
             self._receptacle_counts[recep_name] += 1
@@ -818,7 +875,7 @@ class ReceptacleTracker:
 
         :return: Whether or not the Receptacle has run out of remaining allocations.
         """
-        recep_name = allocated_receptacle.name
+        recep_name = allocated_receptacle.unique_name
         if recep_name not in self._receptacle_counts:
             return False
         # decrement remaining allocations
