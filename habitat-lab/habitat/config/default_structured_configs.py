@@ -817,10 +817,17 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     drop_pen_type: str = "constant"
 
 @attr.s(auto_attribs=True, slots=True)
+class PlacementStabilityMeasurementConfig(MeasurementConfig):
+    type: str = "PlacementStability"
+    stability_steps: float = 50
+    place_anywhere: bool = False
+
+@attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
     place_anywhere: bool = False
+    check_stability: bool = False
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1873,6 +1880,12 @@ cs.store(
     group="habitat/task/measurements",
     name="place_success",
     node=PlaceSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.placement_stability",
+    group="habitat/task/measurements",
+    name="placement_stability",
+    node=PlacementStabilityMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.place_reward",
