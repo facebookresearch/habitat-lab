@@ -315,9 +315,11 @@ class SocialNavReward(Measure):
         position_human = kwargs["observations"]["agent_1_localization_sensor"][
             :3
         ]
+        print("position_human", position_human)
         position_robot = kwargs["observations"]["agent_0_localization_sensor"][
             :3
         ]
+        print("position_robot", position_robot)
 
         distance = np.linalg.norm(position_human - position_robot)
         self._metric = -distance
