@@ -89,9 +89,10 @@ habitat:
             width: 171
             hfov: 55
       agent_1:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
-        articulated_agent_type: KinematicHumanoid
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -146,6 +147,8 @@ habitat_baselines:
               max_skill_steps: 1500
       agent_1:
         hierarchical_policy:
+          high_level_policy:
+            add_arm_rest: False
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
