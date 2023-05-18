@@ -303,6 +303,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             },
         )
         for skill_id, (batch_ids, batch_dat) in grouped_skills.items():
+            print(skill_id)
             action_data = self._skills[skill_id].act(
                 observations=batch_dat["observations"],
                 rnn_hidden_states=batch_dat["rnn_hidden_states"],
