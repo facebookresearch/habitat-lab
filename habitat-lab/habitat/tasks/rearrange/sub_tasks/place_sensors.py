@@ -47,8 +47,8 @@ class ObjAnywhereOnGoal(Measure):
         MAX_FLOOR_HEIGHT = 0.05
         self._metric = False
         # Use the picked object if it exists, otherwise use the target object from geogoal episodes
-        picked_idx = task.picked_object_idx if task.picked_object_idx is not None else task.abs_targ_idx
-        abs_obj_id = self._sim.scene_obj_ids[task.picked_object_idx]
+        picked_idx = task._picked_object_idx if task._picked_object_idx is not None else task.abs_targ_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
         for cp in cps:
             if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
                 if cp.contact_distance < -0.01:
