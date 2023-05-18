@@ -13,8 +13,6 @@ import ctypes
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
 
-from habitat_baselines.config.default import get_config as get_baselines_config
-
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
@@ -40,6 +38,7 @@ from habitat.gui.gui_application import GuiAppDriver, GuiApplication
 from habitat.gui.gui_input import GuiInput
 from habitat.gui.replay_gui_app_renderer import ReplayGuiAppRenderer
 from habitat.gui.text_drawer import TextOnScreenAlignment
+from habitat_baselines.config.default import get_config as get_baselines_config
 
 # Please reach out to the paper authors to obtain this file
 DEFAULT_POSE_PATH = (
@@ -115,7 +114,9 @@ class SandboxDriver(GuiAppDriver):
         self._first_person_mode = args.first_person_mode
         if self._first_person_mode:
             self._lookat_offset_yaw = 0.0
-            self._lookat_offset_pitch = 0.0
+            self._lookat_offset_pitch = float(
+                mn.Rad(mn.Deg(20.0))
+            )  # look slightly down
             self._min_lookat_offset_pitch = (
                 -max(min(np.radians(args.max_look_up_angle), np.pi / 2), 0)
                 + 1e-5
@@ -401,12 +402,12 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_yaw += cam_rot_angle
 
     def _camera_pitch_and_yaw_mouse_control(self):
-        enable_mouse_control = self.gui_input.get_key(GuiInput.KeyNS.R) and (
-            (
-                self._first_person_mode
-                and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
-            )
-            or (not self._first_person_mode)
+        enable_mouse_control = (
+            self._first_person_mode
+            and self._cursor_style == Application.Cursor.HIDDEN_LOCKED
+        ) or (
+            not self._first_person_mode
+            and self.gui_input.get_key(GuiInput.KeyNS.R)
         )
 
         if enable_mouse_control:
@@ -540,14 +541,12 @@ class SandboxDriver(GuiAppDriver):
     def _update_cursor_style(self, post_sim_update_dict):
         do_update_cursor = False
         if self._cursor_style is None:
-            if self._first_person_mode:
-                self._cursor_style = Application.Cursor.HIDDEN_LOCKED
-            else:
-                self._cursor_style = Application.Cursor.ARROW
+            self._cursor_style = Application.Cursor.ARROW
             do_update_cursor = True
         else:
-            if self._first_person_mode and self.gui_input.get_mouse_button(
-                GuiInput.MouseNS.LEFT
+            if (
+                self._first_person_mode
+                and self.gui_input.get_mouse_button_down(GuiInput.MouseNS.LEFT)
             ):
                 # toggle cursor mode
                 self._cursor_style = (
@@ -572,7 +571,8 @@ class SandboxDriver(GuiAppDriver):
         s += "M: next episode\n"
 
         if self._first_person_mode:
-            s += "Left-click: toggle cursor\n"
+            # s += "Left-click: toggle cursor\n"  # make this "unofficial" for now
+            s += "I, K: look up, down\n"
             s += "A, D: turn\n"
             s += "W, S: walk\n"
             s += get_grasp_release_controls_text()
@@ -861,7 +861,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--can-grasp-place-threshold",
-        default=1.0,
+        default=1.2,
         type=float,
         help="Object grasp/place proximity threshold",
     )
