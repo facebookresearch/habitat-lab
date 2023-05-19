@@ -340,6 +340,7 @@ jobs:
               ./build-public.sh
       - run:
           name: Ensure non-editable mode works
+          no_output_timeout: 30m
           command: |
               cd habitat-lab
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
