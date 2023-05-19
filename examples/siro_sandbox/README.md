@@ -6,8 +6,7 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 ## Known Issues
-* The policy-driven agent isn't working in terms of producing interesting actions. As a placeholder, we've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
-* One-time visual flicker shortly after app startup
+* The skinned humanoid doesn't render correctly; see workaround below.
 * When using Floorplanner scenes (see below), the app has very bad runtime perf on older Macbooks (2021 is fine; 2019 is bad).
 * Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode).
 
@@ -56,6 +55,18 @@ habitat.simulator.habitat_sim_v0.allow_sliding=True
 * See on-screen help text for common keyboard and mouse controls
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
+
+## Workaround to avoid broken skinned humanoid
+
+Following the instructions above, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
+
+Steps to work around this by reverting to a rigid-skeleton humanoid:
+1. Make a copy (or symlink) of `female2_0.urdf`.
+    * `cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_rigid.urdf`
+2. Update or override your config. Your humanoid is probably either `main_agent` or `agent_1`.
+    * `habitat.simulator.agents.main_agent.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf`
+    * or `habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'`
+3. Run the sandbox app and you should now see a rigid-skeleton humanoid that animates properly.
 
 ## Debugging visual sensors
 
