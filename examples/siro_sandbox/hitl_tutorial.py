@@ -22,7 +22,6 @@ from typing import List, Tuple
 
 import magnum as mn
 
-import habitat
 import habitat_sim
 
 
