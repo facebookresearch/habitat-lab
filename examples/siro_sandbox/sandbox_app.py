@@ -61,6 +61,12 @@ def requires_habitat_sim_with_bullet(callable_):
     return wrapper
 
 
+def get_pretty_object_name_from_handle(obj_handle_str):
+    handle_lower = obj_handle_str.lower()
+    filtered_str = "".join(filter(lambda c: c.isalpha(), handle_lower))
+    return filtered_str
+
+
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
     def __init__(self, args, config, gui_input):
@@ -81,13 +87,9 @@ class SandboxDriver(GuiAppDriver):
             if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
 
-        self.obs = self.env.reset()
-
         self.ctrl_helper = ControllerHelper(self.env, config, args, gui_input)
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
-
-        self.ctrl_helper.on_environment_reset()
 
         self.cam_transform = None
         self.cam_zoom_dist = 1.0
@@ -99,7 +101,6 @@ class SandboxDriver(GuiAppDriver):
         self._debug_line_render = None
         self._debug_images = args.debug_images
 
-        self._held_target_obj_idx = None
         self._viz_anim_fraction = 0.0
 
         self.lookat = None
@@ -138,6 +139,29 @@ class SandboxDriver(GuiAppDriver):
 
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
+
+        # not sure if these are needed here for linting
+        # self._held_target_obj_idx = None
+        # self._num_remaining_objects = None
+        # self._num_busy_objects = None
+        # self._target_obj_ids = None
+        # self._goal_positions = None
+
+        self.on_environment_reset()
+
+    def on_environment_reset(self):
+        self.obs = self.env.reset()
+        self.ctrl_helper.on_environment_reset()
+        self._held_target_obj_idx = None
+        self._num_remaining_objects = None  # resting, not at goal location yet
+        self._num_busy_objects = None  # currently held by non-gui agents
+
+        sim = self.get_sim()
+        temp_ids, goal_positions_np = sim.get_targets()
+        self._target_obj_ids = [
+            sim._scene_obj_ids[temp_id] for temp_id in temp_ids
+        ]
+        self._goal_positions = [mn.Vector3(pos) for pos in goal_positions_np]
 
     @property
     def lookat_offset_yaw(self):
@@ -185,120 +209,149 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction,
         )
 
-    def visualize_task_and_set_act_hints(self):
+    def get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()
-        idxs, goal_pos = sim.get_targets()
-        scene_pos = sim.get_scene_pos()
-        target_pos = scene_pos[idxs]
-        end_radius = self.env._config.task.obj_succ_thresh
-        drop_pos = None
+        rom = sim.get_rigid_object_manager()
+        object_id = self._target_obj_ids[target_obj_idx]
+        return rom.get_object_by_id(object_id).translation
 
-        if self._held_target_obj_idx != None:
+    def get_target_object_positions(self):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+        return np.array(
+            [
+                rom.get_object_by_id(obj_id).translation
+                for obj_id in self._target_obj_ids
+            ]
+        )
+
+    def update_grasping_and_set_act_hints(self):
+        if self.is_free_camera_mode():
+            return None
+
+        end_radius = self.env._config.task.obj_succ_thresh
+
+        drop_pos = None
+        grasp_object_id = None
+
+        if self._held_target_obj_idx is not None:
             color = mn.Color3(0, 255 / 255, 0)  # green
-            (target_idxs,) = np.where(idxs == self._held_target_obj_idx)
-            if len(target_idxs):
-                goal_position = goal_pos[target_idxs[0]]
+            goal_position = self._goal_positions[self._held_target_obj_idx]
+            self._debug_line_render.draw_circle(
+                goal_position, end_radius, color, 24
+            )
+
+            self.draw_nav_hint_from_agent(
+                mn.Vector3(goal_position), end_radius, color
+            )
+            # draw can place area
+            can_place_position = mn.Vector3(goal_position)
+            can_place_position[1] = self.get_agent_feet_height()
+            self._debug_line_render.draw_circle(
+                can_place_position,
+                1,
+                mn.Color3(255 / 255, 255 / 255, 0),
+                24,
+            )
+
+            if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                translation = self.get_agent_translation()
+                dist_to_obj = np.linalg.norm(goal_position - translation)
+                if dist_to_obj < self._can_grasp_place_threshold:
+                    self._held_target_obj_idx = None
+                    drop_pos = goal_position
+        else:
+            # check for new grasp and call gui_agent_ctrl.set_act_hints
+            if self._held_target_obj_idx is None:
+                assert not self.gui_agent_ctrl.is_grasped
+                # pick up an object
+                if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                    translation = self.get_agent_translation()
+
+                    min_dist = self._can_grasp_place_threshold
+                    min_i = None
+                    for i in range(len(self._target_obj_ids)):
+                        if self.is_target_object_at_goal_position(i):
+                            continue
+
+                        this_target_pos = self.get_target_object_position(i)
+                        # compute distance in xz plane
+                        offset = this_target_pos - translation
+                        offset.y = 0
+                        dist_xz = offset.length()
+                        if dist_xz < min_dist:
+                            min_dist = dist_xz
+                            min_i = i
+
+                    if min_i is not None:
+                        self._held_target_obj_idx = min_i
+                        grasp_object_id = self._target_obj_ids[
+                            self._held_target_obj_idx
+                        ]
+
+        walk_dir = (
+            self.viz_and_get_humanoid_walk_dir()
+            if not self._first_person_mode
+            else None
+        )
+
+        self.gui_agent_ctrl.set_act_hints(
+            walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
+        )
+
+        return drop_pos
+
+    def is_target_object_at_goal_position(self, target_obj_idx):
+        this_target_pos = self.get_target_object_position(target_obj_idx)
+        end_radius = self.env._config.task.obj_succ_thresh
+        return (
+            this_target_pos - self._goal_positions[target_obj_idx]
+        ).length() < end_radius
+
+    def update_task(self):
+        end_radius = self.env._config.task.obj_succ_thresh
+
+        grasped_objects_idxs = self.get_grasped_objects_idxs()
+        self._num_remaining_objects = 0
+        self._num_busy_objects = len(grasped_objects_idxs)
+
+        # draw nav_hint and target box
+        for i in range(len(self._target_obj_ids)):
+            # object is grasped
+            if i in grasped_objects_idxs:
+                continue
+
+            color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
+            if self.is_target_object_at_goal_position(i):
+                continue
+
+            self._num_remaining_objects += 1
+
+            if self._held_target_obj_idx is None:
+                this_target_pos = self.get_target_object_position(i)
+                box_half_size = 0.15
+                box_offset = mn.Vector3(
+                    box_half_size, box_half_size, box_half_size
+                )
+                self._debug_line_render.draw_box(
+                    this_target_pos - box_offset,
+                    this_target_pos + box_offset,
+                    color,
+                )
+
                 if not self.is_free_camera_mode():
                     self.draw_nav_hint_from_agent(
-                        mn.Vector3(goal_position), end_radius, color
+                        mn.Vector3(this_target_pos), end_radius, color
                     )
-                self._debug_line_render.draw_circle(
-                    goal_position, end_radius, color, 24
-                )
-                # reference code to display a box
-                # box_size = 0.3
-                # self._debug_line_render.draw_box(
-                #     goal_position - box_size / 2,
-                #     goal_position + box_size / 2,
-                #     color
-                # )
-                if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
-                    # draw can place area
-                    can_place_position = goal_position.copy()
-                    can_place_position[1] = self.get_agent_feet_height()
+                    # draw can grasp area
+                    can_grasp_position = mn.Vector3(this_target_pos)
+                    can_grasp_position[1] = self.get_agent_feet_height()
                     self._debug_line_render.draw_circle(
-                        can_place_position,
+                        can_grasp_position,
                         1,
                         mn.Color3(255 / 255, 255 / 255, 0),
                         24,
                     )
-
-                assert self._held_target_obj_idx is not None
-                if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                    translation = self.get_agent_translation()
-                    dist_to_obj = np.linalg.norm(goal_position - translation)
-                    if dist_to_obj < self._can_grasp_place_threshold:
-                        self._held_target_obj_idx = None
-                        # object_drop_height = 0.15
-                        drop_pos = (
-                            goal_position
-                            # + mn.Vector3(0, object_drop_height, 0)
-                        )
-        else:
-            grasped_objects_idxs = self.get_grasped_objects_idxs()
-            # draw nav_hint and target box
-            for i in range(len(idxs)):
-                # object is grasped
-                if i in grasped_objects_idxs:
-                    continue
-
-                color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
-                this_target_pos = target_pos[i]
-                threshold = 0.2  # distance in meters
-                if (
-                    mn.Vector3(this_target_pos) - mn.Vector3(goal_pos[i])
-                ).length() < threshold:
-                    # object is already at goal pos
-                    continue
-                else:
-                    if not self.is_free_camera_mode():
-                        self.draw_nav_hint_from_agent(
-                            mn.Vector3(this_target_pos), end_radius, color
-                        )
-                    box_size = 0.3
-                    self._debug_line_render.draw_box(
-                        this_target_pos - box_size / 2,
-                        this_target_pos + box_size / 2,
-                        color,
-                    )
-                    if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
-                        # draw can grasp area
-                        can_grasp_position = this_target_pos.copy()
-                        can_grasp_position[1] = self.get_agent_feet_height()
-                        self._debug_line_render.draw_circle(
-                            can_grasp_position,
-                            1,
-                            mn.Color3(255 / 255, 255 / 255, 0),
-                            24,
-                        )
-
-            # pick up an object
-            if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                translation = self.get_agent_translation()
-                dist_to_objs = np.linalg.norm(target_pos - translation, axis=1)
-                closet_obj_idx = np.argmin(dist_to_objs)
-                closet_obj_dist = dist_to_objs[closet_obj_idx]
-
-                if closet_obj_dist < self._can_grasp_place_threshold:
-                    self._held_target_obj_idx = idxs[closet_obj_idx]
-
-        if isinstance(self.gui_agent_ctrl, GuiHumanoidController):
-            grasp_object_id = (
-                sim.scene_obj_ids[self._held_target_obj_idx]
-                if self._held_target_obj_idx is not None
-                and not self.gui_agent_ctrl.is_grasped
-                else None
-            )
-
-            walk_dir = (
-                self.viz_and_get_humanoid_walk_dir()
-                if not self._first_person_mode
-                else None
-            )
-
-            self.gui_agent_ctrl.set_act_hints(
-                walk_dir, grasp_object_id, drop_pos, self.lookat_offset_yaw
-            )
 
     def get_grasped_objects_idxs(self):
         sim = self.get_sim()
@@ -306,7 +359,7 @@ class SandboxDriver(GuiAppDriver):
 
         grasped_objects_idxs = []
         for agent_idx in range(self.ctrl_helper.n_robots):
-            if agent_idx == self.ctrl_helper.get_gui_controlled_agent_index:
+            if agent_idx == self.ctrl_helper.get_gui_controlled_agent_index():
                 continue
             grasp_mgr = agents_mgr._all_agent_data[agent_idx].grasp_mgr
             if grasp_mgr.is_grasped:
@@ -559,39 +612,74 @@ class SandboxDriver(GuiAppDriver):
         if do_update_cursor:
             post_sim_update_dict["application_cursor"] = self._cursor_style
 
-    def _update_text(self):
+    def _update_help_text(self):
         def get_grasp_release_controls_text():
             if self._held_target_obj_idx is not None:
                 return "Spacebar: put down\n"
             else:
                 return "Spacebar: pick up\n"
 
-        s = ""
-        s += "ESC: exit\n"
-        s += "M: next episode\n"
+        controls_str = ""
+        controls_str += "ESC: exit\n"
+        controls_str += "M: next episode\n"
 
         if self._first_person_mode:
-            # s += "Left-click: toggle cursor\n"  # make this "unofficial" for now
-            s += "I, K: look up, down\n"
-            s += "A, D: turn\n"
-            s += "W, S: walk\n"
-            s += get_grasp_release_controls_text()
+            # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
+            controls_str += "I, K: look up, down\n"
+            controls_str += "A, D: turn\n"
+            controls_str += "W, S: walk\n"
+            controls_str += get_grasp_release_controls_text()
         # third-person mode
         elif not self.is_free_camera_mode():
-            s += "R + drag: rotate camera\n"
-            s += "Right-click: walk\n"
-            s += "A, D: turn\n"
-            s += "W, S: walk\n"
-            s += "Scroll: zoom\n"
-            s += get_grasp_release_controls_text()
+            controls_str += "R + drag: rotate camera\n"
+            controls_str += "Right-click: walk\n"
+            controls_str += "A, D: turn\n"
+            controls_str += "W, S: walk\n"
+            controls_str += "Scroll: zoom\n"
+            controls_str += get_grasp_release_controls_text()
         else:
-            s += "Left-click + drag: rotate camera\n"
-            s += "A, D: turn camera\n"
-            s += "W, S: pan camera\n"
-            s += "O, P: raise or lower camera\n"
-            s += "Scroll: zoom\n"
+            controls_str += "Left-click + drag: rotate camera\n"
+            controls_str += "A, D: turn camera\n"
+            controls_str += "W, S: pan camera\n"
+            controls_str += "O, P: raise or lower camera\n"
+            controls_str += "Scroll: zoom\n"
 
-        self._text_drawer.add_text(s, TextOnScreenAlignment.TOP_LEFT)
+        self._text_drawer.add_text(
+            controls_str, TextOnScreenAlignment.TOP_LEFT
+        )
+
+        status_str = ""
+        assert self._num_remaining_objects is not None
+        assert self._num_busy_objects is not None
+        if self._held_target_obj_idx is not None:
+            sim = self.get_sim()
+            grasp_object_id = sim.scene_obj_ids[self._held_target_obj_idx]
+            obj_handle = (
+                sim.get_rigid_object_manager().get_object_handle_by_id(
+                    grasp_object_id
+                )
+            )
+            status_str += (
+                "Place the "
+                + get_pretty_object_name_from_handle(obj_handle)
+                + " at its goal location!\n"
+            )
+        elif self._num_remaining_objects > 0:
+            status_str += "Move the remaining {} object{}!".format(
+                self._num_remaining_objects,
+                "s" if self._num_remaining_objects > 1 else "",
+            )
+        elif self._num_busy_objects > 0:
+            status_str += "Just wait! The robot is moving the last object.\n"
+        else:
+            status_str += "Task complete!"
+
+        self._text_drawer.add_text(
+            status_str,
+            TextOnScreenAlignment.TOP_CENTER,
+            text_delta_x=-150,
+            text_delta_y=-50,
+        )
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
@@ -600,13 +688,17 @@ class SandboxDriver(GuiAppDriver):
         if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
             self._save_recorded_keyframes_to_file()
 
+        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
+            self.on_environment_reset()
+
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
         self._viz_anim_fraction = (
             self._viz_anim_fraction + dt * viz_anim_speed
         ) % 1.0
 
-        self.visualize_task_and_set_act_hints()
+        self.update_task()
+        self.update_grasping_and_set_act_hints()
 
         # Navmesh visualization only works in the debub third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
@@ -620,11 +712,6 @@ class SandboxDriver(GuiAppDriver):
         action = self.ctrl_helper.update(self.obs)
 
         self.obs = self.env.step(action)
-
-        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self.obs = self.env.reset()
-            self.ctrl_helper.on_environment_reset()
-            self._held_target_obj_idx = None
 
         post_sim_update_dict = {}
 
@@ -711,7 +798,7 @@ class SandboxDriver(GuiAppDriver):
             np.flipud(image) for image in debug_images
         ]
 
-        self._update_text()
+        self._update_help_text()
 
         return post_sim_update_dict
 
