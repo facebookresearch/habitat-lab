@@ -8,7 +8,7 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-#from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
+from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     HasFinishedOracleNavSensor,
     #HasFinishedOracleNavSocSensor,
@@ -121,7 +121,8 @@ class OracleNavSocPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         # ret = torch.zeros(masks.shape[0], dtype=torch.bool)
-
+        o = observations[LocalizationSensor.cls_uuid].cpu()
+        #breakpoint()
         # cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
 
         # for i, batch_i in enumerate(batch_idx):

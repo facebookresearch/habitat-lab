@@ -101,6 +101,8 @@ class HierarchicalPolicy(nn.Module, Policy):
             aux_loss_config=aux_loss_config,
             agent_name=agent_name,
         )
+        #breakpoint()
+        #print("high level policy is ",self._high_level_policy )
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
         )

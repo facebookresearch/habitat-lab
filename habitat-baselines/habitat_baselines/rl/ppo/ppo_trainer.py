@@ -149,6 +149,7 @@ class PPOTrainer(BaseRLTrainer):
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
         )
+        #breakpoint()
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
@@ -267,6 +268,7 @@ class PPOTrainer(BaseRLTrainer):
         self._ppo_cfg = self.config.habitat_baselines.rl.ppo
 
         observations = self.envs.reset()
+        #import ipdb; ipdb.set_trace()
         batch = batch_obs(observations, device=self.device)
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
@@ -982,8 +984,9 @@ class PPOTrainer(BaseRLTrainer):
                 ]
             else:
                 step_data = [a.item() for a in action_data.env_actions.cpu()]
-
+            #breakpoint()
             outputs = self.envs.step(step_data)
+
 
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)

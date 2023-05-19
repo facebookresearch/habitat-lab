@@ -396,6 +396,7 @@ class LocalizationSensor(UsesArticulatedAgentInterface, Sensor):
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(config=config)
         self._sim = sim
+        #import ipdb; ipdb.set_trace()
 
     def _get_uuid(self, *args, **kwargs):
         return LocalizationSensor.cls_uuid
@@ -1059,8 +1060,8 @@ class HasFinishedOracleNavSocSensor(UsesArticulatedAgentInterface, Sensor):
                     f"agent_{self.agent_id}_oracle_nav_soc_action"
                 ]
             else:
-                print("agent id is ", self.agent_id)
-                print("actions are ", self._task.actions)
+                #print("agent id is ", self.agent_id)
+                #print("actions are ", self._task.actions)
                 raise Exception("Action nonexisistent")
         return np.array(nav_action.skill_done, dtype=np.float32)
 
@@ -1109,3 +1110,43 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
                 raise Exception("Action nonexisistent")
         #print("skill done? ", nav_action.skill_done)
         return np.array(nav_action.skill_done, dtype=np.float32)
+
+
+@registry.register_sensor
+class SocialRobotSuccessSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    The position and angle of the articulated_agent in world coordinates.
+    """
+
+    cls_uuid = "localization_sensor"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(config=config)
+        self._sim = sim
+        #import ipdb; ipdb.set_trace()
+
+    def _get_uuid(self, *args, **kwargs):
+        return LocalizationSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, **kwargs):
+        return spaces.Box(
+            shape=(4,),
+            low=np.finfo(np.float32).min,
+            high=np.finfo(np.float32).max,
+            dtype=np.float32,
+        )
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        import ipdb; ipdb.set_trace()
+        articulated_agent = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent
+        T = articulated_agent.base_transformation
+        forward = np.array([1.0, 0, 0])
+        heading_angle = get_angle_to_pos(T.transform_vector(forward))
+        return np.array(
+            [*articulated_agent.base_pos, heading_angle], dtype=np.float32
+        )

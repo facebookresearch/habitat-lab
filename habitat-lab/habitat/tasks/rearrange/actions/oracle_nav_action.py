@@ -50,6 +50,8 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self._prev_ep_id = None
         self._targets = {}
         self.skill_done = False
+        #Defined for task 
+        #self.found_human_at_least_once = 
 
     @staticmethod
     def _compute_turn(rel, turn_vel, robot_forward):
