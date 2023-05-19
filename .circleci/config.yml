@@ -346,9 +346,9 @@ jobs:
               conda create -y -n non-editable-install python=3.9
               . activate non-editable-install
               conda install -y -c conda-forge -c aihabitat-nightly habitat-sim
-              pip install habitat-lab/
+              pip install habitat-lab/ --quiet
               python -c 'import habitat; print("habitat version:", habitat.__version__)'
-              pip install habitat-baselines/
+              pip install habitat-baselines/ --quiet
               python -c 'import habitat_baselines; print("habitat_baselines version:", habitat_baselines.__version__)'
       - run: &build_sdist_and_bdist
           name: Build sdist and bdist
