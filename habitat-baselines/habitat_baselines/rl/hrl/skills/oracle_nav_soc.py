@@ -83,7 +83,8 @@ class OracleNavSocPolicy(NnSkillPolicy):
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )
         self._was_running_on_prev_step = False
-        print("on enter called!")
+        #print("on enter called!")
+        #breakpoint()
         return ret
 
     @classmethod

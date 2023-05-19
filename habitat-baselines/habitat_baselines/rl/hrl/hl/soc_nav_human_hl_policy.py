@@ -120,7 +120,7 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
             # print("should plan?", should_plan)
             if should_plan == 1.0:
                 next_skill[batch_idx] = self._skill_name_to_idx["nav_to_goal"]
-                skill_args_data[batch_idx] = ['nonexistent_goal', 'robot_0'] #['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0']#['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0'] #[['goal0|0', 'robot_0']]  # type: ignore[call-overload]
+                skill_args_data[batch_idx] = ['nonexistent_goal', 'robot_1'] #['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0']#['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0'] #[['goal0|0', 'robot_0']]  # type: ignore[call-overload]
 
                 self._next_sol_idxs[batch_idx] += 1
                 # if self.skill_called_count >0:
@@ -146,4 +146,5 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
             #     import ipdb; ipdb.set_trace()
         #print("self._next_sol_idxs", self._next_sol_idxs)
         #self.skill_called_count +=1
+        #breakpoint()
         return next_skill, skill_args_data, immediate_end, {}

@@ -317,11 +317,13 @@ class EmbodiedTask:
 
     def step(self, action: Dict[str, Any], episode: Episode):
         action_name = action["action"]
+        #print("action name ", action_name)
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         observations: Any = {}
         if isinstance(action_name, tuple):  # there are multiple actions
             for i, a_name in enumerate(action_name):
+                #print("a name ", a_name)
                 self._step_single_action(
                     observations,
                     a_name,

@@ -80,6 +80,7 @@ class OracleNavPolicy(NnSkillPolicy):
             skill_arg, batch_idx, observations, rnn_hidden_states, prev_actions
         )
         self._was_running_on_prev_step = False
+        #breakpoint()
         return ret
 
     @classmethod
@@ -125,7 +126,7 @@ class OracleNavPolicy(NnSkillPolicy):
         #         movement = (prev_pos - cur_pos[i]).pow(2).sum().sqrt()
         #         ret[i] = movement < self._config.stop_thresh
         #     self._prev_pos[batch_i] = cur_pos[i]
-        print("oracle nav!", HasFinishedOracleNavSensor.cls_uuid)
+        #print("oracle nav!", HasFinishedOracleNavSensor.cls_uuid)
         finish_oracle_nav = observations[
             HasFinishedOracleNavSensor.cls_uuid
         ].cpu()

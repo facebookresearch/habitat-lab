@@ -1069,7 +1069,7 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
     """
     Returns 1 if the agent has finished the oracle nav action. Returns 0 otherwise.
     """
-    print("Initialized!")
+    #print("Initialized!")
     cls_uuid: str = "has_finished_oracle_nav" #"has_finished_oracle_nav"
 
     def __init__(self, sim, config, *args, task, **kwargs):
