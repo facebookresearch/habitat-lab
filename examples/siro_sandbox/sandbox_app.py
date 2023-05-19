@@ -562,35 +562,41 @@ class SandboxDriver(GuiAppDriver):
             post_sim_update_dict["application_cursor"] = self._cursor_style
 
     def _update_text(self):
-        def get_grasp_release_controls_text():
-            if self._held_target_obj_idx is not None:
-                return "Spacebar: put down\n"
+        s: str = ""
+        if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
+
+            def get_grasp_release_controls_text():
+                if self._held_target_obj_idx is not None:
+                    return "Spacebar: put down\n"
+                else:
+                    return "Spacebar: pick up\n"
+
+            s += "ESC: exit\n"
+            s += "M: next episode\n"
+
+            if self._first_person_mode:
+                s += "Left-click: toggle cursor\n"
+                s += "A, D: turn\n"
+                s += "W, S: walk\n"
+                s += get_grasp_release_controls_text()
+            # third-person mode
+            elif not self.is_free_camera_mode():
+                s += "Left-click + drag: rotate camera\n"
+                s += "Right-click: walk\n"
+                s += "A, D: turn\n"
+                s += "W, S: walk\n"
+                s += "Scroll: zoom\n"
+                s += get_grasp_release_controls_text()
             else:
-                return "Spacebar: pick up\n"
-
-        s = ""
-        s += "ESC: exit\n"
-        s += "M: next episode\n"
-
-        if self._first_person_mode:
-            s += "Left-click: toggle cursor\n"
-            s += "A, D: turn\n"
-            s += "W, S: walk\n"
-            s += get_grasp_release_controls_text()
-        # third-person mode
-        elif not self.is_free_camera_mode():
-            s += "Left-click + drag: rotate camera\n"
-            s += "Right-click: walk\n"
-            s += "A, D: turn\n"
-            s += "W, S: walk\n"
-            s += "Scroll: zoom\n"
-            s += get_grasp_release_controls_text()
-        else:
-            s += "Left-click + drag: rotate camera\n"
-            s += "A, D: turn camera\n"
-            s += "W, S: pan camera\n"
-            s += "O, P: raise or lower camera\n"
-            s += "Scroll: zoom\n"
+                s += "Left-click + drag: rotate camera\n"
+                s += "A, D: turn camera\n"
+                s += "W, S: pan camera\n"
+                s += "O, P: raise or lower camera\n"
+                s += "Scroll: zoom\n"
+        elif self._sandbox_state == SandboxState.TUTORIAL:
+            s = self._tutorial_stages[
+                self._tutorial_stage_index
+            ].get_display_text()
 
         self._text_drawer.add_text(s, TextOnScreenAlignment.TOP_LEFT)
 
@@ -743,8 +749,7 @@ class SandboxDriver(GuiAppDriver):
             np.flipud(image) for image in debug_images
         ]
 
-        if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
-            self._update_text()
+        self._update_text()
 
         return post_sim_update_dict
 

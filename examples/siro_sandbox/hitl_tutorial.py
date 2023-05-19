@@ -18,8 +18,7 @@ from math import radians
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
-from functools import wraps
-from typing import Any, List, Tuple
+from typing import List, Tuple
 
 import magnum as mn
 
@@ -34,6 +33,7 @@ class TutorialStage:
     _transition_duration: float
     _stage_duration: float
     _elapsed_time: float
+    _display_text: str
 
     def __init__(
         self,
@@ -41,12 +41,14 @@ class TutorialStage:
         next_lookat: Tuple[mn.Vector3, mn.Vector3],
         prev_lookat: Tuple[mn.Vector3, mn.Vector3] = None,
         transition_duration: float = 0.0,
+        display_text: str = "",
     ) -> None:
         self._transition_duration = transition_duration
         self._stage_duration = stage_duration
         self._prev_lookat = prev_lookat
         self._next_lookat = next_lookat
         self._elapsed_time = 0.0
+        self._display_text = display_text
 
     def update(self, dt: float) -> None:
         self._elapsed_time += dt
@@ -83,6 +85,9 @@ class TutorialStage:
     def is_stage_completed(self) -> bool:
         return self._elapsed_time >= self._stage_duration
 
+    def get_display_text(self) -> str:
+        return self._display_text
+
 
 def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
     assert sim is not None
@@ -98,9 +103,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
         camera_fov_deg, scene_target_bb
     )
     tutorial_stages.append(
-        TutorialStage(
-            stage_duration=5.0, next_lookat=scene_top_down_lookat
-        )
+        TutorialStage(stage_duration=5.0, next_lookat=scene_top_down_lookat)
     )
 
     # Show all the targets
@@ -124,9 +127,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
         )
 
     # Controlled agent focus
-    art_obj = (
-        sim.agents_mgr[agent_idx].articulated_agent.sim_obj
-    )
+    art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
     agent_root_node = art_obj.get_link_scene_node(
         -1
     )  # Root link always has index -1
@@ -140,9 +141,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
         TutorialStage(
             stage_duration=2.0,
             transition_duration=1.0,
-            prev_lookat=tutorial_stages[
-                len(tutorial_stages) - 1
-            ]._next_lookat,
+            prev_lookat=tutorial_stages[len(tutorial_stages) - 1]._next_lookat,
             next_lookat=agent_lookat,
         )
     )
@@ -152,9 +151,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
         TutorialStage(
             stage_duration=1.0,
             transition_duration=1.0,
-            prev_lookat=tutorial_stages[
-                len(tutorial_stages) - 1
-            ]._next_lookat,
+            prev_lookat=tutorial_stages[len(tutorial_stages) - 1]._next_lookat,
             next_lookat=final_lookat,
         )
     )
