@@ -30,7 +30,7 @@ habitat:
 
   gym:
     obs_keys:
-      - agent_0_head_depth
+      - agent_0_articulated_agent_arm_depth
       - agent_0_relative_resting_position
       - agent_0_obj_start_sensor
       - agent_0_obj_goal_sensor
