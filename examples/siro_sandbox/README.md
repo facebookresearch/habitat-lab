@@ -55,6 +55,7 @@ habitat.simulator.habitat_sim_v0.allow_sliding=True
 ## Controls
 * See on-screen help text for common keyboard and mouse controls
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
+* For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
 ## Debugging visual sensors
 

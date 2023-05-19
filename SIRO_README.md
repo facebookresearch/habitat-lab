@@ -14,8 +14,7 @@ Project-specific README for SIRo.
     * Keep an eye on relevant [commits to main](https://github.com/facebookresearch/habitat-sim/commits/main) to help you decide when to update/rebuild Habitat-sim.
     * If you encounter the issue about cmake when building from source using Mac `missing xcrun at: /Library/Developer/CommandLineTools/usr/bin/xcrun`, you can solve this by first install the tools `xcode-select --install`.
 1. Download humanoid data.
-    * From the Habitat-lab root directory, `python -m habitat_sim.utils.datasets_download --uids humanoid_data  --data-path data/`
-    * Manually download `walking_motion_processed.pkl` from [this Slack thread](https://cvmlp.slack.com/archives/C0460NTKM4G/p1678403985106999?thread_ts=1678402520.813389&cid=C0460NTKM4G) to `data/humanoids/humanoid_data/walking_motion_processed.pkl`
+    * Manually download `humanoids_skinned.zip` from [this link](https://drive.google.com/file/d/19gUvwaxJpd-Z6Djq8kmCpYotduwZvOfZ/view?usp=sharing) and uncompress to `data`
 1. Download other required datasets:
     * `python -m habitat_sim.utils.datasets_download --uids ycb hab_fetch hab_spot_arm replica_cad_dataset rearrange_pick_dataset_v0 rearrange_dataset_v1 --data-path data/`
 1. Optional: install the Floorplanner Dataset below.
@@ -95,6 +94,14 @@ sh eval_sweep.sh
 
 You will be prompted to enter a directory `$SWEEP_SUBDIR` name where the checkpoints and config files are saved (normally in the format `name/yyyy-dd-mm/hh-mm-ss`). The script will generate videos of evaluation at `$SWEEP_SUBDIR/0/video`.
 
+## Demo Fetch-Human Fixed Planner
+
+You can also run a Fetch-Humanoid where both work with a Fixed Planner, using:
+
+```
+python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluate=True habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=False  --config-name experiments_hab3/rearrange_fetch_human_planner.yaml
+```
+
 # Spot robot
 
 ## Testing the Spot
@@ -132,6 +139,9 @@ habitat.simulator.kinematic_mode=True \
 habitat.simulator.step_physics=False \
 habitat_baselines.num_environments=1
 ```
+
+or for running HRL human-robot fix policy (multi-agent setting)
+`python habitat-baselines/habitat_baselines/run.py --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.evaluate=True habitat.simulator.kinematic_mode=True habitat.simulator.step_physics=False habitat_baselines.num_environments=1`
 
 TODO
 1. Generate more scenes
