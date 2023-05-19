@@ -1,12 +1,8 @@
 # Version of tidy house that only has two target objects.
 objects:
-  - name: any_targets|0
+  - name: goal0|0
     expr_type: movable_entity_type
-  - name: TARGET_any_targets|0
-    expr_type: goal_entity_type
-  - name: any_targets|1
-    expr_type: movable_entity_type
-  - name: TARGET_any_targets|1
+  - name: TARGET_goal0|0
     expr_type: goal_entity_type
   - name: robot_0
     expr_type: robot_entity_type
@@ -14,27 +10,21 @@ objects:
 goal:
   expr_type: AND
   sub_exprs:
-    - at(any_targets|0,TARGET_any_targets|0)
-    - at(any_targets|1,TARGET_any_targets|1)
+    - at(goal0|0,TARGET_goal0|0)
     - not_holding(robot_0)
 
 stage_goals:
   stage_1:
     expr_type: AND
     sub_exprs:
-      - at(any_targets|0,TARGET_any_targets|0)
+      - at(goal0|0,TARGET_goal0|0)
   stage_2:
     expr_type: AND
     sub_exprs:
-      - at(any_targets|0,TARGET_any_targets|0)
-      - at(any_targets|1,TARGET_any_targets|1)
+      - at(goal0|0,TARGET_goal0|0)
 
 solution:
-  - nav_to_goal(any_targets|0, robot_0)
-  - pick(any_targets|0, robot_0)
-  - nav_to_obj(TARGET_any_targets|0, robot_0)
-  - place(any_targets|0,TARGET_any_targets|0, robot_0)
-  - nav_to_goal(any_targets|1, robot_0)
-  - pick(any_targets|1, robot_0)
-  - nav_to_obj(TARGET_any_targets|1, robot_0)
-  - place(any_targets|1,TARGET_any_targets|1, robot_0)
+  - nav_to_goal(goal0|0, robot_0)
+  - pick(goal0|0, robot_0)
+  - nav_to_obj(TARGET_goal0|0, robot_0)
+  - place(goal0|0,TARGET_goal0|0, robot_0)

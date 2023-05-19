@@ -12,6 +12,7 @@ defaults:
     - oracle_nav_action
   - /habitat/task/lab_sensors:
     - has_finished_oracle_nav
+  - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_
 
 habitat:
