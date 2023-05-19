@@ -23,7 +23,6 @@ from typing import List, Tuple
 import magnum as mn
 
 import habitat
-import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 
 
@@ -93,7 +92,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
     assert sim is not None
     assert agent_idx is not None
     assert final_lookat is not None
-    camera_fov_deg = 90  # TODO: Get the actual FOV
+    camera_fov_deg = 100  # TODO: Get the actual FOV
     tutorial_stages: List[TutorialStage] = []
 
     # Scene overview
@@ -103,7 +102,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
         camera_fov_deg, scene_target_bb
     )
     tutorial_stages.append(
-        TutorialStage(stage_duration=5.0, next_lookat=scene_top_down_lookat)
+        TutorialStage(stage_duration=8.0, next_lookat=scene_top_down_lookat)
     )
 
     # Show all the targets
@@ -140,7 +139,7 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
     tutorial_stages.append(
         TutorialStage(
             stage_duration=2.0,
-            transition_duration=1.0,
+            transition_duration=2.0,
             prev_lookat=tutorial_stages[len(tutorial_stages) - 1]._next_lookat,
             next_lookat=agent_lookat,
         )
@@ -149,8 +148,8 @@ def generate_tutorial(sim, agent_idx, final_lookat) -> List[TutorialStage]:
     # Transition from the avatar view to simulated view (e.g. first person)
     tutorial_stages.append(
         TutorialStage(
-            stage_duration=1.0,
-            transition_duration=1.0,
+            stage_duration=1.5,
+            transition_duration=1.5,
             prev_lookat=tutorial_stages[len(tutorial_stages) - 1]._next_lookat,
             next_lookat=final_lookat,
         )
@@ -200,13 +199,19 @@ def _lookat_point_from_closest_navmesh_pos(
     # Look up for a camera position by sampling radially around the target for a navigable position.
     navigable_point = None
     sample_count = 8
+    max_dist_to_obstacle = 0.0
     for i in range(sample_count):
         radial_angle = i * 2.0 * math.pi / float(sample_count)
         dist_x = math.sin(radial_angle) * distance_from_target
         dist_z = math.cos(radial_angle) * distance_from_target
         candidate = mn.Vector3(target.x + dist_x, target.y, target.z + dist_z)
         if pathfinder.is_navigable(candidate, 3.0):
-            navigable_point = candidate
+            dist_to_closest_obstacle = pathfinder.distance_to_closest_obstacle(
+                candidate, 2.0
+            )
+            if dist_to_closest_obstacle > max_dist_to_obstacle:
+                max_dist_to_obstacle = dist_to_closest_obstacle
+                navigable_point = candidate
 
     if navigable_point == None:
         # Fallback to a default point
