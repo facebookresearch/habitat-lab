@@ -1,10 +1,12 @@
 # @package habitat.task
 defaults:
   - /habitat/task/rearrange: rearrange_easy_base
+  - override task_spec: rearrange_easy_fp
   - override /habitat/task/actions:
     - arm_action
     - base_velocity
     - rearrange_stop
+
 task_spec: rearrange_easy_fp
 pddl_domain_def: fp
 actions:
