@@ -9,12 +9,13 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
     - composite_subgoal_reward
+    # - runtime_perf_stats
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -26,12 +27,15 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - humanoid_joint_sensor
+    - other_agent_gps
     - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   # For Spot observation space
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
   - _self_
+
+replan_distance: 1.5
 
 hydra:
   job:
@@ -46,7 +50,7 @@ habitat:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
   environment:
-    max_episode_steps: 700
+    max_episode_steps: 1000
 
   gym:
     obs_keys:
@@ -60,6 +64,7 @@ habitat:
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor
+      - agent_0_other_agent_gps
       - agent_0_has_finished_oracle_nav
       - agent_1_head_depth
       - agent_1_relative_resting_position
@@ -71,6 +76,7 @@ habitat:
       - agent_1_ee_pos
       - agent_1_localization_sensor
       - agent_1_humanoid_joint_sensor
+      - agent_1_other_agent_gps
       - agent_1_has_finished_oracle_nav
   simulator:
     # Add Spot robot agents
@@ -127,32 +133,75 @@ habitat_baselines:
   wb:
     project_name: 'hab3'
     entity: 'andrew-colab'
-    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+    run_name: ${hydra:job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}/${hydra:job.num}
+
+  profiling:
+    enable_perf_logger: True
+    perf_logger_skip_interval: 20
 
   eval:
-    should_load_ckpt: False
+    should_load_ckpt: True
     video_option: ["disk"]
 
   rl:
     agent:
-      num_pool_agents_per_type: [1, 1]
+      num_pool_agents_per_type: [1, 8]
+      agent_sample_interval: 20
     policy:
       agent_0:
         hierarchical_policy:
+          high_level_policy:
+            replan_dist: ${replan_distance}
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "joint"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
+              stop_thresh: 0.00001
+              apply_postconds: False
       agent_1:
         hierarchical_policy:
+          high_level_policy:
+            replan_dist: ${replan_distance}
+            allowed_actions:
+              - nav_to_receptacle_by_name
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+            policy_input_keys:
+              - "head_depth"
+              - "humanoid_joint_sensor"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
+              stop_thresh: 0.00001
+              apply_postconds: False
 
     ppo:
       # ppo params
