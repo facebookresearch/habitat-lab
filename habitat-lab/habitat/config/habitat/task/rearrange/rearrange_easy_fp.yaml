@@ -8,6 +8,8 @@ defaults:
 
 task_spec: rearrange_easy_fp
 pddl_domain_def: fp
+max_objects: 5
+
 actions:
   arm_action:
     grip_controller: SuctionGraspAction

@@ -412,7 +412,7 @@ class PPOTrainer(BaseRLTrainer):
         observations, rewards_l, dones, infos = [
             list(x) for x in zip(*outputs)
         ]
-
+        
         with self.timer.avg_time("update_stats"):
             batch = batch_obs(observations, device=self.device)
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
@@ -445,7 +445,12 @@ class PPOTrainer(BaseRLTrainer):
                     self.running_episode_stats[k] = torch.zeros_like(
                         self.running_episode_stats["count"]
                     )
-                self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
+                if len(self.running_episode_stats[k][env_slice]) != len(v):
+                    # Find which is shorter and pad the other
+                    min_len = min(len(self.running_episode_stats[k][env_slice]), len(v))
+                    self.running_episode_stats[k][env_slice][:min_len] += v[:min_len].where(done_masks[:min_len], v.new_zeros(()))  # type: ignore
+                else:
+                    self.running_episode_stats[k][env_slice] += v.where(done_masks, v.new_zeros(()))  # type: ignore
 
                 self.current_episode_reward[env_slice].masked_fill_(
                     done_masks, 0.0
