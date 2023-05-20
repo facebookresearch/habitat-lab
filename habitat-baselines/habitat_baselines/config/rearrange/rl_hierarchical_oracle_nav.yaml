@@ -12,7 +12,6 @@ defaults:
     - oracle_nav_action
   - /habitat/task/lab_sensors:
     - has_finished_oracle_nav
-  - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_
 
 habitat:
@@ -47,7 +46,7 @@ habitat_baselines:
               nav_to_obj:
                 skill_name: "OracleNavPolicy"
                 obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-                max_skill_steps: 300
+                max_skill_steps: 1000
           high_level_policy:
             allowed_actions:
               - nav_to_receptacle_by_name
