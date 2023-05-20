@@ -31,6 +31,32 @@ habitat:
       - ee_pos
       - localization_sensor
       - has_finished_oracle_nav
+  task:
+    actions:
+      oracle_nav_with_backing_up_action:
+        type: OracleNavWithBackingUpAction
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
+        enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
+    robot_at_thresh: 3.0
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
 
   environment:
     # On average, a single nav-pick-place takes about 750 steps
@@ -66,19 +92,6 @@ habitat_baselines:
     policy:
       main_agent:
         hierarchical_policy:
-          high_level_policy:
-            allowed_actions:
-              - nav_to_receptacle_by_name
-              - nav_to_goal
-              - nav_to_obj
-              - pick
-              - place
-            policy_input_keys:
-              - "head_depth"
-              - "joint"
-              - "is_holding"
-              - "obj_start_gps_compass"
-              - "obj_goal_gps_compass"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
               nav_to_obj:
