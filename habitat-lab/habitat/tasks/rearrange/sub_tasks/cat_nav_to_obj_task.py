@@ -29,6 +29,7 @@ class CatDynNavRLEnv(DynNavRLEnv):
         self._recep_category_to_recep_category_id = (
             dataset.recep_category_to_recep_category_id
         )
+        self._loaded_receptacle_categories = False
         if config.receptacle_categories_file is not None and osp.exists(
             config.receptacle_categories_file
         ):
@@ -36,6 +37,7 @@ class CatDynNavRLEnv(DynNavRLEnv):
                 for line in f.readlines():
                     name, category = line.strip().split(",")
                     self._receptacle_categories[name] = category
+            self._loaded_receptacle_categories = True
 
     @property
     def receptacle_semantic_ids(self):
@@ -43,10 +45,7 @@ class CatDynNavRLEnv(DynNavRLEnv):
 
     @property
     def loaded_receptacle_categories(self):
-        return (
-            self._receptacle_categories is not None
-            and len(self._receptacle_categories) > 0
-        )
+        return self._loaded_receptacle_categories
 
     def reset(self, episode: Episode):
         obs = super().reset(episode)
