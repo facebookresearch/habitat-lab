@@ -11,6 +11,7 @@ from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     HasFinishedOracleNavSensor,
+    ComputeSocNavMetricSensor
     #HasFinishedOracleNavSocSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
@@ -112,6 +113,12 @@ class OracleNavSocPolicy(NnSkillPolicy):
             full_config.habitat.task,
         )
 
+    def compute_socnav_metrics(self, observations):
+        metrics = observations[
+            ComputeSocNavMetricSensor.cls_uuid
+        ]
+        return metrics
+
     def _is_skill_done(
         self,
         observations,
@@ -121,7 +128,7 @@ class OracleNavSocPolicy(NnSkillPolicy):
         batch_idx,
     ) -> torch.BoolTensor:
         # ret = torch.zeros(masks.shape[0], dtype=torch.bool)
-        o = observations[LocalizationSensor.cls_uuid].cpu()
+        #o = observations[LocalizationSensor.cls_uuid].cpu()
         #breakpoint()
         # cur_pos = observations[LocalizationSensor.cls_uuid].cpu()
 
@@ -183,6 +190,11 @@ class OracleNavSocPolicy(NnSkillPolicy):
         )
 
         full_action[:, self._oracle_nav_ac_idx] = action_idxs
+
+        if self._is_skill_done(observations,rnn_hidden_states,prev_actions,masks,cur_batch_idx):
+            print("is skill done")
+            metrics = self.compute_socnav_metrics(observations)
+            breakpoint()
 
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states

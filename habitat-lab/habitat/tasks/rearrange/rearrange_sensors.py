@@ -20,6 +20,7 @@ from habitat.tasks.rearrange.utils import (
     get_angle_to_pos,
     rearrange_logger,
 )
+
 from habitat.tasks.utils import cartesian_to_polar
 
 
@@ -1111,6 +1112,106 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         #print("skill done? ", nav_action.skill_done)
         return np.array(nav_action.skill_done, dtype=np.float32)
 
+@registry.register_sensor
+class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
+    """
+    Compute 
+    found_human
+    spl
+    found_human_rate
+    """
+    #print("Initialized!")
+    cls_uuid: str = "compute_soc_nav_metric" #"has_finished_oracle_nav"
+    import numpy as np
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return ComputeSocNavMetricSensor.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def found_human_list(self, robot_poses, human_poses):
+        distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]]) for i in range(len(robot_poses))]
+        return_list = [d>=1 and d<=2 for d in distances]
+        return return_list
+
+    # def compute_spl(self, observations, robot_start_pose, human_poses):
+    #     #call method from 
+
+    def robot_path_len(self, robot_poses, found_human_list):
+        #Get the first step where the robot found the human
+        found_human_step = np.where(found_human_list)[0][0]
+        print("found human step is ", found_human_step)
+        #euc dist between each of the poses 
+        dist = 0
+        #for i in range(len(robot_poses)-1):
+        if found_human_step >=1:
+            for i in range(found_human_step-1):
+                dist += np.linalg.norm((robot_poses[i] - robot_poses[i+1])[[0, 2]])
+        return dist
+
+
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        #print("self._task.actions", self._task.actions)
+        # if "oracle_nav_action" in self._task.actions:
+        #     nav_action = self._task.actions[
+        #         "oracle_nav_action"#f"agent_{self.agent_id}_oracle_nav_action"#"oracle_nav_soc_action" #f"agent_{self.agent_id}_oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"
+        #     ]
+        # elif "oracle_nav_soc_action" in self._task.actions:
+        #     nav_action = self._task.actions[
+        #         "oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"#"oracle_nav_soc_action" #f"agent_{self.agent_id}_oracle_nav_soc_action"#f"agent_{self.agent_id}_oracle_nav_action"
+        #     ]
+        # else:
+        #     if f"agent_{self.agent_id}_oracle_nav_action" in self._task.actions:
+        #         nav_action = self._task.actions[
+        #             f"agent_{self.agent_id}_oracle_nav_action"
+        #         ]
+        #     elif f"agent_{self.agent_id}_oracle_nav_soc_action" in self._task.actions:
+        #         nav_action = self._task.actions[
+        #             f"agent_{self.agent_id}_oracle_nav_soc_action"
+        #         ]
+        #     else:
+        #         raise Exception("Action nonexisistent")
+        # #print("skill done? ", nav_action.skill_done)
+        # return np.array(nav_action.skill_done, dtype=np.float32)
+        #First get the pose of the robot
+        robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
+        human_nav_action = self._task.actions["agent_1_oracle_nav_soc_action"]
+        robot_poses = robot_nav_action.poses
+        #import ipdb; ipdb.set_trace()
+        #print("robot poses ", len(robot_poses))
+        #breakpoint()
+        if len(robot_poses)==699:
+            robot_start_pose = robot_poses[0]
+            human_poses = human_nav_action.poses
+            found_human_list = self.found_human_list(robot_poses, human_poses)
+            found  = sum(found_human_list) >0
+            found_rate = sum(found_human_list) / float(len(found_human_list))
+            opt_path_len_until_finding_human = human_nav_action.compute_opt_trajectory_len_until_found(robot_start_pose)
+            robot_path_len = self.robot_path_len(robot_poses, found_human_list)
+            found_spl = (opt_path_len_until_finding_human/ max(opt_path_len_until_finding_human, robot_path_len)) * found
+            print(found, found_spl, found_rate)
+            return [found, found_spl, found_rate]
+        else:
+            #return None, None, None
+            return [100, 100, 100]
+
+
+
+
+
+
+
+
 
 @registry.register_sensor
 class SocialRobotSuccessSensor(UsesArticulatedAgentInterface, Sensor):
@@ -1150,3 +1251,5 @@ class SocialRobotSuccessSensor(UsesArticulatedAgentInterface, Sensor):
         return np.array(
             [*articulated_agent.base_pos, heading_angle], dtype=np.float32
         )
+
+
