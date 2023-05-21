@@ -6,8 +6,9 @@ import os
 import random
 from typing import TYPE_CHECKING, Any, List, Type
 
-from habitat import ThreadedVectorEnv, VectorEnv, logger, make_dataset
+from habitat import ThreadedVectorEnv, VectorEnv, logger
 from habitat.config import read_write
+from habitat.datasets import get_dataset_type
 from habitat.utils.gym_definitions import make_gym_from_config
 
 if TYPE_CHECKING:
@@ -35,9 +36,7 @@ def construct_envs(
 
     num_environments = config.habitat_baselines.num_environments
     configs = []
-    dataset = make_dataset(
-        config.habitat.dataset.type, config=config.habitat.dataset
-    )
+    dataset = get_dataset_type(config.habitat.dataset.type)
     scenes = config.habitat.dataset.content_scenes
     if "*" in config.habitat.dataset.content_scenes:
         scenes = dataset.get_scenes_to_load(config.habitat.dataset)
