@@ -227,7 +227,10 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
                 obs_k = np.clip(obs_k[:, :, 0] + obs_k[:, :, 1] * 0.2, 0, 1)[
                     ..., None
                 ]
-            if obs_k.dtype != np.uint8:
+            if obs_k.dtype != np.uint8 or sensor_name in [
+                "goal_recep_segmentation",
+                "object_segmentation",
+            ]:
                 obs_k = obs_k * 255.0
                 obs_k = obs_k.astype(np.uint8)
             if obs_k.shape[2] == 1:

@@ -419,7 +419,7 @@ habitat:
         arm_joint_dimensionality: 7
         grasp_thresh_dist: 0.15
         disable_grip: False
-        delta_pos_limit: 0.0125
+        max_delta_pos: 0.0125
         ee_ctrl_lim: 0.015
       base_velocity:
         type: "BaseVelAction"

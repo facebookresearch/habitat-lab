@@ -64,7 +64,7 @@ actions:
     arm_joint_dimensionality: 7
     grasp_thresh_dist: 0.15
     disable_grip: False
-    delta_pos_limit: 6.28 # The range of joints are:  [ 0., 0.,  0.,  0.,  0., -1.75, -1.57, -3.14, -3.9, -1.53] -> [0.13, 0.13, 0.13, 0.13, 1.1 , 4., 0.56, 3.14, 1.5 , 0.79], so maximum delta is 6.28
+    max_delta_pos: 6.28 # The range of joints are:  [ 0., 0.,  0.,  0.,  0., -1.75, -1.57, -3.14, -3.9, -1.53] -> [0.13, 0.13, 0.13, 0.13, 1.1 , 4., 0.56, 3.14, 1.5 , 0.79], so maximum delta is 6.28
     ee_ctrl_lim: 0.015
     gaze_distance_range: [0.1, 3.0]
     center_cone_angle_threshold: 90.0

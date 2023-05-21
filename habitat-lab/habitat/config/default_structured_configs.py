@@ -119,7 +119,12 @@ class ArmActionConfig(ActionConfig):
     arm_joint_dimensionality: int = 7
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
-    delta_pos_limit: float = 0.0125
+    max_delta_pos: float = (
+        0.0125  # The maximum an arm joint can move in a single step
+    )
+    min_delta_pos: float = (
+        0.0  # The minimum an arm joint needs to move in a single step
+    )
     ee_ctrl_lim: float = 0.015
     should_clip: bool = False
     render_ee_target: bool = False
@@ -143,11 +148,11 @@ class BaseVelocityActionConfig(ActionConfig):
     collision_threshold: float = 1e-5
     navmesh_offset: Optional[List[float]] = None
     min_displacement: float = 0.1  # minimum displacement that is allowed
-    max_displacement_along_axis: float = 1.0  # maximum displacement
-    max_turn_degrees: float = 180.0  # maximum turn waypoint
+    max_displacement_along_axis: float = 0.25  # maximum displacement
+    max_turn_degrees: float = 30.0  # maximum turn waypoint
     min_turn_degrees: float = 5.0  # minimum turn waypoint
-    allow_lateral_movement: bool = True  # whether to allow lateral movement
-    allow_simultaneous_turn: bool = True  # whether to allow simultaneous turn
+    allow_lateral_movement: bool = False  # whether to allow lateral movement
+    allow_simultaneous_turn: bool = False  # whether to allow simultaneous turn
     discrete_movement: bool = (
         False  # whether to move/rotate only in discrete steps
     )
@@ -159,18 +164,9 @@ class RearrangeStopActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ExtendArmActionConfig(ActionConfig):
-    type: str = "ExtendArmAction"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class ResetJointsActionConfig(ActionConfig):
-    type: str = "ResetJointsAction"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class FaceArmActionConfig(ActionConfig):
-    type: str = "FaceArmAction"
+class ManipulationModeActionConfig(ActionConfig):
+    type: str = "ManipulationModeAction"
+    threshold: float = 0.8
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -601,6 +597,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     grasp_reward: float = 0.0
     # General Rearrange Reward config
     constraint_violate_pen: float = 10.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
@@ -641,6 +640,9 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     angle_dist_reward: float = 1.0
     dist_reward: float = 1.0
     constraint_violate_pen: float = 1.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
@@ -657,6 +659,9 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
+    navmesh_violate_pen: float = (
+        1.0  # penalty for trying to move outside navmesh
+    )
     type: str = "OvmmNavToObjReward"
 
 
@@ -755,6 +760,9 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     single_rearrange_reward: float = 1.0
     dist_reward: float = 1.0
     constraint_violate_pen: float = 10.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
@@ -766,6 +774,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     dist_reward: float = 2.0
     pick_reward: float = 2.0
     constraint_violate_pen: float = 1.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     drop_pen: float = 0.5
     wrong_pick_pen: float = 0.5
     force_pen: float = 0.0001
@@ -808,6 +819,9 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     use_ee_dist: bool = False
     wrong_drop_should_end: bool = True
     constraint_violate_pen: float = 0.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0001
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
@@ -1403,6 +1417,12 @@ cs.store(
     group="habitat/task/actions",
     name="rearrange_stop",
     node=RearrangeStopActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.manipulation_mode",
+    group="habitat/task/actions",
+    name="manipulation_mode",
+    node=ManipulationModeActionConfig,
 )
 cs.store(
     package="habitat.task.actions.answer",

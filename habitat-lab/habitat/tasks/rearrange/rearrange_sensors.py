@@ -163,6 +163,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
     panoptic_uuid: str = "robot_head_panoptic"
+
     def __init__(
         self,
         sim,
@@ -1108,6 +1109,7 @@ class RearrangeReward(UsesRobotInterface, Measure):
         self._max_force_pen = self._config.max_force_pen
         self._constraint_violate_pen = self._config.constraint_violate_pen
         self._force_end_pen = self._config.force_end_pen
+        self._navmesh_violate_pen = self._config.navmesh_violate_pen
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -1142,7 +1144,8 @@ class RearrangeReward(UsesRobotInterface, Measure):
         ].get_metric()
         if force_terminate:
             reward -= self._force_end_pen
-
+        if task.actions["base_velocity"].navmesh_violation:
+            reward -= self._navmesh_violate_pen
         self._metric = reward
 
     def _get_coll_reward(self):
