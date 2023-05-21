@@ -81,7 +81,7 @@ class OvmmNavGoalSegmentationSensor(Sensor):
                 obj_id = rom.get_object_id_by_handle(handle)
             instance_id = obj_id + self._instance_ids_start
             # Skip if object is not in the agent's viewport
-            if instance_id >= max_obs_val:
+            if instance_id > max_obs_val:
                 continue
             obs[pan_obs == instance_id] = 1
         return obs
