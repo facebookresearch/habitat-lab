@@ -24,7 +24,11 @@ from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
-from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
+from habitat.tasks.rearrange.utils import (
+    IkHelper,
+    add_perf_timing_func,
+    is_pb_installed,
+)
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -105,6 +109,7 @@ class ArticulatedAgentManager:
                 )
             )
 
+    @add_perf_timing_func()
     def on_new_scene(self) -> None:
         """
         Call on a new scene. This will destroy and re-create the robot
@@ -135,6 +140,7 @@ class ArticulatedAgentManager:
             for grasp_manager in agent_data.grasp_mgrs:
                 grasp_manager.reset()
 
+    @add_perf_timing_func()
     def post_obj_load_reconfigure(self):
         """
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.

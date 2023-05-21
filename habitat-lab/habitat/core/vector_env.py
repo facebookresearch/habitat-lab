@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import signal
+import time
 import warnings
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
@@ -232,7 +233,6 @@ class VectorEnv:
         return self._num_envs - len(self._paused)
 
     @staticmethod
-    @profiling_wrapper.RangeContext("_worker_env")
     def _worker_env(
         connection_read_fn: Callable,
         connection_write_fn: Callable,
@@ -251,20 +251,28 @@ class VectorEnv:
             signal.signal(signal.SIGUSR1, signal.SIG_IGN)
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
-        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(env_fn(*env_fn_args)))
+        inner_env = env_fn(*env_fn_args)
+        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(inner_env))
         if parent_pipe is not None:
             parent_pipe.close()
         try:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
+                    sim = inner_env.env._sim
+
+                    t_start = time.time()
                     observations, reward, done, info = env.step(data)
+                    sim.add_perf_timing("vector_env_step", t_start)
+
+                    t_start = time.time()
                     if auto_reset_done and done:
                         observations = env.reset()
-                    with profiling_wrapper.RangeContext(
-                        "worker write after step"
-                    ):
-                        connection_write_fn((observations, reward, done, info))
+                    sim.add_perf_timing("vector_env_auto_reset", t_start)
+
+                    t_start = time.time()
+                    connection_write_fn((observations, reward, done, info))
+                    sim.add_perf_timing("vector_env_conn_write", t_start)
 
                 elif command == RESET_COMMAND:
                     observations = env.reset()
@@ -293,8 +301,7 @@ class VectorEnv:
                 else:
                     raise NotImplementedError(f"Unknown command {command}")
 
-                with profiling_wrapper.RangeContext("worker wait for command"):
-                    command, data = connection_read_fn()
+                command, data = connection_read_fn()
 
         except KeyboardInterrupt:
             logger.info("Worker KeyboardInterrupt")

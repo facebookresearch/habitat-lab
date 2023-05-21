@@ -123,6 +123,14 @@ class LogicalExpr:
         self._sub_exprs = [e.sub_in(sub_dict) for e in self._sub_exprs]
         return self
 
+    def sub_in_clone(self, sub_dict: Dict[PddlEntity, PddlEntity]):
+        return LogicalExpr(
+            self._expr_type,
+            [e.sub_in(sub_dict) for e in self._sub_exprs],
+            self._inputs,
+            self._quantifier,
+        )
+
     def __repr__(self):
         return f"({self._expr_type}: {self._sub_exprs}"
 

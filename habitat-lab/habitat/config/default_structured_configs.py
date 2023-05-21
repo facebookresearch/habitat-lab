@@ -81,6 +81,8 @@ __all__ = [
     "NavToObjSuccessMeasurementConfig",
     "NavToObjRewardMeasurementConfig",
     "CompositeSuccessMeasurementConfig",
+    # PROFILING MEASURES
+    "RuntimePerfStatsMeasurementConfig",
 ]
 
 
@@ -676,6 +678,11 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
+    type: str = "RuntimePerfStats"
+
+
+@dataclass
 class RobotForceMeasurementConfig(MeasurementConfig):
     r"""
     The amount of force in newton's applied by the robot. It computes both the instant and accumulated.
@@ -1106,6 +1113,9 @@ class TaskConfig(HabitatBaseConfig):
     # Temporary structure for sensors
     lab_sensors: Dict[str, LabSensorConfig] = field(default_factory=dict)
     measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
+    rank0_env0_measure_names: List[str] = field(
+        default_factory=lambda: ["habitat_perf"]
+    )
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
     count_obj_collisions: bool = True
@@ -1392,6 +1402,7 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
+    should_setup_semantic_ids: bool = True
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
     debug_render_goal: bool = True
@@ -2171,6 +2182,12 @@ cs.store(
     group="habitat/task/measurements",
     name="rearrange_reach_success",
     node=RearrangeReachSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.habitat_perf",
+    group="habitat/task/measurements",
+    name="habitat_perf",
+    node=RuntimePerfStatsMeasurementConfig,
 )
 
 

@@ -80,6 +80,18 @@ class Predicate:
         self._pddl_sim_state.sub_in(sub_dict)
         return self
 
+    def sub_in_clone(self, sub_dict: Dict[PddlEntity, PddlEntity]):
+        p = Predicate(
+            self._name,
+            self._pddl_sim_state.sub_in_clone(sub_dict),
+            self._args,
+        )
+        if self._arg_values is not None:
+            p.set_param_values(
+                [sub_dict.get(entity, entity) for entity in self._arg_values]
+            )
+        return p
+
     def is_true(self, sim_info: PddlSimInfo) -> bool:
         """
         Returns if the predicate is satisfied in the current simulator state.

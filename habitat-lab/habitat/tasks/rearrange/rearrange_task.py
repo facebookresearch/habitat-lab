@@ -16,7 +16,10 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+from habitat.tasks.rearrange.rearrange_sim import (
+    RearrangeSim,
+    add_perf_timing_func,
+)
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
     CollisionDetails,
@@ -176,6 +179,7 @@ class RearrangeTask(NavigationTask):
         articulated_agent.base_pos = articulated_agent_pos
         articulated_agent.base_rot = articulated_agent_rot
 
+    @add_perf_timing_func()
     def reset(self, episode: Episode, fetch_observations: bool = True):
         self._episode_id = episode.episode_id
         self._ignore_collisions = []
@@ -203,14 +207,19 @@ class RearrangeTask(NavigationTask):
         else:
             return None
 
+    @add_perf_timing_func()
     def _get_observations(self, episode):
-        obs = self._sim.get_sensor_observations()
-        obs = self._sim._sensor_suite.get_observations(obs)
-
-        task_obs = self.sensor_suite.get_observations(
-            observations=obs, episode=episode, task=self
+        # Fetch the simulator observations, all visual sensors.
+        obs = self._sim._sensor_suite.get_observations(
+            self._sim.get_sensor_observations()
         )
-        obs.update(task_obs)
+
+        # Task sensors (all non-visual sensors)
+        obs.update(
+            self.sensor_suite.get_observations(
+                observations=obs, episode=episode, task=self, should_time=True
+            )
+        )
         return obs
 
     def _is_violating_safe_drop(self, action_args):

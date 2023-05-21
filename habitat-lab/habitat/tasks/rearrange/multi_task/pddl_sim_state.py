@@ -244,6 +244,21 @@ class PddlSimState:
             {k: v.clone() for k, v in self._robot_states.items()},
         )
 
+    def sub_in_clone(
+        self, sub_dict: Dict[PddlEntity, PddlEntity]
+    ) -> "PddlSimState":
+        return PddlSimState(
+            {sub_dict.get(k, k): v for k, v in self._art_states.items()},
+            {
+                sub_dict.get(k, k): sub_dict.get(v, v)
+                for k, v in self._obj_states.items()
+            },
+            {
+                sub_dict.get(k, k): robot_state.sub_in(sub_dict)
+                for k, robot_state in self._robot_states.items()
+            },
+        )
+
     def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "PddlSimState":
         self._robot_states = {
             sub_dict.get(k, k): robot_state.sub_in(sub_dict)

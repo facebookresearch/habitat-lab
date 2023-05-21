@@ -9,6 +9,7 @@ import os
 import os.path as osp
 import pickle
 import time
+from functools import wraps
 from typing import List, Optional, Tuple
 
 import attr
@@ -490,3 +491,42 @@ def get_angle_to_pos(rel_pos: np.ndarray) -> float:
     if not c:
         heading_angle = -1.0 * heading_angle
     return heading_angle
+
+
+def add_perf_timing_func(name: Optional[str] = None):
+    """
+    Function decorator for logging the speed of a method to the RearrangeSim.
+    This must either be applied to methods from RearrangeSim or to methods from
+    objects that contain `self._sim` so this decorator can access the
+    underlying `RearrangeSim` instance to log the speed. This scopes the
+    logging name so nested function calls will include the outer perf timing
+    name separate by a ".".
+
+    :param name: The name of the performance logging key. If unspecified, this
+        defaults to "ModuleName[FuncName]"
+    """
+
+    def perf_time(f):
+        if name is None:
+            module_name = f.__module__.split(".")[-1]
+            use_name = f"{module_name}[{f.__name__}]"
+        else:
+            use_name = name
+
+        @wraps(f)
+        def wrapper(self, *args, **kwargs):
+            if hasattr(self, "add_perf_timing"):
+                sim = self
+            else:
+                sim = self._sim
+
+            sim.cur_runtime_perf_scope.append(use_name)
+            t_start = time.time()
+            ret = f(self, *args, **kwargs)
+            sim.add_perf_timing("", t_start)
+            sim.cur_runtime_perf_scope.pop()
+            return ret
+
+        return wrapper
+
+    return perf_time

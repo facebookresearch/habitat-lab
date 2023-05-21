@@ -122,11 +122,18 @@ class PddlAction:
 
         return self._pre_cond.is_true_from_predicates(predicates)
 
-    def set_precond(self, new_precond):
+    def set_precond(self, new_precond) -> "PddlAction":
         """
         Sets the preconditions for the action.
         """
-        self._pre_cond = new_precond
+        return PddlAction(
+            self._name,
+            self._params,
+            new_precond,
+            self._post_cond,
+            self._task_info,
+            self._post_cond_search,
+        )
 
     @property
     def precond(self):

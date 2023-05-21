@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 import os.path as osp
+import time
 from collections import defaultdict
 from typing import (
     TYPE_CHECKING,
@@ -43,6 +44,7 @@ from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
 from habitat.tasks.rearrange.utils import (
+    add_perf_timing_func,
     get_aabb,
     make_render_only,
     rearrange_collision,
@@ -126,6 +128,15 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
+        self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
+        self._perf_logging_enabled = False
+        self.cur_runtime_perf_scope: List[str] = []
+        self._should_setup_semantic_ids = (
+            self.habitat_config.should_setup_semantic_ids
+        )
+
+    def enable_perf_logging(self):
+        self._perf_logging_enabled = True
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -193,10 +204,12 @@ class RearrangeSim(HabitatSim):
             target_trans.append((targ_idx, trans))
         return target_trans
 
+    @add_perf_timing_func()
     def _try_acquire_context(self):
         if self._concur_render:
             self.renderer.acquire_gl_context()
 
+    @add_perf_timing_func()
     def _sleep_all_objects(self):
         """
         De-activate (sleep) all rigid objects in the scene, assuming they are already in a dynamically stable state.
@@ -240,12 +253,14 @@ class RearrangeSim(HabitatSim):
         for m in self._markers.values():
             m.update()
 
+    @add_perf_timing_func()
     def reset(self):
         SimulatorBackend.reset(self)
         for i in range(len(self.agents)):
             self.reset_agent(i)
         return None
 
+    @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
@@ -265,7 +280,9 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.pre_obj_clear()
         self._clear_objects(should_add_objects)
 
+        t_start = time.time()
         super().reconfigure(config, should_close_on_new_scene=False)
+        self.add_perf_timing("super_reconfigure", t_start)
         self._try_acquire_context()
 
         if new_scene:
@@ -331,6 +348,11 @@ class RearrangeSim(HabitatSim):
                 ao: ao.joint_positions for ao in self.art_objs
             }
 
+        if self._should_setup_semantic_ids:
+            self._setup_semantic_ids()
+
+    @add_perf_timing_func()
+    def _setup_semantic_ids(self):
         # Add the rigid object id for the semantic map
         rom = self.get_rigid_object_manager()
         for i, handle in enumerate(rom.get_object_handles()):
@@ -393,6 +415,7 @@ class RearrangeSim(HabitatSim):
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
+    @add_perf_timing_func()
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
         base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
@@ -415,6 +438,7 @@ class RearrangeSim(HabitatSim):
     def largest_island_idx(self) -> int:
         return self._largest_island_idx
 
+    @add_perf_timing_func()
     def _clear_objects(self, should_add_objects: bool) -> None:
         rom = self.get_rigid_object_manager()
 
@@ -442,6 +466,7 @@ class RearrangeSim(HabitatSim):
         # managed by the underlying sim.
         self.art_objs = []
 
+    @add_perf_timing_func()
     def _set_ao_states_from_ep(self, ep_info: RearrangeEpisode) -> None:
         """
         Sets the ArticulatedObject states for the episode which are differ from base scene state.
@@ -492,6 +517,7 @@ class RearrangeSim(HabitatSim):
 
         return new_pos
 
+    @add_perf_timing_func()
     def _add_objs(
         self, ep_info: RearrangeEpisode, should_add_objects: bool
     ) -> None:
@@ -505,6 +531,7 @@ class RearrangeSim(HabitatSim):
             self._scene_obj_ids = []
 
         for i, (obj_handle, transform) in enumerate(ep_info.rigid_objs):
+            t_start = time.time()
             if should_add_objects:
                 template = None
                 for obj_path in self._additional_object_paths:
@@ -518,6 +545,7 @@ class RearrangeSim(HabitatSim):
                 ro = rom.add_object_by_template_handle(template)
             else:
                 ro = rom.get_object_by_id(self._scene_obj_ids[i])
+            self.add_perf_timing("create_asset", t_start)
 
             # The saved matrices need to be flipped when reloading.
             ro.transformation = mn.Matrix4(
@@ -737,6 +765,7 @@ class RearrangeSim(HabitatSim):
             quat_from_magnum(articulated_agent.sim_obj.rotation * rot_offset),
         )
 
+    @add_perf_timing_func()
     def step(self, action: Union[str, int]) -> Observations:
         rom = self.get_rigid_object_manager()
 
@@ -776,13 +805,20 @@ class RearrangeSim(HabitatSim):
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
-            self._prev_sim_obs = self.get_sensor_observations_async_finish()
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+            t_start = time.time()
+            obs = self._sensor_suite.get_observations(
+                self.get_sensor_observations_async_finish()
+            )
+            self.add_perf_timing("get_sensor_observations", t_start)
         else:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
-            self._prev_sim_obs = self.get_sensor_observations()
-            obs = self._sensor_suite.get_observations(self._prev_sim_obs)
+
+            t_start = time.time()
+            obs = self._sensor_suite.get_observations(
+                self.get_sensor_observations()
+            )
+            self.add_perf_timing("get_sensor_observations", t_start)
 
         if self._enable_gfx_replay_save:
             self.gfx_replay_manager.save_keyframe()
@@ -849,6 +885,7 @@ class RearrangeSim(HabitatSim):
         viz_obj.translation = mn.Vector3(*position)
         return viz_obj.object_id
 
+    @add_perf_timing_func()
     def internal_step(
         self, dt: Union[int, float], update_articulated_agent: bool = True
     ) -> None:
@@ -897,3 +934,24 @@ class RearrangeSim(HabitatSim):
                 for idx in self._scene_obj_ids
             ]
         )
+
+    def add_perf_timing(self, desc, t_start):
+        """
+        Note that this is additive.
+        """
+        if not self._perf_logging_enabled:
+            return
+
+        name = ".".join(self.cur_runtime_perf_scope)
+        if desc != "":
+            name += "." + desc
+        self._extra_runtime_perf_stats[name] += time.time() - t_start
+
+    def get_runtime_perf_stats(self):
+        stats_dict = {}
+        for name, value in self._extra_runtime_perf_stats.items():
+            stats_dict[name] = value
+        # clear this dict so we don't accidentally collect these twice
+        self._extra_runtime_perf_stats = defaultdict(float)
+
+        return stats_dict

@@ -9,7 +9,7 @@ import os
 import random
 import time
 from collections import defaultdict, deque
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 import numpy as np
 import torch
@@ -144,6 +144,10 @@ class PPOTrainer(BaseRLTrainer):
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
+            is_rank0=(
+                not torch.distributed.is_initialized()
+                or torch.distributed.get_rank() == 0
+            ),
         )
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
@@ -273,8 +277,12 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
-
+        self._single_proc_infos = {}
         self.t_start = time.time()
+
+        self._rank0_env0_keys: Set[str] = set(
+            self.config.habitat.task.rank0_env0_measure_names
+        )
 
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -410,7 +418,20 @@ class PPOTrainer(BaseRLTrainer):
             current_ep_reward = self.current_episode_reward[env_slice]
             self.running_episode_stats["reward"][env_slice] += current_ep_reward.where(done_masks, current_ep_reward.new_zeros(()))  # type: ignore
             self.running_episode_stats["count"][env_slice] += done_masks.float()  # type: ignore
-            for k, v_k in extract_scalars_from_infos(infos).items():
+
+            self._single_proc_infos = extract_scalars_from_infos(
+                infos,
+                ignore_keys=set(
+                    k
+                    for k in infos[0].keys()
+                    if k not in self._rank0_env0_keys
+                ),
+            )
+
+            extracted_infos = extract_scalars_from_infos(
+                infos, ignore_keys=self._rank0_env0_keys
+            )
+            for k, v_k in extracted_infos.items():
                 v = torch.tensor(
                     v_k,
                     dtype=torch.float,
@@ -544,6 +565,9 @@ class PPOTrainer(BaseRLTrainer):
         for k, v in losses.items():
             writer.add_scalar(f"learner/{k}", v, self.num_steps_done)
 
+        for k, v in self._single_proc_infos.items():
+            writer.add_scalar(k, np.mean(v), self.num_steps_done)
+
         fps = self.num_steps_done / ((time.time() - self.t_start) + prev_time)
 
         # Log perf metrics.
@@ -555,9 +579,6 @@ class PPOTrainer(BaseRLTrainer):
                 timer_val.mean,
                 self.num_steps_done,
             )
-        # REMOVE
-        for timer_name in sorted(g_timer.keys()):
-            logger.info(f"- perf/{timer_name}: {g_timer[timer_name].mean}")
 
         # log stats
         if (
@@ -585,6 +606,10 @@ class PPOTrainer(BaseRLTrainer):
                     ),
                 )
             )
+            perf_stats_str = " ".join(
+                [f"{k}: {v.mean:.3f}" for k, v in g_timer.items()]
+            )
+            logger.info(f"\tPerf Stats: {perf_stats_str}")
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:

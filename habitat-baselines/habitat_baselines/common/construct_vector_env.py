@@ -18,6 +18,7 @@ def construct_envs(
     config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
+    is_rank0: bool = True,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -76,13 +77,19 @@ def construct_envs(
             scene_splits[idx % len(scene_splits)].append(scene)
         assert sum(map(len, scene_splits)) == len(scenes)
 
-    for i in range(num_environments):
+    for env_i in range(num_environments):
         proc_config = config.copy()
         with read_write(proc_config):
             task_config = proc_config.habitat
-            task_config.seed = task_config.seed + i
+            task_config.seed = task_config.seed + env_i
+            if (env_i != 0) or not is_rank0:
+                task_config.task.measurements = {
+                    k: v
+                    for k, v in task_config.task.measurements.items()
+                    if k not in task_config.task.rank0_env0_measure_names
+                }
             if len(scenes) > 0:
-                task_config.dataset.content_scenes = scene_splits[i]
+                task_config.dataset.content_scenes = scene_splits[env_i]
 
         configs.append(proc_config)
 

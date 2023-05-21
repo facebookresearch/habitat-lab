@@ -431,6 +431,10 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
     profiling: ProfilingConfig = ProfilingConfig()
+    # Keys that should only be
+    info_keys_log_single_proc: List[str] = field(
+        default_factory=lambda: ["habitat_perf"]
+    )
 
 
 @dataclass
