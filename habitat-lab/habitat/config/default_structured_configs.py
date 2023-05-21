@@ -816,11 +816,13 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     sparse_reward: bool = False
     drop_pen_type: str = "constant"
 
+
 @attr.s(auto_attribs=True, slots=True)
 class PlacementStabilityMeasurementConfig(MeasurementConfig):
     type: str = "PlacementStability"
     stability_steps: float = 50
     place_anywhere: bool = False
+
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
@@ -958,11 +960,11 @@ class TaskConfig(HabitatBaseConfig):
     filter_nav_to_tasks: List = []
     actions: Dict[str, ActionConfig] = MISSING
     start_in_manip_mode: bool = False
-    camera_tilt: float =  -0.7125
     goal_type: str = "object_on_recep"
     pick_init: bool = False
     place_init: bool = False
-    camera_tilt: float = -0.7125
+    camera_tilt: float = -0.5236
+    receptacle_categories_file: str = ""
 
 
 @attr.s(auto_attribs=True, slots=True)

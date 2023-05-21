@@ -35,9 +35,14 @@ class PointNavDatasetV1(Dataset):
 
     @staticmethod
     def check_config_paths_exist(config: "DictConfig") -> bool:
-        assert os.path.exists(config.data_path.format(split=config.split)), \
-                "Episde dataset: {} does not exist".format(config.data_path.format(split=config.split))
-        assert os.path.exists(config.scenes_dir), "Scenes dataset: {} does not exist".format(config.scenes_dir)
+        assert os.path.exists(
+            config.data_path.format(split=config.split)
+        ), "Episde dataset: {} does not exist".format(
+            config.data_path.format(split=config.split)
+        )
+        assert os.path.exists(
+            config.scenes_dir
+        ), "Scenes dataset: {} does not exist".format(config.scenes_dir)
         return True
 
     @classmethod
@@ -98,8 +103,6 @@ class PointNavDatasetV1(Dataset):
             return
 
         datasetfile_path = config.data_path.format(split=config.split)
-        with gzip.open(datasetfile_path, "rt") as f:
-            self.from_json(f.read(), scenes_dir=config.scenes_dir)
 
         # Read separate file for each scene
         dataset_dir = os.path.dirname(datasetfile_path)
@@ -124,6 +127,8 @@ class PointNavDatasetV1(Dataset):
                     self.from_json(f.read(), scenes_dir=config.scenes_dir)
 
         else:
+            with gzip.open(datasetfile_path, "rt") as f:
+                self.from_json(f.read(), scenes_dir=config.scenes_dir)
             self.episodes = list(
                 filter(self.build_content_scenes_filter(config), self.episodes)
             )
