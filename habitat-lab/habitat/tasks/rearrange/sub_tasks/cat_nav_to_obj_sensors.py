@@ -81,7 +81,7 @@ class OvmmNavGoalSegmentationSensor(Sensor):
                 obj_id = rom.get_object_id_by_handle(handle)
             instance_id = obj_id + self._instance_ids_start
             # Skip if object is not in the agent's viewport
-            if instance_id >= max_obs_val:
+            if instance_id > max_obs_val:
                 continue
             obs[pan_obs == instance_id] = 1
         return obs
@@ -165,6 +165,9 @@ class ReceptacleSegmentationSensor(Sensor):
     ):
         obs = np.copy(observations[self.panoptic_uuid])
         obj_id_map = np.zeros(np.max(obs) + 1, dtype=np.int32)
+        assert (
+            task.loaded_receptacle_categories
+        ), "Empty receptacle semantic IDs, task didn't cache them."
         for obj_id, semantic_id in task.receptacle_semantic_ids.items():
             instance_id = obj_id + self._instance_ids_start
             # Skip if receptacle is not in the agent's viewport
