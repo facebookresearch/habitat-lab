@@ -187,9 +187,16 @@ class RearrangeTask(NavigationTask):
             self._is_episode_active = True
 
             if self._should_place_articulated_agent:
+                
+                habitat_config = self._sim.habitat_config
+                if "overfit" in habitat_config and habitat_config["overfit"]: 
+                    curr_seed = self._sim.habitat_config.seed
+                    np.random.seed(curr_seed)
+                    self._sim.pathfinder.seed(curr_seed)
+                    
                 for agent_idx in range(self._sim.num_articulated_agents):
                     self._set_articulated_agent_start(agent_idx)
-
+        
         self.prev_measures = self.measurements.get_metrics()
         self._targ_idx = 0
         self.coll_accum = CollisionDetails()
