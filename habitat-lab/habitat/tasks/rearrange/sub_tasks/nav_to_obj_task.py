@@ -79,6 +79,10 @@ class DynNavRLEnv(RearrangeTask):
             or self.actions["rearrange_stop"].does_want_terminate
         )
 
+    @should_end.setter
+    def should_end(self, new_val: bool):
+        self._should_end = new_val
+
     def set_args(self, obj, **kwargs):
         self.force_obj_to_idx = obj
         self.force_kwargs = kwargs

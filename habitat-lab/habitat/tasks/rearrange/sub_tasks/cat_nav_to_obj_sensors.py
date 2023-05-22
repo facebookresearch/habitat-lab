@@ -166,7 +166,7 @@ class ReceptacleSegmentationSensor(Sensor):
     ):
         obs = np.copy(observations[self.panoptic_uuid])
         obj_id_map = np.zeros(np.max(obs) + 1, dtype=np.int32)
-        ssert (
+        assert (
             task.loaded_receptacle_categories
         ), "Empty receptacle semantic IDs, task didn't cache them."
         for obj_id, semantic_id in task.receptacle_semantic_ids.items():
