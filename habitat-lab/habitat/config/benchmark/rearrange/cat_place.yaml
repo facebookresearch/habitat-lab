@@ -14,7 +14,7 @@ habitat:
       - robot_head_depth
       - goal_receptacle
       - object_embedding
-      - ovmm_nav_goal_segmentation
+      - goal_recep_segmentation
       - joint
       - is_holding
   environment:
