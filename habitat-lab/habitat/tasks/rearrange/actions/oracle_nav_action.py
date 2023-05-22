@@ -55,7 +55,6 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self.poses = []
         #import ipdb; ipdb.set_trace()
 
-
     def get_poses(self):
         if self.skill_done:
             return self.poses

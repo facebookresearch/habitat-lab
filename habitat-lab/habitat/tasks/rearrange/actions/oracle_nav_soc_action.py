@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.actions.actions import (
 
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
-
+import os
 
 @registry.register_task_action
 class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
@@ -58,7 +58,20 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         self._waypoint_count = 5
         print("Oracle nav soc action is called!")
         self.poses = []
+        self.log = None
 
+
+    def write_log(self):
+        file_name = 'multiprocess_logs/episode_' + str(self._task._episode_id) + '_agent_' + str(self._agent_index) + '.txt'
+        if not os.path.exists(os.path.dirname(file_name)):
+            os.makedirs(os.path.dirname(file_name))
+        self.log = open(file_name, 'w')
+
+    def close_log(self):
+        if self.log is None:
+            pass
+        else:
+            self.log.close()
 
 
     @staticmethod
@@ -110,9 +123,11 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         if self._task._episode_id != self._prev_ep_id:
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
+            self.close_log()
         self.skill_done = False
         self._counter = 0
         self.poses = []
+        self.write_log()
 
         
     def get_waypoints(self):
@@ -125,7 +140,8 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
             final_nav_targ, _= self._get_random_waypoint()
             self.prev_navigable_point =final_nav_targ 
             self.waypoints.append(final_nav_targ)
-        print("Initialized waypoints are ", self.waypoints)
+        #print("Initialized waypoints are ", self.waypoints)
+        self.log.write("Initialized waypoints are " + str(self.waypoints)+"\n")
 
     def _get_random_waypoint(self):
         #Just sample a new point
@@ -291,9 +307,11 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
             self.get_waypoints()
             self.waypoint_increased_step = self._counter
         print("step ", str(self._counter) , ": dist is ", self._get_distance(self._get_current_pose()[0], self.waypoints[self.waypoint_pointer]))
+        self.log.write("step " + str(self._counter) + ": dist is " + str(self._get_distance(self._get_current_pose()[0], self.waypoints[self.waypoint_pointer])) +"\n" )
         # print("pointer is ", self.waypoint_pointer)
         # print("cur pose is ",self._get_current_pose() )
         print("step ", str(self._counter) , ": cur pose is ", self._get_current_pose()[0])
+        self.log.write("step " + str(self._counter) + ": cur pose is " + str(self._get_current_pose()[0]) +"\n")
         #print("prev navigable point is ", self.prev_navigable_point)
         #if self._counter %20==0:
         #If almost there, resample
@@ -304,6 +322,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
             if self.waypoint_pointer+1 < len(self.waypoints) and (stuck or reached_waypoint):
                 self.waypoint_pointer +=1
                 print("step ", str(self._counter) , ": NEW WAYPOINT!")
+                self.log.write("step " + str(self._counter) + ": NEW WAYPOINT!" +"\n")
                 self.waypoint_increased_step = self._counter
 
         final_nav_targ, obj_targ_pos = self.waypoints[self.waypoint_pointer], self.waypoints[self.waypoint_pointer] 
@@ -368,6 +387,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                     if self.waypoint_pointer == len(self.waypoints) -1:
                         self.skill_done = True
                         print("Completed!")
+                        self.log.write("Complete!"+"\n")
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
@@ -393,7 +413,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                     if self.waypoint_pointer == len(self.waypoints) -1:
                         self.skill_done = True
                         print("Completed!")
-
+                        self.log.write("Complete!"+"\n")
                 self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
                 kwargs[
