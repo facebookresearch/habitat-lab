@@ -17,6 +17,7 @@ def extract_scalars_from_info(
 
         Args:
             info: A gym.Env  info dict
+            ignore_keys: The list of info key names to exclude in the result.
 
         Returns:
             dictionary of scalar values
@@ -56,6 +57,7 @@ def extract_scalars_from_infos(
 
         Args:
             infos: A list of gym.Env type info dict
+            ignore_keys: The list of info key names to exclude in the result.
 
         Returns:
             dict of list of scalar values

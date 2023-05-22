@@ -493,6 +493,10 @@ def get_angle_to_pos(rel_pos: np.ndarray) -> float:
     return heading_angle
 
 
+def has_perf_timing(env) -> bool:
+    return hasattr(env._sim, "add_perf_timing")
+
+
 def add_perf_timing_func(name: Optional[str] = None):
     """
     Function decorator for logging the speed of a method to the RearrangeSim.

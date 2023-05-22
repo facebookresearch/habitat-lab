@@ -38,6 +38,9 @@ class HighLevelPolicy(nn.Module):
 
     @property
     def should_load_agent_state(self) -> bool:
+        """
+        If we need to load the state dict of the high-level policy.
+        """
         return False
 
     def evaluate_actions(
@@ -61,6 +64,12 @@ class HighLevelPolicy(nn.Module):
         old_rnn_hidden_states: torch.Tensor,
         hl_info: Dict[str, Any],
     ) -> torch.Tensor:
+        """
+        Update the hidden states from the previous hidden state and selected HL
+        action information. Called after every HL action prediction. Returns
+        the updated hidden states of same shape as `old_rnn_hidden_states`.
+        """
+
         if old_rnn_hidden_states.shape[0] == len(batch_ids):
             return hl_info["rnn_hidden_states"][batch_ids]
         else:

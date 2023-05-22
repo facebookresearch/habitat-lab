@@ -1113,6 +1113,8 @@ class TaskConfig(HabitatBaseConfig):
     # Temporary structure for sensors
     lab_sensors: Dict[str, LabSensorConfig] = field(default_factory=dict)
     measurements: Dict[str, MeasurementConfig] = field(default_factory=dict)
+    # Measures to only construct in the first environment of the first rank for
+    # vectorized environments.
     rank0_env0_measure_names: List[str] = field(
         default_factory=lambda: ["habitat_perf"]
     )
@@ -1326,6 +1328,7 @@ class AgentConfig(HabitatBaseConfig):
     start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
     start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
+    # Hard-code the robot joint start. `joint_start_noise` still applies.
     joint_start_override: Optional[List[float]] = None
     articulated_agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     articulated_agent_type: str = "FetchRobot"
@@ -1402,6 +1405,9 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
+    # If False, will skip setting the semantic IDs of objects in
+    # `rearrange_sim.py` (there is overhead to this operation so skip if not
+    # using semantic information).
     should_setup_semantic_ids: bool = True
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed

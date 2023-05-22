@@ -277,12 +277,20 @@ class PPOTrainer(BaseRLTrainer):
         self.window_episode_stats = defaultdict(
             lambda: deque(maxlen=self._ppo_cfg.reward_window_size)
         )
-        self._single_proc_infos = {}
+
         self.t_start = time.time()
 
+        # The measure keys that should only be logged on rank0,gpu0 and nowhere
+        # else. They will be excluded from all other workers and only reported
+        # from the single worker.
         self._rank0_env0_keys: Set[str] = set(
             self.config.habitat.task.rank0_env0_measure_names
         )
+
+        # Information on measures that declared in `self._rank0_env0_keys` to
+        # be only reported on rank0,gpu0. This is seperately logged from
+        # `self.window_episode_stats`.
+        self._single_proc_infos = {}
 
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")

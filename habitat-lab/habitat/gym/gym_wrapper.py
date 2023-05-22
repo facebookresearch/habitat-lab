@@ -241,9 +241,6 @@ class HabGymWrapper(gym.Wrapper):
 
         self._screen: Optional[pygame.surface.Surface] = None
 
-        # Store so we can use the perf logging features.
-        self._sim = env._env.task._sim
-
     @add_perf_timing_func()
     def step(
         self, action: Union[np.ndarray, int]

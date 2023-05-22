@@ -17,6 +17,7 @@ from omegaconf import OmegaConf
 from habitat.core.dataset import Dataset, Episode
 from habitat.core.simulator import Observations, SensorSuite, Simulator
 from habitat.core.spaces import ActionSpace, EmptySpace, Space
+from habitat.task.rearrange.utils import has_perf_timing
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -170,7 +171,8 @@ class Measurements:
             t_start = time.time()
             measure.update_metric(*args, task=task, **kwargs)
             measure_name = measure._get_uuid(*args, task=task, **kwargs)
-            task._sim.add_perf_timing(f"measures.{measure_name}", t_start)
+            if has_perf_timing(task):
+                task._sim.add_perf_timing(f"measures.{measure_name}", t_start)
 
     def get_metrics(self) -> Metrics:
         r"""Collects measurement from all :ref:`Measure`\ s and returns it

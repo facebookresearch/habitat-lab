@@ -29,6 +29,7 @@ def construct_envs(
     :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
     :param enforce_scenes_greater_eq_environments: Make sure that there are more (or equal)
         scenes than environments. This is needed for correct evaluation.
+    :param is_rank0: If these environments are being constructed on the rank0 GPU.
 
     :return: VectorEnv object created according to specification.
     """
@@ -68,10 +69,6 @@ def construct_envs(
         for scene in scenes:
             for split in scene_splits:
                 split.append(scene)
-    elif config.habitat_baselines.all_episodes_per_worker:
-        for scene in scenes:
-            for split in scene_splits:
-                split.append(scene)
     else:
         for idx, scene in enumerate(scenes):
             scene_splits[idx % len(scene_splits)].append(scene)
@@ -83,6 +80,8 @@ def construct_envs(
             task_config = proc_config.habitat
             task_config.seed = task_config.seed + env_i
             if (env_i != 0) or not is_rank0:
+                # Filter out non-rank0_env0 measures from the task config if we
+                # are not on rank0 env0.
                 task_config.task.measurements = {
                     k: v
                     for k, v in task_config.task.measurements.items()

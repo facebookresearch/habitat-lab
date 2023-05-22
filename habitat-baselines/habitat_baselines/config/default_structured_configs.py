@@ -401,7 +401,6 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # path to ckpt or path to ckpts dir
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
-    all_episodes_per_worker: bool = False
     num_processes: int = -1  # deprecated
     rollout_storage_name: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
@@ -431,10 +430,6 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
     profiling: ProfilingConfig = ProfilingConfig()
-    # Keys that should only be
-    info_keys_log_single_proc: List[str] = field(
-        default_factory=lambda: ["habitat_perf"]
-    )
 
 
 @dataclass

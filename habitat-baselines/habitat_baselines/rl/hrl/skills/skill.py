@@ -328,4 +328,9 @@ class SkillPolicy(Policy):
 
     @property
     def required_obs_keys(self) -> List[str]:
+        """
+        Which keys from the observation dictionary this skill requires to
+        compute actions and termination conditions.
+        """
+
         return []

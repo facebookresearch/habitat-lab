@@ -94,5 +94,10 @@ class Timing(dict):
         return s
 
 
+# The level of logging is controlled via this environment variable. The higher
+# the value, the more is logged. Will log if the `level` value in
+# `timer.avg_time` is <= this value.
 timing_level = int(os.environ.get("HABITAT_TIMING_LEVEL", 0))
+
+# Global timer instance. All its metrics are reported in `ppo_trainer.py`
 g_timer = Timing(timing_level)
