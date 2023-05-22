@@ -241,8 +241,12 @@ class ObjectSampler:
             sim.pathfinder.build_navmesh_vertices(), axis=0
         )
         # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        self.largest_island_size = max(
-            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
+        island_size = [
+            sim.pathfinder.island_radius(p) for p in navmesh_vertices
+        ]
+        self.largest_island_size = max(island_size)
+        self.largest_island_id = sim.pathfinder.get_island(
+            navmesh_vertices[island_size.index(self.largest_island_size)]
         )
 
         while num_placement_tries < self.max_placement_attempts:
@@ -352,9 +356,13 @@ class ObjectSampler:
         based on Euclidean distance. The nearest navigable point may be
         separated from the object by an obstacle.
         """
+
         if self.nav_to_min_distance == -1:
             return True
-        snapped = sim.pathfinder.snap_point(obj.translation)
+
+        snapped = sim.pathfinder.snap_point(
+            obj.translation, self.largest_island_id
+        )
         island_radius: float = sim.pathfinder.island_radius(snapped)
         dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
@@ -367,8 +375,9 @@ class ObjectSampler:
             self.largest_island_size,
         )
         return (
-            dist < self.nav_to_min_distance
-            and island_radius == self.largest_island_size
+            dist
+            < self.nav_to_min_distance
+            # and island_radius == self.largest_island_size
         )
 
     def single_sample(

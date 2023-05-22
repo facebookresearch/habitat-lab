@@ -11,7 +11,8 @@
           # - "107733960_175999701"
           # - "106878915_174887025"
           # - "106366410_174226806"
-          - "104862669_172226853"
+          # - "104862669_172226853"
+          - "104862660_172226844"
           # 40 scene for mini train
           # - "107734176_176000019"
           # - "107733960_175999701"
@@ -145,7 +146,7 @@
         - 5
         - 5
         orientation_sampling: up
-        nav_to_min_distance: -1
+        nav_to_min_distance: 1.5
     #- name: test_set
     #  type: category_balanced
     #  params:
@@ -208,21 +209,21 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 3 # 3
-        - 5 # 5
+        - 2 # 3
+        - 2 # 5
         orientation_sampling: up
-        nav_to_min_distance: -1
+        nav_to_min_distance: 1.5
 
     correct_unstable_results: True
 
     regenerate_new_mesh: True
-    agent_radius: 0.10
+    agent_radius: 0.25
     agent_height: 1.8
     agent_max_climb: 0.01
 
     check_navigable: True
     navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
-    max_collision_rate_for_navigable: 1.0 #0.5
+    max_collision_rate_for_navigable: 0.5
     angle_threshold: 0.26
     angular_velocity: 1.0
     distance_threshold: 0.9 #0.5
