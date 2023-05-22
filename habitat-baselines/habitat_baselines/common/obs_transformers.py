@@ -1199,12 +1199,16 @@ class Equirect2CubeMap(ProjectionTransformer):
 
 
 def get_active_obs_transforms(
-    config: "DictConfig",
+    config: "DictConfig", agent_name: str = None
 ) -> List[ObservationTransformer]:
     active_obs_transforms = []
 
     # We assume for now that the observation space is shared among agents
-    agent_name = list(config.habitat_baselines.rl.policy.keys())[0]
+    # if agent_name is not specified explicitly
+    agent_name = (
+        agent_name or list(config.habitat_baselines.rl.policy.keys())[0]
+    )
+
     obs_trans_conf = config.habitat_baselines.rl.policy[
         agent_name
     ].obs_transforms
