@@ -826,24 +826,49 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
-    place_anywhere: bool = False
     sparse_reward: bool = False
     drop_pen_type: str = "constant"
+    ee_resting_success_threshold: float = 0.15
 
 
 @attr.s(auto_attribs=True, slots=True)
 class PlacementStabilityMeasurementConfig(MeasurementConfig):
     type: str = "PlacementStability"
     stability_steps: float = 50
-    place_anywhere: bool = False
 
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
-    place_anywhere: bool = False
     check_stability: bool = False
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmObjectToPlaceGoalDistance"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmEEToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmEEToPlaceGoalDistance"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlaceRewardMeasurementConfig(PlaceRewardMeasurementConfig):
+    type: str = "OvmmPlaceReward"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlacementStabilityMeasurementConfig(
+    PlacementStabilityMeasurementConfig
+):
+    type: str = "OvmmPlacementStability"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlaceSuccessMeasurementConfig(PlaceSuccessMeasurementConfig):
+    type: str = "OvmmPlaceSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1914,6 +1939,36 @@ cs.store(
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_object_to_place_goal_distance",
+    group="habitat/task/measurements",
+    name="ovmm_object_to_place_goal_distance",
+    node=OvmmObjectToPlaceGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_ee_to_place_goal_distance",
+    group="habitat/task/measurements",
+    name="ovmm_ee_to_place_goal_distance",
+    node=OvmmEEToPlaceGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_reward",
+    group="habitat/task/measurements",
+    name="ovmm_place_reward",
+    node=OvmmPlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_placement_stability",
+    group="habitat/task/measurements",
+    name="ovmm_placement_stability",
+    node=OvmmPlacementStabilityMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_success",
+    group="habitat/task/measurements",
+    name="ovmm_place_success",
+    node=OvmmPlaceSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",
