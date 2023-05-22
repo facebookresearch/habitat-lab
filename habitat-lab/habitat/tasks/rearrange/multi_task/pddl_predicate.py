@@ -132,7 +132,7 @@ class Predicate:
 
     @property
     def compact_str(self):
-        args = ",".join([x.name for x in self._arg_values])
+        args = ",".join((x.name for x in self._arg_values))
         return f"{self._name}({args})"
 
     def __eq__(self, other_pred):
