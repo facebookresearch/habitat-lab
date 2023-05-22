@@ -58,6 +58,7 @@ habitat:
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor
+      - agent_0_has_finished_oracle_nav
       - agent_1_has_finished_oracle_nav
       - agent_1_head_depth
       - agent_1_relative_resting_position
