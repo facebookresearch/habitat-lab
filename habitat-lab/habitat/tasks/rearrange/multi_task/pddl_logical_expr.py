@@ -136,7 +136,7 @@ class LogicalExpr:
 
     @property
     def compact_str(self):
-        sub_s = ",".join([s.compact_str for s in self._sub_exprs])
+        sub_s = ",".join((s.compact_str for s in self._sub_exprs))
         return f"{self._expr_type.value}({sub_s})"
 
     def clone(self) -> "LogicalExpr":
