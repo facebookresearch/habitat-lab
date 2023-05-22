@@ -65,6 +65,23 @@ class PointNavResNetPolicy(NetPolicy):
         fuse_keys: Optional[List[str]] = None,
         **kwargs,
     ):
+        """
+        Keyword arguments:
+        rnn_type: RNN layer type; one of ["GRU", "LSTM"]
+        backbone: Visual encoder backbone; one of ["resnet18", "resnet50", "resneXt50", "se_resnet50", "se_resneXt50", "se_resneXt101", "resnet50_clip_avgpool", "resnet50_clip_attnpool"]
+        """
+
+        assert backbone in [
+            "resnet18",
+            "resnet50",
+            "resneXt50",
+            "se_resnet50",
+            "se_resneXt50",
+            "se_resneXt101",
+            "resnet50_clip_avgpool",
+            "resnet50_clip_attnpool",
+        ], f"{backbone} backbone is not recognized."
+
         if policy_config is not None:
             discrete_actions = (
                 policy_config.action_distribution_type == "categorical"
@@ -531,7 +548,21 @@ class PointNavResNetNet(Net):
                 }
             )
 
-        if backbone == "resnet50" or backbone == "resnet50_imagenet":
+        if backbone.startswith("resnet50_clip"):
+            self.visual_encoder = ResNetCLIPEncoder(
+                observation_space
+                if not force_blind_policy
+                else spaces.Dict({}),
+                pooling="avgpool" if "avgpool" in backbone else "attnpool",
+            )
+            if not self.visual_encoder.is_blind:
+                self.visual_fc = nn.Sequential(
+                    nn.Linear(
+                        self.visual_encoder.output_shape[0], hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
+        else:
             self.visual_encoder = ResNetEncoder(
                 use_obs_space,
                 baseplanes=resnet_baseplanes,
@@ -548,22 +579,6 @@ class PointNavResNetNet(Net):
                     ),
                     nn.ReLU(True),
                 )
-        elif backbone.startswith("resnet50_clip"):
-            self.visual_encoder = ResNetCLIPEncoder(
-                observation_space
-                if not force_blind_policy
-                else spaces.Dict({}),
-                pooling="avgpool" if "avgpool" in backbone else "attnpool",
-            )
-            if not self.visual_encoder.is_blind:
-                self.visual_fc = nn.Sequential(
-                    nn.Linear(
-                        self.visual_encoder.output_shape[0], hidden_size
-                    ),
-                    nn.ReLU(True),
-                )
-        else:
-            raise NotImplementedError
 
         self.state_encoder = build_rnn_state_encoder(
             (0 if self.is_blind else self._hidden_size) + rnn_input_size,
