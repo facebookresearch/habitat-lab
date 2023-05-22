@@ -660,7 +660,7 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
     navmesh_violate_pen: float = (
-        1.0  # penalty for trying to move outside navmesh
+        0.0  # penalty for trying to move outside navmesh
     )
     type: str = "OvmmNavToObjReward"
 
