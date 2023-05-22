@@ -11,25 +11,26 @@ defaults:
   - /habitat/task/actions:
     - oracle_nav_with_backing_up_action
   - /habitat/task/lab_sensors:
-    - relative_resting_pos_sensor
-    - target_start_sensor
-    - goal_sensor
-    - joint_sensor
-    - is_holding_sensor
-    - end_effector_sensor
-    - target_start_gps_compass_sensor
-    - target_goal_gps_compass_sensor
-    - localization_sensor
     - has_finished_oracle_nav
   - /habitat/task/measurements:
     - composite_subgoal_reward
-    - articulated_agent_colls
-    - contact_test_stats
+    - runtime_perf_stats
   - override /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbd_head_rgbd_arm_agent
   - override /habitat/task/rearrange: rearrange_easy_fp
   - _self_
 
 habitat:
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - has_finished_oracle_nav
   task:
     actions:
       oracle_nav_with_backing_up_action:
@@ -50,24 +51,16 @@ habitat:
         turn_thresh: 0.1
         dist_thresh: 0.5
     robot_at_thresh: 3.0
-
-  gym:
-    obs_keys:
-      - head_depth
-      - relative_resting_position
-      - obj_start_sensor
-      - obj_goal_sensor
-      - obj_start_gps_compass
-      - obj_goal_gps_compass
-      - joint
-      - is_holding
-      - ee_pos
-      - localization_sensor
-      - has_finished_oracle_nav
+    measurements:
+      composite_success:
+        must_call_stop: False
+      force_terminate:
+        max_accum_force: -1.0
+        max_instant_force: -1.0
 
   environment:
     # On average, a single nav-pick-place takes about 750 steps
-    max_episode_steps: 5000
+    max_episode_steps: 2000
 
   simulator:
     habitat_sim_v0:

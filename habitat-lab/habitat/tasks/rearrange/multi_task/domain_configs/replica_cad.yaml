@@ -176,6 +176,23 @@ actions:
         task.force_regenerate: True
         task.should_save_to_cache: False
 
+  - name: nav_to_robot
+    parameters:
+      - name: obj
+        expr_type: robot_entity_type
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition:
+      - robot_at(obj, robot)
+    task_info:
+      task: NavToObjTask-v0
+      task_def: "nav_to_obj"
+      config_args:
+        task.force_regenerate: True
+        task.should_save_to_cache: False
+
+
   - name: pick
     parameters:
       - name: obj

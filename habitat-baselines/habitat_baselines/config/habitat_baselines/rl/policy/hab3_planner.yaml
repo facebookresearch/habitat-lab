@@ -19,5 +19,5 @@ hierarchical_policy:
     # planned sequence (so the agent only does a part of the overall task).
     plan_split_len: 4
     # The index of which plan to take.
-    plan_idx: 0
+    plan_idx: -1
   defined_skills: {}

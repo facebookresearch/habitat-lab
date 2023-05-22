@@ -320,6 +320,7 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        self._saved_object_rotation = None
 
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
@@ -332,6 +333,7 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        assert not self.is_grasped
 
     def get_random_joint_action(self):
         # Add random noise to human arms but keep global transform
@@ -391,6 +393,13 @@ class GuiHumanoidController(GuiController):
     def _update_grasp(self, grasp_object_id, drop_pos):
         if grasp_object_id is not None:
             assert not self.is_grasped
+
+            sim = self._env.task._sim
+            rigid_obj = sim.get_rigid_object_manager().get_object_by_id(
+                grasp_object_id
+            )
+            self._saved_object_rotation = rigid_obj.rotation
+
             self._get_grasp_mgr().snap_to_obj(grasp_object_id)
 
         elif drop_pos is not None:
@@ -404,6 +413,8 @@ class GuiHumanoidController(GuiController):
                 grasp_object_id
             )
             rigid_obj.translation = drop_pos
+            rigid_obj.rotation = self._saved_object_rotation
+            self._saved_object_rotation = None
 
     def act(self, obs, env):
         self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
