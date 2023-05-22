@@ -829,6 +829,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     sparse_reward: bool = False
     drop_pen_type: str = "constant"
     ee_resting_success_threshold: float = 0.15
+    stability_reward: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
