@@ -70,6 +70,7 @@ measurements:
     place_anywhere: True
     sparse_reward: False
     navmesh_violate_pen: 1.0
+    drop_pen: 1.0
   placement_stability:
     place_anywhere: True
 lab_sensors:
