@@ -719,7 +719,7 @@ class RearrangeEpisodeGenerator:
                     logger.info(f"  collision rate {collision_rate} %")
                     if (
                         collision_rate
-                        >= self.cfg.max_collision_rate_for_navigable
+                        > self.cfg.max_collision_rate_for_navigable
                     ):
                         return None
 

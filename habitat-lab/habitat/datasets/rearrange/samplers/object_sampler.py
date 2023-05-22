@@ -316,6 +316,7 @@ class ObjectSampler:
                         f"Successfully sampled (snapped) object placement in {num_placement_tries} tries."
                     )
                     if not self._is_accessible(sim, new_object):
+                        logger.info("But not accessible.")
                         continue
                     return new_object
 
@@ -357,6 +358,13 @@ class ObjectSampler:
         island_radius: float = sim.pathfinder.island_radius(snapped)
         dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
+        )
+        print("dist:", dist, "threshold:", self.nav_to_min_distance)
+        print(
+            "island_radius:",
+            island_radius,
+            "largest_island_size:",
+            self.largest_island_size,
         )
         return (
             dist < self.nav_to_min_distance

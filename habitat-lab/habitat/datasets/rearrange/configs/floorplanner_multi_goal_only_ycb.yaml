@@ -142,8 +142,8 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 1
-        - 2
+        - 5
+        - 5
         orientation_sampling: up
         nav_to_min_distance: -1
     #- name: test_set
@@ -208,15 +208,15 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 1 # 3
-        - 1 # 5
+        - 3 # 3
+        - 5 # 5
         orientation_sampling: up
         nav_to_min_distance: -1
 
     correct_unstable_results: True
 
     regenerate_new_mesh: True
-    agent_radius: 0.25
+    agent_radius: 0.10
     agent_height: 1.8
     agent_max_climb: 0.01
 
