@@ -26,6 +26,7 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
+    - soc_nav_metrics
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   - _self_

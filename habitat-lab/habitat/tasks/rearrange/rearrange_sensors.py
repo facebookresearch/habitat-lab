@@ -21,6 +21,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.tasks.rearrange.utils import coll_name_matches
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -1140,3 +1141,86 @@ class ContactTestStats(Measure):
         )
         self._contact_flag.append(flag)
         self._metric = np.average(self._contact_flag)
+
+
+@registry.register_sensor
+class SocNavMetrics(UsesArticulatedAgentInterface, Sensor):
+    cls_uuid: str = "soc_nav_metrics"
+
+    def __init__(self, sim, config, *args, task, **kwargs):
+        self._task = task
+        self._sim = sim
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return SocNavMetrics.cls_uuid
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def found_human_list(self, robot_poses, human_poses):
+        distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+                     for i in range(len(robot_poses))]
+        return_list = [d >= 1 and d <= 2 for d in distances]
+        return return_list
+
+    def robot_path_len(self, robot_poses, found_human_list):
+        found_human_step = np.where(found_human_list)[0][0]
+        dist = 0
+        if found_human_step >= 1:
+            for i in range(found_human_step-1):
+                dist += np.linalg.norm((robot_poses[i] - robot_poses[i+1])[[0, 2]])
+        return dist
+
+    def collided(self):
+        self._sim.perform_discrete_collision_detection()
+        contact_points = self._sim.get_physics_contact_points()
+        found_contact = False
+
+        agent_ids = [
+            articulated_agent.sim_obj.object_id
+            for articulated_agent in self._sim.agents_mgr.articulated_agents_iter
+        ]
+        if len(agent_ids) != 2:
+            raise ValueError("Sensor only supports 2 agents")
+
+        for cp in contact_points:
+            if coll_name_matches(cp, agent_ids[0]) and coll_name_matches(
+                cp, agent_ids[1]
+            ):
+                found_contact = True
+        return found_contact
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+
+        end_task = False
+        robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
+        human_nav_action = self._task.actions["agent_1_oracle_nav_soc_action"]
+        robot_poses = robot_nav_action.poses
+        did_collide = self.collided()
+
+        if did_collide:
+            self._task.should_end
+            end_task = True
+            print("Collided!")
+
+        if len(robot_poses) == 697:
+            end_task = True
+
+        if end_task:
+            robot_start_pose = robot_poses[0]
+            human_poses = human_nav_action.poses
+            found_human_list = self.found_human_list(robot_poses, human_poses)
+            found = sum(found_human_list) > 0
+            found_rate = sum(found_human_list) / float(len(found_human_list))
+            opt_path_len_until_finding_human = human_nav_action.compute_opt_trajectory_len_until_found(robot_start_pose)
+            robot_path_len = self.robot_path_len(robot_poses, found_human_list)
+            found_spl = (opt_path_len_until_finding_human/ max(opt_path_len_until_finding_human, robot_path_len)) * found
+            print("SocNavMetrics - found", found, "found_spl", found_spl, "found_rate", found_rate)
+            return [found, found_spl, found_rate]
+
+        else:
+            return [100, 100, 100]
