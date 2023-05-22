@@ -191,10 +191,10 @@ class OracleNavSocPolicy(NnSkillPolicy):
 
         full_action[:, self._oracle_nav_ac_idx] = action_idxs
 
-        if self._is_skill_done(observations,rnn_hidden_states,prev_actions,masks,cur_batch_idx):
-            print("is skill done")
-            metrics = self.compute_socnav_metrics(observations)
-            breakpoint()
+        # if self._is_skill_done(observations,rnn_hidden_states,prev_actions,masks,cur_batch_idx):
+        #     print("is skill done")
+        #     metrics = self.compute_socnav_metrics(observations)
+        #     breakpoint()
 
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states

@@ -53,6 +53,14 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         #Defined for task 
         #self.found_human_at_least_once = 
         self.poses = []
+        #import ipdb; ipdb.set_trace()
+
+
+    def get_poses(self):
+        if self.skill_done:
+            return self.poses
+        else:
+            return []
 
     @staticmethod
     def _compute_turn(rel, turn_vel, robot_forward):

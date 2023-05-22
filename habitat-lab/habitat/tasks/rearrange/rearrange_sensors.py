@@ -1186,11 +1186,11 @@ class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
         #First get the pose of the robot
         robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
         human_nav_action = self._task.actions["agent_1_oracle_nav_soc_action"]
-        robot_poses = robot_nav_action.poses
+        robot_poses = robot_nav_action.poses#get_poses()
         #import ipdb; ipdb.set_trace()
         #print("robot poses ", len(robot_poses))
         #breakpoint()
-        if len(robot_poses)==699:
+        if len(robot_poses)==697:
             robot_start_pose = robot_poses[0]
             human_poses = human_nav_action.poses
             found_human_list = self.found_human_list(robot_poses, human_poses)
@@ -1199,10 +1199,10 @@ class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
             opt_path_len_until_finding_human = human_nav_action.compute_opt_trajectory_len_until_found(robot_start_pose)
             robot_path_len = self.robot_path_len(robot_poses, found_human_list)
             found_spl = (opt_path_len_until_finding_human/ max(opt_path_len_until_finding_human, robot_path_len)) * found
-            print(found, found_spl, found_rate)
+            print("SocNavMetrics - found", found, "found_spl", found_spl, "found_rate", found_rate)
             return [found, found_spl, found_rate]
         else:
-            #return None, None, None
+            #return [None, None, None]
             return [100, 100, 100]
 
 
