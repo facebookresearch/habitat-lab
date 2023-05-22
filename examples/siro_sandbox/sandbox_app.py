@@ -211,7 +211,6 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction,
         )
 
-
     def get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
