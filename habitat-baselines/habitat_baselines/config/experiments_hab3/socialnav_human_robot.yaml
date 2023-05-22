@@ -9,7 +9,7 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed #monolithic
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
@@ -135,17 +135,6 @@ habitat_baselines:
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
               ignore_grip: True
-      agent_0:
-        hierarchical_policy:
-          high_level_policy:
-            name: "FixedHighLevelPolicy"
-            add_arm_rest: False
-          # Override to use the oracle navigation skill (which will actually execute navigation).
-          defined_skills:
-            nav_to_robot:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: [ "obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor" ]
-              max_skill_steps: 300
     ppo:
       # ppo params
       clip_param: 0.2
