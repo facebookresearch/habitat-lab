@@ -1,0 +1,229 @@
+---
+    #dataset_path: "data/fphab-v0.2.0/hab-fp.scene_dataset_config.json"
+    dataset_path: "data/fpss/fphab/fphab-uncluttered.scene_dataset_config.json"
+    #dataset_path: /Users/jimmytyyang/habitat_lab_0301/FP/fpss/fphab/fphab.scene_dataset_config.json"
+    additional_object_paths:
+    - data/objects/ycb/configs/
+    scene_sets:
+      -
+        name: "any"
+        included_substrings:
+          # - "107733960_175999701"
+          # - "106878915_174887025"
+          # - "106366410_174226806"
+          - "105515337_173104347"
+          # 40 scene for mini train
+          # - "107734176_176000019"
+          # - "107733960_175999701"
+          # - "106878915_174887025"
+          # - "106366410_174226806"
+          # - "106366386_174226770"
+          # - "105515211_173104179"
+          # - "104862681_172226874"
+          # - "104348463_171513588"
+          # - "102344250"
+          # - "102344193"
+          # - "106366173_174226431"
+          # - "105515448_173104512"
+          # - "105515430_173104494"
+          # - "105515337_173104347"
+          # - "104862669_172226853"
+          # - "104862660_172226844"
+          # - "104862639_172226823"
+          # - "104862621_172226772"
+          # - "103997460_171030507"
+          # - "103997445_171030492"
+          # - "103997424_171030444"
+          # - "103997403_171030405"
+          # - "102817200"
+          # - "102817053"
+          # - "102816852"
+          # - "102816786"
+          # - "102816627"
+          # - "102344280"
+          # - "108736872_177263607"
+          # - "108736851_177263586"
+          # - "108736824_177263559"
+          # - "107734479_176000442"
+          # - "107734449_176000403"
+          # - "107734080_175999881"
+          # - "106879044_174887172"
+          # - "106878945_174887058"
+          # - "106366353_174226695"
+          # - "104862501_172226556"
+          # - "104348328_171513363"
+          # - "103997895_171031182"
+          # 11 scene for mini test
+          # - "103997586_171030669"
+          # - "102817140"
+          # - "102816756"
+          # - "102816615"
+          # - "102816216"
+          # - "102816009"
+          # - "102815859"
+          # - "102344457"
+          # - "102344403"
+          # - "102344022"
+          # - "104348361_171513414"
+          # - "102344115"
+          # - "108294558_176710095"
+          # - "105515211_173104179"
+          # - "108294897_176710602"
+          # - "102344307"
+          # - "102815859"
+          # (old one) Mini-train
+          # - "107734119_175999932"
+          # - "104862660_172226844"
+          # - "106365897_174225972"
+          # - "108736722_177263382"
+          # - "108294558_176710095"
+          # - "107733912_175999623"
+          # - "106879023_174887148"
+          # - "108294897_176710602"
+          # - "104348133_171513054"
+          # - "108736635_177263256"
+          # - "103997460_171030507"
+          # - "107734188_176000034"
+          # - "104862513_172226580"
+          # - "104862621_172226772"
+          # - "103997970_171031287"
+          # - "102344193"
+          # - "105515211_173104179"
+          # - "108294870_176710551"
+        excluded_substrings:
+          - "NONE"
+
+    object_sets:
+    - name: "hab2"
+      included_substrings:
+      - "002_master_chef_can"
+      - "003_cracker_box"
+      - "004_sugar_box"
+      - "005_tomato_soup_can"
+      - "007_tuna_fish_can"
+      - "008_pudding_box"
+      - "009_gelatin_box"
+      - "010_potted_meat_can"
+      - "011_banana.object_config.json"
+      - "012_strawberry.object_config.json"
+      - "013_apple.object_config.json"
+      - "014_lemon.object_config.json"
+      - "015_peach.object_config.json"
+      - "016_pear.object_config.json"
+      - "017_orange.object_config.json"
+      - "018_plum.object_config.json"
+      - "021_bleach_cleanser.object_config.json"
+      - "024_bowl.object_config.json"
+      - "025_mug.object_config.json"
+      - "026_sponge.object_config.json"
+      excluded_substrings: []
+
+    receptacle_sets:
+      -
+        name: "hab2"
+        included_object_substrings:
+          - ""
+        excluded_object_substrings: []
+        included_receptacle_substrings:
+          - ""
+        excluded_receptacle_substrings: []
+
+    scene_sampler:
+      type: subset
+      params:
+        scene_sets:
+        - any
+    object_samplers:
+    - name: train_set
+      type: uniform #category_balanced
+      params:
+        object_sets:
+        - hab2
+        receptacle_sets:
+        - hab2
+        num_samples:
+        - 1
+        - 2
+        orientation_sampling: up
+        nav_to_min_distance: -1
+    #- name: test_set
+    #  type: category_balanced
+    #  params:
+    #    object_sets:
+    #    - test_unseen_action_figure
+    #    - test_unseen_basket
+    #    - test_unseen_book
+    #    - test_unseen_bowl
+    #    - test_unseen_can
+    #    - test_unseen_can_opener
+    #    - test_unseen_candle_holder
+    #    - test_unseen_canister
+    #    - test_unseen_dishtowel
+    #    - test_unseen_hat
+    #    - test_unseen_medicine_bottle
+    #    - test_unseen_mouse_pad
+    #    - test_unseen_pencil_case
+    #    - test_unseen_plate
+    #    - test_unseen_scissors
+    #    - test_unseen_screwdriver
+    #    - test_unseen_shoe
+    #    - test_unseen_spatula
+    #    - test_unseen_stuffed_toy
+    #    - test_unseen_tape
+    #    - test_unseen_vase
+    #    - seen_action_figure
+    #    - seen_basket
+    #    - seen_book
+    #    - seen_bowl
+    #    - seen_candle_holder
+    #    - seen_canister
+    #    - seen_cup
+    #    - seen_dishtowel
+    #    - seen_hat
+    #    - seen_medicine_bottle
+    #    - seen_mouse_pad
+    #    - seen_pencil_case
+    #    - seen_plate
+    #    - seen_shoe
+    #    - seen_soap_dish
+    #    - seen_sponge
+    #    - seen_stuffed_toy
+    #    - seen_sushi_mat
+    #    - seen_tape
+    #    - seen_vase
+    #    receptacle_sets:
+    #    - hab2
+    #    num_samples:
+    #    - 20
+    #    - 20
+    #    orientation_sampling: up
+    #    nav_to_min_distance: 1.5
+    object_target_samplers:
+    - name: any_targets # change from hab2 to any_targets
+      type: uniform
+      params:
+        object_samplers:
+        - train_set
+        #- test_set
+        receptacle_sets:
+        - hab2
+        num_samples:
+        - 1 # 3
+        - 1 # 5
+        orientation_sampling: up
+        nav_to_min_distance: -1
+
+    correct_unstable_results: True
+
+    regenerate_new_mesh: True
+    agent_radius: 0.25
+    agent_height: 1.8
+    agent_max_climb: 0.01
+
+    check_navigable: True
+    navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
+    max_collision_rate_for_navigable: 1.0 #0.5
+    angle_threshold: 0.26
+    angular_velocity: 1.0
+    distance_threshold: 0.9 #0.5
+    linear_velocity: 1.0
