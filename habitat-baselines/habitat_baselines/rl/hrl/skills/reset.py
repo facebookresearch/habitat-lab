@@ -65,7 +65,7 @@ class ResetArmSkill(SkillPolicy):
             )
             < 5e-2
         )
-    
+
     @property
     def required_obs_keys(self) -> List[str]:
         return ["joint", "is_holding"]

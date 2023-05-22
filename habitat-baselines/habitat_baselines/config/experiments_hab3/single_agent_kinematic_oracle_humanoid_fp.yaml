@@ -46,6 +46,6 @@ habitat:
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
-  
+
   dataset:
     data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_v0.1.json.gz
