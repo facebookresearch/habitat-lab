@@ -13,6 +13,8 @@ import ctypes
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
 
+from habitat_baselines.config.default import get_config as get_baselines_config
+
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
@@ -208,6 +210,7 @@ class SandboxDriver(GuiAppDriver):
             color,
             self._viz_anim_fraction,
         )
+
 
     def get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()
