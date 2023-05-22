@@ -131,6 +131,17 @@ habitat_baselines:
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 300
               ignore_grip: True
+      agent_0:
+        hierarchical_policy:
+          high_level_policy:
+            name: "FixedHighLevelPolicy"
+            add_arm_rest: False
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavPolicy"
+              obs_skill_inputs: [ "obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor" ]
+              max_skill_steps: 300
     ppo:
       # ppo params
       clip_param: 0.2
