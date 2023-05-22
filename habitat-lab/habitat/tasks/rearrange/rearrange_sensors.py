@@ -22,6 +22,7 @@ from habitat.tasks.rearrange.utils import (
 )
 
 from habitat.tasks.utils import cartesian_to_polar
+from habitat.tasks.rearrange.utils import coll_name_matches
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -1128,6 +1129,8 @@ class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
         self._task = task
         self._sim = sim
         super().__init__(config=config)
+        #self._end_on_collide = config.end_on_collide
+        #import ipdb; ipdb.set_trace()
 
     def _get_uuid(self, *args, **kwargs):
         return ComputeSocNavMetricSensor.cls_uuid
@@ -1158,6 +1161,24 @@ class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
                 dist += np.linalg.norm((robot_poses[i] - robot_poses[i+1])[[0, 2]])
         return dist
 
+    def collided(self):
+        self._sim.perform_discrete_collision_detection()
+        contact_points = self._sim.get_physics_contact_points()
+        found_contact = False
+
+        agent_ids = [
+            articulated_agent.sim_obj.object_id
+            for articulated_agent in self._sim.agents_mgr.articulated_agents_iter
+        ]
+        if len(agent_ids) != 2:
+            raise ValueError("Sensor only supports 2 agents")
+
+        for cp in contact_points:
+            if coll_name_matches(cp, agent_ids[0]) and coll_name_matches(
+                cp, agent_ids[1]
+            ):
+                found_contact = True
+        return found_contact
 
 
     def get_observation(self, observations, episode, *args, **kwargs):
@@ -1184,13 +1205,27 @@ class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
         # #print("skill done? ", nav_action.skill_done)
         # return np.array(nav_action.skill_done, dtype=np.float32)
         #First get the pose of the robot
+        end_task = False
         robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
         human_nav_action = self._task.actions["agent_1_oracle_nav_soc_action"]
         robot_poses = robot_nav_action.poses#get_poses()
         #import ipdb; ipdb.set_trace()
         #print("robot poses ", len(robot_poses))
         #breakpoint()
+        #every step, check if the agents collided
+        did_collide = self.collided()
+        if did_collide:
+            #end task
+            self._task.should_end
+            end_task = True
+            print("collided!")
+
+        #end_task = N
         if len(robot_poses)==697:
+            end_task = True
+
+        #if len(robot_poses)==697: #At the end
+        if end_task:
             robot_start_pose = robot_poses[0]
             human_poses = human_nav_action.poses
             found_human_list = self.found_human_list(robot_poses, human_poses)
@@ -1206,50 +1241,77 @@ class ComputeSocNavMetricSensor(UsesArticulatedAgentInterface, Sensor):
             return [100, 100, 100]
 
 
+# @registry.register_measure
+# class CooperateSubgoalReward(CompositeSubgoalReward):
+#     @staticmethod
+#     def _get_uuid(*args, **kwargs):
+#         return "cooperate_subgoal_reward"
+
+#     def __init__(self, *args, config, **kwargs):
+#         super().__init__(*args, config=config, **kwargs)
+#         self._end_on_collide = config.end_on_collide
+#         self._collide_penalty = config.collide_penalty
+
+#     def reset_metric(self, *args, task, **kwargs):
+#         task.measurements.check_measure_dependencies(
+#             self._get_uuid(), [DidAgentsCollide._get_uuid()]
+#         )
+#         super().reset_metric(*args, task=task, **kwargs)
+
+#     def update_metric(self, *args, task, **kwargs):
+#         super().update_metric(*args, task=task, **kwargs)
+#         did_collide = task.measurements.measures[
+#             DidAgentsCollide._get_uuid()
+#         ].get_metric()
+
+#         if did_collide and self._end_on_collide:
+#             task.should_end = True
+#             self._metric -= self._collide_penalty
 
 
 
 
 
 
+# @registry.register_sensor
+# class SocialRobotSuccessSensor(UsesArticulatedAgentInterface, Sensor):
+#     """
+#     The position and angle of the articulated_agent in world coordinates.
+#     """
 
-@registry.register_sensor
-class SocialRobotSuccessSensor(UsesArticulatedAgentInterface, Sensor):
-    """
-    The position and angle of the articulated_agent in world coordinates.
-    """
+#     cls_uuid = "localization_sensor"
 
-    cls_uuid = "localization_sensor"
+#     def __init__(self, sim, config, *args, **kwargs):
+#         super().__init__(config=config)
+#         self._sim = sim
+#         #import ipdb; ipdb.set_trace()
 
-    def __init__(self, sim, config, *args, **kwargs):
-        super().__init__(config=config)
-        self._sim = sim
-        #import ipdb; ipdb.set_trace()
+#     def _get_uuid(self, *args, **kwargs):
+#         return LocalizationSensor.cls_uuid
 
-    def _get_uuid(self, *args, **kwargs):
-        return LocalizationSensor.cls_uuid
+#     def _get_sensor_type(self, *args, **kwargs):
+#         return SensorTypes.TENSOR
 
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
+#     def _get_observation_space(self, *args, **kwargs):
+#         return spaces.Box(
+#             shape=(4,),
+#             low=np.finfo(np.float32).min,
+#             high=np.finfo(np.float32).max,
+#             dtype=np.float32,
+#         )
 
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(4,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
+#     def get_observation(self, observations, episode, *args, **kwargs):
+#         import ipdb; ipdb.set_trace()
+#         articulated_agent = self._sim.get_agent_data(
+#             self.agent_id
+#         ).articulated_agent
+#         T = articulated_agent.base_transformation
+#         forward = np.array([1.0, 0, 0])
+#         heading_angle = get_angle_to_pos(T.transform_vector(forward))
+#         return np.array(
+#             [*articulated_agent.base_pos, heading_angle], dtype=np.float32
+#         )
 
-    def get_observation(self, observations, episode, *args, **kwargs):
-        import ipdb; ipdb.set_trace()
-        articulated_agent = self._sim.get_agent_data(
-            self.agent_id
-        ).articulated_agent
-        T = articulated_agent.base_transformation
-        forward = np.array([1.0, 0, 0])
-        heading_angle = get_angle_to_pos(T.transform_vector(forward))
-        return np.array(
-            [*articulated_agent.base_pos, heading_angle], dtype=np.float32
-        )
+
 
 
