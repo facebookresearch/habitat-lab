@@ -679,6 +679,13 @@ class CollisionsMeasurementConfig(MeasurementConfig):
 
 @dataclass
 class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
+    """
+    If added to the measurements, this will time various sections of code in
+    the simulator and task logic. If using with a multi-environment trainer
+    (like DD-PPO) it is recommended to only log this stat for one environment
+    since this metric can include many numbers.
+    """
+
     type: str = "RuntimePerfStats"
 
 

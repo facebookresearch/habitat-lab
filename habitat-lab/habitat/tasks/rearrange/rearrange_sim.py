@@ -136,6 +136,9 @@ class RearrangeSim(HabitatSim):
         )
 
     def enable_perf_logging(self):
+        """
+        Will turn on the performance logging (by default this is off).
+        """
         self._perf_logging_enabled = True
 
     @property
@@ -436,6 +439,9 @@ class RearrangeSim(HabitatSim):
 
     @property
     def largest_island_idx(self) -> int:
+        """
+        The path finder index of the island that has the largest area.
+        """
         return self._largest_island_idx
 
     @add_perf_timing_func()
@@ -935,9 +941,11 @@ class RearrangeSim(HabitatSim):
             ]
         )
 
-    def add_perf_timing(self, desc, t_start):
+    def add_perf_timing(self, desc: str, t_start: float) -> None:
         """
-        Note that this is additive.
+        Records a duration since `t_start` into the perf stats. Note that this
+        is additive, so times between successive calls accumulate, not reset.
+        Also note that this will only log if `self._perf_logging_enabled=True`.
         """
         if not self._perf_logging_enabled:
             return
@@ -947,7 +955,7 @@ class RearrangeSim(HabitatSim):
             name += "." + desc
         self._extra_runtime_perf_stats[name] += time.time() - t_start
 
-    def get_runtime_perf_stats(self):
+    def get_runtime_perf_stats(self) -> Dict[str, float]:
         stats_dict = {}
         for name, value in self._extra_runtime_perf_stats.items():
             stats_dict[name] = value
