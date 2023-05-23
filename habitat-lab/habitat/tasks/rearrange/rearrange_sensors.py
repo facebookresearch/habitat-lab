@@ -1173,6 +1173,7 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
         human_poses = human_nav_action.poses
 
         print("observations.keys()", observations.keys())
+        print("self._task.should_end", self._task.should_end)
 
         # # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
         # robot_poses = robot_poses[:len(human_poses)]
