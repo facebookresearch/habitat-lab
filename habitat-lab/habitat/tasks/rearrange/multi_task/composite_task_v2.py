@@ -4,26 +4,22 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os.path as osp
-from typing import Dict, cast
+from typing import Dict, List, Union, cast
 
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeDatasetV0
-from habitat.tasks.rearrange.multi_task.pddl_domain import (
-    PddlDomain,
-    PddlProblem,
-)
+from habitat.tasks.rearrange.multi_task.pddl_domain import PddlDomain
 from habitat.tasks.rearrange.multi_task.pddl_logical_expr import (
     LogicalExpr,
     LogicalExprType,
 )
+from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlEntity,
     SimulatorObjectType,
 )
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_task(name="RearrangeCompositeTask-v2")
@@ -105,16 +101,12 @@ class CompositeTaskV2(RearrangeTask):
                 )
             )
 
-        self._subgoal_preds = {
-            f"move_obj{i}": LogicalExpr(LogicalExprType.AND, [], [], None)
-            for i in range(self.max_num_objects)
-        }
+        self._subgoal_preds = {}
         for i in range(self.max_num_objects):
+            preds: List[Union[LogicalExpr, Predicate]] = []
             if i < len(goal_preds):
                 goal_pred = goal_preds[i]
                 preds = [goal_pred, *not_holding_preds]
-            else:
-                preds = []
             self._subgoal_preds[f"move_obj{i}"] = LogicalExpr(
                 LogicalExprType.AND, preds, [], None
             )
