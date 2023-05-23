@@ -102,9 +102,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             action_space, "rearrange_stop"
         )
         first_idx: Optional[int] = None
+
+        # Remap all the Noop skills to the same underlying skill so all the
+        # calls to these are batched together.
         for skill_i, skill in self._skills.items():
-            if self._idx_to_name[skill_i] == "noop":
-                continue
             if isinstance(skill, NoopSkillPolicy):
                 if first_idx is None:
                     first_idx = skill_i
