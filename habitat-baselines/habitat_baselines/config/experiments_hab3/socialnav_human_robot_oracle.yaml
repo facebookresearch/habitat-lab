@@ -26,7 +26,7 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
-    #- soc_nav_metrics
+    - soc_nav_metrics
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base
   - _self_
@@ -36,7 +36,7 @@ habitat:
     reward_measure: social_nav_reward
     slack_reward: 0.
     success_reward: 0.
-    task_spec: multi_agent_tidy_house_solved #multi_agent_social_nav_solved
+    task_spec: multi_agent_tidy_house_solved
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
