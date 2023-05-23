@@ -1219,7 +1219,6 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
             # TODO Why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
             found_human_list = self.found_human_list(robot_poses, human_poses)
-            print(found_human_list)
             found_rate = sum(found_human_list) / float(len(found_human_list))
             self._metric = found_rate
 
