@@ -1173,6 +1173,9 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
         robot_poses = robot_nav_action.poses
         human_poses = human_nav_action.poses
 
+        print("robot_poses", len(robot_poses))
+        print("human_poses", len(human_poses))
+
         if len(human_poses) > 0:
             # TODO Why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
@@ -1214,6 +1217,9 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
         human_nav_action = task.actions["agent_1_oracle_nav_action"]
         robot_poses = robot_nav_action.poses
         human_poses = human_nav_action.poses
+
+        print("robot_poses", len(robot_poses))
+        print("human_poses", len(human_poses))
 
         if len(human_poses) > 0:
             # TODO Why is len(robot_poses) > len(human_poses)?
