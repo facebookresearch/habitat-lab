@@ -1213,13 +1213,8 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
             robot_start_pose = robot_poses[0]
             human_poses = human_nav_action.poses
 
-            # TODO Temporary hack: why is len(robot_poses) != len(human_poses)?
-            print("robot_poses", len(robot_poses))
-            print("human_poses", len(human_poses))
+            # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
-            human_poses = human_poses[:len(robot_poses)]
-            print("robot_poses", len(robot_poses))
-            print("human_poses", len(human_poses))
 
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
