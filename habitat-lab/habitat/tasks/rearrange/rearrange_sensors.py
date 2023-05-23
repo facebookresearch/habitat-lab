@@ -1167,6 +1167,7 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
         return [d >= min_dist and d <= max_dist for d in distances]
 
     def get_observation(self, observations, episode, *args, **kwargs):
+        # TODO Why is should_end not set?
         if self._task.should_end:
             robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
             human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
@@ -1179,6 +1180,9 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
             found_rate = sum(found_human_list) / float(len(found_human_list))
+
+            # TODO How to make a metric appear in the run summary at the end
+            #  of evaluation and in WandB?
             print("found", found, "found_rate", found_rate)
             return [found, found_rate]
 
