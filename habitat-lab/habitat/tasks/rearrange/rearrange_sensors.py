@@ -1224,11 +1224,11 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
             found_rate = sum(found_human_list) / float(len(found_human_list))
-            opt_path_len_until_finding_human = human_nav_action.compute_opt_trajectory_len_until_found(robot_start_pose)
-            robot_path_len = self.robot_path_len(robot_poses, found_human_list)
-            found_spl = (opt_path_len_until_finding_human / max(opt_path_len_until_finding_human, robot_path_len)) * found
-            print("SocNavMetrics - found", found, "found_spl", found_spl, "found_rate", found_rate)
-            return [found, found_spl, found_rate]
+            # opt_path_len_until_finding_human = human_nav_action.compute_opt_trajectory_len_until_found(robot_start_pose)
+            # robot_path_len = self.robot_path_len(robot_poses, found_human_list)
+            # found_spl = (opt_path_len_until_finding_human / max(opt_path_len_until_finding_human, robot_path_len)) * found
+            print("SocNavMetrics - found", found, "found_rate", found_rate)
+            return [found, found_rate]
 
         else:
             return [100, 100, 100]
