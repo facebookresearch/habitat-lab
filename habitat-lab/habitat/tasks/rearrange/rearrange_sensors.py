@@ -1143,48 +1143,84 @@ class ContactTestStats(Measure):
         self._metric = np.average(self._contact_flag)
 
 
-@registry.register_sensor
-class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
-    cls_uuid: str = "soc_nav_metrics"
+@registry.register_measure
+class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
+    """
+    Ratio of episodes the robot is able to find the person.
+    """
+    cls_uuid: str = "finding_success_rate"
 
-    def __init__(self, sim, config, *args, task, **kwargs):
-        self._task = task
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
         self._sim = sim
-        super().__init__(config=config)
+        self._config = config
 
+    @staticmethod
     def _get_uuid(self, *args, **kwargs):
-        return SocNavMetricsSensor.cls_uuid
+        return FindingSuccessRate.cls_uuid
 
-    def _get_sensor_type(self, *args, **kwargs):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, config, **kwargs):
-        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+    def reset_metric(self, *args, task, **kwargs):
+        self.update_metric(*args, task=task, **kwargs)
 
     def found_human_list(self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0):
         distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
                      for i in range(len(robot_poses))]
         return [d >= min_dist and d <= max_dist for d in distances]
 
-    def get_observation(self, observations, episode, *args, **kwargs):
-        # TODO Why is should_end not set?
-        if self._task.should_end:
-            robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
-            human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
-            robot_poses = robot_nav_action.poses
-            human_poses = human_nav_action.poses
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_nav_action = task.actions["agent_0_oracle_nav_action"]
+        human_nav_action = task.actions["agent_1_oracle_nav_action"]
+        robot_poses = robot_nav_action.poses
+        human_poses = human_nav_action.poses
 
-            # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
+        if len(human_poses) > 0:
+            # TODO Why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
-
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
-            found_rate = sum(found_human_list) / float(len(found_human_list))
-
-            # TODO How to make a metric appear in the run summary at the end
-            #  of evaluation and in WandB?
-            print("found", found, "found_rate", found_rate)
-            return [found, found_rate]
+            return found
 
         else:
-            return [100, 100, 100]
+            return False
+
+
+@registry.register_measure
+class FollowingRate(UsesArticulatedAgentInterface, Measure):
+    """
+    Ratio of the number of steps the robot was following the person to the
+    number of steps in the episode.
+    """
+    cls_uuid: str = "following_rate"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+
+    @staticmethod
+    def _get_uuid(self, *args, **kwargs):
+        return FollowingRate.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        self.update_metric(*args, task=task, **kwargs)
+
+    def found_human_list(self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0):
+        distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+                     for i in range(len(robot_poses))]
+        return [d >= min_dist and d <= max_dist for d in distances]
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_nav_action = task.actions["agent_0_oracle_nav_action"]
+        human_nav_action = task.actions["agent_1_oracle_nav_action"]
+        robot_poses = robot_nav_action.poses
+        human_poses = human_nav_action.poses
+
+        if len(human_poses) > 0:
+            # TODO Why is len(robot_poses) > len(human_poses)?
+            robot_poses = robot_poses[:len(human_poses)]
+            found_human_list = self.found_human_list(robot_poses, human_poses)
+            found_rate = sum(found_human_list) / float(len(found_human_list))
+            return found_rate
+
+        else:
+            return 0.0
