@@ -24,6 +24,7 @@ defaults:
     - goal_recep_segmentation_sensor
     - relative_resting_pos_sensor
     - goal_receptacle_sensor
+    - object_embedding_sensor
   - _self_
 
 type: RearrangePlaceTask-v0

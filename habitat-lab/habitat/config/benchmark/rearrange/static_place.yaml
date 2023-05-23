@@ -9,7 +9,7 @@ defaults:
 
 habitat:
   gym:
-    auto_name: Place
+    auto_name: StaticPlace
     obs_keys:
       - robot_head_depth
       - goal_receptacle
