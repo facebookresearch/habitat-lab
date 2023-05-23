@@ -1212,6 +1212,7 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
     def found_human_list(self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0):
         distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
                      for i in range(len(robot_poses))]
+        print(distances)
         return [d >= min_dist and d <= max_dist for d in distances]
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
