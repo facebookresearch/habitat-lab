@@ -1173,12 +1173,11 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
         robot_poses = robot_nav_action.poses
         human_poses = human_nav_action.poses
 
-        print("robot_poses", len(robot_poses))
-        print("human_poses", len(human_poses))
-
         if len(human_poses) > 0 and len(robot_poses) > 0:
-            # TODO Why is len(robot_poses) > len(human_poses)?
+            # TODO Why is len(robot_poses) != len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
+            human_poses = human_poses[:len(robot_poses)]
+
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
             self._metric = float(found)
@@ -1218,12 +1217,11 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
         robot_poses = robot_nav_action.poses
         human_poses = human_nav_action.poses
 
-        print("robot_poses", len(robot_poses))
-        print("human_poses", len(human_poses))
-
         if len(human_poses) > 0 and len(robot_poses) > 0:
-            # TODO Why is len(robot_poses) > len(human_poses)?
+            # TODO Why is len(robot_poses) != len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
+            human_poses = human_poses[:len(robot_poses)]
+
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found_rate = sum(found_human_list) / float(len(found_human_list))
             self._metric = found_rate
