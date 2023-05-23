@@ -1161,69 +1161,22 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
     def _get_observation_space(self, *args, config, **kwargs):
         return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
 
-    def found_human_list(self, robot_poses, human_poses):
+    def found_human_list(self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0):
         distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
                      for i in range(len(robot_poses))]
-        return_list = [d >= 1 and d <= 2 for d in distances]
-        return return_list
-
-    def robot_path_len(self, robot_poses, found_human_list):
-        found_human_step = np.where(found_human_list)[0][0]
-        dist = 0
-        if found_human_step >= 1:
-            for i in range(found_human_step-1):
-                dist += np.linalg.norm((robot_poses[i] - robot_poses[i+1])[[0, 2]])
-        return dist
-
-    def collided(self):
-        self._sim.perform_discrete_collision_detection()
-        contact_points = self._sim.get_physics_contact_points()
-        found_contact = False
-
-        agent_ids = [
-            articulated_agent.sim_obj.object_id
-            for articulated_agent in self._sim.agents_mgr.articulated_agents_iter
-        ]
-        if len(agent_ids) != 2:
-            raise ValueError("Sensor only supports 2 agents")
-
-        for cp in contact_points:
-            if coll_name_matches(cp, agent_ids[0]) and coll_name_matches(
-                cp, agent_ids[1]
-            ):
-                found_contact = True
-        return found_contact
+        return [d >= min_dist and d <= max_dist for d in distances]
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        end_task = False
         robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
         human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
         robot_poses = robot_nav_action.poses
-        did_collide = self.collided()
+        human_poses = human_nav_action.poses
 
-        if did_collide:
-            self._task.should_end
-            end_task = True
-            print("Collided!")
+        # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
+        robot_poses = robot_poses[:len(human_poses)]
 
-        if len(robot_poses) == 697:
-            end_task = True
-
-        if end_task:
-            robot_start_pose = robot_poses[0]
-            human_poses = human_nav_action.poses
-
-            # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
-            robot_poses = robot_poses[:len(human_poses)]
-
-            found_human_list = self.found_human_list(robot_poses, human_poses)
-            found = sum(found_human_list) > 0
-            found_rate = sum(found_human_list) / float(len(found_human_list))
-            # opt_path_len_until_finding_human = human_nav_action.compute_opt_trajectory_len_until_found(robot_start_pose)
-            # robot_path_len = self.robot_path_len(robot_poses, found_human_list)
-            # found_spl = (opt_path_len_until_finding_human / max(opt_path_len_until_finding_human, robot_path_len)) * found
-            print("SocNavMetrics - found", found, "found_rate", found_rate)
-            return [found, found_rate]
-
-        else:
-            return [100, 100, 100]
+        found_human_list = self.found_human_list(robot_poses, human_poses)
+        found = sum(found_human_list) > 0
+        found_rate = sum(found_human_list) / float(len(found_human_list))
+        print("found", found, "found_rate", found_rate)
+        return [found, found_rate]
