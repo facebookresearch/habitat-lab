@@ -240,9 +240,13 @@ class ObjectSampler:
         navmesh_vertices = np.stack(
             sim.pathfinder.build_navmesh_vertices(), axis=0
         )
-        # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        self.largest_island_size = max(
-            [sim.pathfinder.island_radius(p) for p in navmesh_vertices]
+        # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
+        # This assumption limits sampling to the largest navigable component of any scene.
+        island_size = [
+            sim.pathfinder.island_radius(p) for p in navmesh_vertices
+        ]
+        self.largest_island_id = sim.pathfinder.get_island(
+            navmesh_vertices[island_size.index(max(island_size))]
         )
 
         while num_placement_tries < self.max_placement_attempts:
@@ -344,8 +348,8 @@ class ObjectSampler:
     ) -> bool:
         """
         Return if the object is within a threshold distance of the nearest
-        navigable point and that the nearest navigable point is on the same
-        navigation mesh.
+        navigable point, in which the nearest navigable point is on the same
+        navigation mesh of the object.
 
         Note that this might not catch all edge cases since the distance is
         based on Euclidean distance. The nearest navigable point may be
@@ -353,15 +357,14 @@ class ObjectSampler:
         """
         if self.nav_to_min_distance == -1:
             return True
-        snapped = sim.pathfinder.snap_point(obj.translation)
-        island_radius: float = sim.pathfinder.island_radius(snapped)
+
+        snapped = sim.pathfinder.snap_point(
+            obj.translation, self.largest_island_id
+        )
         dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
-        return (
-            dist < self.nav_to_min_distance
-            and island_radius == self.largest_island_size
-        )
+        return dist < self.nav_to_min_distance
 
     def single_sample(
         self,
