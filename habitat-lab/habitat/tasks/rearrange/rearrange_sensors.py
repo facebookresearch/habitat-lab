@@ -1220,7 +1220,7 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
             robot_poses = robot_poses[:len(human_poses)]
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found_rate = sum(found_human_list) / float(len(found_human_list))
-            return found_rate
+            self._metric = found_rate
 
         else:
-            return 0.0
+            self._metric = 0.0
