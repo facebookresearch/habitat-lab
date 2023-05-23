@@ -1167,23 +1167,20 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
         return [d >= min_dist and d <= max_dist for d in distances]
 
     def get_observation(self, observations, episode, *args, **kwargs):
-        robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
-        human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
-        robot_poses = robot_nav_action.poses
-        human_poses = human_nav_action.poses
+        if self._task.should_end:
+            robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
+            human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
+            robot_poses = robot_nav_action.poses
+            human_poses = human_nav_action.poses
 
-        print("observations.keys()", observations.keys())
-        print("self._task.should_end", self._task.should_end)
+            # # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
+            robot_poses = robot_poses[:len(human_poses)]
 
-        # # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
-        # robot_poses = robot_poses[:len(human_poses)]
-        #
-        # print("robot_poses", len(robot_poses))
-        # print("human_poses", len(human_poses))
-        # found_human_list = self.found_human_list(robot_poses, human_poses)
-        # print("found_human_list", found_human_list)
-        # found = sum(found_human_list) > 0
-        # found_rate = sum(found_human_list) / float(len(found_human_list))
-        # print("found", found, "found_rate", found_rate)
-        # return [found, found_rate]
-        return 2
+            found_human_list = self.found_human_list(robot_poses, human_poses)
+            found = sum(found_human_list) > 0
+            found_rate = sum(found_human_list) / float(len(found_human_list))
+            print("found", found, "found_rate", found_rate)
+            return [found, found_rate]
+
+        else:
+            return [100, 100, 100]
