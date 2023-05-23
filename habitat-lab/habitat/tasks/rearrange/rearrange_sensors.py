@@ -1176,7 +1176,7 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
         print("robot_poses", len(robot_poses))
         print("human_poses", len(human_poses))
 
-        if len(human_poses) > 0:
+        if len(human_poses) > 0 and len(robot_poses) > 0:
             # TODO Why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
             found_human_list = self.found_human_list(robot_poses, human_poses)
@@ -1221,7 +1221,7 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
         print("robot_poses", len(robot_poses))
         print("human_poses", len(human_poses))
 
-        if len(human_poses) > 0:
+        if len(human_poses) > 0 and len(robot_poses) > 0:
             # TODO Why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
             found_human_list = self.found_human_list(robot_poses, human_poses)
