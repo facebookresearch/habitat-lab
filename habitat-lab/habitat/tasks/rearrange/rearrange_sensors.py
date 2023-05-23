@@ -1156,7 +1156,7 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
         self._config = config
 
     @staticmethod
-    def _get_uuid(self, *args, **kwargs):
+    def _get_uuid(*args, **kwargs):
         return FindingSuccessRate.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
@@ -1198,7 +1198,7 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
         self._config = config
 
     @staticmethod
-    def _get_uuid(self, *args, **kwargs):
+    def _get_uuid(*args, **kwargs):
         return FollowingRate.cls_uuid
 
     def reset_metric(self, *args, task, **kwargs):
