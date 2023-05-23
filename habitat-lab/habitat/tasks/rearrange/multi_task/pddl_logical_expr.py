@@ -80,7 +80,7 @@ class LogicalExpr:
         return self._is_true(lambda p: p.is_true(sim_info))
 
     def _is_true(self, is_true_fn) -> bool:
-        self._truth_vals = [None for _ in range(len(self._sub_exprs))]
+        self._truth_vals = [None] * len(self._sub_exprs)
 
         if (
             self._expr_type == LogicalExprType.AND
