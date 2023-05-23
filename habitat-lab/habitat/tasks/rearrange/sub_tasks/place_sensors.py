@@ -36,6 +36,7 @@ class PlaceReward(RearrangeReward):
         self._dist_reward = config.dist_reward
         self._sparse_reward = config.sparse_reward
         self._drop_pen_type = getattr(config, "drop_pen_type", "constant")
+        self._stability_reward = config.stability_reward
         self._curr_step = 0
         self._ee_resting_success_threshold = (
             config.ee_resting_success_threshold
@@ -154,6 +155,11 @@ class PlaceReward(RearrangeReward):
                     self._task.should_end = True
                     self._metric = reward
                     return
+
+        # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
+        elif self._prev_dropped and (not cur_picked) and obj_at_goal:
+            reward += self._stability_reward
+
 
         # Reward the agent based on distance to goal/resting position
         if dist_to_goal >= min_dist:

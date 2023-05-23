@@ -7,7 +7,7 @@ defaults:
     - base_velocity
     - arm_action
   - /habitat/task/measurements:
-    - object_to_goal_distance
+    - ovmm_object_to_place_goal_distance
     - robot_force
     - force_terminate
     - robot_colls
@@ -17,7 +17,7 @@ defaults:
     - end_effector_to_rest_distance
     - did_pick_object
     - pick_success
-    - place_success
+    - ovmm_place_success
     - ovmm_dist_to_pick_goal
     - ovmm_rot_dist_to_pick_goal
     - ovmm_nav_to_pick_succ
@@ -80,9 +80,9 @@ measurements:
   pick_success:
     object_goal: True
     ee_resting_success_threshold: 100
-  place_success:
-    place_anywhere: True
+  ovmm_place_success:
     ee_resting_success_threshold: 100
+    check_stability: False
   dist_to_pick_goal:
     use_shortest_path_cache: False # when caching, the same set of goals are used throughout
   dist_to_place_goal:
