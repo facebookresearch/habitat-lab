@@ -2344,9 +2344,9 @@ cs.store(
     node=RuntimePerfStatsMeasurementConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.compute_soc_nav_metric",
+    package="habitat.task.lab_sensors.soc_nav_metrics",
     group="habitat/task/lab_sensors",
-    name="compute_soc_nav_metric",
+    name="soc_nav_metrics",
     node=SocNavMetricsSensorConfig,
 )
 
