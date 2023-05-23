@@ -1261,21 +1261,22 @@ class FollowingDistance(UsesArticulatedAgentInterface, Measure):
         return distances
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        robot_nav_action = task.actions["agent_0_oracle_nav_action"]
-        human_nav_action = task.actions["agent_1_oracle_nav_action"]
-        robot_poses = robot_nav_action.poses
-        human_poses = human_nav_action.poses
-
-        if len(human_poses) > 0 and len(robot_poses) > 0:
-            # TODO Why is len(robot_poses) != len(human_poses)?
-            # if len(human_poses) != len(robot_poses):
-            #     print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
-
-            robot_poses = robot_poses[:len(human_poses)]
-            human_poses = human_poses[:len(robot_poses)]
-
-            distances = self.distances(robot_poses, human_poses)
-            self._metric = sum(distances) / len(distances)
-
-        else:
-            self._metric = 0.0
+        return 0.0
+        # robot_nav_action = task.actions["agent_0_oracle_nav_action"]
+        # human_nav_action = task.actions["agent_1_oracle_nav_action"]
+        # robot_poses = robot_nav_action.poses
+        # human_poses = human_nav_action.poses
+        #
+        # if len(human_poses) > 0 and len(robot_poses) > 0:
+        #     # TODO Why is len(robot_poses) != len(human_poses)?
+        #     # if len(human_poses) != len(robot_poses):
+        #     #     print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
+        #
+        #     robot_poses = robot_poses[:len(human_poses)]
+        #     human_poses = human_poses[:len(robot_poses)]
+        #
+        #     distances = self.distances(robot_poses, human_poses)
+        #     self._metric = sum(distances) / len(distances)
+        #
+        # else:
+        #     self._metric = 0.0

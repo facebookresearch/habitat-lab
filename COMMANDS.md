@@ -14,7 +14,7 @@ HYDRA_FULL_ERROR=1 HABITAT_ENV_DEBUG=1 MAGNUM_LOG=quiet HABITAT_SIM_LOG=quiet \
   habitat_baselines.num_environments=1 \
   habitat_baselines.evaluate=True \
   habitat_baselines.eval.should_load_ckpt=False \
-  habitat_baselines.test_episode_count=10
+  habitat_baselines.test_episode_count=100
 ```
 
 ### Training
