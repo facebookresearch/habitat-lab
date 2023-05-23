@@ -155,6 +155,18 @@ class PPOTrainer(BaseRLTrainer):
             orig_action_space=self.envs.orig_action_spaces[0],
         )
 
+        # The measure keys that should only be logged on rank0,gpu0 and nowhere
+        # else. They will be excluded from all other workers and only reported
+        # from the single worker.
+        self._rank0_env0_keys: Set[str] = set(
+            self.config.habitat.task.rank0_env0_measure_names
+        )
+
+        # Information on measures that declared in `self._rank0_env0_keys` to
+        # be only reported on rank0,gpu0. This is seperately logged from
+        # `self.window_episode_stats`.
+        self._single_proc_infos = {}
+
     def _init_train(self, resume_state=None):
         if resume_state is None:
             resume_state = load_resume_state(self.config)
@@ -279,18 +291,6 @@ class PPOTrainer(BaseRLTrainer):
         )
 
         self.t_start = time.time()
-
-        # The measure keys that should only be logged on rank0,gpu0 and nowhere
-        # else. They will be excluded from all other workers and only reported
-        # from the single worker.
-        self._rank0_env0_keys: Set[str] = set(
-            self.config.habitat.task.rank0_env0_measure_names
-        )
-
-        # Information on measures that declared in `self._rank0_env0_keys` to
-        # be only reported on rank0,gpu0. This is seperately logged from
-        # `self.window_episode_stats`.
-        self._single_proc_infos = {}
 
     @rank0_only
     @profiling_wrapper.RangeContext("save_checkpoint")
@@ -993,6 +993,13 @@ class PPOTrainer(BaseRLTrainer):
                     == evals_per_ep
                 ):
                     envs_to_pause.append(i)
+
+                # Exclude the keys from `_rank0_env0_keys`.
+                infos[i] = {
+                    k: v
+                    for k, v in infos[i].items()
+                    if k not in self._rank0_env0_keys
+                }
 
                 if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here

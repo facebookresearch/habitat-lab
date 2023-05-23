@@ -24,7 +24,6 @@ import quaternion
 from gym import Space, spaces
 
 from habitat.core.dataset import Episode
-from habitat.task.rearrange.utils import has_perf_timing
 
 if TYPE_CHECKING:
     try:
@@ -130,8 +129,8 @@ class Observations(Dict[str, Any]):
             t_start = time.time()
             data.append((uuid, sensor.get_observation(*args, **kwargs)))
 
-            if should_time and has_perf_timing(kwargs["task"]):
-                kwargs["task"]._sim.add_perf_timing(f"sensors.{uuid}", t_start)
+            if should_time:
+                kwargs["task"].add_perf_timing(f"sensors.{uuid}", t_start)
 
         super().__init__(data)
 

@@ -96,6 +96,9 @@ class RearrangeSim(HabitatSim):
         ] = {}
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
+        # The receptacle information cached between all scenes.
+        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
+        # The per episode receptacle information.
         self._receptacles: Dict[str, mn.Range3D] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
@@ -532,7 +535,6 @@ class RearrangeSim(HabitatSim):
         obj_counts: Dict[str, int] = defaultdict(int)
 
         self._handle_to_object_id = {}
-        self._receptacles = {}
         if should_add_objects:
             self._scene_obj_ids = []
 
@@ -578,23 +580,9 @@ class RearrangeSim(HabitatSim):
 
             obj_counts[obj_handle] += 1
 
-        all_receps = find_receptacles(self)
-        for recep in all_receps:
-            recep = cast(AABBReceptacle, recep)
-            local_bounds = recep.bounds
-            global_T = recep.get_global_transform(self)
-            # Some coordinates may be flipped by the global transformation,
-            # mixing the minimum and maximum bound coordinates.
-            bounds = np.stack(
-                [
-                    global_T.transform_point(local_bounds.min),
-                    global_T.transform_point(local_bounds.max),
-                ],
-                axis=0,
-            )
-            self._receptacles[recep.name] = mn.Range3D(
-                np.min(bounds, axis=0), np.max(bounds, axis=0)
-            )
+        self._receptacles = self._create_recep_info(
+            ep_info.scene_id, list(self._handle_to_object_id.keys())
+        )
 
         ao_mgr = self.get_articulated_object_manager()
         articulated_agent_art_handles = [
@@ -609,6 +597,34 @@ class RearrangeSim(HabitatSim):
             ):
                 ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
             self.art_objs.append(ao)
+
+    def _create_recep_info(
+        self, scene_id: str, ignore_handles: List[str]
+    ) -> Dict[str, mn.Range3D]:
+        if scene_id not in self._receptacles_cache:
+            receps = {}
+            all_receps = find_receptacles(
+                self,
+                ignore_handles=ignore_handles,
+            )
+            for recep in all_receps:
+                recep = cast(AABBReceptacle, recep)
+                local_bounds = recep.bounds
+                global_T = recep.get_global_transform(self)
+                # Some coordinates may be flipped by the global transformation,
+                # mixing the minimum and maximum bound coordinates.
+                bounds = np.stack(
+                    [
+                        global_T.transform_point(local_bounds.min),
+                        global_T.transform_point(local_bounds.max),
+                    ],
+                    axis=0,
+                )
+                receps[recep.name] = mn.Range3D(
+                    np.min(bounds, axis=0), np.max(bounds, axis=0)
+                )
+            self._receptacles_cache[scene_id] = receps
+        return self._receptacles_cache[scene_id]
 
     def _create_obj_viz(self):
         """

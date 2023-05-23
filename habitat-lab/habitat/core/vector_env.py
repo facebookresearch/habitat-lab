@@ -39,7 +39,6 @@ from habitat.core.logging import logger
 from habitat.core.utils import tile_images
 from habitat.gym.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.gym.gym_env_obs_dict_wrapper import EnvObsDictWrapper
-from habitat.task.rearrange.utils import has_perf_timing
 from habitat.utils import profiling_wrapper
 from habitat.utils.pickle5_multiprocessing import (
     CloudpickleWrapper,
@@ -253,7 +252,6 @@ class VectorEnv:
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
         inner_env = env_fn(*env_fn_args)
-        should_log_perf = has_perf_timing(inner_env.env)
         env = EnvCountEpisodeWrapper(EnvObsDictWrapper(inner_env))
         if parent_pipe is not None:
             parent_pipe.close()
@@ -261,23 +259,20 @@ class VectorEnv:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
-                    sim = inner_env.env._sim
+                    task = inner_env.env.env._env.task
 
                     t_start = time.time()
                     observations, reward, done, info = env.step(data)
-                    if should_log_perf:
-                        sim.add_perf_timing("vector_env_step", t_start)
+                    task.add_perf_timing("vector_env_step", t_start)
 
                     t_start = time.time()
                     if auto_reset_done and done:
                         observations = env.reset()
-                    if should_log_perf:
-                        sim.add_perf_timing("vector_env_auto_reset", t_start)
+                    task.add_perf_timing("vector_env_auto_reset", t_start)
 
                     t_start = time.time()
                     connection_write_fn((observations, reward, done, info))
-                    if should_log_perf:
-                        sim.add_perf_timing("vector_env_conn_write", t_start)
+                    task.add_perf_timing("vector_env_conn_write", t_start)
 
                 elif command == RESET_COMMAND:
                     observations = env.reset()

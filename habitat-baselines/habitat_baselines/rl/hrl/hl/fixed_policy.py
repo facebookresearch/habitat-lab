@@ -30,7 +30,13 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
 
-    def _parse_solution_actions(self, solution):
+    def _parse_solution_actions(self, solution) -> List[Tuple[str, List[str]]]:
+        """
+        Returns the sequence of actions to execute as a list of:
+        - The action name.
+        - A list of the action arguments.
+        """
+
         solution_actions = []
         for i, hl_action in enumerate(solution):
             sol_action = (
