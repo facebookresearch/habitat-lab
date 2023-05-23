@@ -107,7 +107,7 @@ def is_navigable_given_robot_navmesh(
     # Find the path
     pf.find_path(path)
     curr_path_points = path.points
-    if len(curr_path_points) == 0:
+    if len(curr_path_points) <= 1:
         return 1.0
     # Set the initial position
     trans = mn.Matrix4(sim.agents[0].scene_node.transformation)
