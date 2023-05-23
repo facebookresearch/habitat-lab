@@ -1195,7 +1195,6 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
         return found_contact
 
     def get_observation(self, observations, episode, *args, **kwargs):
-
         end_task = False
         robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
         human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
@@ -1214,6 +1213,11 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
             robot_start_pose = robot_poses[0]
             human_poses = human_nav_action.poses
 
+            # TODO Temporary hack: why is len(robot_poses) != len(human_poses)?
+            print("robot_poses", len(robot_poses))
+            print("human_poses", len(human_poses))
+            robot_poses = robot_poses[:len(human_poses)]
+            human_poses = human_poses[:len(robot_poses)]
             print("robot_poses", len(robot_poses))
             print("human_poses", len(human_poses))
 
