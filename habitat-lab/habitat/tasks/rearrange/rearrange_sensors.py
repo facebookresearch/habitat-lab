@@ -1213,6 +1213,10 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
         if end_task:
             robot_start_pose = robot_poses[0]
             human_poses = human_nav_action.poses
+
+            print("robot_poses", len(robot_poses))
+            print("human_poses", len(human_poses))
+
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
             found_rate = sum(found_human_list) / float(len(found_human_list))
