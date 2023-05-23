@@ -36,7 +36,7 @@ habitat:
     reward_measure: social_nav_reward
     slack_reward: 0.
     success_reward: 0.
-    task_spec: multi_agent_social_nav_solved #multi_agent_tidy_house_solved
+    task_spec: multi_agent_tidy_house_solved #multi_agent_social_nav_solved
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
