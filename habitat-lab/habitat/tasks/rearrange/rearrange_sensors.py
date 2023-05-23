@@ -1175,6 +1175,9 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
 
         if len(human_poses) > 0 and len(robot_poses) > 0:
             # TODO Why is len(robot_poses) != len(human_poses)?
+            if len(human_poses) != len(robot_poses):
+                print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
+
             robot_poses = robot_poses[:len(human_poses)]
             human_poses = human_poses[:len(robot_poses)]
 
@@ -1219,6 +1222,9 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
 
         if len(human_poses) > 0 and len(robot_poses) > 0:
             # TODO Why is len(robot_poses) != len(human_poses)?
+            if len(human_poses) != len(robot_poses):
+                print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
+
             robot_poses = robot_poses[:len(human_poses)]
             human_poses = human_poses[:len(robot_poses)]
 
