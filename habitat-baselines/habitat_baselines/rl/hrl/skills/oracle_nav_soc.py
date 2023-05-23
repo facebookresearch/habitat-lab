@@ -11,7 +11,7 @@ from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     HasFinishedOracleNavSensor,
-    ComputeSocNavMetricSensor
+    #ComputeSocNavMetricSensor
     #HasFinishedOracleNavSocSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
@@ -113,11 +113,11 @@ class OracleNavSocPolicy(NnSkillPolicy):
             full_config.habitat.task,
         )
 
-    def compute_socnav_metrics(self, observations):
-        metrics = observations[
-            ComputeSocNavMetricSensor.cls_uuid
-        ]
-        return metrics
+    # def compute_socnav_metrics(self, observations):
+    #     metrics = observations[
+    #         ComputeSocNavMetricSensor.cls_uuid
+    #     ]
+    #     return metrics
 
     def _is_skill_done(
         self,

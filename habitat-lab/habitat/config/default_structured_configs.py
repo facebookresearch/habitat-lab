@@ -561,12 +561,6 @@ class HasFinishedOracleNavSocSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSocSensor"
 
 
-
-
-@dataclass
-class ComputeSocNavMetricSensorConfig(LabSensorConfig):
-    type: str = "ComputeSocNavMetricSensor"
-
 @dataclass
 class GoalSensorConfig(LabSensorConfig):
     """
@@ -662,6 +656,9 @@ class InstructionSensorConfig(LabSensorConfig):
 class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
 
+@dataclass
+class ComputeSocNavMetricMeasureConfig(MeasurementConfig):
+    type: str = "ComputeSocNavMetricMeasure"
 
 @dataclass
 class SuccessMeasurementConfig(MeasurementConfig):
@@ -1938,10 +1935,10 @@ cs.store(
     node=EEPositionSensorConfig,
 )
 cs.store(
-    package="habitat.task.lab_sensors.compute_soc_nav_metric",
-    group="habitat/task/lab_sensors",
+    package="habitat.task.measurements.compute_soc_nav_metric",
+    group="habitat/task/measurements",
     name="compute_soc_nav_metric",
-    node=ComputeSocNavMetricSensorConfig,
+    node=ComputeSocNavMetricMeasureConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",

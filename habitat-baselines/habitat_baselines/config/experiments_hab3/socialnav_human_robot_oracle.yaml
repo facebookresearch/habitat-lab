@@ -15,6 +15,7 @@ defaults:
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
     - social_nav_reward
+    - compute_soc_nav_metric
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -27,7 +28,6 @@ defaults:
     - localization_sensor
     - humanoid_joint_sensor
     - has_finished_oracle_nav
-    - compute_soc_nav_metric
     #- has_finished_oracle_nav_soc
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   # - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_action: oracle_nav_action
@@ -90,7 +90,7 @@ habitat:
       - agent_1_localization_sensor
       - agent_1_humanoid_joint_sensor
       - agent_1_has_finished_oracle_nav
-      - agent_1_compute_soc_nav_metric
+      #- agent_1_compute_soc_nav_metric
       #- agent_1_has_finished_oracle_nav_soc
   simulator:
     agents:

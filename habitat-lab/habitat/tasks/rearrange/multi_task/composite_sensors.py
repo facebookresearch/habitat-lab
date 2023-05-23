@@ -256,6 +256,7 @@ class CompositeSuccess(Measure):
         super().__init__(**kwargs)
         self._sim = sim
         self._config = config
+
         #self._end_on_collide = config.end_on_collide
 
     @staticmethod
@@ -290,6 +291,7 @@ class CompositeSuccess(Measure):
         return found_contact
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
+        #breakpoint()
         self._metric = task.pddl_problem.is_expr_true(task.pddl_problem.goal)
         did_collide = self.check_collision(task)
 
