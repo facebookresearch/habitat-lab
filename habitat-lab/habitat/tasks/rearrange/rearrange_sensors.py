@@ -1174,7 +1174,7 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
             robot_poses = robot_nav_action.poses
             human_poses = human_nav_action.poses
 
-            # # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
+            # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
             robot_poses = robot_poses[:len(human_poses)]
 
             found_human_list = self.found_human_list(robot_poses, human_poses)
