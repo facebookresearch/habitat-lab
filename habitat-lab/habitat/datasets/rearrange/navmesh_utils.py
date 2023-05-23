@@ -124,51 +124,56 @@ def is_navigable_given_robot_navmesh(
 
     collision = []
 
-    while not at_goal:
-        # Find the path
-        path.requested_start = robot_pos
-        path.requested_end = goal_pos
-        pf.find_path(path)
-        curr_path_points = path.points
-        cur_nav_targ = curr_path_points[1]
-        forward = np.array([1.0, 0, 0])
-        robot_forward = np.array(trans.transform_vector(forward))
-        # Compute relative target
-        rel_targ = cur_nav_targ - robot_pos
+    try:
+        while not at_goal:
+            # Find the path
+            path.requested_start = robot_pos
+            path.requested_end = goal_pos
+            pf.find_path(path)
+            curr_path_points = path.points
+            cur_nav_targ = curr_path_points[1]
+            forward = np.array([1.0, 0, 0])
+            robot_forward = np.array(trans.transform_vector(forward))
+            # Compute relative target
+            rel_targ = cur_nav_targ - robot_pos
 
-        # Compute heading angle (2D calculation)
-        robot_forward = robot_forward[[0, 2]]
-        rel_targ = rel_targ[[0, 2]]
-        rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
-        # Get the angles
-        angle_to_target = get_angle(robot_forward, rel_targ)
-        angle_to_obj = get_angle(robot_forward, rel_pos)
-        # Compute the distance
-        dist_to_final_nav_targ = np.linalg.norm(
-            (final_nav_targ - robot_pos)[[0, 2]]
-        )
-        at_goal = (
-            dist_to_final_nav_targ < distance_threshold
-            and angle_to_obj < angle_threshold
-        )
+            # Compute heading angle (2D calculation)
+            robot_forward = robot_forward[[0, 2]]
+            rel_targ = rel_targ[[0, 2]]
+            rel_pos = (obj_targ_pos - robot_pos)[[0, 2]]
+            # Get the angles
+            angle_to_target = get_angle(robot_forward, rel_targ)
+            angle_to_obj = get_angle(robot_forward, rel_pos)
+            # Compute the distance
+            dist_to_final_nav_targ = np.linalg.norm(
+                (final_nav_targ - robot_pos)[[0, 2]]
+            )
+            at_goal = (
+                dist_to_final_nav_targ < distance_threshold
+                and angle_to_obj < angle_threshold
+            )
 
-        if not at_goal:
-            if dist_to_final_nav_targ < distance_threshold:
-                # Do not want to look at the object to reduce collision
-                vel = [0, 0]
-                at_goal = True
-            elif angle_to_target < angle_threshold:
-                # Move towards the target
-                vel = [linear_velocity, 0]
+            if not at_goal:
+                if dist_to_final_nav_targ < distance_threshold:
+                    # Do not want to look at the object to reduce collision
+                    vel = [0, 0]
+                    at_goal = True
+                elif angle_to_target < angle_threshold:
+                    # Move towards the target
+                    vel = [linear_velocity, 0]
+                else:
+                    # Look at the target waypoint.
+                    vel = compute_turn(
+                        rel_targ, angular_velocity, robot_forward
+                    )
             else:
-                # Look at the target waypoint.
-                vel = compute_turn(rel_targ, angular_velocity, robot_forward)
-        else:
-            vel = [0, 0]
+                vel = [0, 0]
 
-        trans = vc.act(trans, vel)
-        robot_pos = trans.translation
-        collision.append(is_collision(sim, trans, navmesh_offset))
+            trans = vc.act(trans, vel)
+            robot_pos = trans.translation
+            collision.append(is_collision(sim, trans, navmesh_offset))
+    except IndexError:
+        return 1.0
 
     return np.average(collision)
 
