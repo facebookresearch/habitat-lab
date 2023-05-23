@@ -1198,7 +1198,7 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
 
         end_task = False
         robot_nav_action = self._task.actions["agent_0_oracle_nav_action"]
-        human_nav_action = self._task.actions["agent_1_oracle_nav_soc_action"]
+        human_nav_action = self._task.actions["agent_1_oracle_nav_action"]
         robot_poses = robot_nav_action.poses
         did_collide = self.collided()
 
