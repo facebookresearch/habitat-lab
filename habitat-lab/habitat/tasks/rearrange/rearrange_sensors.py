@@ -1178,10 +1178,10 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
             robot_poses = robot_poses[:len(human_poses)]
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
-            return found
+            self._metric = float(found)
 
         else:
-            return False
+            self._metric = 0.0
 
 
 @registry.register_measure
