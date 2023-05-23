@@ -16,6 +16,7 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.actions.pddl_actions
     import habitat.tasks.rearrange.multi_task.composite_sensors
     import habitat.tasks.rearrange.multi_task.composite_task
+    import habitat.tasks.rearrange.multi_task.composite_task_v2
     import habitat.tasks.rearrange.rearrange_sensors
     import habitat.tasks.rearrange.rearrange_task
     import habitat.tasks.rearrange.sub_tasks.articulated_object_sensors

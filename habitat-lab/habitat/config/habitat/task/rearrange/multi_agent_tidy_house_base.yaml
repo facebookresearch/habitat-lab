@@ -28,7 +28,7 @@ defaults:
     - localization_sensor
   - _self_
 
-type: RearrangeCompositeTask-v0
+type: RearrangeCompositeTask-v2
 reward_measure: cooperate_subgoal_reward
 success_measure: composite_success
 success_reward: 5.0

@@ -67,8 +67,7 @@ class RearrangeTask(NavigationTask):
         should_place_articulated_agent=True,
         **kwargs,
     ) -> None:
-        self.n_objs = len(dataset.episodes[0].targets)
-        self.n_objs = np.max([self.n_objs, kwargs["config"].max_objects])
+        self._max_num_objects = max(len(ep.targets) for ep in dataset.episodes)
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
@@ -328,8 +327,9 @@ class RearrangeTask(NavigationTask):
         )
         return coll_details
 
-    def get_n_targets(self) -> int:
-        return self.n_objs
+    @property
+    def max_num_objects(self) -> int:
+        return self._max_num_objects
 
     @property
     def should_end(self) -> bool:

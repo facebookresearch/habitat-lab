@@ -16,7 +16,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import magnum as mn
@@ -547,15 +546,18 @@ class RearrangeSim(HabitatSim):
 
             obj_counts[obj_handle] += 1
 
-        all_receps = find_receptacles(self)
-        for recep in all_receps:
-            recep = cast(AABBReceptacle, recep)
-            local_bounds = recep.bounds
-            global_T = recep.get_global_transform(self)
-            self._receptacles[recep.name] = mn.Range3D(
-                global_T.transform_point(local_bounds.min),
-                global_T.transform_point(local_bounds.max),
-            )
+        # WE NEED THIS CODE IN THE MAIN BRANCH. COMMENTED OUT ONLY UNTIL THIS
+        # PR https://github.com/facebookresearch/habitat-lab/pull/1331 IS
+        # MERGED.
+        # all_receps = find_receptacles(self)
+        # for recep in all_receps:
+        #     recep = cast(AABBReceptacle, recep)
+        #     local_bounds = recep.bounds
+        #     global_T = recep.get_global_transform(self)
+        #     self._receptacles[recep.name] = mn.Range3D(
+        #         global_T.transform_point(local_bounds.min),
+        #         global_T.transform_point(local_bounds.max),
+        #     )
 
         ao_mgr = self.get_articulated_object_manager()
         articulated_agent_art_handles = [
@@ -885,10 +887,6 @@ class RearrangeSim(HabitatSim):
             np.array(x.translation) for x in targ_trans
         ]
         return a, np.array(b)
-
-    def get_n_targets(self) -> int:
-        """Get the number of rearrange targets."""
-        return len(self.ep_info.targets)
 
     def get_target_objs_start(self) -> np.ndarray:
         """Get the initial positions of all objects targeted for rearrangement as a numpy array."""

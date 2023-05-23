@@ -203,7 +203,7 @@ class CompositeSuccess(Measure):
         self.update_metric(*args, task=task, **kwargs)
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._metric = task.pddl_problem.is_expr_true(task.pddl_problem.goal)
+        self._metric = task.pddl_problem.is_expr_true(task.goal)
 
         if self._config.must_call_stop:
             does_action_want_stop = task.measurements.measures[
@@ -237,7 +237,7 @@ class CompositeStageGoals(Measure):
 
     def update_metric(self, *args, task, **kwargs):
         self._metric = {}
-        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
+        for stage_name, logical_expr in task.stage_goals.items():
             succ_k = f"{stage_name}_success"
             if stage_name in self._stage_succ:
                 self._metric[succ_k] = 1.0
@@ -278,7 +278,7 @@ class CompositeSubgoalReward(Measure):
     def update_metric(self, *args, task, **kwargs):
         self._metric = 0.0
 
-        for stage_name, logical_expr in task.pddl_problem.stage_goals.items():
+        for stage_name, logical_expr in task.stage_goals.items():
             if stage_name in self._stage_succ:
                 continue
 
