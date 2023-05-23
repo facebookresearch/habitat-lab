@@ -115,7 +115,7 @@ class LogicalExpr:
             self._expr_type == LogicalExprType.NAND
             or self._expr_type == LogicalExprType.NOR
         ):
-            # Invert the entire result.
+            # Invert the entire result for NAND and NOR expressions.
             result = not result
         return result
 
