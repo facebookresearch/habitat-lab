@@ -200,9 +200,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         if self._high_level_policy.num_recurrent_layers != 0:
             return self._high_level_policy.num_recurrent_layers
         else:
-            return self._skills[
-                list(self._skills.keys())[0]
-            ].num_recurrent_layers
+            first_skill = self._skills[list(self._skills.keys())[0]]
+            return first_skill.num_recurrent_layers
 
     @property
     def should_load_agent_state(self):
