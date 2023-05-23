@@ -1644,6 +1644,9 @@ class HabitatConfig(HabitatBaseConfig):
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
 
+@dataclass
+class SocNavMetricsSensorConfig(LabSensorConfig):
+    type: str = "SocNavMetricsSensor"
 
 # -----------------------------------------------------------------------------
 # Register configs in the Hydra ConfigStore
@@ -2339,6 +2342,12 @@ cs.store(
     group="habitat/task/measurements",
     name="runtime_perf_stats",
     node=RuntimePerfStatsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.compute_soc_nav_metric",
+    group="habitat/task/lab_sensors",
+    name="compute_soc_nav_metric",
+    node=SocNavMetricsSensorConfig,
 )
 
 from hydra.core.config_search_path import ConfigSearchPath
