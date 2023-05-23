@@ -57,7 +57,7 @@ actions:
   base_velocity:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
-
+    constraint_base_in_manip_mode: True
 measurements:
   force_terminate:
     max_accum_force: 10_000.0
