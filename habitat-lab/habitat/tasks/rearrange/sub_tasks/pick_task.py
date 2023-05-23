@@ -81,23 +81,24 @@ class RearrangePickTaskV1(RearrangeTask):
             )
             return target_positions, target_positions, None
         elif self._spawn_reference == "view_points":
-            recep_view_points = np.array(
-                [
-                    v.agent_state.position
-                    for g in self._get_spawn_goals(episode)
-                    for v in g.view_points
-                ]
-            )
-            recep_centers = np.array(
-                [
-                    g.position
-                    for g in self._get_spawn_goals(episode)
-                    for _ in g.view_points
-                ]
-            )
+            view_points_per_recep = [
+                np.array([v.agent_state.position for v in g.view_points])
+                for g in self._get_spawn_goals(episode)
+            ]
+            centers_per_recep = [
+                np.array([g.position for v in g.view_points])
+                for g in self._get_spawn_goals(episode)
+            ]
             if self._spawn_reference_sampling == "uniform":
-                return recep_view_points, recep_centers, None
-            elif self._spawn_reference_sampling == "dist_to_center":
+                return (
+                    np.concatenate(view_points_per_recep, 0),
+                    np.concatenate(centers_per_recep, 0),
+                    None,
+                )
+            elif self._spawn_reference_sampling in [
+                "dist_to_center",
+                "only_closest",
+            ]:
                 # TODO: use distance to the edge or cache the distances
                 dist_to_recep_center = [
                     np.linalg.norm(
@@ -109,20 +110,39 @@ class RearrangePickTaskV1(RearrangeTask):
                     )
                     for g in self._get_spawn_goals(episode)
                 ]
-                normalized_dist_to_center = [
-                    dists_per_recep / np.sum(dists_per_recep)
-                    for dists_per_recep in dist_to_recep_center
-                ]
-                sample_probs = [
-                    d
-                    for dists_per_recep in normalized_dist_to_center
-                    for d in dists_per_recep
-                ]
-                return (
-                    recep_view_points,
-                    recep_centers,
-                    sample_probs / np.sum(sample_probs),
-                )
+                if self._spawn_reference_sampling == "only_closest":
+                    # closest viewpoint and corresponding center per receptacle
+                    closest_viewpoint_per_recep = [
+                        np.argmin(d) for d in dist_to_recep_center
+                    ]
+                    view_point_per_recep = [
+                        v[closest_viewpoint_per_recep[i]]
+                        for i, v in enumerate(view_points_per_recep)
+                    ]
+                    center_per_recep = [
+                        v[closest_viewpoint_per_recep[i]]
+                        for i, v in enumerate(centers_per_recep)
+                    ]
+                    return (
+                        np.array(view_point_per_recep),
+                        np.array(center_per_recep),
+                        None,
+                    )
+                else:
+                    normalized_dist_to_center = [
+                        dists_per_recep / np.sum(dists_per_recep)
+                        for dists_per_recep in dist_to_recep_center
+                    ]
+                    sample_probs = [
+                        d
+                        for dists_per_recep in normalized_dist_to_center
+                        for d in dists_per_recep
+                    ]
+                    return (
+                        np.concatenate(view_points_per_recep, 0),
+                        np.concatenate(centers_per_recep, 0),
+                        sample_probs / np.sum(sample_probs),
+                    )
             else:
                 raise ValueError(
                     f"Unrecognized spawn reference sampling {self._spawn_reference_sampling}"

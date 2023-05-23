@@ -4,8 +4,6 @@ defaults:
   - /habitat/task: task_config_base
   - /habitat/task/actions:
     - arm_action
-    - base_velocity
-    - manipulation_mode
   - /habitat/task/measurements:
     - robot_force
     - force_terminate
@@ -26,11 +24,10 @@ defaults:
     - goal_recep_segmentation_sensor
     - relative_resting_pos_sensor
     - goal_receptacle_sensor
-    - object_embedding_sensor
   - _self_
 
 type: RearrangePlaceTask-v0
-base_angle_noise: 0.2618 # 15 degrees
+base_angle_noise: 0.0873 # 5 degrees
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 reward_measure: ovmm_place_reward
@@ -38,10 +35,11 @@ success_measure: ovmm_place_success
 success_reward: 10.0
 slack_reward: -0.005
 spawn_reference: view_points
+spawn_reference_sampling: only_closest
 spawn_max_dists_to_obj: 0.0
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
-start_in_manip_mode: False
+start_in_manip_mode: True
 actions:
   arm_action:
     type: "ArmAction"
@@ -55,10 +53,6 @@ actions:
     min_delta_pos: 0.02
     ee_ctrl_lim: 0.015
     grasp_threshold: -0.8
-  base_velocity:
-    type: "BaseWaypointTeleportAction"
-    navmesh_offset: [[0.0, 0.0]]
-    constraint_base_in_manip_mode: True
 measurements:
   force_terminate:
     max_accum_force: 10_000.0

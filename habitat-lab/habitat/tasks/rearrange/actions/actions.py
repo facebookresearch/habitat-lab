@@ -541,6 +541,9 @@ class BaseWaypointTeleportAction(RobotAction):
         self._allow_simultaneous_turn = config.allow_simultaneous_turn
         self._discrete_movement = config.discrete_movement
         self.navmesh_violation = False
+        self._constraint_base_in_manip_mode = (
+            config.constraint_base_in_manip_mode
+        )
 
     def collision_check(self, trans, target_trans):
         """
@@ -635,7 +638,7 @@ class BaseWaypointTeleportAction(RobotAction):
             # Holding onto an object, also kinematically update the object.
             self.cur_grasp_mgr.update_object_to_grasp()
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, task, is_last_action, **kwargs):
         base_action = kwargs[self._action_arg_prefix + "base_vel"]
         lin_pos_x = base_action[0]
         turn_offset = 1
@@ -696,9 +699,15 @@ class BaseWaypointTeleportAction(RobotAction):
             mn.Quaternion.from_matrix(target_rot), target_pos
         )
 
+        if self._constraint_base_in_manip_mode and task._in_manip_mode:
+            lin_pos_x = 0.0
+            lin_pos_z = 0.0
+            ang_pos = 0.0
+
         if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
             self.update_base(target_rigid_state)
         else:
+            # no violation if no movement was required in the first place
             self.navmesh_violation = False
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)

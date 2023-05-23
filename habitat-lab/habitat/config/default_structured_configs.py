@@ -156,6 +156,9 @@ class BaseVelocityActionConfig(ActionConfig):
     discrete_movement: bool = (
         False  # whether to move/rotate only in discrete steps
     )
+    constraint_base_in_manip_mode: bool = (
+        False  # whether to constraint base motion in manip mode
+    )
 
 
 @attr.s(auto_attribs=True, slots=True)
