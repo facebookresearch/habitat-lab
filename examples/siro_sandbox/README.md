@@ -92,6 +92,12 @@ Add `--first-person-mode` to switch to first-person view humanoid control mode. 
 ## Can grasp/place area
 Use `--can-grasp-place-threshold` argument to set/change grasp/place area radius.
 
+## Disable episode end on collision
+In the multi agent tidy house task, episode is considered over when humanoid and robot agents collide. Sandbox app will crash in this case as the actions can't be executed if env episode is over. In this case, you may want too disable episode end on collision. It can be done by appending the following line to your `--cfg-opts`:
+```
+habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
+```
+
 ## Using FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides appended:
 ```
