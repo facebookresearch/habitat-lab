@@ -1177,6 +1177,11 @@ class FollowingRateMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class FollowingDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "FollowingDistance"
+
+
+@dataclass
 class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
@@ -2360,6 +2365,12 @@ cs.store(
     group="habitat/task/measurements",
     name="following_rate",
     node=FollowingRateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.following_distance",
+    group="habitat/task/measurements",
+    name="following_distance",
+    node=FollowingDistanceMeasurementConfig,
 )
 
 from hydra.core.config_search_path import ConfigSearchPath
