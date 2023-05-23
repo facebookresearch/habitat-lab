@@ -1175,7 +1175,10 @@ class SocNavMetricsSensor(UsesArticulatedAgentInterface, Sensor):
         # TODO Temporary hack: why is len(robot_poses) > len(human_poses)?
         robot_poses = robot_poses[:len(human_poses)]
 
+        print("robot_poses", len(robot_poses))
+        print("human_poses", len(human_poses))
         found_human_list = self.found_human_list(robot_poses, human_poses)
+        print("found_human_list", found_human_list)
         found = sum(found_human_list) > 0
         found_rate = sum(found_human_list) / float(len(found_human_list))
         print("found", found, "found_rate", found_rate)
