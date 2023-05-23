@@ -43,10 +43,6 @@ habitat:
       agent_1_oracle_nav_action:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
-      agent_1_oracle_nav_soc_action:
-        agent_index: 1
-        motion_control: human_joints
-        spawn_max_dist_to_obj: 1.7
     measurements:
       cooperate_subgoal_reward:
         end_on_collide: False
