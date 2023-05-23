@@ -51,7 +51,7 @@ class EmptyAction(ArticulatedAgentAction):
         )
 
     def step(self, *args, **kwargs):
-        return self._sim.step(HabitatSimActions.empty)
+        pass
 
 
 @registry.register_task_action
@@ -60,15 +60,10 @@ class RearrangeStopAction(SimulatorTaskAction):
         super().reset(*args, **kwargs)
         self.does_want_terminate = False
 
-    def step(self, task, *args, is_last_action, **kwargs):
+    def step(self, task, *args, **kwargs):
         should_stop = kwargs.get("rearrange_stop", [1.0])
         if should_stop[0] > 0.0:
             self.does_want_terminate = True
-
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.rearrange_stop)
-        else:
-            return {}
 
 
 @registry.register_task_action
@@ -112,16 +107,12 @@ class ArmAction(ArticulatedAgentAction):
             ] = self.grip_ctrlr.action_space
         return spaces.Dict(action_spaces)
 
-    def step(self, is_last_action, *args, **kwargs):
+    def step(self, *args, **kwargs):
         arm_action = kwargs[self._action_arg_prefix + "arm_action"]
         self.arm_ctrlr.step(arm_action)
         if self.grip_ctrlr is not None and not self.disable_grip:
             grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.arm_action)
-        else:
-            return {}
 
 
 @registry.register_task_action
@@ -448,7 +439,7 @@ class BaseVelAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.params.leg_init_params
             )
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         lin_vel, ang_vel = kwargs[self._action_arg_prefix + "base_vel"]
         lin_vel = np.clip(lin_vel, -1, 1) * self._lin_speed
         ang_vel = np.clip(ang_vel, -1, 1) * self._ang_speed
@@ -460,11 +451,6 @@ class BaseVelAction(ArticulatedAgentAction):
 
         if lin_vel != 0.0 or ang_vel != 0.0:
             self.update_base()
-
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.base_velocity)
-        else:
-            return {}
 
 
 @registry.register_task_action
@@ -607,7 +593,7 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.params.leg_init_params
             )
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         lateral_lin_vel = 0.0
         if self._enable_lateral_move:
             longitudinal_lin_vel, lateral_lin_vel, ang_vel = kwargs[
@@ -639,11 +625,6 @@ class BaseVelNonCylinderAction(ArticulatedAgentAction):
             or ang_vel != 0.0
         ):
             self.update_base(ang_vel != 0.0)
-
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.base_velocity)
-        else:
-            return {}
 
 
 @registry.register_task_action
@@ -735,7 +716,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
             }
         )
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.
         :param self._action_arg_prefix+human_joints_trans: Array of size
@@ -745,8 +726,6 @@ class HumanoidJointAction(ArticulatedAgentAction):
             a transformation offset that comes from the MOCAP pose.
             The first elements correspond to a flattened list of quaternions for each joint.
             When the array is all 0 it keeps the previous joint rotation and transform.
-        :param is_last_action: whether this is the last action before calling environment
-          step
         """
         human_joints_trans = kwargs[
             self._action_arg_prefix + "human_joints_trans"
@@ -777,8 +756,3 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 self.cur_articulated_agent.set_joint_transform(
                     new_joints, new_transform_offset, new_transform_base
                 )
-
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.humanoidjoint_action)
-        else:
-            return {}
