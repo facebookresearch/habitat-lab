@@ -35,15 +35,15 @@ class Benchmark:
         :param eval_remote: boolean indicating whether evaluation should be run remotely or locally
         """
         self.action_space = action_space
-        overrides = []
-        if action_space is not None:
-            overrides.append("habitat/task/actions=" + self.action_space)
-        config_env = get_config(config_paths, overrides)
         self._eval_remote = eval_remote
 
         if self._eval_remote is True:
             self._env = None
         else:
+            overrides = []
+            if action_space is not None:
+                overrides.append("habitat/task/actions=" + self.action_space)
+            config_env = get_config(config_paths, overrides)
             self._env = Env(config=config_env)
 
     def remote_evaluate(

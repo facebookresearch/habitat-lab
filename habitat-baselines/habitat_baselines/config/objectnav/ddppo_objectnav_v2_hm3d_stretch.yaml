@@ -4,8 +4,8 @@ defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
   - /benchmark/nav/objectnav: objectnav_v2_hm3d_stretch
   - /habitat_baselines/rl/policy/obs_transforms:
-    - center_cropper_base
     - resize_shortest_edge_base
+    - center_cropper_base
   - _self_
 
 habitat:
