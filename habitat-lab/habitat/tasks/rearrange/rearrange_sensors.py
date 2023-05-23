@@ -1144,7 +1144,10 @@ class RearrangeReward(UsesRobotInterface, Measure):
         ].get_metric()
         if force_terminate:
             reward -= self._force_end_pen
-        if task.actions["base_velocity"].navmesh_violation:
+        if (
+            "base_velocity" in task.actions
+            and task.actions["base_velocity"].navmesh_violation
+        ):
             reward -= self._navmesh_violate_pen
         self._metric = reward
 
