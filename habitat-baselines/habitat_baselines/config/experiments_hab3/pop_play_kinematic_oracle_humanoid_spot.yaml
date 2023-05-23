@@ -49,9 +49,6 @@ habitat:
       agent_1_oracle_nav_action:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
-    measurements:
-      cooperate_subgoal_reward:
-        end_on_collide: False
   environment:
     max_episode_steps: 1000
 
