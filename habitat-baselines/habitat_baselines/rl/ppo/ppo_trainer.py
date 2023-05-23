@@ -144,7 +144,7 @@ class PPOTrainer(BaseRLTrainer):
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
-            is_rank0=(
+            is_first_rank=(
                 not torch.distributed.is_initialized()
                 or torch.distributed.get_rank() == 0
             ),
@@ -165,7 +165,7 @@ class PPOTrainer(BaseRLTrainer):
         # Information on measures that declared in `self._rank0_env0_keys` to
         # be only reported on rank0,gpu0. This is seperately logged from
         # `self.window_episode_stats`.
-        self._single_proc_infos: Dict[str, float] = {}
+        self._single_proc_infos: Dict[str, List[float]] = {}
 
     def _init_train(self, resume_state=None):
         if resume_state is None:
