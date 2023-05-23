@@ -64,7 +64,7 @@ def download_data():
             [
                 [],
                 [
-                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                    "+habitat_baselines/rl/policy/obs_transforms=[resize_shortest_edge_base, center_cropper_base]",
                 ],
             ],
             ["train", "eval"],
@@ -79,7 +79,7 @@ def download_data():
             [
                 [],
                 [
-                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                    "+habitat_baselines/rl/policy/obs_transforms=[resize_shortest_edge_base, center_cropper_base]",
                 ],
             ],
             ["train", "eval"],
@@ -155,7 +155,7 @@ def test_ver_trainer(
                 "habitat_baselines.trainer_name=ver",
                 f"habitat_baselines.rl.ver.variable_experience={str(variable_experience)}",
                 f"habitat_baselines.rl.ver.overlap_rollouts_and_learn={str(overlap_rollouts_and_learn)}",
-                "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
+                "+habitat_baselines/rl/policy/obs_transforms=[resize_shortest_edge_base, center_cropper_base]",
                 "habitat_baselines.num_updates=2",
                 "habitat_baselines.total_num_steps=-1",
                 "habitat_baselines.rl.preemption.save_state_batch_only=True",
