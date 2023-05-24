@@ -26,7 +26,6 @@ defaults:
     - target_goal_gps_compass_sensor
     - localization_sensor
     - has_finished_oracle_nav
-    - other_agent_gps
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base_spot
   # For Spot observation space
@@ -52,22 +51,24 @@ habitat:
     obs_keys:
       - agent_0_head_depth
       - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
       - agent_0_obj_start_gps_compass
       - agent_0_obj_goal_gps_compass
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor
       - agent_0_has_finished_oracle_nav
-      - agent_0_other_agent_gps
       - agent_1_head_depth
       - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
       - agent_1_obj_start_gps_compass
       - agent_1_obj_goal_gps_compass
       - agent_1_is_holding
       - agent_1_ee_pos
       - agent_1_localization_sensor
       - agent_1_has_finished_oracle_nav
-      - agent_1_other_agent_gps
   simulator:
     # Add Spot robot agents
     agents:
@@ -157,7 +158,7 @@ habitat_baselines:
             add_arm_rest: False
             policy_input_keys:
               - "head_depth"
-              - "humanoid_joint_sensor"
+              - "joint"
               - "is_holding"
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
