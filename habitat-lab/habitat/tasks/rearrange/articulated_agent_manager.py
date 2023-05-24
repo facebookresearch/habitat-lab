@@ -73,6 +73,9 @@ class ArticulatedAgentManager:
             agent_cfg = cfg.agents[agent_name]
             agent_cls = eval(agent_cfg.articulated_agent_type)
             agent = agent_cls(agent_cfg.articulated_agent_urdf, sim)
+
+            if agent_cfg.rest_pose_data_path != "":
+                agent.set_rest_pose_path(agent_cfg.rest_pose_data_path)
             grasp_managers = []
             for grasp_manager_id in range(agent_cfg.grasp_managers):
                 graps_mgr = RearrangeGraspManager(
