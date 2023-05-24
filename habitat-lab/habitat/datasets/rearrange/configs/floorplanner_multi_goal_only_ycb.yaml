@@ -12,7 +12,7 @@
           - "102817200" # medium
           - "108736824_177263559" # large
           - "102816216" # new scene
-          - "108736872_177263607" # new scene
+          #- "108736872_177263607" # new scene
           # 40 scene for mini train
           # - "107734176_176000019"
           # - "107733960_175999701"
@@ -209,8 +209,8 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 2
-        - 2
+        - 3
+        - 3
         orientation_sampling: up
         nav_to_min_distance: 1.5
 
