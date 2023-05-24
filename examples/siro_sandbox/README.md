@@ -1,4 +1,4 @@
-# Sandbox Tool
+# Sandbox Tool 
 
 ![siro_sandbox_screenshot](https://user-images.githubusercontent.com/6557808/230213487-f4812c2f-ec7f-4d68-9bbe-0b65687f769b.png)
 
@@ -6,8 +6,7 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 ## Known Issues
-* The policy-driven agent isn't working in terms of producing interesting actions. As a placeholder, we've injected random-base-movement behavior in `BaselinesController.act`; see comment "temp do random base actions".
-* One-time visual flicker shortly after app startup
+* The skinned humanoid doesn't render correctly; see workaround below.
 * When using Floorplanner scenes (see below), the app has very bad runtime perf on older Macbooks (2021 is fine; 2019 is bad).
 * Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode).
 
@@ -57,6 +56,18 @@ habitat.simulator.habitat_sim_v0.allow_sliding=True
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
+## Workaround to avoid broken skinned humanoid
+
+Following the instructions above, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
+
+Steps to work around this by reverting to a rigid-skeleton humanoid:
+1. Make a copy (or symlink) of `female2_0.urdf`.
+    * `cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_rigid.urdf`
+2. Update or override your config. Your humanoid is probably either `main_agent` or `agent_1`.
+    * `habitat.simulator.agents.main_agent.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf`
+    * or `habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'`
+3. Run the sandbox app and you should now see a rigid-skeleton humanoid that animates properly.
+
 ## Debugging visual sensors
 
 Add `--debug-images` argument followed by the camera sensors ids to enable debug observations visualization in the app GUI. For example, to visualize agent1's head depth sensor observations add: `--debug-images agent_1_head_depth`.
@@ -80,6 +91,12 @@ Add `--first-person-mode` to switch to first-person view humanoid control mode. 
 
 ## Can grasp/place area
 Use `--can-grasp-place-threshold` argument to set/change grasp/place area radius.
+
+## Disable episode end on collision
+In the multi agent tidy house task, episode is considered over when humanoid and robot agents collide. Sandbox app will crash in this case as the actions can't be executed if env episode is over. In this case, you may want too disable episode end on collision. It can be done by appending the following line to your `--cfg-opts`:
+```
+habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
+```
 
 ## Using FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides appended:

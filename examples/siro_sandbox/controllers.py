@@ -18,6 +18,10 @@ from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.utils.common import flatten_dict
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.obs_transformers import (
+    apply_obs_transforms_obs_space,
+    get_active_obs_transforms,
+)
 from habitat_baselines.common.tensor_dict import TensorDict
 from habitat_baselines.utils.common import get_action_space_info
 
@@ -65,12 +69,10 @@ class BaselinesController(Controller):
         sample_random_baseline_base_vel=False,
     ):
         super().__init__(agent_idx, is_multi_agent)
-        agent_name = config.habitat.simulator.agents_order[agent_idx]
-        policy_cls = baseline_registry.get_policy(
-            config.habitat_baselines.rl.policy[agent_name].name
-        )
+        self._config = config
         self._env_ac = env.action_space
         env_obs = env.observation_space
+        agent_name = config.habitat.simulator.agents_order[self._agent_idx]
         if self._is_multi_agent:
             self._agent_k = f"agent_{self._agent_idx}_"
         else:
@@ -80,8 +82,14 @@ class BaselinesController(Controller):
             env_obs = clean_dict(env_obs, self._agent_k)
 
         self._gym_ac_space = gym_wrapper.create_action_space(self._env_ac)
+        self.obs_transforms = get_active_obs_transforms(config, agent_name)
+        env_obs = apply_obs_transforms_obs_space(env_obs, self.obs_transforms)
         gym_obs_space = gym_wrapper.smash_observation_space(
             env_obs, list(env_obs.keys())
+        )
+
+        policy_cls = baseline_registry.get_policy(
+            config.habitat_baselines.rl.policy[agent_name].name
         )
         self._actor_critic = policy_cls.from_config(
             config,
@@ -90,7 +98,28 @@ class BaselinesController(Controller):
             orig_action_space=self._env_ac,
             agent_name=agent_name,
         )
-        self._action_shape, _ = get_action_space_info(self._gym_ac_space)
+        if config.habitat_baselines.eval.should_load_ckpt:
+            checkpoint = torch.load(
+                config.habitat_baselines.eval_ckpt_path_dir, map_location="cpu"
+            )
+            self._actor_critic.load_state_dict(
+                checkpoint[self._agent_idx]["state_dict"]
+            )
+        self.device = (
+            torch.device("cuda", config.habitat_baselines.torch_gpu_id)
+            if torch.cuda.is_available()
+            else torch.device("cpu")
+        )
+        self._actor_critic.to(self.device)
+        self._actor_critic.eval()
+
+        policy_action_space = self._actor_critic.get_policy_action_space(
+            self._gym_ac_space
+        )
+        self._action_shape, self._discrete_actions = get_action_space_info(
+            policy_action_space
+        )
+
         self._step_i = 0
         self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
 
@@ -100,6 +129,7 @@ class BaselinesController(Controller):
                 1,
                 1,
             ),
+            device=self.device,
             dtype=torch.bool,
         )
         if self._step_i == 0:
@@ -108,16 +138,20 @@ class BaselinesController(Controller):
         hxs = torch.ones(
             (
                 1,
-                1,
+                self._actor_critic.num_recurrent_layers,
+                self._config.habitat_baselines.rl.ppo.hidden_size,
             ),
+            device=self.device,
             dtype=torch.float32,
         )
+
         prev_ac = torch.ones(
             (
                 1,
-                self._action_shape[0],
+                *self._action_shape,
             ),
-            dtype=torch.float32,
+            device=self.device,
+            dtype=torch.long if self._discrete_actions else torch.float,
         )
         obs = flatten_dict(obs)
         obs = TensorDict(
@@ -126,6 +160,7 @@ class BaselinesController(Controller):
                     len(self._agent_k) if k.startswith(self._agent_k) else 0 :
                 ]: torch.tensor(v).unsqueeze(0)
                 for k, v in obs.items()
+                if k.startswith(self._agent_k) or "agent_" not in k
             }
         )
         with torch.no_grad():
@@ -333,6 +368,7 @@ class GuiHumanoidController(GuiController):
         self._hint_grasp_obj_idx = None
         self._hint_drop_pos = None
         self._cam_yaw = 0
+        assert not self.is_grasped
 
     def get_random_joint_action(self):
         # Add random noise to human arms but keep global transform
