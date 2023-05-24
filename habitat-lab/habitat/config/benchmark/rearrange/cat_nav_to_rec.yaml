@@ -12,7 +12,7 @@ habitat:
     auto_name: NavToObj
     obs_keys:
       - robot_head_depth
-      - cat_nav_goal_segmentation
+      - ovmm_nav_goal_segmentation
       - receptacle_segmentation
       - goal_receptacle
       - robot_start_gps

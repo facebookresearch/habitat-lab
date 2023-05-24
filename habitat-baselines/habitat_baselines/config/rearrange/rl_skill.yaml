@@ -59,14 +59,14 @@ habitat_baselines:
             - receptacle_segmentation
             - start_receptacle_segmentation
             - goal_receptacle_segmentation
-            - cat_nav_goal_segmentation
+            - ovmm_nav_goal_segmentation
           semantic_keys:
             - robot_head_panoptic
             - object_segmentation
             - receptacle_segmentation
             - start_receptacle_segmentation
             - goal_receptacle_segmentation
-            - cat_nav_goal_segmentation
+            - ovmm_nav_goal_segmentation
         center_cropper:
           type: CenterCropper
           height: 160
@@ -80,7 +80,7 @@ habitat_baselines:
             - receptacle_segmentation
             - start_receptacle_segmentation
             - goal_receptacle_segmentation
-            - cat_nav_goal_segmentation
+            - ovmm_nav_goal_segmentation
     
     ppo:
       # ppo params
