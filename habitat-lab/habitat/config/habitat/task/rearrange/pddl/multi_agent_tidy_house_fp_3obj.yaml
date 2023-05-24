@@ -8,6 +8,10 @@ objects:
     expr_type: movable_entity_type
   - name: TARGET_any_targets|1
     expr_type: goal_entity_type
+  - name: any_targets|2
+    expr_type: movable_entity_type
+  - name: TARGET_any_targets|2
+    expr_type: goal_entity_type
   - name: robot_0
     expr_type: robot_entity_type
   - name: robot_1
@@ -18,6 +22,7 @@ goal:
   sub_exprs:
     - at(any_targets|0,TARGET_any_targets|0)
     - at(any_targets|1,TARGET_any_targets|1)
+    - at(any_targets|2,TARGET_any_targets|2)
     - not_holding(robot_0)
     - not_holding(robot_1)
 
@@ -30,6 +35,10 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - at(any_targets|1,TARGET_any_targets|1)
+  stage_2:
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|2,TARGET_any_targets|2)
 
 solution:
   - nav_to_goal(any_targets|0, robot_0)
