@@ -68,7 +68,6 @@ class RearrangeTask(NavigationTask):
         **kwargs,
     ) -> None:
         self.n_objs = len(dataset.episodes[0].targets)
-        self.n_objs = np.max([self.n_objs, kwargs["config"].max_objects])
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
         self._sim: RearrangeSim = sim
