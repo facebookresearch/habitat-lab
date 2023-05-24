@@ -367,6 +367,15 @@ class ObjectSampler:
         dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
+
+        # Redo the snapping again
+        if math.isnan(dist):
+            snapped = sim.pathfinder.snap_point(obj.translation)
+            island_radius = sim.pathfinder.island_radius(snapped)
+            dist = float(
+                np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
+            )
+
         print("dist:", dist, "threshold:", self.nav_to_min_distance)
         print(
             "island_radius:",
@@ -375,9 +384,8 @@ class ObjectSampler:
             self.largest_island_size,
         )
         return (
-            dist
-            < self.nav_to_min_distance
-            # and island_radius == self.largest_island_size
+            dist < self.nav_to_min_distance
+            and island_radius == self.largest_island_size
         )
 
     def single_sample(
