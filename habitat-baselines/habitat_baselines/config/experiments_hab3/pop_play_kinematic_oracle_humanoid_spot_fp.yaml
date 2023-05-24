@@ -40,17 +40,35 @@ hydra:
 habitat:
   task:
     actions:
+      agent_0_oracle_nav_with_backing_up_action:
+        type: OracleNavWithBackingUpAction
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
+        enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
       agent_0_arm_action:
         grip_controller: MagicGraspAction
       agent_1_oracle_nav_with_backing_up_action:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
+    robot_at_thresh: 3.0
   environment:
     max_episode_steps: 5000
 
   gym:
     obs_keys:
-      - agent_0_head_depth
+      - agent_0_articulated_agent_arm_depth
       - agent_0_relative_resting_position
       - agent_0_obj_start_sensor
       - agent_0_obj_goal_sensor
@@ -106,11 +124,11 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  # video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  # tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  # eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
   num_environments: 32
   num_updates: -1
   total_num_steps: 1e8
@@ -142,8 +160,9 @@ habitat_baselines:
       agent_0:
         hierarchical_policy:
           high_level_policy:
+            add_arm_rest: False
             policy_input_keys:
-              - "head_depth"
+              - "articulated_agent_arm_depth"
               - "is_holding"
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"

@@ -114,9 +114,9 @@ habitat:
         # The distance threshold of treating collision
         collision_threshold: 0.02
         # The navmesh offset for the action control
-        navmesh_offset: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
         # The navmesh offset for the agent placement
-        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.25, 0.0], [-0.25, 0.0]]
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
         enable_lateral_move: False
         turn_thresh: 0.1
         dist_thresh: 0.5
