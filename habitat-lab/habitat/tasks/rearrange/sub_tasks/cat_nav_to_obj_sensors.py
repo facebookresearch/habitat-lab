@@ -47,7 +47,12 @@ class OvmmNavGoalSegmentationSensor(Sensor):
             .resolution
         )
         self._num_channels = 2 if self._is_nav_to_obj else 1
-        self._resolution = sim.agents[0]._sensors[self.panoptic_uuid].specification().resolution
+        self._resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
         super().__init__(config=config)
 
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:

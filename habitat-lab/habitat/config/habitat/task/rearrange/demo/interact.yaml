@@ -12,4 +12,4 @@ constraint_violation_ends_episode: False
 actions:
   arm_action:
     grip_controller: "MagicGraspAction"
-    delta_pos_limit: 0.025
+    max_delta_pos: 0.025

@@ -6,15 +6,14 @@
 
 from typing import Optional, Union
 
-import cv2
 import magnum as mn
 import numpy as np
 from gym import spaces
 
-from habitat.robots.spot_robot import SpotRobot
-from habitat.robots.stretch_robot import StretchRobot
 import habitat_sim
 from habitat.core.registry import registry
+from habitat.robots.spot_robot import SpotRobot
+from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.rearrange.actions.robot_action import RobotAction
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -42,6 +41,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
         self._sim: RearrangeSim = sim
         self._grasp_thresh_dist = config.grasp_thresh_dist
         self._grasp_threshold = config.grasp_threshold
+
     @property
     def action_space(self):
         return spaces.Box(shape=(1,), high=1.0, low=-1.0)
@@ -88,15 +88,25 @@ class MagicGraspAction(GripSimulatorTaskAction):
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
+        if self.cur_grasp_mgr.snap_idx != -1:
+            rom = self._sim.get_rigid_object_manager()
+            ro = rom.get_object_by_id(self.cur_grasp_mgr.snap_idx)
+            ro.motion_type = habitat_sim.physics.MotionType.DYNAMIC
+            ro.collidable = True
         self.cur_grasp_mgr.desnap()
 
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-        # TODO: This may not be ideal for training gaze, instead try to initialize the corresponding gaussian distribution
-        if grip_action >= self._grasp_threshold and not self.cur_grasp_mgr.is_grasped:
+        if (
+            grip_action >= self._grasp_threshold
+            and not self.cur_grasp_mgr.is_grasped
+        ):
             self._grasp()
-        elif grip_action < self._grasp_threshold and self.cur_grasp_mgr.is_grasped:
+        elif (
+            grip_action < self._grasp_threshold
+            and self.cur_grasp_mgr.is_grasped
+        ):
             self._ungrasp()
 
 
@@ -359,7 +369,13 @@ class GazeGraspAction(MagicGraspAction):
     def step(self, grip_action, should_step=True, *args, **kwargs):
         if grip_action is None:
             return
-        if grip_action >= self._grasp_threshold and not self.cur_grasp_mgr.is_grasped:
+        if (
+            grip_action >= self._grasp_threshold
+            and not self.cur_grasp_mgr.is_grasped
+        ):
             self._grasp()
-        elif grip_action < self._grasp_threshold and self.cur_grasp_mgr.is_grasped:
+        elif (
+            grip_action < self._grasp_threshold
+            and self.cur_grasp_mgr.is_grasped
+        ):
             self._ungrasp()

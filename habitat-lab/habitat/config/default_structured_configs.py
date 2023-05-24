@@ -119,7 +119,12 @@ class ArmActionConfig(ActionConfig):
     arm_joint_dimensionality: int = 7
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
-    delta_pos_limit: float = 0.0125
+    max_delta_pos: float = (
+        0.0125  # The maximum an arm joint can move in a single step
+    )
+    min_delta_pos: float = (
+        0.0  # The minimum an arm joint needs to move in a single step
+    )
     ee_ctrl_lim: float = 0.015
     should_clip: bool = False
     render_ee_target: bool = False
@@ -151,6 +156,9 @@ class BaseVelocityActionConfig(ActionConfig):
     discrete_movement: bool = (
         False  # whether to move/rotate only in discrete steps
     )
+    constraint_base_in_manip_mode: bool = (
+        False  # whether to constraint base motion in manip mode
+    )
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -159,18 +167,9 @@ class RearrangeStopActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ExtendArmActionConfig(ActionConfig):
-    type: str = "ExtendArmAction"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class ResetJointsActionConfig(ActionConfig):
-    type: str = "ResetJointsAction"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class FaceArmActionConfig(ActionConfig):
-    type: str = "FaceArmAction"
+class ManipulationModeActionConfig(ActionConfig):
+    type: str = "ManipulationModeAction"
+    threshold: float = 0.8
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -601,6 +600,9 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     grasp_reward: float = 0.0
     # General Rearrange Reward config
     constraint_violate_pen: float = 10.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
@@ -641,6 +643,9 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     angle_dist_reward: float = 1.0
     dist_reward: float = 1.0
     constraint_violate_pen: float = 1.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
@@ -657,6 +662,9 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     type: str = "OvmmNavToObjReward"
 
 
@@ -755,6 +763,9 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     single_rearrange_reward: float = 1.0
     dist_reward: float = 1.0
     constraint_violate_pen: float = 10.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
@@ -766,6 +777,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     dist_reward: float = 2.0
     pick_reward: float = 2.0
     constraint_violate_pen: float = 1.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     drop_pen: float = 0.5
     wrong_pick_pen: float = 0.5
     force_pen: float = 0.0001
@@ -808,26 +822,57 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     use_ee_dist: bool = False
     wrong_drop_should_end: bool = True
     constraint_violate_pen: float = 0.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0001
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
-    place_anywhere: bool = False
     sparse_reward: bool = False
     drop_pen_type: str = "constant"
+    ee_resting_success_threshold: float = 0.15
+    stability_reward: float = 0.0
+
 
 @attr.s(auto_attribs=True, slots=True)
 class PlacementStabilityMeasurementConfig(MeasurementConfig):
     type: str = "PlacementStability"
     stability_steps: float = 50
-    place_anywhere: bool = False
+
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
-    place_anywhere: bool = False
     check_stability: bool = False
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmObjectToPlaceGoalDistance"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmEEToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmEEToPlaceGoalDistance"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlaceRewardMeasurementConfig(PlaceRewardMeasurementConfig):
+    type: str = "OvmmPlaceReward"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlacementStabilityMeasurementConfig(
+    PlacementStabilityMeasurementConfig
+):
+    type: str = "OvmmPlacementStability"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlaceSuccessMeasurementConfig(PlaceSuccessMeasurementConfig):
+    type: str = "OvmmPlaceSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -958,7 +1003,6 @@ class TaskConfig(HabitatBaseConfig):
     filter_nav_to_tasks: List = []
     actions: Dict[str, ActionConfig] = MISSING
     start_in_manip_mode: bool = False
-    camera_tilt: float =  -0.7125
     goal_type: str = "object_on_recep"
     pick_init: bool = False
     place_init: bool = False
@@ -1402,6 +1446,12 @@ cs.store(
     group="habitat/task/actions",
     name="rearrange_stop",
     node=RearrangeStopActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.manipulation_mode",
+    group="habitat/task/actions",
+    name="manipulation_mode",
+    node=ManipulationModeActionConfig,
 )
 cs.store(
     package="habitat.task.actions.answer",
@@ -1893,6 +1943,36 @@ cs.store(
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_object_to_place_goal_distance",
+    group="habitat/task/measurements",
+    name="ovmm_object_to_place_goal_distance",
+    node=OvmmObjectToPlaceGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_ee_to_place_goal_distance",
+    group="habitat/task/measurements",
+    name="ovmm_ee_to_place_goal_distance",
+    node=OvmmEEToPlaceGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_reward",
+    group="habitat/task/measurements",
+    name="ovmm_place_reward",
+    node=OvmmPlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_placement_stability",
+    group="habitat/task/measurements",
+    name="ovmm_placement_stability",
+    node=OvmmPlacementStabilityMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_success",
+    group="habitat/task/measurements",
+    name="ovmm_place_success",
+    node=OvmmPlaceSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",

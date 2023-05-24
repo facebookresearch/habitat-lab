@@ -21,7 +21,6 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
             **kwargs,
         )
 
-
     def _get_targ_pos(self, sim):
         return sim.get_targets()[1]
 
@@ -44,7 +43,8 @@ class RearrangePlaceTaskV1(RearrangePickTaskV1):
         super().reset(episode, fetch_observations=False)
 
         abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
-        self._picked_obj_idx = self.abs_targ_idx
+        self._picked_object_idx = self.abs_targ_idx
+
         sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
 
         self.was_prev_holding = self.targ_idx

@@ -31,7 +31,7 @@ defaults:
   - _self_
 
 type: RearrangePickTask-v0
-base_angle_noise: 0.08727 # 5 degrees
+base_angle_noise: 0.2618 # 15 degrees
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 reward_measure: "pick_reward"
@@ -50,7 +50,8 @@ actions:
     arm_joint_dimensionality: 1
     grasp_thresh_dist: 0.15
     disable_grip: False
-    delta_pos_limit: 0.0125
+    max_delta_pos: 0.1
+    min_delta_pos: 0.02
     ee_ctrl_lim: 0.015
     gaze_distance_range: [0.1, 0.8]
     center_cone_angle_threshold: 90.0
@@ -73,6 +74,7 @@ measurements:
     ee_resting_success_threshold: 100.0
   pick_reward:
     object_goal: True
+    navmesh_violate_pen: 1.0
 lab_sensors:
   joint_sensor:
     dimensionality: 10

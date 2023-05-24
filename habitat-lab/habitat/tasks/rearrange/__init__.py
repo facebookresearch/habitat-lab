@@ -25,6 +25,7 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors
     import habitat.tasks.rearrange.sub_tasks.nav_to_obj_task
+    import habitat.tasks.rearrange.sub_tasks.ovmm_place_sensors
     import habitat.tasks.rearrange.sub_tasks.pick_sensors
     import habitat.tasks.rearrange.sub_tasks.pick_task
     import habitat.tasks.rearrange.sub_tasks.place_sensors
@@ -52,3 +53,5 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("empty")
     if not HabitatSimActions.has_action("rearrange_stop"):
         HabitatSimActions.extend_action_space("rearrange_stop")
+    if not HabitatSimActions.has_action("manipulation_mode"):
+        HabitatSimActions.extend_action_space("manipulation_mode")

@@ -13,12 +13,12 @@ habitat:
     obs_keys:
       - robot_head_depth
       - goal_receptacle
-      - ovmm_nav_goal_segmentation
+      - object_embedding
+      - goal_recep_segmentation
       - joint
       - is_holding
-      - relative_resting_position
   environment:
-    max_episode_steps: 300
+    max_episode_steps: 350
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
@@ -32,6 +32,7 @@ habitat:
     concur_render: True
     auto_sleep: True
     requires_textures: False
+    kinematic_mode: True
     agents:
       main_agent:
         radius: 0.3

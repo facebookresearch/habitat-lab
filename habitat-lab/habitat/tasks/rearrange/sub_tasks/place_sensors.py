@@ -20,68 +20,6 @@ from habitat.tasks.rearrange.utils import rearrange_logger
 
 
 @registry.register_measure
-class ObjAnywhereOnGoal(Measure):
-    cls_uuid: str = "obj_anywhere_on_goal"
-
-    def __init__(self, sim, config, *args, **kwargs):
-        self._config = config
-        self._sim = sim
-        super().__init__(**kwargs)
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return ObjAnywhereOnGoal.cls_uuid
-
-    def reset_metric(self, *args, episode, task, observations, **kwargs):
-        self.update_metric(
-            *args,
-            episode=episode,
-            task=task,
-            observations=observations,
-            **kwargs
-        )
-
-    def update_metric(self, *args, episode, task, observations, **kwargs):
-        self._sim.perform_discrete_collision_detection()
-        cps = self._sim.get_physics_contact_points()
-        MAX_FLOOR_HEIGHT = 0.05
-        self._metric = False
-        # Use the picked object if it exists, otherwise use the target object from geogoal episodes
-        picked_idx = task._picked_object_idx if task._picked_object_idx is not None else task.abs_targ_idx
-        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
-        for cp in cps:
-            if cp.object_id_a == abs_obj_id or cp.object_id_b == abs_obj_id:
-                if cp.contact_distance < -0.01:
-                    self._metric = False
-                else:
-                    other_obj_id = cp.object_id_a + cp.object_id_b - abs_obj_id
-                    # Get the contact point on the other object
-                    contact_point = (
-                        cp.position_on_a_in_ws
-                        if other_obj_id == cp.object_id_a
-                        else cp.position_on_b_in_ws
-                    )
-                    # Check if the other object has an id that is acceptable
-                    self._metric = (
-                        other_obj_id in self._sim.valid_goal_rec_obj_ids
-                        and contact_point[1] >= MAX_FLOOR_HEIGHT # ensure that the object is not on the floor
-                    )
-                    # Additional check for receptacles that are not on a separate object
-                    if self._metric and other_obj_id == -1:
-
-                        for n, r in self._sim.receptacles.items():
-                            if r.check_if_point_on_surface(
-                                self._sim, contact_point
-                            ):
-                                self._metric = (
-                                    n in self._sim.valid_goal_rec_names
-                                )
-                                break
-                    if self._metric:
-                        return
-
-
-@registry.register_measure
 class PlaceReward(RearrangeReward):
     cls_uuid: str = "place_reward"
 
@@ -97,14 +35,29 @@ class PlaceReward(RearrangeReward):
         self._use_diff = config.use_diff
         self._dist_reward = config.dist_reward
         self._sparse_reward = config.sparse_reward
-        self._place_anywhere = config.place_anywhere
-        self._drop_pen_type = getattr(config, 'drop_pen_type', 'constant')
+        self._drop_pen_type = getattr(config, "drop_pen_type", "constant")
+        self._stability_reward = config.stability_reward
         self._curr_step = 0
+        self._ee_resting_success_threshold = (
+            config.ee_resting_success_threshold
+        )
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return PlaceReward.cls_uuid
+
+    @property
+    def _ee_to_goal_dist_cls_uuid(self):
+        return EndEffectorToGoalDistance.cls_uuid
+
+    @property
+    def _obj_to_goal_dist_cls_uuid(self):
+        return ObjectToGoalDistance.cls_uuid
+
+    @property
+    def _obj_on_goal_cls_uuid(self):
+        return ObjAtGoal.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
@@ -113,28 +66,15 @@ class PlaceReward(RearrangeReward):
                 EndEffectorToRestDistance.cls_uuid,
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
+                self._obj_on_goal_cls_uuid,
             ],
         )
         if not self._sparse_reward:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
-                    ObjectToGoalDistance.cls_uuid,
-                    EndEffectorToGoalDistance.cls_uuid,
-                ],
-            )
-        if self._place_anywhere:
-            task.measurements.check_measure_dependencies(
-                self.uuid,
-                [
-                    ObjAnywhereOnGoal.cls_uuid,
-                ],
-            )
-        else:
-            task.measurements.check_measure_dependencies(
-                self.uuid,
-                [
-                    ObjAtGoal.cls_uuid,
+                    self._ee_to_goal_dist_cls_uuid,
+                    self._obj_to_goal_dist_cls_uuid,
                 ],
             )
 
@@ -163,35 +103,36 @@ class PlaceReward(RearrangeReward):
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()
 
-        if self._place_anywhere:
-            obj_at_goal = task.measurements.measures[
-                ObjAnywhereOnGoal.cls_uuid
-            ].get_metric()
-        else:
-            obj_at_goal = task.measurements.measures[
-                ObjAtGoal.cls_uuid
-            ].get_metric()[str(task.abs_targ_idx)]
+        picked_idx = task._picked_object_idx
+        obj_at_goal = task.measurements.measures[
+            self._obj_on_goal_cls_uuid
+        ].get_metric()[str(picked_idx)]
 
         snapped_id = self._sim.grasp_mgr.snap_idx
         cur_picked = snapped_id is not None
         if (not obj_at_goal) or cur_picked:
+            # First stage reward, if holding object or object is not at goal,
+            # agent gets rewarded if distance to goal is greater than min_dist_to_goal
             if self._sparse_reward:
-                dist_to_goal = 0.0
+                dist_to_goal = 0.0  # still use dense reward for returning to resting position
             elif self._use_ee_dist:
                 ee_to_goal_dist = task.measurements.measures[
-                    EndEffectorToGoalDistance.cls_uuid
+                    self._ee_to_goal_dist_cls_uuid
                 ].get_metric()
-                dist_to_goal = ee_to_goal_dist[str(task.abs_targ_idx)]
+                dist_to_goal = ee_to_goal_dist[str(picked_idx)]
             else:
                 obj_to_goal_dist = task.measurements.measures[
-                    ObjectToGoalDistance.cls_uuid
+                    self._obj_to_goal_dist_cls_uuid
                 ].get_metric()
-                dist_to_goal = obj_to_goal_dist[str(task.abs_targ_idx)]
+                dist_to_goal = obj_to_goal_dist[str(picked_idx)]
             min_dist = self._min_dist_to_goal
         else:
+            # Second stage reward, if object is at goal and the agent has released the object
+            # agent is rewarded for returning to resting position
             dist_to_goal = ee_to_rest_distance
-            min_dist = 0.0
+            min_dist = self._ee_resting_success_threshold
 
+        # Penalize and end the episode if object is dropped but not on goal, if object is on goal reward the agent
         if (not self._prev_dropped) and (not cur_picked):
             self._prev_dropped = True
             if obj_at_goal:
@@ -202,9 +143,9 @@ class PlaceReward(RearrangeReward):
             else:
                 # Dropped at wrong location
                 drop_pen = self._drop_pen
-                if self._drop_pen_type == 'penalize_remaining_dist':
+                if self._drop_pen_type == "penalize_remaining_dist":
                     drop_pen *= dist_to_goal
-                elif self._drop_pen_type == 'penalize_remaining_time':
+                elif self._drop_pen_type == "penalize_remaining_time":
                     drop_pen *= (300 - self._curr_step) / 300
                 reward -= drop_pen
                 if self._wrong_drop_should_end:
@@ -215,6 +156,12 @@ class PlaceReward(RearrangeReward):
                     self._metric = reward
                     return
 
+        # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
+        elif self._prev_dropped and (not cur_picked) and obj_at_goal:
+            reward += self._stability_reward
+
+
+        # Reward the agent based on distance to goal/resting position
         if dist_to_goal >= min_dist:
             if self._use_diff:
                 if self._prev_dist < 0:
@@ -229,8 +176,9 @@ class PlaceReward(RearrangeReward):
                 reward -= self._dist_reward * dist_to_goal
         self._prev_dist = dist_to_goal
         self._curr_step += 1
-        
+
         self._metric = reward
+
 
 @registry.register_measure
 class PlacementStability(Measure):
@@ -239,7 +187,6 @@ class PlacementStability(Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._config = config
         self._stability_steps = config.stability_steps
-        self._place_anywhere = self._config.place_anywhere
         self._sim = sim
         self._curr_stability_steps = 0
         super().__init__(**kwargs)
@@ -248,22 +195,18 @@ class PlacementStability(Measure):
     def _get_uuid(*args, **kwargs):
         return PlacementStability.cls_uuid
 
+    @property
+    def _obj_on_goal_cls_uuid(self):
+        return ObjAtGoal.cls_uuid
+
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._curr_stability_steps = 0
-        if self._place_anywhere:
-            task.measurements.check_measure_dependencies(
-                self.uuid,
-                [
-                    ObjAnywhereOnGoal.cls_uuid,
-                ],
-            )
-        else:
-            task.measurements.check_measure_dependencies(
-                self.uuid,
-                [
-                    ObjAtGoal.cls_uuid,
-                ],
-            )
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                self._obj_on_goal_cls_uuid,
+            ],
+        )
         self.update_metric(
             *args,
             episode=episode,
@@ -273,19 +216,16 @@ class PlacementStability(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        if self._place_anywhere:
-            is_obj_at_goal = task.measurements.measures[
-                ObjAnywhereOnGoal.cls_uuid
-            ].get_metric()
-        else:
-            is_obj_at_goal = task.measurements.measures[
-                ObjAtGoal.cls_uuid
-            ].get_metric()[str(task.abs_targ_idx)]
+        picked_idx = task._picked_object_idx
+        is_obj_at_goal = task.measurements.measures[
+            self._obj_on_goal_cls_uuid
+        ].get_metric()[str(picked_idx)]
+
         is_holding = self._sim.grasp_mgr.is_grasped
         if is_obj_at_goal and not is_holding:
-            self._curr_stability_steps += 1 # increment
+            self._curr_stability_steps += 1  # increment
         else:
-            self._curr_stability_steps = 0 # reset
+            self._curr_stability_steps = 0  # reset
         # if the object remained stable for the required number of steps, then the placement is stable
         self._metric = self._curr_stability_steps >= self._stability_steps
 
@@ -299,7 +239,6 @@ class PlaceSuccess(Measure):
         self._ee_resting_success_threshold = (
             self._config.ee_resting_success_threshold
         )
-        self._place_anywhere = self._config.place_anywhere
         self._check_stability = self._config.check_stability
         self._sim = sim
         super().__init__(**kwargs)
@@ -308,32 +247,28 @@ class PlaceSuccess(Measure):
     def _get_uuid(*args, **kwargs):
         return PlaceSuccess.cls_uuid
 
+    @property
+    def _obj_on_goal_cls_uuid(self):
+        return ObjAtGoal.cls_uuid
+
+    @property
+    def _placement_stability_cls_uuid(self):
+        return PlacementStability.cls_uuid
+
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
             self.uuid,
             [
                 EndEffectorToRestDistance.cls_uuid,
+                self._obj_on_goal_cls_uuid,
             ],
         )
-        if self._place_anywhere:
-            task.measurements.check_measure_dependencies(
-                self.uuid,
-                [
-                    ObjAnywhereOnGoal.cls_uuid,
-                ],
-            )
-        else:
-            task.measurements.check_measure_dependencies(
-                self.uuid,
-                [
-                    ObjAtGoal.cls_uuid,
-                ],
-            )
+
         if self._check_stability:
             task.measurements.check_measure_dependencies(
                 self.uuid,
                 [
-                    PlacementStability.cls_uuid,
+                    self._placement_stability_cls_uuid,
                 ],
             )
         self.update_metric(
@@ -345,19 +280,15 @@ class PlaceSuccess(Measure):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        if self._place_anywhere:
-            is_obj_at_goal = task.measurements.measures[
-                ObjAnywhereOnGoal.cls_uuid
-            ].get_metric()
-        else:
-            is_obj_at_goal = task.measurements.measures[
-                ObjAtGoal.cls_uuid
-            ].get_metric()[str(task.abs_targ_idx)]
+        picked_idx = task._picked_object_idx
+        is_obj_at_goal = task.measurements.measures[
+            self._obj_on_goal_cls_uuid
+        ].get_metric()[str(picked_idx)]
         is_holding = self._sim.grasp_mgr.is_grasped
         is_stable = True
         if self._check_stability:
             is_stable = task.measurements.measures[
-                PlacementStability.cls_uuid
+                self._placement_stability_cls_uuid
             ].get_metric()
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
