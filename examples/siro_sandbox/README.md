@@ -8,11 +8,11 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 ## Known Issues
 * The skinned humanoid doesn't render correctly; see workaround below.
 * When using Floorplanner scenes (see below), the app has very bad runtime perf on older Macbooks (2021 is fine; 2019 is bad).
-* Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode).
 
-## Running HITL eval with a user-controlled humanoid and policy-driven Spot
+## Running HITL eval
+Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation), including grabbing latest habitat-sim `main`.
 
-* Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation), including grabbing latest habitat-sim `main`.
+### GUI-controlled humanoid and PDDL planner + oracle skills policy-controlled Spot
 <!-- * To use Fetch, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
@@ -24,7 +24,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival \
 --sample-random-baseline-base-vel
 ``` -->
-* To use Spot, run:
+* To launch GUI-controlled humanoid and planner-controlled Spot, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -36,7 +36,7 @@ python examples/siro_sandbox/sandbox_app.py \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1
 ```
-* Solo user-controlled humanoid mode, with sliding enabled:
+* To launch [solo GUI-controlled humanoid](#solo-humanoid-mode), with sliding enabled, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -48,6 +48,46 @@ python examples/siro_sandbox/sandbox_app.py \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
 habitat.simulator.habitat_sim_v0.allow_sliding=True
+```
+
+### GUI-controlled humanoid and learned-policy-controlled Spot
+
+* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, run:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--never-end \
+--gui-controlled-agent-index 1 \
+--cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=False
+```
+
+* To launch random-policy-controlled humanoid and Spot in [free camera mode](#gui-controlled-agents-and-free-camera-mode), run:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--never-end \
+--cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=False
+```
+
+To use **trained**-policy-controlled agent(s) instead of random-policy-controlled:
+1. Download the pre-trained [checkpoint](https://drive.google.com/file/d/1swH5ZUgxe3xQn_k0s5OD7Ow6-mwCN_ic/view?usp=share_link) (150 updates).
+2.  Run two above commands with the following `--cfg-opts`:
+```
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=True \
+habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 ```
 
 
