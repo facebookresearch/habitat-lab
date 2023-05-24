@@ -1270,6 +1270,7 @@ class FollowingDistance(UsesArticulatedAgentInterface, Measure):
             # TODO Why is len(robot_poses) != len(human_poses)?
             if len(human_poses) != len(robot_poses):
                 print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
+                print(human_poses)
 
             robot_poses = robot_poses[:len(human_poses)]
             human_poses = human_poses[:len(robot_poses)]
