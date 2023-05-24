@@ -35,17 +35,9 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - at(any_targets|1,TARGET_any_targets|1)
-  stage_2:
+  stage_3:
     expr_type: AND
     sub_exprs:
       - at(any_targets|2,TARGET_any_targets|2)
 
-solution:
-  - nav_to_goal(any_targets|0, robot_0)
-  - pick(any_targets|0, robot_0)
-  - nav_to_obj(TARGET_any_targets|0, robot_0)
-  - place(any_targets|0,TARGET_any_targets|0, robot_0)
-  - nav_to_goal(any_targets|1, robot_1)
-  - pick(any_targets|1, robot_1)
-  - nav_to_obj(TARGET_any_targets|1, robot_1)
-  - place(any_targets|1,TARGET_any_targets|1, robot_1)
+solution: []
