@@ -45,7 +45,7 @@ DEFAULT_POSE_PATH = (
     "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
 )
 
-DEFAULT_CFG = "benchmark/rearrange/rearrange_easy_human_and_fetch.yaml"
+DEFAULT_CFG = "experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml"
 
 
 def requires_habitat_sim_with_bullet(callable_):
@@ -1046,6 +1046,7 @@ if __name__ == "__main__":
             task_config.actions.arm_action.arm_controller = "ArmEEAction"
 
         if args.gui_controlled_agent_index is not None:
+            # make sure gui_controlled_agent_index is valid
             if not (
                 args.gui_controlled_agent_index >= 0
                 and args.gui_controlled_agent_index < len(sim_config.agents)
@@ -1056,6 +1057,13 @@ if __name__ == "__main__":
                 )
                 exit()
 
+            # avoid camera sensors for GUI-controlled agents
+            gui_controlled_agent_config = get_agent_config(
+                sim_config, agent_id=args.gui_controlled_agent_index
+            )
+            gui_controlled_agent_config.sim_sensors.clear()
+
+            # make sure chosen articulated_agent_type is supported
             gui_agent_key = sim_config.agents_order[
                 args.gui_controlled_agent_index
             ]
@@ -1069,6 +1077,9 @@ if __name__ == "__main__":
                 )
                 exit()
 
+            # use humanoidjoint_action for GUI-controlled KinematicHumanoid
+            # for example, humanoid oracle-planner-based policy uses following actions:
+            # base_velocity, rearrange_stop, pddl_apply_action, oracle_nav_action
             task_actions = task_config.actions
             gui_agent_actions = [
                 action_key
@@ -1088,6 +1099,14 @@ if __name__ == "__main__":
             )
 
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
+
+    # sanity check if there are no agents with camera sensors
+    # if (
+    #     len(config.habitat.simulator.agents) == 1
+    #     and args.gui_controlled_agent_index is not None
+    # ):
+    #     assert driver.get_sim().createRenderer == False
+    #     pass
 
     viewport_rect = None
     if show_debug_third_person:
