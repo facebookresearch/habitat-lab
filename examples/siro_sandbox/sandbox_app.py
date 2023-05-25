@@ -635,48 +635,41 @@ class SandboxDriver(GuiAppDriver):
         if do_update_cursor:
             post_sim_update_dict["application_cursor"] = self._cursor_style
 
-    def _update_help_text(self):
-        controls_str: str = ""
-
+    def _get_controls_text(self):
         def get_grasp_release_controls_text():
             if self._held_target_obj_idx is not None:
                 return "Spacebar: put down\n"
             else:
                 return "Spacebar: pick up\n"
 
-        if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
-            controls_str += "ESC: exit\n"
-            controls_str += "M: next episode\n"
+        controls_str: str = ""
+        controls_str += "ESC: exit\n"
+        controls_str += "M: next episode\n"
 
-            if self._first_person_mode:
-                # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
-                controls_str += "I, K: look up, down\n"
-                controls_str += "A, D: turn\n"
-                controls_str += "W, S: walk\n"
-                controls_str += get_grasp_release_controls_text()
-            # third-person mode
-            elif not self.is_free_camera_mode():
-                controls_str += "R + drag: rotate camera\n"
-                controls_str += "Right-click: walk\n"
-                controls_str += "A, D: turn\n"
-                controls_str += "W, S: walk\n"
-                controls_str += "Scroll: zoom\n"
-                controls_str += get_grasp_release_controls_text()
-            else:
-                controls_str += "Left-click + drag: rotate camera\n"
-                controls_str += "A, D: turn camera\n"
-                controls_str += "W, S: pan camera\n"
-                controls_str += "O, P: raise or lower camera\n"
-                controls_str += "Scroll: zoom\n"
+        if self._first_person_mode:
+            # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
+            controls_str += "I, K: look up, down\n"
+            controls_str += "A, D: turn\n"
+            controls_str += "W, S: walk\n"
+            controls_str += get_grasp_release_controls_text()
+        # third-person mode
+        elif not self.is_free_camera_mode():
+            controls_str += "R + drag: rotate camera\n"
+            controls_str += "Right-click: walk\n"
+            controls_str += "A, D: turn\n"
+            controls_str += "W, S: walk\n"
+            controls_str += "Scroll: zoom\n"
+            controls_str += get_grasp_release_controls_text()
+        else:
+            controls_str += "Left-click + drag: rotate camera\n"
+            controls_str += "A, D: turn camera\n"
+            controls_str += "W, S: pan camera\n"
+            controls_str += "O, P: raise or lower camera\n"
+            controls_str += "Scroll: zoom\n"
 
-            self._text_drawer.add_text(
-                controls_str, TextOnScreenAlignment.TOP_LEFT
-            )
-        elif self._sandbox_state == SandboxState.TUTORIAL:
-            controls_str = self._tutorial_stages[
-                self._tutorial_stage_index
-            ].get_display_text()
+        return controls_str
 
+    def _get_status_text(self):
         status_str = ""
         assert self._num_remaining_objects is not None
         assert self._num_busy_objects is not None
@@ -703,12 +696,32 @@ class SandboxDriver(GuiAppDriver):
         else:
             status_str += "Task complete!"
 
-        self._text_drawer.add_text(
-            status_str,
-            TextOnScreenAlignment.TOP_CENTER,
-            text_delta_x=-150,
-            text_delta_y=-50,
-        )
+        return status_str
+
+    def _update_help_text(self):
+        if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
+            controls_str = self._get_controls_text()
+            if len(controls_str) > 0:
+                self._text_drawer.add_text(
+                    controls_str, TextOnScreenAlignment.TOP_LEFT
+                )
+
+            status_str = self._get_controls_text()
+            if len(status_str) > 0:
+                self._text_drawer.add_text(
+                    status_str,
+                    TextOnScreenAlignment.TOP_CENTER,
+                    text_delta_x=-150,
+                    text_delta_y=-50,
+                )
+        elif self._sandbox_state == SandboxState.TUTORIAL:
+            tutorial_str = self._tutorial_stages[
+                self._tutorial_stage_index
+            ].get_display_text()
+            if len(tutorial_str) > 0:
+                self._text_drawer.add_text(
+                    tutorial_str, TextOnScreenAlignment.BOTTOM_CENTER
+                )
 
     def _create_camera_lookat(self) -> Tuple[mn.Vector3, mn.Vector3]:
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
