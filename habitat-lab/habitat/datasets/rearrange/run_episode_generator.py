@@ -391,7 +391,7 @@ if __name__ == "__main__":
                 not osp.exists(osp.dirname(output_path))
                 and len(osp.dirname(output_path)) > 0
             ):
-                os.makedirs(osp.dirname(output_path))
+                os.makedirs(osp.dirname(output_path), exist_ok=True)
             # serialize the dataset
             import gzip
 
