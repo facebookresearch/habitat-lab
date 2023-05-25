@@ -39,6 +39,7 @@ class ObjectSampler:
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
+        translation_up_offset=0.08,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -48,10 +49,12 @@ class ObjectSampler:
         :param sample_region_ratio: Defines a XZ scaling of the sample region around its center. Default no scaling. Enables shrinking aabb receptacles away from edges.
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
+        :param translation_up_offset: Optionally offset sample points to improve likelyhood of successful placement on inflated collision shapes.
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
         self._recep_set_sample_probs = recep_set_sample_probs
+        self._translation_up_offset = translation_up_offset
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -246,8 +249,11 @@ class ObjectSampler:
             num_placement_tries += 1
 
             # sample the object location
-            target_object_position = receptacle.sample_uniform_global(
-                sim, self.sample_region_ratio[receptacle.name]
+            target_object_position = (
+                receptacle.sample_uniform_global(
+                    sim, self.sample_region_ratio[receptacle.name]
+                )
+                + self._translation_up_offset * receptacle.up
             )
 
             # instance the new potential object from the handle
