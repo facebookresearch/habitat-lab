@@ -38,6 +38,10 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 object_in_hand_sample_prob: 0.0
+actions:
+  base_velocity:
+    type: "BaseWaypointTeleportAction"
+    navmesh_offset: [[0.0, 0.0]]
 camera_tilt: -0.5236
 receptacle_categories_file: data/objects/fpmodels-categories.csv
 measurements:

@@ -76,7 +76,7 @@ class CatDynNavRLEnv(DynNavRLEnv):
                 category_id = self._recep_category_to_recep_category_id[
                     category
                 ]
-                self._receptacle_semantic_ids[obj.object_id] = category_id
+                self._receptacle_semantic_ids[obj.object_id] = category_id + 1
 
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None
