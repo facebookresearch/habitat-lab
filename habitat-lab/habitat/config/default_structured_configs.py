@@ -629,7 +629,7 @@ class BadCalledTerminateMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
     type: str = "NavToPosSucc"
-    success_distance: float = 1.5
+    success_distance: float = 0.5
 
 
 @attr.s(auto_attribs=True, slots=True)
