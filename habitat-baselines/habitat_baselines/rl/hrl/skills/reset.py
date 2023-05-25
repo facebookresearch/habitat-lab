@@ -96,3 +96,7 @@ class ResetArmSkill(SkillPolicy):
         return PolicyActionData(
             actions=action, rnn_hidden_states=rnn_hidden_states
         )
+
+    @property
+    def required_obs_keys(self) -> List[str]:
+        return ["joint", "is_holding"]
