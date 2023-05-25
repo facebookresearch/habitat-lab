@@ -7,9 +7,9 @@
         name: "any"
         included_substrings:
           - "104862660_172226844" # small
-          #- "102817200" # medium
-          #- "108736824_177263559" # large
-          # - "102816216" # new scene
+          - "102817200" # medium
+          - "108736824_177263559" # large
+          - "102816216" # new scene
           # - "108736872_177263607" # new scene
           # 40 scene for mini train
           # - "107734176_176000019"
@@ -135,8 +135,8 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 3
-        - 3
+        - 2
+        - 2
         orientation_sampling: up
         nav_to_min_distance: 1.5
 
@@ -164,4 +164,4 @@
     # This the parameter used to determine the placement of the robot
     distance_threshold: 0.9
     # This parameter is to check if the object placement is stable or not
-    enable_check_obj_stability: False
+    enable_check_obj_stability: True
