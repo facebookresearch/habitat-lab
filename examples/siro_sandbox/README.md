@@ -96,6 +96,9 @@ habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
+## Saving episode data
+Use `--save-filepath-base my_session`. When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
+
 ## Workaround to avoid broken skinned humanoid
 
 Following the instructions above, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.

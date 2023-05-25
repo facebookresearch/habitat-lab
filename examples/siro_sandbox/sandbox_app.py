@@ -93,6 +93,7 @@ class SandboxDriver(GuiAppDriver):
             self._episode_recorder_dict = {}
         else:
             self._step_recorder = NullRecorder()
+            self._save_filepath_base = None
 
         with habitat.config.read_write(config):
             # needed so we can provide keyframes to GuiApplication
