@@ -551,5 +551,5 @@
     max_collision_rate_for_navigable: 0.5
     angle_threshold: 0.26
     angular_velocity: 1.0
-    distance_threshold: 0.9 #0.5
+    distance_threshold: 0.9
     linear_velocity: 1.0
