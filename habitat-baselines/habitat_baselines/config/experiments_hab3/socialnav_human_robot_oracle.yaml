@@ -81,7 +81,8 @@ habitat:
   simulator:
     agents:
       agent_0:
-        radius: 0.3
+        radius: 0.25
+        height: 1.8
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:
