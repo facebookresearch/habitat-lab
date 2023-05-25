@@ -749,9 +749,6 @@ class SandboxDriver(GuiAppDriver):
         return (lookat + offset.normalized() * self.cam_zoom_dist, lookat)
 
     def _sim_update_controlling_agent(self, dt: float):
-        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self.on_environment_reset()
-
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
         self._viz_anim_fraction = (
@@ -811,11 +808,11 @@ class SandboxDriver(GuiAppDriver):
         if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
             self._save_recorded_keyframes_to_file()
 
-        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
-        viz_anim_speed = 2.0
-        self._viz_anim_fraction = (
-            self._viz_anim_fraction + dt * viz_anim_speed
-        ) % 1.0
+        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
+            self.on_environment_reset()
+
+        self.update_task()
+        self.update_grasping_and_set_act_hints()
 
         # Navmesh visualization only works in the debug third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
@@ -830,9 +827,6 @@ class SandboxDriver(GuiAppDriver):
             self._sim_update_controlling_agent(dt)
         else:
             self._sim_update_tutorial(dt)
-
-        self.update_task()
-        self.update_grasping_and_set_act_hints()
 
         post_sim_update_dict = {"cam_transform": self.cam_transform}
 
