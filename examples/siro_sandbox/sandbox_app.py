@@ -12,17 +12,19 @@ import ctypes
 
 # must call this before importing habitat or magnum! avoids EGL_BAD_ACCESS error on some platforms
 import sys
+from enum import Enum
 
 flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
 from functools import wraps
-from typing import Any, List
+from typing import Any, List, Tuple
 
 import magnum as mn
 import numpy as np
 from controllers import ControllerHelper, GuiHumanoidController
+from hitl_tutorial import TutorialStage, generate_tutorial
 from magnum.platform.glfw import Application
 
 import habitat
@@ -65,6 +67,11 @@ def get_pretty_object_name_from_handle(obj_handle_str):
     handle_lower = obj_handle_str.lower()
     filtered_str = "".join(filter(lambda c: c.isalpha(), handle_lower))
     return filtered_str
+
+
+class SandboxState(Enum):
+    CONTROLLING_AGENT = 1
+    TUTORIAL = 2
 
 
 @requires_habitat_sim_with_bullet
@@ -162,6 +169,22 @@ class SandboxDriver(GuiAppDriver):
             sim._scene_obj_ids[temp_id] for temp_id in temp_ids
         ]
         self._goal_positions = [mn.Vector3(pos) for pos in goal_positions_np]
+
+        self._sandbox_state = (
+            SandboxState.TUTORIAL
+            if args.show_tutorial
+            else SandboxState.CONTROLLING_AGENT
+        )
+        self._tutorial_stages: List[TutorialStage] = (
+            generate_tutorial(
+                self.get_sim(),
+                self.ctrl_helper.get_gui_controlled_agent_index(),
+                self._create_camera_lookat(),
+            )
+            if args.show_tutorial
+            else None
+        )
+        self._tutorial_stage_index: int = 0
 
     @property
     def lookat_offset_yaw(self):
@@ -513,7 +536,7 @@ class SandboxDriver(GuiAppDriver):
             t = step_idx / (num_steps - 1) + anim_fraction * (
                 1 / (num_steps - 1)
             )
-            pos = evaluate_cubic_bezier(ctrl_pts, t)
+            pos = _evaluate_cubic_bezier(ctrl_pts, t)
 
             if (pos - end_pos).length() < end_radius:
                 break
@@ -612,14 +635,14 @@ class SandboxDriver(GuiAppDriver):
         if do_update_cursor:
             post_sim_update_dict["application_cursor"] = self._cursor_style
 
-    def _update_help_text(self):
+    def _get_controls_text(self):
         def get_grasp_release_controls_text():
             if self._held_target_obj_idx is not None:
                 return "Spacebar: put down\n"
             else:
                 return "Spacebar: pick up\n"
 
-        controls_str = ""
+        controls_str: str = ""
         controls_str += "ESC: exit\n"
         controls_str += "M: next episode\n"
 
@@ -644,10 +667,9 @@ class SandboxDriver(GuiAppDriver):
             controls_str += "O, P: raise or lower camera\n"
             controls_str += "Scroll: zoom\n"
 
-        self._text_drawer.add_text(
-            controls_str, TextOnScreenAlignment.TOP_LEFT
-        )
+        return controls_str
 
+    def _get_status_text(self):
         status_str = ""
         assert self._num_remaining_objects is not None
         assert self._num_busy_objects is not None
@@ -674,68 +696,34 @@ class SandboxDriver(GuiAppDriver):
         else:
             status_str += "Task complete!"
 
-        self._text_drawer.add_text(
-            status_str,
-            TextOnScreenAlignment.TOP_CENTER,
-            text_delta_x=-150,
-            text_delta_y=-50,
-        )
+        return status_str
 
-    def sim_update(self, dt):
-        # todo: pipe end_play somewhere
-
-        # Capture gfx-replay file
-        if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
-            self._save_recorded_keyframes_to_file()
-
-        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self.on_environment_reset()
-
-        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
-        viz_anim_speed = 2.0
-        self._viz_anim_fraction = (
-            self._viz_anim_fraction + dt * viz_anim_speed
-        ) % 1.0
-
-        self.update_task()
-        self.update_grasping_and_set_act_hints()
-
-        # Navmesh visualization only works in the debub third-person view
-        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
-        # visualization is only implemented for simulator-rendering, not replay-
-        # rendering.
-        if self.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self.env._sim.navmesh_visualization = (  # type: ignore
-                not self.env._sim.navmesh_visualization  # type: ignore
-            )
-
-        action = self.ctrl_helper.update(self.obs)
-
-        self.obs = self.env.step(action)
-
-        post_sim_update_dict = {}
-
-        if self.gui_input.mouse_scroll_offset != 0:
-            zoom_sensitivity = 0.07
-            if self.gui_input.mouse_scroll_offset < 0:
-                self.cam_zoom_dist *= (
-                    1.0
-                    + -self.gui_input.mouse_scroll_offset * zoom_sensitivity
+    def _update_help_text(self):
+        if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
+            controls_str = self._get_controls_text()
+            if len(controls_str) > 0:
+                self._text_drawer.add_text(
+                    controls_str, TextOnScreenAlignment.TOP_LEFT
                 )
-            else:
-                self.cam_zoom_dist /= (
-                    1.0 + self.gui_input.mouse_scroll_offset * zoom_sensitivity
+
+            status_str = self._get_controls_text()
+            if len(status_str) > 0:
+                self._text_drawer.add_text(
+                    status_str,
+                    TextOnScreenAlignment.TOP_CENTER,
+                    text_delta_x=-150,
+                    text_delta_y=-50,
                 )
-            self.cam_zoom_dist = mn.math.clamp(
-                self.cam_zoom_dist, self._min_zoom_dist, self._max_zoom_dist
-            )
+        elif self._sandbox_state == SandboxState.TUTORIAL:
+            tutorial_str = self._tutorial_stages[
+                self._tutorial_stage_index
+            ].get_display_text()
+            if len(tutorial_str) > 0:
+                self._text_drawer.add_text(
+                    tutorial_str, TextOnScreenAlignment.BOTTOM_CENTER
+                )
 
-        # two ways for camera pitch and yaw control for UX comparison:
-        # 1) press/hold ADIK keys
-        self._camera_pitch_and_yaw_wasd_control()
-        # 2) press left mouse button and move mouse
-        self._camera_pitch_and_yaw_mouse_control()
-
+    def _create_camera_lookat(self) -> Tuple[mn.Vector3, mn.Vector3]:
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
         if agent_idx is None:
             self._free_camera_lookat_control()
@@ -758,13 +746,89 @@ class SandboxDriver(GuiAppDriver):
             np.sin(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
         )
 
+        return (lookat + offset.normalized() * self.cam_zoom_dist, lookat)
+
+    def _sim_update_controlling_agent(self, dt: float):
+        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
+        viz_anim_speed = 2.0
+        self._viz_anim_fraction = (
+            self._viz_anim_fraction + dt * viz_anim_speed
+        ) % 1.0
+
+        action = self.ctrl_helper.update(self.obs)
+        self.obs = self.env.step(action)
+
+        if self.gui_input.mouse_scroll_offset != 0:
+            zoom_sensitivity = 0.07
+            if self.gui_input.mouse_scroll_offset < 0:
+                self.cam_zoom_dist *= (
+                    1.0
+                    + -self.gui_input.mouse_scroll_offset * zoom_sensitivity
+                )
+            else:
+                self.cam_zoom_dist /= (
+                    1.0 + self.gui_input.mouse_scroll_offset * zoom_sensitivity
+                )
+            self.cam_zoom_dist = mn.math.clamp(
+                self.cam_zoom_dist,
+                self._min_zoom_dist,
+                self._max_zoom_dist,
+            )
+
+        # two ways for camera pitch and yaw control for UX comparison:
+        # 1) press/hold ADIK keys
+        self._camera_pitch_and_yaw_wasd_control()
+        # 2) press left mouse button and move mouse
+        self._camera_pitch_and_yaw_mouse_control()
+
+        lookat = self._create_camera_lookat()
         self.cam_transform = mn.Matrix4.look_at(
-            lookat + offset.normalized() * self.cam_zoom_dist,
-            lookat,
-            mn.Vector3(0, 1, 0),
+            lookat[0], lookat[1], mn.Vector3(0, 1, 0)
         )
 
-        post_sim_update_dict["cam_transform"] = self.cam_transform
+    def _sim_update_tutorial(self, dt: float):
+        # Keyframes are saved by RearrangeSim when stepping the environment.
+        # Because the environment is not stepped in the tutorial, we need to save keyframes manually for replay rendering to work.
+        self.get_sim().gfx_replay_manager.save_keyframe()
+
+        assert self._tutorial_stage_index < len(self._tutorial_stages)
+        tutorial_stage = self._tutorial_stages[self._tutorial_stage_index]
+        tutorial_stage.update(dt)
+        self.cam_transform = tutorial_stage.get_look_at_matrix()
+
+        if tutorial_stage.is_stage_completed():
+            self._tutorial_stage_index += 1
+            if self._tutorial_stage_index >= len(self._tutorial_stages):
+                self._sandbox_state = SandboxState.CONTROLLING_AGENT
+
+    def sim_update(self, dt):
+        # todo: pipe end_play somewhere
+
+        # Capture gfx-replay file
+        if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
+            self._save_recorded_keyframes_to_file()
+
+        if self.gui_input.get_key_down(GuiInput.KeyNS.M):
+            self.on_environment_reset()
+
+        self.update_task()
+        self.update_grasping_and_set_act_hints()
+
+        # Navmesh visualization only works in the debug third-person view
+        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
+        # visualization is only implemented for simulator-rendering, not replay-
+        # rendering.
+        if self.gui_input.get_key_down(GuiInput.KeyNS.N):
+            self.env._sim.navmesh_visualization = (  # type: ignore
+                not self.env._sim.navmesh_visualization  # type: ignore
+            )
+
+        if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
+            self._sim_update_controlling_agent(dt)
+        else:
+            self._sim_update_tutorial(dt)
+
+        post_sim_update_dict = {"cam_transform": self.cam_transform}
 
         self._update_cursor_style(post_sim_update_dict)
 
@@ -812,7 +876,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
 
-def evaluate_cubic_bezier(ctrl_pts, t):
+def _evaluate_cubic_bezier(ctrl_pts, t):
     assert len(ctrl_pts) == 4
     weights = (
         pow(1 - t, 3),
@@ -972,6 +1036,12 @@ if __name__ == "__main__":
         default="./data/gfx-replay.json",
         type=str,
         help="Path where the captured graphics replay file is saved.",
+    )
+    parser.add_argument(
+        "--show-tutorial",
+        action="store_true",
+        default=False,
+        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
     )
 
     args = parser.parse_args()
