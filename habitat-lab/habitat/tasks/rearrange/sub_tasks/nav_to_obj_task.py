@@ -54,7 +54,6 @@ class DynNavRLEnv(RearrangeTask):
         self.robot_start_rotation = None
 
         self._min_start_distance = self._config.min_start_distance
-        self._goal_type = config.goal_type
         self._pick_init = config.pick_init
         self._place_init = config.place_init
 
@@ -152,8 +151,6 @@ class DynNavRLEnv(RearrangeTask):
         if (
             self.force_obj_to_idx is None
             and random.random() < self._config.object_in_hand_sample_prob
-            and self._goal_type
-            != "ovmm"  # for end-to-end ovmm task, spawn wrt start receptacle [TODO: remove]
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 

@@ -1003,7 +1003,6 @@ class TaskConfig(HabitatBaseConfig):
     filter_nav_to_tasks: List = []
     actions: Dict[str, ActionConfig] = MISSING
     start_in_manip_mode: bool = False
-    goal_type: str = "object_on_recep"
     pick_init: bool = False
     place_init: bool = False
     camera_tilt: float = -0.5236

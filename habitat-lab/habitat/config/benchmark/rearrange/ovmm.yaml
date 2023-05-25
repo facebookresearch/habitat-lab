@@ -70,5 +70,3 @@ habitat:
   dataset:
     split: val
 
-  task:
-    goal_type: 'ovmm'
