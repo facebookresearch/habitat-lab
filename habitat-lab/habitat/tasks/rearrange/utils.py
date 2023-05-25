@@ -458,7 +458,7 @@ def get_robot_spawns(
         ]
         orient_position = orient_positions_filtered[target_index]
         if distance_threshold == 0:
-            start_position = target_position
+            start_position = sim.pathfinder.snap_point(target_position, island_index=sim.navmesh_classification_results["active_island"])
         else:
             start_position = sim.pathfinder.get_random_navigable_point_near(
                 target_position, distance_threshold,
