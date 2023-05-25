@@ -150,7 +150,7 @@ class GuiApplication(InputHandlerApplication):
         if "application_cursor" in post_sim_update_dict:
             self.cursor = post_sim_update_dict["application_cursor"]
 
-        if "application_exit" in post_sim_update_dict:
+        if post_sim_update_dict.get("should_exit", False):
             self.exit(0)
 
     def draw_event(self):

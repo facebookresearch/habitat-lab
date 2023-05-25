@@ -147,10 +147,19 @@ class SandboxDriver(GuiAppDriver):
         # self._target_obj_ids = None
         # self._goal_positions = None
 
+        self.env_reset()
+        self._prev_post_sim_update_dict = {}
+
+    def env_reset(self):
+        self._obs = self.env.reset()
+        self._metrics = self.env.get_metrics()
         self.on_environment_reset()
 
+    def env_step(self, action):
+        self._obs = self.env.step(action)
+        self._metrics = self.env.get_metrics()
+
     def on_environment_reset(self):
-        self.obs = self.env.reset()
         self.ctrl_helper.on_environment_reset()
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
@@ -162,6 +171,13 @@ class SandboxDriver(GuiAppDriver):
             sim._scene_obj_ids[temp_id] for temp_id in temp_ids
         ]
         self._goal_positions = [mn.Vector3(pos) for pos in goal_positions_np]
+
+    @property
+    def task_complete(self):
+        config = self.env._config
+        success_measure_name = config.task.success_measure
+        episode_success = self._metrics[success_measure_name]
+        return config.task.end_on_success and episode_success
 
     @property
     def lookat_offset_yaw(self):
@@ -249,7 +265,7 @@ class SandboxDriver(GuiAppDriver):
             can_place_position[1] = self.get_agent_feet_height()
             self._debug_line_render.draw_circle(
                 can_place_position,
-                1,
+                self._can_grasp_place_threshold,
                 mn.Color3(255 / 255, 255 / 255, 0),
                 24,
             )
@@ -348,7 +364,7 @@ class SandboxDriver(GuiAppDriver):
                     can_grasp_position[1] = self.get_agent_feet_height()
                     self._debug_line_render.draw_circle(
                         can_grasp_position,
-                        1,
+                        self._can_grasp_place_threshold,
                         mn.Color3(255 / 255, 255 / 255, 0),
                         24,
                     )
@@ -623,56 +639,65 @@ class SandboxDriver(GuiAppDriver):
         controls_str += "ESC: exit\n"
         controls_str += "M: next episode\n"
 
-        if self._first_person_mode:
-            # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
-            controls_str += "I, K: look up, down\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += get_grasp_release_controls_text()
-        # third-person mode
-        elif not self.is_free_camera_mode():
-            controls_str += "R + drag: rotate camera\n"
-            controls_str += "Right-click: walk\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += "Scroll: zoom\n"
-            controls_str += get_grasp_release_controls_text()
-        else:
-            controls_str += "Left-click + drag: rotate camera\n"
-            controls_str += "A, D: turn camera\n"
-            controls_str += "W, S: pan camera\n"
-            controls_str += "O, P: raise or lower camera\n"
-            controls_str += "Scroll: zoom\n"
+        if not (self.env.episode_over or self.task_complete):
+            if self._first_person_mode:
+                # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
+                controls_str += "I, K: look up, down\n"
+                controls_str += "A, D: turn\n"
+                controls_str += "W, S: walk\n"
+                controls_str += get_grasp_release_controls_text()
+            # third-person mode
+            elif not self.is_free_camera_mode():
+                controls_str += "R + drag: rotate camera\n"
+                controls_str += "Right-click: walk\n"
+                controls_str += "A, D: turn\n"
+                controls_str += "W, S: walk\n"
+                controls_str += "Scroll: zoom\n"
+                controls_str += get_grasp_release_controls_text()
+            else:
+                controls_str += "Left-click + drag: rotate camera\n"
+                controls_str += "A, D: turn camera\n"
+                controls_str += "W, S: pan camera\n"
+                controls_str += "O, P: raise or lower camera\n"
+                controls_str += "Scroll: zoom\n"
 
         self._text_drawer.add_text(
             controls_str, TextOnScreenAlignment.TOP_LEFT
         )
 
         status_str = ""
-        assert self._num_remaining_objects is not None
-        assert self._num_busy_objects is not None
-        if self._held_target_obj_idx is not None:
-            sim = self.get_sim()
-            grasp_object_id = sim.scene_obj_ids[self._held_target_obj_idx]
-            obj_handle = (
-                sim.get_rigid_object_manager().get_object_handle_by_id(
-                    grasp_object_id
-                )
-            )
-            status_str += (
-                "Place the "
-                + get_pretty_object_name_from_handle(obj_handle)
-                + " at its goal location!\n"
-            )
-        elif self._num_remaining_objects > 0:
-            status_str += "Move the remaining {} object{}!".format(
-                self._num_remaining_objects,
-                "s" if self._num_remaining_objects > 1 else "",
-            )
-        elif self._num_busy_objects > 0:
-            status_str += "Just wait! The robot is moving the last object.\n"
+        if not self.env.episode_over:
+            if not self.task_complete:
+                assert self._num_remaining_objects is not None
+                assert self._num_busy_objects is not None
+                if self._held_target_obj_idx is not None:
+                    sim = self.get_sim()
+                    grasp_object_id = sim.scene_obj_ids[
+                        self._held_target_obj_idx
+                    ]
+                    obj_handle = (
+                        sim.get_rigid_object_manager().get_object_handle_by_id(
+                            grasp_object_id
+                        )
+                    )
+                    status_str += (
+                        "Place the "
+                        + get_pretty_object_name_from_handle(obj_handle)
+                        + " at its goal location!\n"
+                    )
+                elif self._num_remaining_objects > 0:
+                    status_str += "Move the remaining {} object{}!".format(
+                        self._num_remaining_objects,
+                        "s" if self._num_remaining_objects > 1 else "",
+                    )
+                elif self._num_busy_objects > 0:
+                    status_str += (
+                        "Just wait! The robot is moving the last object.\n"
+                    )
+            else:
+                status_str += "Task complete!"
         else:
-            status_str += "Task complete!"
+            status_str += "Episode over!"
 
         self._text_drawer.add_text(
             status_str,
@@ -683,13 +708,27 @@ class SandboxDriver(GuiAppDriver):
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
+        should_exit = self.gui_input.get_key_down(GuiInput.KeyNS.ESC)
 
         # Capture gfx-replay file
         if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
             self._save_recorded_keyframes_to_file()
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self.on_environment_reset()
+            self.env_reset()
+
+        if self.env.episode_over or self.task_complete:
+            if not self._prev_post_sim_update_dict:
+                raise ValueError(
+                    "Episode is invalid: episode over or task complete at the episode reset."
+                )
+
+            post_sim_update_dict = self._prev_post_sim_update_dict
+            post_sim_update_dict["should_exit"] = should_exit
+
+            self._update_help_text()
+
+            return post_sim_update_dict
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -709,11 +748,10 @@ class SandboxDriver(GuiAppDriver):
                 not self.env._sim.navmesh_visualization  # type: ignore
             )
 
-        action = self.ctrl_helper.update(self.obs)
+        action = self.ctrl_helper.update(self._obs)
+        self.env_step(action)
 
-        self.obs = self.env.step(action)
-
-        post_sim_update_dict = {}
+        post_sim_update_dict = {"should_exit": should_exit}
 
         if self.gui_input.mouse_scroll_offset != 0:
             zoom_sensitivity = 0.07
@@ -763,18 +801,15 @@ class SandboxDriver(GuiAppDriver):
             lookat,
             mn.Vector3(0, 1, 0),
         )
-
         post_sim_update_dict["cam_transform"] = self.cam_transform
 
         self._update_cursor_style(post_sim_update_dict)
-
-        if self.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            post_sim_update_dict["application_exit"] = True
 
         keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
         post_sim_update_dict["keyframes"] = keyframes
+
         if self._enable_gfx_replay_save:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
@@ -786,12 +821,12 @@ class SandboxDriver(GuiAppDriver):
             return converted_obs
 
         # reference code for visualizing a camera sensor in the app GUI
-        assert set(self._debug_images).issubset(set(self.obs.keys())), (
-            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
-            f"not in available sensors ids: {list(self.obs.keys())}"
+        assert set(self._debug_images).issubset(set(self._obs.keys())), (
+            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self._obs.keys())))} "
+            f"not in available sensors ids: {list(self._obs.keys())}"
         )
         debug_images = (
-            depth_to_rgb(self.obs[k]) if "depth" in k else self.obs[k]
+            depth_to_rgb(self._obs[k]) if "depth" in k else self._obs[k]
             for k in self._debug_images
         )
         post_sim_update_dict["debug_images"] = [
@@ -799,6 +834,10 @@ class SandboxDriver(GuiAppDriver):
         ]
 
         self._update_help_text()
+
+        # store post_sim_update_dict for frozen sim mode
+        # when episode is over or when task is completed
+        self._prev_post_sim_update_dict = post_sim_update_dict
 
         return post_sim_update_dict
 
