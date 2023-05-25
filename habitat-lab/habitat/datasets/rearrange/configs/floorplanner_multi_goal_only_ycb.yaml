@@ -163,3 +163,5 @@
     angular_velocity: 1.0
     # This the parameter used to determine the placement of the robot
     distance_threshold: 0.9
+    # This parameter is to check if the object placement is stable or not
+    enable_check_obj_stability: False
