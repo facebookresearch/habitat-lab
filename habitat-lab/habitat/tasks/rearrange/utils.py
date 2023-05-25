@@ -432,7 +432,7 @@ def get_robot_spawns(
     
     :return: The robot's start position, rotation, and whether the placement was successful.
     """
-
+    tolerance = 1e-4
     state = sim.capture_state()
     if orient_positions is None:
         orient_positions = target_positions
@@ -498,7 +498,7 @@ def get_robot_spawns(
         rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
         start_rotation = angle_to_object + rotation_noise
 
-        if target_distance > distance_threshold or not is_navigable:
+        if target_distance > max(distance_threshold, tolerance) or not is_navigable:
             continue
 
         sim.robot.base_pos = start_position
