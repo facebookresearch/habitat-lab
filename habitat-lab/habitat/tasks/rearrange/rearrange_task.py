@@ -74,7 +74,7 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_robot = should_place_robot
-        self._picked_object_idx = None
+        self._picked_object_idx = 0             # TODO:
         self._in_manip_mode = False
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]

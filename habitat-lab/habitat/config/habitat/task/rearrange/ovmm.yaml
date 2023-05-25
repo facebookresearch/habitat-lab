@@ -47,8 +47,8 @@ defaults:
   - _self_
 
 type: CatNavToObjTask-v0
-reward_measure: place_success
-success_measure: place_success
+reward_measure: ovmm_place_success
+success_measure: ovmm_place_success
 success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True
