@@ -41,6 +41,9 @@ slack_reward: -0.005
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
 start_in_manip_mode: False
+spawn_reference: view_points
+spawn_reference_sampling: uniform
+spawn_max_dists_to_obj: 0.0
 actions:
   arm_action:
     type: "ArmAction"
@@ -58,6 +61,7 @@ actions:
     center_cone_vector: [0.0, 1.0, 0.0]
     grasp_threshold: 0.8
     gaze_distance_from: agent
+    wrong_grasp_should_end: True
   base_velocity:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
