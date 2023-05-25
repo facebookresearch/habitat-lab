@@ -813,9 +813,11 @@ class SandboxDriver(GuiAppDriver):
             rotation_list = list(rotation_quat.vector) + [rotation_quat.scalar]
             pos = art_obj.transformation.translation
 
-            snap_idx = self.env.task._sim.agents_mgr._all_agent_data[
-                agent_idx
-            ].grasp_mgr.snap_idx
+            snap_idx = (
+                self.get_sim()
+                .agents_mgr._all_agent_data[agent_idx]
+                .grasp_mgr.snap_idx
+            )
 
             agent_states.append(
                 {
