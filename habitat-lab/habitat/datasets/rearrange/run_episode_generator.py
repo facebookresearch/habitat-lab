@@ -240,6 +240,8 @@ class RearrangeEpisodeGeneratorConfig:
     linear_velocity: float = 10.0
     # The collision rate for navigation
     max_collision_rate_for_navigable: float = 0.5
+    # If we want to check the stability of object placement
+    enable_check_obj_stability: bool = True
 
 
 def get_config_defaults() -> "DictConfig":

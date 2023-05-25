@@ -653,7 +653,10 @@ class RearrangeEpisodeGenerator:
                 )
 
         # simulate the world for a few seconds to validate the placements
-        if not self.settle_sim(target_object_names):
+        if (
+            not self.settle_sim(target_object_names)
+            and self.cfg.enable_check_obj_stability
+        ):
             logger.warning(
                 "Aborting episode generation due to unstable state."
             )
