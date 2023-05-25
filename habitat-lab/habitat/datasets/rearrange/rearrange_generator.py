@@ -716,7 +716,7 @@ class RearrangeEpisodeGenerator:
                         self.cfg.distance_threshold,
                         self.cfg.linear_velocity,
                     )
-                    logger.info(f"  collision rate {collision_rate} %")
+                    logger.info(f"  collision rate {collision_rate}")
                     if (
                         collision_rate
                         > self.cfg.max_collision_rate_for_navigable

@@ -376,12 +376,9 @@ class ObjectSampler:
                 np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
             )
 
-        print("dist:", dist, "threshold:", self.nav_to_min_distance)
-        print(
-            "island_radius:",
-            island_radius,
-            "largest_island_size:",
-            self.largest_island_size,
+        logger.info(f"dist '{dist}' threshold '{self.nav_to_min_distance}'")
+        logger.info(
+            f"island_radius '{island_radius}' largest_island_size '{self.largest_island_size}'"
         )
         return (
             dist < self.nav_to_min_distance
