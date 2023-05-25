@@ -78,6 +78,10 @@ class DynNavRLEnv(RearrangeTask):
             or self.actions["rearrange_stop"].does_want_terminate
         )
 
+    @should_end.setter
+    def should_end(self, new_val: bool):
+        self._should_end = new_val
+
     def set_args(self, obj, **kwargs):
         self.force_obj_to_idx = obj
         self.force_kwargs = kwargs
@@ -240,7 +244,6 @@ class DynNavRLEnv(RearrangeTask):
                 start_quat.scalar,
             ]
         )
-
         if self._nav_to_info.start_hold_obj_idx is not None:
             if self._sim.grasp_mgr.is_grasped:
                 raise ValueError(
@@ -254,9 +257,11 @@ class DynNavRLEnv(RearrangeTask):
             )
 
         if self._sim.habitat_config.debug_render:
+            rom = self._sim.get_rigid_object_manager()
             # Visualize the position the agent is navigating to.
             self._sim.viz_ids["nav_targ_pos"] = self._sim.visualize_position(
-                self._nav_to_info.nav_goal_pos,
+                #self._nav_to_info.nav_goal_pos,
+                np.array(rom.get_object_by_id(int(episode.candidate_objects[0].object_id)).translation),
                 self._sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )

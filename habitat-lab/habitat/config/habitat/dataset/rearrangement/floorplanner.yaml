@@ -8,5 +8,5 @@ type: RearrangeDataset-v0
 split: minitrain
 data_path: data/episodes/rearrange/v2/{split}/cat_npz-exp.json.gz
 scenes_dir: "data/fpss/fphab"
-viewpoints_matrix_path: data/episodes/rearrange/v2/minitrain/cat_npz-exp-vps.npy
-transformations_matrix_path: data/episodes/rearrange/v2/minitrain/cat_npz-exp-trans.npy
+viewpoints_matrix_path: data/episodes/rearrange/v2/{split}/cat_npz-exp-vps.npy
+transformations_matrix_path: data/episodes/rearrange/v2/{split}/cat_npz-exp-trans.npy

@@ -39,11 +39,13 @@ habitat_baselines:
     policy:
       name: "PointNavResNetPolicy"
       action_distribution_type: "gaussian"
+      no_downscaling: True
       action_dist:
         use_log_std: True
         clamp_std: True
         std_init: -1.0
         use_std_param: True
+        max_log_std: 2
       obs_transforms:
         resize_shortest_edge:
           type: ResizeShortestEdge
@@ -57,14 +59,14 @@ habitat_baselines:
             - receptacle_segmentation
             - start_receptacle_segmentation
             - goal_receptacle_segmentation
-            - cat_nav_goal_segmentation
+            - ovmm_nav_goal_segmentation
           semantic_keys:
             - robot_head_panoptic
             - object_segmentation
             - receptacle_segmentation
             - start_receptacle_segmentation
             - goal_receptacle_segmentation
-            - cat_nav_goal_segmentation
+            - ovmm_nav_goal_segmentation
         center_cropper:
           type: CenterCropper
           height: 160
@@ -78,7 +80,7 @@ habitat_baselines:
             - receptacle_segmentation
             - start_receptacle_segmentation
             - goal_receptacle_segmentation
-            - cat_nav_goal_segmentation
+            - ovmm_nav_goal_segmentation
     
     ppo:
       # ppo params
