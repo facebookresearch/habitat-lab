@@ -1101,12 +1101,11 @@ if __name__ == "__main__":
     driver = SandboxDriver(args, config, gui_app_wrapper.get_sim_input())
 
     # sanity check if there are no agents with camera sensors
-    # if (
-    #     len(config.habitat.simulator.agents) == 1
-    #     and args.gui_controlled_agent_index is not None
-    # ):
-    #     assert driver.get_sim().createRenderer == False
-    #     pass
+    if (
+        len(config.habitat.simulator.agents) == 1
+        and args.gui_controlled_agent_index is not None
+    ):
+        assert driver.get_sim().renderer is None
 
     viewport_rect = None
     if show_debug_third_person:
