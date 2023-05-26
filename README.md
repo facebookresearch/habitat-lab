@@ -2,7 +2,7 @@
 This is the code for "Adaptive Coordination in Social Embodied Rearrangement".
 
 <p align="center">
-    <img width="85%" src="https://github.com/">
+    <img width="85%" src="https://github.com/facebookresearch/habitat-lab/raw/social-eai/teaser_fig.png">
     <br />
     <a href="">[Paper]</a>
 </p>
