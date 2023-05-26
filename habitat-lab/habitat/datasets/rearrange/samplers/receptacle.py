@@ -863,6 +863,10 @@ class ReceptacleTracker:
             logger.debug(
                 f"Loaded receptacle filter data for scene '{scene_handle}' from configured filter file '{scene_filter_file}'."
             )
+        else:
+            logger.debug(
+                f"Loaded receptacle filter data for scene '{scene_handle}' does not have configured filter file."
+            )
 
     def inc_count(self, recep_name: str) -> None:
         """
