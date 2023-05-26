@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import os
 import os.path as osp
 import time
 from collections import defaultdict
@@ -446,7 +447,33 @@ class RearrangeSim(HabitatSim):
             base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        self.pathfinder.load_nav_mesh(navmesh_path)
+        # If we cannot load the navmesh, try generarting navmesh on the fly.
+        if osp.exists(navmesh_path):
+            self.pathfinder.load_nav_mesh(navmesh_path)
+        else:
+            navmesh_settings = NavMeshSettings()
+            navmesh_settings.set_defaults()
+
+            if hasattr(self.habitat_config.agents, "agent_0"):
+                radius = self.habitat_config.agents.agent_0.radius
+                height = self.habitat_config.agents.agent_0.height
+                max_climb = self.habitat_config.agents.agent_0.max_climb
+            elif hasattr(self.habitat_config.agents, "main_agent"):
+                radius = self.habitat_config.agents.main_agent.radius
+                height = self.habitat_config.agents.main_agent.height
+                max_climb = self.habitat_config.agents.main_agent.max_climb
+            else:
+                raise ValueError(f"Cannot find agent parameters.")
+            navmesh_settings.agent_radius = radius
+            navmesh_settings.agent_height = height
+            navmesh_settings.agent_max_climb = max_climb
+            self.recompute_navmesh(
+                self.pathfinder,
+                navmesh_settings,
+                include_static_objects=True,
+            )
+            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+            self.pathfinder.save_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0

@@ -344,6 +344,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "ik_arm_urdf",
                 "grasp_managers",
                 "rest_pose_data_path",
+                "max_climb",
             },
         )
 
