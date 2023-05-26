@@ -77,6 +77,7 @@ class ObjectSampler:
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
+        self.largest_island_id = -1
 
     def reset(self) -> None:
         """
@@ -87,6 +88,7 @@ class ObjectSampler:
         self.receptacle_candidates = None
         # number of objects in the range should be reset each time
         self.set_num_samples()
+        self.largest_island_id = -1
 
     def sample_receptacle(
         self,
@@ -239,10 +241,14 @@ class ObjectSampler:
         new_object = None
 
         # Note: we cache the largest island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        island_areas = list(
-            map(sim.pathfinder.island_area, range(sim.pathfinder.num_islands))
-        )
-        self.largest_island_id = island_areas.index(max(island_areas))
+        if self.largest_island_id == -1:
+            island_areas = list(
+                map(
+                    sim.pathfinder.island_area,
+                    range(sim.pathfinder.num_islands),
+                )
+            )
+            self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
@@ -363,11 +369,11 @@ class ObjectSampler:
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
         # Redo the snapping again
-        if math.isnan(dist):
-            snapped = sim.pathfinder.snap_point(obj.translation)
-            dist = float(
-                np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
-            )
+        # if math.isnan(dist):
+        #     snapped = sim.pathfinder.snap_point(obj.translation)
+        #     dist = float(
+        #         np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
+        #     )
 
         logger.info(f"dist '{dist}' threshold '{self.nav_to_min_distance}'")
         return dist < self.nav_to_min_distance
