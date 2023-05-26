@@ -18,6 +18,7 @@ flags = sys.getdlopenflags()
 sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
+from datetime import datetime
 from functools import wraps
 from typing import Any, Dict, List, Tuple
 
@@ -26,6 +27,12 @@ import numpy as np
 from controllers import ControllerHelper, GuiHumanoidController
 from hitl_tutorial import TutorialStage, generate_tutorial
 from magnum.platform.glfw import Application
+from serialize_utils import (
+    NullRecorder,
+    StepRecorder,
+    save_as_json_gzip,
+    save_as_pickle_gzip,
+)
 
 import habitat
 import habitat.tasks.rearrange.rearrange_task
@@ -77,6 +84,17 @@ class SandboxState(Enum):
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
     def __init__(self, args, config, gui_input):
+        self._dataset = config.habitat.dataset
+        self._num_recorded_episodes = 0
+
+        if args.save_filepath_base:
+            self._step_recorder = StepRecorder()
+            self._save_filepath_base = args.save_filepath_base
+            self._episode_recorder_dict = {}
+        else:
+            self._step_recorder = NullRecorder()
+            self._save_filepath_base = None
+
         with habitat.config.read_write(config):
             # needed so we can provide keyframes to GuiApplication
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
@@ -97,7 +115,9 @@ class SandboxDriver(GuiAppDriver):
             if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
 
-        self.ctrl_helper = ControllerHelper(self.env, config, args, gui_input)
+        self.ctrl_helper = ControllerHelper(
+            self.env, config, args, gui_input, self._step_recorder
+        )
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
 
@@ -150,19 +170,7 @@ class SandboxDriver(GuiAppDriver):
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
 
-        # not sure if these are needed here for linting
-        # self._held_target_obj_idx = None
-        # self._num_remaining_objects = None
-        # self._num_busy_objects = None
-        # self._target_obj_ids = None
-        # self._goal_positions = None
-
-        self._env_reset()
-
-    def _env_reset(self):
-        self._obs = self.env.reset()
-        self._metrics = self.env.get_metrics()
-        self._on_environment_reset()
+        self._reset_environment()
 
     def _env_step(self, action):
         self._obs = self.env.step(action)
@@ -179,11 +187,61 @@ class SandboxDriver(GuiAppDriver):
     def _check_compute_action_and_step_env(self):
         # step env if episode is active
         # otherwise pause simulation (don't do anything)
-        if self._env_episode_active():
-            action = self.ctrl_helper.update(self._obs)
-            self._env_step(action)
+        if not self._env_episode_active():
+            return
 
-    def _on_environment_reset(self):
+        action = self.ctrl_helper.update(self._obs)
+        self._env_step(action)
+
+        if self._save_filepath_base:
+            self.record_action(action)
+            self.record_task_state()
+            self.record_metrics(self.env.get_metrics())
+            self._step_recorder.finish_step()
+
+    def _find_episode_save_filepath_base(self, session_filepath_base):
+        retval = (
+            self._save_filepath_base + "." + str(self._num_recorded_episodes)
+        )
+        self._num_recorded_episodes += 1
+        return retval
+
+    def _save_episode_recorder_dict(self):
+        if not self._save_filepath_base or not len(self._step_recorder._steps):
+            return
+
+        filepath_base = self._find_episode_save_filepath_base(
+            self._save_filepath_base
+        )
+
+        json_filepath = filepath_base + ".json.gz"
+        save_as_json_gzip(self._episode_recorder_dict, json_filepath)
+
+        pkl_filepath = filepath_base + ".pkl.gz"
+        save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
+
+    def _start_episode_recorder(self):
+        assert self._save_filepath_base and self._step_recorder
+        ep_dict: Any = dict()
+        ep_dict["start_time"] = datetime.now()
+        ep_dict["dataset"] = self._dataset
+        ep_dict["episode_id"] = self.env.current_episode.episode_id
+
+        ep_dict["target_obj_ids"] = self._target_obj_ids
+        ep_dict[
+            "goal_positions"
+        ] = (
+            self._goal_positions
+        )  # [list[goal_pos] for goal_pos in self._goal_positions]
+
+        self._step_recorder.reset()
+        ep_dict["steps"] = self._step_recorder._steps
+
+        self._episode_recorder_dict = ep_dict
+
+    def _reset_environment(self):
+        self._obs = self.env.reset()
+        self._metrics = self.env.get_metrics()
         self.ctrl_helper.on_environment_reset()
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
@@ -211,6 +269,10 @@ class SandboxDriver(GuiAppDriver):
             else None
         )
         self._tutorial_stage_index: int = 0
+
+        if self._save_filepath_base:
+            self._save_episode_recorder_dict()
+            self._start_episode_recorder()
 
     @property
     def _env_task_complete(self):
@@ -269,6 +331,16 @@ class SandboxDriver(GuiAppDriver):
         rom = sim.get_rigid_object_manager()
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id).translation
+
+    def _get_target_object_positions(self):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+        return np.array(
+            [
+                rom.get_object_by_id(obj_id).translation
+                for obj_id in self._target_obj_ids
+            ]
+        )
 
     def _update_grasping_and_set_act_hints(self):
         if self.is_free_camera_mode():
@@ -693,38 +765,44 @@ class SandboxDriver(GuiAppDriver):
 
     def _get_status_text(self):
         status_str = ""
-        if not self.env.episode_over:
-            if not self._env_task_complete:
-                assert self._num_remaining_objects is not None
-                assert self._num_busy_objects is not None
-                if self._held_target_obj_idx is not None:
-                    sim = self.get_sim()
-                    grasp_object_id = sim.scene_obj_ids[
-                        self._held_target_obj_idx
-                    ]
-                    obj_handle = (
-                        sim.get_rigid_object_manager().get_object_handle_by_id(
-                            grasp_object_id
-                        )
-                    )
-                    status_str += (
-                        "Place the "
-                        + get_pretty_object_name_from_handle(obj_handle)
-                        + " at its goal location!\n"
-                    )
-                elif self._num_remaining_objects > 0:
-                    status_str += "Move the remaining {} object{}!".format(
-                        self._num_remaining_objects,
-                        "s" if self._num_remaining_objects > 1 else "",
-                    )
-                elif self._num_busy_objects > 0:
-                    status_str += (
-                        "Just wait! The robot is moving the last object.\n"
-                    )
+
+        assert self._num_remaining_objects is not None
+        assert self._num_busy_objects is not None
+
+        if not self._env_episode_active():
+            if self._env_task_complete:
+                status_str += (
+                    "Task complete!\nPress M to start the next episode.\n"
+                )
             else:
-                status_str += "Task complete!"
+                status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
+        elif self._held_target_obj_idx is not None:
+            # reference code to display object handle
+            # sim = self.get_sim()
+            # grasp_object_id = sim.scene_obj_ids[
+            #     self._held_target_obj_idx
+            # ]
+            # obj_handle = (
+            #     sim.get_rigid_object_manager().get_object_handle_by_id(
+            #         grasp_object_id
+            #     )
+            # )
+            status_str += (
+                "Place the "
+                # + get_pretty_object_name_from_handle(obj_handle)
+                + "object"
+                + " at its goal location!\n"
+            )
+        elif self._num_remaining_objects > 0:
+            status_str += "Move the remaining {} object{}!".format(
+                self._num_remaining_objects,
+                "s" if self._num_remaining_objects > 1 else "",
+            )
+        elif self._num_busy_objects > 0:
+            status_str += "Just wait! The robot is moving the last object.\n"
         else:
-            status_str += "Episode over!"
+            # we don't expect to hit this case ever
+            status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
 
         return status_str
 
@@ -769,7 +847,6 @@ class SandboxDriver(GuiAppDriver):
             self.cam_zoom_dist = self._min_zoom_dist
             lookat += 0.075 * robot_root.backward
             lookat -= mn.Vector3(0, 0.2, 0)
-
         offset = mn.Vector3(
             np.cos(self.lookat_offset_yaw) * np.cos(self.lookat_offset_pitch),
             np.sin(self.lookat_offset_pitch),
@@ -778,13 +855,62 @@ class SandboxDriver(GuiAppDriver):
 
         return (lookat + offset.normalized() * self.cam_zoom_dist, lookat)
 
-    def _sim_update_controlling_agent(self, dt: float):
-        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
-        viz_anim_speed = 2.0
-        self._viz_anim_fraction = (
-            self._viz_anim_fraction + dt * viz_anim_speed
-        ) % 1.0
+    def record_task_state(self):
+        agent_states = []
+        for agent_idx in range(self.ctrl_helper.n_robots):
+            art_obj = (
+                self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
+            )
+            rotation_quat = mn.Quaternion.from_matrix(
+                art_obj.transformation.rotation()
+            )
+            rotation_list = list(rotation_quat.vector) + [rotation_quat.scalar]
+            pos = art_obj.transformation.translation
 
+            snap_idx = (
+                self.get_sim()
+                .agents_mgr._all_agent_data[agent_idx]
+                .grasp_mgr.snap_idx
+            )
+
+            agent_states.append(
+                {
+                    "position": pos,
+                    "rotation_xyzw": rotation_list,
+                    "grasp_mgr_snap_idx": snap_idx,
+                }
+            )
+
+        self._step_recorder.record("agent_states", agent_states)
+
+        self._step_recorder.record(
+            "target_object_positions", self._get_target_object_positions()
+        )
+
+    def record_action(self, action):
+        action_args = action["action_args"]
+
+        # These are large arrays and they massively bloat the record file size, so
+        # let's exclude them.
+        keys_to_clear = [
+            "human_joints_trans",
+            "agent_0_human_joints_trans",
+            "agent_1_human_joints_trans",
+        ]
+        for key in keys_to_clear:
+            if key in action_args:
+                action_args[key] = None
+
+        self._step_recorder.record("action", action)
+
+    def record_metrics(self, metrics):
+        # We don't want to include this.
+        if "gfx_replay_keyframes_string" in metrics:
+            del metrics["gfx_replay_keyframes_string"]
+
+        self._step_recorder.record("metrics", metrics)
+
+    def _sim_update_controlling_agent(self, dt: float):
         self._check_compute_action_and_step_env()
 
         if self.gui_input.mouse_scroll_offset != 0:
@@ -816,6 +942,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
     def _sim_update_tutorial(self, dt: float):
+        # todo: get rid of this
         # Keyframes are saved by RearrangeSim when stepping the environment.
         # Because the environment is not stepped in the tutorial, we need to save keyframes manually for replay rendering to work.
         self.get_sim().gfx_replay_manager.save_keyframe()
@@ -842,10 +969,17 @@ class SandboxDriver(GuiAppDriver):
             self._save_recorded_keyframes_to_file()
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self._env_reset()
+            self._reset_environment()
 
-        self._update_task()
-        self._update_grasping_and_set_act_hints()
+        # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
+        viz_anim_speed = 2.0
+        self._viz_anim_fraction = (
+            self._viz_anim_fraction + dt * viz_anim_speed
+        ) % 1.0
+
+        if self._env_episode_active():
+            self._update_task()
+            self._update_grasping_and_set_act_hints()
 
         # Navmesh visualization only works in the debug third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
@@ -1077,7 +1211,12 @@ if __name__ == "__main__":
         default=False,
         help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
     )
-
+    parser.add_argument(
+        "--save-filepath-base",
+        default=None,
+        type=str,
+        help="filepath base used for saving various session data files. Include a full path including basename, but not an extension.",
+    )
     args = parser.parse_args()
 
     glfw_config = Application.Configuration()

@@ -346,7 +346,13 @@ class GuiRobotController(GuiController):
 
 class GuiHumanoidController(GuiController):
     def __init__(
-        self, agent_idx, is_multi_agent, gui_input, env, walk_pose_path
+        self,
+        agent_idx,
+        is_multi_agent,
+        gui_input,
+        env,
+        walk_pose_path,
+        recorder,
     ):
         super().__init__(agent_idx, is_multi_agent, gui_input)
         self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
@@ -356,6 +362,7 @@ class GuiHumanoidController(GuiController):
         self._hint_drop_pos = None
         self._cam_yaw = 0
         self._saved_object_rotation = None
+        self._recorder = recorder
 
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
@@ -437,6 +444,8 @@ class GuiHumanoidController(GuiController):
 
             self._get_grasp_mgr().snap_to_obj(grasp_object_id)
 
+            self._recorder.record("grasp_object_id", grasp_object_id)
+
         elif drop_pos is not None:
             assert self.is_grasped
             grasp_object_id = self._get_grasp_mgr().snap_idx
@@ -450,6 +459,8 @@ class GuiHumanoidController(GuiController):
             rigid_obj.translation = drop_pos
             rigid_obj.rotation = self._saved_object_rotation
             self._saved_object_rotation = None
+
+            self._recorder.record("drop_pos", drop_pos)
 
     def act(self, obs, env):
         self._update_grasp(self._hint_grasp_obj_idx, self._hint_drop_pos)
@@ -486,7 +497,14 @@ class GuiHumanoidController(GuiController):
                 humancontroller_base_user_input[0] += self._hint_walk_dir.x
                 humancontroller_base_user_input[2] += self._hint_walk_dir.z
 
+                self._recorder.record("hint_walk_dir", self._hint_walk_dir)
+
             else:
+                self._recorder.record("cam_yaw", self._cam_yaw)
+                self._recorder.record(
+                    "walk_forward_back", humancontroller_base_user_input[0]
+                )
+
                 rot_y_rad = -self._cam_yaw + np.pi
                 rot_y_matrix = np.array(
                     [
@@ -498,6 +516,10 @@ class GuiHumanoidController(GuiController):
                 humancontroller_base_user_input = (
                     rot_y_matrix @ humancontroller_base_user_input
                 )
+
+            self._recorder.record(
+                "base_user_input", humancontroller_base_user_input
+            )
 
         action_names = []
         action_args = {}
@@ -548,7 +570,7 @@ class GuiHumanoidController(GuiController):
 
 
 class ControllerHelper:
-    def __init__(self, env, config, args, gui_input):
+    def __init__(self, env, config, args, gui_input, recorder):
         self._env = env
         self.n_robots = len(env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
@@ -583,6 +605,7 @@ class ControllerHelper:
                     gui_input=gui_input,
                     env=self._env,
                     walk_pose_path=args.walk_pose_path,
+                    recorder=recorder.get_nested_recorder("gui_humanoid"),
                 )
             else:
                 gui_agent_controller = GuiRobotController(
