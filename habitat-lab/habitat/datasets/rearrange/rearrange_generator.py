@@ -304,6 +304,7 @@ class RearrangeEpisodeGenerator:
             # cull duplicates
             unified_scene_set = sorted(set(unified_scene_set))
             self._scene_sampler = samplers.MultiSceneSampler(unified_scene_set)
+            import pdb; pdb.set_trace()
         else:
             logger.error(
                 f"Requested scene sampler '{self.cfg.scene_sampler.type}' is not implemented."
@@ -654,8 +655,8 @@ class RearrangeEpisodeGenerator:
 
         # simulate the world for a few seconds to validate the placements
         if (
+            self.cfg.enable_check_obj_stability and
             not self.settle_sim(target_object_names)
-            and self.cfg.enable_check_obj_stability
         ):
             logger.warning(
                 "Aborting episode generation due to unstable state."

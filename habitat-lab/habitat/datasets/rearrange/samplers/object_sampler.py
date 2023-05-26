@@ -365,6 +365,9 @@ class ObjectSampler:
         # Redo the snapping again
         if math.isnan(dist):
             snapped = sim.pathfinder.snap_point(obj.translation)
+            dist = float(
+                np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
+            )
 
         logger.info(f"dist '{dist}' threshold '{self.nav_to_min_distance}'")
         return dist < self.nav_to_min_distance
