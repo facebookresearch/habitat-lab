@@ -237,17 +237,13 @@ class ObjectSampler:
         """
         num_placement_tries = 0
         new_object = None
-        navmesh_vertices = np.stack(
-            sim.pathfinder.build_navmesh_vertices(), axis=0
-        )
+
         # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
         # This assumption limits sampling to the largest navigable component of any scene.
-        island_size = [
-            sim.pathfinder.island_radius(p) for p in navmesh_vertices
-        ]
-        self.largest_island_id = sim.pathfinder.get_island(
-            navmesh_vertices[island_size.index(max(island_size))]
+        island_areas = list(
+            map(sim.pathfinder.island_area, range(sim.pathfinder.num_islands))
         )
+        self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
             num_placement_tries += 1
