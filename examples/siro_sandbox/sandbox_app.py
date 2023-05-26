@@ -170,7 +170,7 @@ class SandboxDriver(GuiAppDriver):
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
 
-        self.reset_environment()
+        self._reset_environment()
 
     def _env_step(self, action):
         self._obs = self.env.step(action)
@@ -199,18 +199,18 @@ class SandboxDriver(GuiAppDriver):
             self.record_metrics(self.env.get_metrics())
             self._step_recorder.finish_step()
 
-    def find_episode_save_filepath_base(self, session_filepath_base):
+    def _find_episode_save_filepath_base(self, session_filepath_base):
         retval = (
             self._save_filepath_base + "." + str(self._num_recorded_episodes)
         )
         self._num_recorded_episodes += 1
         return retval
 
-    def save_episode_recorder_dict(self):
+    def _save_episode_recorder_dict(self):
         if not self._save_filepath_base or not len(self._step_recorder._steps):
             return
 
-        filepath_base = self.find_episode_save_filepath_base(
+        filepath_base = self._find_episode_save_filepath_base(
             self._save_filepath_base
         )
 
@@ -220,7 +220,7 @@ class SandboxDriver(GuiAppDriver):
         pkl_filepath = filepath_base + ".pkl.gz"
         save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
 
-    def start_episode_recorder(self):
+    def _start_episode_recorder(self):
         assert self._save_filepath_base and self._step_recorder
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
@@ -239,7 +239,7 @@ class SandboxDriver(GuiAppDriver):
 
         self._episode_recorder_dict = ep_dict
 
-    def reset_environment(self):
+    def _reset_environment(self):
         self._obs = self.env.reset()
         self._metrics = self.env.get_metrics()
         self.ctrl_helper.on_environment_reset()
@@ -271,8 +271,8 @@ class SandboxDriver(GuiAppDriver):
         self._tutorial_stage_index: int = 0
 
         if self._save_filepath_base:
-            self.save_episode_recorder_dict()
-            self.start_episode_recorder()
+            self._save_episode_recorder_dict()
+            self._start_episode_recorder()
 
     @property
     def _env_task_complete(self):
@@ -332,7 +332,7 @@ class SandboxDriver(GuiAppDriver):
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id).translation
 
-    def get_target_object_positions(self):
+    def _get_target_object_positions(self):
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
         return np.array(
@@ -884,7 +884,7 @@ class SandboxDriver(GuiAppDriver):
         self._step_recorder.record("agent_states", agent_states)
 
         self._step_recorder.record(
-            "target_object_positions", self.get_target_object_positions()
+            "target_object_positions", self._get_target_object_positions()
         )
 
     def record_action(self, action):
@@ -969,7 +969,7 @@ class SandboxDriver(GuiAppDriver):
             self._save_recorded_keyframes_to_file()
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self.reset_environment()
+            self._reset_environment()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
