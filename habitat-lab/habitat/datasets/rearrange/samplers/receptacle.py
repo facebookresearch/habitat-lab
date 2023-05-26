@@ -376,11 +376,17 @@ class TriangleMeshReceptacle(Receptacle):
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
         # compute the bounding box from all vertices
-        self._bounds = mn.Range3D(
-            mn.math.minmax(
-                self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)
-            )
-        )
+        # TODO: python bindings for ArrayView minmax?
+        # minmax = mn.math.minmax(
+        #        self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)
+        #    )
+        minv = mn.Vector3(9999)
+        maxv = mn.Vector3(-9999)
+        for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
+            minv = mn.math.min(minv, v)
+            maxv = mn.math.max(maxv, v)
+        minmax = (minv, maxv)
+        self._bounds = mn.Range3D(minmax)
 
     @property
     def bounds(self) -> mn.Range3D:
