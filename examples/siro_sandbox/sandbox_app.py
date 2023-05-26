@@ -332,6 +332,16 @@ class SandboxDriver(GuiAppDriver):
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id).translation
 
+    def get_target_object_positions(self):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+        return np.array(
+            [
+                rom.get_object_by_id(obj_id).translation
+                for obj_id in self._target_obj_ids
+            ]
+        )
+
     def _update_grasping_and_set_act_hints(self):
         if self.is_free_camera_mode():
             return None
@@ -755,40 +765,44 @@ class SandboxDriver(GuiAppDriver):
 
     def _get_status_text(self):
         status_str = ""
-        if not self.env.episode_over:
-            if not self._env_task_complete:
-                assert self._num_remaining_objects is not None
-                assert self._num_busy_objects is not None
-                if self._held_target_obj_idx is not None:
-                    # reference code to display object handle
-                    # sim = self.get_sim()
-                    # grasp_object_id = sim.scene_obj_ids[
-                    #     self._held_target_obj_idx
-                    # ]
-                    # obj_handle = (
-                    #     sim.get_rigid_object_manager().get_object_handle_by_id(
-                    #         grasp_object_id
-                    #     )
-                    # )
-                    status_str += (
-                        "Place the "
-                        # + get_pretty_object_name_from_handle(obj_handle)
-                        + "object"
-                        + " at its goal location!\n"
-                    )
-                elif self._num_remaining_objects > 0:
-                    status_str += "Move the remaining {} object{}!".format(
-                        self._num_remaining_objects,
-                        "s" if self._num_remaining_objects > 1 else "",
-                    )
-                elif self._num_busy_objects > 0:
-                    status_str += (
-                        "Just wait! The robot is moving the last object.\n"
-                    )
+
+        assert self._num_remaining_objects is not None
+        assert self._num_busy_objects is not None
+
+        if not self._env_episode_active():
+            if self._env_task_complete:
+                status_str += (
+                    "Task complete!\nPress M to start the next episode.\n"
+                )
             else:
-                status_str += "Task complete! Press M to start the next task."
+                status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
+        elif self._held_target_obj_idx is not None:
+            # reference code to display object handle
+            # sim = self.get_sim()
+            # grasp_object_id = sim.scene_obj_ids[
+            #     self._held_target_obj_idx
+            # ]
+            # obj_handle = (
+            #     sim.get_rigid_object_manager().get_object_handle_by_id(
+            #         grasp_object_id
+            #     )
+            # )
+            status_str += (
+                "Place the "
+                # + get_pretty_object_name_from_handle(obj_handle)
+                + "object"
+                + " at its goal location!\n"
+            )
+        elif self._num_remaining_objects > 0:
+            status_str += "Move the remaining {} object{}!".format(
+                self._num_remaining_objects,
+                "s" if self._num_remaining_objects > 1 else "",
+            )
+        elif self._num_busy_objects > 0:
+            status_str += "Just wait! The robot is moving the last object.\n"
         else:
-            status_str += "Episode over! Press M to start the next task."
+            # we don't expect to hit this case ever
+            status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
 
         return status_str
 
@@ -963,8 +977,9 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction + dt * viz_anim_speed
         ) % 1.0
 
-        self._update_task()
-        self._update_grasping_and_set_act_hints()
+        if self._env_episode_active():
+            self._update_task()
+            self._update_grasping_and_set_act_hints()
 
         # Navmesh visualization only works in the debug third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
