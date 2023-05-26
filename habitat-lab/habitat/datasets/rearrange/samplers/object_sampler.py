@@ -240,9 +240,10 @@ class ObjectSampler:
 
         # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
         # This assumption limits sampling to the largest navigable component of any scene.
-        island_areas = list(
-            map(sim.pathfinder.island_area, range(sim.pathfinder.num_islands))
-        )
+        island_areas = [
+            sim.pathfinder.island_area(ix)
+            for ix in range(sim.pathfinder.num_islands)
+        ]
         self.largest_island_id = island_areas.index(max(island_areas))
 
         while num_placement_tries < self.max_placement_attempts:
