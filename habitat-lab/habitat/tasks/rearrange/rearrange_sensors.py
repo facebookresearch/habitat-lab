@@ -34,8 +34,9 @@ class MultiObjSensor(PointGoalSensor):
         super().__init__(*args, task=task, **kwargs)
 
     def _get_observation_space(self, *args, **kwargs):
+        n_targets = self._task.get_n_targets()
         return spaces.Box(
-            shape=(self._task.max_num_objects * 3,),
+            shape=(n_targets * 3,),
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
             dtype=np.float32,
@@ -103,8 +104,8 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
     def _get_sensor_type(self, *args, **kwargs):
         return SensorTypes.TENSOR
 
-    def _get_observation_space(self, *args, **kwargs):
-        n_targets = self._task.max_num_objects
+    def _get_observation_space(self, *args, config, **kwargs):
+        n_targets = self._task.get_n_targets()
         self._polar_pos = np.zeros(n_targets * 2, dtype=np.float32)
         return spaces.Box(
             shape=(n_targets * 2,),
