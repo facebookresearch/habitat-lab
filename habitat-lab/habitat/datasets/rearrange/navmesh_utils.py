@@ -191,10 +191,6 @@ def is_accessible(sim, point, nav_to_min_distance) -> bool:
     if nav_to_min_distance == -1:
         return True
     snapped = sim.pathfinder.snap_point(point)
-    # island_idx: int = sim.pathfinder.get_island(snapped)
+
     dist = float(np.linalg.norm(np.array((snapped - point))[[0, 2]]))
-    return (
-        dist
-        < nav_to_min_distance
-        # and island_idx == sim.navmesh_classification_results["active_island"]
-    )
+    return dist < nav_to_min_distance

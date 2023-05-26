@@ -135,8 +135,8 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 2
-        - 2
+        - 5
+        - 5
         orientation_sampling: up
         nav_to_min_distance: 1.5
 
@@ -164,4 +164,4 @@
     # This the parameter used to determine the placement of the robot
     distance_threshold: 0.9
     # This parameter is to check if the object placement is stable or not
-    enable_check_obj_stability: True
+    enable_check_obj_stability: False
