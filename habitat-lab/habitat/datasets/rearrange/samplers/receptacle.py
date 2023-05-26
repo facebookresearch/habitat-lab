@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import os
 import random
 from abc import ABC, abstractmethod
@@ -610,6 +611,13 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
     return mesh_data
 
 
+# global cache of Receptacles to reduce load time costs
+# maps receptacle name (not unique name) to a Receptacle instance (NOTE: parent_object_handle must be updated per-user-instance)
+_rec_cache: Dict[
+    str, Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]
+] = {}
+
+
 def parse_receptacles_from_user_config(
     user_subconfig: habitat_sim._ext.habitat_sim_bindings.Configuration,
     parent_object_handle: Optional[str] = None,
@@ -642,18 +650,24 @@ def parse_receptacles_from_user_config(
         if sub_config_key.startswith(receptacle_prefix_string):
             sub_config = user_subconfig.get_subconfig(sub_config_key)
             # this is a receptacle, parse it
-            assert sub_config.has_value("position")
-            assert sub_config.has_value("scale")
-            up = (
-                None
-                if not sub_config.has_value("up")
-                else sub_config.get("up")
-            )
-
             receptacle_name = (
                 sub_config.get("name")
                 if sub_config.has_value("name")
                 else sub_config_key
+            )
+            assert sub_config.has_value("position")
+            assert sub_config.has_value("scale")
+
+            # get the Receptacle from the cache if available
+            if receptacle_name in _rec_cache:
+                receptacles.append(copy.copy(_rec_cache[receptacle_name]))
+                receptacles[-1].parent_object_handle = parent_object_handle
+                continue
+
+            up = (
+                None
+                if not sub_config.has_value("up")
+                else sub_config.get("up")
             )
 
             # optional rotation for global receptacles, defaults to identity
@@ -738,6 +752,9 @@ def parse_receptacles_from_user_config(
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
                 )
+
+            # cache the Receptacle if new
+            _rec_cache[receptacle_name] = receptacles[-1]
 
     return receptacles
 
