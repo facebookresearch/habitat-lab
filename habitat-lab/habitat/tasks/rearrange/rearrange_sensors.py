@@ -129,7 +129,7 @@ class PositionGpsCompassSensor(UsesArticulatedAgentInterface, Sensor):
         rel_pos = batch_transform_point(
             pos, articulated_agent_T.inverted(), np.float32
         )
-
+        self._polar_pos = np.zeros_like(self._polar_pos)
         for i, rel_obj_pos in enumerate(rel_pos):
             rho, phi = cartesian_to_polar(rel_obj_pos[0], rel_obj_pos[1])
             self._polar_pos[(i * 2) : (i * 2) + 2] = [rho, -phi]
