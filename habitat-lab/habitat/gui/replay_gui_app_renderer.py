@@ -89,15 +89,13 @@ class ReplayGuiAppRenderer(GuiAppRenderer):
         self._text_drawer = text_drawer
 
     def post_sim_update(self, post_sim_update_dict):
+        self._need_render = True
         keyframes = post_sim_update_dict["keyframes"]
         self.cam_transform = post_sim_update_dict["cam_transform"]
 
         env_index = 0
         for keyframe in keyframes:
             self._replay_renderer.set_environment_keyframe(env_index, keyframe)
-
-        if len(keyframes):
-            self._need_render = True
 
         if "debug_images" in post_sim_update_dict:
             self._debug_images = post_sim_update_dict["debug_images"]

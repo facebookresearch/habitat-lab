@@ -19,7 +19,7 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 
 import argparse
 from functools import wraps
-from typing import Any, List, Tuple
+from typing import Any, Dict, List, Tuple
 
 import magnum as mn
 import numpy as np
@@ -83,6 +83,9 @@ class SandboxDriver(GuiAppDriver):
                 True
             )
             config.habitat.simulator.concur_render = False
+
+        self._end_on_success = config.habitat.task.end_on_success
+        self._success_measure_name = config.habitat.task.success_measure
 
         self.env = habitat.Env(config=config)
         if args.gui_controlled_agent_index is not None:
@@ -154,10 +157,33 @@ class SandboxDriver(GuiAppDriver):
         # self._target_obj_ids = None
         # self._goal_positions = None
 
-        self.on_environment_reset()
+        self._env_reset()
 
-    def on_environment_reset(self):
-        self.obs = self.env.reset()
+    def _env_reset(self):
+        self._obs = self.env.reset()
+        self._metrics = self.env.get_metrics()
+        self._on_environment_reset()
+
+    def _env_step(self, action):
+        self._obs = self.env.step(action)
+        self._metrics = self.env.get_metrics()
+
+    def _env_episode_active(self) -> bool:
+        """
+        Returns True if current episode is active:
+        1) not self.env.episode_over - none of the constraints is violated, or
+        2) not self._env_task_complete - success measure value is not True
+        """
+        return not (self.env.episode_over or self._env_task_complete)
+
+    def _check_compute_action_and_step_env(self):
+        # step env if episode is active
+        # otherwise pause simulation (don't do anything)
+        if self._env_episode_active():
+            action = self.ctrl_helper.update(self._obs)
+            self._env_step(action)
+
+    def _on_environment_reset(self):
         self.ctrl_helper.on_environment_reset()
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
@@ -187,8 +213,14 @@ class SandboxDriver(GuiAppDriver):
         self._tutorial_stage_index: int = 0
 
     @property
+    def _env_task_complete(self):
+        return (
+            self._end_on_success and self._metrics[self._success_measure_name]
+        )
+
+    @property
     def lookat_offset_yaw(self):
-        return self.to_zero_2pi_range(self._lookat_offset_yaw)
+        return self._to_zero_2pi_range(self._lookat_offset_yaw)
 
     @property
     def lookat_offset_pitch(self):
@@ -208,7 +240,7 @@ class SandboxDriver(GuiAppDriver):
     def get_sim(self) -> Any:
         return self.env.task._sim
 
-    def draw_nav_hint_from_agent(self, end_pos, end_radius, color):
+    def _draw_nav_hint_from_agent(self, end_pos, end_radius, color):
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
         assert agent_idx is not None
         art_obj = (
@@ -223,7 +255,7 @@ class SandboxDriver(GuiAppDriver):
         forward_dir[1] = 0
         forward_dir = forward_dir.normalized()
 
-        self.draw_nav_hint(
+        self._draw_nav_hint(
             agent_pos,
             forward_dir,
             end_pos,
@@ -232,23 +264,13 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction,
         )
 
-    def get_target_object_position(self, target_obj_idx):
+    def _get_target_object_position(self, target_obj_idx):
         sim = self.get_sim()
         rom = sim.get_rigid_object_manager()
         object_id = self._target_obj_ids[target_obj_idx]
         return rom.get_object_by_id(object_id).translation
 
-    def get_target_object_positions(self):
-        sim = self.get_sim()
-        rom = sim.get_rigid_object_manager()
-        return np.array(
-            [
-                rom.get_object_by_id(obj_id).translation
-                for obj_id in self._target_obj_ids
-            ]
-        )
-
-    def update_grasping_and_set_act_hints(self):
+    def _update_grasping_and_set_act_hints(self):
         if self.is_free_camera_mode():
             return None
 
@@ -264,21 +286,21 @@ class SandboxDriver(GuiAppDriver):
                 goal_position, end_radius, color, 24
             )
 
-            self.draw_nav_hint_from_agent(
+            self._draw_nav_hint_from_agent(
                 mn.Vector3(goal_position), end_radius, color
             )
             # draw can place area
             can_place_position = mn.Vector3(goal_position)
-            can_place_position[1] = self.get_agent_feet_height()
+            can_place_position[1] = self._get_agent_feet_height()
             self._debug_line_render.draw_circle(
                 can_place_position,
-                1,
+                self._can_grasp_place_threshold,
                 mn.Color3(255 / 255, 255 / 255, 0),
                 24,
             )
 
             if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                translation = self.get_agent_translation()
+                translation = self._get_agent_translation()
                 dist_to_obj = np.linalg.norm(goal_position - translation)
                 if dist_to_obj < self._can_grasp_place_threshold:
                     self._held_target_obj_idx = None
@@ -289,15 +311,15 @@ class SandboxDriver(GuiAppDriver):
                 assert not self.gui_agent_ctrl.is_grasped
                 # pick up an object
                 if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
-                    translation = self.get_agent_translation()
+                    translation = self._get_agent_translation()
 
                     min_dist = self._can_grasp_place_threshold
                     min_i = None
                     for i in range(len(self._target_obj_ids)):
-                        if self.is_target_object_at_goal_position(i):
+                        if self._is_target_object_at_goal_position(i):
                             continue
 
-                        this_target_pos = self.get_target_object_position(i)
+                        this_target_pos = self._get_target_object_position(i)
                         # compute distance in xz plane
                         offset = this_target_pos - translation
                         offset.y = 0
@@ -313,7 +335,7 @@ class SandboxDriver(GuiAppDriver):
                         ]
 
         walk_dir = (
-            self.viz_and_get_humanoid_walk_dir()
+            self._viz_and_get_humanoid_walk_dir()
             if not self._first_person_mode
             else None
         )
@@ -324,17 +346,17 @@ class SandboxDriver(GuiAppDriver):
 
         return drop_pos
 
-    def is_target_object_at_goal_position(self, target_obj_idx):
-        this_target_pos = self.get_target_object_position(target_obj_idx)
+    def _is_target_object_at_goal_position(self, target_obj_idx):
+        this_target_pos = self._get_target_object_position(target_obj_idx)
         end_radius = self.env._config.task.obj_succ_thresh
         return (
             this_target_pos - self._goal_positions[target_obj_idx]
         ).length() < end_radius
 
-    def update_task(self):
+    def _update_task(self):
         end_radius = self.env._config.task.obj_succ_thresh
 
-        grasped_objects_idxs = self.get_grasped_objects_idxs()
+        grasped_objects_idxs = self._get_grasped_objects_idxs()
         self._num_remaining_objects = 0
         self._num_busy_objects = len(grasped_objects_idxs)
 
@@ -345,13 +367,13 @@ class SandboxDriver(GuiAppDriver):
                 continue
 
             color = mn.Color3(255 / 255, 128 / 255, 0)  # orange
-            if self.is_target_object_at_goal_position(i):
+            if self._is_target_object_at_goal_position(i):
                 continue
 
             self._num_remaining_objects += 1
 
             if self._held_target_obj_idx is None:
-                this_target_pos = self.get_target_object_position(i)
+                this_target_pos = self._get_target_object_position(i)
                 box_half_size = 0.15
                 box_offset = mn.Vector3(
                     box_half_size, box_half_size, box_half_size
@@ -363,20 +385,20 @@ class SandboxDriver(GuiAppDriver):
                 )
 
                 if not self.is_free_camera_mode():
-                    self.draw_nav_hint_from_agent(
+                    self._draw_nav_hint_from_agent(
                         mn.Vector3(this_target_pos), end_radius, color
                     )
                     # draw can grasp area
                     can_grasp_position = mn.Vector3(this_target_pos)
-                    can_grasp_position[1] = self.get_agent_feet_height()
+                    can_grasp_position[1] = self._get_agent_feet_height()
                     self._debug_line_render.draw_circle(
                         can_grasp_position,
-                        1,
+                        self._can_grasp_place_threshold,
                         mn.Color3(255 / 255, 255 / 255, 0),
                         24,
                     )
 
-    def get_grasped_objects_idxs(self):
+    def _get_grasped_objects_idxs(self):
         sim = self.get_sim()
         agents_mgr = sim.agents_mgr
 
@@ -392,21 +414,21 @@ class SandboxDriver(GuiAppDriver):
 
         return grasped_objects_idxs
 
-    def get_agent_translation(self):
+    def _get_agent_translation(self):
         assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
         return (
             self.gui_agent_ctrl._humanoid_controller.obj_transform_base.translation
         )
 
-    def get_agent_feet_height(self):
+    def _get_agent_feet_height(self):
         assert isinstance(self.gui_agent_ctrl, GuiHumanoidController)
         base_offset = (
             self.gui_agent_ctrl.get_articulated_agent().params.base_offset
         )
-        agent_feet_translation = self.get_agent_translation() + base_offset
+        agent_feet_translation = self._get_agent_translation() + base_offset
         return agent_feet_translation[1]
 
-    def viz_and_get_humanoid_walk_dir(self):
+    def _viz_and_get_humanoid_walk_dir(self):
         path_color = mn.Color3(0, 153 / 255, 255 / 255)
         path_endpoint_radius = 0.12
 
@@ -501,7 +523,7 @@ class SandboxDriver(GuiAppDriver):
                 self._max_lookat_offset_pitch,
             )
 
-    def draw_nav_hint(
+    def _draw_nav_hint(
         self, start_pos, start_dir, end_pos, end_radius, color, anim_fraction
     ):
         assert isinstance(start_pos, mn.Vector3)
@@ -614,7 +636,7 @@ class SandboxDriver(GuiAppDriver):
         with open(self._gfx_replay_save_path, "w") as json_file:
             json_file.write(json_content)
 
-    def _update_cursor_style(self, post_sim_update_dict):
+    def _update_cursor_style(self):
         do_update_cursor = False
         if self._cursor_style is None:
             self._cursor_style = Application.Cursor.ARROW
@@ -632,8 +654,7 @@ class SandboxDriver(GuiAppDriver):
                 )
                 do_update_cursor = True
 
-        if do_update_cursor:
-            post_sim_update_dict["application_cursor"] = self._cursor_style
+        return do_update_cursor
 
     def _get_controls_text(self):
         def get_grasp_release_controls_text():
@@ -646,55 +667,64 @@ class SandboxDriver(GuiAppDriver):
         controls_str += "ESC: exit\n"
         controls_str += "M: next episode\n"
 
-        if self._first_person_mode:
-            # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
-            controls_str += "I, K: look up, down\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += get_grasp_release_controls_text()
-        # third-person mode
-        elif not self.is_free_camera_mode():
-            controls_str += "R + drag: rotate camera\n"
-            controls_str += "Right-click: walk\n"
-            controls_str += "A, D: turn\n"
-            controls_str += "W, S: walk\n"
-            controls_str += "Scroll: zoom\n"
-            controls_str += get_grasp_release_controls_text()
-        else:
-            controls_str += "Left-click + drag: rotate camera\n"
-            controls_str += "A, D: turn camera\n"
-            controls_str += "W, S: pan camera\n"
-            controls_str += "O, P: raise or lower camera\n"
-            controls_str += "Scroll: zoom\n"
+        if self._env_episode_active():
+            if self._first_person_mode:
+                # controls_str += "Left-click: toggle cursor\n"  # make this "unofficial" for now
+                controls_str += "I, K: look up, down\n"
+                controls_str += "A, D: turn\n"
+                controls_str += "W, S: walk\n"
+                controls_str += get_grasp_release_controls_text()
+            # third-person mode
+            elif not self.is_free_camera_mode():
+                controls_str += "R + drag: rotate camera\n"
+                controls_str += "Right-click: walk\n"
+                controls_str += "A, D: turn\n"
+                controls_str += "W, S: walk\n"
+                controls_str += "Scroll: zoom\n"
+                controls_str += get_grasp_release_controls_text()
+            else:
+                controls_str += "Left-click + drag: rotate camera\n"
+                controls_str += "A, D: turn camera\n"
+                controls_str += "W, S: pan camera\n"
+                controls_str += "O, P: raise or lower camera\n"
+                controls_str += "Scroll: zoom\n"
 
         return controls_str
 
     def _get_status_text(self):
         status_str = ""
-        assert self._num_remaining_objects is not None
-        assert self._num_busy_objects is not None
-        if self._held_target_obj_idx is not None:
-            sim = self.get_sim()
-            grasp_object_id = sim.scene_obj_ids[self._held_target_obj_idx]
-            obj_handle = (
-                sim.get_rigid_object_manager().get_object_handle_by_id(
-                    grasp_object_id
-                )
-            )
-            status_str += (
-                "Place the "
-                + get_pretty_object_name_from_handle(obj_handle)
-                + " at its goal location!\n"
-            )
-        elif self._num_remaining_objects > 0:
-            status_str += "Move the remaining {} object{}!".format(
-                self._num_remaining_objects,
-                "s" if self._num_remaining_objects > 1 else "",
-            )
-        elif self._num_busy_objects > 0:
-            status_str += "Just wait! The robot is moving the last object.\n"
+        if not self.env.episode_over:
+            if not self._env_task_complete:
+                assert self._num_remaining_objects is not None
+                assert self._num_busy_objects is not None
+                if self._held_target_obj_idx is not None:
+                    sim = self.get_sim()
+                    grasp_object_id = sim.scene_obj_ids[
+                        self._held_target_obj_idx
+                    ]
+                    obj_handle = (
+                        sim.get_rigid_object_manager().get_object_handle_by_id(
+                            grasp_object_id
+                        )
+                    )
+                    status_str += (
+                        "Place the "
+                        + get_pretty_object_name_from_handle(obj_handle)
+                        + " at its goal location!\n"
+                    )
+                elif self._num_remaining_objects > 0:
+                    status_str += "Move the remaining {} object{}!".format(
+                        self._num_remaining_objects,
+                        "s" if self._num_remaining_objects > 1 else "",
+                    )
+                elif self._num_busy_objects > 0:
+                    status_str += (
+                        "Just wait! The robot is moving the last object.\n"
+                    )
+            else:
+                status_str += "Task complete!"
         else:
-            status_str += "Task complete!"
+            status_str += "Episode over!"
 
         return status_str
 
@@ -706,7 +736,7 @@ class SandboxDriver(GuiAppDriver):
                     controls_str, TextOnScreenAlignment.TOP_LEFT
                 )
 
-            status_str = self._get_controls_text()
+            status_str = self._get_status_text()
             if len(status_str) > 0:
                 self._text_drawer.add_text(
                     status_str,
@@ -755,8 +785,7 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction + dt * viz_anim_speed
         ) % 1.0
 
-        action = self.ctrl_helper.update(self.obs)
-        self.obs = self.env.step(action)
+        self._check_compute_action_and_step_env()
 
         if self.gui_input.mouse_scroll_offset != 0:
             zoom_sensitivity = 0.07
@@ -803,16 +832,20 @@ class SandboxDriver(GuiAppDriver):
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
+        post_sim_update_dict: Dict[str, Any] = {}
+
+        if self.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            post_sim_update_dict["application_exit"] = True
 
         # Capture gfx-replay file
         if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
             self._save_recorded_keyframes_to_file()
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self.on_environment_reset()
+            self._env_reset()
 
-        self.update_task()
-        self.update_grasping_and_set_act_hints()
+        self._update_task()
+        self._update_grasping_and_set_act_hints()
 
         # Navmesh visualization only works in the debug third-person view
         # (--debug-third-person-width), not the main sandbox viewport. Navmesh
@@ -828,17 +861,18 @@ class SandboxDriver(GuiAppDriver):
         else:
             self._sim_update_tutorial(dt)
 
-        post_sim_update_dict = {"cam_transform": self.cam_transform}
+        # self.cam_transform is set to new value after
+        # self._sim_update_controlling_agent(dt) or self._sim_update_tutorial(dt)
+        post_sim_update_dict["cam_transform"] = self.cam_transform
 
-        self._update_cursor_style(post_sim_update_dict)
-
-        if self.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            post_sim_update_dict["application_exit"] = True
+        if self._update_cursor_style():
+            post_sim_update_dict["application_cursor"] = self._cursor_style
 
         keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
         post_sim_update_dict["keyframes"] = keyframes
+
         if self._enable_gfx_replay_save:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
@@ -850,12 +884,12 @@ class SandboxDriver(GuiAppDriver):
             return converted_obs
 
         # reference code for visualizing a camera sensor in the app GUI
-        assert set(self._debug_images).issubset(set(self.obs.keys())), (
-            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self.obs.keys())))} "
-            f"not in available sensors ids: {list(self.obs.keys())}"
+        assert set(self._debug_images).issubset(set(self._obs.keys())), (
+            f"Camera sensors ids: {list(set(self._debug_images).difference(set(self._obs.keys())))} "
+            f"not in available sensors ids: {list(self._obs.keys())}"
         )
         debug_images = (
-            depth_to_rgb(self.obs[k]) if "depth" in k else self.obs[k]
+            depth_to_rgb(self._obs[k]) if "depth" in k else self._obs[k]
             for k in self._debug_images
         )
         post_sim_update_dict["debug_images"] = [
@@ -867,7 +901,7 @@ class SandboxDriver(GuiAppDriver):
         return post_sim_update_dict
 
     @staticmethod
-    def to_zero_2pi_range(radians):
+    def _to_zero_2pi_range(radians):
         """Helper method to properly clip radians to [0, 2pi] range."""
         return (
             (2 * np.pi) - ((-radians) % (2 * np.pi))
