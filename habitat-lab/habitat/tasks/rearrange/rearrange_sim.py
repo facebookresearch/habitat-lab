@@ -415,15 +415,20 @@ class RearrangeSim(HabitatSim):
         else:
             navmesh_settings = NavMeshSettings()
             navmesh_settings.set_defaults()
-            navmesh_settings.agent_radius = (
-                self.habitat_config.agents.agent_0.radius
-            )
-            navmesh_settings.agent_height = (
-                self.habitat_config.agents.agent_0.height
-            )
-            navmesh_settings.agent_max_climb = (
-                self.habitat_config.agents.agent_0.max_climb
-            )
+
+            if hasattr(self.habitat_config.agents, "agent_0"):
+                radius = self.habitat_config.agents.agent_0.radius
+                height = self.habitat_config.agents.agent_0.height
+                max_climb = self.habitat_config.agents.agent_0.max_climb
+            elif hasattr(self.habitat_config.agents, "main_agent"):
+                radius = self.habitat_config.agents.main_agent.radius
+                height = self.habitat_config.agents.main_agent.height
+                max_climb = self.habitat_config.agents.main_agent.max_climb
+            else:
+                raise ValueError(f"Cannot find agent parameters.")
+            navmesh_settings.agent_radius = radius
+            navmesh_settings.agent_height = height
+            navmesh_settings.agent_max_climb = max_climb
             self.recompute_navmesh(
                 self.pathfinder,
                 navmesh_settings,
