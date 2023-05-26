@@ -77,6 +77,9 @@ class SandboxDriver(GuiAppDriver):
             )
             config.habitat.simulator.concur_render = False
 
+        self._end_on_success = config.habitat.task.end_on_success
+        self._success_measure_name = config.habitat.task.success_measure
+
         self.env = habitat.Env(config=config)
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
@@ -188,10 +191,9 @@ class SandboxDriver(GuiAppDriver):
 
     @property
     def _env_task_complete(self):
-        config = self.env._config
-        success_measure_name = config.task.success_measure
-        episode_success = self._metrics[success_measure_name]
-        return config.task.end_on_success and episode_success
+        return (
+            self._end_on_success and self._metrics[self._success_measure_name]
+        )
 
     @property
     def lookat_offset_yaw(self):
