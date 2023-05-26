@@ -199,6 +199,46 @@ class SandboxDriver(GuiAppDriver):
             self.record_metrics(self.env.get_metrics())
             self._step_recorder.finish_step()
 
+    def find_episode_save_filepath_base(self, session_filepath_base):
+        retval = (
+            self._save_filepath_base + "." + str(self._num_recorded_episodes)
+        )
+        self._num_recorded_episodes += 1
+        return retval
+
+    def save_episode_recorder_dict(self):
+        if not self._save_filepath_base or not len(self._step_recorder._steps):
+            return
+
+        filepath_base = self.find_episode_save_filepath_base(
+            self._save_filepath_base
+        )
+
+        json_filepath = filepath_base + ".json.gz"
+        save_as_json_gzip(self._episode_recorder_dict, json_filepath)
+
+        pkl_filepath = filepath_base + ".pkl.gz"
+        save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
+
+    def start_episode_recorder(self):
+        assert self._save_filepath_base and self._step_recorder
+        ep_dict: Any = dict()
+        ep_dict["start_time"] = datetime.now()
+        ep_dict["dataset"] = self._dataset
+        ep_dict["episode_id"] = self.env.current_episode.episode_id
+
+        ep_dict["target_obj_ids"] = self._target_obj_ids
+        ep_dict[
+            "goal_positions"
+        ] = (
+            self._goal_positions
+        )  # [list[goal_pos] for goal_pos in self._goal_positions]
+
+        self._step_recorder.reset()
+        ep_dict["steps"] = self._step_recorder._steps
+
+        self._episode_recorder_dict = ep_dict
+
     def reset_environment(self):
         self._obs = self.env.reset()
         self._metrics = self.env.get_metrics()
@@ -233,7 +273,7 @@ class SandboxDriver(GuiAppDriver):
         if self._save_filepath_base:
             self.save_episode_recorder_dict()
             self.start_episode_recorder()
-            
+
     @property
     def _env_task_complete(self):
         return (
@@ -836,6 +876,8 @@ class SandboxDriver(GuiAppDriver):
     def record_action(self, action):
         action_args = action["action_args"]
 
+        # These are large arrays and they massively bloat the record file size, so
+        # let's exclude them.
         keys_to_clear = [
             "human_joints_trans",
             "agent_0_human_joints_trans",
@@ -848,14 +890,13 @@ class SandboxDriver(GuiAppDriver):
         self._step_recorder.record("action", action)
 
     def record_metrics(self, metrics):
+        # We don't want to include this.
         if "gfx_replay_keyframes_string" in metrics:
             del metrics["gfx_replay_keyframes_string"]
 
         self._step_recorder.record("metrics", metrics)
 
-
     def _sim_update_controlling_agent(self, dt: float):
-
         self._check_compute_action_and_step_env()
 
         if self.gui_input.mouse_scroll_offset != 0:

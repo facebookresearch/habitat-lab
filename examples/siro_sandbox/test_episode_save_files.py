@@ -66,6 +66,7 @@ def test_episode_save_files(filepath_base):
             json_step["gui_humanoid"]["cam_yaw"],
         )
 
+        # These will not be present if the episode didn't include a policy-driven robot.
         pkl_subobj = pkl_step["action"]["action_args"]
         json_subobj = json_step["action"]["action_args"]
         keys = [
