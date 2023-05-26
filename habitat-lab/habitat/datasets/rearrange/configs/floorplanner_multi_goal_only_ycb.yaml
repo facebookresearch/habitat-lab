@@ -200,4 +200,4 @@
     # This the parameter used to determine the placement of the robot
     distance_threshold: 0.9
     # This parameter is to check if the object placement is stable or not
-    enable_check_obj_stability: False
+    enable_check_obj_stability: True
