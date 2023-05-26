@@ -17,7 +17,6 @@ from typing import (
     Optional,
     Tuple,
     Union,
-    cast,
 )
 
 import magnum as mn
@@ -576,7 +575,6 @@ class RearrangeSim(HabitatSim):
 
         all_receps = find_receptacles(self)
         for recep in all_receps:
-            recep = cast(AABBReceptacle, recep)
             local_bounds = recep.bounds
             global_T = recep.get_global_transform(self)
             self._receptacles[recep.name] = mn.Range3D(
