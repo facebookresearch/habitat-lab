@@ -176,7 +176,7 @@ class SandboxDriver(GuiAppDriver):
         """
         return not (self.env.episode_over or self._env_task_complete)
 
-    def _compute_action_and_step_env(self):
+    def _check_compute_action_and_step_env(self):
         # step env if episode is active
         # otherwise pause simulation (don't do anything)
         if self._env_episode_active():
@@ -785,7 +785,7 @@ class SandboxDriver(GuiAppDriver):
             self._viz_anim_fraction + dt * viz_anim_speed
         ) % 1.0
 
-        self._compute_action_and_step_env()
+        self._check_compute_action_and_step_env()
 
         if self.gui_input.mouse_scroll_offset != 0:
             zoom_sensitivity = 0.07
