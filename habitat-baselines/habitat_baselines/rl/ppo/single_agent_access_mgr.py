@@ -322,7 +322,7 @@ def default_create_rollouts(
     rollouts = baseline_registry.get_storage(
         config.habitat_baselines.rollout_storage_name
     )(
-        ppo_cfg.num_steps,
+        ppo_cfg.rollout_size,
         num_envs,
         obs_space,
         policy_action_space,

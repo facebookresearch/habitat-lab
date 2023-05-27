@@ -287,6 +287,7 @@ class PPOConfig(HabitatBaselinesBaseConfig):
     eps: float = 1e-5
     max_grad_norm: float = 0.5
     num_steps: int = 5
+    rollout_size: int = 32
     use_gae: bool = True
     use_linear_lr_decay: bool = False
     use_linear_clip_decay: bool = False
