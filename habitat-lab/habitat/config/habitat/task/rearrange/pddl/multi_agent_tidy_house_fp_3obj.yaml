@@ -35,10 +35,25 @@ stage_goals:
     expr_type: AND
     sub_exprs:
       - at(any_targets|1,TARGET_any_targets|1)
-  stage_2:
+  stage_3:
     expr_type: AND
     sub_exprs:
       - at(any_targets|2,TARGET_any_targets|2)
+  stage_1_2:
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|1,TARGET_any_targets|1)
+  stage_1_3:
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|0,TARGET_any_targets|0)
+      - at(any_targets|2,TARGET_any_targets|2)
+  stage_2_3:
+    expr_type: AND
+    sub_exprs:
+      - at(any_targets|2,TARGET_any_targets|2)
+      - at(any_targets|1,TARGET_any_targets|1)
 
 solution:
   - nav_to_goal(any_targets|0, robot_0)

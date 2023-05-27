@@ -38,15 +38,25 @@ hydra:
     name: 'pop_play_humanoid_spot_fp'
 
 habitat:
+  dataset:
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
   task:
+    task_spec: multi_agent_tidy_house_fp_2obj
     actions:
       agent_0_arm_action:
         grip_controller: MagicGraspAction
+      agent_0_oracle_nav_with_backing_up_action:
+        longitudinal_lin_speed: 50
+        lin_speed: 50
+        ang_speed: 20
       agent_1_oracle_nav_with_backing_up_action:
+        longitudinal_lin_speed: 50
+        lin_speed: 50
+        ang_speed: 20
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
   environment:
-    max_episode_steps: 5000
+    max_episode_steps: 3000
 
   gym:
     obs_keys:
@@ -106,11 +116,11 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  # video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  # tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  # eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
   num_environments: 32
   num_updates: -1
   total_num_steps: 1e8
@@ -122,12 +132,12 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  # writer_type: 'wb'
+  writer_type: 'wb'
 
-  # wb:
-  #   project_name: 'hab3'
-  #   entity: 'andrew-colab'
-  #   run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
     should_load_ckpt: False
@@ -135,7 +145,7 @@ habitat_baselines:
 
   rl:
     agent:
-      num_pool_agents_per_type: [1, 8]
+      num_pool_agents_per_type: [1, 1]
       agent_sample_interval: 20
       force_partner_sample_idx: -1
     policy:
@@ -151,6 +161,9 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
+              # skill_name: "NoopSkillPolicy"
+              # apply_postconds: True
+              # obs_skill_inputs: ["goal_to_agent_gps_compass"]
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
@@ -167,6 +180,10 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
+
+              # skill_name: "NoopSkillPolicy"
+              # apply_postconds: True
+              # obs_skill_inputs: ["goal_to_agent_gps_compass"]
               skill_name: "OracleNavPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
@@ -181,7 +198,7 @@ habitat_baselines:
       lr: 2.5e-4
       eps: 1e-5
       max_grad_norm: 0.2
-      num_steps: 128
+      num_steps: 1024
       use_gae: True
       gamma: 0.99
       tau: 0.95
