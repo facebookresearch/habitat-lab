@@ -25,7 +25,7 @@ from typing import Any, Dict, List, Tuple
 import magnum as mn
 import numpy as np
 from controllers import ControllerHelper, GuiHumanoidController
-from hitl_tutorial import TutorialStage, generate_tutorial
+from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
 from serialize_utils import (
     NullRecorder,
@@ -259,7 +259,7 @@ class SandboxDriver(GuiAppDriver):
             if args.show_tutorial
             else SandboxState.CONTROLLING_AGENT
         )
-        self._tutorial_stages: List[TutorialStage] = (
+        self._tutorial: Tutorial = (
             generate_tutorial(
                 self.get_sim(),
                 self.ctrl_helper.get_gui_controlled_agent_index(),
@@ -268,7 +268,6 @@ class SandboxDriver(GuiAppDriver):
             if args.show_tutorial
             else None
         )
-        self._tutorial_stage_index: int = 0
 
         if self._save_filepath_base:
             self._save_episode_recorder_dict()
@@ -823,12 +822,12 @@ class SandboxDriver(GuiAppDriver):
                     text_delta_y=-50,
                 )
         elif self._sandbox_state == SandboxState.TUTORIAL:
-            tutorial_str = self._tutorial_stages[
-                self._tutorial_stage_index
-            ].get_display_text()
+            tutorial_str = self._tutorial.get_display_text()
             if len(tutorial_str) > 0:
                 self._text_drawer.add_text(
-                    tutorial_str, TextOnScreenAlignment.BOTTOM_CENTER
+                    tutorial_str, TextOnScreenAlignment.TOP_CENTER,
+                    text_delta_x=-150,
+                    text_delta_y=-50,
                 )
 
     def _create_camera_lookat(self) -> Tuple[mn.Vector3, mn.Vector3]:
@@ -947,15 +946,13 @@ class SandboxDriver(GuiAppDriver):
         # Because the environment is not stepped in the tutorial, we need to save keyframes manually for replay rendering to work.
         self.get_sim().gfx_replay_manager.save_keyframe()
 
-        assert self._tutorial_stage_index < len(self._tutorial_stages)
-        tutorial_stage = self._tutorial_stages[self._tutorial_stage_index]
-        tutorial_stage.update(dt)
-        self.cam_transform = tutorial_stage.get_look_at_matrix()
+        self._tutorial.update(dt)
 
-        if tutorial_stage.is_stage_completed():
-            self._tutorial_stage_index += 1
-            if self._tutorial_stage_index >= len(self._tutorial_stages):
-                self._sandbox_state = SandboxState.CONTROLLING_AGENT
+        if self._tutorial.is_completed():
+            self._tutorial.reset()
+            self._sandbox_state = SandboxState.CONTROLLING_AGENT
+        else:
+            self.cam_transform = self._tutorial.get_look_at_matrix()
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
