@@ -74,6 +74,10 @@ actions:
   base_velocity:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
+    max_displacement_along_axis: 1.0
+    max_turn_degrees: 180.0
+    allow_lateral_movement: True
+    allow_simultaneous_turn: True
 measurements:
   force_terminate:
     max_accum_force: -1.0
