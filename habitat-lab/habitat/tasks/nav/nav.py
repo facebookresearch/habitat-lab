@@ -447,7 +447,9 @@ class EpisodicGPSSensor(Sensor):
         )
 
     def get_agent_start_pose(self, episode, task):
-        return episode.start_position, episode.start_rotation
+        return episode.start_position, quaternion_from_coeff(
+            episode.start_rotation
+        )
 
     def get_agent_current_pos(self, sim):
         agent_state = self._sim.get_agent_state()
