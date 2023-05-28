@@ -26,47 +26,54 @@ import habitat_sim
 
 
 class ObjectAnimation:
-    _ROTATION_ANIMATION_SPEED = 20.0
-    _PLACE_BACK_TIME = 0.5
-
-    _object: any
+    _object: habitat_sim.physics.ManagedBulletRigidObject
     _view_lookat: Tuple[mn.Vector3, mn.Vector3]
     _object_starting_pos: mn.Vector3
     _object_starting_rot: mn.Quaternion
     _object_target_pos: mn.Vector3
     _object_target_rot: mn.Quaternion
     _duration: float
+    _place_back_time: float
+    _rotation_animation_speed: float
+    _rotation_animation_axis: mn.Vector3 = mn.Vector3(0, 1, -0.5).normalized()
     _elapsed_time: float = 0.0
     _rotation_offset: mn.Quaternion = mn.Quaternion.identity_init()
 
     def __init__(
-            self,
-            object: any,
-            view_lookat: Tuple[mn.Vector3, mn.Vector3],
-            distance_from_view: float,
-            duration: float,
+        self,
+        obj: habitat_sim.physics.ManagedBulletRigidObject,
+        view_lookat: Tuple[mn.Vector3, mn.Vector3],
+        distance_from_view: float,
+        duration: float,
+        place_back_time: float = 0.3,
+        rotation_animation_speed: float = 25.0,
     ) -> None:
-        self._object = object
+        self._object = obj
         self._view_lookat = view_lookat
         self._duration = duration
-        self._object_starting_pos = object.translation
-        self._object_starting_rot = object.rotation
-        
-        self._object_target_pos = view_lookat[0] - mn.Vector3(0.0, distance_from_view, 0.0)
+        self._place_back_time = place_back_time
+        self._rotation_animation_speed = rotation_animation_speed
+        self._object_starting_pos = obj.translation
+        self._object_starting_rot = obj.rotation
+
+        self._object_target_pos = view_lookat[0] - mn.Vector3(
+            0.0, distance_from_view, 0.0
+        )
 
         object_lookat = mn.Matrix4.look_at(
             self._object_target_pos,
             view_lookat[0],
-            mn.Vector3(-1, 0, 0), # Object forward axis
+            mn.Vector3(-1, 0, 0),  # Object forward axis
         )
-        self._object_target_rot = mn.Quaternion.from_matrix(object_lookat.rotation())
+        self._object_target_rot = mn.Quaternion.from_matrix(
+            object_lookat.rotation()
+        )
 
     def update(self, dt: float):
-
         # Slowly rotate the object to give more perspective
         self._rotation_offset *= mn.Quaternion.rotation(
-            mn.Rad(mn.Deg(dt * self._ROTATION_ANIMATION_SPEED)),
-            mn.Vector3(0,1,0.5).normalized(),
+            mn.Rad(mn.Deg(dt * self._rotation_animation_speed)),
+            self._rotation_animation_axis,
         )
 
         self._elapsed_time += dt
@@ -77,7 +84,7 @@ class ObjectAnimation:
         elif t >= 1.0:
             self._place_back(dt)
             return
-        
+
         t = _ease_fn_in_out_quat(t)
 
         # Interpolate
@@ -95,13 +102,15 @@ class ObjectAnimation:
         self._object.translation = pos
         self._object.rotation = rot
 
-    def _place_back(self, dt:float):
-        t = (self._elapsed_time - self._duration) / (self._duration + self._PLACE_BACK_TIME)
+    def _place_back(self, dt: float):
+        t = (self._elapsed_time - self._duration) / (
+            self._duration + self._place_back_time
+        )
         if t > 1.0:
             self.reset()
             return
         t = _ease_fn_in_out_quat(t)
-        
+
         # Interpolate
         pos = mn.math.lerp(
             self._object_target_pos,
@@ -113,13 +122,14 @@ class ObjectAnimation:
             self._object_starting_rot,
             t,
         )
-        
+
         self._object.translation = pos
         self._object.rotation = rot
-    
+
     def reset(self):
         self._object.translation = self._object_starting_pos
         self._object.rotation = self._object_starting_rot
+
 
 class TutorialStage:
     _prev_lookat: Tuple[mn.Vector3, mn.Vector3]
@@ -199,11 +209,13 @@ class Tutorial:
 
     def update(self, dt: float) -> None:
         for object_animation in self._pending_object_animations:
-            object_animation.update(dt) # Keep updating so that objects are placed back
+            object_animation.update(
+                dt
+            )  # Keep updating so that objects are placed back
 
         if self._tutorial_stage_index >= len(self._tutorial_stages):
             return
-        
+
         tutorial_stage = self._tutorial_stages[self._tutorial_stage_index]
         tutorial_stage.update(dt)
 
@@ -211,26 +223,34 @@ class Tutorial:
             self._tutorial_stage_index += 1
 
             if tutorial_stage._object_animation is not None:
-                self._pending_object_animations.append(tutorial_stage._object_animation)
+                self._pending_object_animations.append(
+                    tutorial_stage._object_animation
+                )
 
     def is_completed(self) -> bool:
         return self._tutorial_stage_index >= len(self._tutorial_stages)
-    
+
     def get_look_at_matrix(self) -> mn.Matrix4:
         assert not self.is_completed()
-        return self._tutorial_stages[self._tutorial_stage_index].get_look_at_matrix()
-    
+        return self._tutorial_stages[
+            self._tutorial_stage_index
+        ].get_look_at_matrix()
+
     def get_display_text(self) -> str:
         assert not self.is_completed()
-        return self._tutorial_stages[self._tutorial_stage_index].get_display_text()
-    
+        return self._tutorial_stages[
+            self._tutorial_stage_index
+        ].get_display_text()
+
     def reset(self) -> None:
         for object_animation in self._pending_object_animations:
             object_animation.reset()
         self._pending_object_animations.clear()
-        
 
-def generate_tutorial(sim, agent_idx: int, final_lookat: Tuple[mn.Vector3, mn.Vector3]) -> Tutorial:
+
+def generate_tutorial(
+    sim, agent_idx: int, final_lookat: Tuple[mn.Vector3, mn.Vector3]
+) -> Tutorial:
     assert sim is not None
     assert agent_idx is not None
     assert final_lookat is not None
@@ -250,23 +270,25 @@ def generate_tutorial(sim, agent_idx: int, final_lookat: Tuple[mn.Vector3, mn.Ve
     )
 
     # Show all the targets
-    #pathfinder = sim.pathfinder
+    # pathfinder = sim.pathfinder
     idxs, goal_pos = sim.get_targets()
     target_objs = [
         rom.get_object_by_id(sim._scene_obj_ids[idx]) for idx in idxs
     ]
     for target_obj in target_objs:
-        prev_lookat = tutorial_stages[
-            len(tutorial_stages) - 1
-        ]._next_lookat
+        prev_lookat = tutorial_stages[len(tutorial_stages) - 1]._next_lookat
 
         target_bb = mn.Range3D.from_center(
             mn.Vector3(target_obj.translation),
             mn.Vector3(1.0, 1.0, 1.0),
         )  # Assume 2x2x2m bounding box
-        far_lookat = _lookat_bounding_box_top_down(camera_fov_deg / 3, target_bb, view_forward_vector)
-        close_lookat = _lookat_bounding_box_top_down(camera_fov_deg, target_bb, view_forward_vector)
-        
+        far_lookat = _lookat_bounding_box_top_down(
+            camera_fov_deg / 3, target_bb, view_forward_vector
+        )
+        close_lookat = _lookat_bounding_box_top_down(
+            camera_fov_deg, target_bb, view_forward_vector
+        )
+
         # Top-down view over the object from far away
         tutorial_stages.append(
             TutorialStage(
@@ -279,11 +301,12 @@ def generate_tutorial(sim, agent_idx: int, final_lookat: Tuple[mn.Vector3, mn.Ve
 
         # Zoom-in on the object, and bring the object in front of the camera
         obj_anim = ObjectAnimation(
-            object=target_obj,
+            obj=target_obj,
             view_lookat=close_lookat,
             distance_from_view=0.5,
-            duration=3.0)
-        
+            duration=3.0,
+        )
+
         tutorial_stages.append(
             TutorialStage(
                 stage_duration=3.0,
@@ -303,7 +326,9 @@ def generate_tutorial(sim, agent_idx: int, final_lookat: Tuple[mn.Vector3, mn.Ve
         mn.Vector3(agent_root_node.absolute_translation),
         mn.Vector3(1.0, 1.0, 1.0),
     )  # Assume 2x2x2m bounding box
-    agent_lookat = _lookat_bounding_box_top_down(camera_fov_deg / 3, target_bb, view_forward_vector)
+    agent_lookat = _lookat_bounding_box_top_down(
+        camera_fov_deg / 3, target_bb, view_forward_vector
+    )
 
     tutorial_stages.append(
         TutorialStage(

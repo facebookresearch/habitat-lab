@@ -825,7 +825,8 @@ class SandboxDriver(GuiAppDriver):
             tutorial_str = self._tutorial.get_display_text()
             if len(tutorial_str) > 0:
                 self._text_drawer.add_text(
-                    tutorial_str, TextOnScreenAlignment.TOP_CENTER,
+                    tutorial_str,
+                    TextOnScreenAlignment.TOP_CENTER,
                     text_delta_x=-150,
                     text_delta_y=-50,
                 )
