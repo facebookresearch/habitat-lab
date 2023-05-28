@@ -50,8 +50,8 @@ class DynNavRLEnv(RearrangeTask):
         self.force_recep_to_name = None
 
         self._nav_to_info = None
-        self.robot_start_position = None
-        self.robot_start_rotation = None
+        self._robot_start_position = None
+        self._robot_start_rotation = None
 
         self._min_start_distance = self._config.min_start_distance
         self._pick_init = config.pick_init
@@ -234,9 +234,9 @@ class DynNavRLEnv(RearrangeTask):
             sim.robot.base_pos = self._nav_to_info.robot_start_pos
             sim.robot.base_rot = self._nav_to_info.robot_start_angle
 
-        self.robot_start_position = sim.robot.sim_obj.translation
+        self._robot_start_position = sim.robot.sim_obj.translation
         start_quat = sim.robot.sim_obj.rotation
-        self.robot_start_rotation = np.array(
+        self._robot_start_rotation = np.array(
             [
                 start_quat.vector.x,
                 start_quat.vector.y,
