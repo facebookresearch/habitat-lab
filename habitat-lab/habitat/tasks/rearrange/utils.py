@@ -522,6 +522,10 @@ def add_perf_timing_func(name: Optional[str] = None):
             else:
                 sim = self._sim
 
+            if not hasattr(sim, "add_perf_timing"):
+                # Does not support logging.
+                return f(self, *args, **kwargs)
+
             sim.cur_runtime_perf_scope.append(use_name)
             t_start = time.time()
             ret = f(self, *args, **kwargs)
