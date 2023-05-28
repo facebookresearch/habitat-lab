@@ -12,7 +12,9 @@ habitat:
     auto_name: Pick
     obs_keys:
       - robot_head_depth
+      - start_receptacle
       - object_segmentation
+      - start_recep_segmentation
       - object_embedding
       - joint
       - is_holding

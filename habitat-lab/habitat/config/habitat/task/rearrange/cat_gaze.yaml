@@ -28,6 +28,8 @@ defaults:
     - object_category_sensor
     - object_segmentation_sensor
     - object_embedding_sensor
+    - start_recep_segmentation_sensor
+    - start_receptacle_sensor
   - _self_
 
 type: RearrangePickTask-v0
