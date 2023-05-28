@@ -69,7 +69,9 @@ class NnSkillPolicy(SkillPolicy):
 
     @property
     def required_obs_keys(self):
-        return list(self._filtered_obs_space.spaces.keys())
+        return super().required_obs_keys + list(
+            self._filtered_obs_space.spaces.keys()
+        )
 
     def parameters(self):
         if self._wrap_policy is not None:
