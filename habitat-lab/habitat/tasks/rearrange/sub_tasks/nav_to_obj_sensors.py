@@ -236,12 +236,12 @@ class RobotStartGPSSensor(EpisodicGPSSensor):
     def __init__(self, sim, config: "DictConfig", *args, **kwargs):
         super().__init__(sim=sim, config=config)
 
-    def get_agent_start_pose(self, episode, task):
+    def get_agent_start_position_and_rotation(self, episode, task):
         return task._robot_start_position, quaternion_from_coeff(
             task._robot_start_rotation
         )
 
-    def get_agent_current_pos(self, sim):
+    def get_agent_current_position(self, sim):
         return sim.robot.sim_obj.translation
 
 
@@ -252,12 +252,12 @@ class RobotStartCompassSensor(EpisodicCompassSensor):
     def __init__(self, sim, config: "DictConfig", *args, **kwargs):
         super().__init__(sim=sim, config=config)
 
-    def get_agent_start_rot(self, episode, task):
+    def get_agent_start_rotation(self, episode, task):
         return quaternion_from_coeff(
             task._robot_start_rotation
         )
 
-    def get_agent_current_rot(self, sim):
+    def get_agent_current_rotation(self, sim):
         curr_quat = sim.robot.sim_obj.rotation
         curr_rotation = [
             curr_quat.vector.x,

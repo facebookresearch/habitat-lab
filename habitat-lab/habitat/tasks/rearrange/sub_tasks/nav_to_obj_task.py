@@ -143,11 +143,11 @@ class DynNavRLEnv(RearrangeTask):
 
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
         if isinstance(sim.robot, StretchRobot):
-            sim.robot.arm_motor_pos = StretchJointStates.NAVIGATION
-            sim.robot.arm_joint_pos = StretchJointStates.NAVIGATION
+            joints = StretchJointStates.NAVIGATION.copy()
             # set camera tilt, which is the the last joint of the arm
-            sim.robot.arm_motor_pos[-1] = self._camera_tilt
-            sim.robot.arm_joint_pos[-1] = self._camera_tilt
+            joints[-1] = self._camera_tilt
+            sim.robot.arm_joint_pos = joints
+            sim.robot.arm_motor_pos = joints
 
         start_hold_obj_idx: Optional[int] = None
 
