@@ -40,6 +40,7 @@ class OvmmNavGoalSegmentationSensor(Sensor):
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
         self._is_nav_to_obj = task.is_nav_to_obj
+        self._blank_out_prob = self._config.blank_out_prob
         self.resolution = (
             sim.agents[0]
             ._sensors[self.panoptic_uuid]
@@ -86,8 +87,9 @@ class OvmmNavGoalSegmentationSensor(Sensor):
                 ].parent_object_handle
                 obj_id = rom.get_object_id_by_handle(handle)
             instance_id = obj_id + self._instance_ids_start
-            # Skip if object is not in the agent's viewport
-            if instance_id > max_obs_val:
+            # Skip if receptacle is not in the agent's viewport or if the instance
+            # is selected to be blanked out randomly
+            if instance_id > max_obs_val or np.random.random() < self._blank_out_prob:
                 continue
             obs[pan_obs == instance_id] = 1
         return obs
@@ -140,6 +142,7 @@ class ReceptacleSegmentationSensor(Sensor):
         self._config = config
         self._sim = sim
         self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._blank_out_prob = self._config.blank_out_prob
         self.resolution = (
             sim.agents[0]
             ._sensors[self.panoptic_uuid]
@@ -176,8 +179,9 @@ class ReceptacleSegmentationSensor(Sensor):
         ), "Empty receptacle semantic IDs, task didn't cache them."
         for obj_id, semantic_id in task.receptacle_semantic_ids.items():
             instance_id = obj_id + self._instance_ids_start
-            # Skip if receptacle is not in the agent's viewport
-            if instance_id >= obj_id_map.shape[0]:
+            # Skip if receptacle is not in the agent's viewport or if the instance
+            # is selected to be blanked out randomly
+            if instance_id >= obj_id_map.shape[0] or np.random.random() < self._blank_out_prob:
                 continue
             obj_id_map[instance_id] = semantic_id
         obs = obj_id_map[obs]
