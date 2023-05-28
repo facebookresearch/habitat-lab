@@ -443,11 +443,13 @@ class CameraPoseSensorConfig(LabSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ReceptacleSegmentationSensorConfig(LabSensorConfig):
     type: str = "ReceptacleSegmentationSensor"
+    blank_out_prob: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavGoalSegmentationSensorConfig(LabSensorConfig):
     type: str = "OvmmNavGoalSegmentationSensor"
+    blank_out_prob: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
