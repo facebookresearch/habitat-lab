@@ -207,14 +207,13 @@ class RearrangePickTaskV1(RearrangeTask):
         camera_pan = 0.0
         if self._start_in_manip_mode:
             # turn camera to face the arm
-            camera_pan = -1.57
+            camera_pan = -np.pi / 2
         if isinstance(sim.robot, StretchRobot):
-            sim.robot.arm_motor_pos = StretchJointStates.PRE_GRASP
-            sim.robot.arm_joint_pos = StretchJointStates.PRE_GRASP
-            sim.robot.arm_joint_pos[-2] = camera_pan
-            sim.robot.arm_motor_pos[-2] = camera_pan
-            sim.robot.arm_joint_pos[-1] = self._camera_tilt
-            sim.robot.arm_motor_pos[-1] = self._camera_tilt
+            joints = StretchJointStates.PRE_GRASP.copy()
+            joints[-2] = camera_pan
+            joints[-1] = self._camera_tilt
+            sim.robot.arm_motor_pos = joints
+            sim.robot.arm_joint_pos = joints
 
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 

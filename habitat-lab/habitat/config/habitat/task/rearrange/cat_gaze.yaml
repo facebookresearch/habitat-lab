@@ -44,6 +44,7 @@ start_in_manip_mode: False
 spawn_reference: view_points
 spawn_reference_sampling: uniform
 spawn_max_dists_to_obj: 0.0
+camera_tilt: -0.785398
 actions:
   arm_action:
     type: "ArmAction"
