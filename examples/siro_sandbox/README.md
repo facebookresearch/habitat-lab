@@ -96,6 +96,9 @@ habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
+## Saving episode data
+Use `--save-filepath-base my_session`. When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
+
 ## Workaround to avoid broken skinned humanoid
 
 Following the instructions above, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
@@ -152,6 +155,9 @@ habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/mic
 
 ## Capturing Gfx-Replay Files
 Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording can be enabled with the `--enable-gfx-replay-save` argument. Capturing starts at the first frame and ends (is saved) when pressing the period (`.`) key. The `--gfx-replay-save-path` argument can be set to specify a custom save location.
+
+## Human-in-the-loop tutorial sequence
+The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.
 
 ## Testing BatchReplayRenderer
 
