@@ -386,20 +386,20 @@ class EpisodicCompassSensor(HeadingSensor):
     def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
         return self.cls_uuid
 
-    def get_agent_start_rot(self, episode, task):
+    def get_agent_start_rotation(self, episode, task):
         return quaternion_from_coeff(
             episode.start_rotation
         )
 
-    def get_agent_current_rot(self, sim):
+    def get_agent_current_rotation(self, sim):
         agent_state = self._sim.get_agent_state()
         return agent_state.rotation
 
     def get_observation(
         self, observations, episode, task, *args: Any, **kwargs: Any
     ):
-        rotation_world_start = self.get_agent_start_rot(episode, task)
-        rotation_world_agent = self.get_agent_current_rot(self._sim)
+        rotation_world_start = self.get_agent_start_rotation(episode, task)
+        rotation_world_agent = self.get_agent_current_rotation(self._sim)
 
         if isinstance(rotation_world_agent, quaternion.quaternion):
             return self._quat_to_xy_heading(
@@ -446,12 +446,12 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_agent_start_pose(self, episode, task):
+    def get_agent_start_position_and_rotation(self, episode, task):
         return episode.start_position, quaternion_from_coeff(
             episode.start_rotation
         )
 
-    def get_agent_current_pos(self, sim):
+    def get_agent_current_position(self, sim):
         agent_state = self._sim.get_agent_state()
         return agent_state.position
 
@@ -459,12 +459,12 @@ class EpisodicGPSSensor(Sensor):
         self, observations, episode, task, *args: Any, **kwargs: Any
     ):
 
-        start_position, rotation_world_start = self.get_agent_start_pose(
+        start_position, rotation_world_start = self.get_agent_start_position_and_rotation(
             episode, task
         )
         origin = np.array(start_position, dtype=np.float32)
 
-        agent_position = self.get_agent_current_pos(self._sim)
+        agent_position = self.get_agent_current_position(self._sim)
 
         relative_agent_position = quaternion_rotate_vector(
             rotation_world_start.inverse(), agent_position - origin
