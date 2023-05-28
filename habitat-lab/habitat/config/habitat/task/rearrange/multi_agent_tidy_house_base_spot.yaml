@@ -36,7 +36,7 @@ slack_reward: -0.0005
 end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
-task_spec: multi_agent_tidy_house_fp
+task_spec: multi_agent_tidy_house_fp_2obj
 pddl_domain_def: fp
 actions:
   agent_0_base_velocity:
@@ -64,6 +64,8 @@ actions:
     dist_thresh: 0.5
     lateral_lin_speed: 40.0
     longitudinal_lin_speed: 40.0
+    lin_speed: 40.0
+    ang_speed: 20.0
   agent_1_base_velocity:
     agent_index : 1
     lin_speed: 40.0
@@ -82,11 +84,14 @@ actions:
     navmesh_offset_for_agent_placement: [[0.0, 0.0]]
     lateral_lin_speed: 40.0
     longitudinal_lin_speed: 40.0
+    lin_speed: 40.0
+    ang_speed: 20.0
 measurements:
   composite_success:
     must_call_stop: False
   cooperate_subgoal_reward:
     stage_sparse_reward: 5.0
+    collide_penalty: 0.5
     end_on_collide: True
 
 robot_at_thresh: 3.0
