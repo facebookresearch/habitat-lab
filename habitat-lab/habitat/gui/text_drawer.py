@@ -26,10 +26,16 @@ DISPLAY_FONT_SIZE = 16.0
 
 class TextOnScreenAlignment(Enum):
     TOP_LEFT = (TEXT_DELTA_FROM_CENTER, -TEXT_DELTA_FROM_CENTER)
+    TOP_CENTER = (TEXT_DELTA_FROM_CENTER, 0)
+    # We don't yet have right-alignment based on text width, so as a workaround we
+    # use an x offset halfway between the center and the right side of the viewport.
     TOP_RIGHT = (TEXT_DELTA_FROM_CENTER, TEXT_DELTA_FROM_CENTER / 2)
     CENTER = (0, 0)
+    # When using BOTTOM*, always include a small positive text_delta_y (~10), otherwise
+    # your text will appear too close to the bottom of the screen.
     BOTTOM_LEFT = (-TEXT_DELTA_FROM_CENTER, -TEXT_DELTA_FROM_CENTER)
-    BOTTOM_RIGHT = (-TEXT_DELTA_FROM_CENTER / 2, TEXT_DELTA_FROM_CENTER / 2)
+    BOTTOM_CENTER = (-TEXT_DELTA_FROM_CENTER, 0)
+    BOTTOM_RIGHT = (-TEXT_DELTA_FROM_CENTER, TEXT_DELTA_FROM_CENTER / 2)
 
 
 class TextDrawer:
