@@ -172,13 +172,11 @@ class TutorialStage:
         if self._object_animation is not None:
             self._object_animation.update(dt)
 
-    def get_look_at_matrix(self) -> mn.Matrix4:
+    def _get_look_at_vectors(self) -> Tuple[mn.Vector3, mn.Vector3]:
         # If there's no transition, return the next view
         assert self._next_lookat
         if not self._prev_lookat or self._transition_duration <= 0.0:
-            return mn.Matrix4.look_at(
-                self._next_lookat[0], self._next_lookat[1], mn.Vector3(0, 1, 0)
-            )
+            return (self._next_lookat[0], self._next_lookat[1])
         # Interpolate camera look-ats
         t: float = (
             _ease_fn_in_out_quat(
@@ -199,6 +197,10 @@ class TutorialStage:
                     t,
                 )
             )
+        return (look_at[0], look_at[1])
+
+    def get_look_at_matrix(self) -> mn.Matrix4:
+        look_at = self._get_look_at_vectors()
         return mn.Matrix4.look_at(look_at[0], look_at[1], mn.Vector3(0, 1, 0))
 
     def is_completed(self) -> bool:
@@ -217,10 +219,9 @@ class Tutorial:
         self._tutorial_stages = tutorial_stages
 
     def update(self, dt: float) -> None:
+        # Keep updating objects anims so that they are placed back
         for object_animation in self._pending_object_animations:
-            object_animation.update(
-                dt
-            )  # Keep updating so that objects are placed back
+            object_animation.update(dt)
 
         if self._tutorial_stage_index >= len(self._tutorial_stages):
             return
@@ -250,9 +251,17 @@ class Tutorial:
         return TEXT_HELP
 
     def skip_stage(self) -> None:
+        prev_stage = self._tutorial_stages[self._tutorial_stage_index]
+        # Skip stage
         self._next_stage()
+        # Stop object animations
+        self.stop_animations()
+        # Change 'prev lookat' of next stage to start from transitioning viewpoint
+        if not self.is_completed():
+            next_stage = self._tutorial_stages[self._tutorial_stage_index]
+            next_stage._prev_lookat = prev_stage._get_look_at_vectors()
 
-    def reset(self) -> None:
+    def stop_animations(self) -> None:
         for object_animation in self._pending_object_animations:
             object_animation.reset()
         self._pending_object_animations.clear()
@@ -298,7 +307,6 @@ def generate_tutorial(
     )
 
     # Show all the targets
-    # pathfinder = sim.pathfinder
     idxs, goal_pos = sim.get_targets()
     target_objs = [
         rom.get_object_by_id(sim._scene_obj_ids[idx]) for idx in idxs

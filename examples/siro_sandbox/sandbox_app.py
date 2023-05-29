@@ -959,7 +959,7 @@ class SandboxDriver(GuiAppDriver):
             self._tutorial.skip_stage()
 
         if self._tutorial.is_completed():
-            self._tutorial.reset()
+            self._tutorial.stop_animations()
             self._sandbox_state = SandboxState.CONTROLLING_AGENT
         else:
             self.cam_transform = self._tutorial.get_look_at_matrix()
