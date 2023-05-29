@@ -7,8 +7,8 @@
         name: "any"
         included_substrings:
           - "104862660_172226844" # small
-          - "102344193" # small
-          - "104862639_172226823" # small
+          # - "102344193" # small
+          # - "104862639_172226823" # small
           # - "102817200" # medium
           # - "108736824_177263559" # large
           # - "102816216" # new scene
@@ -173,8 +173,8 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 2
-        - 2
+        - 3
+        - 5
         orientation_sampling: up
         nav_to_min_distance: 1.5
 
@@ -188,6 +188,7 @@
     # of the arm
     agent_height: 1.8
     agent_max_climb: 0.01
+    agent_max_slope: 0
 
     # Check if the robot can navigate from grasping to goal locations
     check_navigable: True

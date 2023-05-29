@@ -488,6 +488,9 @@ class RearrangeEpisodeGenerator:
             self.sim.navmesh_settings.agent_max_climb = (
                 self.cfg.agent_max_climb
             )
+            self.sim.navmesh_settings.agent_max_slope = (
+                self.cfg.agent_max_slope
+            )
             self.sim.recompute_navmesh(
                 self.sim.pathfinder,
                 self.sim.navmesh_settings,
