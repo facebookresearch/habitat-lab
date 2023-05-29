@@ -104,6 +104,8 @@ class HRLPPO(PPO):
             record_min_mean_max(ratio, "prob_ratio")
 
             total_size = batch["loss_mask"].shape[0]
+            if isinstance(n_samples, torch.Tensor):
+                n_samples = n_samples.item()
             learner_metrics["batch_filled_ratio"].append(
                 n_samples / total_size
             )
