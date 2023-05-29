@@ -24,6 +24,15 @@ import magnum as mn
 
 import habitat_sim
 
+TEXT_SCENE_OVERVIEW: str = (
+    "Take note of the following objects.\nYou need to bring them to the goals."
+)
+TEXT_ROBOT_FOCUS: str = (
+    "This is your robot assistant.\nIt will help you accomplish your tasks.\n"
+)
+TEXT_AVATAR_FOCUS: str = "This is your avatar.\nYou will now gain control."
+TEXT_HELP: str = "Spacebar: Skip"
+
 
 class ObjectAnimation:
     _object: habitat_sim.physics.ManagedBulletRigidObject
@@ -220,12 +229,7 @@ class Tutorial:
         tutorial_stage.update(dt)
 
         if tutorial_stage.is_completed():
-            self._tutorial_stage_index += 1
-
-            if tutorial_stage._object_animation is not None:
-                self._pending_object_animations.append(
-                    tutorial_stage._object_animation
-                )
+            self._next_stage()
 
     def is_completed(self) -> bool:
         return self._tutorial_stage_index >= len(self._tutorial_stages)
@@ -242,10 +246,29 @@ class Tutorial:
             self._tutorial_stage_index
         ].get_display_text()
 
+    def get_help_text(self) -> str:
+        return TEXT_HELP
+
+    def skip_stage(self) -> None:
+        self._next_stage()
+
     def reset(self) -> None:
         for object_animation in self._pending_object_animations:
             object_animation.reset()
         self._pending_object_animations.clear()
+
+    def _next_stage(self) -> None:
+        if self.is_completed():
+            return
+
+        tutorial_stage = self._tutorial_stages[self._tutorial_stage_index]
+
+        if tutorial_stage._object_animation is not None:
+            self._pending_object_animations.append(
+                tutorial_stage._object_animation
+            )
+
+        self._tutorial_stage_index += 1
 
 
 def generate_tutorial(
@@ -258,6 +281,7 @@ def generate_tutorial(
     tutorial_stages: List[TutorialStage] = []
     view_forward_vector = final_lookat[1] - final_lookat[0]
     rom = sim.get_rigid_object_manager()
+    pathfinder = sim.pathfinder
 
     # Scene overview
     scene_root_node = sim.get_active_scene_graph().get_root_node()
@@ -266,7 +290,11 @@ def generate_tutorial(
         camera_fov_deg, scene_target_bb, view_forward_vector
     )
     tutorial_stages.append(
-        TutorialStage(stage_duration=6.0, next_lookat=scene_top_down_lookat)
+        TutorialStage(
+            stage_duration=8.0,
+            next_lookat=scene_top_down_lookat,
+            display_text=TEXT_SCENE_OVERVIEW,
+        )
     )
 
     # Show all the targets
@@ -317,6 +345,45 @@ def generate_tutorial(
             )
         )
 
+    # Robot focus
+    # Limitation: Only works if there's 1 robot
+    if len(sim.agents_mgr) == 2:
+        robot_idx = 1 if agent_idx == 0 else 0
+        art_obj = sim.agents_mgr[robot_idx].articulated_agent.sim_obj
+        agent_root_node = art_obj.get_link_scene_node(
+            -1
+        )  # Root link always has index -1
+        target_bb = mn.Range3D.from_center(
+            mn.Vector3(agent_root_node.absolute_translation),
+            mn.Vector3(1.0, 1.0, 1.0),
+        )  # Assume 2x2x2m bounding box
+        robot_lookat_far = _lookat_bounding_box_top_down(
+            camera_fov_deg / 3, target_bb, view_forward_vector
+        )
+        robot_lookat_near = _lookat_point_from_closest_navmesh_pos(
+            agent_root_node.absolute_translation, 1.5, 1.0, pathfinder
+        )
+        tutorial_stages.append(
+            TutorialStage(
+                stage_duration=2.0,
+                transition_duration=2.0,
+                prev_lookat=tutorial_stages[
+                    len(tutorial_stages) - 1
+                ]._next_lookat,
+                next_lookat=robot_lookat_far,
+                display_text=TEXT_ROBOT_FOCUS,
+            )
+        )
+        tutorial_stages.append(
+            TutorialStage(
+                stage_duration=3.0,
+                transition_duration=1.5,
+                prev_lookat=robot_lookat_far,
+                next_lookat=robot_lookat_near,
+                display_text=TEXT_ROBOT_FOCUS,
+            )
+        )
+
     # Controlled agent focus
     art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
     agent_root_node = art_obj.get_link_scene_node(
@@ -336,16 +403,18 @@ def generate_tutorial(
             transition_duration=2.0,
             prev_lookat=tutorial_stages[len(tutorial_stages) - 1]._next_lookat,
             next_lookat=agent_lookat,
+            display_text=TEXT_AVATAR_FOCUS,
         )
     )
 
     # Transition from the avatar view to simulated view (e.g. first person)
     tutorial_stages.append(
         TutorialStage(
-            stage_duration=1.5,
+            stage_duration=2.0,
             transition_duration=1.5,
             prev_lookat=tutorial_stages[len(tutorial_stages) - 1]._next_lookat,
             next_lookat=final_lookat,
+            display_text=TEXT_AVATAR_FOCUS,
         )
     )
 
@@ -384,3 +453,44 @@ def _lookat_bounding_box_top_down(
         camera_position,
         target_bb.center(),
     )
+
+
+def _lookat_point_from_closest_navmesh_pos(
+    target: mn.Vector3,
+    distance_from_target: float,
+    viewpoint_height: float,
+    pathfinder: habitat_sim.PathFinder,
+) -> Tuple[mn.Vector3, mn.Vector3]:
+    r"""
+    Creates look-at vectors for a viewing a point from a nearby navigable point (with a height offset).
+    Helps finding a viewpoint that is not occluded by a wall or other obstacle.
+    """
+    # Look up for a camera position by sampling radially around the target for a navigable position.
+    navigable_point = None
+    sample_count = 8
+    max_dist_to_obstacle = 0.0
+    for i in range(sample_count):
+        radial_angle = i * 2.0 * math.pi / float(sample_count)
+        dist_x = math.sin(radial_angle) * distance_from_target
+        dist_z = math.cos(radial_angle) * distance_from_target
+        candidate = mn.Vector3(target.x + dist_x, target.y, target.z + dist_z)
+        if pathfinder.is_navigable(candidate, 3.0):
+            dist_to_closest_obstacle = pathfinder.distance_to_closest_obstacle(
+                candidate, 2.0
+            )
+            if dist_to_closest_obstacle > max_dist_to_obstacle:
+                max_dist_to_obstacle = dist_to_closest_obstacle
+                navigable_point = candidate
+
+    if navigable_point == None:
+        # Fallback to a default point
+        navigable_point = mn.Vector3(
+            target.x + distance_from_target, target.y, target.z
+        )
+
+    camera_position = mn.Vector3(
+        navigable_point.x,
+        navigable_point.y + viewpoint_height,
+        navigable_point.z,
+    )
+    return (camera_position, target)

@@ -822,6 +822,12 @@ class SandboxDriver(GuiAppDriver):
                     text_delta_y=-50,
                 )
         elif self._sandbox_state == SandboxState.TUTORIAL:
+            controls_str = self._tutorial.get_help_text()
+            if len(controls_str) > 0:
+                self._text_drawer.add_text(
+                    controls_str, TextOnScreenAlignment.TOP_LEFT
+                )
+
             tutorial_str = self._tutorial.get_display_text()
             if len(tutorial_str) > 0:
                 self._text_drawer.add_text(
@@ -948,6 +954,9 @@ class SandboxDriver(GuiAppDriver):
         self.get_sim().gfx_replay_manager.save_keyframe()
 
         self._tutorial.update(dt)
+
+        if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+            self._tutorial.skip_stage()
 
         if self._tutorial.is_completed():
             self._tutorial.reset()
