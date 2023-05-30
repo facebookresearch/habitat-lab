@@ -42,11 +42,11 @@ success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
-start_in_manip_mode: False
 spawn_reference: view_points
 spawn_reference_sampling: uniform
 spawn_max_dists_to_obj: 0.0
-camera_tilt: -0.785398
+start_in_manip_mode: False
+camera_tilt: -0.5236      # start in navigation mode
 actions:
   arm_action:
     type: "ArmAction"
