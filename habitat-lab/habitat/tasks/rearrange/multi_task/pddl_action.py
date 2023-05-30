@@ -70,7 +70,7 @@ class PddlAction:
 
     def set_post_cond_search(
         self, post_cond_search: List[Dict[PddlEntity, PddlEntity]]
-    ):
+    ) -> None:
         self._post_cond_search = post_cond_search
 
     def apply_if_true(self, sim_info: PddlSimInfo) -> bool:
@@ -122,11 +122,18 @@ class PddlAction:
 
         return self._pre_cond.is_true_from_predicates(predicates)
 
-    def set_precond(self, new_precond):
+    def set_precond(self, new_precond) -> "PddlAction":
         """
         Sets the preconditions for the action.
         """
-        self._pre_cond = new_precond
+        return PddlAction(
+            self._name,
+            self._params,
+            new_precond,
+            self._post_cond,
+            self._task_info,
+            self._post_cond_search,
+        )
 
     @property
     def precond(self):
@@ -191,9 +198,10 @@ class PddlAction:
             for sat, assign in zip(
                 self._pre_cond.prev_truth_vals, self._post_cond_search
             ):
-                if sat:
+                if sat is not None and sat:
                     found_assign = assign
                     break
+            assert found_assign is not None
             # Clone and sub in so we don't overwrite the original predicates
             post_conds = [p.clone().sub_in(found_assign) for p in post_conds]
 

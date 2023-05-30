@@ -80,11 +80,37 @@ class Predicate:
         self._pddl_sim_state.sub_in(sub_dict)
         return self
 
+    def sub_in_clone(self, sub_dict: Dict[PddlEntity, PddlEntity]):
+        p = Predicate(
+            self._name,
+            self._pddl_sim_state.sub_in_clone(sub_dict),
+            self._args,
+        )
+        if self._arg_values is not None:
+            p.set_param_values(
+                [sub_dict.get(entity, entity) for entity in self._arg_values]
+            )
+        return p
+
     def is_true(self, sim_info: PddlSimInfo) -> bool:
         """
         Returns if the predicate is satisfied in the current simulator state.
+        Potentially returns the cached truth value of the predicate depending
+        on `sim_info`.
         """
-        return self._pddl_sim_state.is_true(sim_info)
+        self_repr = repr(self)
+        if (
+            sim_info.pred_truth_cache is not None
+            and self_repr in sim_info.pred_truth_cache
+        ):
+            # Return the cached value.
+            return sim_info.pred_truth_cache[self_repr]
+
+        # Recompute and potentially cache the result.
+        result = self._pddl_sim_state.is_true(sim_info)
+        if sim_info.pred_truth_cache is not None:
+            sim_info.pred_truth_cache[self_repr] = result
+        return result
 
     def set_state(self, sim_info: PddlSimInfo) -> None:
         """
@@ -106,7 +132,7 @@ class Predicate:
 
     @property
     def compact_str(self):
-        args = ",".join([str(x) for x in self._arg_values])
+        args = ",".join((x.name for x in self._arg_values))
         return f"{self._name}({args})"
 
     def __eq__(self, other_pred):

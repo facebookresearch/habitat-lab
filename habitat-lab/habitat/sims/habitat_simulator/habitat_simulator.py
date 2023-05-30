@@ -346,6 +346,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "motion_data_path",
                 "ik_arm_urdf",
                 "grasp_managers",
+                "joint_start_override",
             },
         )
 

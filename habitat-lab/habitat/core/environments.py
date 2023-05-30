@@ -46,6 +46,9 @@ class RLTaskEnv(habitat.RLEnv):
         super().__init__(config, dataset)
         self._reward_measure_name = self.config.task.reward_measure
         self._success_measure_name = self.config.task.success_measure
+        self._slack_reward = self.config.task.slack_reward
+        self._success_reward = self.config.task.success_reward
+        self._end_on_success = self.config.task.end_on_success
         assert (
             self._reward_measure_name is not None
         ), "The key task.reward_measure cannot be None"
@@ -69,12 +72,12 @@ class RLTaskEnv(habitat.RLEnv):
 
     def get_reward(self, observations):
         current_measure = self._env.get_metrics()[self._reward_measure_name]
-        reward = self.config.task.slack_reward
+        reward = self._slack_reward
 
         reward += current_measure
 
         if self._episode_success():
-            reward += self.config.task.success_reward
+            reward += self._success_reward
 
         return reward
 
@@ -85,7 +88,7 @@ class RLTaskEnv(habitat.RLEnv):
         done = False
         if self._env.episode_over:
             done = True
-        if self.config.task.end_on_success and self._episode_success():
+        if self._end_on_success and self._episode_success():
             done = True
         return done
 

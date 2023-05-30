@@ -718,7 +718,7 @@ def parse_receptacles_from_user_config(
 
 
 def find_receptacles(
-    sim: habitat_sim.Simulator,
+    sim: habitat_sim.Simulator, ignore_handles: Optional[List[str]] = None
 ) -> List[Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]]:
     """
     Scrape and return a list of all Receptacles defined in the metadata belonging to the scene's currently instanced objects.
@@ -728,6 +728,8 @@ def find_receptacles(
 
     obj_mgr = sim.get_rigid_object_manager()
     ao_mgr = sim.get_articulated_object_manager()
+    if ignore_handles is None:
+        ignore_handles = []
 
     receptacles: List[
         Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]
@@ -746,6 +748,8 @@ def find_receptacles(
 
     # rigid object receptacles
     for obj_handle in obj_mgr.get_object_handles():
+        if obj_handle in ignore_handles:
+            continue
         obj = obj_mgr.get_object_by_handle(obj_handle)
         source_template_file = obj.creation_attributes.file_directory
         user_attr = obj.user_attributes
@@ -759,6 +763,8 @@ def find_receptacles(
 
     # articulated object receptacles
     for obj_handle in ao_mgr.get_object_handles():
+        if obj_handle in ignore_handles:
+            continue
         obj = ao_mgr.get_object_by_handle(obj_handle)
         # TODO: no way to get filepath from AO currently. Add this API.
         source_template_file = ""

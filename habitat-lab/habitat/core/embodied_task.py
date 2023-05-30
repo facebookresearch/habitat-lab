@@ -7,6 +7,7 @@ r"""Implements task and measurements needed for training and benchmarking of
 ``habitat.Agent`` inside ``habitat.Env``.
 """
 
+import time
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Union
 
@@ -164,9 +165,12 @@ class Measurements:
         for measure in self.measures.values():
             measure.reset_metric(*args, **kwargs)
 
-    def update_measures(self, *args: Any, **kwargs: Any) -> None:
+    def update_measures(self, *args: Any, task, **kwargs: Any) -> None:
         for measure in self.measures.values():
-            measure.update_metric(*args, **kwargs)
+            t_start = time.time()
+            measure.update_metric(*args, task=task, **kwargs)
+            measure_name = measure._get_uuid(*args, task=task, **kwargs)
+            task.add_perf_timing(f"measures.{measure_name}", t_start)
 
     def get_metrics(self) -> Metrics:
         r"""Collects measurement from all :ref:`Measure`\ s and returns it
@@ -264,6 +268,10 @@ class EmbodiedTask:
 
         self._is_episode_active = False
 
+    def add_perf_timing(self, *args, **kwargs):
+        if hasattr(self._sim, "add_perf_timing"):
+            self._sim.add_perf_timing(*args, **kwargs)
+
     def _init_entities(self, entities_configs, register_func) -> OrderedDict:
         entities = OrderedDict()
         for entity_name, entity_cfg in entities_configs.items():
@@ -286,7 +294,10 @@ class EmbodiedTask:
         observations = self._sim.reset()
         observations.update(
             self.sensor_suite.get_observations(
-                observations=observations, episode=episode, task=self
+                observations=observations,
+                episode=episode,
+                task=self,
+                should_time=True,
             )
         )
 
@@ -342,6 +353,7 @@ class EmbodiedTask:
                 episode=episode,
                 action=action,
                 task=self,
+                should_time=True,
             )
         )
         self._is_episode_active = self._check_episode_is_active(
