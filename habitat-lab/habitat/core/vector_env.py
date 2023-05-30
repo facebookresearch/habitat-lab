@@ -261,18 +261,12 @@ class VectorEnv:
                 if command == STEP_COMMAND:
                     task = inner_env.env.env._env.task
 
-                    t_start = time.time()
                     observations, reward, done, info = env.step(data)
-                    task.add_perf_timing("vector_env_step", t_start)
 
-                    t_start = time.time()
                     if auto_reset_done and done:
                         observations = env.reset()
-                    task.add_perf_timing("vector_env_auto_reset", t_start)
 
-                    t_start = time.time()
                     connection_write_fn((observations, reward, done, info))
-                    task.add_perf_timing("vector_env_conn_write", t_start)
 
                 elif command == RESET_COMMAND:
                     observations = env.reset()
