@@ -392,9 +392,7 @@ class PddlDomain:
         """
         for k, ac in self._orig_actions.items():
             precond_quant = ac.precond.quantifier
-            new_preconds, assigns = self.expand_quantifiers(
-                ac.precond.clone(), ac.name
-            )
+            new_preconds, assigns = self.expand_quantifiers(ac.precond.clone())
 
             new_ac = ac.set_precond(new_preconds)
             if precond_quant == LogicalQuantifierType.EXISTS:
@@ -572,7 +570,7 @@ class PddlDomain:
         return {**self._constants, **self._added_entities}
 
     def expand_quantifiers(
-        self, expr: LogicalExpr, tmp=None
+        self, expr: LogicalExpr
     ) -> Tuple[LogicalExpr, List[Dict[PddlEntity, PddlEntity]]]:
         """
         Expand out a logical expression that could involve a quantifier into
@@ -598,7 +596,7 @@ class PddlDomain:
         elif expr.quantifier is None:
             return expr, []
         else:
-            raise ValueError(f"Unrecongized {expr.quantifier}")
+            raise ValueError(f"Unrecognized {expr.quantifier}")
 
         t_start = time.time()
         assigns: List[List[PddlEntity]] = [[]]
