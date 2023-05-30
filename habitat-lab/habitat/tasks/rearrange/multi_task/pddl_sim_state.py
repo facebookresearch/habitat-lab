@@ -18,11 +18,7 @@ from habitat.tasks.rearrange.multi_task.rearrange_pddl import (
     PddlSimInfo,
     SimulatorObjectType,
 )
-from habitat.tasks.rearrange.utils import (
-    get_angle_to_pos,
-    get_robot_spawns,
-    rearrange_logger,
-)
+from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 
 CAB_TYPE = "cab_type"
 FRIDGE_TYPE = "fridge_type"

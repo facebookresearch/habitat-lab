@@ -5,7 +5,6 @@
 # LICENSE file in the root directory of this source tree.
 
 import signal
-import time
 import warnings
 from multiprocessing.connection import Connection
 from multiprocessing.context import BaseContext
@@ -259,8 +258,6 @@ class VectorEnv:
             command, data = connection_read_fn()
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
-                    task = inner_env.env.env._env.task
-
                     observations, reward, done, info = env.step(data)
 
                     if auto_reset_done and done:
