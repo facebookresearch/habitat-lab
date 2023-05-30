@@ -67,7 +67,7 @@ class TextDrawer:
             string.ascii_lowercase
             + string.ascii_uppercase
             + string.digits
-            + ":-_+,.! %µ",
+            + ":-_+,.! %µ/",
         )
         self._shader = shaders.VectorGL2D()
         self._window_text = text.Renderer2D(

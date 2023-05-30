@@ -50,7 +50,7 @@ def test_episode_save_files(filepath_base):
     # For example, for json, some complex types are converted to strings and floats
     # are rounded to 5 digits of precision.
 
-    for key in ["episode_id", "target_obj_ids"]:
+    for key in ["scene_id", "episode_id", "target_obj_ids"]:
         assert pkl_obj[key] == json_obj[key]
 
     for key in ["goal_positions"]:
