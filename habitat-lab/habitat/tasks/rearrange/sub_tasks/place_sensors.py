@@ -38,6 +38,8 @@ class PlaceReward(RearrangeReward):
         self._drop_pen_type = getattr(config, "drop_pen_type", "constant")
         self._stability_reward = config.stability_reward
         self._curr_step = 0
+        self._prev_reached_goal = False
+        self._max_steps_to_reach_surface = config.max_steps_to_reach_surface
         self._ee_resting_success_threshold = (
             config.ee_resting_success_threshold
         )
@@ -81,6 +83,8 @@ class PlaceReward(RearrangeReward):
         self._prev_dist = -1.0
         self._prev_dropped = not self._sim.grasp_mgr.is_grasped
         self._curr_step = 0
+        self._time_of_release = 0
+        self._prev_reached_goal = False
         super().reset_metric(
             *args,
             episode=episode,
@@ -115,16 +119,17 @@ class PlaceReward(RearrangeReward):
             # agent gets rewarded if distance to goal is greater than min_dist_to_goal
             if self._sparse_reward:
                 dist_to_goal = 0.0  # still use dense reward for returning to resting position
+            elif not self._use_ee_dist or not cur_picked:
+                # use object to goal distance if object is released or if not using ee distance to target
+                obj_to_goal_dist = task.measurements.measures[
+                    self._obj_to_goal_dist_cls_uuid
+                ].get_metric()
+                dist_to_goal = obj_to_goal_dist[str(picked_idx)]
             elif self._use_ee_dist:
                 ee_to_goal_dist = task.measurements.measures[
                     self._ee_to_goal_dist_cls_uuid
                 ].get_metric()
                 dist_to_goal = ee_to_goal_dist[str(picked_idx)]
-            else:
-                obj_to_goal_dist = task.measurements.measures[
-                    self._obj_to_goal_dist_cls_uuid
-                ].get_metric()
-                dist_to_goal = obj_to_goal_dist[str(picked_idx)]
             min_dist = self._min_dist_to_goal
         else:
             # Second stage reward, if object is at goal and the agent has released the object
@@ -132,15 +137,31 @@ class PlaceReward(RearrangeReward):
             dist_to_goal = ee_to_rest_distance
             min_dist = self._ee_resting_success_threshold
 
-        # Penalize and end the episode if object is dropped but not on goal, if object is on goal reward the agent
-        if (not self._prev_dropped) and (not cur_picked):
-            self._prev_dropped = True
-            if obj_at_goal:
+        if not cur_picked:
+            # first time the object is dropped, we record the time of release
+            if not self._prev_dropped:
+                self._time_of_release = self._curr_step
+                self._prev_dropped = True
+
+            time_since_release = self._curr_step - self._time_of_release
+            if (
+                obj_at_goal
+                and (not self._prev_reached_goal)
+                and time_since_release <= self._max_steps_to_reach_surface
+            ):
+                # if the object reach the surface in time, it receives a place reward
                 reward += self._place_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self._prev_dist = -1
-            else:
+                self._prev_reached_goal = True
+            elif obj_at_goal and self._prev_reached_goal:
+                # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
+                reward += self._stability_reward
+            elif (
+                not obj_at_goal
+                and time_since_release >= self._max_steps_to_reach_surface
+            ):
                 # Dropped at wrong location
                 drop_pen = self._drop_pen
                 if self._drop_pen_type == "penalize_remaining_dist":
@@ -155,11 +176,6 @@ class PlaceReward(RearrangeReward):
                     self._task.should_end = True
                     self._metric = reward
                     return
-
-        # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
-        elif self._prev_dropped and (not cur_picked) and obj_at_goal:
-            reward += self._stability_reward
-
 
         # Reward the agent based on distance to goal/resting position
         if dist_to_goal >= min_dist:

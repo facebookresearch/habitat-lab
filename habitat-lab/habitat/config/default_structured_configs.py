@@ -835,6 +835,7 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     drop_pen_type: str = "constant"
     ee_resting_success_threshold: float = 0.15
     stability_reward: float = 0.0
+    max_steps_to_reach_surface: int = 0
 
 
 @attr.s(auto_attribs=True, slots=True)
