@@ -88,6 +88,8 @@ class HrlRolloutStorage(RolloutStorage):
         if should_inserts is None:
             should_inserts = self._last_should_inserts
         assert should_inserts is not None
+        # Starts as shape [batch_size, 1]
+        should_inserts = should_inserts.flatten()
 
         if should_inserts.sum() == 0:
             return

@@ -2,9 +2,7 @@
 
 defaults:
   - /habitat/task: task_config_base
-  - /habitat/task/actions:
-    - arm_action
-    - base_velocity
+  - /habitat/task/rearrange/agents: fetch_base_arm
   - /habitat/task/measurements:
     - articulated_agent_force
     - force_terminate
@@ -36,9 +34,6 @@ success_measure: place_success
 success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True
-actions:
-  arm_action:
-    grip_controller: SuctionGraspAction
 measurements:
   force_terminate:
     max_accum_force: 10_000.0

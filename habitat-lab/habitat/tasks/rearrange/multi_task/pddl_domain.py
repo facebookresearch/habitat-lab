@@ -610,14 +610,16 @@ class PddlDomain:
                         continue
                     entity_assigns.append([*cur_assign, e])
             assigns = entity_assigns
-        self.sim_info.sim.add_perf_timing("assigns_search", t_start)
+        if self._sim_info is not None:
+            self.sim_info.sim.add_perf_timing("assigns_search", t_start)
 
         t_start = time.time()
         assigns = [dict(zip(expr.inputs, assign)) for assign in assigns]
         expanded_exprs = []
         for assign in assigns:
             expanded_exprs.append(expr.sub_in_clone(assign))
-        self.sim_info.sim.add_perf_timing("expand_exprs_set", t_start)
+        if self._sim_info is not None:
+            self.sim_info.sim.add_perf_timing("expand_exprs_set", t_start)
 
         inputs: List[PddlEntity] = []
         return (

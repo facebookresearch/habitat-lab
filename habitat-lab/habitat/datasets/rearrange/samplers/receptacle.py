@@ -574,7 +574,7 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
         )
         mesh_transformations: List[
             mn.Matrix4
-        ] = mn.scenetools.flatten_transformation_hierarchy3d(
+        ] = mn.scenetools.absolute_field_transformations3d(
             scene, mn.trade.SceneField.MESH
         )
         assert len(mesh_assignments) == len(mesh_transformations)

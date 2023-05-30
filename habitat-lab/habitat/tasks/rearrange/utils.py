@@ -414,19 +414,31 @@ def get_robot_spawns(
 
     :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
     """
-
-    state = sim.capture_state()
     if agent is None:
         agent = sim.articulated_agent
     start_rotation = agent.base_rot
     start_position = agent.base_pos
 
+    state = sim.capture_state()
+
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         sim.set_state(state)
-        start_position = sim.pathfinder.get_random_navigable_point_near(
-            target_position, distance_threshold
-        )
+
+        if distance_threshold == -1.0:
+            # Place as close to the object as possible.
+            if not sim.is_point_within_bounds(target_position):
+                rearrange_logger.error(
+                    f"Object {target_position} is out of bounds but trying to set robot position"
+                )
+
+            start_position = sim.safe_snap_point(target_position)
+        else:
+            # Place within `distance_threshold` of the object.
+            start_position = sim.pathfinder.get_random_navigable_point_near(
+                target_position, distance_threshold
+            )
+
         island_idx = sim.pathfinder.get_island(start_position)
         if island_idx != sim.largest_island_idx:
             continue
@@ -521,6 +533,10 @@ def add_perf_timing_func(name: Optional[str] = None):
                 sim = self
             else:
                 sim = self._sim
+
+            if not hasattr(sim, "add_perf_timing"):
+                # Does not support logging.
+                return f(self, *args, **kwargs)
 
             sim.cur_runtime_perf_scope.append(use_name)
             t_start = time.time()

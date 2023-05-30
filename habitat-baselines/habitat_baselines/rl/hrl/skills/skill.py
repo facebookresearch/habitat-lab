@@ -332,5 +332,7 @@ class SkillPolicy(Policy):
         Which keys from the observation dictionary this skill requires to
         compute actions and termination conditions.
         """
-
-        return []
+        if self._should_keep_hold_state:
+            return [IsHoldingSensor.cls_uuid]
+        else:
+            return []

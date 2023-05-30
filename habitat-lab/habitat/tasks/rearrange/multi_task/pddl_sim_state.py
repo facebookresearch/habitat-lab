@@ -174,32 +174,20 @@ class PddlRobotState:
             targ_pos = sim_info.get_entity_pos(self.pos)
             agent = sim.get_agent_data(robot_id).articulated_agent
 
-            if self.place_at_pos_dist == -1.0:
-                # Place as close to the object as possible.
-                if not sim_info.sim.is_point_within_bounds(targ_pos):
-                    rearrange_logger.error(
-                        f"Object {self.pos} is out of bounds but trying to set robot position"
-                    )
-
-                agent_pos = sim_info.sim.safe_snap_point(targ_pos)
-                agent.base_pos = agent_pos
-                agent.base_rot = get_angle_to_pos(
-                    np.array(targ_pos - agent_pos)
-                )
-            else:
-                # Place some distance away from the object.
-                start_pos, start_rot, was_fail = get_robot_spawns(
-                    target_position=targ_pos,
-                    rotation_perturbation_noise=self.base_angle_noise,
-                    distance_threshold=self.place_at_pos_dist,
-                    sim=sim,
-                    num_spawn_attempts=sim_info.num_spawn_attempts,
-                    physics_stability_steps=sim_info.physics_stability_steps,
-                )
-                sim.articulated_agent.base_pos = start_pos
-                sim.articulated_agent.base_rot = start_rot
-                if was_fail:
-                    rearrange_logger.error("Failed to place the robot.")
+            # Place some distance away from the object.
+            start_pos, start_rot, was_fail = get_robot_spawns(
+                target_position=targ_pos,
+                rotation_perturbation_noise=self.base_angle_noise,
+                distance_threshold=self.place_at_pos_dist,
+                sim=sim,
+                num_spawn_attempts=sim_info.num_spawn_attempts,
+                physics_stability_steps=sim_info.physics_stability_steps,
+                agent=agent,
+            )
+            sim.articulated_agent.base_pos = start_pos
+            sim.articulated_agent.base_rot = start_rot
+            if was_fail:
+                rearrange_logger.error("Failed to place the robot.")
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
             grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr

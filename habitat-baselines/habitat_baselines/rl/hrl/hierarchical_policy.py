@@ -74,7 +74,11 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         self._pddl = self._create_pddl(full_config, config)
         self._create_skills(
-            dict(config.hierarchical_policy.defined_skills),
+            {
+                k: v
+                for k, v in config.hierarchical_policy.defined_skills.items()
+                if k not in config.hierarchical_policy.ignore_skills
+            },
             observation_space,
             action_space,
             full_config,
@@ -403,6 +407,10 @@ class HierarchicalPolicy(nn.Module, Policy):
                     prev_actions,
                 )
                 if "rnn_hidden_states" in hl_info:
+                    if self._skills[skill_id].has_hidden_state:
+                        raise ValueError(
+                            f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
+                        )
                     if prev_actions.shape[0] == len(batch_ids):
                         prev_actions = hl_info["actions"][batch_ids]
                     else:
@@ -412,11 +420,6 @@ class HierarchicalPolicy(nn.Module, Policy):
                         self._high_level_policy.update_hidden_states(
                             batch_ids, rnn_hidden_states, hl_info
                         )
-                    )
-
-                elif self._skills[skill_id].has_hidden_state:
-                    raise ValueError(
-                        f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
                     )
 
             hl_info["actions"] = prev_actions
