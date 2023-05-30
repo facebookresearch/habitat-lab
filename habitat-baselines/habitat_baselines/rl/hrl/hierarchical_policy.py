@@ -74,7 +74,11 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         self._pddl = self._create_pddl(full_config, config)
         self._create_skills(
-            dict(config.hierarchical_policy.defined_skills),
+            {
+                k: v
+                for k, v in config.hierarchical_policy.defined_skills.items()
+                if k not in config.hierarchical_policy.ignore_skills
+            },
             observation_space,
             action_space,
             full_config,

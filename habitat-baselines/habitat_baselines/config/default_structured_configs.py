@@ -264,6 +264,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
+    # Names of the skills to not load.
+    ignore_skills: List[str] = field(default_factory=list)
     defined_skills: Dict[str, HrlDefinedSkillConfig] = field(
         default_factory=dict
     )
