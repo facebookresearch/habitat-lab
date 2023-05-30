@@ -7,7 +7,7 @@
         name: "any"
         included_substrings:
           #- "104862660_172226844" # small
-          - "102344193" # small
+          - "102344193" # small (demo)
           # - "104862639_172226823" # small
           # - "102817200" # medium
           # - "108736824_177263559" # large
@@ -173,7 +173,7 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 1
+        - 2
         - 2
         orientation_sampling: up
         nav_to_min_distance: 1.5
@@ -195,7 +195,7 @@
     navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
     # If the collision rate of the navigation path is larger
     # than the threshold, we reject that sample
-    max_collision_rate_for_navigable: 0.5
+    max_collision_rate_for_navigable: 0.75
     # Velocity control parameter for the robot
     angle_threshold: 0.26
     linear_velocity: 1.0
