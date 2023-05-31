@@ -380,8 +380,8 @@ class TriangleMeshReceptacle(Receptacle):
         # minmax = mn.math.minmax(
         #        self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)
         #    )
-        minv = mn.Vector3(9999)
-        maxv = mn.Vector3(-9999)
+        minv = mn.Vector3(mn.math.inf)
+        maxv = mn.Vector3(-mn.math.inf)
         for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
             minv = mn.math.min(minv, v)
             maxv = mn.math.max(maxv, v)
