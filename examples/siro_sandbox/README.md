@@ -158,7 +158,7 @@ habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/mic
 ```
 
 ## Capturing Gfx-Replay Files
-Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording can be enabled with the `--enable-gfx-replay-save` argument. Capturing starts at the first frame and ends (is saved) when pressing the period (`.`) key. The `--gfx-replay-save-path` argument can be set to specify a custom save location.
+Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording can be enabled with the `--enable-gfx-replay-save` argument. Capturing starts per episode at the first frame and ends (is saved) when episode is completed (environment is reset). The `--save-filepath-base` argument can be set to specify a custom save location (filepath base).
 
 ## Human-in-the-loop tutorial sequence
 The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.
