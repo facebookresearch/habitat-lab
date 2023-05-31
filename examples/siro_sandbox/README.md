@@ -141,6 +141,10 @@ In the multi agent tidy house task, episode is considered over when humanoid and
 habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
 ```
 
+## Play episodes filter
+Specify a subset of play episodes on the command line by adding `--episodes-filter`  argument followed by the filter string. Episodes filter string should be in the form `"0:10 12 14:20:2"`, where single integer number ('12' in this case) represents an episode id and colon separated integers ('0:10' and '14:20:2') represent start:stop:step episodes ids range.
+
+
 ## Using FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides appended:
 ```
