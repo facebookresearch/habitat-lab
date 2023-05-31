@@ -185,7 +185,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
         if self._play_episodes_filter_str is not None:
-            _max_num_digits: int = len(str(len(dataset.episodes)))
+            max_num_digits: int = len(str(len(dataset.episodes)))
 
             def get_play_episodes_ids(play_episodes_filter_str):
                 play_episodes_ids: Set[str] = set()
@@ -193,14 +193,12 @@ class SandboxDriver(GuiAppDriver):
                     if ":" in ep_filter_str:
                         range_params = map(int, ep_filter_str.split(":"))
                         play_episodes_ids.update(
-                            episode_id.zfill(_max_num_digits)
+                            episode_id.zfill(max_num_digits)
                             for episode_id in map(str, range(*range_params))
                         )
                     else:
                         episode_id = ep_filter_str
-                        play_episodes_ids.add(
-                            episode_id.zfill(_max_num_digits)
-                        )
+                        play_episodes_ids.add(episode_id.zfill(max_num_digits))
 
                 return play_episodes_ids
 
@@ -210,8 +208,7 @@ class SandboxDriver(GuiAppDriver):
             dataset.episodes = [
                 ep
                 for ep in dataset.episodes
-                if ep.episode_id.zfill(_max_num_digits)
-                in play_episodes_ids_set
+                if ep.episode_id.zfill(max_num_digits) in play_episodes_ids_set
             ]
 
         return dataset
@@ -824,11 +821,9 @@ class SandboxDriver(GuiAppDriver):
 
         if not self._env_episode_active():
             if self._env_task_complete:
-                status_str += (
-                    "Task complete!\nPress M to start the next episode.\n"
-                )
+                status_str += "Task complete!\n"
             else:
-                status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
+                status_str += "Oops! Something went wrong.\n"
         elif self._held_target_obj_idx is not None:
             # reference code to display object handle
             # sim = self.get_sim()
@@ -855,7 +850,13 @@ class SandboxDriver(GuiAppDriver):
             status_str += "Just wait! The robot is moving the last object.\n"
         else:
             # we don't expect to hit this case ever
-            status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
+            status_str += "Oops! Something went wrong.\n"
+
+        # center align the status_str
+        max_status_str_len = 50
+        status_str = "/n".join(
+            line.center(max_status_str_len) for line in status_str.split("/n")
+        )
 
         return status_str
 
@@ -872,7 +873,7 @@ class SandboxDriver(GuiAppDriver):
                 self._text_drawer.add_text(
                     status_str,
                     TextOnScreenAlignment.TOP_CENTER,
-                    text_delta_x=-150,
+                    text_delta_x=-280,
                     text_delta_y=-50,
                 )
 
@@ -895,7 +896,7 @@ class SandboxDriver(GuiAppDriver):
                 self._text_drawer.add_text(
                     tutorial_str,
                     TextOnScreenAlignment.TOP_CENTER,
-                    text_delta_x=-150,
+                    text_delta_x=-280,
                     text_delta_y=-50,
                 )
 
