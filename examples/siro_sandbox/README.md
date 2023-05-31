@@ -8,11 +8,11 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 ## Known Issues
 * The skinned humanoid doesn't render correctly; see workaround below.
 * When using Floorplanner scenes (see below), the app has very bad runtime perf on older Macbooks (2021 is fine; 2019 is bad).
-* Spot robot stops and doesn't move once it collides with any object (try pressing `M` to reset to a next episode).
 
-## Running HITL eval with a user-controlled humanoid and policy-driven Spot
+## Running HITL eval
+Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation), including grabbing latest habitat-sim `main`.
 
-* Make sure you've followed the [SIRo install instructions](../../SIRO_README.md#installation), including grabbing latest habitat-sim `main`.
+### GUI-controlled humanoid and PDDL planner + oracle skills policy-controlled Spot
 <!-- * To use Fetch, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
@@ -24,7 +24,7 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts habitat.dataset.split=minival \
 --sample-random-baseline-base-vel
 ``` -->
-* To use Spot, run:
+* To launch GUI-controlled humanoid and planner-controlled Spot, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -36,7 +36,7 @@ python examples/siro_sandbox/sandbox_app.py \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1
 ```
-* Solo user-controlled humanoid mode, with sliding enabled:
+* To launch [solo GUI-controlled humanoid](#solo-humanoid-mode), with sliding enabled, run:
 ```
 HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
 python examples/siro_sandbox/sandbox_app.py \
@@ -50,11 +50,54 @@ habitat_baselines.num_environments=1 \
 habitat.simulator.habitat_sim_v0.allow_sliding=True
 ```
 
+### GUI-controlled humanoid and learned-policy-controlled Spot
+
+* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, run:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--never-end \
+--gui-controlled-agent-index 1 \
+--cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=False
+```
+
+* To launch random-policy-controlled humanoid and Spot in [free camera mode](#gui-controlled-agents-and-free-camera-mode), run:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--never-end \
+--cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot.yaml \
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=False
+```
+
+To use **trained**-policy-controlled agent(s) instead of random-policy-controlled:
+1. Download the pre-trained [checkpoint](https://drive.google.com/file/d/1swH5ZUgxe3xQn_k0s5OD7Ow6-mwCN_ic/view?usp=share_link) (150 updates).
+2.  Run two above commands with the following `--cfg-opts`:
+```
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=True \
+habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
+```
+
 
 ## Controls
 * See on-screen help text for common keyboard and mouse controls
 * `N` to toggle navmesh visualization in the debug third-person view (`--debug-third-person-width`)
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
+
+## Saving episode data
+Use `--save-filepath-base my_session`. When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
 
 ## Workaround to avoid broken skinned humanoid
 
@@ -98,6 +141,10 @@ In the multi agent tidy house task, episode is considered over when humanoid and
 habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
 ```
 
+## Play episodes filter
+Specify a subset of play episodes on the command line by adding `--episodes-filter`  argument followed by the filter string. Episodes filter string should be in the form `"0:10 12 14:20:2"`, where single integer number ('12' in this case) represents an episode id and colon separated integers ('0:10' and '14:20:2') represent start:stop:step episodes ids range.
+
+
 ## Using FP dataset
 To use FP dataset follow the FP installation instructions in [SIRO_README.md](../../SIRO_README.md) and run any of the above Sandbox launch command with the following config overrides appended:
 ```
@@ -112,6 +159,9 @@ habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/mic
 
 ## Capturing Gfx-Replay Files
 Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording can be enabled with the `--enable-gfx-replay-save` argument. Capturing starts at the first frame and ends (is saved) when pressing the period (`.`) key. The `--gfx-replay-save-path` argument can be set to specify a custom save location.
+
+## Human-in-the-loop tutorial sequence
+The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.
 
 ## Testing BatchReplayRenderer
 
