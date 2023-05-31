@@ -275,7 +275,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                 raise Exception("path not found!")
         #get the argmin among geo_dists
         optimal_dist = np.min(geo_dists)
-        return optimal_dist
+        return optimal_dist, np.argmin(geo_dists)
 
 
 
