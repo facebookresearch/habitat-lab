@@ -178,6 +178,9 @@ def test_hrl(config_path, policy_type, skill_type, mode):
 
     if policy_type == "hl_neural" and skill_type == "nn_skills":
         return
+    if policy_type == "hl_neural" and mode == "eval":
+        # We don't have skill checkpoints to load right now.
+        return
     if policy_type == "hl_fixed" and mode == "train":
         return
     if skill_type == "oracle_skills" and "oracle" not in config_path:

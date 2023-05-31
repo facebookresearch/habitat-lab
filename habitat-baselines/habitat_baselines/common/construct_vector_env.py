@@ -18,6 +18,7 @@ def construct_envs(
     config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
+    is_first_rank: bool = True,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.
     To allow better performance, dataset are split into small ones for
@@ -28,6 +29,7 @@ def construct_envs(
     :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
     :param enforce_scenes_greater_eq_environments: Make sure that there are more (or equal)
         scenes than environments. This is needed for correct evaluation.
+    :param is_first_rank: If these environments are being constructed on the rank0 GPU.
 
     :return: VectorEnv object created according to specification.
     """
@@ -72,13 +74,21 @@ def construct_envs(
             scene_splits[idx % len(scene_splits)].append(scene)
         assert sum(map(len, scene_splits)) == len(scenes)
 
-    for i in range(num_environments):
+    for env_index in range(num_environments):
         proc_config = config.copy()
         with read_write(proc_config):
             task_config = proc_config.habitat
-            task_config.seed = task_config.seed + i
+            task_config.seed = task_config.seed + env_index
+            if (env_index != 0) or not is_first_rank:
+                # Filter out non-rank0_env0 measures from the task config if we
+                # are not on rank0 env0.
+                task_config.task.measurements = {
+                    k: v
+                    for k, v in task_config.task.measurements.items()
+                    if k not in task_config.task.rank0_env0_measure_names
+                }
             if len(scenes) > 0:
-                task_config.dataset.content_scenes = scene_splits[i]
+                task_config.dataset.content_scenes = scene_splits[env_index]
 
         configs.append(proc_config)
 

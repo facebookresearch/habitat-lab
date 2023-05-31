@@ -24,7 +24,11 @@ from habitat.articulated_agents.robots.fetch_suction import FetchSuctionRobot
 from habitat.tasks.rearrange.rearrange_grasp_manager import (
     RearrangeGraspManager,
 )
-from habitat.tasks.rearrange.utils import IkHelper, is_pb_installed
+from habitat.tasks.rearrange.utils import (
+    IkHelper,
+    add_perf_timing_func,
+    is_pb_installed,
+)
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -91,34 +95,52 @@ class ArticulatedAgentManager:
                         if sensor_name.startswith(camera_prefix):
                             agent._cameras[camera_prefix].append(sensor_name)
 
+            if agent_cfg.joint_start_override is None:
+                use_arm_init = np.array(agent.params.arm_init_params)
+            else:
+                use_arm_init = np.array(agent_cfg.joint_start_override)
             self._all_agent_data.append(
                 ArticulatedAgentData(
                     articulated_agent=agent,
                     grasp_mgrs=grasp_managers,
                     cfg=agent_cfg,
-                    start_js=np.array(agent.params.arm_init_params),
+                    start_js=use_arm_init,
                     is_pb_installed=self._is_pb_installed,
                 )
             )
 
-    def reconfigure(self, is_new_scene: bool):
+    @add_perf_timing_func()
+    def on_new_scene(self) -> None:
+        """
+        Call on a new scene. This will destroy and re-create the robot
+        simulator instances.
+        """
         ao_mgr = self._sim.get_articulated_object_manager()
         for agent_data in self._all_agent_data:
-            if is_new_scene:
-                agent_data.grasp_mgr.reconfigure()
-                if (
-                    agent_data.articulated_agent.sim_obj is not None
-                    and agent_data.articulated_agent.sim_obj.is_alive
-                ):
-                    ao_mgr.remove_object_by_id(
-                        agent_data.articulated_agent.sim_obj.object_id
-                    )
+            agent_data.grasp_mgr.reconfigure()
+            if (
+                agent_data.articulated_agent.sim_obj is not None
+                and agent_data.articulated_agent.sim_obj.is_alive
+            ):
+                ao_mgr.remove_object_by_id(
+                    agent_data.articulated_agent.sim_obj.object_id
+                )
 
-                agent_data.articulated_agent.reconfigure()
+            agent_data.articulated_agent.reconfigure()
 
+    def pre_obj_clear(self) -> None:
+        """
+        Must call before all objects in the scene are removed before the next
+        episode. This will reset the grasp constraints and any references to
+        previously existing objects.
+        """
+
+        for agent_data in self._all_agent_data:
+            agent_data.grasp_mgr.reconfigure()
             for grasp_manager in agent_data.grasp_mgrs:
                 grasp_manager.reset()
 
+    @add_perf_timing_func()
     def post_obj_load_reconfigure(self):
         """
         Called at the end of the simulator reconfigure method. Used to set the starting configurations of the robots if specified in the task config.

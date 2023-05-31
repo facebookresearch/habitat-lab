@@ -189,12 +189,12 @@ class PddlRobotState:
             else:
                 # Place some distance away from the object.
                 start_pos, start_rot, was_fail = get_robot_spawns(
-                    targ_pos,
-                    self.base_angle_noise,
-                    self.place_at_pos_dist,
-                    sim,
-                    sim_info.num_spawn_attempts,
-                    sim_info.physics_stability_steps,
+                    target_position=targ_pos,
+                    rotation_perturbation_noise=self.base_angle_noise,
+                    distance_threshold=self.place_at_pos_dist,
+                    sim=sim,
+                    num_spawn_attempts=sim_info.num_spawn_attempts,
+                    physics_stability_steps=sim_info.physics_stability_steps,
                 )
                 sim.articulated_agent.base_pos = start_pos
                 sim.articulated_agent.base_rot = start_rot
@@ -242,6 +242,21 @@ class PddlSimState:
             self._art_states,
             self._obj_states,
             {k: v.clone() for k, v in self._robot_states.items()},
+        )
+
+    def sub_in_clone(
+        self, sub_dict: Dict[PddlEntity, PddlEntity]
+    ) -> "PddlSimState":
+        return PddlSimState(
+            {sub_dict.get(k, k): v for k, v in self._art_states.items()},
+            {
+                sub_dict.get(k, k): sub_dict.get(v, v)
+                for k, v in self._obj_states.items()
+            },
+            {
+                sub_dict.get(k, k): robot_state.sub_in(sub_dict)
+                for k, robot_state in self._robot_states.items()
+            },
         )
 
     def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "PddlSimState":

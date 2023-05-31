@@ -56,10 +56,6 @@ class SkillPolicy(Policy):
         if self._apply_postconds and self._pddl_ac_start is None:
             raise ValueError(f"Could not find PDDL action in skill {self}")
 
-        self._delay_term: List[Optional[bool]] = [
-            None for _ in range(self._batch_size)
-        ]
-
         self._grip_ac_idx = 0
         found_grip = False
         for k, space in action_space.items():
@@ -185,10 +181,6 @@ class SkillPolicy(Policy):
         is_skill_done = self._is_skill_done(
             observations, rnn_hidden_states, prev_actions, masks, batch_idx
         ).cpu()
-        if is_skill_done.sum() > 0:
-            self._internal_log(
-                f"Requested skill termination {is_skill_done}",
-            )
 
         cur_skill_step = self._cur_skill_step[batch_idx]
 
@@ -208,26 +200,11 @@ class SkillPolicy(Policy):
 
         new_actions = torch.zeros_like(actions)
         for i, env_i in enumerate(batch_idx):
-            if self._delay_term[env_i]:
-                self._internal_log(
-                    "Terminating skill due to delayed termination."
-                )
-                self._delay_term[env_i] = False
-                is_skill_done[i] = True
-            elif self._apply_postconds and is_skill_done[i]:
+            if self._apply_postconds and is_skill_done[i]:
                 new_actions[i] = self._apply_postcond(
                     actions, log_info, skill_name[i], env_i, i
                 )
-                self._delay_term[env_i] = True
-                is_skill_done[i] = False
-                self._internal_log(
-                    "Applying PDDL action and terminating on the next step."
-                )
 
-        if bad_terminate.sum() > 0:
-            self._internal_log(
-                f"Bad terminating due to timeout {cur_skill_step}, {bad_terminate}",
-            )
         return is_skill_done, bad_terminate, new_actions
 
     def on_enter(
@@ -348,3 +325,14 @@ class SkillPolicy(Policy):
         deterministic=False,
     ) -> PolicyActionData:
         raise NotImplementedError()
+
+    @property
+    def required_obs_keys(self) -> List[str]:
+        """
+        Which keys from the observation dictionary this skill requires to
+        compute actions and termination conditions.
+        """
+        if self._should_keep_hold_state:
+            return [IsHoldingSensor.cls_uuid]
+        else:
+            return []

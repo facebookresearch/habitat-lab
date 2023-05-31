@@ -232,7 +232,6 @@ class VectorEnv:
         return self._num_envs - len(self._paused)
 
     @staticmethod
-    @profiling_wrapper.RangeContext("_worker_env")
     def _worker_env(
         connection_read_fn: Callable,
         connection_write_fn: Callable,
@@ -259,12 +258,11 @@ class VectorEnv:
             while command != CLOSE_COMMAND:
                 if command == STEP_COMMAND:
                     observations, reward, done, info = env.step(data)
+
                     if auto_reset_done and done:
                         observations = env.reset()
-                    with profiling_wrapper.RangeContext(
-                        "worker write after step"
-                    ):
-                        connection_write_fn((observations, reward, done, info))
+
+                    connection_write_fn((observations, reward, done, info))
 
                 elif command == RESET_COMMAND:
                     observations = env.reset()
@@ -293,8 +291,7 @@ class VectorEnv:
                 else:
                     raise NotImplementedError(f"Unknown command {command}")
 
-                with profiling_wrapper.RangeContext("worker wait for command"):
-                    command, data = connection_read_fn()
+                command, data = connection_read_fn()
 
         except KeyboardInterrupt:
             logger.info("Worker KeyboardInterrupt")

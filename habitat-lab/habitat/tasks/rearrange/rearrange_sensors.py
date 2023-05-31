@@ -1023,3 +1023,23 @@ class BadCalledTerminate(Measure):
         ].get_metric()
 
         self._metric = (not is_succ) and does_action_want_stop
+
+
+@registry.register_measure
+class RuntimePerfStats(Measure):
+    cls_uuid: str = "habitat_perf"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RuntimePerfStats.cls_uuid
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._sim.enable_perf_logging()
+        super().__init__()
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = {}
+
+    def update_metric(self, *args, task, **kwargs):
+        self._metric = self._sim.get_runtime_perf_stats()
