@@ -136,9 +136,9 @@ class ArticulatedAgentManager:
         """
 
         for agent_data in self._all_agent_data:
-            agent_data.grasp_mgr.reconfigure()
             for grasp_manager in agent_data.grasp_mgrs:
                 grasp_manager.reset()
+            agent_data.grasp_mgr.reconfigure()
 
     @add_perf_timing_func()
     def post_obj_load_reconfigure(self):
