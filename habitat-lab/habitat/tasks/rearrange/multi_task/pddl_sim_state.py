@@ -56,20 +56,41 @@ class PddlRobotState:
 
     :property place_at_pos_dist: If -1.0, this will place the robot as close
         as possible to the entity. Otherwise, it will place the robot within X
-        meters of the entity.
+        meters of the entity. If unset, sets to task default.
     :property base_angle_noise: How much noise to add to the robot base angle
-        when setting the robot base position.
+        when setting the robot base position. If not set, sets to task default.
     :property place_at_angle_thresh: The required maximum angle to the target
         entity in the robot's local frame. Specified in radains. If not specified,
         no angle is considered.
+    :property physics_stability_steps: Number of physics checks for placing the
+        robot. If not set, sets to task default.
     """
 
     holding: Optional[PddlEntity] = None
     should_drop: bool = False
     pos: Optional[Any] = None
-    place_at_pos_dist: float = -1.0
+    place_at_pos_dist: Optional[float] = None
     place_at_angle_thresh: Optional[float] = None
-    base_angle_noise: float = 0.0
+    base_angle_noise: Optional[float] = None
+    physics_stability_steps: Optional[int] = None
+
+    def get_place_at_pos_dist(self, sim_info) -> Optional[float]:
+        if self.place_at_pos_dist is None:
+            return sim_info.robot_at_thresh
+        else:
+            return self.place_at_pos_dist
+
+    def get_base_angle_noise(self, sim_info) -> Optional[float]:
+        if self.base_angle_noise is None:
+            return sim_info.base_angle_noise
+        else:
+            return self.base_angle_noise
+
+    def get_physics_stability_steps(self, sim_info) -> Optional[int]:
+        if self.physics_stability_steps is None:
+            return sim_info.physics_stability_steps
+        else:
+            return self.physics_stability_steps
 
     def sub_in(
         self, sub_dict: Dict[PddlEntity, PddlEntity]
@@ -124,13 +145,8 @@ class PddlRobotState:
             # Get the angle
             angle = np.arccos(np.dot(pos, pos_robot))
 
-            if self.place_at_pos_dist == -1.0:
-                use_thresh = sim_info.robot_at_thresh
-            else:
-                use_thresh = self.place_at_pos_dist
-
             # Check the distance threshold.
-            if dist > use_thresh:
+            if dist > self.get_place_at_pos_dist(sim_info):
                 return False
 
             # Check for the angle threshold
@@ -173,11 +189,15 @@ class PddlRobotState:
             # Place some distance away from the object.
             start_pos, start_rot, was_fail = get_robot_spawns(
                 target_position=targ_pos,
-                rotation_perturbation_noise=self.base_angle_noise,
-                distance_threshold=self.place_at_pos_dist,
+                rotation_perturbation_noise=self.get_base_angle_noise(
+                    sim_info
+                ),
+                distance_threshold=self.get_place_at_pos_dist(sim_info),
                 sim=sim,
                 num_spawn_attempts=sim_info.num_spawn_attempts,
-                physics_stability_steps=sim_info.physics_stability_steps,
+                physics_stability_steps=self.get_physics_stability_steps(
+                    sim_info
+                ),
                 agent=agent,
             )
             sim.articulated_agent.base_pos = start_pos

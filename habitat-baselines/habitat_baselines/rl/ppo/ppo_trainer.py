@@ -155,15 +155,16 @@ class PPOTrainer(BaseRLTrainer):
             orig_action_space=self.envs.orig_action_spaces[0],
         )
 
-        # The measure keys that should only be logged on rank0,gpu0 and nowhere
+        # The measure keys that should only be logged on rank0 and nowhere
         # else. They will be excluded from all other workers and only reported
         # from the single worker.
-        self._rank0_env0_keys: Set[str] = set(
-            self.config.habitat.task.rank0_env0_measure_names
+        self._rank0_keys: Set[str] = set(
+            list(self.config.habitat.task.rank0_env0_measure_names)
+            + list(self.config.habitat.task.rank0_measure_names)
         )
 
-        # Information on measures that declared in `self._rank0_env0_keys` to
-        # be only reported on rank0,gpu0. This is seperately logged from
+        # Information on measures that declared in `self._rank0_keys` or
+        # to be only reported on rank0. This is seperately logged from
         # `self.window_episode_stats`.
         self._single_proc_infos: Dict[str, List[float]] = {}
 
@@ -430,14 +431,12 @@ class PPOTrainer(BaseRLTrainer):
             self._single_proc_infos = extract_scalars_from_infos(
                 infos,
                 ignore_keys=set(
-                    k
-                    for k in infos[0].keys()
-                    if k not in self._rank0_env0_keys
+                    k for k in infos[0].keys() if k not in self._rank0_keys
                 ),
             )
 
             extracted_infos = extract_scalars_from_infos(
-                infos, ignore_keys=self._rank0_env0_keys
+                infos, ignore_keys=self._rank0_keys
             )
             for k, v_k in extracted_infos.items():
                 v = torch.tensor(
@@ -994,11 +993,11 @@ class PPOTrainer(BaseRLTrainer):
                 ):
                     envs_to_pause.append(i)
 
-                # Exclude the keys from `_rank0_env0_keys`.
+                # Exclude the keys from `_rank0_keys`.
                 infos[i] = {
                     k: v
                     for k, v in infos[i].items()
-                    if k not in self._rank0_env0_keys
+                    if k not in self._rank0_keys
                 }
 
                 if len(self.config.habitat_baselines.eval.video_option) > 0:

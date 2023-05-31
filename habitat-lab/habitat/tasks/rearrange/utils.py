@@ -409,7 +409,7 @@ def get_robot_spawns(
     :param distance_threshold: The maximum distance from the target.
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
-    :param physics_stability_steps: The number of steps to perform for physics stability check.
+    :param physics_stability_steps: The number of steps to perform for physics stability check. If specified as 0, then it will return the result without doing any checks.
     :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
 
     :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
@@ -438,24 +438,24 @@ def get_robot_spawns(
             start_position = sim.pathfinder.get_random_navigable_point_near(
                 target_position, distance_threshold
             )
+        # Face the robot towards the object.
+        relative_target = target_position - start_position
+        angle_to_object = get_angle_to_pos(relative_target)
+        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
+        start_rotation = angle_to_object + rotation_noise
+
+        if physics_stability_steps == 0:
+            return start_position, start_rotation, False
 
         island_idx = sim.pathfinder.get_island(start_position)
         if island_idx != sim.largest_island_idx:
             continue
-
-        relative_target = target_position - start_position
-
-        angle_to_object = get_angle_to_pos(relative_target)
 
         target_distance = np.linalg.norm(
             (start_position - target_position)[[0, 2]]
         )
 
         is_navigable = sim.pathfinder.is_navigable(start_position)
-
-        # Face the robot towards the object.
-        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        start_rotation = angle_to_object + rotation_noise
 
         if target_distance > distance_threshold or not is_navigable:
             continue

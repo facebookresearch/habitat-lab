@@ -1134,6 +1134,8 @@ class TaskConfig(HabitatBaseConfig):
     rank0_env0_measure_names: List[str] = field(
         default_factory=lambda: ["habitat_perf"]
     )
+    # Measures to only record in the first rank for vectorized environments.
+    rank0_measure_names: List[str] = field(default_factory=list)
     goal_sensor_uuid: str = "pointgoal"
     # REARRANGE task
     count_obj_collisions: bool = True

@@ -79,14 +79,25 @@ def construct_envs(
         with read_write(proc_config):
             task_config = proc_config.habitat
             task_config.seed = task_config.seed + env_index
+            remove_measure_names = []
+            if not is_first_rank:
+                # Filter out non rank0_measure from the task config if we are not on rank0.
+                remove_measure_names.extend(
+                    task_config.task.rank0_measure_names
+                )
             if (env_index != 0) or not is_first_rank:
                 # Filter out non-rank0_env0 measures from the task config if we
                 # are not on rank0 env0.
-                task_config.task.measurements = {
-                    k: v
-                    for k, v in task_config.task.measurements.items()
-                    if k not in task_config.task.rank0_env0_measure_names
-                }
+                remove_measure_names.extend(
+                    task_config.task.rank0_env0_measure_names
+                )
+
+            task_config.task.measurements = {
+                k: v
+                for k, v in task_config.task.measurements.items()
+                if k not in remove_measure_names
+            }
+
             if len(scenes) > 0:
                 task_config.dataset.content_scenes = scene_splits[env_index]
 
