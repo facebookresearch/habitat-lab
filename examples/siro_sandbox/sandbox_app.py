@@ -91,14 +91,6 @@ class SandboxDriver(GuiAppDriver):
         self._success_measure_name = config.habitat.task.success_measure
         self._num_recorded_episodes = 0
 
-        if args.save_filepath_base:
-            self._step_recorder = StepRecorder()
-            self._save_filepath_base = args.save_filepath_base
-            self._episode_recorder_dict = {}
-        else:
-            self._step_recorder = NullRecorder()
-            self._save_filepath_base = None
-
         with habitat.config.read_write(config):
             # needed so we can provide keyframes to GuiApplication
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
@@ -117,6 +109,15 @@ class SandboxDriver(GuiAppDriver):
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
+
+        if args.save_filepath_base:
+            self._step_recorder = StepRecorder()
+            self._save_filepath_base = args.save_filepath_base
+            self._episode_recorder_dict = {}
+            self._reset_episode_recorder()
+        else:
+            self._step_recorder = NullRecorder()
+            self._save_filepath_base = None
 
         self.ctrl_helper = ControllerHelper(
             self.env, config, args, gui_input, self._step_recorder
