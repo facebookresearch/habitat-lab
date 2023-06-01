@@ -54,5 +54,5 @@ habitat:
       allow_sliding: False
       enable_physics: True
   dataset:
-    #data_path: data/datasets/replica_cad/rearrange/v2/{split}/tidy_house_10k_1k.pickle
+    # data_path: data/datasets/replica_cad/rearrange/v2/{split}/tidy_house_10k_1k.pickle
     data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz

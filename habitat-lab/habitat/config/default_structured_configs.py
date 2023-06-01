@@ -284,7 +284,8 @@ class HumanoidJointActionConfig(ActionConfig):
     In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
     """
     type: str = "HumanoidJointAction"
-    num_joints: int = 17
+    # Number of joints in the humanoid body, 54 for SMPL-X, 17 for SMPL
+    num_joints: int = 54
 
 
 @dataclass
@@ -487,7 +488,7 @@ class HumanoidJointSensorConfig(LabSensorConfig):
     Rearrangement only. Returns the joint positions of the robot.
     """
     type: str = "HumanoidJointSensor"
-    dimensionality: int = 17 * 4
+    dimensionality: int = 54 * 4
 
 
 @dataclass
@@ -1166,6 +1167,21 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class FindingSuccessRateMeasurementConfig(MeasurementConfig):
+    type: str = "FindingSuccessRate"
+
+
+@dataclass
+class FollowingRateMeasurementConfig(MeasurementConfig):
+    type: str = "FollowingRate"
+
+
+@dataclass
+class FollowingDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "FollowingDistance"
+
+
+@dataclass
 class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
@@ -1411,6 +1427,7 @@ class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
+    max_climb: float = 0.01
     grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
@@ -1422,6 +1439,7 @@ class AgentConfig(HabitatBaseConfig):
     ik_arm_urdf: str = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+    rest_pose_data_path: str = ""
 
 
 @dataclass
@@ -1641,7 +1659,6 @@ class HabitatConfig(HabitatBaseConfig):
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
-
 
 # -----------------------------------------------------------------------------
 # Register configs in the Hydra ConfigStore
@@ -2337,6 +2354,24 @@ cs.store(
     group="habitat/task/measurements",
     name="runtime_perf_stats",
     node=RuntimePerfStatsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.finding_success_rate",
+    group="habitat/task/measurements",
+    name="finding_success_rate",
+    node=FindingSuccessRateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.following_rate",
+    group="habitat/task/measurements",
+    name="following_rate",
+    node=FollowingRateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.following_distance",
+    group="habitat/task/measurements",
+    name="following_distance",
+    node=FollowingDistanceMeasurementConfig,
 )
 
 from hydra.core.config_search_path import ConfigSearchPath

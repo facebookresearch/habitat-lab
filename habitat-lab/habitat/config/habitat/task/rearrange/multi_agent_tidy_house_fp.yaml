@@ -5,7 +5,7 @@ defaults:
   - /habitat/task/actions@actions.agent_1_arm_action: arm_action
   - _self_
 
-task_spec: multi_agent_tidy_house_fp
+task_spec: multi_agent_tidy_house_fp_2obj
 pddl_domain_def: fp
 
 actions:

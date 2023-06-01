@@ -48,7 +48,7 @@ class FixedHighLevelPolicy(HighLevelPolicy):
                 solution_actions.append(parse_func("reset_arm(0)"))
 
         # Add a wait action at the end.
-        solution_actions.append(parse_func("wait(30)"))
+        # solution_actions.append(parse_func("wait(30)"))
         return solution_actions
 
     def apply_mask(self, mask):

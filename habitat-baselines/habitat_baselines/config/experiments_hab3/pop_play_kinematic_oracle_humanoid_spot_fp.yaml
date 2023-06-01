@@ -9,24 +9,24 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
     - composite_subgoal_reward
+    - runtime_perf_stats
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
     - goal_sensor
-    - joint_sensor
     - is_holding_sensor
     - end_effector_sensor
     - target_start_gps_compass_sensor
     - target_goal_gps_compass_sensor
     - localization_sensor
-    - humanoid_joint_sensor
     - has_finished_oracle_nav
+    - other_agent_gps
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - override /habitat/task/rearrange: multi_agent_tidy_house_base_spot
   # For Spot observation space
@@ -40,27 +40,45 @@ hydra:
 habitat:
   task:
     actions:
+      agent_0_oracle_nav_with_backing_up_action:
+        type: OracleNavWithBackingUpAction
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
+        enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
       agent_0_arm_action:
         grip_controller: MagicGraspAction
       agent_1_oracle_nav_with_backing_up_action:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
+    robot_at_thresh: 3.0
   environment:
     max_episode_steps: 5000
 
   gym:
     obs_keys:
-      - agent_0_head_depth
+      - agent_0_articulated_agent_arm_depth
       - agent_0_relative_resting_position
       - agent_0_obj_start_sensor
       - agent_0_obj_goal_sensor
       - agent_0_obj_start_gps_compass
       - agent_0_obj_goal_gps_compass
-      - agent_0_joint
       - agent_0_is_holding
       - agent_0_ee_pos
       - agent_0_localization_sensor
       - agent_0_has_finished_oracle_nav
+      - agent_0_other_agent_gps
       - agent_1_head_depth
       - agent_1_relative_resting_position
       - agent_1_obj_start_sensor
@@ -70,13 +88,14 @@ habitat:
       - agent_1_is_holding
       - agent_1_ee_pos
       - agent_1_localization_sensor
-      - agent_1_humanoid_joint_sensor
       - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
   simulator:
     # Add Spot robot agents
     agents:
       agent_0:
-        radius: 0.3
+        radius: 0.25
+        height: 1.8
         articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
         articulated_agent_type: "SpotRobot"
         sim_sensors:
@@ -89,9 +108,10 @@ habitat:
             width: 171
             hfov: 55
       agent_1:
-        articulated_agent_urdf: 'data/humanoids/humanoid_data/armatures/human_armature.urdf'
-        articulated_agent_type: KinematicHumanoid
-        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed.pkl"
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
@@ -105,14 +125,14 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  # video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  # tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  # eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  # log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
+  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
+  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
+  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
   num_environments: 32
   num_updates: -1
-  total_num_steps: 5.0e7
+  total_num_steps: 1e8
   log_interval: 1
   num_checkpoints: 10
   force_torch_single_threaded: True
@@ -134,10 +154,20 @@ habitat_baselines:
 
   rl:
     agent:
-      num_pool_agents_per_type: [1, 1]
+      num_pool_agents_per_type: [1, 8]
+      agent_sample_interval: 20
+      force_partner_sample_idx: -1
     policy:
       agent_0:
         hierarchical_policy:
+          high_level_policy:
+            add_arm_rest: False
+            policy_input_keys:
+              - "articulated_agent_arm_depth"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
@@ -146,6 +176,14 @@ habitat_baselines:
               max_skill_steps: 1500
       agent_1:
         hierarchical_policy:
+          high_level_policy:
+            add_arm_rest: False
+            policy_input_keys:
+              - "head_depth"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:

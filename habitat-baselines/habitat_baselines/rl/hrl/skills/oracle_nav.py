@@ -10,6 +10,7 @@ import torch
 from habitat.core.spaces import ActionSpace
 from habitat.tasks.rearrange.rearrange_sensors import (
     HasFinishedOracleNavSensor,
+    IsHoldingSensor,
 )
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.skills.nn_skill import NnSkillPolicy
@@ -141,6 +142,13 @@ class OracleNavPolicy(NnSkillPolicy):
         match_i = self._all_entities.index(target)
 
         return OracleNavPolicy.OracleNavActionArgs(match_i)
+
+    @property
+    def required_obs_keys(self):
+        ret = [HasFinishedOracleNavSensor.cls_uuid]
+        if self._should_keep_hold_state:
+            ret.append(IsHoldingSensor.cls_uuid)
+        return ret
 
     def _internal_act(
         self,

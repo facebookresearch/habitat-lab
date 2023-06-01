@@ -13,11 +13,6 @@ objects:
   - name: robot_1
     expr_type: robot_entity_type
 
-
-init:
-  - closed_fridge(fridge_push_point)
-
-
 goal:
   expr_type: AND
   sub_exprs:
@@ -34,22 +29,14 @@ stage_goals:
   stage_2:
     expr_type: AND
     sub_exprs:
-      - at(any_targets|0,TARGET_any_targets|0)
       - at(any_targets|1,TARGET_any_targets|1)
 
 solution:
-  - nav_to_goal(any_targets|0, robot_1)
-  - pick(any_targets|0, robot_1)
-  - nav_to_obj(TARGET_any_targets|0, robot_1)
-  - place(any_targets|0,TARGET_any_targets|0, robot_1)
+  - nav_to_goal(any_targets|0, robot_0)
+  - pick(any_targets|0, robot_0)
+  - nav_to_obj(TARGET_any_targets|0, robot_0)
+  - place(any_targets|0,TARGET_any_targets|0, robot_0)
   - nav_to_goal(any_targets|1, robot_1)
   - pick(any_targets|1, robot_1)
   - nav_to_obj(TARGET_any_targets|1, robot_1)
   - place(any_targets|1,TARGET_any_targets|1, robot_1)
-  - nav_to_robot(robot_1, robot_0)
-  - nav_to_robot(robot_1, robot_0)
-  - nav_to_robot(robot_1, robot_0)
-  - nav_to_robot(robot_1, robot_0)
-  - nav_to_robot(robot_1, robot_0)
-  - nav_to_robot(robot_1, robot_0)
-  - nav_to_robot(robot_1, robot_0)
