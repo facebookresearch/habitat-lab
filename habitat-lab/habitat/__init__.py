@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 from habitat.config import get_config, read_write
+#from habitat.config import get_config, read_write
 from habitat.core.agent import Agent
 from habitat.core.benchmark import Benchmark
 from habitat.core.challenge import Challenge

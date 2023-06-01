@@ -937,6 +937,7 @@ class PPOTrainer(BaseRLTrainer):
 
         pbar = tqdm.tqdm(total=number_of_eval_episodes * evals_per_ep)
         self._agent.eval()
+        #breakpoint()
         while (
             len(stats_episodes) < (number_of_eval_episodes * evals_per_ep)
             and self.envs.num_envs > 0

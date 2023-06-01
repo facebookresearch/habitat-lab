@@ -990,7 +990,7 @@ class DoesWantTerminate(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        breakpoint()
+        #breakpoint()
         self._metric = task.actions["rearrange_stop"].does_want_terminate
 
 

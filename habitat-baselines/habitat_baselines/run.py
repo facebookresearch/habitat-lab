@@ -51,10 +51,11 @@ def execute_exp(config: "DictConfig", run_type: str) -> None:
     trainer_init = baseline_registry.get_trainer(
         config.habitat_baselines.trainer_name
     )
+    #breakpoint() #<class 'habitat_baselines.rl.ppo.ppo_trainer.PPOTrainer'> 
     assert (
         trainer_init is not None
     ), f"{config.habitat_baselines.trainer_name} is not supported"
-    trainer = trainer_init(config)
+    trainer = trainer_init(config) 
 
     if run_type == "train":
         trainer.train()
