@@ -97,7 +97,7 @@ habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
 ## Saving episode data
-Add `--save-episode-record` flag to enable saving recorded episode data to file and `--save-filepath-base my_session` argument to specify a custom save location (filepath base). When the user presses `M` to reset the env, the first episode will be saved as `my_session.1.json.gz` and `my_session.1.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.2.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
+Add `--save-episode-record` flag to enable saving recorded episode data to file and `--save-filepath-base my_session` argument to specify a custom save location (filepath base). When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
 
 ## Workaround to avoid broken skinned humanoid
 
@@ -158,7 +158,7 @@ habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/mic
 ```
 
 ## Capturing Gfx-Replay Files
-Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing starts per episode at the first frame and ends (is saved) when episode is completed (environment is reset). The file will be saved as `my_session.<episode_number>.gfx_replay.json.gz` where `<episode_number>` is a sequential episodes number starting from 1.
+Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing starts per episode at the first frame and ends (is saved) when episode is completed (environment is reset). The file will be saved as `my_session.<episode_number>.gfx_replay.json.gz` where `<episode_number>` is a sequential episodes number starting from 0.
 
 ## Human-in-the-loop tutorial sequence
 The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.

@@ -281,10 +281,6 @@ class SandboxDriver(GuiAppDriver):
         self._episode_recorder_dict = ep_dict
 
     def _reset_environment(self):
-        # reset recorded keyframes and episode recorder data
-        self._recording_keyframes.clear()
-        self._reset_episode_recorder()
-
         self._obs = self.env.reset()
         self._metrics = self.env.get_metrics()
         self.ctrl_helper.on_environment_reset()
@@ -314,6 +310,10 @@ class SandboxDriver(GuiAppDriver):
             else None
         )
 
+        # reset recorded keyframes and episode recorder data
+        self._recording_keyframes.clear()
+        self._reset_episode_recorder()
+
     def _check_save_episode_data(self):
         assert self._save_filepath_base
         saved_keyframes, saved_episode_data = False, False
@@ -327,12 +327,12 @@ class SandboxDriver(GuiAppDriver):
         if saved_keyframes or saved_episode_data:
             self._num_recorded_episodes += 1
 
-    def _end_episode(self):
-        if self._next_episode_exists():
-            self._reset_environment()
-
+    def _end_episode(self, do_reset=False):
         self._check_save_episode_data()
         self._num_episodes_done += 1
+
+        if do_reset and self._next_episode_exists():
+            self._reset_environment()
 
     @property
     def _env_task_complete(self):
@@ -892,7 +892,7 @@ class SandboxDriver(GuiAppDriver):
             self._text_drawer.add_text(
                 progress_str,
                 TextOnScreenAlignment.TOP_RIGHT,
-                text_delta_x=380,
+                text_delta_x=370,
             )
 
         elif self._sandbox_state == SandboxState.TUTORIAL:
@@ -1047,7 +1047,7 @@ class SandboxDriver(GuiAppDriver):
             post_sim_update_dict["application_exit"] = True
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self._end_episode()
+            self._end_episode(do_reset=True)
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
