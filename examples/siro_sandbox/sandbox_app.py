@@ -111,9 +111,9 @@ class SandboxDriver(GuiAppDriver):
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
 
         self._save_filepath_base = args.save_filepath_base
-        self._save_episode_data = args.save_episode_data
+        self._save_episode_record = args.save_episode_record
         self._step_recorder = (
-            StepRecorder() if self._save_episode_data else NullRecorder()
+            StepRecorder() if self._save_episode_record else NullRecorder()
         )
         self._episode_recorder_dict = {}
 
@@ -174,7 +174,6 @@ class SandboxDriver(GuiAppDriver):
         self._num_iter_episodes: int = len(self.env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
         self._reset_environment()
-        self._reset_episode_recorder()
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset
@@ -237,8 +236,7 @@ class SandboxDriver(GuiAppDriver):
         action = self.ctrl_helper.update(self._obs)
         self._env_step(action)
 
-        if self._save_episode_data:
-            assert self._save_filepath_base
+        if self._save_episode_record:
             self._record_action(action)
             self._record_task_state()
             self._record_metrics(self.env.get_metrics())
@@ -251,7 +249,7 @@ class SandboxDriver(GuiAppDriver):
         return retval
 
     def _save_episode_recorder_dict(self):
-        if not self._save_filepath_base or not len(self._step_recorder._steps):
+        if not len(self._step_recorder._steps):
             return
 
         filepath_base = self._find_episode_save_filepath_base()
@@ -262,10 +260,8 @@ class SandboxDriver(GuiAppDriver):
         pkl_filepath = filepath_base + ".pkl.gz"
         save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
 
-        self._reset_episode_recorder()
-
     def _reset_episode_recorder(self):
-        assert self._save_filepath_base and self._step_recorder
+        assert self._step_recorder
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
         ep_dict["dataset"] = self._dataset_config
@@ -285,6 +281,10 @@ class SandboxDriver(GuiAppDriver):
         self._episode_recorder_dict = ep_dict
 
     def _reset_environment(self):
+        # reset recorded keyframes and episode recorder data
+        self._recording_keyframes.clear()
+        self._reset_episode_recorder()
+
         self._obs = self.env.reset()
         self._metrics = self.env.get_metrics()
         self.ctrl_helper.on_environment_reset()
@@ -314,24 +314,25 @@ class SandboxDriver(GuiAppDriver):
             else None
         )
 
-        self._check_save_episode_data()
-
     def _check_save_episode_data(self):
+        assert self._save_filepath_base
         saved_keyframes, saved_episode_data = False, False
         if self._save_gfx_replay_keyframes:
             self._save_recorded_keyframes_to_file()
             saved_keyframes = True
-        if self._save_episode_data:
+        if self._save_episode_record:
             self._save_episode_recorder_dict()
             saved_episode_data = True
 
         if saved_keyframes or saved_episode_data:
             self._num_recorded_episodes += 1
 
-    def _check_reset_environment(self):
+    def _end_episode(self):
         if self._next_episode_exists():
             self._reset_environment()
-            self._num_episodes_done += 1
+
+        self._check_save_episode_data()
+        self._num_episodes_done += 1
 
     @property
     def _env_task_complete(self):
@@ -749,7 +750,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
     def _save_recorded_keyframes_to_file(self):
-        if not self._save_filepath_base or not self._recording_keyframes:
+        if not self._recording_keyframes:
             return
 
         # Consolidate recorded keyframes into a single json string
@@ -766,9 +767,6 @@ class SandboxDriver(GuiAppDriver):
         filepath_base = self._find_episode_save_filepath_base()
         filepath = filepath_base + ".gfx_replay.json.gz"
         save_as_gzip(json_content.encode("utf-8"), filepath)
-
-        # reset recording_keyframes
-        self._recording_keyframes.clear()
 
     def _update_cursor_style(self):
         do_update_cursor = False
@@ -1045,11 +1043,11 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict: Dict[str, Any] = {}
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ESC):
-            self._check_save_episode_data()
+            self._end_episode()
             post_sim_update_dict["application_exit"] = True
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self._check_reset_environment()
+            self._end_episode()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -1296,10 +1294,10 @@ if __name__ == "__main__":
         help="Save the gfx-replay keyframes to file. Use --save-filepath-base to specify the filepath base.",
     )
     parser.add_argument(
-        "--save-episode-data",
+        "--save-episode-record",
         action="store_true",
         default=False,
-        help="Save the episode data to file. Use --save-filepath-base to specify the filepath base.",
+        help="Save recorded episode data to file. Use --save-filepath-base to specify the filepath base.",
     )
     parser.add_argument(
         "--save-filepath-base",
@@ -1308,6 +1306,13 @@ if __name__ == "__main__":
         help="Filepath base used for saving various session data files. Include a full path including basename, but not an extension.",
     )
     args = parser.parse_args()
+    if (
+        args.save_gfx_replay_keyframes or args.save_episode_record
+    ) and not args.save_filepath_base:
+        raise ValueError(
+            "--save-gfx-replay-keyframes and/or --save-episode-record flags are enabled, "
+            "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
+        )
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
