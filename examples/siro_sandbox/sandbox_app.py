@@ -114,7 +114,6 @@ class SandboxDriver(GuiAppDriver):
             self._step_recorder = StepRecorder()
             self._save_filepath_base = args.save_filepath_base
             self._episode_recorder_dict = {}
-            self._reset_episode_recorder()
         else:
             self._step_recorder = NullRecorder()
             self._save_filepath_base = None
@@ -176,6 +175,7 @@ class SandboxDriver(GuiAppDriver):
         self._num_iter_episodes: int = len(self.env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
         self._reset_environment()
+        self._reset_episode_recorder()
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset
