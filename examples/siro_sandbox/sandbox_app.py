@@ -110,13 +110,15 @@ class SandboxDriver(GuiAppDriver):
             if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
 
-        if args.save_filepath_base:
-            self._step_recorder = StepRecorder()
-            self._save_filepath_base = args.save_filepath_base
-            self._episode_recorder_dict = {}
-        else:
-            self._step_recorder = NullRecorder()
-            self._save_filepath_base = None
+        self._save_filepath_base = args.save_filepath_base
+        self._save_episode_data = args.save_episode_data
+        self._step_recorder = (
+            StepRecorder() if self._save_episode_data else NullRecorder()
+        )
+        self._episode_recorder_dict = {}
+
+        self._save_gfx_replay_keyframes: bool = args.save_gfx_replay_keyframes
+        self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
             self.env, config, args, gui_input, self._step_recorder
@@ -165,9 +167,6 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch = 0.955
             self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
             self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
-
-        self._enable_gfx_replay_save: bool = args.enable_gfx_replay_save
-        self._recording_keyframes: List[str] = []
 
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
@@ -238,7 +237,8 @@ class SandboxDriver(GuiAppDriver):
         action = self.ctrl_helper.update(self._obs)
         self._env_step(action)
 
-        if self._save_filepath_base:
+        if self._save_episode_data:
+            assert self._save_filepath_base
             self._record_action(action)
             self._record_task_state()
             self._record_metrics(self.env.get_metrics())
@@ -317,9 +317,15 @@ class SandboxDriver(GuiAppDriver):
         self._check_save_episode_data()
 
     def _check_save_episode_data(self):
-        if self._save_filepath_base:
+        saved_keyframes, saved_episode_data = False, False
+        if self._save_gfx_replay_keyframes:
             self._save_recorded_keyframes_to_file()
+            saved_keyframes = True
+        if self._save_episode_data:
             self._save_episode_recorder_dict()
+            saved_episode_data = True
+
+        if saved_keyframes or saved_episode_data:
             self._num_recorded_episodes += 1
 
     def _check_reset_environment(self):
@@ -743,7 +749,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
     def _save_recorded_keyframes_to_file(self):
-        if not self._recording_keyframes:
+        if not self._save_filepath_base or not self._recording_keyframes:
             return
 
         # Consolidate recorded keyframes into a single json string
@@ -1081,7 +1087,7 @@ class SandboxDriver(GuiAppDriver):
         )
         post_sim_update_dict["keyframes"] = keyframes
 
-        if self._enable_gfx_replay_save:
+        if self._save_gfx_replay_keyframes:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
 
@@ -1278,16 +1284,22 @@ if __name__ == "__main__":
         help="Sample random BaselinesController base vel",
     )
     parser.add_argument(
-        "--enable-gfx-replay-save",
+        "--show-tutorial",
+        action="store_true",
+        default=False,
+        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+    )
+    parser.add_argument(
+        "--save-gfx-replay-keyframes",
         action="store_true",
         default=False,
         help="Save the gfx-replay keyframes to file. Use --save-filepath-base to specify the filepath base.",
     )
     parser.add_argument(
-        "--show-tutorial",
+        "--save-episode-data",
         action="store_true",
         default=False,
-        help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+        help="Save the episode data to file. Use --save-filepath-base to specify the filepath base.",
     )
     parser.add_argument(
         "--save-filepath-base",

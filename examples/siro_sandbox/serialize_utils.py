@@ -66,7 +66,6 @@ def convert_to_json_friendly(obj):
 def save_as_pickle_gzip(obj, filepath):
     pickled_data = pickle.dumps(obj)
     save_as_gzip(pickled_data, filepath)
-    print("wrote " + filepath)
 
 
 def save_as_json_gzip(obj, filepath):
@@ -74,12 +73,12 @@ def save_as_json_gzip(obj, filepath):
         convert_to_json_friendly(obj), separators=(",", ":")
     )
     save_as_gzip(json_data.encode("utf-8"), filepath)
-    print("wrote " + filepath)
 
 
 def save_as_gzip(data, filepath, mode="wb"):
     with gzip.open(filepath, mode) as file:
         file.write(data)
+    print("wrote " + filepath)
 
 
 def load_pickle_gzip(filepath):
