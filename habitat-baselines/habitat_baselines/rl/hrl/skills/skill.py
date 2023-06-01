@@ -74,7 +74,10 @@ class SkillPolicy(Policy):
 
     @property
     def required_obs_keys(self) -> List[str]:
-        return []
+        if self._should_keep_hold_state:
+            return [IsHoldingSensor.cls_uuid]
+        else:
+            return []
 
     def _internal_log(self, s):
         baselines_logger.debug(

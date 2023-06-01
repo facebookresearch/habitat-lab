@@ -368,6 +368,7 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     num_active_agents_per_type: List[int] = field(default_factory=lambda: [1])
     num_pool_agents_per_type: List[int] = field(default_factory=lambda: [1])
     agent_sample_interval: int = 20
+    force_partner_sample_idx: int = -1
     # A value of -1 means not configured.
     behavior_latent_dim: int = -1
     # Configuration option for evaluating BDP. If True, then include all

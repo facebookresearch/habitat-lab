@@ -234,12 +234,23 @@ class MultiAgentAccessMgr(AgentAccessMgr):
                 raise ValueError(
                     "The current code only supports sampling one agent of a given type at a time"
                 )
-            active_agents_type = self._rnd.choice(
-                self._agent_count_idxs[agent_type_ind],
-                size=self._pop_config.num_active_agents_per_type[
-                    agent_type_ind
-                ],
-            )
+            if (
+                self._pop_config.force_partner_sample_idx >= 0
+                and agent_type_ind > 0
+            ):
+                # We want to force the selection of an agent from the
+                # population for the non-coordination agent (the coordination
+                # agent is at index 0.
+                active_agents_type = np.array(
+                    [self._pop_config.force_partner_sample_idx]
+                )
+            else:
+                active_agents_type = self._rnd.choice(
+                    self._agent_count_idxs[agent_type_ind],
+                    size=self._pop_config.num_active_agents_per_type[
+                        agent_type_ind
+                    ],
+                )
             agent_cts = active_agents_type + prev_num_agents
             prev_num_agents += self._agent_count_idxs[agent_type_ind]
             active_agents.append(agent_cts)
@@ -401,20 +412,26 @@ class MultiAgentAccessMgr(AgentAccessMgr):
         )
         if all_discrete:
             return spaces.MultiDiscrete(
-                tuple([agent.policy_action_space.n for agent in self._agents])
+                tuple(
+                    [
+                        self._agents[agent_i].policy_action_space.n
+                        for agent_i in self._active_agents
+                    ]
+                )
             )
         else:
             return spaces.Dict(
                 {
-                    index: agent.policy_action_space
-                    for index, agent in enumerate(self._agents)
+                    agent_i: self._agents[agent_i].policy_action_space
+                    for agent_i in self._active_agents
                 }
             )
 
     @property
     def policy_action_space_shape_lens(self):
         lens = []
-        for agent in self._agents:
+        for agent_i in self._active_agents:
+            agent = self._agents[agent_i]
             if isinstance(agent.policy_action_space, spaces.Discrete):
                 lens.append(1)
             elif isinstance(agent.policy_action_space, spaces.Box):
