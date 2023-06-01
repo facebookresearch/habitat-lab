@@ -1040,6 +1040,15 @@ class SandboxDriver(GuiAppDriver):
         else:
             self.cam_transform = self._tutorial.get_look_at_matrix()
 
+    def _add_spatial_data_to_gfx_replay_keyframe(self):
+        sim = self.get_sim()
+        agent_node = sim.agents_mgr[0].articulated_agent.sim_obj
+        translation = agent_node.translation
+        rotation = mn.Quaternion(mn.Quaterniond(agent_node.rotation))
+        sim.gfx_replay_manager.add_user_transform_to_keyframe(
+            "agent", translation, rotation
+        )
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
         post_sim_update_dict: Dict[str, Any] = {}
@@ -1069,6 +1078,9 @@ class SandboxDriver(GuiAppDriver):
             self.env._sim.navmesh_visualization = (  # type: ignore
                 not self.env._sim.navmesh_visualization  # type: ignore
             )
+
+        if self._save_gfx_replay_keyframes:
+            self._add_spatial_data_to_gfx_replay_keyframe()
 
         if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
             self._sim_update_controlling_agent(dt)
