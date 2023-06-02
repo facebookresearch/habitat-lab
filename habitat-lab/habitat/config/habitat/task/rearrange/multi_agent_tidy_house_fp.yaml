@@ -7,7 +7,6 @@ defaults:
 
 task_spec: multi_agent_tidy_house_fp_2obj
 pddl_domain_def: fp
-max_objects: 5
 
 actions:
   # Actions are defined per agent. Unlike the sensors, actions are not
