@@ -46,7 +46,7 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  writer_type: 'wb'
+  # writer_type: 'wb'
 
   eval:
     should_load_ckpt: False
