@@ -9,6 +9,8 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
+  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
+  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
@@ -57,11 +59,19 @@ habitat:
         enable_lateral_move: False
         turn_thresh: 0.1
         dist_thresh: 0.5
+        lateral_lin_speed:  100
+        longitudinal_lin_speed:  100
+        lin_speed: 100
+        ang_speed: 20
       agent_0_arm_action:
         grip_controller: MagicGraspAction
       agent_1_oracle_nav_with_backing_up_action:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
+        lateral_lin_speed:  100
+        longitudinal_lin_speed:  100
+        lin_speed: 100
+        ang_speed: 20
     robot_at_thresh: 3.0
   environment:
     max_episode_steps: 5000
