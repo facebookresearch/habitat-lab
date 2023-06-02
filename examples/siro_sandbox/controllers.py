@@ -572,8 +572,8 @@ class GuiHumanoidController(GuiController):
 class ControllerHelper:
     def __init__(self, env, config, args, gui_input, recorder):
         self._env = env
-        self.n_robots = len(env._sim.agents_mgr)
-        is_multi_agent = self.n_robots > 1
+        self.n_agents = len(env._sim.agents_mgr)
+        is_multi_agent = self.n_agents > 1
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
         self.controllers: List[Controller] = [
@@ -585,7 +585,7 @@ class ControllerHelper:
                 env,
                 sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
             )
-            for agent_index in range(self.n_robots)
+            for agent_index in range(self.n_agents)
             if agent_index != self._gui_controlled_agent_index
         ]
 
@@ -617,7 +617,7 @@ class ControllerHelper:
                 self._gui_controlled_agent_index, gui_agent_controller
             )
 
-        self.all_hxs = [None for _ in range(self.n_robots)]
+        self.all_hxs = [None for _ in range(self.n_agents)]
         self.active_controllers = list(
             range(len(self.controllers))
         )  # assuming all controllers are active
