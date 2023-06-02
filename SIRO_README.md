@@ -105,17 +105,17 @@ python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluat
 To run evaluation on population-based training checkpoints:
 1. GTCoord training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GT_Coordlatest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GTCoord_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
 ```
 
 2. PBT training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GT_Coordlatest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/PBT8_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]
 ```
 
 3. BDP training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GT_Coordlatest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/BDP16_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
 ```
 
 The coordination agent (checkpoint for Spot) in all of the above cases is the 0th index in the `state_dict` in the checkpoint. 
