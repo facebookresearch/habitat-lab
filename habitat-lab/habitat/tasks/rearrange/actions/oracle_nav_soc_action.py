@@ -129,11 +129,9 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         #Just sample a new point
         #print("Getting waypoint")
         navigable_point = self._sim.pathfinder.get_random_navigable_point()
-        while abs(navigable_point[1] - self.prev_navigable_point[1]) >= 0.1 or self._get_distance(self.prev_navigable_point, navigable_point) <=7: #add distance measure too
+        #while abs(navigable_point[1] - self.prev_navigable_point[1]) >= 0.1 or self._get_distance(self.prev_navigable_point, navigable_point) <=7: #add distance measure too
+        while self._get_distance(self.prev_navigable_point, navigable_point) <=5: 
             navigable_point = self._sim.pathfinder.get_random_navigable_point()
-            # print("Sampling!")
-            # print("y dist is ", abs(navigable_point[1] - self.prev_navigable_point[1]))
-            # print("dist from prev is ", self._get_distance(self.prev_navigable_point, navigable_point))
         #print("navigable point is ", navigable_point)
         #print("dist is ", self._get_distance(self.prev_navigable_point, navigable_point))
         return navigable_point, navigable_point
@@ -217,7 +215,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
 
     def _get_distance(self, prev_nav_target, final_nav_targ):
         dist_to_final_nav_targ = np.linalg.norm(
-            (final_nav_targ - prev_nav_target)[[0, 2]]
+            (final_nav_targ - prev_nav_target)#[[0, 2]]
         )
         return dist_to_final_nav_targ
 
