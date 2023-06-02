@@ -58,6 +58,8 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         self._waypoint_count = 5
         print("Oracle nav soc action is called!")
 
+        self.poses = []
+
 
 
     @staticmethod
@@ -111,6 +113,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
         self._counter = 0
+        self.poses = []
 
         
     def get_waypoints(self):
@@ -226,6 +229,35 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         return stuck_xy and stuck_angle
 
 
+    def compute_geodesc_dist_for_path(self, path_points, start_pose):
+        #euclidean distance between points
+        dist = 0
+        for p in path_points:
+            dist += np.linalg.norm(
+                (p - start_pose)[[0, 2]]
+            )
+        return dist
+
+
+
+    def compute_opt_trajectory_len_until_found(self, robot_start_pose):
+        #Compute geodesic distance to all the human_poses at step_i
+        geo_dists = []
+        for p in self.poses:
+            path = habitat_sim.ShortestPath()
+            path.requested_start = robot_start_pose
+            path.requested_end = p #oint
+            found_path = self._sim.pathfinder.find_path(path)
+            if found_path:
+                geo_dist = self.compute_geodesc_dist_for_path(path.points, robot_start_pose)
+                geo_dists.append(geo_dist)
+            else:
+                #raise Exception("path not found!")
+                geo_dist = np.inf
+                geo_dists.append(geo_dist)
+        #get the argmin among geo_dists
+        optimal_dist = np.min(geo_dists)
+        return optimal_dist, np.argmin(geo_dists)
 
     def step(self, *args, is_last_action, **kwargs):
         # nav_to_target_idx = kwargs[
@@ -277,6 +309,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+        self.poses.append(robot_pos)
 
         self._counter +=1
         self.prev_pose = self._get_current_pose()

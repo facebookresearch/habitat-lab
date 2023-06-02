@@ -701,6 +701,9 @@ class InstructionSensorConfig(LabSensorConfig):
 class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
 
+@dataclass
+class ComputeSocNavMetricMeasureConfig(MeasurementConfig):
+    type: str = "ComputeSocNavMetricMeasure"
 
 @dataclass
 class SuccessMeasurementConfig(MeasurementConfig):
@@ -2056,6 +2059,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.measurements.compute_soc_nav_metric",
+    group="habitat/task/measurements",
+    name="compute_soc_nav_metric",
+    node=ComputeSocNavMetricMeasureConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",
