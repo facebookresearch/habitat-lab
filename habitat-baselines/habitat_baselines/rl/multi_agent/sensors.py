@@ -63,3 +63,49 @@ class MultiAgentGlobalPredicatesSensor(UsesArticulatedAgentInterface, Sensor):
         sim_info = self._task.pddl_problem.sim_info
         truth_values = [p.is_true(sim_info) for p in self.predicates_list]
         return np.array(truth_values, dtype=np.float32)
+
+
+@registry.register_sensor
+class ShouldReplanSensor(Sensor):
+    def __init__(self, sim, config, *args, **kwargs):
+        self._sim = sim
+        self._x_len = config.x_len
+        self._y_len = config.y_len
+
+        self._should_check = (
+            self._x_len is not None and self._y_len is not None
+        )
+        if not self._should_check:
+            assert self._x_len is None and self._y_len is None
+        self._agent_idx = config.agent_idx
+
+        super().__init__(config=config)
+
+    def _get_uuid(self, *args, **kwargs):
+        return f"agent_{self._agent_idx}_should_replan"
+
+    def _get_sensor_type(self, *args, **kwargs):
+        return SensorTypes.TENSOR
+
+    def _get_observation_space(self, *args, config, **kwargs):
+        return spaces.Box(shape=(1,), low=0, high=1, dtype=np.float32)
+
+    def get_observation(self, observations, episode, *args, **kwargs):
+        if not self._should_check:
+            return 0.0
+
+        other_agent_id = (self._agent_idx + 1) % 2
+        my_T = self._sim.get_agent_data(
+            self._agent_idx
+        ).articulated_agent.base_transformation
+
+        other_pos = self._sim.get_agent_data(
+            other_agent_id
+        ).articulated_agent.base_pos
+        rel_pos = my_T.inverted().transform_point(other_pos)
+
+        # z coordinate is the height.
+        dist = ((rel_pos[0] ** 2) / (self._x_len**2)) + (
+            (rel_pos[1] ** 2) / (self._y_len**2)
+        )
+        return float(dist < 1)

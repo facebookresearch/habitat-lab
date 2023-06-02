@@ -22,6 +22,7 @@ hydra:
   job:
     name: 'pop_play_humanoid_spot_fp'
 
+
 habitat_baselines:
   verbose: False
   trainer_name: "ddppo"
