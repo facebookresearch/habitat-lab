@@ -20,12 +20,12 @@ sys.setdlopenflags(flags | ctypes.RTLD_GLOBAL)
 import argparse
 from datetime import datetime
 from functools import wraps
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 import magnum as mn
 import numpy as np
 from controllers import ControllerHelper, GuiHumanoidController
-from hitl_tutorial import TutorialStage, generate_tutorial
+from hitl_tutorial import Tutorial, generate_tutorial
 from magnum.platform.glfw import Application
 from serialize_utils import (
     NullRecorder,
@@ -84,7 +84,10 @@ class SandboxState(Enum):
 @requires_habitat_sim_with_bullet
 class SandboxDriver(GuiAppDriver):
     def __init__(self, args, config, gui_input):
-        self._dataset = config.habitat.dataset
+        self._dataset_config = config.habitat.dataset
+        self._play_episodes_filter_str = args.episodes_filter
+        self._end_on_success = config.habitat.task.end_on_success
+        self._success_measure_name = config.habitat.task.success_measure
         self._num_recorded_episodes = 0
 
         if args.save_filepath_base:
@@ -102,10 +105,9 @@ class SandboxDriver(GuiAppDriver):
             )
             config.habitat.simulator.concur_render = False
 
-        self._end_on_success = config.habitat.task.end_on_success
-        self._success_measure_name = config.habitat.task.success_measure
+        dataset = self._make_dataset(config=config)
+        self.env = habitat.Env(config=config, dataset=dataset)
 
-        self.env = habitat.Env(config=config)
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
             gui_agent_key = sim_config.agents_order[
@@ -170,11 +172,53 @@ class SandboxDriver(GuiAppDriver):
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
 
+        self._num_iter_episodes: int = len(self.env.episode_iterator.episodes)  # type: ignore
+        self._num_episodes_done: int = 0
         self._reset_environment()
+
+    def _make_dataset(self, config):
+        from habitat.datasets import make_dataset
+
+        dataset_config = config.habitat.dataset
+        dataset = make_dataset(
+            id_dataset=dataset_config.type, config=dataset_config
+        )
+
+        if self._play_episodes_filter_str is not None:
+            max_num_digits: int = len(str(len(dataset.episodes)))
+
+            def get_play_episodes_ids(play_episodes_filter_str):
+                play_episodes_ids: Set[str] = set()
+                for ep_filter_str in play_episodes_filter_str.split(" "):
+                    if ":" in ep_filter_str:
+                        range_params = map(int, ep_filter_str.split(":"))
+                        play_episodes_ids.update(
+                            episode_id.zfill(max_num_digits)
+                            for episode_id in map(str, range(*range_params))
+                        )
+                    else:
+                        episode_id = ep_filter_str
+                        play_episodes_ids.add(episode_id.zfill(max_num_digits))
+
+                return play_episodes_ids
+
+            play_episodes_ids_set: Set[str] = get_play_episodes_ids(
+                self._play_episodes_filter_str
+            )
+            dataset.episodes = [
+                ep
+                for ep in dataset.episodes
+                if ep.episode_id.zfill(max_num_digits) in play_episodes_ids_set
+            ]
+
+        return dataset
 
     def _env_step(self, action):
         self._obs = self.env.step(action)
         self._metrics = self.env.get_metrics()
+
+    def _next_episode_exists(self):
+        return self._num_episodes_done < self._num_iter_episodes - 1
 
     def _env_episode_active(self) -> bool:
         """
@@ -224,7 +268,8 @@ class SandboxDriver(GuiAppDriver):
         assert self._save_filepath_base and self._step_recorder
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
-        ep_dict["dataset"] = self._dataset
+        ep_dict["dataset"] = self._dataset_config
+        ep_dict["scene_id"] = self.env.current_episode.scene_id
         ep_dict["episode_id"] = self.env.current_episode.episode_id
 
         ep_dict["target_obj_ids"] = self._target_obj_ids
@@ -259,7 +304,7 @@ class SandboxDriver(GuiAppDriver):
             if args.show_tutorial
             else SandboxState.CONTROLLING_AGENT
         )
-        self._tutorial_stages: List[TutorialStage] = (
+        self._tutorial: Tutorial = (
             generate_tutorial(
                 self.get_sim(),
                 self.ctrl_helper.get_gui_controlled_agent_index(),
@@ -268,11 +313,15 @@ class SandboxDriver(GuiAppDriver):
             if args.show_tutorial
             else None
         )
-        self._tutorial_stage_index: int = 0
 
         if self._save_filepath_base:
             self._save_episode_recorder_dict()
             self._start_episode_recorder()
+
+    def _check_reset_environment(self):
+        if self._next_episode_exists():
+            self._reset_environment()
+            self._num_episodes_done += 1
 
     @property
     def _env_task_complete(self):
@@ -737,7 +786,8 @@ class SandboxDriver(GuiAppDriver):
 
         controls_str: str = ""
         controls_str += "ESC: exit\n"
-        controls_str += "M: next episode\n"
+        if self._next_episode_exists():
+            controls_str += "M: next episode\n"
 
         if self._env_episode_active():
             if self._first_person_mode:
@@ -771,11 +821,9 @@ class SandboxDriver(GuiAppDriver):
 
         if not self._env_episode_active():
             if self._env_task_complete:
-                status_str += (
-                    "Task complete!\nPress M to start the next episode.\n"
-                )
+                status_str += "Task complete!\n"
             else:
-                status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
+                status_str += "Oops! Something went wrong.\n"
         elif self._held_target_obj_idx is not None:
             # reference code to display object handle
             # sim = self.get_sim()
@@ -802,7 +850,13 @@ class SandboxDriver(GuiAppDriver):
             status_str += "Just wait! The robot is moving the last object.\n"
         else:
             # we don't expect to hit this case ever
-            status_str += "Oops! Something went wrong.\nPress M to try again on the next episode.\n"
+            status_str += "Oops! Something went wrong.\n"
+
+        # center align the status_str
+        max_status_str_len = 50
+        status_str = "/n".join(
+            line.center(max_status_str_len) for line in status_str.split("/n")
+        )
 
         return status_str
 
@@ -819,16 +873,31 @@ class SandboxDriver(GuiAppDriver):
                 self._text_drawer.add_text(
                     status_str,
                     TextOnScreenAlignment.TOP_CENTER,
-                    text_delta_x=-150,
+                    text_delta_x=-280,
                     text_delta_y=-50,
                 )
+
+            progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes remaining"
+            self._text_drawer.add_text(
+                progress_str,
+                TextOnScreenAlignment.TOP_RIGHT,
+                text_delta_x=380,
+            )
+
         elif self._sandbox_state == SandboxState.TUTORIAL:
-            tutorial_str = self._tutorial_stages[
-                self._tutorial_stage_index
-            ].get_display_text()
+            controls_str = self._tutorial.get_help_text()
+            if len(controls_str) > 0:
+                self._text_drawer.add_text(
+                    controls_str, TextOnScreenAlignment.TOP_LEFT
+                )
+
+            tutorial_str = self._tutorial.get_display_text()
             if len(tutorial_str) > 0:
                 self._text_drawer.add_text(
-                    tutorial_str, TextOnScreenAlignment.BOTTOM_CENTER
+                    tutorial_str,
+                    TextOnScreenAlignment.TOP_CENTER,
+                    text_delta_x=-280,
+                    text_delta_y=-50,
                 )
 
     def _create_camera_lookat(self) -> Tuple[mn.Vector3, mn.Vector3]:
@@ -947,15 +1016,16 @@ class SandboxDriver(GuiAppDriver):
         # Because the environment is not stepped in the tutorial, we need to save keyframes manually for replay rendering to work.
         self.get_sim().gfx_replay_manager.save_keyframe()
 
-        assert self._tutorial_stage_index < len(self._tutorial_stages)
-        tutorial_stage = self._tutorial_stages[self._tutorial_stage_index]
-        tutorial_stage.update(dt)
-        self.cam_transform = tutorial_stage.get_look_at_matrix()
+        self._tutorial.update(dt)
 
-        if tutorial_stage.is_stage_completed():
-            self._tutorial_stage_index += 1
-            if self._tutorial_stage_index >= len(self._tutorial_stages):
-                self._sandbox_state = SandboxState.CONTROLLING_AGENT
+        if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+            self._tutorial.skip_stage()
+
+        if self._tutorial.is_completed():
+            self._tutorial.stop_animations()
+            self._sandbox_state = SandboxState.CONTROLLING_AGENT
+        else:
+            self.cam_transform = self._tutorial.get_look_at_matrix()
 
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
@@ -969,7 +1039,7 @@ class SandboxDriver(GuiAppDriver):
             self._save_recorded_keyframes_to_file()
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self._reset_environment()
+            self._check_reset_environment()
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -1183,6 +1253,16 @@ if __name__ == "__main__":
         default=1.2,
         type=float,
         help="Object grasp/place proximity threshold",
+    )
+    parser.add_argument(
+        "--episodes-filter",
+        default=None,
+        type=str,
+        help=(
+            "Episodes filter in the form '0:10 12 14:20:2', "
+            "where single integer number (`12` in this case) represents an episode id, "
+            "colon separated integers (`0:10' and `14:20:2`) represent start:stop:step ids range."
+        ),
     )
     # temp argument:
     # allowed to switch between oracle baseline nav
