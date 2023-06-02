@@ -1049,12 +1049,6 @@ class SandboxDriver(GuiAppDriver):
         # if this is the first step after env reset
         # add goal object positions
         if not self._recording_keyframes:
-            # sim.get_targets()
-            # self._goal_positions
-
-            # idxs, goal_pos = self._sim.get_targets()
-            # scene_pos = self._sim.get_scene_pos()
-            # target_pos = scene_pos[idxs]
             for object_index, object_id in enumerate(self._target_obj_ids):
                 rigid_object = rom.get_object_by_id(object_id)
                 translation = self._goal_positions[object_index]
