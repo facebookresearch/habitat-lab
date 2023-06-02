@@ -13,14 +13,12 @@ objects:
   - name: robot_1
     expr_type: robot_entity_type
 
-init:
-  - closed_fridge(fridge_push_point)
+# init:
+#   - closed_fridge(fridge_push_point)
 
 goal:
   expr_type: AND
   sub_exprs:
-    - at(any_targets|0,TARGET_any_targets|0)
-    - at(any_targets|1,TARGET_any_targets|1)
     - not_holding(robot_0)
     - not_holding(robot_1)
 

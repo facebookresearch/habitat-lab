@@ -346,7 +346,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
                         # Look at the object
-                        vel = OracleNavAction._compute_turn(
+                        vel = OracleNavSocAction._compute_turn(
                             rel_pos, self._config.turn_velocity, robot_forward
                         )
                     elif angle_to_target < self._config.turn_thresh:
@@ -354,7 +354,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                         vel = [self._config.forward_velocity, 0]
                     else:
                         # Look at the target waypoint.
-                        vel = OracleNavAction._compute_turn(
+                        vel = OracleNavSocAction._compute_turn(
                             rel_targ, self._config.turn_velocity, robot_forward
                         )
                 else:

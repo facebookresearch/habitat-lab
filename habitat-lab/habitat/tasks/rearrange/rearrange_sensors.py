@@ -1097,13 +1097,13 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         if self.agent_id is not None:
             if f"agent_{self.agent_id}_oracle_nav_action" in self._task.actions:
                 use_k = f"agent_{self.agent_id}_oracle_nav_action"
-                if (
+            elif (
+                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
+                in self._task.actions
+            ):
+                use_k = (
                     f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                    in self._task.actions
-                ):
-                    use_k = (
-                        f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                    )
+                )
             elif f"agent_{self.agent_id}_oracle_nav_soc_action" in self._task.actions:
                 use_k = f"agent_{self.agent_id}_oracle_nav_soc_action"
             else:
@@ -1111,8 +1111,8 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
         else:
             if "oracle_nav_action" in self._task.actions:
                 use_k = "oracle_nav_action"
-                if "oracle_nav_with_backing_up_action" in self._task.actions:
-                    use_k = "oracle_nav_with_backing_up_action"
+            elif "oracle_nav_with_backing_up_action" in self._task.actions:
+                use_k = "oracle_nav_with_backing_up_action"
             elif "oracle_nav_soc_action" in self._task.actions:
                 use_k = "oracle_nav_soc_action"
             else:
@@ -1196,9 +1196,28 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
                 dist += np.linalg.norm((robot_poses[i] - robot_poses[i+1])[[0, 2]])
         return dist
 
+    def get_agent_k(self, agent_id, task):
+        if f"agent_{agent_id}_oracle_nav_action" in task.actions:
+            use_k = f"agent_{agent_id}_oracle_nav_action"
+        elif (
+            f"agent_{agent_id}_oracle_nav_with_backing_up_action"
+            in task.actions
+        ):
+            use_k = (
+                f"agent_{agent_id}_oracle_nav_with_backing_up_action"
+            )
+        elif f"agent_{agent_id}_oracle_nav_soc_action" in task.actions:
+            use_k = f"agent_{agent_id}_oracle_nav_soc_action"
+        else:
+            raise Exception("Nav action nonexistent!")
+        return use_k
+
+
     def get_socnav_metrics(self,  episode, task, observations):
-        robot_nav_action = task.actions["agent_0_oracle_nav_action"]
-        human_nav_action = task.actions["agent_1_oracle_nav_soc_action"]
+        agent_0_k = self.get_agent_k(0, task)
+        agent_1_k = self.get_agent_k(1, task)
+        robot_nav_action = task.actions[agent_0_k]
+        human_nav_action = task.actions[agent_1_k]
         robot_poses = robot_nav_action.poses
         if len(robot_poses) >0:
             robot_start_pose = robot_poses[0]
