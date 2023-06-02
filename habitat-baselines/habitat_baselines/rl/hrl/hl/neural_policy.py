@@ -100,7 +100,6 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._critic = CriticHead(self._hidden_size)
 
         self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
-        self._replan_dist = self._config.replan_dist
 
     @property
     def should_load_agent_state(self):
@@ -115,18 +114,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         cur_skills,
         log_info,
     ):
-        if self._replan_dist > 0.0:
-            other_agent_dist = observations["other_agent_gps"].norm(dim=-1)
-            return (other_agent_dist < self._replan_dist).cpu()
-        else:
-            return super().get_termination(
-                observations,
-                rnn_hidden_states,
-                prev_actions,
-                masks,
-                cur_skills,
-                log_info,
-            )
+        return observations["should_replan"] > 1.0
 
     def create_hl_info(self):
         return {"actions": None}
