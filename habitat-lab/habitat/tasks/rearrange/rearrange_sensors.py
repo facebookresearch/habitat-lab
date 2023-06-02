@@ -1095,18 +1095,29 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         if self.agent_id is not None:
-            use_k = f"agent_{self.agent_id}_oracle_nav_action"
-            if (
-                f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                in self._task.actions
-            ):
-                use_k = (
+            if f"agent_{self.agent_id}_oracle_nav_action" in self._task.actions:
+                use_k = f"agent_{self.agent_id}_oracle_nav_action"
+                if (
                     f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
-                )
+                    in self._task.actions
+                ):
+                    use_k = (
+                        f"agent_{self.agent_id}_oracle_nav_with_backing_up_action"
+                    )
+            elif f"agent_{self.agent_id}_oracle_nav_soc_action" in self._task.actions:
+                use_k = f"agent_{self.agent_id}_oracle_nav_soc_action"
+            else:
+                raise Exception("No oracle action for nav!")
         else:
-            use_k = "oracle_nav_action"
-            if "oracle_nav_with_backing_up_action" in self._task.actions:
-                use_k = "oracle_nav_with_backing_up_action"
+            if "oracle_nav_action" in self._task.actions:
+                use_k = "oracle_nav_action"
+                if "oracle_nav_with_backing_up_action" in self._task.actions:
+                    use_k = "oracle_nav_with_backing_up_action"
+            elif "oracle_nav_soc_action" in self._task.actions:
+                use_k = "oracle_nav_soc_action"
+            else:
+                raise Exception("No oracle action for nav!")
+            
 
         nav_action = self._task.actions[use_k]
 

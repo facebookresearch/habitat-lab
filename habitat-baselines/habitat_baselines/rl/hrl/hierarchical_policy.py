@@ -25,6 +25,7 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     HighLevelPolicy,
     NeuralHighLevelPolicy,
     PlannerHighLevelPolicy,
+    SocNavHumanHighLevelPolicy
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
@@ -36,6 +37,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ResetArmSkill,
     SkillPolicy,
     WaitSkillPolicy,
+    OracleNavSocPolicy,
 )
 from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData

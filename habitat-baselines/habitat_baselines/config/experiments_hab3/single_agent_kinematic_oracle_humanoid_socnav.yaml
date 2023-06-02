@@ -1,8 +1,8 @@
 # @package _global_
 
 defaults:
-  - /rearrange/rl_hierarchical_oracle_nav_human
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hl_fixed
+  - /rearrange/rl_hierarchical_oracle_nav_soc_human
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.main_agent: hl_socnav_human #hl_human #hl_fixed
   - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills_humanoid
   - _self_
 
@@ -13,10 +13,10 @@ hydra:
 habitat_baselines:
   log_interval: 1
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
-  tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
-  eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  checkpoint_folder: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
-  log_file: ${hydra:sweep.dir}/${hydra:sweep.subdir}/train.log
+  tensorboard_dir: ""
+  eval_ckpt_path_dir: ""
+  checkpoint_folder: ""
+  log_file: ""
   evaluate: False
   writer_type: 'tb'
   num_environments: 2
@@ -24,7 +24,7 @@ habitat_baselines:
 habitat:
   task:
     actions:
-      oracle_nav_action:
+      oracle_nav_soc_action:
         spawn_max_dist_to_obj: -1.0
     measurements:
       composite_success:
@@ -40,5 +40,3 @@ habitat:
     kinematic_mode: True
     ac_freq_ratio: 1
     step_physics: False
-  dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
