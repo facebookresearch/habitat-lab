@@ -688,6 +688,7 @@ class PddlProblem(PddlDomain):
 
                 self._solution.append(action)
         self.bind_actions()
+        #breakpoint()
 
     @property
     def solution(self):
