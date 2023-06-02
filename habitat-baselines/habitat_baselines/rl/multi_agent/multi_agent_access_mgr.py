@@ -87,8 +87,11 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             self._sample_active()
 
     def init_distributed(self, find_unused_params: bool = True) -> None:
+        ind = 0 
         for agent in self._agents:
-            agent.init_distributed(find_unused_params)
+            if ind == 0:   
+                agent.init_distributed(find_unused_params)
+            ind += 1
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
         if self._pop_config.self_play_batched:
@@ -151,6 +154,8 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             agent_count_idxs.append(num_agents_type)
 
             for agent_type_i in range(num_agents_type):
+                if agent_type_i == 1:
+                    is_distrib = False
                 agent_ct = agent_i * agent_count_idxs[agent_i] + agent_type_i
 
                 use_resume_state = None
