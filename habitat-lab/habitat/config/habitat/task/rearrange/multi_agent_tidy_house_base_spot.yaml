@@ -62,14 +62,12 @@ actions:
     enable_lateral_move: False
     turn_thresh: 0.1
     dist_thresh: 0.5
-    lateral_lin_speed: 40.0
-    longitudinal_lin_speed: 40.0
-    lin_speed: 40.0
+    lateral_lin_speed: 100.0
+    longitudinal_lin_speed: 100.0
+    lin_speed: 100.0
     ang_speed: 20.0
   agent_1_base_velocity:
     agent_index : 1
-    lin_speed: 40.0
-    ang_speed: 20.0
   agent_1_rearrange_stop:
     agent_index : 1
   agent_1_pddl_apply_action:
@@ -84,7 +82,7 @@ actions:
     navmesh_offset_for_agent_placement: [[0.0, 0.0]]
     lateral_lin_speed: 40.0
     longitudinal_lin_speed: 40.0
-    lin_speed: 40.0
+    lin_speed: 100.0
     ang_speed: 20.0
 measurements:
   composite_success:
