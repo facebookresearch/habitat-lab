@@ -19,5 +19,4 @@ hierarchical_policy:
     backbone: resnet18
     normalize_visual_inputs: False
     num_rnn_layers: 2
-    replan_dist: 1.5
   defined_skills: {}

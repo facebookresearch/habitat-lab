@@ -604,6 +604,14 @@ class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ShouldReplanSensorConfig(LabSensorConfig):
+    type: str = "ShouldReplanSensor"
+    x_len: Optional[float] = None
+    y_len: Optional[float] = None
+    agent_idx: int = 0
+
+
+@dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
 
@@ -2043,6 +2051,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="multi_agent_all_predicates",
     node=MultiAgentGlobalPredicatesSensorConfig,
+)
+
+cs.store(
+    package="habitat.task.lab_sensors.should_replan",
+    group="habitat/task/lab_sensors",
+    name="should_replan",
+    node=ShouldReplanSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",

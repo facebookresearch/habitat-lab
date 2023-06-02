@@ -110,6 +110,12 @@ class HRLPPO(PPO):
                 n_samples / total_size
             )
 
+            total_size = batch["loss_mask"].shape[0]
+            if isinstance(n_samples, torch.Tensor):
+                n_samples = n_samples.item()
+            learner_metrics["batch_filled_ratio"].append(
+                n_samples / total_size
+            )
             learner_metrics["value_loss"].append(value_loss)
             learner_metrics["action_loss"].append(action_loss)
             learner_metrics["dist_entropy"].append(dist_entropy)
