@@ -92,7 +92,7 @@ class ShouldReplanSensor(Sensor):
 
     def get_observation(self, observations, episode, *args, **kwargs):
         if not self._should_check:
-            return 0.0
+            return np.array([0.0], dtype=np.float32)
 
         other_agent_id = (self._agent_idx + 1) % 2
         my_T = self._sim.get_agent_data(
@@ -108,4 +108,4 @@ class ShouldReplanSensor(Sensor):
         dist = ((rel_pos[0] ** 2) / (self._x_len**2)) + (
             (rel_pos[1] ** 2) / (self._y_len**2)
         )
-        return float(dist < 1)
+        return np.array([dist < 1], dtype=np.float32)

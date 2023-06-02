@@ -114,7 +114,7 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         cur_skills,
         log_info,
     ):
-        return observations["should_replan"] > 1.0
+        return (observations["should_replan"] > 0.0).view(-1).cpu()
 
     def create_hl_info(self):
         return {"actions": None}
