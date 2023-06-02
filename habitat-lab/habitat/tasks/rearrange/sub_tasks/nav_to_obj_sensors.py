@@ -152,7 +152,14 @@ class NavToObjReward(RearrangeReward):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        reward = 0.0
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+        reward = self._metric
         cur_dist = task.measurements.measures[
             self._dist_to_goal_cls_uuid
         ].get_metric()
@@ -178,6 +185,30 @@ class NavToObjReward(RearrangeReward):
             self._cur_angle_dist = angle_dist
 
         self._metric = reward
+
+
+@registry.register_measure
+class NavmeshCollision(Measure):
+    """
+    Returns 1 if the agent has called the stop action and 0 otherwise.
+    """
+
+    cls_uuid: str = "navmesh_collision"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return NavmeshCollision.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = 0
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        if (
+            "base_velocity" in task.actions
+            and task.actions["base_velocity"].navmesh_violation
+        ):
+            self._metric += 1
 
 
 @registry.register_measure
