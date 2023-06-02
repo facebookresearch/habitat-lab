@@ -204,10 +204,9 @@ class NavmeshCollision(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        if (
-            "base_velocity" in task.actions
-            and task.actions["base_velocity"].navmesh_violation
-        ):
+        if (('base_velocity' in task.actions and task.actions['base_velocity'].
+    navmesh_violation) or 
+        ('move_forward' in task.actions and task._is_navmesh_violated)):
             self._metric += 1
 
 

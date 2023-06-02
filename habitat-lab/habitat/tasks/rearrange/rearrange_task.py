@@ -76,6 +76,7 @@ class RearrangeTask(NavigationTask):
         self._should_place_robot = should_place_robot
         self._picked_object_idx = 0             # TODO:
         self._in_manip_mode = False
+        self._is_navmesh_violated = False
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
@@ -177,6 +178,7 @@ class RearrangeTask(NavigationTask):
         self._should_end = False
         self._done = False
         self._cur_episode_step = 0
+        self._is_navmesh_violated = False
         if fetch_observations:
             self._sim.maybe_update_robot()
             return self._get_observations(episode)
