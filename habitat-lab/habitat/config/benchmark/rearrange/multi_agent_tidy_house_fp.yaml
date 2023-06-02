@@ -20,7 +20,7 @@ habitat:
       - agent_0_joint
       - agent_1_joint
   environment:
-    max_episode_steps: 5000
+    max_episode_steps: 750
   simulator:
     type: RearrangeSim-v0
     seed: 100
