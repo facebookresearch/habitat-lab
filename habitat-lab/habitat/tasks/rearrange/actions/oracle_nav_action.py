@@ -163,14 +163,12 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self.humanoid_controller.obj_transform_base.translation
             + base_offset
         )
-        
+
         filtered_query_pos = self._sim.step_filter(
             prev_query_pos, target_query_pos
         )
         fixup = filtered_query_pos - target_query_pos
-        self.humanoid_controller.obj_transform_base.translation += (
-            fixup
-        )
+        self.humanoid_controller.obj_transform_base.translation += fixup
 
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False

@@ -102,6 +102,28 @@ You can also run a Fetch-Humanoid where both work with a Fixed Planner, using:
 python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluate=True habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=False  --config-name experiments_hab3/rearrange_fetch_human_planner.yaml
 ```
 
+To run evaluation on population-based training checkpoints:
+1. GTCoord training
+```
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GTCoord_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
+```
+
+2. PBT training
+```
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/PBT8_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]
+```
+
+3. BDP training
+```
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/BDP16_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
+```
+
+The coordination agent (checkpoint for Spot) in all of the above cases is the 0th index in the `state_dict` in the checkpoint. 
+
+Note: Right now, PBT training is resulting in the coordination agent staying stationary, while the partners do the full task. This is known behavior, and a function of the RL training. We will fix this with hyperparameter tuning. For now, you can either evaluate with the coordination agent that stays stationary, or use one of the population agents (indexes 1-8 in `state_dict`) for testing now.
+
+For evaluating against the training population, for PBT training set `habitat_baselines.rl.agent.force_partner_sample_idx` to be a partner index. In BDP, make number of environments same as number of latent dimensions: `habitat_baselines.num_environments=16 habitat_baselines.rl.agent.force_all_agents=True`.
+
 # Spot robot
 
 ## Testing the Spot
