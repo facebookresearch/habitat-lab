@@ -87,6 +87,7 @@ class RLTaskEnv(habitat.RLEnv):
             done = True
         if self.config.task.end_on_success and self._episode_success():
             done = True
+
         return done
 
     def get_info(self, observations):
