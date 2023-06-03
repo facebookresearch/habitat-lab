@@ -217,6 +217,7 @@ class RearrangeTask(NavigationTask):
             action_args
         ):
             action_args["grip_action"] = None
+        self._is_navmesh_violated = False
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)
