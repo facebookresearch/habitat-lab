@@ -136,7 +136,6 @@ class HighLevelPolicy(nn.Module):
         """
         Returns the list of all actions this agent can execute.
         """
-
         # In the PDDL domain, the agents are referred to as robots.
         robot_id = "robot_" + self._agent_name.split("_")[1]
 

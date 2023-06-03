@@ -253,6 +253,7 @@ class RearrangeSim(HabitatSim):
         return None
 
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
+        #breakpoint()
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         t_start = time.time()
