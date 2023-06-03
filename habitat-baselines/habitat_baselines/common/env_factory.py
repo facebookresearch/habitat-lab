@@ -1,10 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, List, Optional
-
-import torch
+from typing import TYPE_CHECKING
 
 from habitat import VectorEnv
-from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -16,6 +13,7 @@ class VectorEnvFactory(ABC):
         self,
         config: "DictConfig",
         workers_ignore_signals: bool = False,
-        is_eval: bool = False,
+        enforce_scenes_greater_eq_environments: bool = False,
+        is_first_rank: bool = True,
     ) -> VectorEnv:
         pass
