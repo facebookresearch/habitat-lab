@@ -10,7 +10,7 @@ defaults:
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_socnav_human  #hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/measurements:
@@ -59,12 +59,13 @@ habitat:
         dist_thresh: 0.5
       agent_0_arm_action:
         grip_controller: MagicGraspAction
-      agent_1_oracle_nav_with_backing_up_action:
+      agent_1_oracle_nav_soc_action:
+        type: OracleNavSocAction
         motion_control: human_joints
         spawn_max_dist_to_obj: -1
     robot_at_thresh: 3.0
   environment:
-    max_episode_steps: 5000
+    max_episode_steps: 1000
 
   gym:
     obs_keys:
@@ -177,6 +178,7 @@ habitat_baselines:
       agent_1:
         hierarchical_policy:
           high_level_policy:
+            name: "SocNavHumanHighLevelPolicy"
             add_arm_rest: False
             policy_input_keys:
               - "head_depth"
@@ -187,7 +189,7 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
-              skill_name: "OracleNavPolicy"
+              skill_name: "OracleNavSocPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
 

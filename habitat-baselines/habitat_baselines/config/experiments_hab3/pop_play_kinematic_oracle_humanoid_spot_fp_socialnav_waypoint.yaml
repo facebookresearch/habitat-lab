@@ -63,7 +63,7 @@ habitat:
       agent_1_oracle_nav_soc_action:
         type: OracleNavSocAction
         agent_index: 1
-        #motion_control: human_joints
+        motion_control: human_joints
         #spawn_max_dist_to_obj: -1
     robot_at_thresh: 3.0
   environment:
