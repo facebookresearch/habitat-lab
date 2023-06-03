@@ -386,6 +386,13 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
+    _target_: str = (
+        "habitat_baselines.common.habitat_env_factory.HabitatEnvFactory"
+    )
+
+
+@dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     # If habitat_baselines.evaluate is true, the run will be in evaluation mode
@@ -415,6 +422,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     log_file: str = "train.log"
     force_blind_policy: bool = False
     verbose: bool = True
+    vector_env_factory: VectorEnvFactoryConfig = VectorEnvFactoryConfig()
     eval_keys_to_include_in_name: List[str] = field(default_factory=list)
     # For our use case, the CPU side things are mainly memory copies
     # and nothing of substantive compute. PyTorch has been making

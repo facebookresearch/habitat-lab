@@ -113,6 +113,7 @@ class RearrangeSim(HabitatSim):
 
         self.agents_mgr = ArticulatedAgentManager(self.habitat_config, self)
 
+        # Setup config options.
         self._debug_render_articulated_agent = (
             self.habitat_config.debug_render_articulated_agent
         )
@@ -127,10 +128,13 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.update_articulated_agent
         )
         self._step_physics = self.habitat_config.step_physics
+        self._auto_sleep = self.habitat_config.auto_sleep
+        self._load_objs = self.habitat_config.load_objs
         self._additional_object_paths = (
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
+
         self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
         self._perf_logging_enabled = False
         self.cur_runtime_perf_scope: List[str] = []
@@ -270,9 +274,6 @@ class RearrangeSim(HabitatSim):
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
-        with read_write(config):
-            config["scene"] = ep_info.scene_id
-
         self.ep_info = ep_info
         new_scene = self.prev_scene_id != ep_info.scene_id
         if new_scene:
@@ -286,10 +287,15 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.pre_obj_clear()
         self._clear_objects(should_add_objects)
 
-        t_start = time.time()
-        super().reconfigure(config, should_close_on_new_scene=False)
-        self.add_perf_timing("super_reconfigure", t_start)
-        self._try_acquire_context()
+        is_hard_reset = new_scene or should_add_objects
+
+        if is_hard_reset:
+            print("Hard resetting!")
+            with read_write(config):
+                config["scene"] = ep_info.scene_id
+            t_start = time.time()
+            super().reconfigure(config, should_close_on_new_scene=False)
+            self.add_perf_timing("super_reconfigure", t_start)
 
         if new_scene:
             self.agents_mgr.on_new_scene()
@@ -309,14 +315,14 @@ class RearrangeSim(HabitatSim):
         self.agents_mgr.post_obj_load_reconfigure()
 
         # add episode clutter objects additional to base scene objects
-        if self.habitat_config.load_objs:
+        if self._load_objs:
             self._add_objs(ep_info, should_add_objects)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
 
         # auto-sleep rigid objects as optimization
-        if self.habitat_config.auto_sleep:
+        if self._auto_sleep:
             self._sleep_all_objects()
 
         rom = self.get_rigid_object_manager()

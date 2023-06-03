@@ -11,6 +11,7 @@ import time
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional, Set
 
+import hydra
 import numpy as np
 import torch
 import tqdm
@@ -28,7 +29,7 @@ from habitat.utils.visualizations.utils import (
 )
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.construct_vector_env import construct_envs
+from habitat_baselines.common.env_factory import VectorEnvFactory
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -140,7 +141,10 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs = construct_envs(
+        env_factory: VectorEnvFactory = hydra.utils.instantiate(
+            config.habitat_baselines.vector_env_factory
+        )
+        self.envs = env_factory.construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
@@ -149,6 +153,7 @@ class PPOTrainer(BaseRLTrainer):
                 or torch.distributed.get_rank() == 0
             ),
         )
+
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
