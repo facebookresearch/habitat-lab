@@ -712,11 +712,12 @@ class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
     type: str = "OvmmNavToObjSucc"
+    min_object_coverage_iou: float = 1e-3
 
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavOrientToPickSuccMeasurementConfig(
-    NavToObjSuccessMeasurementConfig
+    OvmmNavToObjSuccMeasurementConfig
 ):
     type: str = "OvmmNavOrientToPickSucc"
 
@@ -728,9 +729,37 @@ class OvmmNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmNavOrientToPlaceSuccMeasurementConfig(
-    NavToObjSuccessMeasurementConfig
+    OvmmNavToObjSuccMeasurementConfig
 ):
     type: str = "OvmmNavOrientToPlaceSucc"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PickObjectIoUCoverageMeasurementConfig(MeasurementConfig):
+    type: str = "PickObjectIoUCoverage"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PlaceObjectIoUCoverageMeasurementConfig(MeasurementConfig):
+    type: str = "PlaceObjectIoUCoverage"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class TargetIoUCoverageMeasurementConfig(MeasurementConfig):
+    type: str = "TargetIoUCoverage"
+    max_goal_dist: float = 0.1
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PickGoalIoUCoverageMeasurementConfig(TargetIoUCoverageMeasurementConfig):
+    type: str = "PickGoalIoUCoverage"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PlaceGoalIoUCoverageMeasurementConfig(
+    TargetIoUCoverageMeasurementConfig
+):
+    type: str = "PlaceGoalIoUCoverage"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -2142,6 +2171,24 @@ cs.store(
     group="habitat/task/measurements",
     name="ovmm_nav_orient_to_place_succ",
     node=OvmmNavOrientToPlaceSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_goal_iou_coverage",
+    group="habitat/task/measurements",
+    name="pick_goal_iou_coverage",
+    node=PickGoalIoUCoverageMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.place_goal_iou_coverage",
+    group="habitat/task/measurements",
+    name="place_goal_iou_coverage",
+    node=PlaceGoalIoUCoverageMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.target_iou_coverage",
+    group="habitat/task/measurements",
+    name="target_iou_coverage",
+    node=TargetIoUCoverageMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_reach_reward",

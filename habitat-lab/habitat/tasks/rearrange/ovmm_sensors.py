@@ -10,11 +10,12 @@ import numpy as np
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_sensors import (
+    OvmmNavToObjSucc,
     OvmmRotDistToGoal,
+    TargetIoUCoverage,
 )
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     DistToGoal,
-    NavToObjSuccess,
     NavToPosSucc,
 )
 
@@ -74,7 +75,7 @@ class OvmmNavToPickSucc(NavToPosSucc):
 
 
 @registry.register_measure
-class OvmmNavOrientToPickSucc(NavToObjSuccess):
+class OvmmNavOrientToPickSucc(OvmmNavToObjSucc):
     """Whether the agent has navigated within `success_distance` of the closest viewpoint of a candidate pick object and oriented itself within `success_angle` of the object"""
 
     cls_uuid: str = "ovmm_nav_orient_to_pick_succ"
@@ -90,6 +91,27 @@ class OvmmNavOrientToPickSucc(NavToObjSuccess):
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OvmmRotDistToPickGoal.cls_uuid
+
+    @property
+    def _target_iou_coverage_cls_uuid(self):
+        return PickGoalIoUCoverage.cls_uuid
+
+
+@registry.register_measure
+class PickGoalIoUCoverage(TargetIoUCoverage):
+    """IoU coverage of the target object"""
+
+    cls_uuid: str = "pick_goal_iou_coverage"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickGoalIoUCoverage.cls_uuid
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+        self._is_nav_to_obj = True
 
 
 # Sensors for measuring success to place goals
@@ -147,7 +169,7 @@ class OvmmNavToPlaceSucc(NavToPosSucc):
 
 
 @registry.register_measure
-class OvmmNavOrientToPlaceSucc(NavToObjSuccess):
+class OvmmNavOrientToPlaceSucc(OvmmNavToObjSucc):
     """Whether the agent has navigated within `success_distance` of the center of the closest candidate place receptacle and oriented itself within `success_angle` of the receptacle"""
 
     cls_uuid: str = "ovmm_nav_orient_to_place_succ"
@@ -163,3 +185,24 @@ class OvmmNavOrientToPlaceSucc(NavToObjSuccess):
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OvmmRotDistToPlaceGoal.cls_uuid
+
+    @property
+    def _target_iou_coverage_cls_uuid(self):
+        return PlaceGoalIoUCoverage.cls_uuid
+
+
+@registry.register_measure
+class PlaceGoalIoUCoverage(TargetIoUCoverage):
+    """IoU coverage of the target place receptacle"""
+
+    cls_uuid: str = "place_goal_iou_coverage"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PlaceGoalIoUCoverage.cls_uuid
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+        self._is_nav_to_obj = False
