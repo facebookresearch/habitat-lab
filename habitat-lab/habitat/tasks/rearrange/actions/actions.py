@@ -330,7 +330,6 @@ class BaseVelAction(RobotAction):
         self._lin_speed = self._config.lin_speed
         self._ang_speed = self._config.ang_speed
         self._allow_back = self._config.allow_back
-        self.navmesh_violation = False
 
     @property
     def action_space(self):
@@ -540,7 +539,6 @@ class BaseWaypointTeleportAction(RobotAction):
         self._allow_lateral_movement = config.allow_lateral_movement
         self._allow_simultaneous_turn = config.allow_simultaneous_turn
         self._discrete_movement = config.discrete_movement
-        self.navmesh_violation = False
         self._constraint_base_in_manip_mode = (
             config.constraint_base_in_manip_mode
         )
@@ -629,7 +627,7 @@ class BaseWaypointTeleportAction(RobotAction):
         )
         self.cur_robot.sim_obj.transformation = target_trans
         # Check if there is a collision
-        self.navmesh_violation, new_target_trans = self.collision_check(
+        navmesh_violation, new_target_trans = self.collision_check(
             trans, target_trans
         )
         # Update the base
@@ -637,6 +635,7 @@ class BaseWaypointTeleportAction(RobotAction):
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
             self.cur_grasp_mgr.update_object_to_grasp()
+        return navmesh_violation
 
     def step(self, *args, task, is_last_action, **kwargs):
         base_action = kwargs[self._action_arg_prefix + "base_vel"]
@@ -705,10 +704,10 @@ class BaseWaypointTeleportAction(RobotAction):
             ang_pos = 0.0
 
         if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
-            self.update_base(target_rigid_state)
+            task._is_navmesh_violated = self.update_base(target_rigid_state)
         else:
             # no violation if no movement was required in the first place
-            self.navmesh_violation = False
+            task._is_navmesh_violated = False
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)
         else:

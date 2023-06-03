@@ -188,29 +188,6 @@ class NavToObjReward(RearrangeReward):
 
 
 @registry.register_measure
-class NavmeshCollision(Measure):
-    """
-    Returns 1 if the agent has called the stop action and 0 otherwise.
-    """
-
-    cls_uuid: str = "navmesh_collision"
-
-    @staticmethod
-    def _get_uuid(*args, **kwargs):
-        return NavmeshCollision.cls_uuid
-
-    def reset_metric(self, *args, **kwargs):
-        self._metric = 0
-        self.update_metric(*args, **kwargs)
-
-    def update_metric(self, *args, task, **kwargs):
-        if (('base_velocity' in task.actions and task.actions['base_velocity'].
-    navmesh_violation) or 
-        ('move_forward' in task.actions and task._is_navmesh_violated)):
-            self._metric += 1
-
-
-@registry.register_measure
 class DistToGoal(Measure):
     cls_uuid: str = "dist_to_goal"
 

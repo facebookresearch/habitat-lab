@@ -1144,10 +1144,8 @@ class RearrangeReward(UsesRobotInterface, Measure):
         ].get_metric()
         if force_terminate:
             reward -= self._force_end_pen
-        if (
-            "base_velocity" in task.actions
-            and task.actions["base_velocity"].navmesh_violation
-        ):
+        if (('base_velocity' in task.actions or
+        'move_forward' in task.actions) and task._is_navmesh_violated):
             reward -= self._navmesh_violate_pen
         self._metric = reward
 
@@ -1267,3 +1265,25 @@ class CameraPoseSensor(Sensor):
         return self._sim._sensors[
             "robot_head_rgb"
         ]._sensor_object.node.transformation
+
+
+@registry.register_measure
+class NavmeshCollision(Measure):
+    """
+    Returns 1 if the agent has called the stop action and 0 otherwise.
+    """
+
+    cls_uuid: str = "navmesh_collision"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return NavmeshCollision.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = 0
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        if ('base_velocity' in task.actions or
+        'move_forward' in task.actions) and task._is_navmesh_violated:
+            self._metric += 1
