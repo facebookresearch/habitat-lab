@@ -328,6 +328,32 @@ class OracleNavActionConfig(ActionConfig):
 
 
 @dataclass
+class OracleNavSocActionConfig(ActionConfig):
+    """
+    Rearrangement Only, Oracle navigation action.
+    This action takes as input a discrete ID which refers to an object in the
+    PDDL domain. The oracle navigation controller then computes the actions to
+    navigate to that desired object.
+    """
+
+    type: str = "OracleNavSocAction"
+    # Whether the motion is in the form of base_velocity or human_joints
+    motion_control: str = "base_velocity"
+    num_joints: int = 17
+    turn_velocity: float = 1.0
+    forward_velocity: float = 1.0
+    turn_thresh: float = 0.1
+    dist_thresh: float = 0.2
+    lin_speed: float = 10.0
+    ang_speed: float = 10.0
+    allow_dyn_slide: bool = True
+    allow_back: bool = True
+    # A value of -1.0 means we will get as close to the object as possible.
+    spawn_max_dist_to_obj: float = 2.0
+    num_spawn_attempts: int = 200
+
+
+@dataclass
 class OracleNavWithBackingUpActionConfig(ActionConfig):
     """
     Rearrangement Only, Oracle navigation action with backing-up motion.
@@ -675,6 +701,11 @@ class InstructionSensorConfig(LabSensorConfig):
 @dataclass
 class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
+
+
+@dataclass
+class ComputeSocNavMetricMeasureConfig(MeasurementConfig):
+    type: str = "ComputeSocNavMetricMeasure"
 
 
 @dataclass
@@ -1660,6 +1691,7 @@ class HabitatConfig(HabitatBaseConfig):
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
 
+
 # -----------------------------------------------------------------------------
 # Register configs in the Hydra ConfigStore
 # -----------------------------------------------------------------------------
@@ -1774,6 +1806,12 @@ cs.store(
     group="habitat/task/actions",
     name="oracle_nav_action",
     node=OracleNavActionConfig,
+)
+cs.store(
+    package="habitat.task.actions.oracle_nav_soc_action",
+    group="habitat/task/actions",
+    name="oracle_nav_soc_action",
+    node=OracleNavSocActionConfig,
 )
 cs.store(
     package="habitat.task.actions.oracle_nav_with_backing_up_action",
@@ -2039,6 +2077,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
     node=HasFinishedOracleNavSensorConfig,
+)
+cs.store(
+    package="habitat.task.measurements.compute_soc_nav_metric",
+    group="habitat/task/measurements",
+    name="compute_soc_nav_metric",
+    node=ComputeSocNavMetricMeasureConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.other_agent_gps",

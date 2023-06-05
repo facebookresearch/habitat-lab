@@ -1,0 +1,65 @@
+# @package _global_
+
+# Extends the `rl_hierarchical_oracle_nav` config to use the human avatar.
+# Several things change to support the oracle navigation:
+# - Add ignore_grip parameter
+# - Add sliding.
+# - Use the oracle navigation skill.
+
+defaults:
+  - rl_hierarchical_oracle_nav_soc
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - humanoid_joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - has_finished_oracle_nav
+  - override /habitat/task/actions:
+    - base_velocity
+    - rearrange_stop
+    - pddl_apply_action
+    - oracle_nav_soc_action
+  - override /habitat/task/rearrange: rearrange_easy_base
+  - override /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.main_agent.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
+  - _self_
+
+habitat:
+  task:
+    actions:
+      oracle_nav_soc_action:
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1.0
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - humanoid_joint_sensor
+      - localization_sensor
+      - is_holding
+      - has_finished_oracle_nav
+  simulator:
+    agents:
+      main_agent:
+        articulated_agent_urdf: 'data/female2_0.urdf'
+        articulated_agent_type: KinematicHumanoid
+        motion_data_path: "data/walking_motion_processed_smplx.pkl"
+
+habitat_baselines:
+  rl:
+    policy:
+      main_agent:
+        hierarchical_policy:
+          defined_skills:
+            nav_to_obj:
+              skill_name: "OracleNavSocPolicy"
+              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              max_skill_steps: 1000 #Set this higher than the max steps

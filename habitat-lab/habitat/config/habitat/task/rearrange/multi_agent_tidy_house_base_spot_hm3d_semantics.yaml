@@ -1,0 +1,92 @@
+# @package habitat.task
+
+defaults:
+  - /habitat/task: task_config_base
+  - /habitat/task/actions@actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@actions.agent_0_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@actions.agent_0_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
+  - /habitat/task/actions@actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@actions.agent_1_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
+  - /habitat/task/measurements:
+    - composite_success
+    - num_steps
+    - did_agents_collide
+    - composite_stage_goals
+    - cooperate_subgoal_reward
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+  - _self_
+
+type: RearrangeCompositeTask-v0
+reward_measure: cooperate_subgoal_reward
+success_measure: composite_success
+success_reward: 10.0
+slack_reward: -0.0005
+end_on_success: True
+constraint_violation_ends_episode: False
+constraint_violation_drops_object: True
+task_spec: multi_agent_tidy_house_hm3d_semantics
+pddl_domain_def: hm3d_semantics
+actions:
+  agent_0_base_velocity:
+    agent_index: 0
+    lin_speed: 40.0
+    ang_speed: 20.0
+
+  agent_0_oracle_nav_with_backing_up_action:
+    #type: OracleNavWithBackingUpAction
+    agent_index : 0
+    spawn_max_dist_to_obj: -1.0
+    # For noncylinder navmesh action
+    # If we allow the agent to do sliding
+    allow_dyn_slide: True
+    # If the agent is allowed to slide if the agent needs to do rotation
+    enable_rotation_check_for_dyn_slide: False
+    # The distance threshold of treating collision
+    collision_threshold: 0.02
+    # The navmesh offset for the action control
+    navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+    # The navmesh offset for the agent placement
+    navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+    enable_lateral_move: False
+    turn_thresh: 0.1
+    dist_thresh: 0.5
+    lateral_lin_speed: 40.0
+    longitudinal_lin_speed: 40.0
+  agent_1_base_velocity:
+    agent_index : 1
+    lin_speed: 40.0
+    ang_speed: 20.0
+  agent_1_rearrange_stop:
+    agent_index : 1
+  agent_1_pddl_apply_action:
+    agent_index : 1
+  agent_1_oracle_nav_soc_action:
+    agent_index : 1
+    # spawn_max_dist_to_obj: -1.0
+    # collision_threshold: 0.02
+    # # The navmesh offset for the action control
+    # navmesh_offset: [[0.0, 0.0]]
+    # # The navmesh offset for the agent placement
+    # navmesh_offset_for_agent_placement: [[0.0, 0.0]]
+    # lateral_lin_speed: 40.0
+    # longitudinal_lin_speed: 40.0
+measurements:
+  composite_success:
+    must_call_stop: False
+  cooperate_subgoal_reward:
+    stage_sparse_reward: 5.0
+    end_on_collide: True
+
+robot_at_thresh: 3.0

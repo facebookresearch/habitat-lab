@@ -1,0 +1,49 @@
+# @package _global_
+
+# Extends the `rl_hierarchical` config to use an oracle navigation action.
+# Several things change to support the oracle navigation:
+# - Adding the oracle navigation action
+# - Add sliding.
+# - Use the oracle navigation skill.
+
+defaults:
+  - rl_hierarchical
+  - /habitat/task/actions:
+    - oracle_nav_soc_action
+  - /habitat/task/lab_sensors:
+    - has_finished_oracle_nav
+  - _self_
+
+habitat:
+  task:
+    actions:
+      oracle_nav_soc_action:
+        spawn_max_dist_to_obj: -1.0
+  gym:
+    obs_keys:
+      - head_depth
+      - relative_resting_position
+      - obj_start_sensor
+      - obj_goal_sensor
+      - obj_start_gps_compass
+      - obj_goal_gps_compass
+      - joint
+      - is_holding
+      - ee_pos
+      - localization_sensor
+      - has_finished_oracle_nav
+  simulator:
+    habitat_sim_v0:
+      allow_sliding: True
+
+habitat_baselines:
+  rl:
+    policy:
+      main_agent:
+        hierarchical_policy:
+          # Override to use the oracle navigation skill (which will actually execute navigation).
+          defined_skills:
+              nav_to_obj:
+                skill_name: "OracleNavSocPolicy"
+                obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+                max_skill_steps: 300

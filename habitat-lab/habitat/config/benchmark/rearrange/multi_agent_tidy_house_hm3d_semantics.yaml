@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.agent_0: depth_head_agent
   - /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
-  - /habitat/task/rearrange: multi_agent_tidy_house
+  - /habitat/task/rearrange: multi_agent_tidy_house_hm3d_semantics #multi_agent_tidy_house_fp
   - /habitat/dataset/rearrangement: replica_cad
   - _self_
 
@@ -26,6 +26,8 @@ habitat:
     seed: 100
     additional_object_paths:
       - "data/objects/ycb/configs/"
+      - "data/objects/amazon_berkeley/configs/"
+      - "data/objects/google_object_dataset/configs/"
     concur_render: True
     auto_sleep: True
     agents_order:
@@ -54,6 +56,5 @@ habitat:
       allow_sliding: False
       enable_physics: True
   dataset:
-    # data_path: data/datasets/replica_cad/rearrange/v2/{split}/tidy_house_10k_1k.pickle
-    # data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
-    data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
+    #data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
+    data_path: data/datasets/hm3d_semantics/rearrange_hm3d_v2_temp_example/train/content/1S7LAXRdDqK.json.gz

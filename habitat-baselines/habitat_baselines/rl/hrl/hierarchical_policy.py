@@ -25,12 +25,14 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
     HighLevelPolicy,
     NeuralHighLevelPolicy,
     PlannerHighLevelPolicy,
+    SocNavHumanHighLevelPolicy,
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
     NavSkillPolicy,
     NoopSkillPolicy,
     OracleNavPolicy,
+    OracleNavSocPolicy,
     PickSkillPolicy,
     PlaceSkillPolicy,
     ResetArmSkill,

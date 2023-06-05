@@ -429,6 +429,7 @@ class RearrangeSim(HabitatSim):
             navmesh_settings.agent_radius = radius
             navmesh_settings.agent_height = height
             navmesh_settings.agent_max_climb = max_climb
+
             self.recompute_navmesh(
                 self.pathfinder,
                 navmesh_settings,
