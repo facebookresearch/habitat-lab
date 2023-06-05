@@ -18,6 +18,7 @@ defaults:
     - bad_called_terminate
     - ovmm_nav_to_obj_reward
     - num_steps
+    - navmesh_collision
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor

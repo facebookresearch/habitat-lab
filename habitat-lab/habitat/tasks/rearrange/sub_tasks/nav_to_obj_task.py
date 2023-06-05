@@ -75,9 +75,14 @@ class DynNavRLEnv(RearrangeTask):
 
     @property
     def should_end(self) -> bool:
+        does_want_terminate = False
+        if "stop" in self.actions:
+            does_want_terminate = self.is_stop_called
+        else:
+            does_want_terminate = self.actions["rearrange_stop"].does_want_terminate
         return (
             self._should_end
-            or self.actions["rearrange_stop"].does_want_terminate
+            or does_want_terminate
         )
 
     @should_end.setter

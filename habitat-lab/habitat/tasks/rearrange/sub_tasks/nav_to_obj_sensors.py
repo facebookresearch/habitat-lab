@@ -152,7 +152,14 @@ class NavToObjReward(RearrangeReward):
         )
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        reward = 0.0
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs
+        )
+        reward = self._metric
         cur_dist = task.measurements.measures[
             self._dist_to_goal_cls_uuid
         ].get_metric()

@@ -616,6 +616,11 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class NavmeshCollisionMeasurementConfig(MeasurementConfig):
+    type: str = "NavmeshCollision"
+
+
+@attr.s(auto_attribs=True, slots=True)
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
     use_shortest_path_cache: bool = True
@@ -1984,6 +1989,12 @@ cs.store(
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.navmesh_collision",
+    group="habitat/task/measurements",
+    name="navmesh_collision",
+    node=NavmeshCollisionMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_object_to_place_goal_distance",

@@ -6,7 +6,7 @@ defaults:
 
 type: ObjectRearrangeDataset-v0
 split: train
-data_path: data/episodes/rearrange/v3/{split}/cat_npz-exp.json.gz
+data_path: data/episodes/rearrange/v4/{split}/cat_npz-exp.json.gz
 scenes_dir: "data/fphab/fphab/"
-viewpoints_matrix_path: "data/episodes/rearrange/v3/{split}/cat_npz-exp-vps.npy"
-transformations_matrix_path: data/episodes/rearrange/v3/{split}/cat_npz-exp-trans.npy
+viewpoints_matrix_path: data/episodes/rearrange/v4/{split}/cat_npz-exp-vps.npy
+transformations_matrix_path: data/episodes/rearrange/v4/{split}/cat_npz-exp-trans.npy
