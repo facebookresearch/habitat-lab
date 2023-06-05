@@ -250,8 +250,7 @@ class VectorEnv:
             signal.signal(signal.SIGUSR1, signal.SIG_IGN)
             signal.signal(signal.SIGUSR2, signal.SIG_IGN)
 
-        inner_env = env_fn(*env_fn_args)
-        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(inner_env))
+        env = EnvCountEpisodeWrapper(EnvObsDictWrapper(env_fn(*env_fn_args)))
         if parent_pipe is not None:
             parent_pipe.close()
         try:

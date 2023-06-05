@@ -285,11 +285,12 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names = obj_names
 
         self.agents_mgr.pre_obj_clear()
-        self._clear_objects(should_add_objects)
+        self._clear_objects(should_add_objects, new_scene)
 
         is_hard_reset = new_scene or should_add_objects
 
         if is_hard_reset:
+            print(f"hard resetting {should_add_objects}, {new_scene}")
             with read_write(config):
                 config["scene"] = ep_info.scene_id
             t_start = time.time()
@@ -315,7 +316,7 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         if self._load_objs:
-            self._add_objs(ep_info, should_add_objects)
+            self._add_objs(ep_info, should_add_objects, new_scene)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
@@ -453,7 +454,9 @@ class RearrangeSim(HabitatSim):
         return self._largest_island_idx
 
     @add_perf_timing_func()
-    def _clear_objects(self, should_add_objects: bool) -> None:
+    def _clear_objects(
+        self, should_add_objects: bool, new_scene: bool
+    ) -> None:
         rom = self.get_rigid_object_manager()
 
         # Clear all the rigid objects.
@@ -476,9 +479,10 @@ class RearrangeSim(HabitatSim):
                 rom.remove_object_by_id(viz_obj.object_id)
         self._viz_objs = {}
 
-        # Do not remove the articulated objects from the scene, these are
-        # managed by the underlying sim.
-        self.art_objs = []
+        if new_scene:
+            # Do not remove the articulated objects from the scene, these are
+            # managed by the underlying sim.
+            self.art_objs = []
 
     @add_perf_timing_func()
     def _set_ao_states_from_ep(self, ep_info: RearrangeEpisode) -> None:
@@ -533,7 +537,10 @@ class RearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def _add_objs(
-        self, ep_info: RearrangeEpisode, should_add_objects: bool
+        self,
+        ep_info: RearrangeEpisode,
+        should_add_objects: bool,
+        new_scene: bool,
     ) -> None:
         # Load clutter objects:
         rom = self.get_rigid_object_manager()
@@ -585,23 +592,24 @@ class RearrangeSim(HabitatSim):
 
             obj_counts[obj_handle] += 1
 
-        self._receptacles = self._create_recep_info(
-            ep_info.scene_id, list(self._handle_to_object_id.keys())
-        )
+        if new_scene:
+            self._receptacles = self._create_recep_info(
+                ep_info.scene_id, list(self._handle_to_object_id.keys())
+            )
 
-        ao_mgr = self.get_articulated_object_manager()
-        articulated_agent_art_handles = [
-            articulated_agent.sim_obj.handle
-            for articulated_agent in self.agents_mgr.articulated_agents_iter
-        ]
-        for aoi_handle in ao_mgr.get_object_handles():
-            ao = ao_mgr.get_object_by_handle(aoi_handle)
-            if (
-                self._kinematic_mode
-                and ao.handle not in articulated_agent_art_handles
-            ):
-                ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-            self.art_objs.append(ao)
+            ao_mgr = self.get_articulated_object_manager()
+            articulated_agent_art_handles = [
+                articulated_agent.sim_obj.handle
+                for articulated_agent in self.agents_mgr.articulated_agents_iter
+            ]
+            for aoi_handle in ao_mgr.get_object_handles():
+                ao = ao_mgr.get_object_by_handle(aoi_handle)
+                if (
+                    self._kinematic_mode
+                    and ao.handle not in articulated_agent_art_handles
+                ):
+                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                self.art_objs.append(ao)
 
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]

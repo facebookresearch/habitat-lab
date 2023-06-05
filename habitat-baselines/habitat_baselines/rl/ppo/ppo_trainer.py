@@ -1043,7 +1043,7 @@ class PPOTrainer(BaseRLTrainer):
                             video_option=self.config.habitat_baselines.eval.video_option,
                             video_dir=self.config.habitat_baselines.video_dir,
                             images=rgb_frames[i],
-                            episode_id=current_episodes_info[i].episode_id,
+                            episode_id=f"{current_episodes_info[i].episode_id}_{ep_eval_count[k]}",
                             checkpoint_idx=checkpoint_index,
                             metrics=extract_scalars_from_info(infos[i]),
                             fps=self.config.habitat_baselines.video_fps,
