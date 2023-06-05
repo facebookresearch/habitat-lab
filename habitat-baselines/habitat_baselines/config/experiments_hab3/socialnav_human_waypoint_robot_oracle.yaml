@@ -29,7 +29,7 @@ defaults:
     - humanoid_joint_sensor
     - has_finished_oracle_nav
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
-  
+
   - override /habitat/task/rearrange: multi_agent_tidy_house_base_social
   # For Spot observation space
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
@@ -198,5 +198,3 @@ habitat_baselines:
       backbone: resnet18
       rnn_type: LSTM
       num_recurrent_layers: 2
-  
-  

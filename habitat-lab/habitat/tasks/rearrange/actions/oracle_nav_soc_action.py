@@ -3,6 +3,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import List, Tuple
+
 import magnum as mn
 import numpy as np
 from gym import spaces
@@ -10,12 +12,12 @@ from gym import spaces
 import habitat_sim
 from habitat.articulated_agent_controllers import HumanoidRearrangeController
 from habitat.core.registry import registry
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
+
+# from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.actions import (
     BaseVelAction,
     HumanoidJointAction,
 )
-
 from habitat.tasks.rearrange.utils import place_agent_at_dist_from_pos
 from habitat.tasks.utils import get_angle
 
@@ -53,14 +55,16 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
 
         self.skill_done = False
 
-        #Just wrote this
+        # Just wrote this
         self._counter = 0
         self._waypoint_count = 5
         print("Oracle nav soc action is called!")
 
-        self.poses = []
-
-
+        self.poses: List[np.ndarray] = []
+        self.waypoints: List[np.ndarray] = []
+        self.waypoint_pointer: int = 0
+        self.prev_navigable_point: np.ndarray = np.array([])
+        self.prev_pose: Tuple[np.ndarray, np.ndarray]
 
     @staticmethod
     def _compute_turn(rel, turn_vel, robot_forward):
@@ -115,30 +119,32 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         self._counter = 0
         self.poses = []
 
-        
     def get_waypoints(self):
-        #When resetting, decide 5 navigable points
+        # When resetting, decide 5 navigable points
         self.waypoints = []
         self.waypoint_pointer = 0
-        self.prev_navigable_point = np.array(self.cur_articulated_agent.base_pos)
+        self.prev_navigable_point = np.array(
+            self.cur_articulated_agent.base_pos
+        )
         while len(self.waypoints) < self._waypoint_count:
-            #if self._get_distance(self._get_current_pose(), self.prev_navigable_point)<=0.3 :# stop condition
-            final_nav_targ, _= self._get_random_waypoint()
-            self.prev_navigable_point =final_nav_targ 
+            # if self._get_distance(self._get_current_pose(), self.prev_navigable_point)<=0.3 :# stop condition
+            final_nav_targ, _ = self._get_random_waypoint()
+            self.prev_navigable_point = final_nav_targ
             self.waypoints.append(final_nav_targ)
         print("Initialized waypoints are ", self.waypoints)
 
     def _get_random_waypoint(self):
-        #Just sample a new point
-        #print("Getting waypoint")
+        # Just sample a new point
+        # print("Getting waypoint")
         navigable_point = self._sim.pathfinder.get_random_navigable_point()
-        #while abs(navigable_point[1] - self.prev_navigable_point[1]) >= 0.1 or self._get_distance(self.prev_navigable_point, navigable_point) <=7: #add distance measure too
-        while self._get_distance(self.prev_navigable_point, navigable_point) <=5: 
+        # while abs(navigable_point[1] - self.prev_navigable_point[1]) >= 0.1 or self._get_distance(self.prev_navigable_point, navigable_point) <=7: #add distance measure too
+        while (
+            self._get_distance(self.prev_navigable_point, navigable_point) <= 5
+        ):
             navigable_point = self._sim.pathfinder.get_random_navigable_point()
-        #print("navigable point is ", navigable_point)
-        #print("dist is ", self._get_distance(self.prev_navigable_point, navigable_point))
+        # print("navigable point is ", navigable_point)
+        # print("dist is ", self._get_distance(self.prev_navigable_point, navigable_point))
         return navigable_point, navigable_point
-
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         nav_to_obj = self._poss_entities[nav_to_target_idx]
@@ -148,12 +154,14 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         ):
             obj_pos = self._task.pddl_problem.sim_info.get_entity_pos(
                 nav_to_obj
-            ) #obj_pos is Vector(3.44619, 0.48436, 4.73188)
+            )  # obj_pos is Vector(3.44619, 0.48436, 4.73188)
             if "robot" in nav_to_obj.name:
                 # Safety margin between the human and the robot
                 sample_distance = 1.0
             else:
-                sample_distance = self._config.spawn_max_dist_to_obj #this is -1.0
+                sample_distance = (
+                    self._config.spawn_max_dist_to_obj
+                )  # this is -1.0
             start_pos, _, _ = place_agent_at_dist_from_pos(
                 np.array(obj_pos),
                 0.0,
@@ -171,7 +179,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                     self.cur_articulated_agent.base_transformation
                 )
             self._targets[nav_to_target_idx] = (start_pos, np.array(obj_pos))
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         return self._targets[nav_to_target_idx]
 
     def _path_to_point(self, point):
@@ -207,55 +215,52 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         end_pos -= self.cur_articulated_agent.params.base_offset
         self.humanoid_controller.obj_transform_base.translation = end_pos
 
-    def _get_current_pose(self):
+    def _get_current_pose(self) -> Tuple[np.ndarray, np.ndarray]:
         base_T = self.cur_articulated_agent.base_transformation
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
         forward = np.array([1.0, 0, 0])
         robot_forward = np.array(base_T.transform_vector(forward))
         # Compute heading angle (2D calculation)
         robot_forward = robot_forward[[0, 2]]
-        return robot_pos, robot_forward
+        return (robot_pos, robot_forward)
 
     def _get_distance(self, prev_nav_target, final_nav_targ):
         dist_to_final_nav_targ = np.linalg.norm(
-            (final_nav_targ - prev_nav_target)#[[0, 2]]
+            (final_nav_targ - prev_nav_target)  # [[0, 2]]
         )
         return dist_to_final_nav_targ
 
     def _decide_if_stuck(self, prev_pos, cur_pos):
-        stuck_xy = np.sqrt(((prev_pos[0] - cur_pos[0])**2).sum()) < 0.001
-        stuck_angle = np.sqrt(((prev_pos[1] - cur_pos[1])**2).sum()) < 0.001
-        #temporary fix
+        stuck_xy = np.sqrt(((prev_pos[0] - cur_pos[0]) ** 2).sum()) < 0.001
+        stuck_angle = np.sqrt(((prev_pos[1] - cur_pos[1]) ** 2).sum()) < 0.001
+        # temporary fix
         return stuck_xy and stuck_angle
 
-
     def compute_geodesc_dist_for_path(self, path_points, start_pose):
-        #euclidean distance between points
-        dist = 0
+        # euclidean distance between points
+        dist = 0.0
         for p in path_points:
-            dist += np.linalg.norm(
-                (p - start_pose)[[0, 2]]
-            )
+            dist += np.linalg.norm((p - start_pose)[[0, 2]]).item()
         return dist
 
-
-
     def compute_opt_trajectory_len_until_found(self, robot_start_pose):
-        #Compute geodesic distance to all the human_poses at step_i
+        # Compute geodesic distance to all the human_poses at step_i
         geo_dists = []
         for p in self.poses:
             path = habitat_sim.ShortestPath()
             path.requested_start = robot_start_pose
-            path.requested_end = p #oint
+            path.requested_end = p  # oint
             found_path = self._sim.pathfinder.find_path(path)
             if found_path:
-                geo_dist = self.compute_geodesc_dist_for_path(path.points, robot_start_pose)
+                geo_dist = self.compute_geodesc_dist_for_path(
+                    path.points, robot_start_pose
+                )
                 geo_dists.append(geo_dist)
             else:
-                #raise Exception("path not found!")
+                # raise Exception("path not found!")
                 geo_dist = np.inf
                 geo_dists.append(geo_dist)
-        #get the argmin among geo_dists
+        # get the argmin among geo_dists
         optimal_dist = np.min(geo_dists)
         return optimal_dist, np.argmin(geo_dists)
 
@@ -271,47 +276,73 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         #         return self._sim.step(HabitatSimActions.base_velocity)
         #     else:
         #         return {}
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         # nav_to_target_idx = int(nav_to_target_idx[0]) - 1
-        
-        #final_nav_targ, obj_targ_pos = self._get_target_for_idx(
+
+        # final_nav_targ, obj_targ_pos = self._get_target_for_idx(
         #    nav_to_target_idx
         #
         # if self._counter ==0:
         #     self.prev_navigable_point = np.array(self.cur_articulated_agent.base_pos)
         self.skill_done = False
-        #print("Step called! ", self._counter)
-        if self._counter ==0:
+        # print("Step called! ", self._counter)
+        if self._counter == 0:
             self.get_waypoints()
             self.waypoint_increased_step = self._counter
-        print("step ", str(self._counter) , ": dist is ", self._get_distance(self._get_current_pose()[0], self.waypoints[self.waypoint_pointer]))
+        print(
+            "step ",
+            str(self._counter),
+            ": dist is ",
+            self._get_distance(
+                self._get_current_pose()[0],
+                self.waypoints[self.waypoint_pointer],
+            ),
+        )
         # print("pointer is ", self.waypoint_pointer)
         # print("cur pose is ",self._get_current_pose() )
-        print("step ", str(self._counter) , ": cur pose is ", self._get_current_pose()[0])
-        #print("prev navigable point is ", self.prev_navigable_point)
-        #if self._counter %20==0:
-        #If almost there, resample
-        #TODO: change this to at_goal
-        if self._counter >0:
-            stuck = self._decide_if_stuck(self.prev_pose, self._get_current_pose())
-            reached_waypoint = self._get_distance(self._get_current_pose()[0], self.waypoints[self.waypoint_pointer])<=0.01 #_config.stop_thresh is 0.001 #stop condition
-            if self.waypoint_pointer+1 < len(self.waypoints) and (stuck or reached_waypoint):
-                self.waypoint_pointer +=1
-                print("step ", str(self._counter) , ": NEW WAYPOINT!")
+        print(
+            "step ",
+            str(self._counter),
+            ": cur pose is ",
+            self._get_current_pose()[0],
+        )
+        # print("prev navigable point is ", self.prev_navigable_point)
+        # if self._counter %20==0:
+        # If almost there, resample
+        # TODO: change this to at_goal
+        if self._counter > 0:
+            stuck = self._decide_if_stuck(
+                self.prev_pose, self._get_current_pose()
+            )
+            reached_waypoint = (
+                self._get_distance(
+                    self._get_current_pose()[0],
+                    self.waypoints[self.waypoint_pointer],
+                )
+                <= 0.01
+            )  # _config.stop_thresh is 0.001 #stop condition
+            if self.waypoint_pointer + 1 < len(self.waypoints) and (
+                stuck or reached_waypoint
+            ):
+                self.waypoint_pointer += 1
+                print("step ", str(self._counter), ": NEW WAYPOINT!")
                 self.waypoint_increased_step = self._counter
 
-        final_nav_targ, obj_targ_pos = self.waypoints[self.waypoint_pointer], self.waypoints[self.waypoint_pointer] 
+        final_nav_targ, obj_targ_pos = (
+            self.waypoints[self.waypoint_pointer],
+            self.waypoints[self.waypoint_pointer],
+        )
 
-        #print("received nav_to_target_idx", nav_to_target_idx)
-        #print("final_nav_targ ", final_nav_targ, " obj_targ_pos, ", obj_targ_pos)
-        #import ipdb; ipdb.set_trace()
-        #print("Get target for idx called!")
+        # print("received nav_to_target_idx", nav_to_target_idx)
+        # print("final_nav_targ ", final_nav_targ, " obj_targ_pos, ", obj_targ_pos)
+        # import ipdb; ipdb.set_trace()
+        # print("Get target for idx called!")
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
         self.poses.append(robot_pos)
 
-        self._counter +=1
+        self._counter += 1
         self.prev_pose = self._get_current_pose()
         if curr_path_points is None:
             raise Exception
@@ -359,7 +390,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                         )
                 else:
                     vel = [0, 0]
-                    if self.waypoint_pointer == len(self.waypoints) -1:
+                    if self.waypoint_pointer == len(self.waypoints) - 1:
                         self.skill_done = True
                         print("Completed!")
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
@@ -383,8 +414,8 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                         )
                 else:
                     self.humanoid_controller.calculate_stop_pose()
-                    #if at_goal and at the end of the pointer
-                    if self.waypoint_pointer == len(self.waypoints) -1:
+                    # if at_goal and at the end of the pointer
+                    if self.waypoint_pointer == len(self.waypoints) - 1:
                         self.skill_done = True
                         print("Completed!")
 

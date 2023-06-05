@@ -196,4 +196,3 @@ habitat_baselines:
       backbone: resnet18
       rnn_type: LSTM
       num_recurrent_layers: 2
-

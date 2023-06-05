@@ -87,9 +87,9 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             self._sample_active()
 
     def init_distributed(self, find_unused_params: bool = True) -> None:
-        ind = 0 
+        ind = 0
         for agent in self._agents:
-            if ind == 0:   
+            if ind == 0:
                 agent.init_distributed(find_unused_params)
             ind += 1
 

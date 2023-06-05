@@ -352,6 +352,7 @@ class OracleNavSocActionConfig(ActionConfig):
     spawn_max_dist_to_obj: float = 2.0
     num_spawn_attempts: int = 200
 
+
 @dataclass
 class OracleNavWithBackingUpActionConfig(ActionConfig):
     """
@@ -701,9 +702,11 @@ class InstructionSensorConfig(LabSensorConfig):
 class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
 
+
 @dataclass
 class ComputeSocNavMetricMeasureConfig(MeasurementConfig):
     type: str = "ComputeSocNavMetricMeasure"
+
 
 @dataclass
 class SuccessMeasurementConfig(MeasurementConfig):
@@ -1687,6 +1690,7 @@ class HabitatConfig(HabitatBaseConfig):
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
+
 
 # -----------------------------------------------------------------------------
 # Register configs in the Hydra ConfigStore

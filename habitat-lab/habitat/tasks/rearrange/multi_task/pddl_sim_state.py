@@ -314,11 +314,9 @@ class PddlSimState:
         # Check object states.
         rom = sim_info.sim.get_rigid_object_manager()
         for entity, target in self._obj_states.items():
-            #breakpoint()
             if not sim_info.check_type_matches(
                 entity, SimulatorObjectType.MOVABLE_ENTITY.value
             ):
-                breakpoint()
                 raise ValueError(f"Got unexpected entity {entity}")
             obj_idx = cast(int, sim_info.search_for_entity(entity))
             abs_obj_id = sim_info.sim.scene_obj_ids[obj_idx]

@@ -8,7 +8,8 @@ from dataclasses import dataclass
 import torch
 
 from habitat.core.spaces import ActionSpace
-#from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
+
+# from habitat.tasks.rearrange.rearrange_sensors import LocalizationSensor
 from habitat.tasks.rearrange.rearrange_sensors import (
     HasFinishedOracleNavSensor,
 )
@@ -57,7 +58,7 @@ class OracleNavSocPolicy(NnSkillPolicy):
         self._prev_pos = [None for _ in range(self._batch_size)]
         print("stop threshold is ", self._config.stop_thresh)
         self._apply_postconds = False
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
 
     def set_pddl_problem(self, pddl_prob):
         super().set_pddl_problem(pddl_prob)
@@ -133,7 +134,7 @@ class OracleNavSocPolicy(NnSkillPolicy):
             HasFinishedOracleNavSensor.cls_uuid
         ].cpu()
         ret = finish_oracle_nav[batch_idx].to(torch.bool)
-        #print("Oracle nav soc ret is ", ret)
+        # print("Oracle nav soc ret is ", ret)
         # ret = torch.zeros(masks.shape[0], dtype=torch.bool)
         return ret
 
@@ -154,13 +155,10 @@ class OracleNavSocPolicy(NnSkillPolicy):
         #     )
         # match_i = self._all_entities.index(target)
         # import ipdb; ipdb.set_trace()
-        #return OracleNavSocPolicy.OracleNavSocActionArgs(match_i)
-        #Just pass anything; doesnt matter
-        match_i = 100
+        # return OracleNavSocPolicy.OracleNavSocActionArgs(match_i)
+        # Just pass anything; doesnt matter
+        # match_i = 100
         return OracleNavSocPolicy.OracleNavSocActionArgs(100)
-
-
-        
 
     def _internal_act(
         self,

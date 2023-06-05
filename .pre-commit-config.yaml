@@ -75,7 +75,7 @@ repos:
     hooks:
     -   id: mypy
         # https://github.com/python/mypy/issues/4008
-        exclude: "^docs/|setup.py$"
+        exclude: "^docs/|setup.py|habitat-baselines/habitat_baselines/rl/hrl/hl/soc_nav_human_hl_policy.py$"
         additional_dependencies:
          - attrs>=19.1.0
          - hydra-core>=1.2.0

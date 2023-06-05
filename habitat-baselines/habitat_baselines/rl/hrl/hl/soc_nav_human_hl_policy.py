@@ -28,10 +28,12 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
         # self._solution_actions = self._parse_solution_actions(
         #     self._pddl_prob.solution
         # )
-        self._solution_actions = [['nonexistent_goal', 'robot_0']]
+        self._solution_actions: List[List[str]] = [
+            ["nonexistent_goal", "robot_0"]
+        ]
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
-        #self.skill_called_count = 0
+        # self.skill_called_count = 0
 
     def _parse_solution_actions(self, solution):
         solution_actions = []
@@ -41,8 +43,8 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
                 [x.name for x in hl_action.param_values],
             )
             # Filter out the correct action for the robot.
-            robot_id = "robot_" + self._agent_name.split("_")[1]
-            #if robot_id in sol_action[1]:
+            # robot_id = "robot_" + self._agent_name.split("_")[1]
+            # if robot_id in sol_action[1]:
             if True:
                 solution_actions.append(sol_action)
 
@@ -51,7 +53,7 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
 
         # Add a wait action at the end.
         solution_actions.append(parse_func("wait(30)"))
-        #import ipdb; ipdb.set_trace()
+        # import ipdb; ipdb.set_trace()
         return solution_actions
 
     # def get_termination(self,
@@ -120,7 +122,10 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
             # print("should plan?", should_plan)
             if should_plan == 1.0:
                 next_skill[batch_idx] = self._skill_name_to_idx["nav_to_goal"]
-                skill_args_data[batch_idx] = ['nonexistent_goal', 'robot_0'] #['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0']#['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0'] #[['goal0|0', 'robot_0']]  # type: ignore[call-overload]
+                skill_args_data[batch_idx] = [
+                    "nonexistent_goal",
+                    "robot_0",
+                ]  # ['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0']#['goal0|0', 'robot_0']#['nonexistent_goal', 'robot_0'] #[['goal0|0', 'robot_0']]  # type: ignore[call-overload]
 
                 self._next_sol_idxs[batch_idx] += 1
                 # if self.skill_called_count >0:
@@ -144,6 +149,6 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
 
             #     self._next_sol_idxs[batch_idx] += 1
             #     import ipdb; ipdb.set_trace()
-        #print("self._next_sol_idxs", self._next_sol_idxs)
-        #self.skill_called_count +=1
+        # print("self._next_sol_idxs", self._next_sol_idxs)
+        # self.skill_called_count +=1
         return next_skill, skill_args_data, immediate_end, {}
