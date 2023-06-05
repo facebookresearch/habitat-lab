@@ -196,7 +196,6 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
-
         self.poses.append(robot_pos)
 
         if curr_path_points is None:

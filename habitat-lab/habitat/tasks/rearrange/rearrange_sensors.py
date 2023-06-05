@@ -1119,9 +1119,13 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
                 raise Exception("No oracle action for nav!")
             
 
-        nav_action = self._task.actions[use_k]
+        if use_k in self._task.actions:
+            nav_action = self._task.actions[use_k]
+            skill_done = nav_action.skill_done
+        else:
+            skill_done = False
 
-        return np.array(nav_action.skill_done, dtype=np.float32)[..., None]
+        return np.array(skill_done, dtype=np.float32)[..., None]
 
 
 @registry.register_measure
@@ -1268,3 +1272,166 @@ class ContactTestStats(Measure):
         )
         self._contact_flag.append(flag)
         self._metric = np.average(self._contact_flag)
+
+
+@registry.register_measure
+class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
+    """
+    Ratio of episodes the robot is able to find the person.
+    """
+
+    cls_uuid: str = "finding_success_rate"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+        self.robot_poses = []
+        self.human_poses = []
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return FindingSuccessRate.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        self.update_metric(*args, task=task, **kwargs)
+
+    def found_human_list(
+        self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0
+    ):
+        distances = [
+            np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+            for i in range(len(robot_poses))
+        ]
+        return [d >= min_dist and d <= max_dist for d in distances]
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_pose = self._sim.get_agent_data(0).articulated_agent.base_pos
+        human_pose = self._sim.get_agent_data(1).articulated_agent.base_pos
+
+        self.robot_poses.append(robot_pose)
+        self.human_poses.append(human_pose)
+        robot_poses = self.robot_poses
+        human_poses = self.human_poses
+
+        if len(human_poses) > 0 and len(robot_poses) > 0:
+            # TODO Why is len(robot_poses) != len(human_poses)?
+            if len(human_poses) != len(robot_poses):
+                print(
+                    f"{len(human_poses)} human poses != {len(robot_poses)} robot poses"
+                )
+            robot_poses = robot_poses[: len(human_poses)]
+            human_poses = human_poses[: len(robot_poses)]
+
+            found_human_list = self.found_human_list(robot_poses, human_poses)
+            found = sum(found_human_list) > 0
+            self._metric = float(found)
+
+        else:
+            self._metric = 0.0
+
+
+@registry.register_measure
+class FollowingRate(UsesArticulatedAgentInterface, Measure):
+    """
+    Ratio of the number of steps the robot was following the person to the
+    number of steps in the episode.
+    """
+
+    cls_uuid: str = "following_rate"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+        self.robot_poses = []
+        self.human_poses = []
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return FollowingRate.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        self.update_metric(*args, task=task, **kwargs)
+
+    def found_human_list(
+        self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0
+    ):
+        distances = [
+            np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+            for i in range(len(robot_poses))
+        ]
+        return [d >= min_dist and d <= max_dist for d in distances]
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_pose = self._sim.get_agent_data(0).articulated_agent.base_pos
+        human_pose = self._sim.get_agent_data(1).articulated_agent.base_pos
+
+        self.robot_poses.append(robot_pose)
+        self.human_poses.append(human_pose)
+        robot_poses = self.robot_poses
+        human_poses = self.human_poses
+        if len(human_poses) > 0 and len(robot_poses) > 0:
+            # TODO Why is len(robot_poses) != len(human_poses)?
+            if len(human_poses) != len(robot_poses):
+                print(
+                    f"{len(human_poses)} human poses != {len(robot_poses)} robot poses"
+                )
+
+            robot_poses = robot_poses[: len(human_poses)]
+            human_poses = human_poses[: len(robot_poses)]
+
+            found_human_list = self.found_human_list(robot_poses, human_poses)
+            found_rate = sum(found_human_list) / float(len(found_human_list))
+            self._metric = found_rate
+
+        else:
+            self._metric = 0.0
+
+
+@registry.register_measure
+class FollowingDistance(UsesArticulatedAgentInterface, Measure):
+    """
+    Average distance between the robot and the person during the episode.
+    """
+
+    cls_uuid: str = "following_distance"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        super().__init__(**kwargs)
+        self._sim = sim
+        self._config = config
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return FollowingDistance.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        self.update_metric(*args, task=task, **kwargs)
+
+    def distances(self, robot_poses, human_poses):
+        distances = [
+            np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+            for i in range(len(robot_poses))
+        ]
+        return distances
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_nav_action = task.actions["agent_0_oracle_nav_action"]
+        human_nav_action = task.actions["agent_1_oracle_nav_action"]
+        robot_poses = robot_nav_action.poses
+        human_poses = human_nav_action.poses
+
+        if len(human_poses) > 0 and len(robot_poses) > 0:
+            # TODO Why is len(robot_poses) != len(human_poses)?
+            # if len(human_poses) != len(robot_poses):
+            #     print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
+
+            robot_poses = robot_poses[: len(human_poses)]
+            human_poses = human_poses[: len(robot_poses)]
+
+            distances = self.distances(robot_poses, human_poses)
+            self._metric = sum(distances) / len(distances)
+
+        else:
+            self._metric = 0.0
