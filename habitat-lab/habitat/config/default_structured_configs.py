@@ -1277,6 +1277,9 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
+    # The minimum distance between the agents at start. If < 0
+    # there is no minimal distance
+    min_distance_start_agents: float = -1.0
     actions: Dict[str, ActionConfig] = MISSING
 
 
