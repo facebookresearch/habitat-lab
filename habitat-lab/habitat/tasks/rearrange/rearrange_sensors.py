@@ -1179,7 +1179,7 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
         return found_contact
 
     def found_human_list(self, robot_poses, human_poses):
-        distances = [np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]]) for i in range(len(robot_poses))]
+        distances = [np.linalg.norm(np.array(robot_poses[i] - human_poses[i])[[0, 2]]) for i in range(len(robot_poses))]
         return_list = [d>=1 and d<=2 for d in distances]
         return return_list
 
@@ -1197,7 +1197,7 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
         #for i in range(len(robot_poses)-1):
         if found_human_step >=1:
             for i in range(found_human_step-1):
-                dist += np.linalg.norm((robot_poses[i] - robot_poses[i+1])[[0, 2]])
+                dist += np.linalg.norm(np.array(robot_poses[i] - robot_poses[i+1])[[0, 2]])
         return dist
 
     def get_agent_k(self, agent_id, task):
@@ -1300,7 +1300,7 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
         self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0
     ):
         distances = [
-            np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+            np.linalg.norm(np.array(robot_poses[i] - human_poses[i])[[0, 2]])
             for i in range(len(robot_poses))
         ]
         return [d >= min_dist and d <= max_dist for d in distances]
@@ -1358,10 +1358,11 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
         self, robot_poses, human_poses, min_dist=1.0, max_dist=2.0
     ):
         distances = [
-            np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+            np.linalg.norm(np.array(robot_poses[i] - human_poses[i])[[0, 2]])
             for i in range(len(robot_poses))
         ]
         return [d >= min_dist and d <= max_dist for d in distances]
+
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         robot_pose = self._sim.get_agent_data(0).articulated_agent.base_pos
@@ -1411,14 +1412,30 @@ class FollowingDistance(UsesArticulatedAgentInterface, Measure):
 
     def distances(self, robot_poses, human_poses):
         distances = [
-            np.linalg.norm((robot_poses[i] - human_poses[i])[[0, 2]])
+            np.linalg.norm(np.array(robot_poses[i] - human_poses[i])[[0, 2]])
             for i in range(len(robot_poses))
         ]
         return distances
 
+    def get_agent_k(self, agent_id, task):
+        if f"agent_{agent_id}_oracle_nav_action" in task.actions:
+            use_k = f"agent_{agent_id}_oracle_nav_action"
+        elif (
+            f"agent_{agent_id}_oracle_nav_with_backing_up_action"
+            in task.actions
+        ):
+            use_k = (
+                f"agent_{agent_id}_oracle_nav_with_backing_up_action"
+            )
+        elif f"agent_{agent_id}_oracle_nav_soc_action" in task.actions:
+            use_k = f"agent_{agent_id}_oracle_nav_soc_action"
+        else:
+            raise Exception("Nav action nonexistent!")
+        return use_k
+
     def update_metric(self, *args, episode, task, observations, **kwargs):
-        robot_nav_action = task.actions["agent_0_oracle_nav_action"]
-        human_nav_action = task.actions["agent_1_oracle_nav_action"]
+        robot_nav_action = task.actions[self.get_agent_k(0, task)]
+        human_nav_action = task.actions[self.get_agent_k(1, task)]
         robot_poses = robot_nav_action.poses
         human_poses = human_nav_action.poses
 
