@@ -194,9 +194,7 @@ def test_humanoid_controller():
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        #sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
 
         # add the humanoid to the world via the wrapper

@@ -201,7 +201,6 @@ class PddlSimInfo:
         self, entity: PddlEntity
     ) -> Union[int, str, MarkerInfo, mn.Range3D]:
         ename = entity.name
-        #breakpoint()
 
         if self.check_type_matches(
             entity, SimulatorObjectType.ROBOT_ENTITY.value

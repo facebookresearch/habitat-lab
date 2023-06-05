@@ -125,6 +125,7 @@ class PPOTrainer(BaseRLTrainer):
         Sets up the AgentAccessMgr. You still must call `agent.post_init` after
         this call. This only constructs the object.
         """
+        
         self._create_obs_transforms()
         return baseline_registry.get_agent_access_mgr(
             self.config.habitat_baselines.rl.agent.type

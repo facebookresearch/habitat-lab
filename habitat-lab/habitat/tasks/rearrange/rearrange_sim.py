@@ -253,7 +253,6 @@ class RearrangeSim(HabitatSim):
         return None
 
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
-        #breakpoint()
         self._handle_to_goal_name = ep_info.info["object_labels"]
 
         t_start = time.time()
@@ -410,7 +409,6 @@ class RearrangeSim(HabitatSim):
             base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
 
         navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-
         # If we cannot load the navmesh, try generarting navmesh on the fly.
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
@@ -432,13 +430,11 @@ class RearrangeSim(HabitatSim):
             navmesh_settings.agent_height = height
             navmesh_settings.agent_max_climb = max_climb
 
-            # self.recompute_navmesh(
-            #     self.pathfinder,
-            #     navmesh_settings,
-            #     include_static_objects=True,
-            # )
-            navmesh_settings.include_static_objects = True
-            self.recompute_navmesh(self.pathfinder, navmesh_settings)
+            self.recompute_navmesh(
+                self.pathfinder,
+                navmesh_settings,
+                include_static_objects=True,
+            )
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.pathfinder.save_nav_mesh(navmesh_path)
 
