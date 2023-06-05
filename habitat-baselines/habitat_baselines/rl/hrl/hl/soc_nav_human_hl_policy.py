@@ -2,7 +2,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import List, Tuple
+from typing import List, Optional
 
 import torch
 
@@ -18,8 +18,6 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
     :property _solution_actions: List of tuples were first tuple element is the
         action name and the second is the action arguments.
     """
-
-    _solution_actions: List[Tuple[str, List[str]]]
 
     def __init__(self, *args, **kwargs):
         print("RUNNING SocNavHumanHighLevelPolicy!")
@@ -116,7 +114,9 @@ class SocNavHumanHighLevelPolicy(HighLevelPolicy):
         log_info,
     ):
         next_skill = torch.zeros(self._num_envs)
-        skill_args_data = [None for _ in range(self._num_envs)]
+        skill_args_data: List[Optional[List[str]]] = [
+            None for _ in range(self._num_envs)
+        ]
         immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
         for batch_idx, should_plan in enumerate(plan_masks):
             # print("should plan?", should_plan)
