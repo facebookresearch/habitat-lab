@@ -16,6 +16,7 @@ defaults:
   - /habitat/task/measurements:
     - composite_subgoal_reward
     - runtime_perf_stats
+    - compute_soc_nav_metric
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
