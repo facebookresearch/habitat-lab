@@ -57,7 +57,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
 
         # Just wrote this
         self._counter = 0
-        self._waypoint_count = 5
+        self._waypoint_count = 20
         print("Oracle nav soc action is called!")
 
         self.poses: List[np.ndarray] = []
