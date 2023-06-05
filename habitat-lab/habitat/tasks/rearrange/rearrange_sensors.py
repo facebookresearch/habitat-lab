@@ -211,7 +211,7 @@ class ObjectSegmentationSensor(Sensor):
             segmentation_sensor = np.zeros_like(
                 observations[self.panoptic_uuid], dtype=np.uint8
             )
-            for g in episode.candidate_objects:
+            for g in episode.candidate_objects_hard:
                 segmentation_sensor = segmentation_sensor | (
                     observations[self.panoptic_uuid]
                     == self._sim.scene_obj_ids[int(g.object_id)]
