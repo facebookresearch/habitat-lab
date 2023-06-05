@@ -17,6 +17,10 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToObjSuccess,
     NavToPosSucc,
 )
+from habitat.tasks.rearrange.sub_tasks.pick_sensors import RearrangePickSuccess
+
+from habitat.tasks.rearrange.sub_tasks.ovmm_place_sensors import OvmmPlaceSuccess
+
 
 
 # Sensors for measuring success to pick goals
@@ -163,3 +167,128 @@ class OvmmNavOrientToPlaceSucc(NavToObjSuccess):
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OvmmRotDistToPlaceGoal.cls_uuid
+
+
+@registry.register_measure
+class OvmmFindObjectPhaseSuccess(Measure):
+    """Whether the agent has successfully found an object"""
+
+    cls_uuid: str = "ovmm_find_object_phase_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return OvmmFindObjectPhaseSuccess.cls_uuid
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+
+    def reset_metric(self, *args, episode, task,  **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [OvmmNavOrientToPickSucc.cls_uuid]
+        )
+        self._metric = False
+
+
+    def update_metric(self, episode, task, *args, **kwargs):
+        nav_orient_to_pick_succ = task.measurements.measures[
+            OvmmNavOrientToPickSucc.cls_uuid
+        ].get_metric()
+        self._metric = nav_orient_to_pick_succ or self._metric
+
+
+@registry.register_measure
+class OvmmPickObjectPhaseSuccess(Measure):
+    """Whether the agent has successfully completed the pick object stage successfully"""
+
+    cls_uuid: str = "ovmm_pick_object_phase_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return OvmmPickObjectPhaseSuccess.cls_uuid
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+
+    def reset_metric(self, *args, episode, task,  **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [OvmmFindObjectPhaseSuccess.cls_uuid, RearrangePickSuccess.cls_uuid]
+        )
+        self._metric = False
+
+
+    def update_metric(self, episode, task, *args, **kwargs):
+        find_object_phase_success = task.measurements.measures[
+            OvmmFindObjectPhaseSuccess.cls_uuid
+        ].get_metric()
+        did_pick_object = task.measurements.measures[
+            RearrangePickSuccess.cls_uuid
+        ].get_metric()
+        self._metric = (find_object_phase_success and did_pick_object) or self._metric
+
+
+@registry.register_measure
+class OvmmFindRecepPhaseSuccess(Measure):
+    """Whether the agent has successfully completed the find receptacle stage"""
+
+    cls_uuid: str = "ovmm_find_recep_phase_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return OvmmFindRecepPhaseSuccess.cls_uuid
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+
+    def reset_metric(self, *args, episode, task,  **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [OvmmNavOrientToPlaceSucc.cls_uuid, OvmmPickObjectPhaseSuccess.cls_uuid]
+        )
+        self._metric = False
+
+
+    def update_metric(self, episode, task, *args, **kwargs):
+        pick_object_phase_success = task.measurements.measures[
+            OvmmPickObjectPhaseSuccess.cls_uuid
+        ].get_metric()
+        nav_orient_to_place_succ = task.measurements.measures[
+            OvmmNavOrientToPlaceSucc.cls_uuid
+        ].get_metric()
+        self._metric = (pick_object_phase_success and nav_orient_to_place_succ) or self._metric
+
+
+@registry.register_measure
+class OvmmPlaceObjectPhaseSuccess(Measure):
+    """Whether the agent has successfully completed the place object stage"""
+
+    cls_uuid: str = "ovmm_place_object_phase_success"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return OvmmPlaceObjectPhaseSuccess.cls_uuid
+
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+
+    def reset_metric(self, *args, episode, task,  **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid, [OvmmFindRecepPhaseSuccess.cls_uuid, OvmmPlaceSuccess.cls_uuid]
+        )
+        self._metric = False
+
+
+    def update_metric(self, episode, task, *args, **kwargs):
+        find_recep_phase_success = task.measurements.measures[
+            OvmmFindRecepPhaseSuccess.cls_uuid
+        ].get_metric()
+        place_success = task.measurements.measures[
+            OvmmPlaceSuccess.cls_uuid
+        ].get_metric()
+        self._metric = (find_recep_phase_success and place_success) or self._metric

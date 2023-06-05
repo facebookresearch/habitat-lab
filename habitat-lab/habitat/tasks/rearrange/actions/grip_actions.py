@@ -315,15 +315,17 @@ class GazeGraspAction(MagicGraspAction):
         allowed_scene_obj_ids = [
             int(g.object_id) for g in self._sim.ep_info.candidate_objects
         ]
-        closest = np.argmin(
-            np.linalg.norm(
+        distances = np.linalg.norm(
                 (
                     self._sim.get_scene_pos()[allowed_scene_obj_ids]
                     - self._sim.robot.base_pos
                 )[:, [0, 2]],
                 axis=1,
             )
-        )
+        closest = np.argmin(distances)
+        if distances[closest] > self._grasp_thresh_dist:
+            return
+
         snap_obj_idx = np.array(self._sim.scene_obj_ids)[
             allowed_scene_obj_ids
         ][closest]

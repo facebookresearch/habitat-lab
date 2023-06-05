@@ -380,14 +380,14 @@ class RearrangeSim(HabitatSim):
     def _load_navmesh(self, ep_info):
         scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
         base_dir = osp.dirname(osp.dirname(ep_info.scene_id))
-
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
+        agent_config = self.get_agent(0).agent_config
+        navmesh_folder = "navmeshes_{%0.2f}_{%0.2f}" % (agent_config.radius, agent_config.height)
+        navmesh_path = osp.join(base_dir, navmesh_folder, scene_name + ".navmesh")
         if osp.exists(navmesh_path):
             self.pathfinder.load_nav_mesh(navmesh_path)
         else:
             self.navmesh_settings = NavMeshSettings()
             self.navmesh_settings.set_defaults()
-            agent_config = self.get_agent(0).agent_config
             self.navmesh_settings.agent_radius = agent_config.radius
             self.navmesh_settings.agent_height = agent_config.height
             self.navmesh_settings.agent_max_climb = 0.01
@@ -400,7 +400,7 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.save_nav_mesh(navmesh_path)
 
         island_classes_path = osp.join(
-            base_dir, "navmeshes", scene_name + ".pkl"
+            base_dir, navmesh_folder, scene_name + ".pkl"
         )
         if osp.exists(island_classes_path):
             with open(island_classes_path, "rb") as f:

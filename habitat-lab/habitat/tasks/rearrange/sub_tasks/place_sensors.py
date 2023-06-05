@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Any
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -221,6 +222,7 @@ class PlacementStability(Measure):
             self.uuid,
             [
                 self._obj_on_goal_cls_uuid,
+                ObjectAtRest.cls_uuid,
             ],
         )
         self.update_metric(
@@ -237,8 +239,12 @@ class PlacementStability(Measure):
             self._obj_on_goal_cls_uuid
         ].get_metric()[str(picked_idx)]
 
+        object_at_rest = task.measurements.measures[
+            ObjectAtRest.cls_uuid
+        ].get_metric()
+
         is_holding = self._sim.grasp_mgr.is_grasped
-        if is_obj_at_goal and not is_holding:
+        if is_obj_at_goal and object_at_rest and not is_holding:
             self._curr_stability_steps += 1  # increment
         else:
             self._curr_stability_steps = 0  # reset
@@ -316,3 +322,68 @@ class PlaceSuccess(Measure):
             and ee_to_rest_distance < self._ee_resting_success_threshold
             and is_stable
         )
+
+
+@registry.register_measure
+class PickedObjectAngularVel(Measure):
+    cls_uuid: str = "picked_object_angular_vel"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickedObjectAngularVel.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = None
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        rom = self._sim.get_rigid_object_manager()
+        ro = rom.get_object_by_id(task._picked_object_idx)
+        self._metric = ro.angular_velocity.length()
+
+@registry.register_measure
+class PickedObjectLinearVel(Measure):
+    cls_uuid: str = "picked_object_linear_vel"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickedObjectLinearVel.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = None
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        rom = self._sim.get_rigid_object_manager()
+        ro = rom.get_object_by_id(task._picked_object_idx)
+        self._metric = ro.linear_velocity.length()
+    
+@registry.register_measure
+class ObjectAtRest(Measure):
+    cls_uuid: str = "object_at_rest"
+
+    def __init__(self, sim, config, *args: Any, **kwargs: Any) -> None:
+        self._linear_vel_thresh = config.linear_vel_thresh
+        self._angular_vel_thresh = config.angular_vel_thresh
+        self._sim = sim
+        super().__init__(*args, **kwargs)
+    
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjectAtRest.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = None
+    
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        rom = self._sim.get_rigid_object_manager()
+        ro = rom.get_object_by_id(task._picked_object_idx)
+        self._metric = ro.linear_velocity.length() < self._linear_vel_thresh and ro.angular_velocity.length() < self._angular_vel_thresh

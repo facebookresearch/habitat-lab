@@ -31,7 +31,7 @@ habitat:
       - ovmm_nav_goal_segmentation
       - receptacle_segmentation
   environment:
-    max_episode_steps: 1250
+    max_episode_steps: 1320
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
@@ -45,7 +45,7 @@ habitat:
     kinematic_mode: True
     agents:
       main_agent:
-        radius: 0.3
+        radius: 0.25
         height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"

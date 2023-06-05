@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 from hydra.core.config_store import ConfigStore
@@ -850,6 +850,41 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
     ee_resting_success_threshold: float = 0.15
     check_stability: bool = False
 
+@attr.s(auto_attribs=True, slots=True)
+class PickedObjectLinearVelMeasurementConfig(MeasurementConfig):
+    type: str = "PickedObjectLinearVel"
+
+@attr.s(auto_attribs=True, slots=True)
+class PickedObjectAngularVelMeasurementConfig(MeasurementConfig):
+    type: str = "PickedObjectAngularVel"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class ObjectAtRestMeasurementConfig(MeasurementConfig):
+    type: str = "ObjectAtRest"
+    angular_vel_thresh: float = 1e-3
+    linear_vel_thresh: float = 1e-3
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmFindObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmFindObjectPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPickObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmPickObjectPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmPlaceObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmPlaceObjectPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OvmmFindRecepPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OvmmFindRecepPhaseSuccess"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class OvmmObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
@@ -1008,6 +1043,7 @@ class TaskConfig(HabitatBaseConfig):
     start_in_manip_mode: bool = False
     pick_init: bool = False
     place_init: bool = False
+    episode_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
 
@@ -1146,8 +1182,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
-    width: int = 512
-    height: int = 512
+    width: int = 1024
+    height: int = 1024
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1191,7 +1227,8 @@ class HabitatSimV0Config(HabitatBaseConfig):
     # with concurrent rendering
     leave_context_with_background_renderer: bool = False
     enable_gfx_replay_save: bool = False
-
+    hbao_visual_effects: bool = True
+    pbr_image_based_lighting: bool = True
 
 @attr.s(auto_attribs=True, slots=True)
 class SimulatorConfig(HabitatBaseConfig):
@@ -1315,7 +1352,6 @@ class DatasetConfig(HabitatBaseConfig):
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
     content_scenes: List[str] = ["*"]
-    episode_ids: List[int] = []
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
@@ -1324,13 +1360,16 @@ class DatasetConfig(HabitatBaseConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class ObjectRearrangeDatasetConfig(DatasetConfig):
-    type: str = "ObjectRearrangeDataset-v1"
+    type: str = "ObvjectRearrangeDataset-v0"
     viewpoints_matrix_path: Optional[
         str
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
     transformations_matrix_path: Optional[
         str
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
+    # Not implemented yet for other datasets
+    episode_indices_range: Tuple[int, int] = (0, -1)
+    episode_ids: List[int] = []
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1975,6 +2014,48 @@ cs.store(
     group="habitat/task/measurements",
     name="ovmm_place_success",
     node=OvmmPlaceSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.object_at_rest",
+    group="habitat/task/measurements",
+    name="object_at_rest",
+    node=ObjectAtRestMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.picked_object_linear_vel",
+    group="habitat/task/measurements",
+    name="picked_object_linear_vel",
+    node=PickedObjectLinearVelMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.picked_object_angular_vel",
+    group="habitat/task/measurements",
+    name="picked_object_angular_vel",
+    node=PickedObjectAngularVelMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_find_object_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_find_object_phase_success",
+    node=OvmmFindObjectPhaseSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_pick_object_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_pick_object_phase_success",
+    node=OvmmPickObjectPhaseSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_object_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_place_object_phase_success",
+    node=OvmmPlaceObjectPhaseSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_find_recep_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_find_recep_phase_success",
+    node=OvmmFindRecepPhaseSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",

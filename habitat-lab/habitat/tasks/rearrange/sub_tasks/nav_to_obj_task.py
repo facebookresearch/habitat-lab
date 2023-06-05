@@ -14,7 +14,9 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
+from habitat.tasks.utils import cartesian_to_polar
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
+from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
 
 
 @dataclass
@@ -56,7 +58,7 @@ class DynNavRLEnv(RearrangeTask):
         self._min_start_distance = self._config.min_start_distance
         self._pick_init = config.pick_init
         self._place_init = config.place_init
-
+        self._episode_init = config.episode_init
         assert not (
             self._pick_init and self._place_init
         ), "Can init near either pick or place."
@@ -167,69 +169,61 @@ class DynNavRLEnv(RearrangeTask):
         self._nav_to_info = self._generate_nav_start_goal(
             episode, nav_to_pos, start_hold_obj_idx=start_hold_obj_idx
         )
-        if self._pick_init:
-            # spawn agent close to and oriented to pick object for pick testing, [wip]: moving to ovmm_task.py
-            spawn_recs = [
-                sim.receptacles[
-                    episode.name_to_receptacle[
-                        list(sim.instance_handle_to_ref_handle.keys())[0]
-                    ]
-                ]
-            ]
-            snap_pos = np.array(
-                [r.get_surface_center(sim) for r in spawn_recs]
+        if self._episode_init:
+            self._sim.robot.base_pos = np.array(episode.start_position)
+            start_quat = quaternion_from_coeff(
+                episode.start_rotation
             )
-
+            direction_vector = np.array([0, 0, -1])
+            heading_vector = quaternion_rotate_vector(start_quat, direction_vector)
+            self._sim.robot.base_rot = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+        elif self._pick_init or self._place_init:
+            if self._pick_init:
+                spawn_goals = episode.candidate_objects
+            else:
+                spawn_goals = episode.candidate_goal_receps
+                # Remove whatever the agent is currently holding.
+                abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
+                sim.grasp_mgr.desnap(force=True)
+                sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
+            view_points_per_recep = np.concatenate([
+                np.array([v.agent_state.position for v in g.view_points])
+                for g in spawn_goals
+            ], 0)
+            centers_per_recep = np.concatenate([
+                np.array([g.position for v in g.view_points])
+                for g in spawn_goals
+            ], 0)
             start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
-                snap_pos,
+                view_points_per_recep,
                 self._config.base_angle_noise,
-                self._config.spawn_max_dists_to_obj,
+                0.0,
                 sim,
                 self._config.num_spawn_attempts,
                 self._config.physics_stability_steps,
+                orient_positions=centers_per_recep,
+                sample_probs=None,
             )
-
-            if was_unsucc:
-                rearrange_logger.error(
-                    f"Episode {episode.episode_id} failed to place robot"
-                )
             sim.robot.base_pos = start_pos
-            sim.robot.base_rot = angle_to_obj
-        elif self._place_init:
-            # spawn agent close to and oriented towards goal receptacle for place testing, [wip]: moving to ovmm_task.py
-            if isinstance(sim.robot, StretchRobot):
-                # gripper straight out
-                sim.robot.arm_motor_pos[6] = 0.0
-                sim.robot.arm_joint_pos[6] = 0.0
-            spawn_recs = [
-                sim.receptacles[r]
-                for r in sim.receptacles.keys()
-                if r in sim.valid_goal_rec_names
-            ]
-
-            snap_pos = np.array([v.agent_state.position for g in episode.candidate_goal_receps for v in g.view_points])
-            recep_centers = np.array([g.position for g in episode.candidate_goal_receps for _ in g.view_points])
-            start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
-                target_positions=snap_pos,
-                rotation_perturbation_noise=0.0,
-                distance_threshold=0.0,
-                sim=sim,
-                num_spawn_attempts=self._config.num_spawn_attempts,
-                physics_stability_steps=self._config.physics_stability_steps,
-                orient_positions=recep_centers,
-            )
-
-            if was_unsucc:
-                rearrange_logger.error(
-                    f"Episode {episode.episode_id} failed to place robot"
-                )
-
-            sim.robot.base_pos = start_pos
-            sim.robot.base_rot = angle_to_obj
-            abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
-            sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
-            if isinstance(self._sim.robot, StretchRobot) and self._start_in_manip_mode:
+            if (
+                isinstance(self._sim.robot, StretchRobot)
+                and self._start_in_manip_mode
+            ):
+                # in the case of Stretch, rotate base so that the arm faces the target location
                 sim.robot.base_rot = angle_to_obj + np.pi / 2
+            else:
+                sim.robot.base_rot = angle_to_obj
+            camera_pan = 0.0
+            if self._start_in_manip_mode:
+                # turn camera to face the arm
+                camera_pan = -np.pi / 2
+            if isinstance(sim.robot, StretchRobot):
+                joints = StretchJointStates.PRE_GRASP.copy()
+                joints[-2] = camera_pan
+                joints[-1] = self._camera_tilt
+                sim.robot.arm_motor_pos = joints
+                sim.robot.arm_joint_pos = joints
+
         else:
             sim.robot.base_pos = self._nav_to_info.robot_start_pos
             sim.robot.base_rot = self._nav_to_info.robot_start_angle

@@ -17,6 +17,10 @@ defaults:
     - end_effector_to_rest_distance
     - did_pick_object
     - pick_success
+    - picked_object_linear_vel
+    - picked_object_angular_vel
+    - object_at_rest
+    - ovmm_placement_stability
     - ovmm_place_success
     - ovmm_dist_to_pick_goal
     - ovmm_rot_dist_to_pick_goal
@@ -26,6 +30,10 @@ defaults:
     - ovmm_rot_dist_to_place_goal
     - ovmm_nav_to_place_succ
     - ovmm_nav_orient_to_place_succ
+    - ovmm_find_object_phase_success
+    - ovmm_pick_object_phase_success
+    - ovmm_find_recep_phase_success
+    - ovmm_place_object_phase_success
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
@@ -55,7 +63,9 @@ end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 object_in_hand_sample_prob: 0.0
+base_angle_noise: 0.2618 # 15 degrees
 receptacle_categories_file: data/objects/fpmodels-categories.csv
+episode_init: True
 actions:
   arm_action:
     type: "ArmAction"
@@ -63,7 +73,7 @@ actions:
     grip_controller: "GazeGraspAction"
     arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
     arm_joint_dimensionality: 7
-    grasp_thresh_dist: 0.15
+    grasp_thresh_dist: 1.5 # for oracle snap
     disable_grip: False
     max_delta_pos: 6.28 # The range of joints are:  [ 0., 0.,  0.,  0.,  0., -1.75, -1.57, -3.14, -3.9, -1.53] -> [0.13, 0.13, 0.13, 0.13, 1.1 , 4., 0.56, 3.14, 1.5 , 0.79], so maximum delta is 6.28
     ee_ctrl_lim: 0.015
@@ -87,7 +97,7 @@ measurements:
     ee_resting_success_threshold: 100
   ovmm_place_success:
     ee_resting_success_threshold: 100
-    check_stability: False
+    check_stability: True
   dist_to_pick_goal:
     use_shortest_path_cache: False # when caching, the same set of goals are used throughout
   dist_to_place_goal:
@@ -96,6 +106,10 @@ measurements:
     must_call_stop: False
   nav_orient_to_place_succ:
     must_call_stop: False
+  nav_to_pick_succ:
+    success_distance: 0.1
+  nav_to_place_succ:
+    success_distance: 0.1
 lab_sensors:
   joint_sensor:
     dimensionality: 10

@@ -180,6 +180,7 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                         split=self.config.split
                     )
                 )
+        self.episode_indices_range = self.config.episode_indices_range
         super().__init__(config)
 
     def get_episode_iterator(
@@ -223,7 +224,15 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                 "recep_category_to_recep_category_id"
             ]
 
-        for i, episode in enumerate(deserialized["episodes"]):
+
+        episodes_index_low, episodes_index_high = self.episode_indices_range
+        episode_ids_subset = None
+        all_episodes = deserialized["episodes"]
+        if len(self.config.episode_ids) > 0:
+            episode_ids_subset = self.config.episode_ids[episodes_index_low: episodes_index_high]
+        else:
+            all_episodes = all_episodes[episodes_index_low: episodes_index_high]
+        for i, episode in enumerate(all_episodes):
             rearrangement_episode = ObjectRearrangeEpisode(**episode)
             rearrangement_episode.episode_id = str(i)
             for goal_type in [
@@ -243,7 +252,7 @@ class ObjectRearrangeDatasetV0(PointNavDatasetV1):
                     )
 
             if (
-                len(self.config.episode_ids) == 0
-                or i in self.config.episode_ids
+                episode_ids_subset is None
+                or int(episode['episode_id']) in episode_ids_subset
             ):
                 self.episodes.append(rearrangement_episode)
