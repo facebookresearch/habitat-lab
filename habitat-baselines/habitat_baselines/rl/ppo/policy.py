@@ -123,6 +123,7 @@ class MultiAgentPolicyActionData(PolicyActionData):
             unpack_lengths = [
                 int(tensor_to_unpack.shape[-1] / self.num_agents)
             ] * self.num_agents
+
         tensor_unpacked = torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
         return tensor_unpacked
 

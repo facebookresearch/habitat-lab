@@ -1,7 +1,7 @@
 # @package _global_
 
 defaults:
-  - pop_play_kinematic_oracle
+  - pop_play_kinematic_oracle_humanoid_spot_fp
   - /habitat_baselines/rl/auxiliary_losses: bdp_discrim
   - override /habitat_baselines/rl/agent: bdp
   - _self_
@@ -24,4 +24,10 @@ habitat_baselines:
           high_level_policy:
             policy_input_keys:
               - "head_depth"
+              - "is_holding"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
               - "behav_latent"
