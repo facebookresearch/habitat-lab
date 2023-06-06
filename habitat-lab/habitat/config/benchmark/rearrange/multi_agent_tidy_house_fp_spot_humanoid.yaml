@@ -57,6 +57,7 @@ habitat:
     reward_measure: cooperate_subgoal_reward
     success_measure: composite_success
     success_reward: 10.0
+    min_distance_start_agents: 5.0
     slack_reward: -0.0005
     end_on_success: True
     constraint_violation_ends_episode: False
