@@ -126,7 +126,6 @@ class SandboxDriver(GuiAppDriver):
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
 
-        self.cam_transform = None
         self.cam_zoom_dist = 1.0
         self._max_zoom_dist = 50.0
         self._min_zoom_dist = 0.02
@@ -174,6 +173,11 @@ class SandboxDriver(GuiAppDriver):
         self._num_iter_episodes: int = len(self.env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
         self._reset_environment()
+
+        lookat = self._create_camera_lookat()
+        self.cam_transform = mn.Matrix4.look_at(
+            lookat[0], lookat[1], mn.Vector3(0, 1, 0)
+        )
 
     def _make_dataset(self, config):
         from habitat.datasets import make_dataset
@@ -289,9 +293,9 @@ class SandboxDriver(GuiAppDriver):
         self._num_busy_objects = None  # currently held by non-gui agents
 
         sim = self.get_sim()
-        temp_ids, goal_positions_np = sim.get_targets()
+        temp_idxs, goal_positions_np = sim.get_targets()
         self._target_obj_ids = [
-            sim._scene_obj_ids[temp_id] for temp_id in temp_ids
+            sim._scene_obj_ids[temp_id] for temp_id in temp_idxs
         ]
         self._goal_positions = [mn.Vector3(pos) for pos in goal_positions_np]
 
@@ -374,7 +378,7 @@ class SandboxDriver(GuiAppDriver):
         # get forward_dir from FPS camera yaw, not art_obj.transformation
         # (the problem with art_obj.transformation is that it includes a "wobble"
         # introduced by the walk animation)
-        transformation = self.cam_transform or art_obj.transformation
+        transformation = self.cam_transform
         forward_dir = transformation.transform_vector(-mn.Vector3(0, 0, 1))
         forward_dir[1] = 0
         forward_dir = forward_dir.normalized()
@@ -537,7 +541,7 @@ class SandboxDriver(GuiAppDriver):
         agents_mgr = sim.agents_mgr
 
         grasped_objects_idxs = []
-        for agent_idx in range(self.ctrl_helper.n_robots):
+        for agent_idx in range(self.ctrl_helper.n_agents):
             if agent_idx == self.ctrl_helper.get_gui_controlled_agent_index():
                 continue
             grasp_mgr = agents_mgr._all_agent_data[agent_idx].grasp_mgr
@@ -938,7 +942,7 @@ class SandboxDriver(GuiAppDriver):
 
     def _record_task_state(self):
         agent_states = []
-        for agent_idx in range(self.ctrl_helper.n_robots):
+        for agent_idx in range(self.ctrl_helper.n_agents):
             art_obj = (
                 self.get_sim().agents_mgr[agent_idx].articulated_agent.sim_obj
             )
@@ -1039,6 +1043,46 @@ class SandboxDriver(GuiAppDriver):
         else:
             self.cam_transform = self._tutorial.get_look_at_matrix()
 
+    def _add_spatial_data_to_gfx_replay_keyframe(self):
+        sim = self.get_sim()
+        rom = sim.get_rigid_object_manager()
+
+        # if this is the first step after env reset
+        # add goal object positions
+        if not self._recording_keyframes:
+            for object_index, object_id in enumerate(self._target_obj_ids):
+                rigid_object = rom.get_object_by_id(object_id)
+                translation = self._goal_positions[object_index]
+                rotation = rigid_object.rotation
+                sim.gfx_replay_manager.add_user_transform_to_keyframe(
+                    f"object_{object_id}_goal_pose", translation, rotation
+                )
+
+        # add current target object positions
+        for object_id in self._target_obj_ids:
+            rigid_object = rom.get_object_by_id(object_id)
+            translation = rigid_object.translation
+            rotation = rigid_object.rotation
+            sim.gfx_replay_manager.add_user_transform_to_keyframe(
+                f"object_{object_id}_current_pose", translation, rotation
+            )
+
+        # add poses of all the agents
+        for agent_index in range(self.ctrl_helper.n_agents):
+            agent_node = sim.agents_mgr[agent_index].articulated_agent.sim_obj
+            translation = agent_node.translation
+            rotation = agent_node.rotation
+            sim.gfx_replay_manager.add_user_transform_to_keyframe(
+                f"agent_{agent_index}", translation, rotation
+            )
+
+        # add user camera
+        translation = self.cam_transform.translation
+        rotation = mn.Quaternion.from_matrix(self.cam_transform.rotation())
+        sim.gfx_replay_manager.add_user_transform_to_keyframe(
+            "user_camera", translation, rotation
+        )
+
     def sim_update(self, dt):
         # todo: pipe end_play somewhere
         post_sim_update_dict: Dict[str, Any] = {}
@@ -1050,6 +1094,15 @@ class SandboxDriver(GuiAppDriver):
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
             self._end_episode(do_reset=True)
 
+        # Navmesh visualization only works in the debug third-person view
+        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
+        # visualization is only implemented for simulator-rendering, not replay-
+        # rendering.
+        if self.gui_input.get_key_down(GuiInput.KeyNS.N):
+            self.env._sim.navmesh_visualization = (  # type: ignore
+                not self.env._sim.navmesh_visualization  # type: ignore
+            )
+
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
         self._viz_anim_fraction = (
@@ -1060,15 +1113,7 @@ class SandboxDriver(GuiAppDriver):
             self._update_task()
             self._update_grasping_and_set_act_hints()
 
-        # Navmesh visualization only works in the debug third-person view
-        # (--debug-third-person-width), not the main sandbox viewport. Navmesh
-        # visualization is only implemented for simulator-rendering, not replay-
-        # rendering.
-        if self.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self.env._sim.navmesh_visualization = (  # type: ignore
-                not self.env._sim.navmesh_visualization  # type: ignore
-            )
-
+        self._add_spatial_data_to_gfx_replay_keyframe()
         if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
             self._sim_update_controlling_agent(dt)
         else:
