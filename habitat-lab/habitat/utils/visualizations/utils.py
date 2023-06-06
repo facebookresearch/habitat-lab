@@ -220,7 +220,7 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             obs_k = observation[sensor_name]
             if not isinstance(obs_k, np.ndarray):
                 obs_k = obs_k.cpu().numpy()
-            if sensor_name == "ovmm_nav_goal_segmentation":
+            if  "ovmm_nav_goal_segmentation" in sensor_name:
                 if  obs_k.shape[2] == 1:
                     obs_k = obs_k * 255.0
                     obs_k = obs_k.astype(np.uint8)
@@ -234,6 +234,8 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             if obs_k.dtype != np.uint8 or sensor_name in [
                 "goal_recep_segmentation",
                 "object_segmentation",
+                "object_segmentation_resized",
+                "object_segmentation_resized",
             ]:
                 obs_k = obs_k * 255.0
                 obs_k = obs_k.astype(np.uint8)
