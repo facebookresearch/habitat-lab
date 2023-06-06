@@ -45,7 +45,7 @@ habitat:
     kinematic_mode: True
     agents:
       main_agent:
-        radius: 0.25
+        radius: 0.3
         height: 1.41
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
@@ -68,5 +68,6 @@ habitat:
       enable_physics: True
     needs_markers: false
   dataset:
+    data_path: data/episodes/rearrange/v4/val/cat_npz-exp-filtered-with-init-poses.json.gz
     split: val
 
