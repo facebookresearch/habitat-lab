@@ -1,0 +1,200 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/task: task_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
+  - /habitat/simulator/agents@habitat.simulator.agents.agent_1: depth_head_agent
+
+  - /habitat/dataset/rearrangement: replica_cad
+
+
+  - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_0_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_0_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
+
+  - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
+  - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
+  - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
+  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
+
+  - /habitat/task/measurements:
+    - composite_success
+    - num_steps
+    - did_agents_collide
+    - composite_stage_goals
+    - cooperate_subgoal_reward
+    - runtime_perf_stats
+  - /habitat/task/lab_sensors:
+    - relative_resting_pos_sensor
+    - target_start_sensor
+    - goal_sensor
+    - joint_sensor
+    - is_holding_sensor
+    - end_effector_sensor
+    - target_start_gps_compass_sensor
+    - target_goal_gps_compass_sensor
+    - localization_sensor
+    - other_agent_gps
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_0_should_replan: should_replan
+  - /habitat/task/lab_sensors@habitat.task.lab_sensors.agent_1_should_replan: should_replan
+  - _self_
+
+habitat:
+  task:
+    lab_sensors:
+      agent_0_should_replan:
+        x_len: 3.0
+        y_len: 1.5
+        agent_idx: 0
+      agent_1_should_replan:
+        x_len: 3.0
+        y_len: 1.5
+        agent_idx: 1
+    type: RearrangeCompositeTask-v0
+    reward_measure: cooperate_subgoal_reward
+    success_measure: composite_success
+    success_reward: 10.0
+    min_distance_start_agents: 5.0
+    slack_reward: -0.0005
+    end_on_success: True
+    constraint_violation_ends_episode: False
+    constraint_violation_drops_object: True
+    measurements:
+      composite_success:
+        must_call_stop: False
+      cooperate_subgoal_reward:
+        stage_sparse_reward: 5.0
+        end_on_collide: True
+        collide_penalty: 0.5
+    task_spec: multi_agent_tidy_house_fp_2obj
+    pddl_domain_def: fp
+    actions:
+      agent_0_arm_action:
+        grip_controller: MagicGraspAction
+      agent_0_base_velocity:
+        agent_index: 0
+        lin_speed: 40.0
+        ang_speed: 20.0
+
+      agent_0_oracle_nav_with_backing_up_action:
+        type: OracleNavWithBackingUpAction
+        agent_index : 0
+        spawn_max_dist_to_obj: -1.0
+        # For noncylinder navmesh action
+        # If we allow the agent to do sliding
+        allow_dyn_slide: True
+        # If the agent is allowed to slide if the agent needs to do rotation
+        enable_rotation_check_for_dyn_slide: False
+        # The distance threshold of treating collision
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0], [0.15, 0.0], [-0.15, 0.0]]
+        enable_lateral_move: False
+        turn_thresh: 0.1
+        dist_thresh: 0.5
+        lateral_lin_speed: 100.0
+        longitudinal_lin_speed: 100.0
+        lin_speed: 100.0
+        ang_speed: 20.0
+      agent_1_base_velocity:
+        agent_index : 1
+      agent_1_rearrange_stop:
+        agent_index : 1
+      agent_1_pddl_apply_action:
+        agent_index : 1
+      agent_1_oracle_nav_with_backing_up_action:
+        agent_index : 1
+        motion_control: human_joints
+        spawn_max_dist_to_obj: -1.0
+        collision_threshold: 0.02
+        # The navmesh offset for the action control
+        navmesh_offset: [[0.0, 0.0]]
+        # The navmesh offset for the agent placement
+        navmesh_offset_for_agent_placement: [[0.0, 0.0]]
+        lateral_lin_speed: 40.0
+        longitudinal_lin_speed: 40.0
+        lin_speed: 100.0
+        ang_speed: 20.0
+
+    robot_at_thresh: 3.0
+  gym:
+    obs_keys:
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_has_finished_oracle_nav
+      - agent_0_other_agent_gps
+      - agent_0_should_replan
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+      - agent_1_should_replan
+  environment:
+    max_episode_steps: 750
+  simulator:
+    type: RearrangeSim-v0
+    seed: 100
+    additional_object_paths:
+      - "data/objects/ycb/configs/"
+      - "data/objects/amazon_berkeley/configs/"
+      - "data/objects/google_object_dataset/configs/"
+    concur_render: True
+    auto_sleep: True
+    agents_order:
+      - agent_0
+      - agent_1
+    agents:
+      agent_0:
+        radius: 0.25
+        height: 1.8
+        articulated_agent_urdf: data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf
+        articulated_agent_type: "SpotRobot"
+        sim_sensors:
+          arm_rgb_sensor:
+            height: 480
+            width: 640
+            hfov: 47
+          arm_depth_sensor:
+            height: 224
+            width: 171
+            hfov: 55
+        joint_start_noise: 0.0
+      agent_1:
+        radius: 0.3
+        sim_sensors:
+          head_depth_sensor:
+            height: 256
+            width: 256
+        articulated_agent_urdf: 'data/humanoids/humanoid_data/female2_0.urdf'
+        articulated_agent_type: 'KinematicHumanoid'
+        rest_pose_data_path: 'data/humanoids/humanoid_data/standing_pose_smplx.pkl'
+        motion_data_path: "data/humanoids/humanoid_data/walking_motion_processed_smplx.pkl"
+
+    kinematic_mode: True
+    ac_freq_ratio: 1
+    step_physics: False
+
+    habitat_sim_v0:
+      allow_sliding: True
+      enable_physics: True
+  dataset:
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz

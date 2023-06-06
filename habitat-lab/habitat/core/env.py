@@ -273,17 +273,6 @@ class Env:
 
         return observations
 
-    def _update_step_stats(self) -> None:
-        self._elapsed_steps += 1
-        self._episode_over = not self._task.is_episode_active
-        if self._past_limit():
-            self._episode_over = True
-
-        if self.episode_iterator is not None and isinstance(
-            self.episode_iterator, EpisodeIterator
-        ):
-            self.episode_iterator.step_taken()
-
     def step(
         self, action: Union[int, str, Dict[str, Any]], **kwargs
     ) -> Observations:
@@ -315,14 +304,26 @@ class Env:
             action=action, episode=self.current_episode
         )
 
+        # Compute if the episode is over due to a timeout or the task no longer being active.
+        self._elapsed_steps += 1
+        is_timeout = self._past_limit()
+
         self._task.measurements.update_measures(
             episode=self.current_episode,
             action=action,
             task=self.task,
             observations=observations,
+            # Let the sensor know if this is the last step due to a timeout.
+            is_timeout=is_timeout,
         )
+        self._episode_over = not self._task.is_episode_active
+        if is_timeout:
+            self._episode_over = True
 
-        self._update_step_stats()
+        if self.episode_iterator is not None and isinstance(
+            self.episode_iterator, EpisodeIterator
+        ):
+            self.episode_iterator.step_taken()
 
         return observations
 
