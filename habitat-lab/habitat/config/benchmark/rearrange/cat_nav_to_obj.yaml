@@ -18,7 +18,6 @@ habitat:
       - start_receptacle
       - robot_start_gps
       - robot_start_compass
-      - joint
   environment:
     max_episode_steps: 400
   simulator:
