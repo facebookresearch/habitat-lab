@@ -386,9 +386,11 @@ class ObjectSampler:
         """
         # draw a new pairing
         if fixed_obj_handle is None:
+            print("sampling obj")
             object_handle = self.sample_object()
         else:
             object_handle = fixed_obj_handle
+
         if fixed_target_receptacle is not None:
             target_receptacle = fixed_target_receptacle
         else:

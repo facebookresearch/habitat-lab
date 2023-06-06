@@ -280,6 +280,7 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         # Only remove and re-add objects if we have a new set of objects.
+        ep_info.rigid_objs = sorted(ep_info.rigid_objs, key=lambda x: x[0])
         obj_names = [x[0] for x in ep_info.rigid_objs]
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
@@ -290,7 +291,6 @@ class RearrangeSim(HabitatSim):
         is_hard_reset = new_scene or should_add_objects
 
         if is_hard_reset:
-            print(f"hard resetting {should_add_objects}, {new_scene}")
             with read_write(config):
                 config["scene"] = ep_info.scene_id
             t_start = time.time()
