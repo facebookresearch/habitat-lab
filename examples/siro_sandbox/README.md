@@ -159,7 +159,7 @@ habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
 Specify a subset of play episodes on the command line by adding `--episodes-filter`  argument followed by the filter string. Episodes filter string should be in the form `"0:10 12 14:20:2"`, where single integer number ('12' in this case) represents an episode id and colon separated integers ('0:10' and '14:20:2') represent start:stop:step episodes ids range.
 
 ## Capturing Gfx-Replay Files
-Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing starts per episode at the first frame and ends (is saved) when episode is completed (environment is reset). The file will be saved as `my_session.<episode_number>.gfx_replay.json.gz` where `<episode_number>` is a sequential episodes number starting from 0.
+Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing ends (is saved) when the session is over (pressed ESC). The file will be saved as `my_session.gfx_replay.json.gz`.
 
 ## Human-in-the-loop tutorial sequence
 The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.
