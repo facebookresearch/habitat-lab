@@ -598,6 +598,14 @@ class MultiAgentGlobalPredicatesSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ShouldReplanSensorConfig(LabSensorConfig):
+    type: str = "ShouldReplanSensor"
+    x_len: Optional[float] = None
+    y_len: Optional[float] = None
+    agent_idx: int = 0
+
+
+@dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
 
@@ -1254,6 +1262,9 @@ class TaskConfig(HabitatBaseConfig):
     enable_safe_drop: bool = False
     art_succ_thresh: float = 0.15
     robot_at_thresh: float = 2.0
+    # The minimum distance between the agents at start. If < 0
+    # there is no minimal distance
+    min_distance_start_agents: float = -1.0
     actions: Dict[str, ActionConfig] = MISSING
 
 
@@ -2019,6 +2030,13 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="multi_agent_all_predicates",
     node=MultiAgentGlobalPredicatesSensorConfig,
+)
+
+cs.store(
+    package="habitat.task.lab_sensors.should_replan",
+    group="habitat/task/lab_sensors",
+    name="should_replan",
+    node=ShouldReplanSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",

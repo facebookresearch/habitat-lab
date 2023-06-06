@@ -314,14 +314,16 @@ class SandboxDriver(GuiAppDriver):
             else None
         )
 
-        # reset recorded keyframes and episode recorder data
-        self._recording_keyframes.clear()
+        # reset recorded keyframes and episode recorder data:
+        # do not clead self._recording_keyframes as for now,
+        # save a gfx-replay file per session not per episode
+        # self._recording_keyframes.clear()
         self._reset_episode_recorder()
 
-    def _check_save_episode_data(self):
+    def _check_save_episode_data(self, session_ended):
         assert self._save_filepath_base
         saved_keyframes, saved_episode_data = False, False
-        if self._save_gfx_replay_keyframes:
+        if self._save_gfx_replay_keyframes and session_ended:
             self._save_recorded_keyframes_to_file()
             saved_keyframes = True
         if self._save_episode_record:
@@ -332,7 +334,7 @@ class SandboxDriver(GuiAppDriver):
             self._num_recorded_episodes += 1
 
     def _end_episode(self, do_reset=False):
-        self._check_save_episode_data()
+        self._check_save_episode_data(session_ended=do_reset == False)
         self._num_episodes_done += 1
 
         if do_reset and self._next_episode_exists():
@@ -768,8 +770,7 @@ class SandboxDriver(GuiAppDriver):
         json_content = '{{"keyframes":[{}]}}'.format(json_keyframes)
 
         # Save keyframes to file
-        filepath_base = self._find_episode_save_filepath_base()
-        filepath = filepath_base + ".gfx_replay.json.gz"
+        filepath = self._save_filepath_base + ".gfx_replay.json.gz"
         save_as_gzip(json_content.encode("utf-8"), filepath)
 
     def _update_cursor_style(self):
