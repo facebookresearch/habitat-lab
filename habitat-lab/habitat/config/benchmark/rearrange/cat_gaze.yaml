@@ -17,7 +17,6 @@ habitat:
       - start_recep_segmentation
       - object_embedding
       - joint
-      - is_holding
   environment:
     max_episode_steps: 300
   simulator:
