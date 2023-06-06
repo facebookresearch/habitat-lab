@@ -30,6 +30,7 @@ from magnum.platform.glfw import Application
 from serialize_utils import (
     NullRecorder,
     StepRecorder,
+    save_as_gzip,
     save_as_json_gzip,
     save_as_pickle_gzip,
 )
@@ -90,14 +91,6 @@ class SandboxDriver(GuiAppDriver):
         self._success_measure_name = config.habitat.task.success_measure
         self._num_recorded_episodes = 0
 
-        if args.save_filepath_base:
-            self._step_recorder = StepRecorder()
-            self._save_filepath_base = args.save_filepath_base
-            self._episode_recorder_dict = {}
-        else:
-            self._step_recorder = NullRecorder()
-            self._save_filepath_base = None
-
         with habitat.config.read_write(config):
             # needed so we can provide keyframes to GuiApplication
             config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
@@ -116,6 +109,16 @@ class SandboxDriver(GuiAppDriver):
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
             if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
                 del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
+
+        self._save_filepath_base = args.save_filepath_base
+        self._save_episode_record = args.save_episode_record
+        self._step_recorder = (
+            StepRecorder() if self._save_episode_record else NullRecorder()
+        )
+        self._episode_recorder_dict = {}
+
+        self._save_gfx_replay_keyframes: bool = args.save_gfx_replay_keyframes
+        self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
             self.env, config, args, gui_input, self._step_recorder
@@ -164,10 +167,6 @@ class SandboxDriver(GuiAppDriver):
             self._lookat_offset_pitch = 0.955
             self._min_lookat_offset_pitch = -np.pi / 2 + 1e-5
             self._max_lookat_offset_pitch = np.pi / 2 - 1e-5
-
-        self._enable_gfx_replay_save: bool = args.enable_gfx_replay_save
-        self._gfx_replay_save_path: str = args.gfx_replay_save_path
-        self._recording_keyframes: List[str] = []
 
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
@@ -237,26 +236,23 @@ class SandboxDriver(GuiAppDriver):
         action = self.ctrl_helper.update(self._obs)
         self._env_step(action)
 
-        if self._save_filepath_base:
-            self.record_action(action)
-            self.record_task_state()
-            self.record_metrics(self.env.get_metrics())
+        if self._save_episode_record:
+            self._record_action(action)
+            self._record_task_state()
+            self._record_metrics(self.env.get_metrics())
             self._step_recorder.finish_step()
 
-    def _find_episode_save_filepath_base(self, session_filepath_base):
+    def _find_episode_save_filepath_base(self):
         retval = (
             self._save_filepath_base + "." + str(self._num_recorded_episodes)
         )
-        self._num_recorded_episodes += 1
         return retval
 
     def _save_episode_recorder_dict(self):
-        if not self._save_filepath_base or not len(self._step_recorder._steps):
+        if not len(self._step_recorder._steps):
             return
 
-        filepath_base = self._find_episode_save_filepath_base(
-            self._save_filepath_base
-        )
+        filepath_base = self._find_episode_save_filepath_base()
 
         json_filepath = filepath_base + ".json.gz"
         save_as_json_gzip(self._episode_recorder_dict, json_filepath)
@@ -264,8 +260,8 @@ class SandboxDriver(GuiAppDriver):
         pkl_filepath = filepath_base + ".pkl.gz"
         save_as_pickle_gzip(self._episode_recorder_dict, pkl_filepath)
 
-    def _start_episode_recorder(self):
-        assert self._save_filepath_base and self._step_recorder
+    def _reset_episode_recorder(self):
+        assert self._step_recorder
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
         ep_dict["dataset"] = self._dataset_config
@@ -314,14 +310,31 @@ class SandboxDriver(GuiAppDriver):
             else None
         )
 
-        if self._save_filepath_base:
-            self._save_episode_recorder_dict()
-            self._start_episode_recorder()
+        # reset recorded keyframes and episode recorder data:
+        # do not clead self._recording_keyframes as for now,
+        # save a gfx-replay file per session not per episode
+        # self._recording_keyframes.clear()
+        self._reset_episode_recorder()
 
-    def _check_reset_environment(self):
-        if self._next_episode_exists():
+    def _check_save_episode_data(self, session_ended):
+        assert self._save_filepath_base
+        saved_keyframes, saved_episode_data = False, False
+        if self._save_gfx_replay_keyframes and session_ended:
+            self._save_recorded_keyframes_to_file()
+            saved_keyframes = True
+        if self._save_episode_record:
+            self._save_episode_recorder_dict()
+            saved_episode_data = True
+
+        if saved_keyframes or saved_episode_data:
+            self._num_recorded_episodes += 1
+
+    def _end_episode(self, do_reset=False):
+        self._check_save_episode_data(session_ended=do_reset == False)
+        self._num_episodes_done += 1
+
+        if do_reset and self._next_episode_exists():
             self._reset_environment()
-            self._num_episodes_done += 1
 
     @property
     def _env_task_complete(self):
@@ -739,23 +752,22 @@ class SandboxDriver(GuiAppDriver):
         )
 
     def _save_recorded_keyframes_to_file(self):
+        if not self._recording_keyframes:
+            return
+
         # Consolidate recorded keyframes into a single json string
         # self._recording_keyframes format:
-        #     List['{"keyframe": {...}', '{"keyframe": {...}', ...]
+        #     List['{"keyframe":{...}', '{"keyframe":{...}',...]
         # Output format:
-        #     '{"keyframes": [{...}, {...}, ...]}'
-        json_keyframes = "".join(
-            keyframe[12:-1] + ","
-            for keyframe in self._recording_keyframes[:-1]
+        #     '{"keyframes":[{...},{...},...]}'
+        json_keyframes = ",".join(
+            keyframe[12:-1] for keyframe in self._recording_keyframes
         )
-        json_keyframes += self._recording_keyframes[-1:][0][
-            12:-1
-        ]  # Last element without trailing comma
-        json_content = '{{"keyframes": [{}]}}'.format(json_keyframes)
+        json_content = '{{"keyframes":[{}]}}'.format(json_keyframes)
 
         # Save keyframes to file
-        with open(self._gfx_replay_save_path, "w") as json_file:
-            json_file.write(json_content)
+        filepath = self._save_filepath_base + ".gfx_replay.json.gz"
+        save_as_gzip(json_content.encode("utf-8"), filepath)
 
     def _update_cursor_style(self):
         do_update_cursor = False
@@ -881,7 +893,7 @@ class SandboxDriver(GuiAppDriver):
             self._text_drawer.add_text(
                 progress_str,
                 TextOnScreenAlignment.TOP_RIGHT,
-                text_delta_x=380,
+                text_delta_x=370,
             )
 
         elif self._sandbox_state == SandboxState.TUTORIAL:
@@ -924,7 +936,7 @@ class SandboxDriver(GuiAppDriver):
 
         return (lookat + offset.normalized() * self.cam_zoom_dist, lookat)
 
-    def record_task_state(self):
+    def _record_task_state(self):
         agent_states = []
         for agent_idx in range(self.ctrl_helper.n_robots):
             art_obj = (
@@ -956,7 +968,7 @@ class SandboxDriver(GuiAppDriver):
             "target_object_positions", self._get_target_object_positions()
         )
 
-    def record_action(self, action):
+    def _record_action(self, action):
         action_args = action["action_args"]
 
         # These are large arrays and they massively bloat the record file size, so
@@ -972,7 +984,7 @@ class SandboxDriver(GuiAppDriver):
 
         self._step_recorder.record("action", action)
 
-    def record_metrics(self, metrics):
+    def _record_metrics(self, metrics):
         # We don't want to include this.
         if "gfx_replay_keyframes_string" in metrics:
             del metrics["gfx_replay_keyframes_string"]
@@ -1032,14 +1044,11 @@ class SandboxDriver(GuiAppDriver):
         post_sim_update_dict: Dict[str, Any] = {}
 
         if self.gui_input.get_key_down(GuiInput.KeyNS.ESC):
+            self._end_episode()
             post_sim_update_dict["application_exit"] = True
 
-        # Capture gfx-replay file
-        if self.gui_input.get_key_down(GuiInput.KeyNS.PERIOD):
-            self._save_recorded_keyframes_to_file()
-
         if self.gui_input.get_key_down(GuiInput.KeyNS.M):
-            self._check_reset_environment()
+            self._end_episode(do_reset=True)
 
         # _viz_anim_fraction goes from 0 to 1 over time and then resets to 0
         viz_anim_speed = 2.0
@@ -1077,7 +1086,7 @@ class SandboxDriver(GuiAppDriver):
         )
         post_sim_update_dict["keyframes"] = keyframes
 
-        if self._enable_gfx_replay_save:
+        if self._save_gfx_replay_keyframes:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
 
@@ -1130,7 +1139,7 @@ def _evaluate_cubic_bezier(ctrl_pts, t):
     return result
 
 
-def parse_debug_third_person(args, framebuffer_size):
+def _parse_debug_third_person(args, framebuffer_size):
     viewport_multiplier = mn.Vector2(
         framebuffer_size.x / args.width, framebuffer_size.y / args.height
     )
@@ -1274,30 +1283,37 @@ if __name__ == "__main__":
         help="Sample random BaselinesController base vel",
     )
     parser.add_argument(
-        "--enable-gfx-replay-save",
-        action="store_true",
-        default=False,
-        help="Save the gfx-replay keyframes to file. Use --gfx-replay-save-path to specify the save location.",
-    )
-    parser.add_argument(
-        "--gfx-replay-save-path",
-        default="./data/gfx-replay.json",
-        type=str,
-        help="Path where the captured graphics replay file is saved.",
-    )
-    parser.add_argument(
         "--show-tutorial",
         action="store_true",
         default=False,
         help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
     )
     parser.add_argument(
+        "--save-gfx-replay-keyframes",
+        action="store_true",
+        default=False,
+        help="Save the gfx-replay keyframes to file. Use --save-filepath-base to specify the filepath base.",
+    )
+    parser.add_argument(
+        "--save-episode-record",
+        action="store_true",
+        default=False,
+        help="Save recorded episode data to file. Use --save-filepath-base to specify the filepath base.",
+    )
+    parser.add_argument(
         "--save-filepath-base",
         default=None,
         type=str,
-        help="filepath base used for saving various session data files. Include a full path including basename, but not an extension.",
+        help="Filepath base used for saving various session data files. Include a full path including basename, but not an extension.",
     )
     args = parser.parse_args()
+    if (
+        args.save_gfx_replay_keyframes or args.save_episode_record
+    ) and not args.save_filepath_base:
+        raise ValueError(
+            "--save-gfx-replay-keyframes and/or --save-episode-record flags are enabled, "
+            "but --save-filepath-base argument is not set. Specify filepath base for the session episode data to be saved."
+        )
 
     glfw_config = Application.Configuration()
     glfw_config.title = "Sandbox App"
@@ -1310,7 +1326,7 @@ if __name__ == "__main__":
         show_debug_third_person,
         debug_third_person_width,
         debug_third_person_height,
-    ) = parse_debug_third_person(args, framebuffer_size)
+    ) = _parse_debug_third_person(args, framebuffer_size)
 
     config = get_baselines_config(args.cfg, args.cfg_opts)
     # config = habitat.get_config(args.cfg, args.cfg_opts)

@@ -7,6 +7,7 @@
 import copyreg
 import gzip
 import json
+import os
 import pickle
 from abc import abstractmethod
 from datetime import datetime
@@ -65,17 +66,21 @@ def convert_to_json_friendly(obj):
 
 def save_as_pickle_gzip(obj, filepath):
     pickled_data = pickle.dumps(obj)
-    with gzip.open(filepath, "wb") as file:
-        file.write(pickled_data)
-    print("wrote " + filepath)
+    save_as_gzip(pickled_data, filepath)
 
 
 def save_as_json_gzip(obj, filepath):
     json_data = json.dumps(
         convert_to_json_friendly(obj), separators=(",", ":")
     )
-    with gzip.open(filepath, "wb") as file:
-        file.write(json_data.encode("utf-8"))
+    save_as_gzip(json_data.encode("utf-8"), filepath)
+
+
+def save_as_gzip(data, filepath, mode="wb"):
+    if os.path.exists(filepath):
+        raise FileExistsError(filepath)
+    with gzip.open(filepath, mode) as file:
+        file.write(data)
     print("wrote " + filepath)
 
 
