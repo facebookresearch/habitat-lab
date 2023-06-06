@@ -50,7 +50,7 @@ habitat:
         y_len: 1.5
         agent_idx: 0
       agent_1_should_replan:
-        x_len: 1.5
+        x_len: 3.0
         y_len: 1.5
         agent_idx: 1
     type: RearrangeCompositeTask-v0
