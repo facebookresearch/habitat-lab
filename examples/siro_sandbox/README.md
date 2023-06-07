@@ -117,7 +117,7 @@ Steps to work around this by reverting to a rigid-skeleton humanoid:
 
 If your FPS is very low, consider this workaround. This habitat-sim commit replaces render meshes for high-vertex-density objects with white bounding-box outlines. Beware, many parts of the scene will appear to be missing!
 * Follow [SIRo install instructions](../../SIRO_README.md#installation) for building habitat-sim from source.
-* Apply this habitat-sim commit: `git cherry-pick 93d13ce1f7192d996e02c7ff37f0239553549ab0`
+* Apply this habitat-sim commit: `git cherry-pick f031c975`
 * Rebuild habitat-sim.
 
 # Command-line Options
