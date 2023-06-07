@@ -31,7 +31,7 @@ habitat:
       - ovmm_nav_goal_segmentation
       - receptacle_segmentation
   environment:
-    max_episode_steps: 1320
+    max_episode_steps: 1250
   simulator:
     type: ObjectRearrangeSim-v0
     additional_object_paths:
@@ -68,6 +68,6 @@ habitat:
       enable_physics: True
     needs_markers: false
   dataset:
-    data_path: data/episodes/rearrange/v4/val/cat_npz-exp-filtered-with-init-poses.json.gz
+    data_path: data/episodes/rearrange/v4/val/cat_npz-exp-with_init_poses.json.gz
     split: val
 

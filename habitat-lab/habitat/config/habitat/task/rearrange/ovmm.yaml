@@ -24,16 +24,19 @@ defaults:
     - ovmm_place_success
     - ovmm_dist_to_pick_goal
     - ovmm_rot_dist_to_pick_goal
+    - pick_goal_iou_coverage
     - ovmm_nav_to_pick_succ
     - ovmm_nav_orient_to_pick_succ
     - ovmm_dist_to_place_goal
     - ovmm_rot_dist_to_place_goal
+    - place_goal_iou_coverage
     - ovmm_nav_to_place_succ
     - ovmm_nav_orient_to_place_succ
     - ovmm_find_object_phase_success
     - ovmm_pick_object_phase_success
     - ovmm_find_recep_phase_success
     - ovmm_place_object_phase_success
+    - navmesh_collision
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
@@ -73,7 +76,7 @@ actions:
     grip_controller: "GazeGraspAction"
     arm_joint_mask: [1,0,0,0,1,1,1,1,1,1]
     arm_joint_dimensionality: 7
-    grasp_thresh_dist: 1.5 # for oracle snap
+    grasp_thresh_dist: 0.8 # for oracle snap
     disable_grip: False
     max_delta_pos: 6.28 # The range of joints are:  [ 0., 0.,  0.,  0.,  0., -1.75, -1.57, -3.14, -3.9, -1.53] -> [0.13, 0.13, 0.13, 0.13, 1.1 , 4., 0.56, 3.14, 1.5 , 0.79], so maximum delta is 6.28
     ee_ctrl_lim: 0.015
@@ -104,12 +107,17 @@ measurements:
     use_shortest_path_cache: False # when caching, the same set of goals are used throughout
   nav_orient_to_pick_succ:
     must_call_stop: False
+    success_angle_dist: 3.14
+    min_object_coverage_iou: 1e-3
   nav_orient_to_place_succ:
     must_call_stop: False
+    success_angle_dist: 3.14
+    min_object_coverage_iou: 1e-3
   nav_to_pick_succ:
     success_distance: 0.1
   nav_to_place_succ:
     success_distance: 0.1
+
 lab_sensors:
   joint_sensor:
     dimensionality: 10

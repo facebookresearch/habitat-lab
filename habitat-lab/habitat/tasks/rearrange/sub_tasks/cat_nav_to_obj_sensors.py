@@ -9,9 +9,10 @@ from typing import Any
 import numpy as np
 from gym import spaces
 
-import habitat_sim
+from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.ovmm.utils import find_closest_goal_index_within_distance
 from habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task import (
     CatDynNavRLEnv,
 )
@@ -20,6 +21,7 @@ from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToObjSuccess,
     RotDistToGoal,
 )
+from habitat.tasks.utils import compute_pixel_coverage
 
 
 @registry.register_sensor
@@ -89,7 +91,10 @@ class OvmmNavGoalSegmentationSensor(Sensor):
             instance_id = obj_id + self._instance_ids_start
             # Skip if receptacle is not in the agent's viewport or if the instance
             # is selected to be blanked out randomly
-            if instance_id > max_obs_val or np.random.random() < self._blank_out_prob:
+            if (
+                instance_id > max_obs_val
+                or np.random.random() < self._blank_out_prob
+            ):
                 continue
             obs[pan_obs == instance_id] = 1
         return obs
@@ -181,7 +186,10 @@ class ReceptacleSegmentationSensor(Sensor):
             instance_id = obj_id + self._instance_ids_start
             # Skip if receptacle is not in the agent's viewport or if the instance
             # is selected to be blanked out randomly
-            if instance_id >= obj_id_map.shape[0] or np.random.random() < self._blank_out_prob:
+            if (
+                instance_id >= obj_id_map.shape[0]
+                or np.random.random() < self._blank_out_prob
+            ):
                 continue
             obj_id_map[instance_id] = semantic_id
         obs = obj_id_map[obs]
@@ -209,20 +217,10 @@ class OvmmRotDistToGoal(RotDistToGoal):
             goals = episode.candidate_objects
         else:
             goals = episode.candidate_goal_receps
-        goal_pos = [g.position for g in goals]
-        goal_view_points = [
-            g.view_points[0].agent_state.position for g in goals
-        ]
-        path = habitat_sim.MultiGoalShortestPath()
-        path.requested_start = self._sim.robot.base_pos
-        path.requested_ends = goal_view_points
-        self._sim.pathfinder.find_path(path)
-        assert (
-            path.closest_end_point_index != -1
-        ), f"None of the goals are reachable from current position for episode {episode.episode_id}"
-        # RotDist to closest goal
-        targ = goal_pos[path.closest_end_point_index]
-        return targ
+        closest_idx = find_closest_goal_index_within_distance(
+            self._sim, goals, episode.episode_id, max_dist=-1
+        )
+        return goals[closest_idx].position
 
 
 @registry.register_measure
@@ -241,6 +239,34 @@ class OvmmNavToObjSucc(NavToObjSuccess):
     def _rot_dist_to_goal_cls_uuid(self):
         return OvmmRotDistToGoal.cls_uuid
 
+    def __init__(self, *args, sim, config, dataset, task, **kwargs):
+        super().__init__(
+            *args, sim=sim, config=config, dataset=dataset, task=task, **kwargs
+        )
+        self._min_object_coverage_iou = config.min_object_coverage_iou
+
+    @property
+    def _target_iou_coverage_cls_uuid(self):
+        return TargetIoUCoverage.cls_uuid
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [self._target_iou_coverage_cls_uuid],
+        )
+        super().reset_metric(*args, task=task, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        super().update_metric(*args, task=task, **kwargs)
+        if self._must_look_at_targ and self._min_object_coverage_iou > 0:
+            place_goal_iou = task.measurements.measures[
+                self._target_iou_coverage_cls_uuid
+            ].get_metric()
+            self._metric = (
+                self._metric
+                and place_goal_iou >= self._min_object_coverage_iou
+            )
+
 
 @registry.register_measure
 class OvmmNavToObjReward(NavToObjReward):
@@ -257,3 +283,71 @@ class OvmmNavToObjReward(NavToObjReward):
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OvmmRotDistToGoal.cls_uuid
+
+
+@registry.register_measure
+class TargetIoUCoverage(Measure):
+    cls_uuid: str = "target_iou_coverage"
+
+    def __init__(self, *args, sim, task, config, **kwargs):
+        self._instance_ids_start = sim.habitat_config.instance_ids_start
+        self._is_nav_to_obj = task.is_nav_to_obj
+        self._max_goal_dist = config.max_goal_dist
+        self._sim = sim
+        super().__init__(*args, sim=sim, task=task, config=config, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return TargetIoUCoverage.cls_uuid
+
+    def _get_object_id(self, goal):
+        if self._is_nav_to_obj:
+            return self._sim.scene_obj_ids[int(goal.object_id)]
+        else:
+            return int(goal.object_id)
+
+    def _get_goals(self, episode):
+        """key to access the goal in the episode"""
+        if self._is_nav_to_obj:
+            return episode.candidate_objects
+        else:
+            return episode.candidate_goal_receps
+
+    def _filter_out_goals_not_in_view(self, goals, observations):
+        """filters out goals that are not in the agent's viewport"""
+        filtered_goals = []
+        for goal in goals:
+            instance_id = self._get_object_id(goal) + self._instance_ids_start
+            if instance_id in observations["robot_head_panoptic"]:
+                filtered_goals.append(goal)
+        return filtered_goals
+
+    def _get_closest_object_id_in_view(self, episode, observations):
+        """returns the object id of the closest object to the agent"""
+        goals = self._get_goals(episode)
+        goals = self._filter_out_goals_not_in_view(goals, observations)
+        if len(goals) == 0:
+            return -1
+        closest_idx = find_closest_goal_index_within_distance(
+            self._sim,
+            goals,
+            episode.episode_id,
+            max_dist=self._max_goal_dist,
+            use_all_viewpoints=True,
+        )
+        if closest_idx == -1:
+            return -1
+        return self._get_object_id(goals[closest_idx])
+
+    def reset_metric(self, *args, task, **kwargs):
+        self.update_metric(*args, task=task, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        object_id = self._get_closest_object_id_in_view(episode, observations)
+        if object_id == -1:
+            self._metric = 0
+            return
+        self._metric = compute_pixel_coverage(
+            observations["robot_head_panoptic"],
+            object_id + self._instance_ids_start,
+        )

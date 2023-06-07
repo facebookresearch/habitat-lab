@@ -23,6 +23,7 @@ class RearrangePickTaskV1(RearrangeTask):
     """
 
     def __init__(self, *args, config, dataset=None, **kwargs):
+        self.is_nav_to_obj = True
         super().__init__(
             config=config,
             *args,
