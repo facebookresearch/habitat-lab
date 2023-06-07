@@ -6,54 +6,15 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 # Known Issues
-* June 5: The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See recently-tested snapshot below including specific commits that have been tested to work together.
+* The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See Snapshots section below for best results.
 * The skinned humanoid doesn't render correctly; see workaround below.
 * When using Floorplanner scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
-* June 5: navmesh issue: you can walk through furniture.
 
-# Recently-tested Snapshot, June 5
-1. Follow [SIRo install instructions](../../SIRO_README.md#installation).
-2. Apply the "Workaround to avoid broken skinned humanoid" described below.
-2. Check out these commits: `habitat-lab`: `e7c17e49`, `habitat-sim`: `d32d7510`, `fbhab` (at `data/fpss`): `6fb800903`, `data/datasets/floorplanner`: `ff11d93`
-3. Run either command below.
-
-## GUI-controlled humanoid and PDDL planner + oracle skills policy-controlled Spot, Floorplanner scenes
-```
-HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---gui-controlled-agent-index 1 \
---never-end \
---first-person-mode \
---show-tutorial \
---save-filepath-base my_session \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat.simulator.habitat_sim_v0.allow_sliding=True \
-habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'
-```
-
-## Solo GUI-controlled humanoid, ReplicaCAD scene
-```
-HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---gui-controlled-agent-index 0 \
---never-end \
---first-person-mode \
---save-filepath-base my_session \
---cfg experiments_hab3/single_agent_pddl_planner_kinematic_oracle_humanoid.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat.dataset.split=minival \
-habitat.simulator.habitat_sim_v0.allow_sliding=True \
-habitat.simulator.agents.main_agent.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'
-```
+# Snapshots with examples of running the tool
+See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKuXXE2cKchi-C_O7GGVFZ5x0QU7J9gHTIETzpVKJU/edit#). The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. This doc describes well-tested sets of commits across our repos (Habitat-lab, Habitat-sim, fphab, floorplanner). This doc also gives example commands to run the tool.
 
 <!-- 
+# Example commands
 June 5: these are commented out because they're broken.
 ### GUI-controlled humanoid and learned-policy-controlled Spot
 
