@@ -883,9 +883,21 @@ class PPOTrainer(BaseRLTrainer):
         ] = {}  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
-        rgb_frames: List[List[np.ndarray]] = [
-            [] for _ in range(self.config.habitat_baselines.num_environments)
-        ]
+        if len(self.config.habitat_baselines.eval.video_option) > 0:
+            # Add the first frame of the episode to the video.
+            rgb_frames: List[List[np.ndarray]] = [
+                [
+                    observations_to_image(
+                        {k: v[env_idx] for k, v in batch.items()}, {}
+                    )
+                ]
+                for env_idx in range(
+                    self.config.habitat_baselines.num_environments
+                )
+            ]
+        else:
+            rgb_frames = None
+
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 

@@ -291,6 +291,7 @@ class RearrangeSim(HabitatSim):
         is_hard_reset = new_scene or should_add_objects
 
         if is_hard_reset:
+            print(f"hard resetting {should_add_objects}, {new_scene}")
             with read_write(config):
                 config["scene"] = ep_info.scene_id
             t_start = time.time()
@@ -598,16 +599,10 @@ class RearrangeSim(HabitatSim):
             )
 
             ao_mgr = self.get_articulated_object_manager()
-            articulated_agent_art_handles = [
-                articulated_agent.sim_obj.handle
-                for articulated_agent in self.agents_mgr.articulated_agents_iter
-            ]
+            # Make all articulated objects (including the robots) kinematic
             for aoi_handle in ao_mgr.get_object_handles():
                 ao = ao_mgr.get_object_by_handle(aoi_handle)
-                if (
-                    self._kinematic_mode
-                    and ao.handle not in articulated_agent_art_handles
-                ):
+                if self._kinematic_mode:
                     ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
                 self.art_objs.append(ao)
 
