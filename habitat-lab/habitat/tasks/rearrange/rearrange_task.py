@@ -11,16 +11,22 @@ from typing import Any, Dict, List, Tuple, Union
 
 import numpy as np
 from gym import spaces
+
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.rearrange_sim import (RearrangeSim,
-                                                   add_perf_timing_func)
-from habitat.tasks.rearrange.utils import (CacheHelper, CollisionDetails,
-                                           UsesArticulatedAgentInterface,
-                                           rearrange_collision,
-                                           rearrange_logger)
+from habitat.tasks.rearrange.rearrange_sim import (
+    RearrangeSim,
+    add_perf_timing_func,
+)
+from habitat.tasks.rearrange.utils import (
+    CacheHelper,
+    CollisionDetails,
+    UsesArticulatedAgentInterface,
+    rearrange_collision,
+    rearrange_logger,
+)
 
 
 @registry.register_task(name="RearrangeEmptyTask-v0")
@@ -151,13 +157,20 @@ class RearrangeTask(NavigationTask):
         return f"{self._episode_id}_{agent_idx}"
 
     def _cache_articulated_agent_start(self, cache_data, agent_idx: int = 0):
-        if self._articulated_agent_pos_start is not None and self._should_save_to_cache:
+        if (
+            self._articulated_agent_pos_start is not None
+            and self._should_save_to_cache
+        ):
             start_ident = self._get_ep_init_ident(agent_idx)
             self._articulated_agent_pos_start[start_ident] = cache_data
-            self._articulated_agent_init_cache.save(self._articulated_agent_pos_start)
+            self._articulated_agent_init_cache.save(
+                self._articulated_agent_pos_start
+            )
 
     def _set_articulated_agent_start(self, agent_idx: int) -> None:
-        articulated_agent_start = self._get_cached_articulated_agent_start(agent_idx)
+        articulated_agent_start = self._get_cached_articulated_agent_start(
+            agent_idx
+        )
         if articulated_agent_start is None:
             (
                 articulated_agent_pos,
@@ -173,7 +186,9 @@ class RearrangeTask(NavigationTask):
                 articulated_agent_pos,
                 articulated_agent_rot,
             ) = articulated_agent_start
-        articulated_agent = self._sim.get_agent_data(agent_idx).articulated_agent
+        articulated_agent = self._sim.get_agent_data(
+            agent_idx
+        ).articulated_agent
         articulated_agent.base_pos = articulated_agent_pos
         articulated_agent.base_rot = articulated_agent_rot
 
@@ -224,7 +239,9 @@ class RearrangeTask(NavigationTask):
         idxs, goal_pos = self._sim.get_targets()
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
-        min_dist = np.min(np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1))
+        min_dist = np.min(
+            np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
+        )
         return (
             self._sim.grasp_mgr.is_grasped
             and action_args.get("grip_action", None) is not None
@@ -234,7 +251,9 @@ class RearrangeTask(NavigationTask):
 
     def step(self, action: Dict[str, Any], episode: Episode):
         action_args = action["action_args"]
-        if self._enable_safe_drop and self._is_violating_safe_drop(action_args):
+        if self._enable_safe_drop and self._is_violating_safe_drop(
+            action_args
+        ):
             action_args["grip_action"] = None
         obs = super().step(action=action, episode=episode)
 
@@ -337,7 +356,9 @@ class RearrangeTask(NavigationTask):
         # by a metric, the episode will end on the _next_
         # step. This makes sure that the episode is ended
         # on the correct step.
-        self._is_episode_active = (not self._should_end) and self._is_episode_active
+        self._is_episode_active = (
+            not self._should_end
+        ) and self._is_episode_active
         if new_val:
             rearrange_logger.debug("-" * 40)
             rearrange_logger.debug(
