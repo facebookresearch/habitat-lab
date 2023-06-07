@@ -158,7 +158,9 @@ class BaselinesController(Controller):
             {
                 k[
                     len(self._agent_k) if k.startswith(self._agent_k) else 0 :
-                ]: torch.tensor(v).unsqueeze(0)
+                ]: torch.tensor(v)
+                .unsqueeze(0)
+                .to(self.device)
                 for k, v in obs.items()
                 if k.startswith(self._agent_k) or "agent_" not in k
             }
