@@ -33,6 +33,23 @@ HUMAN_TYPE = 1
 BEHAV_ID = "behav_latent"
 
 
+class BdpMultiPolicy(MultiPolicy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.behav_ids = None
+
+    def get_extra(self, action_data, infos, dones):
+        extras = super().get_extra(action_data, infos, dones)
+        if self.behav_ids is not None:
+            for env_i, behav_id in enumerate(self.behav_ids):
+                behav_id = behav_id.item()
+                stage_goals = infos[env_i]["composite_stage_goals"]
+                extras[env_i].update(
+                    {f"{behav_id}_{k}": v for k, v in stage_goals.items()}
+                )
+        return extras
+
+
 @baseline_registry.register_agent_access_mgr
 class BdpAgentAccessMgr(MultiAgentAccessMgr):
     """
@@ -72,6 +89,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         self._behav_latents = F.one_hot(
             behav_ids, self._pop_config.behavior_latent_dim
         ).float()
+        self._multi_policy.behav_ids = behav_ids
 
         return np.array([COORD_AGENT, BEHAV_AGENT]), np.array(
             [ROBOT_TYPE, HUMAN_TYPE]
@@ -84,7 +102,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         return agent_obs
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
-        multi_policy = MultiPolicy.from_config(
+        multi_policy = BdpMultiPolicy.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,

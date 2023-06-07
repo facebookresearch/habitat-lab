@@ -3,7 +3,7 @@ import os
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    # For tidy-house there are 5 plans.
+    # For tidy-house style task there are 5 plans.
     parser.add_argument("--num-plans", type=int, default=5)
     parser.add_argument("--debug", action="store_true")
     parser.add_argument(
