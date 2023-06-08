@@ -291,7 +291,6 @@ class RearrangeSim(HabitatSim):
         is_hard_reset = new_scene or should_add_objects
 
         if is_hard_reset:
-            print(f"hard resetting {should_add_objects}, {new_scene}")
             with read_write(config):
                 config["scene"] = ep_info.scene_id
             t_start = time.time()

@@ -6,13 +6,13 @@ open_fridge:
   skill_name: "ArtObjSkillPolicy"
   load_ckpt_file: "data/models/open_fridge.pth"
 
-# close_cab:
-#   skill_name: "ArtObjSkillPolicy"
-#   load_ckpt_file: "data/models/close_cab.pth"
-#
-# close_fridge:
-#   skill_name: "ArtObjSkillPolicy"
-#   load_ckpt_file: "data/models/close_fridge.pth"
+close_cab:
+  skill_name: "ArtObjSkillPolicy"
+  load_ckpt_file: "data/models/close_cab.pth"
+
+close_fridge:
+  skill_name: "ArtObjSkillPolicy"
+  load_ckpt_file: "data/models/close_fridge.pth"
 
 pick:
   skill_name: "PickSkillPolicy"
