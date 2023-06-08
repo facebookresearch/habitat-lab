@@ -99,7 +99,30 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                         for pred in pred_set
                         if not _is_pred_at(pred, robot_to_nav)
                     ]
+
                 for p in action.post_cond:
+                    remove_idx = []
+                    # Unfortunately holding and not_holding are negations. The
+                    # PDDL system does not currently support negations, so we
+                    # have to manually handle this case.
+                    if p.name == "holding":
+                        pred_set = [
+                            other_p
+                            for other_p in pred_set
+                            if not (
+                                other_p.name == "not_holding"
+                                and other_p._arg_values[0] == p._arg_values[1]
+                            )
+                        ]
+                    if p.name == "not_holding":
+                        pred_set = [
+                            other_p
+                            for other_p in pred_set
+                            if not (
+                                other_p.name == "holding"
+                                and p._arg_values[0] == other_p._arg_values[1]
+                            )
+                        ]
                     if p not in pred_set:
                         pred_set.append(p)
 

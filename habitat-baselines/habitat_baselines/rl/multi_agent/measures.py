@@ -66,3 +66,88 @@ class CooperateSubgoalReward(CompositeSubgoalReward):
         if did_collide and self._end_on_collide:
             task.should_end = True
             self._metric -= self._collide_penalty
+
+
+@registry.register_measure
+class AgentBlameMeasure(Measure):
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return "agent_blame"
+
+    def _get_goal_values(self, task):
+        return {
+            goal_name: task.pddl_problem.is_expr_true(expr)
+            for goal_name, expr in task.pddl_problem.stage_goals.items()
+        }
+
+    def reset_metric(self, *args, task, **kwargs):
+        self._prev_goal_states = self._get_goal_values(task)
+        self._agent_blames = {}
+        for agent in range(2):
+            for k in self._prev_goal_states:
+                self._agent_blames[f"{agent}_{k}"] = False
+        self.update_metric(
+            *args,
+            task=task,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        cur_goal_states = self._get_goal_values(task)
+
+        changed_goals = []
+        for goal_name, is_sat in cur_goal_states.items():
+            if is_sat and not self._prev_goal_states[goal_name]:
+                changed_goals.append(goal_name)
+
+        for k in changed_goals:
+            any_true = False
+            sub_goal = task.pddl_problem.stage_goals[k]
+            for agent in range(2):
+                pddl_action = task.actions[f"AGENT_{agent}_PDDL_APPLY_ACTION"]
+                if pddl_action._prev_action is None:
+                    continue
+                if pddl_action.was_prev_action_invalid:
+                    continue
+                post_cond_in_sub_goal = (
+                    len(
+                        AgentBlameMeasure._logical_expr_contains(
+                            sub_goal, pddl_action._prev_action._post_cond
+                        )
+                    )
+                    > 0
+                )
+                self._agent_blames[f"{agent}_{k}"] = post_cond_in_sub_goal
+                any_true = any_true or post_cond_in_sub_goal
+
+            # If neither of the agents can be attributed, then attribute both agents.
+            if not any_true:
+                for agent in range(2):
+                    pddl_action = task.actions[
+                        f"AGENT_{agent}_PDDL_APPLY_ACTION"
+                    ]
+                    if pddl_action._prev_action is None:
+                        continue
+                    if pddl_action.was_prev_action_invalid:
+                        continue
+                    self._agent_blames[f"{agent}_{k}"] = True
+
+        self._prev_goal_states = cur_goal_states
+        self._metric = self._agent_blames
+
+    @staticmethod
+    def _logical_expr_contains(expr, preds):
+        ret = []
+        for sub_expr in expr.sub_exprs:
+            if isinstance(sub_expr, LogicalExpr):
+                ret.extend(
+                    AgentBlameMeasure._logical_expr_contains(sub_expr, preds)
+                )
+            elif isinstance(sub_expr, Predicate):
+                for pred in preds:
+                    if sub_expr.compact_str == pred.compact_str:
+                        ret.append(sub_expr)
+                        break
+            else:
+                raise ValueError()
+        return ret

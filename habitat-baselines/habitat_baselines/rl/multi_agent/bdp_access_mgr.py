@@ -79,6 +79,13 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
                 end=self._pop_config.behavior_latent_dim,
                 device=device,
             )
+        elif self._pop_config.force_partner_sample_idx >= 0:
+            behav_ids = torch.full(
+                (num_envs,),
+                fill_value=self._pop_config.force_partner_sample_idx,
+                dtype=torch.long,
+                device=device,
+            )
         else:
             behav_ids = torch.randint(
                 0,

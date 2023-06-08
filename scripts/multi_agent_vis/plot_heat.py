@@ -5,6 +5,8 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import rl_utils.plotting.utils as putils
+from omegaconf import OmegaConf
+from rl_utils.plotting.wb_query import query
 
 EVENT_NAME = "Event"
 RENAME_MAP = {}
@@ -12,8 +14,25 @@ RENAME_MAP = {}
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--name", required=True, type=str)
+    parser.add_argument("--type", required=True, type=str)
+    parser.add_argument(
+        "--cfg",
+        required=True,
+        type=str,
+        default="scripts/multi_agent_vis/cfgs/fp_spot_human.yaml",
+    )
     args = parser.parse_args()
+
+    cfg = OmegaConf.load(args.cfg)
+    proj_cfg = OmegaConf.load("/coc/testnvme/aszot3/configs/hr.yaml")
+
+    for method_name, run_name in cfg[args.type].items():
+        result = query(
+            [RUN_K],
+            {"name": run_name},
+            proj_cfg,
+            verbose=False,
+        )
 
 
 def plot_heatmap(
