@@ -440,6 +440,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
     profiling: ProfilingConfig = ProfilingConfig()
+    should_log_single_proc_infos: bool = False
 
 
 @dataclass

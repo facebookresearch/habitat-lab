@@ -5,6 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from collections import defaultdict, deque
+
 import numpy as np
 from gym import spaces
 
@@ -1039,7 +1041,10 @@ class RuntimePerfStats(Measure):
         super().__init__()
 
     def reset_metric(self, *args, **kwargs):
+        self._metric_queue = defaultdict(deque)
         self._metric = {}
 
     def update_metric(self, *args, task, **kwargs):
-        self._metric = self._sim.get_runtime_perf_stats()
+        for k, v in self._sim.get_runtime_perf_stats().items():
+            self._metric_queue[k].append(v)
+        self._metric = {k: np.mean(v) for k, v in self._metric_queue.items()}

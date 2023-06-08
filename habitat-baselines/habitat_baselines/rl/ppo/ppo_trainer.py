@@ -439,7 +439,6 @@ class PPOTrainer(BaseRLTrainer):
                     k for k in infos[0].keys() if k not in self._rank0_keys
                 ),
             )
-
             extracted_infos = extract_scalars_from_infos(
                 infos, ignore_keys=self._rank0_keys
             )
@@ -622,6 +621,9 @@ class PPOTrainer(BaseRLTrainer):
                 [f"{k}: {v.mean:.3f}" for k, v in g_timer.items()]
             )
             logger.info(f"\tPerf Stats: {perf_stats_str}")
+            if self.config.habitat_baselines.should_log_single_proc_infos:
+                for k, v in self._single_proc_infos.items():
+                    logger.info(f" - {k}: {np.mean(v):.3f}")
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
