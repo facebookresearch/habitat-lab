@@ -465,6 +465,12 @@ def get_robot_spawns(
                 island_index=sim.navmesh_classification_results["active_island"]
             )
         
+        relative_target = orient_position - start_position
+
+        angle_to_object = get_angle_to_pos(relative_target)
+        # Face the robot towards the object.
+        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
+        start_rotation = angle_to_object + rotation_noise
 
         is_navigable = sim.pathfinder.is_navigable(start_position)
         invalid_target_position = not is_navigable if distance_threshold == 0 else np.isnan(start_position).any()
@@ -485,18 +491,13 @@ def get_robot_spawns(
                     sample_probs_filtered = sample_probs.copy()
             continue
 
-        relative_target = orient_position - start_position
 
-        angle_to_object = get_angle_to_pos(relative_target)
 
         target_distance = np.linalg.norm(
             (start_position - target_position)[[0, 2]]
         )
 
 
-        # Face the robot towards the object.
-        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        start_rotation = angle_to_object + rotation_noise
 
         if target_distance > max(distance_threshold, tolerance) or not is_navigable:
             continue
