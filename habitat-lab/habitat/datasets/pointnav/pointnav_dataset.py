@@ -93,16 +93,11 @@ class PointNavDatasetV1(Dataset):
 
     def _load_from_file(self, fname: str, scenes_dir: str) -> None:
         """
-        Load the data from a file into `self.episodes`. This can load `.pickle`
-        or `.json.gz` file formats.
+        Load the data from a file into `self.episodes`.
         """
 
-        if fname.endswith(".pickle"):
-            with open(fname, "rb") as f:
-                self.from_binary(pickle.load(f), scenes_dir=scenes_dir)
-        else:
-            with gzip.open(fname, "rt") as f:
-                self.from_json(f.read(), scenes_dir=scenes_dir)
+        with gzip.open(fname, "rt") as f:
+            self.from_json(f.read(), scenes_dir=scenes_dir)
 
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.episodes = []
@@ -140,14 +135,6 @@ class PointNavDatasetV1(Dataset):
             self.episodes = list(
                 filter(self.build_content_scenes_filter(config), self.episodes)
             )
-
-    def to_binary(self) -> Dict[str, Any]:
-        raise NotImplementedError()
-
-    def from_binary(
-        self, data_dict: Dict[str, Any], scenes_dir: Optional[str] = None
-    ) -> None:
-        raise NotImplementedError()
 
     def from_json(
         self, json_str: str, scenes_dir: Optional[str] = None
