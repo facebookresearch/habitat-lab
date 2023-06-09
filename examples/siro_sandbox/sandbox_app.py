@@ -314,7 +314,8 @@ class SandboxDriver(GuiAppDriver):
         # do not clead self._recording_keyframes as for now,
         # save a gfx-replay file per session not per episode
         # self._recording_keyframes.clear()
-        self._reset_episode_recorder()
+        if self._save_episode_record:
+            self._reset_episode_recorder()
 
     def _check_save_episode_data(self, session_ended):
         assert self._save_filepath_base
