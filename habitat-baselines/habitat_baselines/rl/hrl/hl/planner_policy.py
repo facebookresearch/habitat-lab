@@ -6,6 +6,7 @@ from collections import deque
 from dataclasses import dataclass
 from typing import List
 
+import gym.spaces as spaces
 import torch
 
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
@@ -33,7 +34,12 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         super().__init__(*args, **kwargs)
         # This must match the predicate set in the `GlobalPredicatesSensor`.
         self._predicates_list = self._pddl_prob.get_possible_predicates()
+
+        # TODO: should go somewhere in the config, or read from the dataset
+        self._max_num_predicates = 2
+        self._num_plans = 2**self._max_num_predicates
         self._all_actions = self._setup_actions()
+        self._n_actions = len(self._all_actions)
         self._max_search_depth = self._config.max_search_depth
         self._reactive_planner = self._config.is_reactive
 
@@ -42,6 +48,19 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             [] for _ in range(self._num_envs)
         ]
         self._should_replan = torch.zeros(self._num_envs, dtype=torch.bool)
+        self.plan_ids_batch = torch.zeros(self._num_envs, dtype=torch.int32)
+
+    def create_hl_info(self):
+        return {"actions": None}
+
+    def get_policy_action_space(
+        self, env_action_space: spaces.Space
+    ) -> spaces.Space:
+        """
+        Fetches the policy action space for learning. If we are learning the HL
+        policy, it will return its custom action space for learning.
+        """
+        return spaces.Discrete(self._n_actions)
 
     def apply_mask(self, mask):
         if self._reactive_planner:
@@ -180,15 +199,21 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                 plans.append(full_plan[start_i : start_i + num_subplans])
         return plans
 
-    def _replan(self, pred_vals):
+    def _replan(self, pred_vals, plan_idx=None):
         plans = self._get_all_plans(pred_vals)
 
         # Just return the shortest plan for now.
-        return plans[self._config.plan_idx]
+        if self._config.plan_idx != -2:
+            if plan_idx is None:
+                return plans[self._config.plan_idx]
+            else:
+                return plans[plan_idx]
+        else:
+            return plans[self._config.plan_idx]
 
-    def _get_plan_action(self, pred_vals, batch_idx):
+    def _get_plan_action(self, pred_vals, batch_idx, plan_idx=None):
         if self._should_replan[batch_idx]:
-            self._plans[batch_idx] = self._replan(pred_vals)
+            self._plans[batch_idx] = self._replan(pred_vals, plan_idx)
             self._next_sol_idxs[batch_idx] = 0
         cur_plan = self._plans[batch_idx]
 
@@ -215,6 +240,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
         immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
+        self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
+            self._num_plans, [(~masks).int().sum().item()], dtype=torch.int32
+        )
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan != 1.0:
                 continue
@@ -227,4 +255,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                 next_skill[batch_idx] = self._skill_name_to_idx["wait"]
                 # Wait 1 step.
                 skill_args_data[batch_idx] = ["1"]  # type: ignore[call-overload]
-        return next_skill, skill_args_data, immediate_end, {}
+        return (
+            next_skill,
+            skill_args_data,
+            immediate_end,
+            {"actions": next_skill},
+        )
