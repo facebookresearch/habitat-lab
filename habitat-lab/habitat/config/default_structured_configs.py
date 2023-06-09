@@ -1243,7 +1243,7 @@ class TaskConfig(HabitatBaseConfig):
     should_save_to_cache: bool = False
     object_in_hand_sample_prob: float = 0.167
     min_start_distance: float = 3.0
-    gfx_replay_dir = "data/replays"
+    gfx_replay_dir: str = "data/replays"
     render_target: bool = True
     # Spawn parameters
     physics_stability_steps: int = 1
