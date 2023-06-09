@@ -101,7 +101,6 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                     ]
 
                 for p in action.post_cond:
-                    remove_idx = []
                     # Unfortunately holding and not_holding are negations. The
                     # PDDL system does not currently support negations, so we
                     # have to manually handle this case.
