@@ -546,7 +546,12 @@ class GfxReplayMeasure(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        if not task._is_episode_active and self._enable_gfx_replay_save:
+        is_timeout = False
+        if "is_timeout" in kwargs:
+            is_timeout = kwargs["is_timeout"]
+        if (
+            is_timeout or not task._is_episode_active
+        ) and self._enable_gfx_replay_save:
             self._metric = (
                 self._sim.gfx_replay_manager.write_saved_keyframes_to_string()
             )
