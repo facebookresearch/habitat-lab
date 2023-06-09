@@ -10,7 +10,7 @@ types:
     - fridge_type
 
 
-constants:
+constants: {}
 
 
 predicates:

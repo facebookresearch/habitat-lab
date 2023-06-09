@@ -1131,6 +1131,11 @@ class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
 
 
 @dataclass
+class AgentBlameMeasureConfig(MeasurementConfig):
+    type: str = "AgentBlameMeasure"
+
+
+@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
@@ -2250,6 +2255,12 @@ cs.store(
     group="habitat/task/measurements",
     name="cooperate_subgoal_reward",
     node=CooperateSubgoalRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.agent_blame_measure",
+    group="habitat/task/measurements",
+    name="agent_blame_measure",
+    node=AgentBlameMeasureConfig,
 )
 cs.store(
     package="habitat.task.measurements.did_agents_collide",

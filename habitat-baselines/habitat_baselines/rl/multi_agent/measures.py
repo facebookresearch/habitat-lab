@@ -3,6 +3,8 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.multi_task.composite_sensors import (
     CompositeSubgoalReward,
 )
+from habitat.tasks.rearrange.multi_task.pddl_logical_expr import LogicalExpr
+from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
 from habitat.tasks.rearrange.utils import coll_name_matches
 
 
@@ -104,7 +106,7 @@ class AgentBlameMeasure(Measure):
             any_true = False
             sub_goal = task.pddl_problem.stage_goals[k]
             for agent in range(2):
-                pddl_action = task.actions[f"AGENT_{agent}_PDDL_APPLY_ACTION"]
+                pddl_action = task.actions[f"agent_{agent}_pddl_apply_action"]
                 if pddl_action._prev_action is None:
                     continue
                 if pddl_action.was_prev_action_invalid:
@@ -124,7 +126,7 @@ class AgentBlameMeasure(Measure):
             if not any_true:
                 for agent in range(2):
                     pddl_action = task.actions[
-                        f"AGENT_{agent}_PDDL_APPLY_ACTION"
+                        f"agent_{agent}_pddl_apply_action"
                     ]
                     if pddl_action._prev_action is None:
                         continue
