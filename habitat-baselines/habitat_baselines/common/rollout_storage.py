@@ -9,11 +9,14 @@ from typing import Any, Dict, Iterator, Optional
 
 import numpy as np
 import torch
+
 from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.storage import Storage
 from habitat_baselines.common.tensor_dict import DictTree, TensorDict
 from habitat_baselines.rl.models.rnn_state_encoder import (
-    build_pack_info_from_dones, build_rnn_build_seq_info)
+    build_pack_info_from_dones,
+    build_rnn_build_seq_info,
+)
 from habitat_baselines.utils.common import get_action_space_info
 from habitat_baselines.utils.timing import g_timer
 
@@ -60,12 +63,16 @@ class RolloutStorage(Storage):
         self.buffers["value_preds"] = torch.zeros(numsteps + 1, num_envs, 1)
         self.buffers["returns"] = torch.zeros(numsteps + 1, num_envs, 1)
 
-        self.buffers["action_log_probs"] = torch.zeros(numsteps + 1, num_envs, 1)
+        self.buffers["action_log_probs"] = torch.zeros(
+            numsteps + 1, num_envs, 1
+        )
 
         if action_shape is None:
             action_shape = action_space.shape
 
-        self.buffers["actions"] = torch.zeros(numsteps + 1, num_envs, *action_shape)
+        self.buffers["actions"] = torch.zeros(
+            numsteps + 1, num_envs, *action_shape
+        )
         self.buffers["prev_actions"] = torch.zeros(
             numsteps + 1, num_envs, *action_shape
         )
@@ -75,7 +82,9 @@ class RolloutStorage(Storage):
             self.buffers["actions"] = self.buffers["actions"].long()
             self.buffers["prev_actions"] = self.buffers["prev_actions"].long()
 
-        self.buffers["masks"] = torch.zeros(numsteps + 1, num_envs, 1, dtype=torch.bool)
+        self.buffers["masks"] = torch.zeros(
+            numsteps + 1, num_envs, 1, dtype=torch.bool
+        )
 
         self.is_double_buffered = is_double_buffered
         self._nbuffers = 2 if is_double_buffered else 1
@@ -158,13 +167,17 @@ class RolloutStorage(Storage):
     def after_update(self):
         self.buffers[0] = self.buffers[self.current_rollout_step_idx]
 
-        self.current_rollout_step_idxs = [0 for _ in self.current_rollout_step_idxs]
+        self.current_rollout_step_idxs = [
+            0 for _ in self.current_rollout_step_idxs
+        ]
 
     @g_timer.avg_time("rollout_storage.compute_returns", level=1)
     def compute_returns(self, next_value, use_gae, gamma, tau):
         if use_gae:
             assert isinstance(self.buffers["value_preds"], torch.Tensor)
-            self.buffers["value_preds"][self.current_rollout_step_idx] = next_value
+            self.buffers["value_preds"][
+                self.current_rollout_step_idx
+            ] = next_value
             gae = 0.0
             for step in reversed(range(self.current_rollout_step_idx)):
                 delta = (
@@ -174,7 +187,9 @@ class RolloutStorage(Storage):
                     * self.buffers["masks"][step + 1]
                     - self.buffers["value_preds"][step]
                 )
-                gae = delta + gamma * tau * gae * self.buffers["masks"][step + 1]
+                gae = (
+                    delta + gamma * tau * gae * self.buffers["masks"][step + 1]
+                )
                 self.buffers["returns"][step] = (  # type: ignore
                     gae + self.buffers["value_preds"][step]  # type: ignore
                 )
@@ -199,7 +214,9 @@ class RolloutStorage(Storage):
         assert num_environments >= num_mini_batch, (
             "Trainer requires the number of environments ({}) "
             "to be greater than or equal to the number of "
-            "trainer mini batches ({}).".format(num_environments, num_mini_batch)
+            "trainer mini batches ({}).".format(
+                num_environments, num_mini_batch
+            )
         )
         if num_environments % num_mini_batch != 0:
             warnings.warn(
@@ -222,16 +239,18 @@ class RolloutStorage(Storage):
             batch = self.buffers[curr_slice]
             if advantages is not None:
                 batch["advantages"] = advantages[curr_slice]
-            batch["recurrent_hidden_states"] = batch["recurrent_hidden_states"][0:1]
+            batch["recurrent_hidden_states"] = batch[
+                "recurrent_hidden_states"
+            ][0:1]
 
             batch.map_in_place(lambda v: v.flatten(0, 1))
 
             batch["rnn_build_seq_info"] = build_rnn_build_seq_info(
                 device=self.device,
                 build_fn_result=build_pack_info_from_dones(
-                    dones_cpu[0 : self.current_rollout_step_idx, inds.numpy()].reshape(
-                        -1, len(inds)
-                    ),
+                    dones_cpu[
+                        0 : self.current_rollout_step_idx, inds.numpy()
+                    ].reshape(-1, len(inds)),
                 ),
             )
 

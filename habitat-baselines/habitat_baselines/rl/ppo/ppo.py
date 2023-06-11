@@ -13,7 +13,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch import Tensor
-from torch.optim.lr_scheduler import LambdaLR
 
 from habitat.utils import profiling_wrapper
 from habitat_baselines.common.baseline_registry import baseline_registry

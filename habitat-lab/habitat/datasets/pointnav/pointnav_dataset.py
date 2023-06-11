@@ -7,7 +7,7 @@
 import gzip
 import json
 import os
-from typing import List, Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING, List, Optional
 
 from habitat.config import read_write
 from habitat.core.dataset import ALL_SCENES_MASK, Dataset
