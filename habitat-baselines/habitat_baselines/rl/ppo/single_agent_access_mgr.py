@@ -194,7 +194,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def get_resume_state(self) -> Dict[str, Any]:
         ret = {
             "state_dict": self._actor_critic.state_dict(),
-            "optim_state": self._updater.optimizer.state_dict(),
+            **self._updater.get_resume_state(),
         }
         if self._lr_scheduler is not None:
             ret["lr_sched_state"] = (self._lr_scheduler.state_dict(),)
@@ -216,10 +216,9 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def load_state_dict(self, state: Dict) -> None:
         self._actor_critic.load_state_dict(state["state_dict"])
         if self._updater is not None:
-            if "optim_state" in state:
-                self._actor_critic.load_state_dict(state["optim_state"])
+            self._updater.load_state_dict(state)
             if "lr_sched_state" in state:
-                self._actor_critic.load_state_dict(state["lr_sched_state"])
+                self._lr_scheduler.load_state_dict(state["lr_sched_state"])
 
     @property
     def hidden_state_shape(self):
@@ -234,6 +233,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             and self._lr_scheduler is not None
         ):
             self._lr_scheduler.step()  # type: ignore
+        self._updater.after_update()
 
     def pre_rollout(self):
         if self._ppo_cfg.use_linear_clip_decay:

@@ -7,8 +7,7 @@
 import gzip
 import json
 import os
-import pickle
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
 from habitat.config import read_write
 from habitat.core.dataset import ALL_SCENES_MASK, Dataset
