@@ -6,7 +6,7 @@ To make things easier we expect `data` folder of particular structure or symlink
 | --- | --- | --- |
 | [Habitat test scenes](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#habitat-test-scenes) | `data/scene_datasets/habitat-test-scenes/{scene}.glb` | 89 MB |
 | 🆕 [HSSD](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#habitat-synthetic-scene-dataset-hssd) | `data/scene_datasets/hssd/configs/scenes/{scene}.scene_instance.json` | 2.3 GB |
-| 🆕 [AI2-THOR-Habitat](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#ai2-thor-habitat) | `data/scene_datasets/ai2thorhab/configs/scenes/DATASET}/{scene}.scene_instance.json` | 2.3 GB |
+| 🆕 [AI2-THOR-Habitat](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#ai2-thor-habitat) | `data/scene_datasets/ai2thorhab/configs/scenes/{DATASET}/{scene}.scene_instance.json` | 2.3 GB |
 | 🆕 [ReplicaCAD](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#replicacad) | `data/scene_datasets/replica_cad/configs/scenes/{scene}.scene_instance.json` | 123 MB |
 | 🆕 [HM3D](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#habitat-matterport-3d-research-dataset-hm3d) | `data/scene_datasets/hm3d/{split}/00\d\d\d-{scene}/{scene}.basis.glb` | 130 GB |
 | [Gibson](https://github.com/facebookresearch/habitat-sim/blob/main/DATASETS.md#gibson-and-3dscenegraph-datasets) | `data/scene_datasets/gibson/{scene}.glb` | 1.5 GB |
