@@ -199,7 +199,7 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 5
+        - 2
         - 5
         orientation_sampling: up
         nav_to_min_distance: 1.5
