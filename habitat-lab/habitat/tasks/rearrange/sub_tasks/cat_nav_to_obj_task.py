@@ -48,8 +48,9 @@ class CatDynNavRLEnv(DynNavRLEnv):
         return self._loaded_receptacle_categories
 
     def reset(self, episode: Episode):
-        obs = super().reset(episode)
+        self._receptacle_semantic_ids = {}
         self._cache_receptacles()
+        obs = super().reset(episode)
         self._nav_to_obj_goal = np.stack(
             [
                 view_point.agent_state.position
