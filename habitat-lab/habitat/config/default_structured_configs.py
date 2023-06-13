@@ -1175,6 +1175,21 @@ class AnswerAccuracyMeasurementConfig(MeasurementConfig):
 
 
 @dataclass
+class FindingSuccessRateMeasurementConfig(MeasurementConfig):
+    type: str = "FindingSuccessRate"
+
+
+@dataclass
+class FollowingRateMeasurementConfig(MeasurementConfig):
+    type: str = "FollowingRate"
+
+
+@dataclass
+class FollowingDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "FollowingDistance"
+
+
+@dataclass
 class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
@@ -1655,7 +1670,6 @@ class HabitatConfig(HabitatBaseConfig):
     task: TaskConfig = MISSING
     dataset: DatasetConfig = MISSING
     gym: GymConfig = GymConfig()
-
 
 # -----------------------------------------------------------------------------
 # Register configs in the Hydra ConfigStore
@@ -2358,6 +2372,24 @@ cs.store(
     group="habitat/task/measurements",
     name="runtime_perf_stats",
     node=RuntimePerfStatsMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.finding_success_rate",
+    group="habitat/task/measurements",
+    name="finding_success_rate",
+    node=FindingSuccessRateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.following_rate",
+    group="habitat/task/measurements",
+    name="following_rate",
+    node=FollowingRateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.following_distance",
+    group="habitat/task/measurements",
+    name="following_distance",
+    node=FollowingDistanceMeasurementConfig,
 )
 
 from hydra.core.config_search_path import ConfigSearchPath
