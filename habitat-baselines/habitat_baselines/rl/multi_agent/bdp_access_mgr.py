@@ -1,3 +1,5 @@
+from typing import List
+
 import gym.spaces as spaces
 import numpy as np
 import torch
@@ -196,14 +198,17 @@ class BehavDiscrim(nn.Module):
     def __init__(
         self,
         action_space: spaces.Box,
+        obs_space,
         net: Net,
         loss_scale,
         hidden_size,
         behavior_latent_dim,
+        input_keys: List[str],
     ):
         super().__init__()
 
-        input_dim = net._hidden_size
+        self._input_keys = input_keys
+        input_dim = sum(obs_space.spaces[k].shape[0] for k in self._input_keys)
         self.discrim = nn.Sequential(
             nn.Linear(input_dim, hidden_size),
             nn.ReLU(True),
@@ -214,11 +219,10 @@ class BehavDiscrim(nn.Module):
         self.loss_scale = loss_scale
 
     def pred_logits(self, policy_features, obs):
-        return self.discrim(policy_features)
+        inputs = torch.cat([obs[k] for k in self._input_keys], dim=-1)
+        return self.discrim(inputs)
 
     def forward(self, policy_features, obs):
-        # Don't backprop into the policy representation.
-        policy_features = policy_features.detach()
         pred_logits = self.pred_logits(policy_features, obs)
         behav_ids = torch.argmax(obs[BEHAV_ID], -1)
         loss = F.cross_entropy(pred_logits, behav_ids)

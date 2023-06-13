@@ -606,6 +606,12 @@ class ShouldReplanSensorConfig(LabSensorConfig):
 
 
 @dataclass
+class ActionHistorySensorConfig(LabSensorConfig):
+    type: str = "ActionHistorySensor"
+    window_size: int = 20
+
+
+@dataclass
 class HasFinishedOracleNavSensorConfig(LabSensorConfig):
     type: str = "HasFinishedOracleNavSensor"
 
@@ -2042,6 +2048,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="should_replan",
     node=ShouldReplanSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.action_history",
+    group="habitat/task/lab_sensors",
+    name="action_history",
+    node=ActionHistorySensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",
