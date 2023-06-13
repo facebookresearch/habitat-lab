@@ -142,7 +142,10 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._policy_action_space
 
     def init_distributed(self, find_unused_params: bool = True) -> None:
-        self._updater.init_distributed(find_unused_params=find_unused_params)
+        if len(list(self._updater.parameters())) > 0:
+            self._updater.init_distributed(
+                find_unused_params=find_unused_params
+            )
 
     @property
     def policy_action_space_shape_lens(self):
@@ -216,6 +219,8 @@ class SingleAgentAccessMgr(AgentAccessMgr):
         return self._updater
 
     def get_resume_state(self) -> Dict[str, Any]:
+        if self._updater.optimizer is None:
+            return {"state_dict": {}, "optim_state": {}}
         ret = {
             "state_dict": self._actor_critic.state_dict(),
             "optim_state": self._updater.optimizer.state_dict(),
