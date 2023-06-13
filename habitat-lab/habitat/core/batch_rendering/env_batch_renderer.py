@@ -224,7 +224,7 @@ class EnvBatchRenderer:
             raise NotImplementedError
 
         # Render
-        self._replay_renderer.render(self._gpu_to_cpu_images)
+        self._replay_renderer.render(color_images=self._gpu_to_cpu_images)
         return self._gpu_to_cpu_buffer
 
     def _draw_observations_gpu_to_gpu(
