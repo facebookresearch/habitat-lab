@@ -30,7 +30,6 @@ def set_episode(env, episode_id):
 config = get_config(args.cfg_path, args.opts)
 
 episodes_list = []
-ep_count = 0
 
 # load the episodes to copy over the metadata
 episodes = json.load(gzip.open(config.habitat.dataset.data_path))
@@ -57,10 +56,8 @@ with habitat.Env(config=config) as env:
             curr_quat.scalar,
         ]
         curr_episode["start_rotation"] = curr_rotation
-        curr_episode['episode_id'] = str(ep_count)
         # add the newly created episode
         new_episodes_list.append(curr_episode)
-        ep_count += 1
 
 # copy over the episodes while retaining all other metadata
 episodes['episodes'] = new_episodes_list
