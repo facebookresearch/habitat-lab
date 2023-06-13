@@ -1216,8 +1216,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
-    width: int = 1024
-    height: int = 1024
+    width: int = 512
+    height: int = 512
 
 
 @attr.s(auto_attribs=True, slots=True)
