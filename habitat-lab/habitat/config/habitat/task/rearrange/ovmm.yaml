@@ -117,6 +117,9 @@ measurements:
     success_distance: 0.1
   nav_to_place_succ:
     success_distance: 0.1
+  object_at_rest:
+    angular_vel_thresh: 5e-2
+    linear_vel_thresh: 5e-3
 
 lab_sensors:
   joint_sensor:

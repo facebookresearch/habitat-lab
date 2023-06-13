@@ -342,7 +342,9 @@ class PickedObjectAngularVel(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         rom = self._sim.get_rigid_object_manager()
-        ro = rom.get_object_by_id(task._picked_object_idx)
+        picked_idx = task._picked_object_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
+        ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.angular_velocity.length()
 
 @registry.register_measure
@@ -363,7 +365,9 @@ class PickedObjectLinearVel(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         rom = self._sim.get_rigid_object_manager()
-        ro = rom.get_object_by_id(task._picked_object_idx)
+        picked_idx = task._picked_object_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
+        ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.linear_velocity.length()
     
 @registry.register_measure
@@ -385,5 +389,7 @@ class ObjectAtRest(Measure):
     
     def update_metric(self, *args, episode, task, observations, **kwargs):
         rom = self._sim.get_rigid_object_manager()
-        ro = rom.get_object_by_id(task._picked_object_idx)
+        picked_idx = task._picked_object_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
+        ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.linear_velocity.length() < self._linear_vel_thresh and ro.angular_velocity.length() < self._angular_vel_thresh
