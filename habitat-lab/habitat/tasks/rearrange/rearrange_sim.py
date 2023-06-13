@@ -360,7 +360,7 @@ class RearrangeSim(HabitatSim):
             robot.base_rot = start_rot
             self.perform_discrete_collision_detection()
             did_collide, _ = rearrange_collision(
-                self, True, ignore_base=False, agent_idx=agent_idx
+                self, True, ignore_base=True, agent_idx=agent_idx
             )
             if not did_collide:
                 break
