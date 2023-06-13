@@ -10,6 +10,6 @@ The csv files should contain a field `clean_category` that specifies category of
 
 ## Saving episode start poses
 ```
-python habitat-lab/habitat/datasets/rearrange/add_start_pose_to_episodes.py habitat.dataset.data_path=/path/to/episodes
+python habitat-lab/habitat/datasets/rearrange/generate_ovmm_episode_inits.py habitat.dataset.data_path=/path/to/episodes
 ```
 The new episodes with start poses will be saved in the same directory with `-with_init_poses` suffix.

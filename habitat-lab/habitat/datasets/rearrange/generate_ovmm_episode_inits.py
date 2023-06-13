@@ -28,7 +28,6 @@ def set_episode(env, episode_id):
     env.current_episode = episode
 
 config = get_config(args.cfg_path, args.opts)
-start = time.perf_counter()
 
 episodes_list = []
 ep_count = 0
@@ -36,7 +35,6 @@ ep_count = 0
 # load the episodes to copy over the metadata
 episodes = json.load(gzip.open(config.habitat.dataset.data_path))
 episodes_list = episodes['episodes']
-episodes_list.sort(key=lambda x: int(x["episode_id"]))
 # create the episode id to episode mapping
 episode_mapping = {episode['episode_id']: episode for episode in episodes_list}
 new_episodes_list = []
