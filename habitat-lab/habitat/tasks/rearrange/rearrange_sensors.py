@@ -1085,7 +1085,7 @@ class RobotCollisionsTerminate(Measure):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return ForceTerminate.cls_uuid
+        return RobotCollisionsTerminate.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         task.measurements.check_measure_dependencies(
@@ -1202,7 +1202,7 @@ class RearrangeReward(UsesRobotInterface, Measure):
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
-        collisions_terminate = task.measurements.measure[
+        collisions_terminate = task.measurements.measures[
             RobotCollisionsTerminate.cls_uuid
         ].get_metric()
         if force_terminate:
