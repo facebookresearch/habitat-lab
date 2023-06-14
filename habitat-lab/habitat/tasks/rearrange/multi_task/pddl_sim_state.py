@@ -99,6 +99,14 @@ class PddlRobotState:
         self.pos = sub_dict.get(self.pos, self.pos)
         return self
 
+    def sub_in_clone(
+        self, sub_dict: Dict[PddlEntity, PddlEntity]
+    ) -> "PddlRobotState":
+        other = replace(self)
+        other.holding = sub_dict.get(self.holding, self.holding)
+        other.pos = sub_dict.get(self.pos, self.pos)
+        return other
+
     def clone(self) -> "PddlRobotState":
         """
         Returns a shallow copy
@@ -258,7 +266,7 @@ class PddlSimState:
                 for k, v in self._obj_states.items()
             },
             {
-                sub_dict.get(k, k): robot_state.sub_in(sub_dict)
+                sub_dict.get(k, k): robot_state.sub_in_clone(sub_dict)
                 for k, robot_state in self._robot_states.items()
             },
         )

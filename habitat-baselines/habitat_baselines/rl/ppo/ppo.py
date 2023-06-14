@@ -36,7 +36,7 @@ class PPO(nn.Module, Updater):
     @classmethod
     def from_config(cls, actor_critic: NetPolicy, config):
         return cls(
-            actor_critic=actor_critic.actor_critic,
+            actor_critic=actor_critic,
             clip_param=config.clip_param,
             ppo_epoch=config.ppo_epoch,
             num_mini_batch=config.num_mini_batch,
