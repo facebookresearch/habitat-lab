@@ -1067,6 +1067,60 @@ class ForceTerminate(Measure):
             self._metric = False
 
 
+
+@registry.register_measure
+class RobotCollisionsTerminate(Measure):
+    """
+    If the accumulated force throughout this episode exceeds the limit.
+    """
+
+    cls_uuid: str = "robot_collisions_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_num_collisions = self._config.max_num_collisions
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ForceTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_collisions = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        total_collisions = robot_collisions["total_collisions"]
+        if (
+            self._max_num_collisions >= 0
+            and total_collisions > self._max_num_collisions
+        ):
+            rearrange_logger.debug(
+                f"Collisions count={self._max_num_collisions} exceeded {self._max_num_collisions}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+
 @registry.register_measure
 class DidViolateHoldConstraintMeasure(UsesRobotInterface, Measure):
     cls_uuid: str = "did_violate_hold_constraint"
@@ -1110,6 +1164,9 @@ class RearrangeReward(UsesRobotInterface, Measure):
         self._constraint_violate_pen = self._config.constraint_violate_pen
         self._force_end_pen = self._config.force_end_pen
         self._navmesh_violate_pen = self._config.navmesh_violate_pen
+        self._robot_collisions_pen = self._config.robot_collisions_pen
+        self._robot_collisions_end_pen = self._config.robot_collisions_end_pen
+        self._prev_num_collisions = 0
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -1118,8 +1175,11 @@ class RearrangeReward(UsesRobotInterface, Measure):
             [
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
+                RobotCollisions.cls_uuid,
+                RobotCollisionsTerminate.cls_uuid,
             ],
         )
+        self._prev_num_collisions = 0
 
         self.update_metric(
             *args,
@@ -1142,11 +1202,24 @@ class RearrangeReward(UsesRobotInterface, Measure):
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
+        collisions_terminate = task.measurements.measure[
+            RobotCollisionsTerminate.cls_uuid
+        ].get_metric()
         if force_terminate:
             reward -= self._force_end_pen
+        if collisions_terminate:
+            reward -= self._robot_collisions_end_pen
         if (('base_velocity' in task.actions or
         'move_forward' in task.actions) and task._is_navmesh_violated):
             reward -= self._navmesh_violate_pen
+
+        robot_collisions = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        collisions_added_in_step = robot_collisions['total_collisions'] - self._prev_num_collisions
+        if collisions_added_in_step > 0:
+            reward -= self._robot_collisions_pen
+        self._prev_num_collisions = robot_collisions['total_collisions']
         self._metric = reward
 
     def _get_coll_reward(self):

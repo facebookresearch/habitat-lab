@@ -10,10 +10,12 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
+    - robot_collisions_terminate
     - end_effector_to_rest_distance
     - ovmm_ee_to_place_goal_distance
     - ovmm_object_to_place_goal_distance
     - obj_anywhere_on_goal
+    - object_at_rest
     - ovmm_placement_stability
     - ovmm_place_success
     - ovmm_place_reward
@@ -67,11 +69,15 @@ measurements:
     check_stability: True
     ee_resting_success_threshold: 100.0
   ovmm_place_reward:
-    sparse_reward: False
+    sparse_reward: True
     ee_resting_success_threshold: 100.0
     navmesh_violate_pen: 0.05
     drop_pen: 1.0
     max_steps_to_reach_surface: 20
+    robot_collisions_pen: 1.0
+    robot_collisions_end_pen: 5.0
+  robot_collisions_terminate:
+    max_num_collisions: 0
 lab_sensors:
   joint_sensor:
     dimensionality: 10
