@@ -21,7 +21,7 @@ MAX_DISPLAY_TEXT_CHARS = 512
 TEXT_DELTA_FROM_CENTER = 0.49
 
 # font size of the magnum in-window display text
-DISPLAY_FONT_SIZE = 16.0
+DISPLAY_FONT_SIZE = 22.0 #16.0
 
 
 class TextOnScreenAlignment(Enum):

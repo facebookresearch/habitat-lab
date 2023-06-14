@@ -374,7 +374,7 @@ def generate_tutorial(
         tutorial_stages.append(
             TutorialStage(
                 stage_duration=2.0,
-                transition_duration=2.0,
+                transition_duration=1.0, #2.0
                 prev_lookat=tutorial_stages[
                     len(tutorial_stages) - 1
                 ]._next_lookat,
@@ -382,15 +382,15 @@ def generate_tutorial(
                 display_text=TEXT_ROBOT_FOCUS,
             )
         )
-        tutorial_stages.append(
-            TutorialStage(
-                stage_duration=3.0,
-                transition_duration=1.5,
-                prev_lookat=robot_lookat_far,
-                next_lookat=robot_lookat_near,
-                display_text=TEXT_ROBOT_FOCUS,
-            )
-        )
+        # tutorial_stages.append(
+        #     TutorialStage(
+        #         stage_duration=2.0, #3.0
+        #         transition_duration=0, #1.5
+        #         prev_lookat=robot_lookat_far,
+        #         next_lookat=robot_lookat_near,
+        #         display_text=TEXT_ROBOT_FOCUS,
+        #     )
+        # )
 
     # Controlled agent focus
     art_obj = sim.agents_mgr[agent_idx].articulated_agent.sim_obj
