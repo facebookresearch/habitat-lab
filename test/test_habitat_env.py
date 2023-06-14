@@ -348,11 +348,11 @@ def test_rl_vectorized_envs_batch_renderer(
         # TODO: Add screenshot tests. Image stats are compared until then.
         threshold: float = 0.01
         if sensor_uuid == "rgb_sensor":
-            baseline_mean: List[float] = [126.23, 126.84, 126.62, 125.63]
-            baseline_std_dev: List[float] = [26.54, 26.16, 25.80, 26.56]
+            baseline_mean = [126.23, 126.84, 126.62, 125.63]
+            baseline_std_dev = [26.54, 26.16, 25.80, 26.56]
         elif sensor_uuid == "depth_sensor":
-            baseline_mean: List[float] = [0.4852, 0.4886, 0.4920, 0.4956]
-            baseline_std_dev: List[float] = [0.0107, 0.0112, 0.0117, 0.0122]
+            baseline_mean = [0.4852, 0.4886, 0.4920, 0.4956]
+            baseline_std_dev = [0.0107, 0.0112, 0.0117, 0.0122]
         for env_idx in range(num_envs):
             env_obs = observations[env_idx][obs_key]
             mean = float(np.mean(env_obs[env_idx]))
