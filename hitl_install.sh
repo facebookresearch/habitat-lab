@@ -5,13 +5,14 @@
 # LICENSE file in the root directory of this source tree.
 
 # Conda environment
+echo "Ensure that you have access to floorplanner hugging face repo before running this script!"
 conda create -y -n siro-hitl-eval python=3.9
 conda activate siro-hitl-eval
 
 # Hab-lab
 git clone --branch stable https://github.com/facebookresearch/habitat-lab.git
 cd habitat-lab
-git checkout e7c17e49
+git checkout 941d4dc
 pip install -e habitat-lab
 pip install -e habitat-baselines
 cd ..
