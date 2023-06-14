@@ -425,7 +425,10 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
-            new_episode = self.generate_single_episode()
+            try:
+                new_episode = self.generate_single_episode()
+            except:
+                new_episode = None
             if new_episode is None:
                 failed_episodes += 1
                 continue

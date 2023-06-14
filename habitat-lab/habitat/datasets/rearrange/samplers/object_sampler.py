@@ -332,7 +332,6 @@ class ObjectSampler:
                 if not self._is_accessible(sim, new_object):
                     continue
                 return new_object
-
         # if num_placement_tries > self.max_placement_attempts:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
@@ -360,7 +359,6 @@ class ObjectSampler:
 
         if self.nav_to_min_distance == -1:
             return True
-
         snapped = sim.pathfinder.snap_point(
             obj.translation, self.largest_island_id
         )
@@ -457,6 +455,7 @@ class ObjectSampler:
             and num_pairing_tries < self.max_sample_attempts
         ):
             num_pairing_tries += 1
+
             if len(new_objects) < len(target_receptacles):
                 # sample objects explicitly from pre-designated target receptacles first
                 new_object, receptacle = self.single_sample(
@@ -478,7 +477,6 @@ class ObjectSampler:
                 ):
                     # used up receptacle, need to recompute the sampler's receptacle_candidates
                     self.receptacle_candidates = None
-
             if new_object is not None:
                 # when an object placement is successful, reset the try counter.
                 logger.info(
@@ -487,7 +485,6 @@ class ObjectSampler:
                 num_pairing_tries = 0
                 pairing_start_time = time.time()
                 new_objects.append((new_object, receptacle))
-
         logger.info(
             f"    Sampling process completed in ({time.time()-sampling_start_time}sec)."
         )

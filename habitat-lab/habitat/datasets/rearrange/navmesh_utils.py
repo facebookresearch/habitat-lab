@@ -168,11 +168,10 @@ def is_navigable_given_robot_navmesh(
                     )
             else:
                 vel = [0, 0]
-
-            trans = vc.act(trans, vel)
+            trans = mn.Matrix4(vc.act(trans, vel))
             robot_pos = trans.translation
             collision.append(is_collision(sim, trans, navmesh_offset))
-    except IndexError:
+    except:
         return 1.0
 
     return np.average(collision)
