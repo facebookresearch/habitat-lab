@@ -14,8 +14,10 @@ defaults:
     - dist_to_goal
     - nav_to_pos_succ
     - does_want_terminate
+    - target_iou_coverage
     - ovmm_nav_to_obj_success
     - bad_called_terminate
+    - ovmm_nav_to_obj_explore_reward
     - ovmm_nav_to_obj_reward
     - num_steps
     - navmesh_collision

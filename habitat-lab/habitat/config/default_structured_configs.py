@@ -538,7 +538,7 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class RobotCollisionsTerminateMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisionsTerminate"
-    max_num_collisions: int = -1 # do not terminate by default
+    max_num_collisions: int = -1  # do not terminate by default
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -677,9 +677,15 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     success_angle_dist: float = 0.261799
 
 
+class OVMMNavToObjExploreRewardMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMNavToObjExploreReward"
+    iou_threshold: float = 0.001
+
+
 @attr.s(auto_attribs=True, slots=True)
 class OVMMNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
     type: str = "OVMMNavToObjReward"
+    explore_reward: float = 5.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -897,9 +903,11 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
     ee_resting_success_threshold: float = 0.15
     check_stability: bool = False
 
+
 @attr.s(auto_attribs=True, slots=True)
 class PickedObjectLinearVelMeasurementConfig(MeasurementConfig):
     type: str = "PickedObjectLinearVel"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class PickedObjectAngularVelMeasurementConfig(MeasurementConfig):
@@ -2212,6 +2220,12 @@ cs.store(
     group="habitat/task/measurements",
     name="dist_to_goal",
     node=DistToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_nav_to_obj_explore_reward",
+    group="habitat/task/measurements",
+    name="ovmm_nav_to_obj_explore_reward",
+    node=OVMMNavToObjExploreRewardMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_nav_to_obj_reward",

@@ -269,12 +269,80 @@ class OVMMNavToObjSucc(NavToObjSuccess):
 
 
 @registry.register_measure
+class OVMMNavToObjExploreReward(Measure):
+    cls_uuid: str = "ovmm_nav_to_obj_explore_reward"
+    panoptic_uuid: str = "robot_head_panoptic"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._sim = sim
+        self._resolution = (
+            sim.agents[0]
+            ._sensors[self.panoptic_uuid]
+            .specification()
+            .resolution
+        )
+        self._num_pixels = self._resolution[0] * self._resolution[1]
+
+        self._iou_threshold = self._config.iou_threshold
+
+        self._num_objects = None
+        self._seen_objects = set()
+
+        super().__init__(*args, sim=sim, config=config, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return OVMMNavToObjExploreReward.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._num_objects = (
+            self._sim.get_rigid_object_manager().get_num_objects()
+            + self._sim.get_articulated_object_manager().get_num_objects()
+        )
+        self._seen_objects = set()
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        reward = 0.0
+
+        instances, counts = np.unique(
+            observations[self.panoptic_uuid], return_counts=True
+        )
+        was_seen_all = (counts / self._num_pixels) > self._iou_threshold
+
+        for instance, was_seen in zip(instances, was_seen_all):
+            if was_seen and instance not in self._seen_objects:
+                self._seen_objects.add(instance)
+                reward += 1 / self._num_objects
+
+        self._metric = reward
+
+
+@registry.register_measure
 class OVMMNavToObjReward(NavToObjReward):
     cls_uuid: str = "ovmm_nav_to_obj_reward"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+        self._explore_reward = self._config.explore_reward
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return OVMMNavToObjReward.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [OVMMNavToObjExploreReward.cls_uuid],
+        )
+        super().reset_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
 
     @property
     def _nav_to_obj_succ_cls_uuid(self):
@@ -283,6 +351,22 @@ class OVMMNavToObjReward(NavToObjReward):
     @property
     def _rot_dist_to_goal_cls_uuid(self):
         return OVMMRotDistToGoal.cls_uuid
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        super().update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+        self._metric += (
+            self._explore_reward
+            * task.measurements.measures[
+                OVMMNavToObjExploreReward.cls_uuid
+            ].get_metric()
+        )
 
 
 @registry.register_measure
