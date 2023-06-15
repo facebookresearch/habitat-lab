@@ -368,6 +368,8 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     navmesh_offset_for_agent_placement: Optional[List[float]] = None
     # Simulation frequency for velocity control
     sim_freq: float = 120.0
+    # Distance threshold between two agents to issue a stop action
+    agents_dist_thresh: float = -1.0
 
 
 # -----------------------------------------------------------------------------
