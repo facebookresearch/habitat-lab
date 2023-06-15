@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /benchmark/nav/objectnav: objectnav_hssd
+  - /benchmark/nav/objectnav: objectnav_hssd-hab
   - /habitat_baselines/rl/policy/obs_transforms:
     - center_cropper_base
     - resize_shortest_edge_base
