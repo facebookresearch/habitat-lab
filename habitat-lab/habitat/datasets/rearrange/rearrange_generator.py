@@ -488,6 +488,7 @@ class RearrangeEpisodeGenerator:
             self.sim.navmesh_settings.set_defaults()
             self.sim.navmesh_settings.agent_radius = self.cfg.agent_radius
             self.sim.navmesh_settings.agent_height = self.cfg.agent_height
+            self.sim.navmesh_settings.include_static_objects = True
             self.sim.navmesh_settings.agent_max_climb = (
                 self.cfg.agent_max_climb
             )
@@ -497,7 +498,6 @@ class RearrangeEpisodeGenerator:
             self.sim.recompute_navmesh(
                 self.sim.pathfinder,
                 self.sim.navmesh_settings,
-                include_static_objects=True,
             )
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.sim.pathfinder.save_nav_mesh(navmesh_path)

@@ -170,12 +170,14 @@
           # - "102816009" x
 
           # Raw
-          - "102816756" # O
-          - "102817140" # O
-          - "103997586_171030669" # O
-          - "103997895_171031182" # O
-          - "104348328_171513363" # O
-          # - "104348361_171513414"
+          # - "102816756" # O
+          # - "102817140" # O
+          # - "103997586_171030669" # O
+          # - "103997895_171031182" # O
+          # - "104348328_171513363" # O
+
+
+          - "104348361_171513414"
           # - "105515211_173104185"
           # - "106366386_174226770"
           # - "106366410_174226806"
@@ -236,7 +238,7 @@
         receptacle_sets:
         - hab2
         num_samples:
-        - 2
+        - 5
         - 5
         orientation_sampling: up
         nav_to_min_distance: 1.5
@@ -267,7 +269,7 @@
     agent_max_slope: 45
 
     # Check if the robot can navigate from grasping to goal locations
-    check_navigable: False
+    check_navigable: True
     navmesh_offset: [[0, 0], [0.15, 0], [-0.15, 0]]
     # If the collision rate of the navigation path is larger
     # than the threshold, we reject that sample
