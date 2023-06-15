@@ -72,11 +72,9 @@ class ShouldReplanSensor(Sensor):
         self._x_len = config.x_len
         self._y_len = config.y_len
 
-        self._should_check = (
-            self._x_len is not None and self._y_len is not None
-        )
+        self._should_check = self._x_len > -1.0 and self._y_len > -1.0
         if not self._should_check:
-            assert self._x_len is None and self._y_len is None
+            assert self._x_len <= -1.0 or self._y_len <= -1.0
         self._agent_idx = config.agent_idx
 
         super().__init__(config=config)

@@ -77,7 +77,9 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             rnn_hidden_states.device
         )
 
-    def _get_solution_nodes(self, pred_vals):
+    def _get_solution_nodes(self, pred_vals, pddl_goal=None):
+        if pddl_goal is None:
+            pddl_goal = self._pddl_prob.goal
         # The true predicates at the current state
         start_true_preds = [
             pred
@@ -151,7 +153,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
                     add_node = PlanNode(
                         pred_set, cur_node, cur_node.depth + 1, action
                     )
-                    if self._pddl_prob.goal.is_true_from_predicates(pred_set):
+                    if pddl_goal.is_true_from_predicates(pred_set):
                         # Found a goal, we can stop searching.
                         sol_nodes.append(add_node)
                     else:
@@ -169,12 +171,12 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             paths.append(path[::-1])
         return paths
 
-    def _get_all_plans(self, pred_vals):
+    def _get_all_plans(self, pred_vals, pddl_goal=None):
         """
         :param pred_vals: Shape (num_prds,). NOT batched.
         """
         assert len(pred_vals) == len(self._predicates_list)
-        sol_nodes = self._get_solution_nodes(pred_vals)
+        sol_nodes = self._get_solution_nodes(pred_vals, pddl_goal)
 
         # Extract the paths to the goals.
         paths = self._extract_paths(sol_nodes)
@@ -184,32 +186,31 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
             all_ac_seqs.append([node.action for node in path])
         # Sort by the length of the action sequence
         full_plans = sorted(all_ac_seqs, key=len)
-
         # Each full plan will be a permutation of the other full plans.
-        plans = full_plans[1:]
-        # Only extract subsequences from 1 of the plans.
-        full_plan = full_plans[0]
-        for num_subplans in range(
-            0, len(full_plan) + 1, self._config.plan_split_len
-        ):
-            if num_subplans == 0:
-                plans.append([])
-                continue
-            for start_i in range(0, len(full_plan), num_subplans):
-                plans.append(full_plan[start_i : start_i + num_subplans])
+        plans = full_plans[0]
         return plans
 
-    def _replan(self, pred_vals, plan_idx=None):
-        plans = self._get_all_plans(pred_vals)
-
-        # Just return the shortest plan for now.
-        if self._config.plan_idx != -2:
-            if plan_idx is None:
-                return plans[self._config.plan_idx]
-            else:
-                return plans[plan_idx]
+    def _replan(self, pred_vals, plan_idx):
+        if self._config.plan_idx == -2:
+            # We select a plan at random
+            index_plan = plan_idx
         else:
-            return plans[self._config.plan_idx]
+            # We select the plan in plan_idx
+            index_plan = self._config.plan_idx
+        # Plan is 0 for no goal, 2**n  - 1 for all goals
+        index_plan = index_plan % self._num_plans
+        assert index_plan > 0
+        # VERY HACKY, will only work for 2 goals but here we are.
+        # index_plan can be 1, 2, 3 corresponding to stage_1, stage_2, composite_success
+        if index_plan == 3:
+            pddl_goal = self._pddl_prob.goal
+        else:
+            goal_name = ["stage_2_2", "stage_1_2"][index_plan - 1]
+            pddl_goal = self._pddl_prob.stage_goals[goal_name]
+
+        plans = self._get_all_plans(pred_vals, pddl_goal)
+        #  print([p.compact_str for p in plans])
+        return plans
 
     def _get_plan_action(self, pred_vals, batch_idx, plan_idx=None):
         if self._should_replan[batch_idx]:
@@ -240,13 +241,20 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
         immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
-        self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
-            self._num_plans, [(~masks).int().sum().item()], dtype=torch.int32
-        )
+        if ~masks.sum() > 0:
+            self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
+                low=1,
+                high=self._num_plans,
+                size=[(~masks).int().sum().item()],
+                dtype=torch.int32,
+            )
         for batch_idx, should_plan in enumerate(plan_masks):
             if should_plan != 1.0:
                 continue
-            cur_ac = self._get_plan_action(all_pred_vals[batch_idx], batch_idx)
+            plan_idx = self.plan_ids_batch[batch_idx]
+            cur_ac = self._get_plan_action(
+                all_pred_vals[batch_idx], batch_idx, plan_idx
+            )
             if cur_ac is not None:
                 next_skill[batch_idx] = self._skill_name_to_idx[cur_ac.name]
                 skill_args_data[batch_idx] = [param.name for param in cur_ac.param_values]  # type: ignore[call-overload]
