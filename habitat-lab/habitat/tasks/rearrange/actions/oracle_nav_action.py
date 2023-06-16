@@ -225,7 +225,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             at_goal = (
                 dist_to_final_nav_targ < self._dist_thresh
                 and angle_to_obj < self._turn_thresh
-            )
+            ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
 
             if self.motion_type == "base_velocity":
                 if not at_goal:
@@ -495,7 +495,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
             at_goal = (
                 dist_to_final_nav_targ < self._dist_thresh
                 and angle_to_obj < self._turn_thresh
-            )
+            ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
 
             # Planning to see if the robot needs to do back-up
             need_move_backward = False
