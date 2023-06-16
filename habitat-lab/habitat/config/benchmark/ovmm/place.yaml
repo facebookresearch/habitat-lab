@@ -3,32 +3,32 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_gaze
+  - /habitat/task/ovmm: place
   - /habitat/dataset/rearrangement: hssd
   - _self_
 
 habitat:
   gym:
-    auto_name: Pick
+    auto_name: Place
     obs_keys:
       - robot_head_depth
-      - start_receptacle
-      - object_segmentation
-      - start_recep_segmentation
+      - goal_receptacle
       - object_embedding
+      - goal_recep_segmentation
       - joint
+      - is_holding
   environment:
-    max_episode_steps: 300
+    max_episode_steps: 350
   simulator:
-    type: ObjectRearrangeSim-v0
+    type: OVMMSim-v0
     additional_object_paths:
       - data/objects/amazon_berkeley/configs/
       - data/objects/google_scanned/configs/
       - data/objects/ai2thorhab/configs/objects/
       - data/objects/floorplanner/configs/objects/
+    needs_markers: False
     debug_render_goal: False
     debug_render: False
-    needs_markers: False
     concur_render: True
     auto_sleep: True
     requires_textures: False
@@ -44,12 +44,12 @@ habitat:
              height: 160
              width: 120
              hfov: 42
-             position: [0, 1.31, 0]
+             position: [0,1.31,0]
            head_panoptic_sensor:
              height: 160
              width: 120
              hfov: 42
-             position: [0, 1.31, 0]
+             position: [0,1.31,0]
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True

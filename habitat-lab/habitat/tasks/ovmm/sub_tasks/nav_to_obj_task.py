@@ -15,8 +15,8 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import DynNavRLEnv
 
 
-@registry.register_task(name="CatNavToObjTask-v0")
-class CatDynNavRLEnv(DynNavRLEnv):
+@registry.register_task(name="OVMMNavToObjTask-v0")
+class OVMMDynNavRLEnv(DynNavRLEnv):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(
             config=config,

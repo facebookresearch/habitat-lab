@@ -16,7 +16,7 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.obj_rearrange_sim import ObjectRearrangeSim
+from habitat.tasks.ovmm.ovmm_sim import OVMMSim
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
@@ -66,7 +66,7 @@ class RearrangeTask(NavigationTask):
         self.n_objs = len(dataset.episodes[0].targets)
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
-        self._sim: Union[RearrangeSim, ObjectRearrangeSim] = sim
+        self._sim: Union[RearrangeSim, OVMMSim] = sim
         self._ignore_collisions: List[Any] = []
         self._desired_resting = np.array(self._config.desired_resting_position)
         self._sim_reset = True

@@ -3,9 +3,6 @@
 defaults:
   - /benchmark/rearrange: pick
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /habitat_baselines/rl/policy/obs_transforms:
-    - resize_shortest_edge_base
-    - center_cropper_base
   - _self_
 
 habitat_baselines:
@@ -37,51 +34,13 @@ habitat_baselines:
 
   rl:
     policy:
-      name: "PointNavResNetPolicy"
-      action_distribution_type: "gaussian"
-      no_downscaling: True
-      action_dist:
-        use_log_std: True
-        clamp_std: True
-        std_init: -1.0
-        use_std_param: True
-        max_log_std: 2
-      obs_transforms:
-        resize_shortest_edge:
-          type: ResizeShortestEdge
-          size: 120
-          channels_last: True
-          trans_keys:
-            - robot_head_rgb
-            - robot_head_depth
-            - robot_head_panoptic
-            - object_segmentation
-            - receptacle_segmentation
-            - start_receptacle_segmentation
-            - goal_receptacle_segmentation
-            - ovmm_nav_goal_segmentation
-          semantic_keys:
-            - robot_head_panoptic
-            - object_segmentation
-            - receptacle_segmentation
-            - start_receptacle_segmentation
-            - goal_receptacle_segmentation
-            - ovmm_nav_goal_segmentation
-        center_cropper:
-          type: CenterCropper
-          height: 160
-          width: 120
-          channels_last: True
-          trans_keys:
-            - robot_head_rgb
-            - robot_head_depth
-            - robot_head_panoptic
-            - object_segmentation
-            - receptacle_segmentation
-            - start_receptacle_segmentation
-            - goal_receptacle_segmentation
-            - ovmm_nav_goal_segmentation
-    
+        name: "PointNavResNetPolicy"
+        action_distribution_type: "gaussian"
+        action_dist:
+           use_log_std: True
+           clamp_std: True
+           std_init: -1.0
+           use_std_param: True
     ppo:
       # ppo params
       clip_param: 0.2
@@ -112,7 +71,7 @@ habitat_baselines:
     ddppo:
       sync_frac: 0.6
       # The PyTorch distributed backend to use
-      distrib_backend: GLOO
+      distrib_backend: NCCL
       # Visual encoder backbone
       pretrained_weights: data/ddppo-models/gibson-2plus-resnet50.pth
       # Initialize with pretrained weights

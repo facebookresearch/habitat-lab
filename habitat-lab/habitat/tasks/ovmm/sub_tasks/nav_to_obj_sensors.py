@@ -13,8 +13,8 @@ from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
 from habitat.tasks.ovmm.utils import find_closest_goal_index_within_distance
-from habitat.tasks.rearrange.sub_tasks.cat_nav_to_obj_task import (
-    CatDynNavRLEnv,
+from habitat.tasks.ovmm.sub_tasks.nav_to_obj_task import (
+    OVMMDynNavRLEnv,
 )
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToObjReward,
@@ -25,7 +25,7 @@ from habitat.tasks.utils import compute_pixel_coverage
 
 
 @registry.register_sensor
-class OvmmNavGoalSegmentationSensor(Sensor):
+class OVMMNavGoalSegmentationSensor(Sensor):
     cls_uuid: str = "ovmm_nav_goal_segmentation"
     panoptic_uuid: str = "robot_head_panoptic"
 
@@ -100,7 +100,7 @@ class OvmmNavGoalSegmentationSensor(Sensor):
         return obs
 
     def get_observation(
-        self, observations, *args, episode, task: CatDynNavRLEnv, **kwargs
+        self, observations, *args, episode, task: OVMMDynNavRLEnv, **kwargs
     ):
         pan_obs = observations[self.panoptic_uuid]
         max_obs_val = np.max(pan_obs)
@@ -175,7 +175,7 @@ class ReceptacleSegmentationSensor(Sensor):
         )
 
     def get_observation(
-        self, observations, *args, episode, task: CatDynNavRLEnv, **kwargs
+        self, observations, *args, episode, task: OVMMDynNavRLEnv, **kwargs
     ):
         obs = np.copy(observations[self.panoptic_uuid])
         obj_id_map = np.zeros(np.max(obs) + 1, dtype=np.int32)
@@ -197,7 +197,7 @@ class ReceptacleSegmentationSensor(Sensor):
 
 
 @registry.register_measure
-class OvmmRotDistToGoal(RotDistToGoal):
+class OVMMRotDistToGoal(RotDistToGoal):
     """
     Computes angle between the agent's heading direction and the direction from agent to object. Selects the object with the closest viewpoint for computing this angle.
     """
@@ -210,7 +210,7 @@ class OvmmRotDistToGoal(RotDistToGoal):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmRotDistToGoal.cls_uuid
+        return OVMMRotDistToGoal.cls_uuid
 
     def _get_targ(self, task, episode):
         if self._is_nav_to_obj:
@@ -224,7 +224,7 @@ class OvmmRotDistToGoal(RotDistToGoal):
 
 
 @registry.register_measure
-class OvmmNavToObjSucc(NavToObjSuccess):
+class OVMMNavToObjSucc(NavToObjSuccess):
     """Whether the agent has navigated within `success_distance` of the center of the closest candidate goal object and oriented itself within `success_angle` of the receptacle
 
     Used for training nav skills used in OVMM baseline"""
@@ -233,11 +233,11 @@ class OvmmNavToObjSucc(NavToObjSuccess):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmNavToObjSucc.cls_uuid
+        return OVMMNavToObjSucc.cls_uuid
 
     @property
     def _rot_dist_to_goal_cls_uuid(self):
-        return OvmmRotDistToGoal.cls_uuid
+        return OVMMRotDistToGoal.cls_uuid
 
     def __init__(self, *args, sim, config, dataset, task, **kwargs):
         super().__init__(
@@ -269,20 +269,20 @@ class OvmmNavToObjSucc(NavToObjSuccess):
 
 
 @registry.register_measure
-class OvmmNavToObjReward(NavToObjReward):
+class OVMMNavToObjReward(NavToObjReward):
     cls_uuid: str = "ovmm_nav_to_obj_reward"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmNavToObjReward.cls_uuid
+        return OVMMNavToObjReward.cls_uuid
 
     @property
     def _nav_to_obj_succ_cls_uuid(self):
-        return OvmmNavToObjSucc.cls_uuid
+        return OVMMNavToObjSucc.cls_uuid
 
     @property
     def _rot_dist_to_goal_cls_uuid(self):
-        return OvmmRotDistToGoal.cls_uuid
+        return OVMMRotDistToGoal.cls_uuid
 
 
 @registry.register_measure

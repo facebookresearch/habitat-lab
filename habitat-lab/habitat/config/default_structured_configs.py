@@ -447,8 +447,8 @@ class ReceptacleSegmentationSensorConfig(LabSensorConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavGoalSegmentationSensorConfig(LabSensorConfig):
-    type: str = "OvmmNavGoalSegmentationSensor"
+class OVMMNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "OVMMNavGoalSegmentationSensor"
     blank_out_prob: float = 0.0
 
 
@@ -668,70 +668,70 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
+class OVMMNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
     navmesh_violate_pen: float = (
         0.0  # penalty for trying to move outside navmesh
     )
-    type: str = "OvmmNavToObjReward"
+    type: str = "OVMMNavToObjReward"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
-    type: str = "OvmmDistToPickGoal"
+class OVMMDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OVMMDistToPickGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
-    type: str = "OvmmDistToPlaceGoal"
+class OVMMDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OVMMDistToPlaceGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
-    type: str = "OvmmRotDistToGoal"
+class OVMMRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
+    type: str = "OVMMRotDistToGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmRotDistToPickGoalMeasurementConfig(
-    OvmmRotDistToGoalMeasurementConfig
+class OVMMRotDistToPickGoalMeasurementConfig(
+    OVMMRotDistToGoalMeasurementConfig
 ):
-    type: str = "OvmmRotDistToPickGoal"
+    type: str = "OVMMRotDistToPickGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmRotDistToPlaceGoalMeasurementConfig(
-    OvmmRotDistToGoalMeasurementConfig
+class OVMMRotDistToPlaceGoalMeasurementConfig(
+    OVMMRotDistToGoalMeasurementConfig
 ):
-    type: str = "OvmmRotDistToPlaceGoal"
+    type: str = "OVMMRotDistToPlaceGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
-    type: str = "OvmmNavToPickSucc"
+class OVMMNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OVMMNavToPickSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
-    type: str = "OvmmNavToObjSucc"
+class OVMMNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
+    type: str = "OVMMNavToObjSucc"
     min_object_coverage_iou: float = 1e-3
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavOrientToPickSuccMeasurementConfig(
-    OvmmNavToObjSuccMeasurementConfig
+class OVMMNavOrientToPickSuccMeasurementConfig(
+    OVMMNavToObjSuccMeasurementConfig
 ):
-    type: str = "OvmmNavOrientToPickSucc"
+    type: str = "OVMMNavOrientToPickSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
-    type: str = "OvmmNavToPlaceSucc"
+class OVMMNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OVMMNavToPlaceSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavOrientToPlaceSuccMeasurementConfig(
-    OvmmNavToObjSuccMeasurementConfig
+class OVMMNavOrientToPlaceSuccMeasurementConfig(
+    OVMMNavToObjSuccMeasurementConfig
 ):
-    type: str = "OvmmNavOrientToPlaceSucc"
+    type: str = "OVMMNavOrientToPlaceSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -901,50 +901,50 @@ class ObjectAtRestMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmFindObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
-    type: str = "OvmmFindObjectPhaseSuccess"
+class OVMMFindObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMFindObjectPhaseSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmPickObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
-    type: str = "OvmmPickObjectPhaseSuccess"
+class OVMMPickObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMPickObjectPhaseSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmPlaceObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
-    type: str = "OvmmPlaceObjectPhaseSuccess"
+class OVMMPlaceObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMPlaceObjectPhaseSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmFindRecepPhaseSuccessMeasurementConfig(MeasurementConfig):
-    type: str = "OvmmFindRecepPhaseSuccess"
+class OVMMFindRecepPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMFindRecepPhaseSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
-    type: str = "OvmmObjectToPlaceGoalDistance"
+class OVMMObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMObjectToPlaceGoalDistance"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmEEToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
-    type: str = "OvmmEEToPlaceGoalDistance"
+class OVMMEEToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMEEToPlaceGoalDistance"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmPlaceRewardMeasurementConfig(PlaceRewardMeasurementConfig):
-    type: str = "OvmmPlaceReward"
+class OVMMPlaceRewardMeasurementConfig(PlaceRewardMeasurementConfig):
+    type: str = "OVMMPlaceReward"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmPlacementStabilityMeasurementConfig(
+class OVMMPlacementStabilityMeasurementConfig(
     PlacementStabilityMeasurementConfig
 ):
-    type: str = "OvmmPlacementStability"
+    type: str = "OVMMPlacementStability"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmPlaceSuccessMeasurementConfig(PlaceSuccessMeasurementConfig):
-    type: str = "OvmmPlaceSuccess"
+class OVMMPlaceSuccessMeasurementConfig(PlaceSuccessMeasurementConfig):
+    type: str = "OVMMPlaceSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1394,8 +1394,8 @@ class DatasetConfig(HabitatBaseConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ObjectRearrangeDatasetConfig(DatasetConfig):
-    type: str = "ObvjectRearrangeDataset-v0"
+class OVMMDatasetConfig(DatasetConfig):
+    type: str = "OVMMDataset-v0"
     viewpoints_matrix_path: Optional[
         str
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
@@ -1555,7 +1555,7 @@ cs.store(
     package="habitat.dataset",
     group="habitat/dataset",
     name="object_rearrange_dataset_config_schema",
-    node=ObjectRearrangeDatasetConfig,
+    node=OVMMDatasetConfig,
 )
 
 # Simulator Sensors
@@ -1848,7 +1848,7 @@ cs.store(
     package="habitat.task.lab_sensors.ovmm_nav_goal_segmentation_sensor",
     group="habitat/task/lab_sensors",
     name="ovmm_nav_goal_segmentation_sensor",
-    node=OvmmNavGoalSegmentationSensorConfig,
+    node=OVMMNavGoalSegmentationSensorConfig,
 )
 
 # Task Measurements
@@ -1970,7 +1970,7 @@ cs.store(
     package="habitat.task.measurements.ovmm_rot_dist_to_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_goal",
-    node=OvmmRotDistToGoalMeasurementConfig,
+    node=OVMMRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",
@@ -2030,31 +2030,31 @@ cs.store(
     package="habitat.task.measurements.ovmm_object_to_place_goal_distance",
     group="habitat/task/measurements",
     name="ovmm_object_to_place_goal_distance",
-    node=OvmmObjectToPlaceGoalDistanceMeasurementConfig,
+    node=OVMMObjectToPlaceGoalDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_ee_to_place_goal_distance",
     group="habitat/task/measurements",
     name="ovmm_ee_to_place_goal_distance",
-    node=OvmmEEToPlaceGoalDistanceMeasurementConfig,
+    node=OVMMEEToPlaceGoalDistanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_place_reward",
     group="habitat/task/measurements",
     name="ovmm_place_reward",
-    node=OvmmPlaceRewardMeasurementConfig,
+    node=OVMMPlaceRewardMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_placement_stability",
     group="habitat/task/measurements",
     name="ovmm_placement_stability",
-    node=OvmmPlacementStabilityMeasurementConfig,
+    node=OVMMPlacementStabilityMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_place_success",
     group="habitat/task/measurements",
     name="ovmm_place_success",
-    node=OvmmPlaceSuccessMeasurementConfig,
+    node=OVMMPlaceSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.object_at_rest",
@@ -2078,25 +2078,25 @@ cs.store(
     package="habitat.task.measurements.ovmm_find_object_phase_success",
     group="habitat/task/measurements",
     name="ovmm_find_object_phase_success",
-    node=OvmmFindObjectPhaseSuccessMeasurementConfig,
+    node=OVMMFindObjectPhaseSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_pick_object_phase_success",
     group="habitat/task/measurements",
     name="ovmm_pick_object_phase_success",
-    node=OvmmPickObjectPhaseSuccessMeasurementConfig,
+    node=OVMMPickObjectPhaseSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_place_object_phase_success",
     group="habitat/task/measurements",
     name="ovmm_place_object_phase_success",
-    node=OvmmPlaceObjectPhaseSuccessMeasurementConfig,
+    node=OVMMPlaceObjectPhaseSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_find_recep_phase_success",
     group="habitat/task/measurements",
     name="ovmm_find_recep_phase_success",
-    node=OvmmFindRecepPhaseSuccessMeasurementConfig,
+    node=OVMMFindRecepPhaseSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",
@@ -2198,61 +2198,61 @@ cs.store(
     package="habitat.task.measurements.ovmm_nav_to_obj_reward",
     group="habitat/task/measurements",
     name="ovmm_nav_to_obj_reward",
-    node=OvmmNavToObjRewardMeasurementConfig,
+    node=OVMMNavToObjRewardMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.dist_to_pick_goal",
     group="habitat/task/measurements",
     name="ovmm_dist_to_pick_goal",
-    node=OvmmDistToPickGoalMeasurementConfig,
+    node=OVMMDistToPickGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.dist_to_place_goal",
     group="habitat/task/measurements",
     name="ovmm_dist_to_place_goal",
-    node=OvmmDistToPlaceGoalMeasurementConfig,
+    node=OVMMDistToPlaceGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_pick_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_pick_goal",
-    node=OvmmRotDistToPickGoalMeasurementConfig,
+    node=OVMMRotDistToPickGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_place_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_place_goal",
-    node=OvmmRotDistToPlaceGoalMeasurementConfig,
+    node=OVMMRotDistToPlaceGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_to_pick_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_to_pick_succ",
-    node=OvmmNavToPickSuccMeasurementConfig,
+    node=OVMMNavToPickSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_to_place_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_to_place_succ",
-    node=OvmmNavToPlaceSuccMeasurementConfig,
+    node=OVMMNavToPlaceSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_nav_to_obj_success",
     group="habitat/task/measurements",
     name="ovmm_nav_to_obj_success",
-    node=OvmmNavToObjSuccMeasurementConfig,
+    node=OVMMNavToObjSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_pick_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_orient_to_pick_succ",
-    node=OvmmNavOrientToPickSuccMeasurementConfig,
+    node=OVMMNavOrientToPickSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_place_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_orient_to_place_succ",
-    node=OvmmNavOrientToPlaceSuccMeasurementConfig,
+    node=OVMMNavOrientToPlaceSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.pick_goal_iou_coverage",
