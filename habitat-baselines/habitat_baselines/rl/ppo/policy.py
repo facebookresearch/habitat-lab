@@ -271,7 +271,7 @@ class NetPolicy(nn.Module, Policy):
         self.critic = CriticHead(self.net.output_size)
 
         self.aux_loss_modules = get_aux_modules(
-            aux_loss_config, action_space, net
+            aux_loss_config, action_space, None, net
         )
 
     @property
