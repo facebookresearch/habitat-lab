@@ -241,7 +241,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         next_skill = torch.zeros(self._num_envs)
         skill_args_data = [None for _ in range(self._num_envs)]
         immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
-        if ~masks.sum() > 0:
+        if (~masks).sum() > 0:
             self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
                 low=1,
                 high=self._num_plans,
