@@ -90,6 +90,7 @@ class SandboxDriver(GuiAppDriver):
         self._end_on_success = config.habitat.task.end_on_success
         self._success_measure_name = config.habitat.task.success_measure
         self._num_recorded_episodes = 0
+        self._args = args
 
         with habitat.config.read_write(config):
             # needed so we can provide keyframes to GuiApplication
@@ -1085,11 +1086,25 @@ class SandboxDriver(GuiAppDriver):
         keyframes = (
             self.get_sim().gfx_replay_manager.write_incremental_saved_keyframes_to_string_array()
         )
-        post_sim_update_dict["keyframes"] = keyframes
 
         if self._save_gfx_replay_keyframes:
             for keyframe in keyframes:
                 self._recording_keyframes.append(keyframe)
+
+        if self._args.hide_humanoid_in_gui:
+            # Hack to hide skinned humanoids in the GUI viewport. Specifically, this
+            # hides all render instances with a filepath starting with
+            # "data/humanoids/humanoid_data", by replacing with an invalid filepath.
+            # Gfx-replay playback logic will print a warning to the terminal and then
+            # not attempt to render the instance. This is a temp hack until
+            # skinning is supported in gfx-replay.
+            for i in range(len(keyframes)):
+                keyframes[i] = keyframes[i].replace(
+                    '"creation":{"filepath":"data/humanoids/humanoid_data',
+                    '"creation":{"filepath":"invalid_filepath',
+                )
+
+        post_sim_update_dict["keyframes"] = keyframes
 
         def depth_to_rgb(obs):
             converted_obs = np.concatenate(
@@ -1288,6 +1303,12 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Shows an intro sequence that helps familiarize the user to the scene and task in a HITL context.",
+    )
+    parser.add_argument(
+        "--hide-humanoid-in-gui",
+        action="store_true",
+        default=False,
+        help="Hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.",
     )
     parser.add_argument(
         "--save-gfx-replay-keyframes",
