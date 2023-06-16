@@ -32,7 +32,7 @@ habitat:
     concur_render: True
     auto_sleep: True
     requires_textures: False
-    kinematic_mode: True
+    kinematic_mode: False
     agents:
       main_agent:
         radius: 0.3
