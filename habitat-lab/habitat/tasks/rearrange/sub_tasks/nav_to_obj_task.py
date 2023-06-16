@@ -191,7 +191,6 @@ class DynNavRLEnv(RearrangeTask):
                 abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
                 sim.grasp_mgr.desnap(force=True)
                 sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
-            np.random.seed(42)
             view_points_per_recep = np.concatenate([
                 np.array([v.agent_state.position for v in g.view_points])
                 for g in spawn_goals
