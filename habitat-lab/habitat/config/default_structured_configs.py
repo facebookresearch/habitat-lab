@@ -536,6 +536,12 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class RobotCollisionsTerminateMeasurementConfig(MeasurementConfig):
+    type: str = "RobotCollisionsTerminate"
+    max_num_collisions: int = -1 # do not terminate by default
+
+
+@attr.s(auto_attribs=True, slots=True)
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
 
@@ -608,6 +614,8 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -656,6 +664,8 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -669,9 +679,6 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class OVMMNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
-    navmesh_violate_pen: float = (
-        0.0  # penalty for trying to move outside navmesh
-    )
     type: str = "OVMMNavToObjReward"
 
 
@@ -805,6 +812,8 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -828,6 +837,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     sparse_reward: bool = False
     angle_reward_min_dist: float = 0.0
     angle_reward_scale: float = 1.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -870,6 +881,8 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     ee_resting_success_threshold: float = 0.15
     stability_reward: float = 0.0
     max_steps_to_reach_surface: int = 0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1905,6 +1918,12 @@ cs.store(
     group="habitat/task/measurements",
     name="force_terminate",
     node=ForceTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.robot_collisions_terminate",
+    group="habitat/task/measurements",
+    name="robot_collisions_terminate",
+    node=RobotCollisionsTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_object_distance",
