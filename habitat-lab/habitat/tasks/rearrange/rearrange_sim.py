@@ -133,9 +133,6 @@ class RearrangeSim(HabitatSim):
         )
         self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
-        # Cache the snap point given scene.
-        self.scene_id_2_island_id: Dict[Any, Any] = {}
-
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
         return self._receptacles
@@ -548,22 +545,7 @@ class RearrangeSim(HabitatSim):
         """
         snap_point can return nan which produces hard to catch errors.
         """
-        if self.ep_info.scene_id not in self.scene_id_2_island_id:
-            island_areas = list(
-                map(
-                    self.pathfinder.island_area,
-                    range(self.pathfinder.num_islands),
-                )
-            )
-            largest_island_id = island_areas.index(max(island_areas))
-            self.scene_id_2_island_id[
-                self.ep_info.scene_id
-            ] = largest_island_id
-        else:
-            largest_island_id = self.scene_id_2_island_id[
-                self.ep_info.scene_id
-            ]
-        new_pos = self.pathfinder.snap_point(pos, largest_island_id)
+        new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
         return new_pos
 
     def _add_objs(
