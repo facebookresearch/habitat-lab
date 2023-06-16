@@ -11,7 +11,7 @@ from habitat.tasks.rearrange.utils import UsesRobotInterface
 
 
 @registry.register_measure
-class OvmmObjectToPlaceGoalDistance(Measure):
+class OVMMObjectToPlaceGoalDistance(Measure):
     """
     Euclidean distance from the target object to the goal.
     """
@@ -25,7 +25,7 @@ class OvmmObjectToPlaceGoalDistance(Measure):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmObjectToPlaceGoalDistance.cls_uuid
+        return OVMMObjectToPlaceGoalDistance.cls_uuid
 
     def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
@@ -44,7 +44,7 @@ class OvmmObjectToPlaceGoalDistance(Measure):
 
 
 @registry.register_measure
-class OvmmEEToPlaceGoalDistance(UsesRobotInterface, Measure):
+class OVMMEEToPlaceGoalDistance(UsesRobotInterface, Measure):
     """
     Euclidean distance from the end-effector to the goal.
     """
@@ -58,7 +58,7 @@ class OvmmEEToPlaceGoalDistance(UsesRobotInterface, Measure):
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmEEToPlaceGoalDistance.cls_uuid
+        return OVMMEEToPlaceGoalDistance.cls_uuid
 
     def reset_metric(self, *args, episode, **kwargs):
         self.update_metric(*args, episode=episode, **kwargs)
@@ -142,20 +142,20 @@ class ObjAnywhereOnGoal(Measure):
 
 
 @registry.register_measure
-class OvmmPlaceReward(PlaceReward):
+class OVMMPlaceReward(PlaceReward):
     cls_uuid: str = "ovmm_place_reward"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmPlaceReward.cls_uuid
+        return OVMMPlaceReward.cls_uuid
 
     @property
     def _ee_to_goal_dist_cls_uuid(self):
-        return OvmmEEToPlaceGoalDistance.cls_uuid
+        return OVMMEEToPlaceGoalDistance.cls_uuid
 
     @property
     def _obj_to_goal_dist_cls_uuid(self):
-        return OvmmObjectToPlaceGoalDistance.cls_uuid
+        return OVMMObjectToPlaceGoalDistance.cls_uuid
 
     @property
     def _obj_on_goal_cls_uuid(self):
@@ -163,12 +163,12 @@ class OvmmPlaceReward(PlaceReward):
 
 
 @registry.register_measure
-class OvmmPlacementStability(PlacementStability):
+class OVMMPlacementStability(PlacementStability):
     cls_uuid: str = "ovmm_placement_stability"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmPlacementStability.cls_uuid
+        return OVMMPlacementStability.cls_uuid
 
     @property
     def _obj_on_goal_cls_uuid(self):
@@ -176,16 +176,16 @@ class OvmmPlacementStability(PlacementStability):
 
 
 @registry.register_measure
-class OvmmPlaceSuccess(PlaceSuccess):
+class OVMMPlaceSuccess(PlaceSuccess):
     cls_uuid: str = "ovmm_place_success"
 
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return OvmmPlaceSuccess.cls_uuid
+        return OVMMPlaceSuccess.cls_uuid
 
     @property
     def _placement_stability_cls_uuid(self):
-        return OvmmPlacementStability.cls_uuid
+        return OVMMPlacementStability.cls_uuid
 
     @property
     def _obj_on_goal_cls_uuid(self):

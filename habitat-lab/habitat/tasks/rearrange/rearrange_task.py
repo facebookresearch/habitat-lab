@@ -16,7 +16,7 @@ from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
-from habitat.tasks.rearrange.obj_rearrange_sim import ObjectRearrangeSim
+from habitat.tasks.ovmm.ovmm_sim import OVMMSim
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     CacheHelper,
@@ -66,7 +66,7 @@ class RearrangeTask(NavigationTask):
         self.n_objs = len(dataset.episodes[0].targets)
         super().__init__(sim=sim, dataset=dataset, **kwargs)
         self.is_gripper_closed = False
-        self._sim: Union[RearrangeSim, ObjectRearrangeSim] = sim
+        self._sim: Union[RearrangeSim, OVMMSim] = sim
         self._ignore_collisions: List[Any] = []
         self._desired_resting = np.array(self._config.desired_resting_position)
         self._sim_reset = True
@@ -74,8 +74,9 @@ class RearrangeTask(NavigationTask):
         self._episode_id: str = ""
         self._cur_episode_step = 0
         self._should_place_robot = should_place_robot
-        self._picked_object_idx = 0             # TODO:
+        self._picked_object_idx = 0
         self._in_manip_mode = False
+        self._is_navmesh_violated = False
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
@@ -177,6 +178,8 @@ class RearrangeTask(NavigationTask):
         self._should_end = False
         self._done = False
         self._cur_episode_step = 0
+        self._is_navmesh_violated = False
+        self._picked_object_idx = 0
         if fetch_observations:
             self._sim.maybe_update_robot()
             return self._get_observations(episode)
@@ -215,6 +218,7 @@ class RearrangeTask(NavigationTask):
             action_args
         ):
             action_args["grip_action"] = None
+        self._is_navmesh_violated = False
         obs = super().step(action=action, episode=episode)
 
         self.prev_coll_accum = copy.copy(self.coll_accum)

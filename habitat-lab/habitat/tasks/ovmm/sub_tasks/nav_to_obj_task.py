@@ -15,8 +15,8 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import DynNavRLEnv
 
 
-@registry.register_task(name="CatNavToObjTask-v0")
-class CatDynNavRLEnv(DynNavRLEnv):
+@registry.register_task(name="OVMMNavToObjTask-v0")
+class OVMMDynNavRLEnv(DynNavRLEnv):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(
             config=config,
@@ -48,8 +48,9 @@ class CatDynNavRLEnv(DynNavRLEnv):
         return self._loaded_receptacle_categories
 
     def reset(self, episode: Episode):
-        obs = super().reset(episode)
+        self._receptacle_semantic_ids = {}
         self._cache_receptacles()
+        obs = super().reset(episode)
         self._nav_to_obj_goal = np.stack(
             [
                 view_point.agent_state.position

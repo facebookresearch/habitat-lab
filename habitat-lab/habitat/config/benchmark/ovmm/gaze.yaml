@@ -2,8 +2,8 @@
 
 defaults:
   - /habitat: habitat_config_base
-  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_pick
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
+  - /habitat/task/ovmm: gaze
   - /habitat/dataset/rearrangement: hssd
   - _self_
 
@@ -11,24 +11,28 @@ habitat:
   gym:
     auto_name: Pick
     obs_keys:
-      - robot_head_rgb
       - robot_head_depth
+      - start_receptacle
+      - object_segmentation
+      - start_recep_segmentation
       - object_embedding
       - joint
-      - is_holding
-      - relative_resting_position
   environment:
     max_episode_steps: 300
   simulator:
-    type: ObjectRearrangeSim-v0
+    type: OVMMSim-v0
     additional_object_paths:
       - data/objects/amazon_berkeley/configs/
       - data/objects/google_scanned/configs/
       - data/objects/ai2thorhab/configs/objects/
       - data/objects/floorplanner/configs/objects/
+    debug_render_goal: False
+    debug_render: False
     needs_markers: False
     concur_render: True
     auto_sleep: True
+    requires_textures: False
+    kinematic_mode: True
     agents:
       main_agent:
         radius: 0.3
@@ -36,21 +40,16 @@ habitat:
         robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
         robot_type: "StretchRobot"
         sim_sensors:
-           head_rgb_sensor:
-             height: 640
-             width: 480
-             hfov: 42
-             position: [0,1.31,0]
            head_depth_sensor:
              height: 640
              width: 480
              hfov: 42
-             position: [0,1.31,0]
+             position: [0, 1.31, 0]
            head_panoptic_sensor:
              height: 640
              width: 480
              hfov: 42
-             position: [0,1.31,0]
+             position: [0, 1.31, 0]
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True

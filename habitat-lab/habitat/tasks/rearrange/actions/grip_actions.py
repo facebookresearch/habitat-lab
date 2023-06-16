@@ -312,25 +312,42 @@ class GazeGraspAction(MagicGraspAction):
 
     def _snap_closest_valid_object(self):
         """Snaps closest valid object"""
+        sim_observations = self._sim._sensor_suite.get_observations(
+            self._sim.get_sensor_observations()
+        )
+        if isinstance(self._sim.robot, StretchRobot):
+            obj_seg = self._task.sensor_suite.get_observations(
+                observations=sim_observations,
+                episode=self._sim.ep_info,
+                task=self._task,
+            )["object_segmentation"]
+        else:
+            raise NotImplementedError(
+                "This robot dose not have GazeGraspAction."
+            )
         allowed_scene_obj_ids = [
             int(g.object_id) for g in self._sim.ep_info.candidate_objects
         ]
-        closest = np.argmin(
-            np.linalg.norm(
+        ee_pos = self.cur_robot.ee_transform.translation
+        distances = np.linalg.norm(
                 (
                     self._sim.get_scene_pos()[allowed_scene_obj_ids]
-                    - self._sim.robot.base_pos
+                    - ee_pos
                 )[:, [0, 2]],
                 axis=1,
             )
-        )
+        closest = np.argmin(distances)
+        if distances[closest] > self._grasp_thresh_dist:
+            return
+
         snap_obj_idx = np.array(self._sim.scene_obj_ids)[
             allowed_scene_obj_ids
         ][closest]
         self._task._picked_object_idx = self._sim.scene_obj_ids.index(
             snap_obj_idx
         )
-        self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
+        if np.sum(obj_seg) > 0:
+            self.cur_grasp_mgr.snap_to_obj(snap_obj_idx, force=True)
 
     def _grasp(self):
         if self._oracle_snap:

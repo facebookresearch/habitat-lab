@@ -18,6 +18,7 @@ defaults:
     - bad_called_terminate
     - ovmm_nav_to_obj_reward
     - num_steps
+    - navmesh_collision
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
@@ -28,7 +29,7 @@ defaults:
     - robot_start_compass_sensor
   - _self_
 
-type: CatNavToObjTask-v0
+type: OVMMNavToObjTask-v0
 reward_measure: ovmm_nav_to_obj_reward
 success_measure: ovmm_nav_to_obj_success
 success_reward: 10.0

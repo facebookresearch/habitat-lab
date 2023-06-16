@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Any
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -38,6 +39,8 @@ class PlaceReward(RearrangeReward):
         self._drop_pen_type = getattr(config, "drop_pen_type", "constant")
         self._stability_reward = config.stability_reward
         self._curr_step = 0
+        self._prev_reached_goal = False
+        self._max_steps_to_reach_surface = config.max_steps_to_reach_surface
         self._ee_resting_success_threshold = (
             config.ee_resting_success_threshold
         )
@@ -81,6 +84,8 @@ class PlaceReward(RearrangeReward):
         self._prev_dist = -1.0
         self._prev_dropped = not self._sim.grasp_mgr.is_grasped
         self._curr_step = 0
+        self._time_of_release = 0
+        self._prev_reached_goal = False
         super().reset_metric(
             *args,
             episode=episode,
@@ -115,16 +120,17 @@ class PlaceReward(RearrangeReward):
             # agent gets rewarded if distance to goal is greater than min_dist_to_goal
             if self._sparse_reward:
                 dist_to_goal = 0.0  # still use dense reward for returning to resting position
+            elif not self._use_ee_dist or not cur_picked:
+                # use object to goal distance if object is released or if not using ee distance to target
+                obj_to_goal_dist = task.measurements.measures[
+                    self._obj_to_goal_dist_cls_uuid
+                ].get_metric()
+                dist_to_goal = obj_to_goal_dist[str(picked_idx)]
             elif self._use_ee_dist:
                 ee_to_goal_dist = task.measurements.measures[
                     self._ee_to_goal_dist_cls_uuid
                 ].get_metric()
                 dist_to_goal = ee_to_goal_dist[str(picked_idx)]
-            else:
-                obj_to_goal_dist = task.measurements.measures[
-                    self._obj_to_goal_dist_cls_uuid
-                ].get_metric()
-                dist_to_goal = obj_to_goal_dist[str(picked_idx)]
             min_dist = self._min_dist_to_goal
         else:
             # Second stage reward, if object is at goal and the agent has released the object
@@ -132,15 +138,31 @@ class PlaceReward(RearrangeReward):
             dist_to_goal = ee_to_rest_distance
             min_dist = self._ee_resting_success_threshold
 
-        # Penalize and end the episode if object is dropped but not on goal, if object is on goal reward the agent
-        if (not self._prev_dropped) and (not cur_picked):
-            self._prev_dropped = True
-            if obj_at_goal:
+        if not cur_picked:
+            # first time the object is dropped, we record the time of release
+            if not self._prev_dropped:
+                self._time_of_release = self._curr_step
+                self._prev_dropped = True
+
+            time_since_release = self._curr_step - self._time_of_release
+            if (
+                obj_at_goal
+                and (not self._prev_reached_goal)
+                and time_since_release <= self._max_steps_to_reach_surface
+            ):
+                # if the object reach the surface in time, it receives a place reward
                 reward += self._place_reward
                 # If we just transitioned to the next stage our current
                 # distance is stale.
                 self._prev_dist = -1
-            else:
+                self._prev_reached_goal = True
+            elif obj_at_goal and self._prev_reached_goal:
+                # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
+                reward += self._stability_reward
+            elif (
+                not obj_at_goal
+                and time_since_release >= self._max_steps_to_reach_surface
+            ):
                 # Dropped at wrong location
                 drop_pen = self._drop_pen
                 if self._drop_pen_type == "penalize_remaining_dist":
@@ -155,11 +177,6 @@ class PlaceReward(RearrangeReward):
                     self._task.should_end = True
                     self._metric = reward
                     return
-
-        # Reward stable placements: If the object is dropped and stays on goal in subsequent steps
-        elif self._prev_dropped and (not cur_picked) and obj_at_goal:
-            reward += self._stability_reward
-
 
         # Reward the agent based on distance to goal/resting position
         if dist_to_goal >= min_dist:
@@ -205,6 +222,7 @@ class PlacementStability(Measure):
             self.uuid,
             [
                 self._obj_on_goal_cls_uuid,
+                ObjectAtRest.cls_uuid,
             ],
         )
         self.update_metric(
@@ -221,8 +239,12 @@ class PlacementStability(Measure):
             self._obj_on_goal_cls_uuid
         ].get_metric()[str(picked_idx)]
 
+        object_at_rest = task.measurements.measures[
+            ObjectAtRest.cls_uuid
+        ].get_metric()
+
         is_holding = self._sim.grasp_mgr.is_grasped
-        if is_obj_at_goal and not is_holding:
+        if is_obj_at_goal and object_at_rest and not is_holding:
             self._curr_stability_steps += 1  # increment
         else:
             self._curr_stability_steps = 0  # reset
@@ -300,3 +322,74 @@ class PlaceSuccess(Measure):
             and ee_to_rest_distance < self._ee_resting_success_threshold
             and is_stable
         )
+
+
+@registry.register_measure
+class PickedObjectAngularVel(Measure):
+    cls_uuid: str = "picked_object_angular_vel"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickedObjectAngularVel.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = None
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        rom = self._sim.get_rigid_object_manager()
+        picked_idx = task._picked_object_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
+        ro = rom.get_object_by_id(abs_obj_id)
+        self._metric = ro.angular_velocity.length()
+
+@registry.register_measure
+class PickedObjectLinearVel(Measure):
+    cls_uuid: str = "picked_object_linear_vel"
+
+    def __init__(self, sim, config, *args, **kwargs):
+        self._config = config
+        self._sim = sim
+        super().__init__(**kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return PickedObjectLinearVel.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = None
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        rom = self._sim.get_rigid_object_manager()
+        picked_idx = task._picked_object_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
+        ro = rom.get_object_by_id(abs_obj_id)
+        self._metric = ro.linear_velocity.length()
+    
+@registry.register_measure
+class ObjectAtRest(Measure):
+    cls_uuid: str = "object_at_rest"
+
+    def __init__(self, sim, config, *args: Any, **kwargs: Any) -> None:
+        self._linear_vel_thresh = config.linear_vel_thresh
+        self._angular_vel_thresh = config.angular_vel_thresh
+        self._sim = sim
+        super().__init__(*args, **kwargs)
+    
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return ObjectAtRest.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        self._metric = None
+    
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        rom = self._sim.get_rigid_object_manager()
+        picked_idx = task._picked_object_idx
+        abs_obj_id = self._sim.scene_obj_ids[picked_idx]
+        ro = rom.get_object_by_id(abs_obj_id)
+        self._metric = ro.linear_velocity.length() < self._linear_vel_thresh and ro.angular_velocity.length() < self._angular_vel_thresh
