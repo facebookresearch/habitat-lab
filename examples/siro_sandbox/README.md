@@ -64,9 +64,11 @@ habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
 # Workaround to avoid broken skinned humanoid
-Following the instructions above, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
+Following the default install instructions, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
 
-Steps to work around this by reverting to a rigid-skeleton humanoid:
+Update June 16: `--hide-humanoid-in-gui` is the preferred workaround (documented below). This simply hides the humanoid in the GUI viewport.
+
+Alternately, here's an older, outdated workaround where we revert to a rigid-skeleton humanoid. This workaround is worse than `--hide-humanoid-in-gui` because the rigid skeleton is also rendered into observations fed to policies, which is wrong, but we leave these steps here for reference:
 1. Make a copy (or symlink) of `female2_0.urdf`.
     * `cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_rigid.urdf`
 2. Update or override your config. Your humanoid is probably either `main_agent` or `agent_1`.
@@ -82,6 +84,9 @@ If your FPS is very low, consider this workaround. This habitat-sim commit repla
 * Rebuild habitat-sim.
 
 # Command-line Options
+
+## Hack to hide the skinned humanoid in the GUI viewport
+Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
 
 ## Saving episode data
 Use `--save-filepath-base my_session`. When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
