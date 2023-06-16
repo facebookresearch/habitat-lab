@@ -479,8 +479,11 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.island_radius(p) for p in self._navmesh_vertices
         ]
         self._max_island_size = max(self._island_sizes)
+        largest_size_vertex = self._navmesh_vertices[
+            np.argmax(self._island_sizes)
+        ]
         self._largest_island_idx = self.pathfinder.get_island(
-            self._navmesh_vertices[np.argmax(self._island_sizes)]
+            largest_size_vertex
         )
 
     @property
