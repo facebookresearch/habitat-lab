@@ -133,8 +133,8 @@ class RearrangeSim(HabitatSim):
         )
         self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
-        # Cache the snap point given scene
-        self.scene_id_2_island_id = {}
+        # Cache the snap point given scene.
+        self.scene_id_2_island_id: Dict[Any, Any] = {}
 
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
@@ -556,12 +556,14 @@ class RearrangeSim(HabitatSim):
                 )
             )
             largest_island_id = island_areas.index(max(island_areas))
-            self.scene_id_2_island_id[self.ep_info.scene_id] = largest_island_id
+            self.scene_id_2_island_id[
+                self.ep_info.scene_id
+            ] = largest_island_id
         else:
-            largest_island_id = self.scene_id_2_island_id[self.ep_info.scene_id]
-        new_pos = self.pathfinder.snap_point(
-            pos, largest_island_id
-        )
+            largest_island_id = self.scene_id_2_island_id[
+                self.ep_info.scene_id
+            ]
+        new_pos = self.pathfinder.snap_point(pos, largest_island_id)
         return new_pos
 
     def _add_objs(
