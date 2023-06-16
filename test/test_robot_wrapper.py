@@ -305,8 +305,7 @@ def test_fetch_robot_wrapper(fixed_base):
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
 
         # add the robot to the world via the wrapper
@@ -460,8 +459,7 @@ def test_franka_robot_wrapper():
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
 
         # add the robot to the world via the wrapper
@@ -582,8 +580,7 @@ def test_spot_robot_wrapper(fixed_base):
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_spot_arm/urdf/hab_spot_arm.urdf"
@@ -721,8 +718,7 @@ def test_stretch_robot_wrapper(fixed_base):
         # compute a navmesh on the ground plane
         navmesh_settings = habitat_sim.NavMeshSettings()
         navmesh_settings.set_defaults()
-        navmesh_settings.include_static_objects = True
-        sim.recompute_navmesh(sim.pathfinder, navmesh_settings)
+        sim.recompute_navmesh(sim.pathfinder, navmesh_settings, True)
         sim.navmesh_visualization = True
         # add the robot to the world via the wrapper
         robot_path = "data/robots/hab_stretch/urdf/hab_stretch.urdf"

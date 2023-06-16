@@ -347,6 +347,7 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             },
         )
 
+# <<<<<<< HEAD
         # configure default navmesh parameters to match the configured agent
         if self.habitat_config.default_agent_navmesh:
             sim_config.navmesh_settings = habitat_sim.nav.NavMeshSettings()
@@ -357,6 +358,8 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 self.habitat_config.navmesh_include_static_objects
             )
 
+# =======
+# >>>>>>> abc3e2d6 (Revert "Adds hab-lab changes for including static objects in navmesh settings (#1400)")
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
             assert isinstance(sensor, HabitatSimSensor)

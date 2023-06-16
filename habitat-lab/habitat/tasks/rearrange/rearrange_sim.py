@@ -475,8 +475,11 @@ class RearrangeSim(HabitatSim):
             self.navmesh_settings.agent_radius = agent_config.radius
             self.navmesh_settings.agent_height = agent_config.height
             self.navmesh_settings.agent_max_climb = 0.01
-            self.navmesh_settings.include_static_objects = True
-            self.recompute_navmesh(self.pathfinder, self.navmesh_settings)
+            self.recompute_navmesh(
+                self.pathfinder,
+                self.navmesh_settings,
+                include_static_objects=True,
+            )
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.pathfinder.save_nav_mesh(navmesh_path)
 
