@@ -3,15 +3,46 @@
 defaults:
   - pop_play_kinematic_oracle_humanoid_spot_fp
   - /habitat_baselines/rl/auxiliary_losses: bdp_discrim
+  - /habitat/task/lab_sensors:
+    - action_history
   - override /habitat_baselines/rl/agent: bdp
   - _self_
 
+habitat:
+  gym:
+    obs_keys:
+      - agent_0_articulated_agent_arm_depth
+      - agent_0_relative_resting_position
+      - agent_0_obj_start_sensor
+      - agent_0_obj_goal_sensor
+      - agent_0_obj_start_gps_compass
+      - agent_0_obj_goal_gps_compass
+      - agent_0_is_holding
+      - agent_0_ee_pos
+      - agent_0_localization_sensor
+      - agent_0_has_finished_oracle_nav
+      - agent_0_other_agent_gps
+      - agent_0_should_replan
+      - agent_1_head_depth
+      - agent_1_relative_resting_position
+      - agent_1_obj_start_sensor
+      - agent_1_obj_goal_sensor
+      - agent_1_obj_start_gps_compass
+      - agent_1_obj_goal_gps_compass
+      - agent_1_is_holding
+      - agent_1_ee_pos
+      - agent_1_localization_sensor
+      - agent_1_has_finished_oracle_nav
+      - agent_1_other_agent_gps
+      - agent_1_should_replan
+      - agent_1_action_history
 habitat_baselines:
   rl:
     auxiliary_losses:
       bdp_discrim:
         loss_scale: 0.1
         behavior_latent_dim: 16
+        input_keys: ['action_history']
     agent:
       # BDP uses a behavior latent to create a population, instead of multiple independent policies.
       num_pool_agents_per_type: [1, 1]
@@ -31,3 +62,4 @@ habitat_baselines:
               - "obj_start_sensor"
               - "obj_goal_sensor"
               - "behav_latent"
+              - "action_history"

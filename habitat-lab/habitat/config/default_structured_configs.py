@@ -368,6 +368,8 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     navmesh_offset_for_agent_placement: Optional[List[float]] = None
     # Simulation frequency for velocity control
     sim_freq: float = 120.0
+    # Distance threshold between two agents to issue a stop action
+    agents_dist_thresh: float = -1.0
 
 
 # -----------------------------------------------------------------------------
@@ -603,6 +605,12 @@ class ShouldReplanSensorConfig(LabSensorConfig):
     x_len: Optional[float] = None
     y_len: Optional[float] = None
     agent_idx: int = 0
+
+
+@dataclass
+class ActionHistorySensorConfig(LabSensorConfig):
+    type: str = "ActionHistorySensor"
+    window_size: int = 20
 
 
 @dataclass
@@ -2042,6 +2050,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="should_replan",
     node=ShouldReplanSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.action_history",
+    group="habitat/task/lab_sensors",
+    name="action_history",
+    node=ActionHistorySensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",

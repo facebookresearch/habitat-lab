@@ -217,7 +217,8 @@ class Policy(abc.ABC):
         pass
 
 
-def get_aux_modules(aux_loss_config, action_space, net):
+# TODO: SIRo hack. We need to make aux modules generally support obs space input.
+def get_aux_modules(aux_loss_config, action_space, obs_space, net):
     aux_loss_modules = nn.ModuleDict()
     if aux_loss_config is None:
         return aux_loss_modules
@@ -226,6 +227,7 @@ def get_aux_modules(aux_loss_config, action_space, net):
 
         aux_loss_modules[aux_loss_name] = aux_loss(
             action_space,
+            obs_space,
             net,
             **cfg,
         )

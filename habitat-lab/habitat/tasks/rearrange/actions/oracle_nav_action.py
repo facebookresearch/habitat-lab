@@ -467,6 +467,20 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         # Get the robot position
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
 
+        # Get the current robot/human pos assuming human is agent 1
+        _robot_pos = np.array(
+            self._sim.get_agent_data(
+                0
+            ).articulated_agent.base_transformation.translation
+        )[[0, 2]]
+        _human_pos = np.array(
+            self._sim.get_agent_data(
+                1
+            ).articulated_agent.base_transformation.translation
+        )[[0, 2]]
+        # Compute the distance
+        robot_human_dis = np.linalg.norm(_robot_pos - _human_pos)
+
         if curr_path_points is None:
             raise RuntimeError("Pathfinder returns empty list")
         else:
@@ -556,6 +570,13 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
                 if need_move_backward:
                     vel[0] = -1 * vel[0]
+
+                # If the human and robot are too close to each other, pause the robot
+                if (
+                    self._config.agents_dist_thresh != -1
+                    and robot_human_dis < self._config.agents_dist_thresh
+                ):
+                    vel = [0, 0]
 
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelNonCylinderAction.step(
