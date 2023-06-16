@@ -133,6 +133,9 @@ class RearrangeSim(HabitatSim):
         )
         self._extra_runtime_perf_stats: Dict[str, Any] = {}
 
+        # Cache the snap point given scene
+        self.scene_id_2_island_id = {}
+
     @property
     def receptacles(self) -> Dict[str, AABBReceptacle]:
         return self._receptacles
@@ -492,31 +495,20 @@ class RearrangeSim(HabitatSim):
         """
         snap_point can return nan which produces hard to catch errors.
         """
-        new_pos = self.pathfinder.snap_point(pos)
-        island_radius = self.pathfinder.island_radius(new_pos)
-
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # The point is not valid or not in a different island. Find a
-            # different point nearby that is on a different island and is
-            # valid.
-            new_pos = self.pathfinder.get_random_navigable_point_near(
-                pos, 1.5, 1000
+        if self.ep_info.scene_id not in self.scene_id_2_island_id:
+            island_areas = list(
+                map(
+                    self.pathfinder.island_area,
+                    range(self.pathfinder.num_islands),
+                )
             )
-            island_radius = self.pathfinder.island_radius(new_pos)
-
-        if np.isnan(new_pos[0]) or island_radius != self._max_island_size:
-            # This is a last resort, take a navmesh vertex that is closest
-            use_verts = [
-                x
-                for s, x in zip(self._island_sizes, self._navmesh_vertices)
-                if s == self._max_island_size
-            ]
-            distances = np.linalg.norm(
-                np.array(pos).reshape(1, 3) - use_verts, axis=-1
-            )
-            closest_idx = np.argmin(distances)
-            new_pos = self._navmesh_vertices[closest_idx]
-
+            largest_island_id = island_areas.index(max(island_areas))
+            self.scene_id_2_island_id[self.ep_info.scene_id] = largest_island_id
+        else:
+            largest_island_id = self.scene_id_2_island_id[self.ep_info.scene_id]
+        new_pos = self.pathfinder.snap_point(
+            pos, largest_island_id
+        )
         return new_pos
 
     def _add_objs(
