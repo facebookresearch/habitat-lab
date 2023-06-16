@@ -1402,7 +1402,7 @@ class OVMMDatasetConfig(DatasetConfig):
     transformations_matrix_path: Optional[
         str
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
-    # Not implemented yet for other datasets
+    # Other datasets do not allow using a subset of episodes
     episode_indices_range: Tuple[int, int] = (0, -1)
     episode_ids: List[int] = []
 

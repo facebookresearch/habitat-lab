@@ -243,8 +243,11 @@ class RobotStartGPSSensor(EpisodicGPSSensor):
     def __init__(self, sim, config: "DictConfig", *args, **kwargs):
         super().__init__(sim=sim, config=config)
 
-    def get_agent_start_position_and_rotation(self, episode, task):
-        return task._robot_start_position, quaternion_from_coeff(
+    def get_agent_start_position(self, episode, task):
+        return task._robot_start_position
+
+    def get_agent_start_rotation(self, episode, task):
+        return quaternion_from_coeff(
             task._robot_start_rotation
         )
 

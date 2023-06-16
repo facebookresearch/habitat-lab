@@ -446,8 +446,11 @@ class EpisodicGPSSensor(Sensor):
             dtype=np.float32,
         )
 
-    def get_agent_start_position_and_rotation(self, episode, task):
-        return episode.start_position, quaternion_from_coeff(
+    def get_agent_start_position(self, episode, task):
+        return episode.start_position
+
+    def get_agent_start_rotation(self, episode, task):
+        return quaternion_from_coeff(
             episode.start_rotation
         )
 
@@ -459,9 +462,9 @@ class EpisodicGPSSensor(Sensor):
         self, observations, episode, task, *args: Any, **kwargs: Any
     ):
 
-        start_position, rotation_world_start = self.get_agent_start_position_and_rotation(
-            episode, task
-        )
+        start_position = self.get_agent_start_position(episode, task)
+        rotation_world_start = self.get_agent_start_rotation(episode, task)
+
         origin = np.array(start_position, dtype=np.float32)
 
         agent_position = self.get_agent_current_position(self._sim)
