@@ -6,4 +6,4 @@ defaults:
 type: ObjectNav-v1
 split: train
 data_path: data/datasets/objectnav/procthor-hab/{split}/{split}.json.gz
-scenes_dir: data/scene_datasets/ai2thorhab/configs/scenes/ProcTHOR
+scenes_dir: data/scene_datasets/ai2thor-hab/ai2thor-hab/configs/scenes/ProcTHOR/

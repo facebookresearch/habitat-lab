@@ -12,7 +12,7 @@ habitat:
     max_episode_steps: 500
 
   simulator:
-    scene_dataset: "data/scene_datasets/ai2thorhab/ai2thor.scene_dataset_config.json"
+    scene_dataset: "data/scene_datasets/ai2thor-hab/ai2thor-hab/ai2thor-hab.scene_dataset_config.json"
     navmesh_include_static_objects: True
     turn_angle: 30
     tilt_angle: 30
