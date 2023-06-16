@@ -544,40 +544,6 @@ class RearrangeEpisodeGenerator:
             targ_sampler_name_to_obj_sampler_names[
                 sampler_name
             ] = targ_sampler_cfg["params"]["object_samplers"]
-        dataset_name = osp.basename(self.cfg.dataset_path).split(".", 1)[0]
-        receptacle_cache_path = osp.join(
-            "data/cache/receptacle_viewpoints",
-            dataset_name,
-            scene_name + ".pkl",
-        )
-        if osp.exists(receptacle_cache_path) and not self._ignore_cache:
-            with open(receptacle_cache_path, "rb") as f:
-                _, viewable_receptacle_names = pickle.load(f)
-            receptacles = find_receptacles(self.sim)
-            viewable_receptacles = [
-                rec
-                for rec in receptacles
-                if rec.name in viewable_receptacle_names
-            ]
-            logger.info(
-                f"{len(viewable_receptacles)} viewable receptacles found in cache."
-            )
-        else:
-            receptacles = find_receptacles(self.sim)
-            navigable_receptacles = get_navigable_receptacles(
-                self.sim, receptacles
-            )
-            populate_semantic_graph(self.sim)
-            (
-                receptacle_viewpoints,
-                viewable_receptacles,
-            ) = get_receptacle_viewpoints(self.sim, navigable_receptacles)
-            viewable_receptacle_names = {
-                rec.name for rec in viewable_receptacles
-            }
-            logger.info(
-                f"{len(viewable_receptacles)}/{len(receptacles)} viewable receptacles found."
-            )
 
         viewable_receptacles = self.get_receptacles(scene_name)
         for sampler in itertools.chain(
