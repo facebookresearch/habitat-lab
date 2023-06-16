@@ -37,7 +37,7 @@ class PointNavDatasetV1(Dataset):
     def check_config_paths_exist(config: "DictConfig") -> bool:
         assert os.path.exists(
             config.data_path.format(split=config.split)
-        ), "Episde dataset: {} does not exist".format(
+        ), "Episode dataset: {} does not exist".format(
             config.data_path.format(split=config.split)
         )
         assert os.path.exists(
