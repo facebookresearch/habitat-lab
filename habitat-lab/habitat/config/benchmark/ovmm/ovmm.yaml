@@ -3,7 +3,7 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: rgbdp_head_rgb_third_agent
-  - /habitat/task/rearrange: ovmm
+  - /habitat/task/ovmm: ovmm
   - /habitat/dataset/rearrangement: hssd
   - _self_
 
@@ -33,7 +33,7 @@ habitat:
   environment:
     max_episode_steps: 1250
   simulator:
-    type: ObjectRearrangeSim-v0
+    type: OVMMSim-v0
     additional_object_paths:
       - data/objects/amazon_berkeley/configs/
       - data/objects/google_scanned/configs/
@@ -68,7 +68,6 @@ habitat:
       enable_physics: True
     needs_markers: false
   dataset:
+    data_path: data/episodes/rearrange/v4/val/cat_npz-exp-with_init_poses.json.gz
     split: val
 
-  task:
-    goal_type: 'ovmm'

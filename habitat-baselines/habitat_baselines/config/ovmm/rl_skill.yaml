@@ -1,13 +1,16 @@
 # @package _global_
 
 defaults:
-  - /benchmark/rearrange: ovmm
+  - /benchmark/ovmm: gaze
   - /habitat_baselines: habitat_baselines_rl_config_base
+  - /habitat_baselines/rl/policy/obs_transforms:
+    - resize_shortest_edge_base
+    - center_cropper_base
   - _self_
 
 habitat_baselines:
   verbose: False
-  trainer_name: "ddppo"
+  trainer_name: "ver"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
@@ -17,7 +20,8 @@ habitat_baselines:
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   # 26 environments will just barely be below 16gb.
-  num_environments: 1
+  # 20 environments will just barely be below 11gb.
+  num_environments: 20
   checkpoint_folder: "data/new_checkpoints"
   num_updates: -1
   total_num_steps: 1.0e8
@@ -33,13 +37,51 @@ habitat_baselines:
 
   rl:
     policy:
-        name: "PointNavResNetPolicy"
-        action_distribution_type: "gaussian"
-        action_dist:
-           use_log_std: True
-           clamp_std: True
-           std_init: -1.0
-           use_std_param: True
+      name: "PointNavResNetPolicy"
+      action_distribution_type: "gaussian"
+      no_downscaling: True
+      action_dist:
+        use_log_std: True
+        clamp_std: True
+        std_init: -1.0
+        use_std_param: True
+        max_log_std: 2
+      obs_transforms:
+        resize_shortest_edge:
+          type: ResizeShortestEdge
+          size: 120
+          channels_last: True
+          trans_keys:
+            - robot_head_rgb
+            - robot_head_depth
+            - robot_head_panoptic
+            - object_segmentation
+            - receptacle_segmentation
+            - start_recep_segmentation
+            - goal_recep_segmentation
+            - ovmm_nav_goal_segmentation
+          semantic_keys:
+            - robot_head_panoptic
+            - object_segmentation
+            - receptacle_segmentation
+            - start_recep_segmentation
+            - goal_recep_segmentation
+            - ovmm_nav_goal_segmentation
+        center_cropper:
+          type: CenterCropper
+          height: 160
+          width: 120
+          channels_last: True
+          trans_keys:
+            - robot_head_rgb
+            - robot_head_depth
+            - robot_head_panoptic
+            - object_segmentation
+            - receptacle_segmentation
+            - start_recep_segmentation
+            - goal_recep_segmentation
+            - ovmm_nav_goal_segmentation
+    
     ppo:
       # ppo params
       clip_param: 0.2

@@ -732,6 +732,7 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
         mesh_assignments: cr.containers.StridedArrayView1D = scene.field(
             mn.trade.SceneField.MESH
         )
+
         mesh_transformations: List[
             mn.Matrix4
         ] = mn.scenetools.absolute_field_transformations3d(

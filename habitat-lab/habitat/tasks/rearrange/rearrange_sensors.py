@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import pickle
 from typing import Any, Optional
 
 import numpy as np
@@ -13,10 +12,7 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-from habitat.datasets.rearrange.rearrange_dataset import (
-    ObjectRearrangeDatasetV0,
-    ObjectRearrangeEpisode,
-)
+
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -28,238 +24,6 @@ from habitat.tasks.rearrange.utils import (
 )
 from habitat.tasks.utils import cartesian_to_polar
 
-
-@registry.register_sensor
-class ObjectCategorySensor(Sensor):
-    cls_uuid: str = "object_category"
-
-    def __init__(
-        self,
-        sim,
-        config,
-        dataset: "ObjectRearrangeDatasetV0",
-        category_attribute="object_category",
-        name_to_id_mapping="obj_category_to_obj_category_id",
-        *args: Any,
-        **kwargs: Any,
-    ):
-        self._sim = sim
-        self._dataset = dataset
-        self._category_attribute = category_attribute
-        self._name_to_id_mapping = name_to_id_mapping
-
-        super().__init__(config=config)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.cls_uuid
-
-    def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.SEMANTIC
-
-    def _get_observation_space(self, *args: Any, **kwargs: Any):
-        sensor_shape = (1,)
-        max_value = max(
-            getattr(self._dataset, self._name_to_id_mapping).values()
-        )
-
-        return spaces.Box(
-            low=0, high=max_value, shape=sensor_shape, dtype=np.int64
-        )
-
-    def get_observation(
-        self,
-        observations,
-        *args: Any,
-        episode: ObjectRearrangeEpisode,
-        **kwargs: Any,
-    ) -> Optional[np.ndarray]:
-        category_name = getattr(episode, self._category_attribute)
-        return np.array(
-            [getattr(self._dataset, self._name_to_id_mapping)[category_name]],
-            dtype=np.int64,
-        )
-
-
-@registry.register_sensor
-class ObjectEmbeddingSensor(Sensor):
-    cls_uuid: str = "object_embedding"
-
-    def __init__(
-        self,
-        sim,
-        config,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        self._config = config
-        self._dimensionality = self._config.dimensionality
-        with open(config.embeddings_file, "rb") as f:
-            self._embeddings = pickle.load(f)
-
-        super().__init__(config=config)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.cls_uuid
-
-    def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(self._dimensionality,),
-            low=np.finfo(np.float32).min,
-            high=np.finfo(np.float32).max,
-            dtype=np.float32,
-        )
-
-    def get_observation(self, observations, *args, episode, **kwargs):
-        category_name = episode.object_category
-        return self._embeddings[category_name]
-
-
-@registry.register_sensor
-class GoalReceptacleSensor(ObjectCategorySensor):
-    cls_uuid: str = "goal_receptacle"
-
-    def __init__(
-        self,
-        sim,
-        config,
-        dataset: "ObjectRearrangeDatasetV0",
-        *args: Any,
-        **kwargs: Any,
-    ):
-        super().__init__(
-            sim=sim,
-            config=config,
-            dataset=dataset,
-            category_attribute="goal_recep_category",
-            name_to_id_mapping="recep_category_to_recep_category_id",
-        )
-
-
-@registry.register_sensor
-class StartReceptacleSensor(ObjectCategorySensor):
-    cls_uuid: str = "start_receptacle"
-
-    def __init__(
-        self,
-        sim,
-        config,
-        dataset: "ObjectRearrangeDatasetV0",
-        *args: Any,
-        **kwargs: Any,
-    ):
-        super().__init__(
-            sim=sim,
-            config=config,
-            dataset=dataset,
-            category_attribute="start_recep_category",
-            name_to_id_mapping="recep_category_to_recep_category_id",
-        )
-
-
-@registry.register_sensor
-class ObjectSegmentationSensor(Sensor):
-    cls_uuid: str = "object_segmentation"
-    panoptic_uuid: str = "robot_head_panoptic"
-
-    def __init__(
-        self,
-        sim,
-        config,
-        *args: Any,
-        **kwargs: Any,
-    ):
-        self._config = config
-        self._blank_out_prob = self._config.blank_out_prob
-        self._sim = sim
-        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
-        self._resolution = (
-            sim.agents[0]
-            ._sensors[self.panoptic_uuid]
-            .specification()
-            .resolution
-        )
-
-        super().__init__(config=config)
-
-    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
-        return self.cls_uuid
-
-    def _get_sensor_type(self, *args: Any, **kwargs: Any):
-        return SensorTypes.TENSOR
-
-    def _get_observation_space(self, *args, **kwargs):
-        return spaces.Box(
-            shape=(
-                self._resolution[0],
-                self._resolution[1],
-                1,
-            ),
-            low=0,
-            high=1,
-            dtype=np.uint8,
-        )
-
-    def get_observation(self, observations, *args, episode, task, **kwargs):
-        if np.random.random() < self._blank_out_prob:
-            return np.zeros_like(
-                observations[self.panoptic_uuid], dtype=np.uint8
-            )
-        else:
-            segmentation_sensor = np.zeros_like(
-                observations[self.panoptic_uuid], dtype=np.uint8
-            )
-            for g in episode.candidate_objects:
-                segmentation_sensor = segmentation_sensor | (
-                    observations[self.panoptic_uuid]
-                    == self._sim.scene_obj_ids[int(g.object_id)]
-                    + self._instance_ids_start
-                )
-            return segmentation_sensor
-
-
-@registry.register_sensor
-class RecepSegmentationSensor(ObjectSegmentationSensor):
-    cls_uuid: str = "recep_segmentation"
-
-    def _get_recep_goals(self, episode):
-        raise NotImplementedError
-
-    def get_observation(self, observations, *args, episode, task, **kwargs):
-        recep_goals = self._get_recep_goals(episode)
-        if np.random.random() < self._config.blank_out_prob:
-            return np.zeros_like(
-                observations[self.panoptic_uuid], dtype=np.uint8
-            )
-        else:
-            segmentation_sensor = np.zeros_like(
-                observations[self.panoptic_uuid], dtype=np.uint8
-            )
-            for g in recep_goals:
-                segmentation_sensor = segmentation_sensor | (
-                    observations[self.panoptic_uuid]
-                    == int(g.object_id)
-                    + self._sim.habitat_config.instance_ids_start
-                )
-            return segmentation_sensor
-
-
-@registry.register_sensor
-class StartRecepSegmentationSensor(RecepSegmentationSensor):
-    cls_uuid: str = "start_recep_segmentation"
-
-    def _get_recep_goals(self, episode):
-        return episode.candidate_start_receps
-
-
-@registry.register_sensor
-class GoalRecepSegmentationSensor(RecepSegmentationSensor):
-    cls_uuid: str = "goal_recep_segmentation"
-
-    def _get_recep_goals(self, episode):
-        return episode.candidate_goal_receps
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -1067,6 +831,60 @@ class ForceTerminate(Measure):
             self._metric = False
 
 
+
+@registry.register_measure
+class RobotCollisionsTerminate(Measure):
+    """
+    If the accumulated force throughout this episode exceeds the limit.
+    """
+
+    cls_uuid: str = "robot_collisions_terminate"
+
+    def __init__(self, *args, sim, config, task, **kwargs):
+        self._sim = sim
+        self._config = config
+        self._max_num_collisions = self._config.max_num_collisions
+        self._task = task
+        super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return RobotCollisionsTerminate.cls_uuid
+
+    def reset_metric(self, *args, episode, task, observations, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self.uuid,
+            [
+                RobotCollisions.cls_uuid,
+            ],
+        )
+
+        self.update_metric(
+            *args,
+            episode=episode,
+            task=task,
+            observations=observations,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, episode, task, observations, **kwargs):
+        robot_collisions = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        total_collisions = robot_collisions["total_collisions"]
+        if (
+            self._max_num_collisions >= 0
+            and total_collisions > self._max_num_collisions
+        ):
+            rearrange_logger.debug(
+                f"Collisions count={self._max_num_collisions} exceeded {self._max_num_collisions}, ending episode"
+            )
+            self._task.should_end = True
+            self._metric = True
+        else:
+            self._metric = False
+
+
 @registry.register_measure
 class DidViolateHoldConstraintMeasure(UsesRobotInterface, Measure):
     cls_uuid: str = "did_violate_hold_constraint"
@@ -1109,6 +927,10 @@ class RearrangeReward(UsesRobotInterface, Measure):
         self._max_force_pen = self._config.max_force_pen
         self._constraint_violate_pen = self._config.constraint_violate_pen
         self._force_end_pen = self._config.force_end_pen
+        self._navmesh_violate_pen = self._config.navmesh_violate_pen
+        self._robot_collisions_pen = self._config.robot_collisions_pen
+        self._robot_collisions_end_pen = self._config.robot_collisions_end_pen
+        self._prev_num_collisions = 0
         super().__init__(*args, sim=sim, config=config, task=task, **kwargs)
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
@@ -1117,8 +939,11 @@ class RearrangeReward(UsesRobotInterface, Measure):
             [
                 RobotForce.cls_uuid,
                 ForceTerminate.cls_uuid,
+                RobotCollisions.cls_uuid,
+                RobotCollisionsTerminate.cls_uuid,
             ],
         )
+        self._prev_num_collisions = 0
 
         self.update_metric(
             *args,
@@ -1141,9 +966,24 @@ class RearrangeReward(UsesRobotInterface, Measure):
         force_terminate = task.measurements.measures[
             ForceTerminate.cls_uuid
         ].get_metric()
+        collisions_terminate = task.measurements.measures[
+            RobotCollisionsTerminate.cls_uuid
+        ].get_metric()
         if force_terminate:
             reward -= self._force_end_pen
+        if collisions_terminate:
+            reward -= self._robot_collisions_end_pen
+        if (('base_velocity' in task.actions or
+        'move_forward' in task.actions) and task._is_navmesh_violated):
+            reward -= self._navmesh_violate_pen
 
+        robot_collisions = task.measurements.measures[
+            RobotCollisions.cls_uuid
+        ].get_metric()
+        collisions_added_in_step = robot_collisions['total_collisions'] - self._prev_num_collisions
+        if collisions_added_in_step > 0:
+            reward -= self._robot_collisions_pen
+        self._prev_num_collisions = robot_collisions['total_collisions']
         self._metric = reward
 
     def _get_coll_reward(self):
@@ -1262,3 +1102,25 @@ class CameraPoseSensor(Sensor):
         return self._sim._sensors[
             "robot_head_rgb"
         ]._sensor_object.node.transformation
+
+
+@registry.register_measure
+class NavmeshCollision(Measure):
+    """
+    Returns 1 if the agent has called the stop action and 0 otherwise.
+    """
+
+    cls_uuid: str = "navmesh_collision"
+
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return NavmeshCollision.cls_uuid
+
+    def reset_metric(self, *args, **kwargs):
+        self._metric = 0
+        self.update_metric(*args, **kwargs)
+
+    def update_metric(self, *args, task, **kwargs):
+        if ('base_velocity' in task.actions or
+        'move_forward' in task.actions) and task._is_navmesh_violated:
+            self._metric += 1

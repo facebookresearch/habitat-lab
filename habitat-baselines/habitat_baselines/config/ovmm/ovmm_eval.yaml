@@ -1,0 +1,29 @@
+# @package _global_
+
+defaults:
+  - /benchmark/ovmm: ovmm
+  - /habitat_baselines: habitat_baselines_rl_config_base
+  - _self_
+
+habitat_baselines:
+  verbose: False
+  torch_gpu_id: 0
+  tensorboard_dir: "tb"
+  video_dir: "video_dir"
+  video_fps: 30
+  video_render_views:
+    - "third_rgb_sensor"
+  test_episode_count: -1
+  eval_ckpt_path_dir: "data/new_checkpoints"
+  # 26 environments will just barely be below 16gb.
+  num_environments: 1
+  checkpoint_folder: "data/new_checkpoints"
+  log_interval: 10
+  num_checkpoints: 20
+  # Force PyTorch to be single threaded as
+  # this improves performance considerably
+  force_torch_single_threaded: True
+  eval_keys_to_include_in_name: ["reward", "force", "success"]
+
+  eval:
+    video_option: ["disk"]

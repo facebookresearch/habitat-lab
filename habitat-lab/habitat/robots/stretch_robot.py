@@ -17,7 +17,7 @@ class StretchJointStates:
 
     # TODO: Match with pregrasp from home-robot
     PRE_GRASP = np.array(
-        [0.0] * 4 + [0.775, 0.0, -np.pi / 2, 0.0, -1.7375, -np.pi / 4]
+        [0.0] * 4 + [0.775, 0.0, -np.pi / 2, 0.0, -np.pi / 2, -np.pi / 4]
     )
     NAVIGATION = np.array(
         [0.0] * 4 + [0.775, 0.0, -np.pi / 2, 0.0, 0.0, -np.pi / 6]

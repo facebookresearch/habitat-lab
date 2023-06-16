@@ -3,26 +3,24 @@
 defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
-  - /habitat/task/rearrange: cat_nav_to_obj
+  - /habitat/task/ovmm: gaze
   - /habitat/dataset/rearrangement: hssd
   - _self_
 
 habitat:
   gym:
-    auto_name: NavToObj
+    auto_name: Pick
     obs_keys:
       - robot_head_depth
-      - object_embedding
-      - ovmm_nav_goal_segmentation
-      - receptacle_segmentation
       - start_receptacle
-      - robot_start_gps
-      - robot_start_compass
+      - object_segmentation
+      - start_recep_segmentation
+      - object_embedding
       - joint
   environment:
-    max_episode_steps: 400
+    max_episode_steps: 300
   simulator:
-    type: ObjectRearrangeSim-v0
+    type: OVMMSim-v0
     additional_object_paths:
       - data/objects/amazon_berkeley/configs/
       - data/objects/google_scanned/configs/
@@ -30,6 +28,7 @@ habitat:
       - data/objects/floorplanner/configs/objects/
     debug_render_goal: False
     debug_render: False
+    needs_markers: False
     concur_render: True
     auto_sleep: True
     requires_textures: False
@@ -42,14 +41,15 @@ habitat:
         robot_type: "StretchRobot"
         sim_sensors:
            head_depth_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
+             position: [0, 1.31, 0]
            head_panoptic_sensor:
-             height: 256
-             width: 256
+             height: 640
+             width: 480
              hfov: 42
+             position: [0, 1.31, 0]
     habitat_sim_v0:
       allow_sliding: False
       enable_physics: True
-    needs_markers: false

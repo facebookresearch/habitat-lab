@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 from hydra.core.config_store import ConfigStore
@@ -110,6 +110,7 @@ class ArmActionConfig(ActionConfig):
     :property gaze_distance_range: The gaze action will only work on the closet object if its distance to the end effector is smaller than this value. Only for `GazeGraspAction` grip_controller.
     :property center_cone_angle_threshold: The threshold angle between the line of sight and center_cone_vector. Only for `GazeGraspAction` grip_controller.
     :property center_cone_vector: The vector that the camera's line of sight should be when grasping the object. Only for `GazeGraspAction` grip_controller.
+    :property grasp_threshold: The gripper is enabled if `grip_action` is greather than `grasp_threshold`
     """
     type: str = "ArmAction"
     arm_controller: str = "ArmRelPosAction"
@@ -118,7 +119,12 @@ class ArmActionConfig(ActionConfig):
     arm_joint_dimensionality: int = 7
     grasp_thresh_dist: float = 0.15
     disable_grip: bool = False
-    delta_pos_limit: float = 0.0125
+    max_delta_pos: float = (
+        0.0125  # The maximum an arm joint can move in a single step
+    )
+    min_delta_pos: float = (
+        0.0  # The minimum an arm joint needs to move in a single step
+    )
     ee_ctrl_lim: float = 0.015
     should_clip: bool = False
     render_ee_target: bool = False
@@ -128,6 +134,7 @@ class ArmActionConfig(ActionConfig):
     wrong_grasp_should_end: bool = False
     gaze_distance_from: str = "camera"
     gaze_center_square_width: float = 1
+    grasp_threshold: float = 0.0
     oracle_snap: bool = False
 
 
@@ -141,13 +148,16 @@ class BaseVelocityActionConfig(ActionConfig):
     collision_threshold: float = 1e-5
     navmesh_offset: Optional[List[float]] = None
     min_displacement: float = 0.1  # minimum displacement that is allowed
-    max_displacement_along_axis: float = 1.0  # maximum displacement
-    max_turn_degrees: float = 180.0  # maximum turn waypoint
+    max_displacement_along_axis: float = 0.25  # maximum displacement
+    max_turn_degrees: float = 30.0  # maximum turn waypoint
     min_turn_degrees: float = 5.0  # minimum turn waypoint
-    allow_lateral_movement: bool = True  # whether to allow lateral movement
-    allow_simultaneous_turn: bool = True  # whether to allow simultaneous turn
+    allow_lateral_movement: bool = False  # whether to allow lateral movement
+    allow_simultaneous_turn: bool = False  # whether to allow simultaneous turn
     discrete_movement: bool = (
         False  # whether to move/rotate only in discrete steps
+    )
+    constraint_base_in_manip_mode: bool = (
+        False  # whether to constraint base motion in manip mode
     )
 
 
@@ -157,18 +167,9 @@ class RearrangeStopActionConfig(ActionConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ExtendArmActionConfig(ActionConfig):
-    type: str = "ExtendArmAction"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class ResetJointsActionConfig(ActionConfig):
-    type: str = "ResetJointsAction"
-
-
-@attr.s(auto_attribs=True, slots=True)
-class FaceArmActionConfig(ActionConfig):
-    type: str = "FaceArmAction"
+class ManipulationModeActionConfig(ActionConfig):
+    type: str = "ManipulationModeAction"
+    threshold: float = 0.8
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -442,11 +443,13 @@ class CameraPoseSensorConfig(LabSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ReceptacleSegmentationSensorConfig(LabSensorConfig):
     type: str = "ReceptacleSegmentationSensor"
+    blank_out_prob: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavGoalSegmentationSensorConfig(LabSensorConfig):
-    type: str = "OvmmNavGoalSegmentationSensor"
+class OVMMNavGoalSegmentationSensorConfig(LabSensorConfig):
+    type: str = "OVMMNavGoalSegmentationSensor"
+    blank_out_prob: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -533,6 +536,12 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class RobotCollisionsTerminateMeasurementConfig(MeasurementConfig):
+    type: str = "RobotCollisionsTerminate"
+    max_num_collisions: int = -1 # do not terminate by default
+
+
+@attr.s(auto_attribs=True, slots=True)
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
 
@@ -599,14 +608,24 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     grasp_reward: float = 0.0
     # General Rearrange Reward config
     constraint_violate_pen: float = 10.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
 class RotDistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "RotDistToGoal"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class NavmeshCollisionMeasurementConfig(MeasurementConfig):
+    type: str = "NavmeshCollision"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -625,7 +644,7 @@ class BadCalledTerminateMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
     type: str = "NavToPosSucc"
-    success_distance: float = 1.5
+    success_distance: float = 0.5
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -639,9 +658,14 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     angle_dist_reward: float = 1.0
     dist_reward: float = 1.0
     constraint_violate_pen: float = 1.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0001
     max_force_pen: float = 0.01
     force_end_pen: float = 1.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -654,66 +678,95 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
-    type: str = "OvmmNavToObjReward"
+class OVMMNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
+    type: str = "OVMMNavToObjReward"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
-    type: str = "OvmmDistToPickGoal"
+class OVMMDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OVMMDistToPickGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
-    type: str = "OvmmDistToPlaceGoal"
+class OVMMDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
+    type: str = "OVMMDistToPlaceGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
-    type: str = "OvmmRotDistToGoal"
+class OVMMRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
+    type: str = "OVMMRotDistToGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmRotDistToPickGoalMeasurementConfig(
-    OvmmRotDistToGoalMeasurementConfig
+class OVMMRotDistToPickGoalMeasurementConfig(
+    OVMMRotDistToGoalMeasurementConfig
 ):
-    type: str = "OvmmRotDistToPickGoal"
+    type: str = "OVMMRotDistToPickGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmRotDistToPlaceGoalMeasurementConfig(
-    OvmmRotDistToGoalMeasurementConfig
+class OVMMRotDistToPlaceGoalMeasurementConfig(
+    OVMMRotDistToGoalMeasurementConfig
 ):
-    type: str = "OvmmRotDistToPlaceGoal"
+    type: str = "OVMMRotDistToPlaceGoal"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
-    type: str = "OvmmNavToPickSucc"
+class OVMMNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OVMMNavToPickSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
-    type: str = "OvmmNavToObjSucc"
+class OVMMNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
+    type: str = "OVMMNavToObjSucc"
+    min_object_coverage_iou: float = 1e-3
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavOrientToPickSuccMeasurementConfig(
-    NavToObjSuccessMeasurementConfig
+class OVMMNavOrientToPickSuccMeasurementConfig(
+    OVMMNavToObjSuccMeasurementConfig
 ):
-    type: str = "OvmmNavOrientToPickSucc"
+    type: str = "OVMMNavOrientToPickSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
-    type: str = "OvmmNavToPlaceSucc"
+class OVMMNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
+    type: str = "OVMMNavToPlaceSucc"
 
 
 @attr.s(auto_attribs=True, slots=True)
-class OvmmNavOrientToPlaceSuccMeasurementConfig(
-    NavToObjSuccessMeasurementConfig
+class OVMMNavOrientToPlaceSuccMeasurementConfig(
+    OVMMNavToObjSuccMeasurementConfig
 ):
-    type: str = "OvmmNavOrientToPlaceSucc"
+    type: str = "OVMMNavOrientToPlaceSucc"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PickObjectIoUCoverageMeasurementConfig(MeasurementConfig):
+    type: str = "PickObjectIoUCoverage"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PlaceObjectIoUCoverageMeasurementConfig(MeasurementConfig):
+    type: str = "PlaceObjectIoUCoverage"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class TargetIoUCoverageMeasurementConfig(MeasurementConfig):
+    type: str = "TargetIoUCoverage"
+    max_goal_dist: float = 0.1
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PickGoalIoUCoverageMeasurementConfig(TargetIoUCoverageMeasurementConfig):
+    type: str = "PickGoalIoUCoverage"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PlaceGoalIoUCoverageMeasurementConfig(
+    TargetIoUCoverageMeasurementConfig
+):
+    type: str = "PlaceGoalIoUCoverage"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -753,9 +806,14 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     single_rearrange_reward: float = 1.0
     dist_reward: float = 1.0
     constraint_violate_pen: float = 10.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.001
     max_force_pen: float = 1.0
     force_end_pen: float = 10.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -764,6 +822,9 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     dist_reward: float = 2.0
     pick_reward: float = 2.0
     constraint_violate_pen: float = 1.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     drop_pen: float = 0.5
     wrong_pick_pen: float = 0.5
     force_pen: float = 0.0001
@@ -776,6 +837,8 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     sparse_reward: bool = False
     angle_reward_min_dist: float = 0.0
     angle_reward_scale: float = 1.0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -806,19 +869,95 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     use_ee_dist: bool = False
     wrong_drop_should_end: bool = True
     constraint_violate_pen: float = 0.0
+    navmesh_violate_pen: float = (
+        0.0  # penalty for trying to move outside navmesh
+    )
     force_pen: float = 0.0001
     max_force_pen: float = 0.0
     force_end_pen: float = 1.0
     min_dist_to_goal: float = 0.15
-    place_anywhere: bool = False
     sparse_reward: bool = False
+    drop_pen_type: str = "constant"
+    ee_resting_success_threshold: float = 0.15
+    stability_reward: float = 0.0
+    max_steps_to_reach_surface: int = 0
+    robot_collisions_pen: float = 0.0
+    robot_collisions_end_pen: float = 0.0
+
+
+@attr.s(auto_attribs=True, slots=True)
+class PlacementStabilityMeasurementConfig(MeasurementConfig):
+    type: str = "PlacementStability"
+    stability_steps: float = 50
 
 
 @attr.s(auto_attribs=True, slots=True)
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     type: str = "PlaceSuccess"
     ee_resting_success_threshold: float = 0.15
-    place_anywhere: bool = False
+    check_stability: bool = False
+
+@attr.s(auto_attribs=True, slots=True)
+class PickedObjectLinearVelMeasurementConfig(MeasurementConfig):
+    type: str = "PickedObjectLinearVel"
+
+@attr.s(auto_attribs=True, slots=True)
+class PickedObjectAngularVelMeasurementConfig(MeasurementConfig):
+    type: str = "PickedObjectAngularVel"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class ObjectAtRestMeasurementConfig(MeasurementConfig):
+    type: str = "ObjectAtRest"
+    angular_vel_thresh: float = 1e-3
+    linear_vel_thresh: float = 1e-3
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMFindObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMFindObjectPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMPickObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMPickObjectPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMPlaceObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMPlaceObjectPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMFindRecepPhaseSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMFindRecepPhaseSuccess"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMObjectToPlaceGoalDistance"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMEEToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
+    type: str = "OVMMEEToPlaceGoalDistance"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMPlaceRewardMeasurementConfig(PlaceRewardMeasurementConfig):
+    type: str = "OVMMPlaceReward"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMPlacementStabilityMeasurementConfig(
+    PlacementStabilityMeasurementConfig
+):
+    type: str = "OVMMPlacementStability"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class OVMMPlaceSuccessMeasurementConfig(PlaceSuccessMeasurementConfig):
+    type: str = "OVMMPlaceSuccess"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -919,6 +1058,8 @@ class TaskConfig(HabitatBaseConfig):
     num_spawn_attempts: int = 200
     spawn_max_dists_to_obj: float = 1.0
     base_angle_noise: float = 0.523599
+    spawn_reference: str = "target"
+    spawn_reference_sampling: str = "uniform"
     # EE sample parameters
     ee_sample_factor: float = 0.2
     ee_exclude_region: float = 0.0
@@ -933,7 +1074,6 @@ class TaskConfig(HabitatBaseConfig):
     # If true, does not care about navigability or collisions
     # with objects when spawning robot
     easy_init: bool = False
-    biased_init: bool = False
     should_enforce_target_within_reach: bool = False
     # COMPOSITE task CONFIG
     task_spec_base_path: str = "habitat/task/rearrange/pddl/"
@@ -947,9 +1087,10 @@ class TaskConfig(HabitatBaseConfig):
     robot_at_thresh: float = 2.0
     filter_nav_to_tasks: List = []
     actions: Dict[str, ActionConfig] = MISSING
-    goal_type: str = "object_on_recep"
+    start_in_manip_mode: bool = False
     pick_init: bool = False
     place_init: bool = False
+    episode_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
 
@@ -1259,7 +1400,6 @@ class DatasetConfig(HabitatBaseConfig):
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
     content_scenes: List[str] = ["*"]
-    episode_ids: List[int] = []
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
@@ -1267,14 +1407,17 @@ class DatasetConfig(HabitatBaseConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
-class ObjectRearrangeDatasetConfig(DatasetConfig):
-    type: str = "ObjectRearrangeDataset-v1"
+class OVMMDatasetConfig(DatasetConfig):
+    type: str = "OVMMDataset-v0"
     viewpoints_matrix_path: Optional[
         str
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_viewpoints_matrix.npy"
     transformations_matrix_path: Optional[
         str
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
+    # Other datasets do not allow using a subset of episodes
+    episode_indices_range: Tuple[int, int] = (0, -1)
+    episode_ids: List[int] = []
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1394,6 +1537,12 @@ cs.store(
     node=RearrangeStopActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.manipulation_mode",
+    group="habitat/task/actions",
+    name="manipulation_mode",
+    node=ManipulationModeActionConfig,
+)
+cs.store(
     package="habitat.task.actions.answer",
     group="habitat/task/actions",
     name="answer",
@@ -1419,7 +1568,7 @@ cs.store(
     package="habitat.dataset",
     group="habitat/dataset",
     name="object_rearrange_dataset_config_schema",
-    node=ObjectRearrangeDatasetConfig,
+    node=OVMMDatasetConfig,
 )
 
 # Simulator Sensors
@@ -1712,7 +1861,7 @@ cs.store(
     package="habitat.task.lab_sensors.ovmm_nav_goal_segmentation_sensor",
     group="habitat/task/lab_sensors",
     name="ovmm_nav_goal_segmentation_sensor",
-    node=OvmmNavGoalSegmentationSensorConfig,
+    node=OVMMNavGoalSegmentationSensorConfig,
 )
 
 # Task Measurements
@@ -1769,6 +1918,12 @@ cs.store(
     group="habitat/task/measurements",
     name="force_terminate",
     node=ForceTerminateMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.robot_collisions_terminate",
+    group="habitat/task/measurements",
+    name="robot_collisions_terminate",
+    node=RobotCollisionsTerminateMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.end_effector_to_object_distance",
@@ -1834,7 +1989,7 @@ cs.store(
     package="habitat.task.measurements.ovmm_rot_dist_to_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_goal",
-    node=OvmmRotDistToGoalMeasurementConfig,
+    node=OVMMRotDistToGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.episode_info",
@@ -1873,10 +2028,94 @@ cs.store(
     node=PlaceSuccessMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.placement_stability",
+    group="habitat/task/measurements",
+    name="placement_stability",
+    node=PlacementStabilityMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.place_reward",
     group="habitat/task/measurements",
     name="place_reward",
     node=PlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.navmesh_collision",
+    group="habitat/task/measurements",
+    name="navmesh_collision",
+    node=NavmeshCollisionMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_object_to_place_goal_distance",
+    group="habitat/task/measurements",
+    name="ovmm_object_to_place_goal_distance",
+    node=OVMMObjectToPlaceGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_ee_to_place_goal_distance",
+    group="habitat/task/measurements",
+    name="ovmm_ee_to_place_goal_distance",
+    node=OVMMEEToPlaceGoalDistanceMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_reward",
+    group="habitat/task/measurements",
+    name="ovmm_place_reward",
+    node=OVMMPlaceRewardMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_placement_stability",
+    group="habitat/task/measurements",
+    name="ovmm_placement_stability",
+    node=OVMMPlacementStabilityMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_success",
+    group="habitat/task/measurements",
+    name="ovmm_place_success",
+    node=OVMMPlaceSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.object_at_rest",
+    group="habitat/task/measurements",
+    name="object_at_rest",
+    node=ObjectAtRestMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.picked_object_linear_vel",
+    group="habitat/task/measurements",
+    name="picked_object_linear_vel",
+    node=PickedObjectLinearVelMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.picked_object_angular_vel",
+    group="habitat/task/measurements",
+    name="picked_object_angular_vel",
+    node=PickedObjectAngularVelMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_find_object_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_find_object_phase_success",
+    node=OVMMFindObjectPhaseSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_pick_object_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_pick_object_phase_success",
+    node=OVMMPickObjectPhaseSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_place_object_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_place_object_phase_success",
+    node=OVMMPlaceObjectPhaseSuccessMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.ovmm_find_recep_phase_success",
+    group="habitat/task/measurements",
+    name="ovmm_find_recep_phase_success",
+    node=OVMMFindRecepPhaseSuccessMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.move_objects_reward",
@@ -1978,61 +2217,79 @@ cs.store(
     package="habitat.task.measurements.ovmm_nav_to_obj_reward",
     group="habitat/task/measurements",
     name="ovmm_nav_to_obj_reward",
-    node=OvmmNavToObjRewardMeasurementConfig,
+    node=OVMMNavToObjRewardMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.dist_to_pick_goal",
     group="habitat/task/measurements",
     name="ovmm_dist_to_pick_goal",
-    node=OvmmDistToPickGoalMeasurementConfig,
+    node=OVMMDistToPickGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.dist_to_place_goal",
     group="habitat/task/measurements",
     name="ovmm_dist_to_place_goal",
-    node=OvmmDistToPlaceGoalMeasurementConfig,
+    node=OVMMDistToPlaceGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_pick_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_pick_goal",
-    node=OvmmRotDistToPickGoalMeasurementConfig,
+    node=OVMMRotDistToPickGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rot_dist_to_place_goal",
     group="habitat/task/measurements",
     name="ovmm_rot_dist_to_place_goal",
-    node=OvmmRotDistToPlaceGoalMeasurementConfig,
+    node=OVMMRotDistToPlaceGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_to_pick_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_to_pick_succ",
-    node=OvmmNavToPickSuccMeasurementConfig,
+    node=OVMMNavToPickSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_to_place_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_to_place_succ",
-    node=OvmmNavToPlaceSuccMeasurementConfig,
+    node=OVMMNavToPlaceSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.ovmm_nav_to_obj_success",
     group="habitat/task/measurements",
     name="ovmm_nav_to_obj_success",
-    node=OvmmNavToObjSuccMeasurementConfig,
+    node=OVMMNavToObjSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_pick_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_orient_to_pick_succ",
-    node=OvmmNavOrientToPickSuccMeasurementConfig,
+    node=OVMMNavOrientToPickSuccMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.nav_orient_to_place_succ",
     group="habitat/task/measurements",
     name="ovmm_nav_orient_to_place_succ",
-    node=OvmmNavOrientToPlaceSuccMeasurementConfig,
+    node=OVMMNavOrientToPlaceSuccMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.pick_goal_iou_coverage",
+    group="habitat/task/measurements",
+    name="pick_goal_iou_coverage",
+    node=PickGoalIoUCoverageMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.place_goal_iou_coverage",
+    group="habitat/task/measurements",
+    name="place_goal_iou_coverage",
+    node=PlaceGoalIoUCoverageMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.target_iou_coverage",
+    group="habitat/task/measurements",
+    name="target_iou_coverage",
+    node=TargetIoUCoverageMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.rearrange_reach_reward",
