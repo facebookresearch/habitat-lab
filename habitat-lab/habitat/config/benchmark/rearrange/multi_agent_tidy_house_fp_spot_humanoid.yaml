@@ -8,7 +8,6 @@ defaults:
 
   - /habitat/dataset/rearrangement: replica_cad
 
-
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
@@ -52,7 +51,7 @@ habitat:
         agent_idx: 0
       agent_1_should_replan:
         x_len: 3.0
-        y_len: 3.0
+        y_len: 1.5
         agent_idx: 1
     type: RearrangeCompositeTask-v0
     reward_measure: cooperate_subgoal_reward
