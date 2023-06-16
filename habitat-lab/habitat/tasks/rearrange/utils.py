@@ -370,7 +370,37 @@ class UsesArticulatedAgentInterface:
         super().__init__(*args, **kwargs)
         self.agent_id = None
 
+def get_info_episode_step(info_dict):
+    # Return a dictionary with the data we care about per step
+    res_dict = {}
+    names_care = ["pddl_action", "agent_0_pddl_action", "agent_1_pddl_action"]
+    for name in names_care:
+        if name in info_dict:
+            res_dict[name] = info_dict[name]
+    if len(res_dict) > 0:
+        res_dict["num_steps"] = info_dict["num_steps"]
+    return res_dict
 
+def get_info_episode_final(info_dict):
+    # Return a dictionary with the data we care about in total
+    breakpoint()
+    res_dict = {}
+    names_care = ["composite_success", "num_steps"]
+    for name in names_care:
+        if name in info_dict:
+            res_dict[name] = info_dict[name]
+    
+    return res_dict
+
+def write_episode_data(episode_summary, episode_data_dir, ep_id):
+    os.makedirs(episode_data_dir, exist_ok=True)
+    filepath = osp.join(
+        episode_data_dir, f"episode_{ep_id}_info.pkl"
+    )
+    
+    with open(filepath, "wb+") as f:
+        pickle.dump(episode_summary, f)
+    
 def write_gfx_replay(gfx_keyframe_str, task_config, ep_id):
     """
     Writes the all replay frames to a file for later replay. Filename is of the
