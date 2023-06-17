@@ -100,7 +100,9 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         self._policy = CategoricalNet(self._hidden_size, self._n_actions)
         self._critic = CriticHead(self._hidden_size)
 
-        self.aux_modules = get_aux_modules(aux_loss_config, action_space, self)
+        self.aux_modules = get_aux_modules(
+            aux_loss_config, action_space, observation_space, self
+        )
 
     @property
     def should_load_agent_state(self):

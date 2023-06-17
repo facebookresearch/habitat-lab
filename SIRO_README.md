@@ -138,14 +138,14 @@ To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the
 ```bash
 srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 \
 python -u habitat-baselines/habitat_baselines/run.py \
---config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml \
+-m --config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml \
 habitat_baselines.num_environments=1
 ```
 
 or for running HRL fix policy:
 ```bash
 python habitat-baselines/habitat_baselines/run.py \
---config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml \
+-m --config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml \
 habitat_baselines.evaluate=True \
 habitat.simulator.kinematic_mode=True \
 habitat.simulator.step_physics=False \
@@ -158,7 +158,7 @@ habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines
 or for running HRL human-robot fix policy (multi-agent setting)
 ```bash
 python habitat-baselines/habitat_baselines/run.py \
---config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
+-m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
 habitat_baselines.evaluate=True \
 habitat.simulator.kinematic_mode=True \
 habitat.simulator.step_physics=False \
