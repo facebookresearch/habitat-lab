@@ -17,6 +17,7 @@ defaults:
     - target_iou_coverage
     - ovmm_nav_to_obj_success
     - bad_called_terminate
+    - robot_collisions_terminate
     - ovmm_nav_to_obj_explore_reward
     - ovmm_nav_to_obj_reward
     - num_steps
