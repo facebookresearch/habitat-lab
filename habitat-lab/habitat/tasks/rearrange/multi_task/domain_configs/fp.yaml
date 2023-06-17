@@ -10,7 +10,7 @@ types:
     - fridge_type
 
 
-constants:
+constants: {}
 
 
 predicates:
@@ -132,6 +132,7 @@ actions:
     precondition:
       expr_type: AND
       sub_exprs:
+        - not_holding(robot)
         - robot_at(obj, robot)
         - quantifier: FORALL
           inputs:
