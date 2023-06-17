@@ -313,7 +313,7 @@ class ArmRelPosReducedActionStretch(RobotAction):
         delta_per_step = (delta) * interpolation
         for i in range(int(num_steps)):
             obs = self._sim.get_sensor_observations()['robot_third_rgb'][:,:,:3]
-            cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
+            # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
             task._frames.append(obs)
             curr_arm_pos = curr_arm_pos + delta_per_step
             self.cur_robot.arm_motor_pos = curr_arm_pos
@@ -678,14 +678,14 @@ class BaseWaypointTeleportAction(RobotAction):
             turn = np.sign(turn) if turn != 0 else 0
 
         max_base_forward_delta = 0.05
-        max_turn_delta = 0.05
+        max_turn_delta = 0.025
         num_steps = max(int(np.ceil(max([lin_pos_x / max_base_forward_delta, lin_pos_z / max_base_forward_delta, turn / max_turn_delta]))), 1)
         
 
         for i in range(num_steps):
             interpolation = 1.0 / num_steps
             obs = self._sim.get_sensor_observations()['robot_third_rgb'][:,:,:3]
-            cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
+            # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
             task._frames.append(obs)
             self._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
             self._max_turn_radians_interp = self._max_turn_radians * interpolation

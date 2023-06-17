@@ -162,7 +162,7 @@ class RearrangeTask(NavigationTask):
     def reset(self, episode: Episode, fetch_observations: bool = True):
         if self._frames is not None and len(self._frames) > 0:
             # save as video
-            images_to_video(self._frames, self._video_save_folder, self._episode_id, fps=24, quality=1)
+            images_to_video(self._frames, self._video_save_folder, self._episode_id, fps=24, quality=5)
         os.makedirs(f'{self._video_save_folder}/snaps/{self._episode_id}/', exist_ok=True)
         self._frames = []
 
