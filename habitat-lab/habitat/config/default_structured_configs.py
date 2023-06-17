@@ -1093,6 +1093,7 @@ class TaskConfig(HabitatBaseConfig):
     episode_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
+    video_save_folder: str = 'videos_from_task/'
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1229,8 +1230,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @attr.s(auto_attribs=True, slots=True)
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
-    width: int = 512
-    height: int = 512
+    width: int = 1920
+    height: int = 1080
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -1274,8 +1275,8 @@ class HabitatSimV0Config(HabitatBaseConfig):
     # with concurrent rendering
     leave_context_with_background_renderer: bool = False
     enable_gfx_replay_save: bool = False
-    hbao_visual_effects: bool = False
-    pbr_image_based_lighting: bool = False
+    hbao_visual_effects: bool = True
+    pbr_image_based_lighting: bool = True
 
 
 @attr.s(auto_attribs=True, slots=True)
