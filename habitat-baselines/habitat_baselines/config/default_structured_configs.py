@@ -378,6 +378,7 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     discrim_reward_weight: float = 1.0
     allow_self_play: bool = False
     self_play_batched: bool = False
+    load_type1_pop_ckpts: Optional[List[str]] = None
     ###############################
 
 
