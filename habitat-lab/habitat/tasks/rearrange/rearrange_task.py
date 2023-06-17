@@ -86,6 +86,18 @@ class RearrangeTask(NavigationTask):
         self._min_distance_start_agents = (
             self._config.min_distance_start_agents
         )
+        # Set config properties
+        self._force_regenerate = self._config.force_regenerate
+        self._obj_succ_thresh = self._config.obj_succ_thresh
+        self._should_save_to_cache = self._config.should_save_to_cache
+        self._enable_safe_drop = self._config.enable_safe_drop
+        self._constraint_violation_drops_object = (
+            self._config.constraint_violation_drops_object
+        )
+        self._constraint_violation_ends_episode = (
+            self._config.constraint_violation_ends_episode
+        )
+        self._count_obj_collisions = self._config.count_obj_collisions
 
         habitat_config = self._sim.habitat_config
         if "overfit" in habitat_config and habitat_config["overfit"]:

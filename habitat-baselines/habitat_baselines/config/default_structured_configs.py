@@ -328,6 +328,7 @@ class BdpDiscrimConfig(AuxLossConfig):
     loss_scale: float = 0.1
     hidden_size: int = 128
     behavior_latent_dim: int = -1
+    input_keys: List[str] = field(default_factory=list)
 
 
 @dataclass
