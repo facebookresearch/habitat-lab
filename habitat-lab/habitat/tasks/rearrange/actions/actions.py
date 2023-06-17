@@ -5,11 +5,11 @@
 # LICENSE file in the root directory of this source tree.
 
 from typing import Optional
-
+import cv2
 import magnum as mn
 import numpy as np
 from gym import spaces
-
+import time
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
@@ -665,8 +665,7 @@ class BaseWaypointTeleportAction(RobotAction):
 
         for i in range(int(1/interpolation)):
             cv2.imwrite(f'visuals/timestep_{time.time()}.png', self._sim.get_sensor_observations()['robot_head_rgb'][:,:,:3][...,::-1])
-            s
-            elf._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
+            self._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
             self._max_turn_radians_interp = self._max_turn_radians * interpolation
 
             lin_pos_x_new = (
