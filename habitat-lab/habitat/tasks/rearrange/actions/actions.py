@@ -661,53 +661,62 @@ class BaseWaypointTeleportAction(RobotAction):
             lin_pos_z = np.sign(lin_pos_z) if lin_pos_z != 0 else 0
             turn = np.sign(turn) if turn != 0 else 0
 
-        lin_pos_x = (
-            np.clip(lin_pos_x, -1, 1) * self._max_displacement_along_axis
-        )
-        lin_pos_z = (
-            np.clip(lin_pos_z, -1, 1) * self._max_displacement_along_axis
-        )
-        ang_pos = np.clip(turn, -1, 1) * self._max_turn_radians
+        interpolation = 0.25 # 4 intermediate steps per action
 
-        # Do not allow small movements
-        if np.abs(ang_pos) < self._min_turn_radians:
-            ang_pos = 0
-        if np.linalg.norm([lin_pos_x, lin_pos_z]) < self._min_displacement:
-            lin_pos_x = 0
-            lin_pos_z = 0
+        for i in range(int(1/interpolation)):
+            cv2.imwrite(f'visuals/timestep_{time.time()}.png', self._sim.get_sensor_observations()['robot_head_rgb'][:,:,:3][...,::-1])
+            s
+            elf._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
+            self._max_turn_radians_interp = self._max_turn_radians * interpolation
 
-        if not self._allow_back:
-            lin_pos_x = np.maximum(lin_pos_x, 0)
+            lin_pos_x_new = (
+                np.clip(lin_pos_x, -1, 1) * self._max_displacement_along_axis_interp
+            )
+            lin_pos_z_new = (
+                np.clip(lin_pos_z, -1, 1) * self._max_displacement_along_axis_interp
+            )
+            ang_pos = np.clip(turn, -1, 1) * self._max_turn_radians_interp
+            
+            # # Do not allow small movements
+            # if np.abs(ang_pos) < self._min_turn_radians:
+            #     ang_pos = 0
+            # if np.linalg.norm([lin_pos_x, lin_pos_z]) < self._min_displacement:
+            #     lin_pos_x = 0
+            #     lin_pos_z = 0
 
-        # Get the transformation of the robot
-        base_trans = self._sim.robot.base_transformation
-        obj_trans = self.cur_robot.sim_obj.transformation
-        # Get the global pos from the local target waypoints
-        target_pos = base_trans.transform_point(
-            mn.Vector3([lin_pos_x, lin_pos_z, 0])
-        )
-        target_rot = obj_trans.rotation()
-        rot_quat = mn.Quaternion(
-            mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
-        )
-        # Get the target rotation
-        target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
+            if not self._allow_back:
+                lin_pos_x_new = np.maximum(lin_pos_x_new, 0)
 
-        # combine target translation and rotation to get target rigid state
-        target_rigid_state = habitat_sim.RigidState(
-            mn.Quaternion.from_matrix(target_rot), target_pos
-        )
+            # Get the transformation of the robot
+            base_trans = self._sim.robot.base_transformation
+            obj_trans = self.cur_robot.sim_obj.transformation
+            # Get the global pos from the local target waypoints
+            target_pos = base_trans.transform_point(
+                mn.Vector3([lin_pos_x_new, lin_pos_z_new, 0])
+            )
+            target_rot = obj_trans.rotation()
+            rot_quat = mn.Quaternion(
+                mn.Vector3(0, np.sin(ang_pos / 2), 0), np.cos(ang_pos / 2)
+            )
+            # Get the target rotation
+            target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
 
-        if self._constraint_base_in_manip_mode and task._in_manip_mode:
-            lin_pos_x = 0.0
-            lin_pos_z = 0.0
-            ang_pos = 0.0
+            # combine target translation and rotation to get target rigid state
+            target_rigid_state = habitat_sim.RigidState(
+                mn.Quaternion.from_matrix(target_rot), target_pos
+            )
 
-        if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
-            task._is_navmesh_violated = self.update_base(target_rigid_state)
-        else:
-            # no violation if no movement was required in the first place
-            task._is_navmesh_violated = False
+            if self._constraint_base_in_manip_mode and task._in_manip_mode:
+                lin_pos_x = 0.0
+                lin_pos_z = 0.0
+                ang_pos = 0.0
+
+            if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
+                task._is_navmesh_violated = self.update_base(target_rigid_state)
+                self._sim.maybe_update_robot()
+            else:
+                # no violation if no movement was required in the first place
+                task._is_navmesh_violated = False
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)
         else:
