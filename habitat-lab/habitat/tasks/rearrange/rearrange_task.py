@@ -6,6 +6,7 @@
 
 import copy
 import os.path as osp
+import os
 from collections import OrderedDict
 from typing import Any, Dict, List, Tuple, Union
 
@@ -28,7 +29,7 @@ from habitat.tasks.rearrange.utils import (
     rearrange_collision,
     rearrange_logger,
 )
-
+from habitat.utils.visualizations.utils import images_to_video
 
 @registry.register_task(name="RearrangeEmptyTask-v0")
 class RearrangeTask(NavigationTask):
@@ -106,7 +107,7 @@ class RearrangeTask(NavigationTask):
             osp.dirname(data_path),
             f"{fname}_{self._config.type}_robot_start.pickle",
         )
-
+        self._video_save_folder = self._config.video_save_folder
         if self._config.should_save_to_cache or osp.exists(cache_path):
             self._articulated_agent_init_cache = CacheHelper(
                 cache_path,
@@ -122,6 +123,7 @@ class RearrangeTask(NavigationTask):
         if len(self._sim.agents_mgr) > 1:
             # Duplicate sensors that handle articulated agents. One for each articulated agent.
             self._duplicate_sensor_suite(self.sensor_suite)
+        self._frames = None
 
     def overwrite_sim_config(self, config: Any, episode: Episode) -> Any:
         return config
@@ -198,7 +200,15 @@ class RearrangeTask(NavigationTask):
 
     @add_perf_timing_func()
     def reset(self, episode: Episode, fetch_observations: bool = True):
+        if self._frames is not None and len(self._frames) > 0:
+            # save as video
+            images_to_video(self._frames, self._video_save_folder, self._episode_id, fps=24, quality=5)
+        os.makedirs(f'{self._video_save_folder}/snaps/{self._episode_id}/', exist_ok=True)
+        self._frames = []
+
         self._episode_id = episode.episode_id
+
+
         self._ignore_collisions = []
 
         if self._sim_reset:

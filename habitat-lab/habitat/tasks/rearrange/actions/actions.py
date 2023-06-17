@@ -33,7 +33,7 @@ from habitat.tasks.rearrange.actions.grip_actions import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import rearrange_collision, rearrange_logger
-
+import cv2
 
 @registry.register_task_action
 class EmptyAction(ArticulatedAgentAction):
@@ -113,7 +113,7 @@ class ArmAction(ArticulatedAgentAction):
 
     def step(self, *args, **kwargs):
         arm_action = kwargs[self._action_arg_prefix + "arm_action"]
-        self.arm_ctrlr.step(arm_action)
+        self.arm_ctrlr.step(arm_action, *args, **kwargs)
         if self.grip_ctrlr is not None and not self.disable_grip:
             grip_action = kwargs[self._action_arg_prefix + "grip_action"]
             self.grip_ctrlr.step(grip_action)
@@ -316,7 +316,7 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
             dtype=np.float32,
         )
 
-    def step(self, delta_pos, *args, **kwargs):
+    def step(self, delta_pos, *args, task, **kwargs):
         if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
@@ -353,7 +353,22 @@ class ArmRelPosKinematicReducedActionStretch(ArticulatedAgentAction):
                     set_arm_pos[i + 1] -= min_limit[i] - set_arm_pos[i]
                     set_arm_pos[i] = min_limit[i]
         set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
+        curr_arm_pos = self.cur_articulated_agent.arm_motor_pos
+        delta = set_arm_pos - curr_arm_pos
+        max_allowed_delta = np.array([0.01, 0.01, 0.01, 0.01, 0.04] + [np.pi/36]* 5)
+        num_steps = max(np.ceil(np.max(delta/max_allowed_delta)), 1)
+        
+        interpolation = 1.0/num_steps # 5 intermediate steps per action
 
+        delta_per_step = (delta) * interpolation
+        for i in range(int(num_steps)):
+            obs = self._sim.get_sensor_observations()['robot_third_rgb'][:,:,:3]
+            # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
+            task._frames.append(obs)
+            curr_arm_pos = curr_arm_pos + delta_per_step
+            self.cur_articulated_agent.arm_motor_pos = curr_arm_pos
+            self.cur_articulated_agent.arm_joint_pos = curr_arm_pos
+            self._sim.maybe_update_robot()
         self.cur_articulated_agent.arm_motor_pos = set_arm_pos
         self.cur_articulated_agent.arm_joint_pos = set_arm_pos
         if self.cur_grasp_mgr.snap_idx is not None:
@@ -895,10 +910,16 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
             lin_pos_z = np.sign(lin_pos_z) if lin_pos_z != 0 else 0
             turn = np.sign(turn) if turn != 0 else 0
 
-        interpolation = 0.25 # 4 intermediate steps per action
+        max_base_forward_delta = 0.05
+        max_turn_delta = 0.025
+        num_steps = max(int(np.ceil(max([lin_pos_x / max_base_forward_delta, lin_pos_z / max_base_forward_delta, turn / max_turn_delta]))), 1)
+        
 
-        for i in range(int(1/interpolation)):
-            cv2.imwrite(f'visuals/timestep_{time.time()}.png', self._sim.get_sensor_observations()['robot_head_rgb'][:,:,:3][...,::-1])
+        for i in range(num_steps):
+            interpolation = 1.0 / num_steps
+            obs = self._sim.get_sensor_observations()['robot_third_rgb'][:,:,:3]
+            # cv2.imwrite(f'{task._video_save_folder}/snaps/{task._episode_id}/timestep_{len(task._frames)}.png', obs[...,::-1])
+            task._frames.append(obs)
             self._max_displacement_along_axis_interp = self._max_displacement_along_axis * interpolation
             self._max_turn_radians_interp = self._max_turn_radians * interpolation
 

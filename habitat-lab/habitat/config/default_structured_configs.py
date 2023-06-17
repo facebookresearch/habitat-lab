@@ -1517,6 +1517,7 @@ class TaskConfig(HabitatBaseConfig):
     place_init: bool = False
     camera_tilt: float = -0.5236
     receptacle_categories_file: str = ""
+    video_save_folder: str = 'videos_from_task/'
 
 
 @dataclass
@@ -1660,8 +1661,8 @@ class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
 @dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
-    width: int = 512
-    height: int = 512
+    width: int = 1920
+    height: int = 1080
     hfov: int = 120
 
 
