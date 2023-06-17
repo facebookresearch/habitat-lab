@@ -71,8 +71,12 @@ class OVMMDynNavRLEnv(DynNavRLEnv):
                 obj_name = osp.basename(obj.creation_attributes.handle).split(
                     ".", 1
                 )[0]
-                category = self._receptacle_categories[obj_name]
-                if category not in self._recep_category_to_recep_category_id:
+                category = self._receptacle_categories.get(obj_name)
+                if (
+                    category is None
+                    or category
+                    not in self._recep_category_to_recep_category_id
+                ):
                     continue
                 category_id = self._recep_category_to_recep_category_id[
                     category
