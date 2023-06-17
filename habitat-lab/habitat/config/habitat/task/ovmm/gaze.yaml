@@ -9,6 +9,7 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
+    - robot_collisions_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
     - did_pick_object

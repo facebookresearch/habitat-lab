@@ -14,8 +14,10 @@ defaults:
     - dist_to_goal
     - nav_to_pos_succ
     - does_want_terminate
+    - target_iou_coverage
     - ovmm_nav_to_obj_success
     - bad_called_terminate
+    - robot_collisions_terminate
     - ovmm_nav_to_obj_reward
     - num_steps
     - navmesh_collision
@@ -44,7 +46,7 @@ actions:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
 camera_tilt: -0.5236
-receptacle_categories_file: data/objects/fpmodels-categories.csv
+receptacle_categories_file: data/objects/hssd-receptacles.csv
 measurements:
   force_terminate:
     max_accum_force: 10_000.0

@@ -22,10 +22,10 @@ habitat:
   simulator:
     type: OVMMSim-v0
     additional_object_paths:
-      - data/objects/amazon_berkeley/configs/
-      - data/objects/google_scanned/configs/
-      - data/objects/ai2thorhab/configs/objects/
-      - data/objects/floorplanner/configs/objects/
+      - data/objects/train_val/amazon_berkeley/configs/
+      - data/objects/train_val/google_scanned/configs/
+      - data/objects/train_val/ai2thorhab/configs/objects/
+      - data/objects/train_val/hssd/configs/objects/
     debug_render_goal: False
     debug_render: False
     needs_markers: False

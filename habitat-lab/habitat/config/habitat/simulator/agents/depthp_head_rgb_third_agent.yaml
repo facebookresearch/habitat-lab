@@ -1,4 +1,4 @@
-# @package habitat.simulator.agents.rgb_head_agent
+# @package habitat.simulator.agents.depthp_head_rgb_third_agent
 
 defaults:
   - agent_base
