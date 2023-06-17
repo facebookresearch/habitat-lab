@@ -368,6 +368,8 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     navmesh_offset_for_agent_placement: Optional[List[float]] = None
     # Simulation frequency for velocity control
     sim_freq: float = 120.0
+    # Distance threshold between two agents to issue a stop action
+    agents_dist_thresh: float = -1.0
 
 
 # -----------------------------------------------------------------------------
@@ -603,6 +605,12 @@ class ShouldReplanSensorConfig(LabSensorConfig):
     x_len: Optional[float] = None
     y_len: Optional[float] = None
     agent_idx: int = 0
+
+
+@dataclass
+class ActionHistorySensorConfig(LabSensorConfig):
+    type: str = "ActionHistorySensor"
+    window_size: int = 20
 
 
 @dataclass
@@ -1128,6 +1136,11 @@ class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
     end_on_collide: bool = True
     # Positive penalty means give negative reward.
     collide_penalty: float = 1.0
+
+
+@dataclass
+class AgentBlameMeasureConfig(MeasurementConfig):
+    type: str = "AgentBlameMeasure"
 
 
 @dataclass
@@ -2039,6 +2052,12 @@ cs.store(
     node=ShouldReplanSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.action_history",
+    group="habitat/task/lab_sensors",
+    name="action_history",
+    node=ActionHistorySensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.has_finished_oracle_nav",
     group="habitat/task/lab_sensors",
     name="has_finished_oracle_nav",
@@ -2250,6 +2269,12 @@ cs.store(
     group="habitat/task/measurements",
     name="cooperate_subgoal_reward",
     node=CooperateSubgoalRewardConfig,
+)
+cs.store(
+    package="habitat.task.measurements.agent_blame_measure",
+    group="habitat/task/measurements",
+    name="agent_blame_measure",
+    node=AgentBlameMeasureConfig,
 )
 cs.store(
     package="habitat.task.measurements.did_agents_collide",

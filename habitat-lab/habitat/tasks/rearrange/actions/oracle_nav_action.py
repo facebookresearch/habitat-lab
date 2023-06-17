@@ -225,7 +225,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             at_goal = (
                 dist_to_final_nav_targ < self._dist_thresh
                 and angle_to_obj < self._turn_thresh
-            )
+            ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
 
             if self.motion_type == "base_velocity":
                 if not at_goal:
@@ -467,6 +467,24 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         # Get the robot position
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
 
+        # Get the current robot/human pos assuming human is agent 1
+        robot_human_dis = None
+
+        if self._sim.num_articulated_agents > 1:
+            # This is very specific to SIRo. Careful merging
+            _robot_pos = np.array(
+                self._sim.get_agent_data(
+                    0
+                ).articulated_agent.base_transformation.translation
+            )[[0, 2]]
+            _human_pos = np.array(
+                self._sim.get_agent_data(
+                    1
+                ).articulated_agent.base_transformation.translation
+            )[[0, 2]]
+            # Compute the distance
+            robot_human_dis = np.linalg.norm(_robot_pos - _human_pos)
+
         if curr_path_points is None:
             raise RuntimeError("Pathfinder returns empty list")
         else:
@@ -495,7 +513,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
             at_goal = (
                 dist_to_final_nav_targ < self._dist_thresh
                 and angle_to_obj < self._turn_thresh
-            )
+            ) or dist_to_final_nav_targ < self._dist_thresh / 10.0
 
             # Planning to see if the robot needs to do back-up
             need_move_backward = False
@@ -556,6 +574,14 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
                 if need_move_backward:
                     vel[0] = -1 * vel[0]
+
+                # If the human and robot are too close to each other, pause the robot
+                if (
+                    self._config.agents_dist_thresh != -1
+                    and robot_human_dis is not None
+                    and robot_human_dis < self._config.agents_dist_thresh
+                ):
+                    vel = [0, 0]
 
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelNonCylinderAction.step(

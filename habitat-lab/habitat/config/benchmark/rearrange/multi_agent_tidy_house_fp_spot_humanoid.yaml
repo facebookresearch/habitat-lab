@@ -8,7 +8,6 @@ defaults:
 
   - /habitat/dataset/rearrangement: replica_cad
 
-
   - /habitat/task/actions@habitat.task.actions.agent_0_arm_action: arm_action
   - /habitat/task/actions@habitat.task.actions.agent_0_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_0_rearrange_stop: rearrange_stop
@@ -27,6 +26,7 @@ defaults:
     - composite_stage_goals
     - cooperate_subgoal_reward
     - runtime_perf_stats
+    - agent_blame_measure
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -46,8 +46,8 @@ habitat:
   task:
     lab_sensors:
       agent_0_should_replan:
-        x_len: 3.0
-        y_len: 1.5
+        x_len: -1.0
+        y_len: -1.0
         agent_idx: 0
       agent_1_should_replan:
         x_len: 3.0
@@ -83,6 +83,7 @@ habitat:
         type: OracleNavWithBackingUpAction
         agent_index : 0
         spawn_max_dist_to_obj: -1.0
+        agents_dist_thresh: 1.5
         # For noncylinder navmesh action
         # If we allow the agent to do sliding
         allow_dyn_slide: True
@@ -197,4 +198,6 @@ habitat:
       allow_sliding: True
       enable_physics: True
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
+    # data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
+    # data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz

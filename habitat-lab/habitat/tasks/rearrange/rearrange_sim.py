@@ -307,8 +307,7 @@ class RearrangeSim(HabitatSim):
             for handle, ro in rom.get_objects_by_handle_substring().items()
         }
 
-        if new_scene:
-            self._load_navmesh(ep_info)
+        self._load_navmesh(ep_info, new_scene)
 
         # Get the starting positions of the target objects.
         scene_pos = self.get_scene_pos()
@@ -368,7 +367,9 @@ class RearrangeSim(HabitatSim):
         articulated_agent = self.get_agent_data(agent_idx).articulated_agent
 
         for attempt_i in range(max_attempts):
-            start_pos = self.pathfinder.get_random_navigable_point()
+            start_pos = self.pathfinder.get_random_navigable_point(
+                island_index=self._largest_island_idx
+            )
 
             start_pos = self.safe_snap_point(start_pos)
             start_rot = np.random.uniform(0, 2 * np.pi)
@@ -399,40 +400,43 @@ class RearrangeSim(HabitatSim):
                 [[transform[j][i] for j in range(4)] for i in range(4)]
             )
 
-    def _load_navmesh(self, ep_info):
-        scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
+    def _load_navmesh(self, ep_info, new_scene):
+        if new_scene:
+            scene_name = ep_info.scene_id.split("/")[-1].split(".")[0]
 
-        if "fpss" in ep_info.scene_id.split("/"):
-            # For FP scenes, we use different path structure than for other scenes.
-            base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
-        else:
-            base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
-
-        navmesh_path = osp.join(base_dir, "navmeshes", scene_name + ".navmesh")
-        # If we cannot load the navmesh, try generarting navmesh on the fly.
-        if osp.exists(navmesh_path):
-            self.pathfinder.load_nav_mesh(navmesh_path)
-        else:
-            navmesh_settings = NavMeshSettings()
-            navmesh_settings.set_defaults()
-
-            if hasattr(self.habitat_config.agents, "agent_0"):
-                radius = self.habitat_config.agents.agent_0.radius
-                height = self.habitat_config.agents.agent_0.height
-                max_climb = self.habitat_config.agents.agent_0.max_climb
-            elif hasattr(self.habitat_config.agents, "main_agent"):
-                radius = self.habitat_config.agents.main_agent.radius
-                height = self.habitat_config.agents.main_agent.height
-                max_climb = self.habitat_config.agents.main_agent.max_climb
+            if "fpss" in ep_info.scene_id.split("/"):
+                # For FP scenes, we use different path structure than for other scenes.
+                base_dir = osp.join(*ep_info.scene_id.split("/")[:3])
             else:
-                raise ValueError(f"Cannot find agent parameters.")
-            navmesh_settings.agent_radius = radius
-            navmesh_settings.agent_height = height
-            navmesh_settings.agent_max_climb = max_climb
-            navmesh_settings.include_static_objects = True
-            self.recompute_navmesh(self.pathfinder, navmesh_settings)
-            os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
-            self.pathfinder.save_nav_mesh(navmesh_path)
+                base_dir = osp.join(*ep_info.scene_id.split("/")[:2])
+
+            navmesh_path = osp.join(
+                base_dir, "navmeshes", scene_name + ".navmesh"
+            )
+            # If we cannot load the navmesh, try generarting navmesh on the fly.
+            if osp.exists(navmesh_path):
+                self.pathfinder.load_nav_mesh(navmesh_path)
+            else:
+                navmesh_settings = NavMeshSettings()
+                navmesh_settings.set_defaults()
+
+                if hasattr(self.habitat_config.agents, "agent_0"):
+                    radius = self.habitat_config.agents.agent_0.radius
+                    height = self.habitat_config.agents.agent_0.height
+                    max_climb = self.habitat_config.agents.agent_0.max_climb
+                elif hasattr(self.habitat_config.agents, "main_agent"):
+                    radius = self.habitat_config.agents.main_agent.radius
+                    height = self.habitat_config.agents.main_agent.height
+                    max_climb = self.habitat_config.agents.main_agent.max_climb
+                else:
+                    raise ValueError(f"Cannot find agent parameters.")
+                navmesh_settings.agent_radius = radius
+                navmesh_settings.agent_height = height
+                navmesh_settings.agent_max_climb = max_climb
+                navmesh_settings.include_static_objects = True
+                self.recompute_navmesh(self.pathfinder, navmesh_settings)
+                os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
+                self.pathfinder.save_nav_mesh(navmesh_path)
 
         self._navmesh_vertices = np.stack(
             self.pathfinder.build_navmesh_vertices(), axis=0
@@ -441,6 +445,12 @@ class RearrangeSim(HabitatSim):
             self.pathfinder.island_radius(p) for p in self._navmesh_vertices
         ]
         self._max_island_size = max(self._island_sizes)
+        largest_size_vertex = self._navmesh_vertices[
+            np.argmax(self._island_sizes)
+        ]
+        self._largest_island_idx = self.pathfinder.get_island(
+            largest_size_vertex
+        )
 
     def _clear_objects(self, should_add_objects: bool) -> None:
         rom = self.get_rigid_object_manager()

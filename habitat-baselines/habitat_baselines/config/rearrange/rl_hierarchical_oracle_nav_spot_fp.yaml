@@ -86,7 +86,7 @@ habitat:
       - "data/objects/amazon_berkeley/configs/"
       - "data/objects/google_object_dataset/configs/"
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_v0.1.json.gz
+    data_path:  data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
 
 habitat_baselines:
   rl:

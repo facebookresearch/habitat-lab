@@ -69,6 +69,8 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
@@ -85,6 +87,8 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:

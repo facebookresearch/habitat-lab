@@ -1,3 +1,5 @@
+from typing import List
+
 import gym.spaces as spaces
 import numpy as np
 import torch
@@ -33,6 +35,23 @@ HUMAN_TYPE = 1
 BEHAV_ID = "behav_latent"
 
 
+class BdpMultiPolicy(MultiPolicy):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.behav_ids = None
+
+    def get_extra(self, action_data, infos, dones):
+        extras = super().get_extra(action_data, infos, dones)
+        if self.behav_ids is not None:
+            for env_i, behav_id in enumerate(self.behav_ids):
+                behav_id = behav_id.item()
+                stage_goals = infos[env_i]["composite_stage_goals"]
+                extras[env_i].update(
+                    {f"{behav_id}_{k}": v for k, v in stage_goals.items()}
+                )
+        return extras
+
+
 @baseline_registry.register_agent_access_mgr
 class BdpAgentAccessMgr(MultiAgentAccessMgr):
     """
@@ -62,6 +81,13 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
                 end=self._pop_config.behavior_latent_dim,
                 device=device,
             )
+        elif self._pop_config.force_partner_sample_idx >= 0:
+            behav_ids = torch.full(
+                (num_envs,),
+                fill_value=self._pop_config.force_partner_sample_idx,
+                dtype=torch.long,
+                device=device,
+            )
         else:
             behav_ids = torch.randint(
                 0,
@@ -72,6 +98,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         self._behav_latents = F.one_hot(
             behav_ids, self._pop_config.behavior_latent_dim
         ).float()
+        self._multi_policy.behav_ids = behav_ids
 
         return np.array([COORD_AGENT, BEHAV_AGENT]), np.array(
             [ROBOT_TYPE, HUMAN_TYPE]
@@ -84,7 +111,7 @@ class BdpAgentAccessMgr(MultiAgentAccessMgr):
         return agent_obs
 
     def _create_multi_components(self, config, env_spec, num_active_agents):
-        multi_policy = MultiPolicy.from_config(
+        multi_policy = BdpMultiPolicy.from_config(
             config,
             env_spec.observation_space,
             env_spec.action_space,
@@ -171,14 +198,17 @@ class BehavDiscrim(nn.Module):
     def __init__(
         self,
         action_space: spaces.Box,
+        obs_space,
         net: Net,
         loss_scale,
         hidden_size,
         behavior_latent_dim,
+        input_keys: List[str],
     ):
         super().__init__()
 
-        input_dim = net._hidden_size
+        self._input_keys = input_keys
+        input_dim = sum(obs_space.spaces[k].shape[0] for k in self._input_keys)
         self.discrim = nn.Sequential(
             nn.Linear(input_dim, hidden_size),
             nn.ReLU(True),
@@ -189,11 +219,10 @@ class BehavDiscrim(nn.Module):
         self.loss_scale = loss_scale
 
     def pred_logits(self, policy_features, obs):
-        return self.discrim(policy_features)
+        inputs = torch.cat([obs[k] for k in self._input_keys], dim=-1)
+        return self.discrim(inputs)
 
     def forward(self, policy_features, obs):
-        # Don't backprop into the policy representation.
-        policy_features = policy_features.detach()
         pred_logits = self.pred_logits(policy_features, obs)
         behav_ids = torch.argmax(obs[BEHAV_ID], -1)
         loss = F.cross_entropy(pred_logits, behav_ids)
