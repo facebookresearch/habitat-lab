@@ -50,15 +50,6 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         ]
         self._should_replan = torch.zeros(self._num_envs, dtype=torch.bool)
         self.plan_ids_batch = torch.zeros(self._num_envs, dtype=torch.int32)
-        self._cf_plan_idx = self._config.plan_idx
-
-        # Goals: [None, Goal1, Goal2, Goal1 and Goal2]
-        # 1 Goal
-        # 1 Goal Random
-        # 1, 2 Goal Random
-        # 0, 1, 2 Goal Random
-        self.low_plan = [1, 1, 1, 0]
-        self.high_plan = [1, 2, 3, 3]
 
     def create_hl_info(self):
         return {"actions": None}
@@ -203,25 +194,25 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         return plans
 
     def _replan(self, pred_vals, plan_idx):
-        if self._cf_plan_idx >= 0:
+        if self._config.plan_idx == -2:
             # We select a plan at random
-            index_plan = self._config.plan_idx
+            index_plan = plan_idx
         else:
             # We select the plan in plan_idx
-            index_plan = plan_idx
-
-        possible_plans = [
-            None,
-            self._pddl_prob.stage_goals["stage_2_2"],
-            self._pddl_prob.stage_goals["stage_1_2"],
-            self._pddl_prob.goal,
-        ]
-        pddl_goal_selected = possible_plans[index_plan]
-        if pddl_goal_selected is None:
-            plans = []
+            index_plan = self._config.plan_idx
+        # Plan is 0 for no goal, 2**n  - 1 for all goals
+        index_plan = index_plan % self._num_plans
+        assert index_plan > 0
+        # VERY HACKY, will only work for 2 goals but here we are.
+        # index_plan can be 1, 2, 3 corresponding to stage_1, stage_2, composite_success
+        if index_plan == 3:
+            pddl_goal = self._pddl_prob.goal
         else:
-            plans = self._get_all_plans(pred_vals, pddl_goal_selected)
+            goal_name = ["stage_2_2", "stage_1_2"][index_plan - 1]
+            pddl_goal = self._pddl_prob.stage_goals[goal_name]
 
+        plans = self._get_all_plans(pred_vals, pddl_goal)
+        #  print([p.compact_str for p in plans])
         return plans
 
     def _get_plan_action(self, pred_vals, batch_idx, plan_idx=None):
@@ -258,8 +249,8 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
         if (~masks).sum() > 0:
             self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
-                low=self.low_plan[self._cf_plan_idx],
-                high=self.high_plan[self._cf_plan_idx] + 1,
+                low=1,
+                high=self._num_plans,
                 size=[(~masks).int().sum().item()],
                 dtype=torch.int32,
             )

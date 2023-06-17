@@ -338,6 +338,12 @@ class RearrangeSim(HabitatSim):
         if self.habitat_config.auto_sleep:
             self.sleep_all_objects()
 
+        rom = self.get_rigid_object_manager()
+        self._obj_orig_motion_types = {
+            handle: ro.motion_type
+            for handle, ro in rom.get_objects_by_handle_substring().items()
+        }
+
         self._load_navmesh(ep_info, new_scene)
 
         # Get the starting positions of the target objects.
