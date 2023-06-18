@@ -393,6 +393,11 @@ class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class HydraCallbackConfig(HabitatBaselinesBaseConfig):
+    _target_: Optional[str] = None
+
+
+@dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     # If habitat_baselines.evaluate is true, the run will be in evaluation mode
@@ -441,6 +446,10 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval: EvalConfig = EvalConfig()
     profiling: ProfilingConfig = ProfilingConfig()
     should_log_single_proc_infos: bool = False
+    # Called every time a checkpoint is saved.
+    # Function signature: fn(save_file_path: str) -> None
+    # If not specified, there is no callback.
+    on_save_ckpt_callback: Optional[HydraCallbackConfig] = None
 
 
 @dataclass

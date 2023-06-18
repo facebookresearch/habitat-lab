@@ -318,18 +318,21 @@ class PPOTrainer(BaseRLTrainer):
         if extra_state is not None:
             checkpoint["extra_state"] = extra_state  # type: ignore
 
-        torch.save(
-            checkpoint,
-            os.path.join(
-                self.config.habitat_baselines.checkpoint_folder, file_name
-            ),
+        save_file_path = os.path.join(
+            self.config.habitat_baselines.checkpoint_folder, file_name
         )
+        torch.save(checkpoint, save_file_path)
         torch.save(
             checkpoint,
             os.path.join(
                 self.config.habitat_baselines.checkpoint_folder, "latest.pth"
             ),
         )
+        if self.config.habitat_baselines.on_save_ckpt_callback is not None:
+            hydra.utils.call(
+                self.config.habitat_baselines.on_save_ckpt_callback,
+                save_file_path=save_file_path,
+            )
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
         r"""Load checkpoint of specified path as a dict.
