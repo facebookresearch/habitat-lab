@@ -443,6 +443,28 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
         return False
 
+    def _agent_vel_point_direction(self, vel, agent_pos):
+        # We are turning, so fur sure not pointing to the other agent_pos
+        if vel[0] == 0:
+            return False
+
+        trans = mn.Matrix4(self.cur_articulated_agent.sim_obj.transformation)
+        forward = np.array([1.0, 0, 0])
+        robot_forward = np.array(trans.transform_vector(forward))
+        robot_forward = robot_forward[[0, 2]] * np.sign(vel[0])
+        agent_rel_pos = agent_pos - np.array(trans.translation)[[0, 2]]
+
+        magnitude1 = np.linalg.norm(robot_forward)
+        magnitude2 = np.linalg.norm(agent_rel_pos)
+        dot_prod = np.dot(robot_forward, agent_rel_pos)
+        norm_dot_prod = dot_prod / (magnitude1 * magnitude2 + 1e-9)
+        norm_dot_prod = np.clip(norm_dot_prod, -1, 1)
+        angle_rad = np.arccos(norm_dot_prod)
+        angle_deg = np.degrees(angle_rad)
+        if np.abs(angle_deg) < 45:
+            return True
+        return False
+
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
         nav_to_target_idx = kwargs[
@@ -525,8 +547,11 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 # check if there is a collision caused by rotation
                 # if it does, we should block the rotation, and
                 # only move backward
-                need_move_backward = self.rotation_collision_check(
-                    cur_nav_targ,
+                need_move_backward = (
+                    self.rotation_collision_check(
+                        cur_nav_targ,
+                    )
+                    and self.motion_type == "base_velocity"
                 )
 
             if need_move_backward:
@@ -580,9 +605,9 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                     self._config.agents_dist_thresh != -1
                     and robot_human_dis is not None
                     and robot_human_dis < self._config.agents_dist_thresh
+                    and self._agent_vel_point_direction(vel, _human_pos)
                 ):
                     vel = [0, 0]
-
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelNonCylinderAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
@@ -603,6 +628,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                         self.humanoid_controller.calculate_walk_pose(
                             mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
                         )
+
                 else:
                     self.at_goal = True
                     self.skill_done = True
