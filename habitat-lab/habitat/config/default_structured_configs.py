@@ -538,7 +538,7 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class RobotCollisionsTerminateMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisionsTerminate"
-    max_num_collisions: int = -1 # do not terminate by default
+    max_num_collisions: int = -1  # do not terminate by default
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -897,9 +897,11 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
     ee_resting_success_threshold: float = 0.15
     check_stability: bool = False
 
+
 @attr.s(auto_attribs=True, slots=True)
 class PickedObjectLinearVelMeasurementConfig(MeasurementConfig):
     type: str = "PickedObjectLinearVel"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class PickedObjectAngularVelMeasurementConfig(MeasurementConfig):
@@ -1567,7 +1569,7 @@ cs.store(
 cs.store(
     package="habitat.dataset",
     group="habitat/dataset",
-    name="object_rearrange_dataset_config_schema",
+    name="ovmm_dataset_config_schema",
     node=OVMMDatasetConfig,
 )
 
