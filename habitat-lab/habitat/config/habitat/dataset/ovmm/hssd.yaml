@@ -1,7 +1,7 @@
 # @package habitat.dataset
 
 defaults:
-  - /habitat/dataset: object_rearrange_dataset_config_schema
+  - /habitat/dataset: ovmm_dataset_config_schema
   - _self_
 
 type: OVMMDataset-v0
