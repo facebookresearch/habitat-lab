@@ -330,7 +330,7 @@ def _make_proc_config(config, rank, scenes=None, scene_splits=None):
 def _create_worker_configs(config: "DictConfig"):
     num_environments = config.habitat_baselines.num_environments
 
-    dataset = make_dataset(config.habitat.dataset.type)
+    dataset = make_dataset(config.habitat.dataset.type, config=config.habitat.dataset)
     scenes = config.habitat.dataset.content_scenes
     if "*" in config.habitat.dataset.content_scenes:
         scenes = dataset.get_scenes_to_load(config.habitat.dataset)
