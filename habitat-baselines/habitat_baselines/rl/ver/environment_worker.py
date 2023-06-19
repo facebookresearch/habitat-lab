@@ -22,10 +22,11 @@ from typing import (
 import attr
 import numpy as np
 
-from habitat import RLEnv, logger, make_dataset
+from habitat import RLEnv, logger
 from habitat.config import read_write
 from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
 from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
+from habitat.datasets import get_dataset_type
 from habitat.utils.gym_definitions import make_gym_from_config
 from habitat_baselines.common.tensor_dict import NDArrayDict, TensorDict
 from habitat_baselines.rl.ver.queue import BatchedQueue
@@ -330,7 +331,7 @@ def _make_proc_config(config, rank, scenes=None, scene_splits=None):
 def _create_worker_configs(config: "DictConfig"):
     num_environments = config.habitat_baselines.num_environments
 
-    dataset = make_dataset(config.habitat.dataset.type, config=config.habitat.dataset)
+    dataset = get_dataset_type(config.habitat.dataset.type)
     scenes = config.habitat.dataset.content_scenes
     if "*" in config.habitat.dataset.content_scenes:
         scenes = dataset.get_scenes_to_load(config.habitat.dataset)
