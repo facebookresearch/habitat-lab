@@ -286,27 +286,11 @@ class EnvBatchRenderer:
                     output.append(self._gpu_to_cpu_buffer[env_idx][..., 0:3])
                 elif sensor_spec.sensor_type == habitat_sim.SensorType.DEPTH:
                     float_depth_image = self._gpu_to_cpu_buffer[env_idx]
-                    int_depth_image = np.zeros_like(
-                        float_depth_image, dtype=np.uint8
-                    )
-                    float_min = float_depth_image.min()
-                    float_max = float_depth_image.max()
-
-                    # Normalize the distance into 0-255 into new array
-                    for y, x in np.ndindex(float_depth_image.shape):
-                        distance_from_camera = float_depth_image[y, x]
-                        normalized_color_value = np.uint8(
-                            255.0
-                            * (
-                                (distance_from_camera - float_min)
-                                / (float_max - float_min)
-                            )
+                    rgb_depth_image = (
+                        EnvBatchRenderer._float_image_to_rgb_image(
+                            float_depth_image
                         )
-                        int_depth_image[y, x] = normalized_color_value
-
-                    # Expand single channel to RGB channels
-                    rgb_depth_image = np.dstack([int_depth_image] * 3)
-
+                    )
                     output.append(rgb_depth_image)
         return output
 
@@ -431,3 +415,30 @@ class EnvBatchRenderer:
             logger.warn(
                 "No composite file was pre-loaded. Expect lower batch rendering performance."
             )
+
+    @staticmethod
+    def _float_image_to_rgb_image(float_image: np.ndarray):
+        r"""
+        Creates a visualization-friendly RGB image from a float image.
+        The image is normalized from [min, max] to [0, 255].
+
+        :param float_image: 2-dimension float ndarray to be transformed.
+        """
+        int_depth_image = np.zeros_like(float_image, dtype=np.uint8)
+        float_min = float_image.min()
+        float_max = float_image.max()
+
+        # Normalize the values into 0-255
+        for y, x in np.ndindex(float_image.shape):
+            distance_from_camera = float_image[y, x]
+            normalized_color_value = np.uint8(
+                255.0
+                * (
+                    (distance_from_camera - float_min)
+                    / (float_max - float_min)
+                )
+            )
+            int_depth_image[y, x] = normalized_color_value
+
+        # Expand single channels to RGB channels
+        return np.dstack([int_depth_image] * 3)

@@ -331,7 +331,7 @@ def test_rl_vectorized_envs_batch_renderer(
 
     num_envs = len(configs)
     env_fn_args = tuple(zip(configs, datasets, range(num_envs)))
-    with habitat.ThreadedVectorEnv(
+    with habitat.VectorEnv(
         make_env_fn=_make_dummy_env_func, env_fn_args=env_fn_args
     ) as envs:
         envs.initialize_batch_renderer(configs[0])
@@ -387,7 +387,7 @@ def test_rl_vectorized_envs_batch_renderer(
             tiled_img = envs.render(mode="rgb_array")
             new_height = int(np.ceil(np.sqrt(NUM_ENVS)))
             new_width = int(np.ceil(float(NUM_ENVS) / new_height))
-            h, w, _c = observations[0][obs_key].shape
+            h, w, _ = observations[0][obs_key].shape
             assert tiled_img.shape == (
                 h * new_height,
                 w * new_width,
