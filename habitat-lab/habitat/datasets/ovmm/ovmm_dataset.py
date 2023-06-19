@@ -109,9 +109,11 @@ class OVMMDatasetV0(PointNavDatasetV1):
     transformations_matrix: np.ndarray = None
     content_scenes_path: str = "{data_path}/content/{scene}.json.gz"
 
+
     def __init__(self, config: Optional["DictConfig"] = None) -> None:
         self.config = config
         check_and_gen_physics_config()
+        self.episode_indices_range = None
         if config is not None:
             if self.config.viewpoints_matrix_path is not None:
                 self.viewpoints_matrix = np.load(
@@ -125,7 +127,7 @@ class OVMMDatasetV0(PointNavDatasetV1):
                         split=self.config.split
                     )
                 )
-        self.episode_indices_range = self.config.episode_indices_range
+            self.episode_indices_range = self.config.episode_indices_range
         super().__init__(config)
 
     def get_episode_iterator(
@@ -170,9 +172,12 @@ class OVMMDatasetV0(PointNavDatasetV1):
             ]
 
 
-        episodes_index_low, episodes_index_high = self.episode_indices_range
-        episode_ids_subset = None
         all_episodes = deserialized["episodes"]
+        if self.episode_indices_range is None:
+            episodes_index_low, episodes_index_high = 0, len(all_episodes)
+        else:
+            episodes_index_low, episodes_index_high = self.episode_indices_range
+        episode_ids_subset = None
         if len(self.config.episode_ids) > 0:
             episode_ids_subset = self.config.episode_ids[episodes_index_low: episodes_index_high]
         else:
