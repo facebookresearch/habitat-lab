@@ -10,7 +10,7 @@ defaults:
 
 habitat_baselines:
   verbose: False
-  trainer_name: "ver"
+  trainer_name: "ddppo"
   torch_gpu_id: 0
   tensorboard_dir: "tb"
   video_dir: "video_dir"
