@@ -4,7 +4,7 @@ defaults:
   - /habitat: habitat_config_base
   - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
   - /habitat/task/ovmm: nav_to_rec
-  - /habitat/dataset/rearrangement: hssd
+  - /habitat/dataset/ovmm: hssd
   - _self_
 
 habitat:
