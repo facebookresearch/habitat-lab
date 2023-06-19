@@ -472,5 +472,10 @@ class DebugVisualizer:
         file_path = os.path.join(output_path, prefix + date_time)
         logger.info(f"DebugVisualizer: Saving debug video to {file_path}")
         vut.make_video(
-            obs_cache, self.default_sensor_uuid, "color", file_path, fps=fps
+            obs_cache,
+            self.default_sensor_uuid,
+            "color",
+            file_path,
+            fps=fps,
+            open_vid=False,
         )

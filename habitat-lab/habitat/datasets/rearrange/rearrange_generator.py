@@ -951,7 +951,7 @@ class RearrangeEpisodeGenerator:
                 obs_cache=settle_db_obs,
             )
 
-        Y_OFFSET = 10.
+        Y_OFFSET = 4.5
         scene_bb_center = scene_bb.center()
         scene_bb_center.y = scene_bb_center.y + Y_OFFSET
         down = mn.Vector3(scene_bb_center)
@@ -1009,6 +1009,7 @@ class RearrangeEpisodeGenerator:
             self.vdb.make_debug_video(
                 prefix="settle_", fps=30, obs_cache=settle_db_obs
             )
+            input("Waiting for input...")
 
         # collect detailed receptacle stability report log
         detailed_receptacle_stability_report = (
