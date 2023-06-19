@@ -119,6 +119,7 @@ class RearrangeSim(HabitatSim):
         self._debug_render_goal = self.habitat_config.debug_render_goal
         self._debug_render = self.habitat_config.debug_render
         self._concur_render = self.habitat_config.concur_render
+        self._batch_render = config.renderer.enable_batch_renderer
         self._enable_gfx_replay_save = (
             self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
         )
@@ -212,7 +213,7 @@ class RearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def _try_acquire_context(self):
-        if self._concur_render:
+        if self.renderer and self._concur_render:
             self.renderer.acquire_gl_context()
 
     @add_perf_timing_func()
@@ -821,7 +822,14 @@ class RearrangeSim(HabitatSim):
 
         self.maybe_update_articulated_agent()
 
-        if self._concur_render:
+        if self._batch_render:
+            for _ in range(self.ac_freq_ratio):
+                self.internal_step(-1, update_articulated_agent=False)
+                
+            self._prev_sim_obs = self.get_sensor_observations()
+            self.add_keyframe_to_observations(self._prev_sim_obs)
+            obs = self._prev_sim_obs
+        elif self._concur_render:
             self._prev_sim_obs = self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
@@ -842,14 +850,15 @@ class RearrangeSim(HabitatSim):
             )
             self.add_perf_timing("get_sensor_observations", t_start)
 
-        if self._enable_gfx_replay_save:
+        # TODO: Support recording while batch rendering
+        if self._enable_gfx_replay_save and not self._batch_render:
             self.gfx_replay_manager.save_keyframe()
 
         if self._needs_markers:
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "third_rgb" in obs and self._debug_render:
+        if "third_rgb" in obs and self._debug_render and not self._batch_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
@@ -913,7 +922,7 @@ class RearrangeSim(HabitatSim):
     ) -> None:
         """Step the world and update the articulated_agent.
 
-        :param dt: Timestep by which to advance the world. Multiple physics substeps can be excecuted within a single timestep. -1 indicates a single physics substep.
+        :param dt: Timestep by which to advance the world. Multiple physics substeps can be executed within a single timestep. -1 indicates a single physics substep.
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
