@@ -387,6 +387,11 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
+    """
+    `_target_` points to the `VectorEnvFactory` to setup the vectorized
+    environment. Defaults to the Habitat vectorized environment setup.
+    """
+
     _target_: str = (
         "habitat_baselines.common.habitat_env_factory.HabitatEnvFactory"
     )
@@ -394,6 +399,11 @@ class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
 
 @dataclass
 class HydraCallbackConfig(HabitatBaselinesBaseConfig):
+    """
+    Generic callback option for Hydra. Used to create the `_target_` class or
+    call the `_target_` method.
+    """
+
     _target_: Optional[str] = None
 
 
@@ -427,6 +437,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     log_file: str = "train.log"
     force_blind_policy: bool = False
     verbose: bool = True
+    # Creates the vectorized environment.
     vector_env_factory: VectorEnvFactoryConfig = VectorEnvFactoryConfig()
     eval_keys_to_include_in_name: List[str] = field(default_factory=list)
     # For our use case, the CPU side things are mainly memory copies

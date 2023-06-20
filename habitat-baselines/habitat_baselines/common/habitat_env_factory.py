@@ -26,15 +26,6 @@ class HabitatVectorEnvFactory(VectorEnvFactory):
         r"""Create VectorEnv object with specified config and env class type.
         To allow better performance, dataset are split into small ones for
         each individual env, grouped by scenes.
-
-        :param config: configs that contain num_environments as well as information
-        :param necessary to create individual environments.
-        :param workers_ignore_signals: Passed to :ref:`habitat.VectorEnv`'s constructor
-        :param enforce_scenes_greater_eq_environments: Make sure that there are more (or equal)
-            scenes than environments. This is needed for correct evaluation.
-        :param is_first_rank: If these environments are being constructed on the rank0 GPU.
-
-        :return: VectorEnv object created according to specification.
         """
 
         num_environments = config.habitat_baselines.num_environments

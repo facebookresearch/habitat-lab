@@ -20,10 +20,16 @@ class Updater(abc.ABC):
         return None
 
     def after_update(self) -> None:
-        pass
+        """
+        Called after the policy update.
+        """
 
     def get_resume_state(self) -> Dict[str, Any]:
-        pass
+        """
+        Gets the optimizer resume state.
+        """
 
     def load_state_dict(self, state: Dict[str, Any]) -> None:
-        pass
+        """
+        Loads an optimizer state.
+        """
