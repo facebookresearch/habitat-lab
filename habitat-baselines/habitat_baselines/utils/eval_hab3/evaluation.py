@@ -11,6 +11,7 @@ import numpy as np
 def get_results_from_folder(folder_name):
     # Given a folder returns a dictionary with episode_id
     all_files = glob.glob(f"{folder_name}/*.pkl")
+    print(len(all_files))
     results_dict = {}
     for file_name in all_files:
         with open(file_name, "rb") as f:
@@ -65,9 +66,13 @@ class EvalRunResults():
             mean_speedup, std = np.mean(speedups), np.std(speedups)
             speedup_all_seeds.append(mean_speedup)
         mean, std = np.mean(speedup_all_seeds), np.std(speedup_all_seeds)
-        print("Speedup: {:.02f} {:.02f}".format(mean, std))
+        print("Speedup: {:.02f} ({:.02f})".format(mean, std))
 
 def compute_all_metrics():
+    for path in paths:
+        results = EvalRunResults(path)
+        results.average_metrics()
+        
     fpth = "multirun/2023-06-15/17-37-03/0/eval_stats"
     single_agent = EvalRunResults(fpth_single)
     for experiment in baselines:
@@ -77,4 +82,10 @@ def compute_all_metrics():
     common_agent.compute_speedup(single_agent)
 
 if __name__ == '__main__':
-    
+    baselines = [
+        "multirun/2023-06-18/02-12-56/0/eval_data/",
+        "multirun/2023-06-18/02-13-01/0/eval_data/",
+        "multirun/2023-06-19/16-02-14/0/eval_data/"
+    ]
+    for baseline in baselines:
+        EvalRunResults(baseline)
