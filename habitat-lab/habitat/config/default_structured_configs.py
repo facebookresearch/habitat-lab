@@ -1663,7 +1663,8 @@ class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
     width: int = 1920
     height: int = 1080
-    hfov: int = 120
+    hfov: int = 120  # horizontal field of view in degrees
+
 
 
 @dataclass
@@ -1883,6 +1884,7 @@ class DatasetConfig(HabitatBaseConfig):
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
     content_scenes: List[str] = field(default_factory=lambda: ["*"])
+    scene_indices_range: Optional[Tuple[int, int]] = None
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
