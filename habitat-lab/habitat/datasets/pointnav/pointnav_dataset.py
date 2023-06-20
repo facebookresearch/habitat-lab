@@ -119,12 +119,13 @@ class PointNavDatasetV1(Dataset):
                     dataset_dir=dataset_dir,
                 )
 
-            for scene in scenes:
-                scene_filename = self.content_scenes_path.format(
-                    data_path=dataset_dir, scene=scene
-                )
-                with gzip.open(scene_filename, "rt") as f:
-                    self.from_json(f.read(), scenes_dir=config.scenes_dir)
+            for i, scene in enumerate(scenes):
+                if config.scene_indices_range is None or i in range(config.scene_indices_range[0], config.scene_indices_range[1]):
+                    scene_filename = self.content_scenes_path.format(
+                        data_path=dataset_dir, scene=scene
+                    )
+                    with gzip.open(scene_filename, "rt") as f:
+                        self.from_json(f.read(), scenes_dir=config.scenes_dir)
 
         else:
             with gzip.open(datasetfile_path, "rt") as f:
