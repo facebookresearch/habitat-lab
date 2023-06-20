@@ -891,7 +891,7 @@ class SandboxDriver(GuiAppDriver):
                     text_delta_y=-50,
                 )
 
-            progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes remaining"
+            progress_str = f"{self._num_iter_episodes - (self._num_episodes_done + 1)} episodes left"
             self._text_drawer.add_text(
                 progress_str,
                 TextOnScreenAlignment.TOP_RIGHT,
