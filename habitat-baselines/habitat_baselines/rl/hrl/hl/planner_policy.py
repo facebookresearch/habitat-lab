@@ -8,6 +8,7 @@ from typing import List
 
 import gym.spaces as spaces
 import torch
+import random
 
 from habitat.tasks.rearrange.multi_task.pddl_action import PddlAction
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
@@ -98,13 +99,15 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         stack = deque([PlanNode(start_true_preds, None, 0, None)])
         visited = {_get_pred_hash(start_true_preds)}
         sol_nodes = []
+        shuffled_actions = [action for action in self._all_actions]
+        random.shuffle(shuffled_actions)
         while len(stack) != 0:
             cur_node = stack.popleft()
 
             if cur_node.depth > self._max_search_depth:
                 break
 
-            for action in self._all_actions:
+            for action in shuffled_actions:
                 if not action.is_precond_satisfied_from_predicates(
                     cur_node.cur_pred_state
                 ):
