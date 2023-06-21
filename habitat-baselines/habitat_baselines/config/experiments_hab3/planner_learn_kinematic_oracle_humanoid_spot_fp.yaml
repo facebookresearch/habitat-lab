@@ -12,7 +12,7 @@ defaults:
 
 hydra:
   job:
-    name: 'pop_play_humanoid_spot_fp'
+    name: 'planner_play_humanoid_spot_fp'
 
 
 habitat:
@@ -54,7 +54,21 @@ habitat_baselines:
       agent_sample_interval: 20
       force_partner_sample_idx: -1
     policy:
+      # agent_1:
+      #   hierarchical_policy:
+      #     high_level_policy:
+      #       plan_idx: -2 # -2 means use different subsets for different envs
+      agent_0:
+        hierarchical_policy:
+          defined_skills:
+            nav_to_obj:
+              skill_name: "NoopSkillPolicy"
+              apply_postconds: True
+              max_skill_steps: 1  
       agent_1:
         hierarchical_policy:
-          high_level_policy:
-            plan_idx: -2 # -2 means use different subsets for different envs
+          defined_skills:
+            nav_to_obj:
+              skill_name: "NoopSkillPolicy"
+              apply_postconds: True
+              max_skill_steps: 1

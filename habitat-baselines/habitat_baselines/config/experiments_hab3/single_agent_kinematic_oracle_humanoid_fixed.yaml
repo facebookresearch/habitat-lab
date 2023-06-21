@@ -12,6 +12,8 @@ hydra:
 
 habitat_baselines:
   log_interval: 1
+
+  episode_data_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/eval_data
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
   tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
   eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
