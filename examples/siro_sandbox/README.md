@@ -6,54 +6,15 @@
 This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearrangement episode datasets, Fetch and Spot robots, humanoids (controllers, animation, skinning), trained agent policies, batch rendering and other visualization.
 
 # Known Issues
-* June 5: The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See recently-tested snapshot below including specific commits that have been tested to work together.
+* The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. See Snapshots section below for best results.
 * The skinned humanoid doesn't render correctly; see workaround below.
 * When using Floorplanner scenes (see below), the app has bad runtime perf on older Macbooks (2021 is fine; 2019 is bad). See "Workaround for poor runtime perf on slower machines".
-* June 5: navmesh issue: you can walk through furniture.
 
-# Recently-tested Snapshot, June 5
-1. Follow [SIRo install instructions](../../SIRO_README.md#installation).
-2. Apply the "Workaround to avoid broken skinned humanoid" described below.
-2. Check out these commits: `habitat-lab`: `e7c17e49`, `habitat-sim`: `d32d7510`, `fbhab` (at `data/fpss`): `6fb800903`, `data/datasets/floorplanner`: `ff11d93`
-3. Run either command below.
-
-## GUI-controlled humanoid and PDDL planner + oracle skills policy-controlled Spot, Floorplanner scenes
-```
-HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---gui-controlled-agent-index 1 \
---never-end \
---first-person-mode \
---show-tutorial \
---save-filepath-base my_session \
---cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat.simulator.habitat_sim_v0.allow_sliding=True \
-habitat.simulator.agents.agent_1.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'
-```
-
-## Solo GUI-controlled humanoid, ReplicaCAD scene
-```
-HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
-python examples/siro_sandbox/sandbox_app.py \
---disable-inverse-kinematics \
---gui-controlled-agent-index 0 \
---never-end \
---first-person-mode \
---save-filepath-base my_session \
---cfg experiments_hab3/single_agent_pddl_planner_kinematic_oracle_humanoid.yaml \
---cfg-opts \
-habitat_baselines.evaluate=True \
-habitat_baselines.num_environments=1 \
-habitat.dataset.split=minival \
-habitat.simulator.habitat_sim_v0.allow_sliding=True \
-habitat.simulator.agents.main_agent.articulated_agent_urdf='data/humanoids/humanoid_data/female2_0_rigid.urdf'
-```
+# Snapshots with examples of running the tool
+See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKuXXE2cKchi-C_O7GGVFZ5x0QU7J9gHTIETzpVKJU/edit#). The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. This doc describes well-tested sets of commits across our repos (Habitat-lab, Habitat-sim, fphab, floorplanner). This doc also gives example commands to run the tool.
 
 <!-- 
+# Example commands
 June 5: these are commented out because they're broken.
 ### GUI-controlled humanoid and learned-policy-controlled Spot
 
@@ -103,10 +64,11 @@ habitat_baselines.eval_ckpt_path_dir=path/to/latest.pth
 * For `--first-person-mode`, you can toggle mouse-look by left-clicking anywhere
 
 # Workaround to avoid broken skinned humanoid
+Following the default install instructions, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
 
-Following the instructions above, a broken skinned humanoid is rendered which blocks the first-person camera view at times. This is a known issue: the sandbox app uses replay-rendering, which doesn't yet support skinning.
+Update June 16: `--hide-humanoid-in-gui` is the preferred workaround (documented below). This simply hides the humanoid in the GUI viewport.
 
-Steps to work around this by reverting to a rigid-skeleton humanoid:
+Alternately, here's an older, outdated workaround where we revert to a rigid-skeleton humanoid. This workaround is worse than `--hide-humanoid-in-gui` because the rigid skeleton is also rendered into observations fed to policies, which is wrong, but we leave these steps here for reference:
 1. Make a copy (or symlink) of `female2_0.urdf`.
     * `cp data/humanoids/humanoid_data/female2_0.urdf data/humanoids/humanoid_data/female2_0_rigid.urdf`
 2. Update or override your config. Your humanoid is probably either `main_agent` or `agent_1`.
@@ -118,10 +80,13 @@ Steps to work around this by reverting to a rigid-skeleton humanoid:
 
 If your FPS is very low, consider this workaround. This habitat-sim commit replaces render meshes for high-vertex-density objects with white bounding-box outlines. Beware, many parts of the scene will appear to be missing!
 * Follow [SIRo install instructions](../../SIRO_README.md#installation) for building habitat-sim from source.
-* Apply this habitat-sim commit: `git cherry-pick 93d13ce1f7192d996e02c7ff37f0239553549ab0`
+* Apply this habitat-sim commit: `git cherry-pick f031c975`
 * Rebuild habitat-sim.
 
 # Command-line Options
+
+## Hack to hide the skinned humanoid in the GUI viewport
+Use `--hide-humanoid-in-gui` to hide the humanoid in the GUI viewport. Note it will still be rendered into observations fed to policies. This option is a workaround for broken skinned humanoid rendering in the GUI viewport.
 
 ## Saving episode data
 Use `--save-filepath-base my_session`. When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
@@ -156,8 +121,11 @@ habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False
 ## Play episodes filter
 Specify a subset of play episodes on the command line by adding `--episodes-filter`  argument followed by the filter string. Episodes filter string should be in the form `"0:10 12 14:20:2"`, where single integer number ('12' in this case) represents an episode id and colon separated integers ('0:10' and '14:20:2') represent start:stop:step episodes ids range.
 
+## Saving episode data
+Add `--save-episode-record` flag to enable saving recorded episode data to file and `--save-filepath-base my_session` argument to specify a custom save location (filepath base). When the user presses `M` to reset the env, the first episode will be saved as `my_session.0.json.gz` and `my_session.0.pkl.gz`. These files contain mostly-identical data; we save both so that developers have two choices for how to consume the data later. After pressing `M` again, the second episode will be saved as `my_session.1.json.gz`, etc. For an example of consuming this data, see `test_episode_save_files.py` .
+
 ## Capturing Gfx-Replay Files
-Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording can be enabled with the `--enable-gfx-replay-save` argument. Capturing starts at the first frame and ends (is saved) when pressing the period (`.`) key. The `--gfx-replay-save-path` argument can be set to specify a custom save location.
+Gfx-Replay files are graphics captures that can be replayed by other applications, such as Blender. Recording (and saving to disk) can be enabled by adding `--enable-gfx-replay-save` flag and `--save-filepath-base my_session` argument specifying a custom save location (filepath base). Capturing ends (is saved) when the session is over (pressed ESC). The file will be saved as `my_session.gfx_replay.json.gz`.
 
 ## Human-in-the-loop tutorial sequence
 The sandbox tool can show a tutorial sequence at the start of every episode to introduce the user to the scene and goals in a human-in-the-loop context. To enable this, use the `--show-tutorial` command-line argument.

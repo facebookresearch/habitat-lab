@@ -1,0 +1,45 @@
+# @package _global_
+
+defaults:
+  - pop_play_kinematic_oracle_humanoid_spot_fp
+  - _self_
+
+hydra:
+  job:
+    name: 'teleport_pop_play_humanoid_spot_fp'
+
+habitat_baselines:
+  rl:
+    policy:
+      agent_0:
+        hierarchical_policy:
+          high_level_policy:
+            add_arm_rest: False
+            policy_input_keys:
+              - "articulated_agent_arm_depth"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+          defined_skills:
+            nav_to_obj:
+              skill_name: "NoopSkillPolicy"
+              max_skill_steps: 1
+      agent_1:
+        hierarchical_policy:
+          high_level_policy:
+            add_arm_rest: False
+            policy_input_keys:
+              - "head_depth"
+              - "is_holding"
+              - "obj_start_sensor"
+              - "obj_goal_sensor"
+              - "obj_start_gps_compass"
+              - "obj_goal_gps_compass"
+              - "other_agent_gps"
+          defined_skills:
+            nav_to_obj:
+              skill_name: "NoopSkillPolicy"
+              max_skill_steps: 1

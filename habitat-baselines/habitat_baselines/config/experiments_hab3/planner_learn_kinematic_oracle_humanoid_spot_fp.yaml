@@ -2,11 +2,18 @@
 
 defaults:
   - pop_play_kinematic_oracle_humanoid_spot_fp
-  - /habitat_baselines/rl/auxiliary_losses: bdp_discrim
   - /habitat/task/lab_sensors:
-    - action_history
-  - override /habitat_baselines/rl/agent: bdp
+    # For the oracle navigation
+    - all_predicates
+
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_planner
   - _self_
+
+hydra:
+  job:
+    name: 'pop_play_humanoid_spot_fp'
+
 
 habitat:
   gym:
@@ -35,31 +42,19 @@ habitat:
       - agent_1_has_finished_oracle_nav
       - agent_1_other_agent_gps
       - agent_1_should_replan
-      - agent_1_action_history
+      - all_predicates
 habitat_baselines:
+  eval:
+    should_load_ckpt: False
+    video_option: ["disk"]
+
   rl:
-    auxiliary_losses:
-      bdp_discrim:
-        loss_scale: 0.1
-        behavior_latent_dim: 16
-        input_keys: ['action_history']
     agent:
-      # BDP uses a behavior latent to create a population, instead of multiple independent policies.
       num_pool_agents_per_type: [1, 1]
-      behavior_latent_dim: 16
-      discrim_reward_weight: 0.001
+      agent_sample_interval: 20
+      force_partner_sample_idx: -1
     policy:
       agent_1:
-        # This is the behav policy.
         hierarchical_policy:
           high_level_policy:
-            policy_input_keys:
-              - "head_depth"
-              - "is_holding"
-              - "obj_start_gps_compass"
-              - "obj_goal_gps_compass"
-              - "other_agent_gps"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
-              - "behav_latent"
-              - "action_history"
+            plan_idx: -2 # -2 means use different subsets for different envs

@@ -203,6 +203,7 @@ actions:
       expr_type: AND
       sub_exprs:
         - robot_at(obj, robot)
+        - not_holding(robot)
         - quantifier: FORALL
           inputs:
             - name: recep

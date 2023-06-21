@@ -105,17 +105,20 @@ python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluat
 To run evaluation on population-based training checkpoints:
 1. GTCoord training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GTCoord_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GTCoord_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
+habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0
 ```
 
 2. PBT training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/PBT8_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8]
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/PBT8_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8] habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
+habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 
 ```
 
 3. BDP training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/BDP16_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1]
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/BDP16_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
+habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0
 ```
 
 The coordination agent (checkpoint for Spot) in all of the above cases is the 0th index in the `state_dict` in the checkpoint. 
@@ -135,14 +138,14 @@ To run Spot in FP (`pop_play_kinematic_oracle_spot_fp.yaml`), please follows the
 ```bash
 srun -v --gpus-per-node=1 --partition=siro --time=1:00:00 --cpus-per-task 1 \
 python -u habitat-baselines/habitat_baselines/run.py \
---config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml \
+-m --config-name=experiments_hab3/pop_play_kinematic_oracle_spot_fp.yaml \
 habitat_baselines.num_environments=1
 ```
 
 or for running HRL fix policy:
 ```bash
 python habitat-baselines/habitat_baselines/run.py \
---config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml \
+-m --config-name=rearrange/rl_hierarchical_oracle_nav_spot_fp.yaml \
 habitat_baselines.evaluate=True \
 habitat.simulator.kinematic_mode=True \
 habitat.simulator.step_physics=False \
@@ -155,7 +158,7 @@ habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines
 or for running HRL human-robot fix policy (multi-agent setting)
 ```bash
 python habitat-baselines/habitat_baselines/run.py \
---config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
+-m --config-name=experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
 habitat_baselines.evaluate=True \
 habitat.simulator.kinematic_mode=True \
 habitat.simulator.step_physics=False \

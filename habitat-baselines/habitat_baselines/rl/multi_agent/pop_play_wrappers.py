@@ -211,7 +211,7 @@ class MultiPolicy(Policy):
         update_obs_with_agent_prefix_fn: Optional[Callable] = None,
         **kwargs,
     ):
-        return MultiPolicy(update_obs_with_agent_prefix_fn)
+        return cls(update_obs_with_agent_prefix_fn)
 
 
 class MultiStorage(Storage):

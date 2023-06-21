@@ -158,7 +158,9 @@ class BaselinesController(Controller):
             {
                 k[
                     len(self._agent_k) if k.startswith(self._agent_k) else 0 :
-                ]: torch.tensor(v).unsqueeze(0)
+                ]: torch.tensor(v)
+                .unsqueeze(0)
+                .to(self.device)
                 for k, v in obs.items()
                 if k.startswith(self._agent_k) or "agent_" not in k
             }
@@ -478,10 +480,6 @@ class GuiHumanoidController(GuiController):
 
         KeyNS = GuiInput.KeyNS
         gui_input = self._gui_input
-
-        if gui_input.get_key_down(KeyNS.N):
-            # todo: move outside this controller
-            env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
         if do_humanoidjoint_action:
             humancontroller_base_user_input = np.zeros(3)

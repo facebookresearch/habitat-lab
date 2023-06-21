@@ -147,7 +147,11 @@ class PPOTrainer(BaseRLTrainer):
         self.envs, num_scenes = construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
-            enforce_scenes_greater_eq_environments=is_eval,
+            # enforce_scenes_greater_eq_environments=is_eval,
+            # TODO: This must be changed for episodes with few scenes. We
+            # should change it back when expanding to more scenes and final
+            # results so there is no imbalance of scenes per worker.
+            enforce_scenes_greater_eq_environments=False,
         )
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
