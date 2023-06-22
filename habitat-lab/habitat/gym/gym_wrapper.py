@@ -272,7 +272,6 @@ class HabGymWrapper(gym.Wrapper):
     def _transform_obs(self, obs):
         if self._save_orig_obs:
             self.orig_obs = obs
-
         observation = {
             "observation": OrderedDict(
                 [(k, obs[k]) for k in self._gym_obs_keys]
@@ -309,7 +308,8 @@ class HabGymWrapper(gym.Wrapper):
         if return_info:
             obs, info = obs
             self._last_obs = obs
-            return self._transform_obs(obs), info
+            # return self._transform_obs(obs), info
+            return obs, info
         else:
             self._last_obs = obs
             return self._transform_obs(obs)
