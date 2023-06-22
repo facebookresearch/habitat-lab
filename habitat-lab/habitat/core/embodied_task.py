@@ -307,7 +307,6 @@ class EmbodiedTask:
             action_name in self.actions
         ), f"Can't find '{action_name}' action in {self.actions.keys()}."
         task_action = self.actions[action_name]
-        print("is_last_action:", is_last_action)
         observations.update(
             task_action.step(
                 **action["action_args"],
