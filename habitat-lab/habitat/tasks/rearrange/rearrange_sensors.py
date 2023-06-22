@@ -1138,16 +1138,7 @@ class HasFinishedOracleNavSensor(UsesArticulatedAgentInterface, Sensor):
 
 @registry.register_measure
 class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
-    """
-    Compute
-    found_human
-    spl
-    found_human_rate
-    """
-
-    # print("Initialized!")
     cls_uuid: str = "compute_soc_nav_metric"  # "has_finished_oracle_nav"
-    import numpy as np
 
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(**kwargs)
@@ -1239,30 +1230,13 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
             human_poses = human_nav_action.poses
             found_human_list = self.found_human_list(robot_poses, human_poses)
             found = sum(found_human_list) > 0
-            following_rate = sum(found_human_list) / float(
-                len(found_human_list)
-            )
             (
                 opt_path_len_until_finding_human,
                 arg_opt,
             ) = human_nav_action.compute_opt_trajectory_len_until_found(
                 robot_start_pose
             )
-            robot_path_len = self.robot_path_len(robot_poses, found_human_list)
-            found_spl = (
-                opt_path_len_until_finding_human
-                / max(opt_path_len_until_finding_human, robot_path_len)
-            ) * found
-            print(
-                "SocNavMetrics - found",
-                found,
-                "found_spl",
-                found_spl,
-                "following_rate",
-                following_rate,
-            )
-            print("arg opt is ", arg_opt)
-            return found  # [found, found_spl, found_rate]
+            return found
         else:
             return np.nan  # [np.nan, np.nan, np.nan]
 
@@ -1345,11 +1319,6 @@ class FindingSuccessRate(UsesArticulatedAgentInterface, Measure):
         human_poses = self.human_poses
 
         if len(human_poses) > 0 and len(robot_poses) > 0:
-            # TODO Why is len(robot_poses) != len(human_poses)?
-            if len(human_poses) != len(robot_poses):
-                print(
-                    f"{len(human_poses)} human poses != {len(robot_poses)} robot poses"
-                )
             robot_poses = robot_poses[: len(human_poses)]
             human_poses = human_poses[: len(robot_poses)]
 
@@ -1402,12 +1371,6 @@ class FollowingRate(UsesArticulatedAgentInterface, Measure):
         robot_poses = self.robot_poses
         human_poses = self.human_poses
         if len(human_poses) > 0 and len(robot_poses) > 0:
-            # TODO Why is len(robot_poses) != len(human_poses)?
-            if len(human_poses) != len(robot_poses):
-                print(
-                    f"{len(human_poses)} human poses != {len(robot_poses)} robot poses"
-                )
-
             robot_poses = robot_poses[: len(human_poses)]
             human_poses = human_poses[: len(robot_poses)]
 
@@ -1474,10 +1437,6 @@ class FollowingDistance(UsesArticulatedAgentInterface, Measure):
         human_poses = self.human_poses
 
         if len(human_poses) > 0 and len(robot_poses) > 0:
-            # TODO Why is len(robot_poses) != len(human_poses)?
-            # if len(human_poses) != len(robot_poses):
-            #     print(f"{len(human_poses)} human poses != {len(robot_poses)} robot poses")
-
             robot_poses = robot_poses[: len(human_poses)]
             human_poses = human_poses[: len(robot_poses)]
 
