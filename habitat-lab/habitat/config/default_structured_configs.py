@@ -4,7 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 from hydra.core.config_store import ConfigStore
@@ -1267,7 +1267,7 @@ class DatasetConfig(HabitatBaseConfig):
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
     content_scenes: List[str] = ["*"]
-    episode_ids: List[int] = []
+    scene_indices_range: Optional[Tuple[int, int]] = None
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
