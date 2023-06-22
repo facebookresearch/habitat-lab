@@ -225,6 +225,10 @@ class ObjectGoalSensorConfig(LabSensorConfig):
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
 
+@attr.s(auto_attribs=True, slots=True)
+class LanguageGoalSensorConfig(LabSensorConfig):
+    type: str = "LanguageGoalSensor"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class ImageGoalSensorConfig(LabSensorConfig):
@@ -862,6 +866,13 @@ class EpisodeInfoMeasurementConfig(MeasurementConfig):
 @attr.s(auto_attribs=True, slots=True)
 class DistanceToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToGoal"
+    distance_to: str = "POINT"
+    goals_attr: str = "goals"
+    distance_from: str = "BASE"
+
+@attr.s(auto_attribs=True, slots=True)
+class DistanceToGoalInstanceMeasurementConfig(MeasurementConfig):
+    type: str = "DistanceToGoalInstance"
     distance_to: str = "POINT"
     goals_attr: str = "goals"
     distance_from: str = "BASE"
@@ -1538,6 +1549,12 @@ cs.store(
     node=ObjectGoalSensorConfig,
 )
 cs.store(
+    package="habitat.task.lab_sensors.languagegoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="languagegoal_sensor",
+    node=LanguageGoalSensorConfig,
+)
+cs.store(
     package="habitat.task.lab_sensors.imagegoal_sensor",
     group="habitat/task/lab_sensors",
     name="imagegoal_sensor",
@@ -1724,6 +1741,12 @@ cs.store(
     group="habitat/task/measurements",
     name="distance_to_goal",
     node=DistanceToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.distance_to_goal_instance",
+    group="habitat/task/measurements",
+    name="distance_to_goal_instance",
+    node=DistanceToGoalInstanceMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.distance_to_goal_reward",

@@ -1055,6 +1055,85 @@ class DistanceToGoal(Measure):
 
 
 @registry.register_measure
+class DistanceToGoalInstance(Measure):
+    """The measure calculates a distance towards the goal."""
+
+    cls_uuid: str = "distance_to_goal_instance"
+
+    def __init__(
+        self, sim: Simulator, config: "DictConfig", *args: Any, **kwargs: Any
+    ):
+        self._previous_position: Optional[Tuple[float, float, float]] = None
+        self._sim = sim
+        self._config = config
+        self._episode_view_points: Optional[
+            List[Tuple[float, float, float]]
+        ] = None
+        self._distance_to = self._config.distance_to
+        self._distance_from = self._config.distance_from
+        self._goals_attr = self._config.goals_attr
+
+        super().__init__(**kwargs)
+
+    def _get_uuid(self, *args: Any, **kwargs: Any) -> str:
+        return self.cls_uuid
+
+    def get_base_position(self):
+        return self._sim.get_agent_state().position
+
+    def get_end_effector_position(self):
+        raise NotImplementedError
+
+    def reset_metric(self, episode, task, *args: Any, **kwargs: Any):
+        self._previous_position = None
+        self._metric = None
+        if self._distance_to == "VIEW_POINTS":
+            goals = task._dataset.goals_by_instance[episode.goals_key]
+            self._episode_view_points = [
+                view_point.agent_state.position
+                for goal in goals
+                for view_point in goal.view_points
+            ]
+        self.update_metric(episode=episode, task=task, *args, **kwargs)
+
+    def update_metric(
+        self,
+        episode,
+        task,
+        *args: Any,
+        **kwargs: Any,
+    ):
+        current_position = self._sim.get_agent_state().position
+
+        if self._previous_position is None or not np.allclose(
+            self._previous_position, current_position, atol=1e-4
+        ):
+            if self._config.distance_to == "POINT":
+                goals = task._dataset.goals_by_instance[episode.goals_key]
+                distance_to_target = self._sim.geodesic_distance(
+                    current_position,
+                    [goal.position for goal in goals],
+                    episode,
+                )
+            elif self._distance_to == "VIEW_POINTS":
+                distance_to_target = self._sim.geodesic_distance(
+                    current_position, self._episode_view_points, episode
+                )
+            else:
+                logger.error(
+                    "Non valid distance_to parameter was provided"
+                    f"{self._distance_to}"
+                )
+            self._previous_position = (
+                current_position[0],
+                current_position[1],
+                current_position[2],
+            )
+            self._metric = distance_to_target
+
+
+
+@registry.register_measure
 class DistanceToGoalReward(Measure):
     """
     The measure calculates a reward based on the distance towards the goal.
