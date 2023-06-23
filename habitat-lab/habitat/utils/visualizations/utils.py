@@ -220,14 +220,23 @@ def observations_to_image(observation: Dict, info: Dict) -> np.ndarray:
             obs_k = observation[sensor_name]
             if not isinstance(obs_k, np.ndarray):
                 obs_k = obs_k.cpu().numpy()
-            if (
-                sensor_name == "ovmm_nav_goal_segmentation"
-                and obs_k.shape[2] == 2
-            ):
-                obs_k = np.clip(obs_k[:, :, 0] + obs_k[:, :, 1] * 0.2, 0, 1)[
-                    ..., None
-                ]
-            if obs_k.dtype != np.uint8:
+            if  "ovmm_nav_goal_segmentation" in sensor_name:
+                if  obs_k.shape[2] == 1:
+                    obs_k = obs_k * 255.0
+                    obs_k = obs_k.astype(np.uint8)
+                elif obs_k.shape[2] == 2:
+                    obs_k = np.clip(obs_k[:, :, 0] + obs_k[:, :, 1] * 0.2, 0, 1)[
+                        ..., None
+                    ]
+                else:
+                    raise Exception("OVMM Nav Goal Segmentation Sensor can have max 2 channels")
+
+            if obs_k.dtype != np.uint8 or sensor_name in [
+                "goal_recep_segmentation",
+                "object_segmentation",
+                "object_segmentation_resized",
+                "object_segmentation_resized",
+            ]:
                 obs_k = obs_k * 255.0
                 obs_k = obs_k.astype(np.uint8)
             if obs_k.shape[2] == 1:

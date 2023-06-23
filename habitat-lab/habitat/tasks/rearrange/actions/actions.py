@@ -13,6 +13,7 @@ from gym import spaces
 import habitat_sim
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
+from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 # flake8: noqa
@@ -134,7 +135,8 @@ class ArmRelPosAction(RobotAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
 
     @property
     def action_space(self):
@@ -148,7 +150,8 @@ class ArmRelPosAction(RobotAction):
     def step(self, delta_pos, should_step=True, *args, **kwargs):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
         # The actual joint positions
         self._sim: RearrangeSim
         self.cur_robot.arm_motor_pos = delta_pos + self.cur_robot.arm_motor_pos
@@ -163,7 +166,8 @@ class ArmRelPosKinematicAction(RobotAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
         self._should_clip = self._config.get("should_clip", True)
 
     @property
@@ -179,7 +183,8 @@ class ArmRelPosKinematicAction(RobotAction):
         if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
         self._sim: RearrangeSim
 
         set_arm_pos = delta_pos + self.cur_robot.arm_joint_pos
@@ -243,7 +248,8 @@ class ArmRelPosReducedActionStretch(RobotAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self.last_arm_action = None
-        self._delta_pos_limit = self._config.delta_pos_limit
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
         self._should_clip = self._config.get("should_clip", True)
         self._arm_joint_mask = self._config.arm_joint_mask
 
@@ -265,7 +271,8 @@ class ArmRelPosReducedActionStretch(RobotAction):
         if self._should_clip:
             # clip from -1 to 1
             delta_pos = np.clip(delta_pos, -1, 1)
-        delta_pos *= self._delta_pos_limit
+        delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
         self._sim: RearrangeSim
 
         # Expand delta_pos based on mask
@@ -298,62 +305,9 @@ class ArmRelPosReducedActionStretch(RobotAction):
 
         self.cur_robot.arm_motor_pos = set_arm_pos
         self.cur_robot.arm_joint_pos = set_arm_pos
-
-
-@registry.register_task_action
-class ArmAbsPosReducedActionStretch(RobotAction):
-    """
-    The arm motor targets are set to the joint values specified by the
-    action and the mask. This function is used for Stretch.
-    The extension rolls (if set) rolls over to the other joints
-    """
-
-    def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
-        super().__init__(*args, config=config, sim=sim, **kwargs)
-        self.last_arm_action = None
-        self._arm_joint_mask = self._config.arm_joint_mask
-
-    @property
-    def action_space(self):
-        return spaces.Box(
-            shape=(self._config.arm_joint_dimensionality,),
-            low=0,
-            high=1,
-            dtype=np.float32,
-        )
-
-    def step(self, abs_pos, *args, **kwargs):
-        # Expand abs_pos based on mask
-        expanded_abs_pos = np.zeros(len(self._arm_joint_mask))
-        src_idx = 0
-        tgt_idx = 0
-        for mask in self._arm_joint_mask:
-            if mask == 0:
-                tgt_idx += 1
-                continue
-            expanded_abs_pos[tgt_idx] = abs_pos[src_idx]
-            tgt_idx += 1
-            src_idx += 1
-
-        min_limit, max_limit = self.cur_robot.arm_joint_limits
-        # no clipping, we directly set the arm
-        set_arm_pos = expanded_abs_pos
-        # Perform roll over to the joints so that the user cannot control
-        # the motor 2, 3, 4 for the arm.
-        if expanded_abs_pos[0] >= 0:
-            for i in range(3):
-                if set_arm_pos[i] > max_limit[i]:
-                    set_arm_pos[i + 1] += set_arm_pos[i] - max_limit[i]
-                    set_arm_pos[i] = max_limit[i]
-        else:
-            for i in range(3):
-                if set_arm_pos[i] < min_limit[i]:
-                    set_arm_pos[i + 1] -= min_limit[i] - set_arm_pos[i]
-                    set_arm_pos[i] = min_limit[i]
-        set_arm_pos = np.clip(set_arm_pos, min_limit, max_limit)
-
-        self.cur_robot.arm_motor_pos = set_arm_pos
-        self.cur_robot.arm_joint_pos = set_arm_pos
+        if self.cur_grasp_mgr.snap_idx is not None:
+            # Holding onto an object, also kinematically update the object.
+            self.cur_grasp_mgr.update_object_to_grasp()
 
 
 @registry.register_task_action
@@ -519,6 +473,48 @@ class ArmEEAction(RobotAction):
 
 
 @registry.register_task_action
+class ManipulationModeAction(RobotAction):
+    """
+    The robot joints and base is changed for performing manipulation. In the case of Stretch, the head is turned to face the arm and the base is rotated left by 90 degrees
+    """
+
+    def __init__(self, *args, config, **kwargs):
+        self._threshold = config.threshold
+        super().__init__(self, *args, config=config, **kwargs)
+
+    def step(self, task, *args, is_last_action, **kwargs):
+        manip_mode = kwargs.get("manipulation_mode", [-1.0])
+        if manip_mode[0] > self._threshold and not task._in_manip_mode:
+            if isinstance(self._sim.robot, StretchRobot):
+                # Turn the head to face the arm
+                task._in_manip_mode = True
+                self._sim.robot.arm_motor_pos = StretchJointStates.PRE_GRASP
+                self._sim.robot.arm_joint_pos = StretchJointStates.PRE_GRASP
+                # now turn the robot's base left by 90 degrees
+                obj_trans = self.cur_robot.sim_obj.transformation
+                turn_angle = np.pi / 2  # Turn left by 90 degrees
+                rot_quat = mn.Quaternion(
+                    mn.Vector3(0, np.sin(turn_angle / 2), 0),
+                    np.cos(turn_angle / 2),
+                )
+                # Get the target rotation
+                target_rot = rot_quat.to_matrix() @ obj_trans.rotation()
+                target_trans = mn.Matrix4.from_(
+                    target_rot,
+                    obj_trans.translation,
+                )
+                self.cur_robot.sim_obj.transformation = target_trans
+                if self.cur_grasp_mgr.snap_idx is not None:
+                    # Holding onto an object, also kinematically update the object.
+                    self.cur_grasp_mgr.update_object_to_grasp()
+
+        if is_last_action:
+            return self._sim.step(HabitatSimActions.manipulation_mode)
+        else:
+            return {}
+
+
+@registry.register_task_action
 class BaseWaypointTeleportAction(RobotAction):
     """
     The robot is teleported to the target waypoints while being constrained to the navmesh. In one step, The robot can only move forward or turn.
@@ -543,6 +539,9 @@ class BaseWaypointTeleportAction(RobotAction):
         self._allow_lateral_movement = config.allow_lateral_movement
         self._allow_simultaneous_turn = config.allow_simultaneous_turn
         self._discrete_movement = config.discrete_movement
+        self._constraint_base_in_manip_mode = (
+            config.constraint_base_in_manip_mode
+        )
 
     def collision_check(self, trans, target_trans):
         """
@@ -628,14 +627,17 @@ class BaseWaypointTeleportAction(RobotAction):
         )
         self.cur_robot.sim_obj.transformation = target_trans
         # Check if there is a collision
-        _, new_target_trans = self.collision_check(trans, target_trans)
+        navmesh_violation, new_target_trans = self.collision_check(
+            trans, target_trans
+        )
         # Update the base
         self.cur_robot.sim_obj.transformation = new_target_trans
         if self.cur_grasp_mgr.snap_idx is not None:
             # Holding onto an object, also kinematically update the object.
             self.cur_grasp_mgr.update_object_to_grasp()
+        return navmesh_violation
 
-    def step(self, *args, is_last_action, **kwargs):
+    def step(self, *args, task, is_last_action, **kwargs):
         base_action = kwargs[self._action_arg_prefix + "base_vel"]
         lin_pos_x = base_action[0]
         turn_offset = 1
@@ -696,8 +698,16 @@ class BaseWaypointTeleportAction(RobotAction):
             mn.Quaternion.from_matrix(target_rot), target_pos
         )
 
+        if self._constraint_base_in_manip_mode and task._in_manip_mode:
+            lin_pos_x = 0.0
+            lin_pos_z = 0.0
+            ang_pos = 0.0
+
         if lin_pos_x != 0.0 or lin_pos_z != 0.0 or ang_pos != 0.0:
-            self.update_base(target_rigid_state)
+            task._is_navmesh_violated = self.update_base(target_rigid_state)
+        else:
+            # no violation if no movement was required in the first place
+            task._is_navmesh_violated = False
         if is_last_action:
             return self._sim.step(HabitatSimActions.base_velocity)
         else:

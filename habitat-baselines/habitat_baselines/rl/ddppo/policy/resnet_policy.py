@@ -25,7 +25,7 @@ from habitat.tasks.nav.nav import (
     ProximitySensor,
 )
 from habitat.tasks.nav.object_nav_task import ObjectGoalSensor
-from habitat.tasks.rearrange.rearrange_sensors import (
+from habitat.tasks.ovmm.ovmm_sensors import (
     GoalReceptacleSensor,
     ObjectCategorySensor,
     StartReceptacleSensor,

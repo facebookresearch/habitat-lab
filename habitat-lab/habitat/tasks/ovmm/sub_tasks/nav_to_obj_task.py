@@ -5,6 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
+import os.path as osp
 from typing import Dict
 
 import numpy as np
@@ -14,8 +15,8 @@ from habitat.core.registry import registry
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import DynNavRLEnv
 
 
-@registry.register_task(name="CatNavToObjTask-v0")
-class CatDynNavRLEnv(DynNavRLEnv):
+@registry.register_task(name="OVMMNavToObjTask-v0")
+class OVMMDynNavRLEnv(DynNavRLEnv):
     def __init__(self, *args, config, dataset=None, **kwargs):
         super().__init__(
             config=config,
@@ -24,14 +25,32 @@ class CatDynNavRLEnv(DynNavRLEnv):
             **kwargs,
         )
         self._receptacle_semantic_ids: Dict[int, int] = {}
+        self._receptacle_categories: Dict[str, str] = {}
+        self._recep_category_to_recep_category_id = (
+            dataset.recep_category_to_recep_category_id
+        )
+        self._loaded_receptacle_categories = False
+        if config.receptacle_categories_file is not None and osp.exists(
+            config.receptacle_categories_file
+        ):
+            with open(config.receptacle_categories_file) as f:
+                for line in f.readlines():
+                    name, category = line.strip().split(",")
+                    self._receptacle_categories[name] = category
+            self._loaded_receptacle_categories = True
 
     @property
     def receptacle_semantic_ids(self):
         return self._receptacle_semantic_ids
 
+    @property
+    def loaded_receptacle_categories(self):
+        return self._loaded_receptacle_categories
+
     def reset(self, episode: Episode):
-        obs = super().reset(episode)
+        self._receptacle_semantic_ids = {}
         self._cache_receptacles()
+        obs = super().reset(episode)
         self._nav_to_obj_goal = np.stack(
             [
                 view_point.agent_state.position
@@ -49,9 +68,20 @@ class CatDynNavRLEnv(DynNavRLEnv):
             obj = rom.get_object_by_handle(obj_handle)
             user_attr_keys = obj.user_attributes.get_subconfig_keys()
             if any(key.startswith("receptacle_") for key in user_attr_keys):
-                self._receptacle_semantic_ids[
-                    obj.object_id
-                ] = obj.creation_attributes.semantic_id
+                obj_name = osp.basename(obj.creation_attributes.handle).split(
+                    ".", 1
+                )[0]
+                category = self._receptacle_categories.get(obj_name)
+                if (
+                    category is None
+                    or category
+                    not in self._recep_category_to_recep_category_id
+                ):
+                    continue
+                category_id = self._recep_category_to_recep_category_id[
+                    category
+                ]
+                self._receptacle_semantic_ids[obj.object_id] = category_id + 1
 
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None

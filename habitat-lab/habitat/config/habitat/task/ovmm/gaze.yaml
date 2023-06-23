@@ -9,6 +9,7 @@ defaults:
     - robot_force
     - force_terminate
     - robot_colls
+    - robot_collisions_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
     - did_pick_object
@@ -28,10 +29,12 @@ defaults:
     - object_category_sensor
     - object_segmentation_sensor
     - object_embedding_sensor
+    - start_recep_segmentation_sensor
+    - start_receptacle_sensor
   - _self_
 
 type: RearrangePickTask-v0
-base_angle_noise: 0.523599
+base_angle_noise: 0.2618 # 15 degrees
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
 reward_measure: "pick_reward"
@@ -40,20 +43,29 @@ success_reward: 10.0
 slack_reward: -0.005
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
+spawn_reference: view_points
+spawn_reference_sampling: uniform
+spawn_max_dists_to_obj: 0.0
+start_in_manip_mode: False
+camera_tilt: -0.5236      # start in navigation mode
 actions:
   arm_action:
     type: "ArmAction"
     arm_controller: "ArmRelPosReducedActionStretch"
     grip_controller: "GazeGraspAction"
-    arm_joint_mask: [0,0,0,0,0,0,0,0,0,0]
-    arm_joint_dimensionality: 0
+    arm_joint_mask: [0,0,0,0,0,0,0,0,0,1]
+    arm_joint_dimensionality: 1
     grasp_thresh_dist: 0.15
     disable_grip: False
-    delta_pos_limit: 0.0125
+    max_delta_pos: 0.1
+    min_delta_pos: 0.02
     ee_ctrl_lim: 0.015
-    gaze_distance_range: [0.1, 3.0]
+    gaze_distance_range: [0.1, 0.8]
     center_cone_angle_threshold: 90.0
     center_cone_vector: [0.0, 1.0, 0.0]
+    grasp_threshold: 0.8
+    gaze_distance_from: agent
+    wrong_grasp_should_end: True
   base_velocity:
     type: "BaseWaypointTeleportAction"
     navmesh_offset: [[0.0, 0.0]]
@@ -70,6 +82,7 @@ measurements:
     ee_resting_success_threshold: 100.0
   pick_reward:
     object_goal: True
+    navmesh_violate_pen: 1.0
 lab_sensors:
   joint_sensor:
     dimensionality: 10

@@ -360,7 +360,7 @@ class RearrangeSim(HabitatSim):
             robot.base_rot = start_rot
             self.perform_discrete_collision_detection()
             did_collide, _ = rearrange_collision(
-                self, True, ignore_base=False, agent_idx=agent_idx
+                self, True, ignore_base=True, agent_idx=agent_idx
             )
             if not did_collide:
                 break
@@ -391,11 +391,8 @@ class RearrangeSim(HabitatSim):
             self.navmesh_settings.agent_radius = agent_config.radius
             self.navmesh_settings.agent_height = agent_config.height
             self.navmesh_settings.agent_max_climb = 0.01
-            self.recompute_navmesh(
-                self.pathfinder,
-                self.navmesh_settings,
-                include_static_objects=True,
-            )
+            self.navmesh_settings.include_static_objects = True
+            self.recompute_navmesh(self.pathfinder, self.navmesh_settings)
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.pathfinder.save_nav_mesh(navmesh_path)
 

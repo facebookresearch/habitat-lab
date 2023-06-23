@@ -233,6 +233,7 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     ovrl: bool = False
     no_downscaling: bool = False
     use_augmentations: bool = False
+    deterministic_actions: bool = False
 
 
 @attr.s(auto_attribs=True, slots=True)

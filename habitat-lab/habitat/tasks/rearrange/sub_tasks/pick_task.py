@@ -23,6 +23,7 @@ class RearrangePickTaskV1(RearrangeTask):
     """
 
     def __init__(self, *args, config, dataset=None, **kwargs):
+        self.is_nav_to_obj = True
         super().__init__(
             config=config,
             *args,
@@ -30,7 +31,10 @@ class RearrangePickTaskV1(RearrangeTask):
             should_place_robot=False,
             **kwargs,
         )
-
+        self._spawn_reference = config.spawn_reference
+        self._spawn_reference_sampling = config.spawn_reference_sampling
+        self._start_in_manip_mode = config.start_in_manip_mode
+        self._camera_tilt = config.camera_tilt
         self.prev_colls = None
         self.force_set_idx = None
 
@@ -51,27 +55,108 @@ class RearrangePickTaskV1(RearrangeTask):
             sel_idx = np.random.randint(0, len(self._get_targ_pos(sim)))
         return sel_idx
 
-    def _get_spawn_recs(self, sim, episode):
-        return [
-            sim.receptacles[
-                episode.name_to_receptacle[
-                    list(sim.instance_handle_to_ref_handle.keys())[0]
-                ]
-            ]
-        ]
-
-    def _gen_start_pos(self, sim, episode, sel_idx):
-        if self._config.biased_init:
-            target_positions = self._get_targ_pos(sim)
-            snap_pos = np.expand_dims(target_positions[sel_idx], axis=0)
+    def _get_spawn_goals(self, episode):
+        if self._spawn_reference == "view_points":
+            return episode.candidate_objects
         else:
-            snap_pos = np.array(
-                [
-                    r.get_surface_center(sim)
-                    for r in self._get_spawn_recs(sim, episode)
+            return episode.candidate_start_receps
+
+    def get_spawn_reference_points(self, sim, episode, sel_idx):
+        # Return a tuple of numpy arrays, the first being the reference points for distance and the second being the reference points for angle
+        if self._spawn_reference == "receptacle_center":
+            assert (
+                self._spawn_reference_sampling == "uniform"
+            ), "Only uniform sampling is supported for receptacle center"
+            recep_centers = np.array(
+                [g.position for g in self._get_spawn_goals(episode)]
+            )
+            return recep_centers, recep_centers, None
+        elif self._spawn_reference == "target":
+            assert (
+                self._spawn_reference_sampling == "uniform"
+            ), "Only uniform sampling is supported for target"
+            # biased init wrt geogoal pick or place target
+            target_positions = self._get_targ_pos(sim)
+            target_positions = np.expand_dims(
+                target_positions[sel_idx], axis=0
+            )
+            return target_positions, target_positions, None
+        elif self._spawn_reference == "view_points":
+            view_points_per_recep = [
+                np.array([v.agent_state.position for v in g.view_points])
+                for g in self._get_spawn_goals(episode)
+            ]
+            centers_per_recep = [
+                np.array([g.position for v in g.view_points])
+                for g in self._get_spawn_goals(episode)
+            ]
+            if self._spawn_reference_sampling == "uniform":
+                return (
+                    np.concatenate(view_points_per_recep, 0),
+                    np.concatenate(centers_per_recep, 0),
+                    None,
+                )
+            elif self._spawn_reference_sampling in [
+                "dist_to_center",
+                "only_closest",
+            ]:
+                # TODO: use distance to the edge or cache the distances
+                dist_to_recep_center = [
+                    np.linalg.norm(
+                        np.array(
+                            [v.agent_state.position for v in g.view_points]
+                        )
+                        - g.position,
+                        axis=1,
+                    )
+                    for g in self._get_spawn_goals(episode)
                 ]
+                if self._spawn_reference_sampling == "only_closest":
+                    # closest viewpoint and corresponding center per receptacle
+                    closest_viewpoint_per_recep = [
+                        np.argmin(d) for d in dist_to_recep_center
+                    ]
+                    view_point_per_recep = [
+                        v[closest_viewpoint_per_recep[i]]
+                        for i, v in enumerate(view_points_per_recep)
+                    ]
+                    center_per_recep = [
+                        v[closest_viewpoint_per_recep[i]]
+                        for i, v in enumerate(centers_per_recep)
+                    ]
+                    return (
+                        np.array(view_point_per_recep),
+                        np.array(center_per_recep),
+                        None,
+                    )
+                else:
+                    normalized_dist_to_center = [
+                        dists_per_recep / np.sum(dists_per_recep)
+                        for dists_per_recep in dist_to_recep_center
+                    ]
+                    sample_probs = [
+                        d
+                        for dists_per_recep in normalized_dist_to_center
+                        for d in dists_per_recep
+                    ]
+                    return (
+                        np.concatenate(view_points_per_recep, 0),
+                        np.concatenate(centers_per_recep, 0),
+                        sample_probs / np.sum(sample_probs),
+                    )
+            else:
+                raise ValueError(
+                    f"Unrecognized spawn reference sampling {self._spawn_reference_sampling}"
+                )
+        else:
+            raise ValueError(
+                f"Unrecognized spawn reference {self._spawn_reference}"
             )
 
+    def _gen_start_pos(self, sim, episode, sel_idx):
+        snap_pos, orient_pos, sample_probs = self.get_spawn_reference_points(
+            sim, episode, sel_idx
+        )
         start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
             snap_pos,
             self._config.base_angle_noise,
@@ -79,6 +164,8 @@ class RearrangePickTaskV1(RearrangeTask):
             sim,
             self._config.num_spawn_attempts,
             self._config.physics_stability_steps,
+            orient_positions=orient_pos,
+            sample_probs=sample_probs,
         )
 
         if was_unsucc:
@@ -118,15 +205,25 @@ class RearrangePickTaskV1(RearrangeTask):
 
         sel_idx = self._sample_idx(sim)
         # in the case of Stretch, force the agent to look down and retract arm with the gripper pointing downwards
+        camera_pan = 0.0
+        if self._start_in_manip_mode:
+            # turn camera to face the arm
+            camera_pan = -np.pi / 2
         if isinstance(sim.robot, StretchRobot):
-            sim.robot.arm_motor_pos = StretchJointStates.PRE_GRASP
-            sim.robot.arm_joint_pos = StretchJointStates.PRE_GRASP
+            joints = StretchJointStates.PRE_GRASP.copy()
+            joints[-2] = camera_pan
+            joints[-1] = self._camera_tilt
+            sim.robot.arm_motor_pos = joints
+            sim.robot.arm_joint_pos = joints
 
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
         sim.robot.base_pos = start_pos
-        # in the case of Stretch, rotate base so that the arm faces the target location
-        if isinstance(self._sim.robot, StretchRobot):
+        if (
+            isinstance(self._sim.robot, StretchRobot)
+            and self._start_in_manip_mode
+        ):
+            # in the case of Stretch, rotate base so that the arm faces the target location
             sim.robot.base_rot = start_rot + np.pi / 2
         else:
             sim.robot.base_rot = start_rot

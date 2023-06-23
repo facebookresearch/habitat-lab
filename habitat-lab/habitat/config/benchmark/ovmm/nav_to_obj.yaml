@@ -1,0 +1,57 @@
+# @package _global_
+
+defaults:
+  - /habitat: habitat_config_base
+  - /habitat/simulator/agents@habitat.simulator.agents.main_agent: depthp_head_rgb_third_agent
+  - /habitat/task/ovmm: nav_to_obj
+  - /habitat/dataset/ovmm: hssd
+  - _self_
+
+habitat:
+  gym:
+    auto_name: NavToObj
+    obs_keys:
+      - robot_head_depth
+      - object_embedding
+      - ovmm_nav_goal_segmentation
+      - receptacle_segmentation
+      - start_receptacle
+      - robot_start_gps
+      - robot_start_compass
+  environment:
+    max_episode_steps: 400
+  simulator:
+    type: OVMMSim-v0
+    additional_object_paths:
+      - data/objects/train_val/amazon_berkeley/configs/
+      - data/objects/train_val/google_scanned/configs/
+      - data/objects/train_val/ai2thorhab/configs/objects/
+      - data/objects/train_val/hssd/configs/objects/
+    debug_render_goal: False
+    debug_render: False
+    concur_render: True
+    auto_sleep: True
+    requires_textures: False
+    kinematic_mode: True
+    agents:
+      main_agent:
+        radius: 0.3
+        height: 1.41
+        robot_urdf: data/robots/hab_stretch/urdf/hab_stretch.urdf
+        robot_type: "StretchRobot"
+        ik_arm_urdf: null
+        sim_sensors:
+           head_depth_sensor:
+             height: 640
+             width: 480
+             hfov: 42
+             position: [0,1.31,0]
+           head_panoptic_sensor:
+             height: 640
+             width: 480
+             hfov: 42
+             position: [0,1.31,0]
+    habitat_sim_v0:
+      allow_sliding: False
+      enable_physics: True
+    needs_markers: false

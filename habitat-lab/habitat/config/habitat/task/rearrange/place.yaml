@@ -43,4 +43,3 @@ measurements:
   force_terminate:
     max_accum_force: 10_000.0
     max_instant_force: 10_000.0
-biased_init: True

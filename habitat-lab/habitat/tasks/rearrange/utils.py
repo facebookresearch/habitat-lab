@@ -415,6 +415,8 @@ def get_robot_spawns(
     sim,
     num_spawn_attempts: int,
     physics_stability_steps: int,
+    orient_positions: Optional[np.ndarray] = None,
+    sample_probs: Optional[np.ndarray] = None,
 ):
     """
     Attempts to place the robot near the target position, facing towards it
@@ -425,39 +427,79 @@ def get_robot_spawns(
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
     :param physics_stability_steps: The number of steps to perform for physics stability check.
-
+    :param orient_positions: The positions to orient the robot towards. If None, the target position is used.
+    :param sample_probs: The probability of sampling each target position. If None, uniform sampling is used.
+    
     :return: The robot's start position, rotation, and whether the placement was successful.
     """
-
+    tolerance = 1e-4
     state = sim.capture_state()
+    if orient_positions is None:
+        orient_positions = target_positions
+
+    orient_positions_filtered = orient_positions.copy()
+    target_positions_filtered = target_positions.copy()
+    sample_probs_filtered = None
+    if sample_probs is not None:
+        sample_probs_filtered = sample_probs.copy()
+
+    start_rotation = None
+    start_position = None
 
     # Try to place the robot.
-    for _ in range(num_spawn_attempts):
+    for i in range(num_spawn_attempts):
         sim.set_state(state)
-        target_position = target_positions[
-            np.random.choice(target_positions.shape[0])
-        ]
-        start_position = sim.pathfinder.get_random_navigable_point_near(
-            target_position,
-            distance_threshold,
-            island_index=sim.navmesh_classification_results["active_island"],
-        )
 
-        relative_target = target_position - start_position
+        # Randomly sample an index of target positions.
+        target_index = np.random.choice(target_positions_filtered.shape[0], p=sample_probs_filtered)
+
+        target_position = target_positions_filtered[
+            target_index
+        ]
+        orient_position = orient_positions_filtered[target_index]
+        if distance_threshold == 0:
+            start_position = sim.pathfinder.snap_point(target_position, island_index=sim.navmesh_classification_results["active_island"])
+        else:
+            start_position = sim.pathfinder.get_random_navigable_point_near(
+                target_position, distance_threshold,
+                island_index=sim.navmesh_classification_results["active_island"]
+            )
+        
+        relative_target = orient_position - start_position
 
         angle_to_object = get_angle_to_pos(relative_target)
+        # Face the robot towards the object.
+        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
+        start_rotation = angle_to_object + rotation_noise
+
+        is_navigable = sim.pathfinder.is_navigable(start_position)
+        invalid_target_position = not is_navigable if distance_threshold == 0 else np.isnan(start_position).any()
+
+        if invalid_target_position:
+            # navmesh is hard to sample from around the selected target position
+            # do not sample this target position again
+            target_positions_filtered = np.delete(target_positions_filtered, target_index, axis=0)
+            orient_positions_filtered = np.delete(orient_positions_filtered, target_index, axis=0)
+            if sample_probs_filtered is not None:
+                sample_probs_filtered = np.delete(sample_probs_filtered, target_index, axis=0)
+                sample_probs_filtered = sample_probs_filtered / np.sum(sample_probs_filtered)
+            if len(target_positions_filtered) == 0:
+                # reset the target positions and start over again
+                target_positions_filtered = target_positions.copy()
+                orient_positions_filtered = orient_positions.copy()
+                if sample_probs_filtered is not None:
+                    sample_probs_filtered = sample_probs.copy()
+            continue
+
+
 
         target_distance = np.linalg.norm(
             (start_position - target_position)[[0, 2]]
         )
 
-        is_navigable = sim.pathfinder.is_navigable(start_position)
 
-        # Face the robot towards the object.
-        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        start_rotation = angle_to_object + rotation_noise
 
-        if target_distance > distance_threshold or not is_navigable:
+        if target_distance > max(distance_threshold, tolerance) or not is_navigable:
             continue
 
         sim.robot.base_pos = start_position

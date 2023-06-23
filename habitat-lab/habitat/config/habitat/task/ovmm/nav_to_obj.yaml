@@ -14,19 +14,25 @@ defaults:
     - dist_to_goal
     - nav_to_pos_succ
     - does_want_terminate
+    - target_iou_coverage
     - ovmm_nav_to_obj_success
     - bad_called_terminate
+    - robot_collisions_terminate
     - ovmm_nav_to_obj_reward
     - num_steps
+    - navmesh_collision
   - /habitat/task/lab_sensors:
     - joint_sensor
     - joint_velocity_sensor
-    - goal_receptacle_sensor
+    - start_receptacle_sensor
+    - ovmm_nav_goal_segmentation_sensor
+    - receptacle_segmentation_sensor
+    - object_embedding_sensor
     - robot_start_gps_sensor
     - robot_start_compass_sensor
   - _self_
 
-type: CatNavToObjTask-v0
+type: OVMMNavToObjTask-v0
 reward_measure: ovmm_nav_to_obj_reward
 success_measure: ovmm_nav_to_obj_success
 success_reward: 10.0
@@ -34,8 +40,13 @@ slack_reward: -0.005
 end_on_success: True
 constraint_violation_ends_episode: False
 constraint_violation_drops_object: True
-object_in_hand_sample_prob: 1.0
-
+object_in_hand_sample_prob: 0.0
+actions:
+  base_velocity:
+    type: "BaseWaypointTeleportAction"
+    navmesh_offset: [[0.0, 0.0]]
+camera_tilt: -0.5236
+receptacle_categories_file: data/objects/hssd-receptacles.csv
 measurements:
   force_terminate:
     max_accum_force: 10_000.0

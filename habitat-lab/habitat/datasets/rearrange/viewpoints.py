@@ -22,9 +22,9 @@ ISLAND_RADIUS_LIMIT = 3.5
 
 
 class ViewpointType(Enum):
+    not_on_active_island = auto()
     too_far = auto()
     down_unnavigable = auto()
-    island_too_small = auto()
     outdoor_viewpoint = auto()
     low_visibility = auto()
     good = auto()
@@ -105,6 +105,22 @@ def generate_viewpoints(
 
     def _get_iou(x, y, z):
         pt = np.array([x, y, z])
+        pf = sim.pathfinder
+        pt_snapped = np.array(
+            pf.snap_point(
+                pt,
+                island_index=sim.navmesh_classification_results[
+                    "active_island"
+                ],
+            )
+        )
+        if (
+            np.isnan(pt_snapped).any()
+            or np.linalg.norm((pt - pt_snapped)[[0, 2]]) > cell_size / 2
+        ):
+            return -1, pt, None, ViewpointType.not_on_active_island
+
+        pt = pt_snapped
 
         if not object_obb.distance(pt) <= max_distance:
             return -1, pt, None, ViewpointType.too_far
@@ -112,10 +128,6 @@ def generate_viewpoints(
         if not down_is_navigable(pt):
             return -1, pt, None, ViewpointType.down_unnavigable
 
-        pf = sim.pathfinder
-        pt = np.array(pf.snap_point(pt))
-        if pf.island_radius(pt) < ISLAND_RADIUS_LIMIT:
-            return -1, pt, None, ViewpointType.island_too_small
         pt[1] += pf.nav_mesh_settings.agent_height
 
         goal_direction = object_position - pt
@@ -166,7 +178,7 @@ def generate_viewpoints(
     ]
     view_locations = sorted(view_locations, reverse=True, key=lambda v: v.iou)
 
-    if debug_viz and len(view_locations) == 0:
+    if debug_viz and len(view_locations) > 0:
         save_topdown_map(
             sim,
             view_locations,
