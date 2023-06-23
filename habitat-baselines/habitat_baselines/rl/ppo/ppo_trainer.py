@@ -984,6 +984,9 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            # Note that `policy_infos` represents the information about the
+            # action BEFORE `observations` (the action used to transition to
+            # `observations`).
             policy_infos = self._agent.actor_critic.get_extra(
                 action_data, infos, dones
             )
@@ -1035,11 +1038,16 @@ class PPOTrainer(BaseRLTrainer):
                     if not not_done_masks[i].item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
-                        frame = observations_to_image(
+                        final_frame = observations_to_image(
                             {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
                         )
-                    frame = overlay_frame(frame, infos[i])
-                    rgb_frames[i].append(frame)
+                        final_frame = overlay_frame(final_frame, infos[i])
+                        rgb_frames[i].append(final_frame)
+                        # The starting frame of the next episode will be the final element..
+                        rgb_frames[i].append(frame)
+                    else:
+                        frame = overlay_frame(frame, infos[i])
+                        rgb_frames[i].append(frame)
 
                 # episode ended
                 if not not_done_masks[i].item():
@@ -1064,7 +1072,8 @@ class PPOTrainer(BaseRLTrainer):
                         generate_video(
                             video_option=self.config.habitat_baselines.eval.video_option,
                             video_dir=self.config.habitat_baselines.video_dir,
-                            images=rgb_frames[i],
+                            # Since the final frame is the start frame of the next episode.
+                            images=rgb_frames[i][:-1],
                             episode_id=f"{current_episodes_info[i].episode_id}_{ep_eval_count[k]}",
                             checkpoint_idx=checkpoint_index,
                             metrics=extract_scalars_from_info(infos[i]),
@@ -1073,7 +1082,8 @@ class PPOTrainer(BaseRLTrainer):
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
                         )
 
-                        rgb_frames[i] = []
+                        # Since the starting frame of the next episode is the final frame.
+                        rgb_frames[i] = rgb_frames[i][-1:]
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":

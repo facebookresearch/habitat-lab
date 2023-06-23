@@ -456,6 +456,8 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
     profiling: ProfilingConfig = ProfilingConfig()
+    # Whether to log the infos that are only logged to a single process to the
+    # CLI along with the other metrics.
     should_log_single_proc_infos: bool = False
     # Called every time a checkpoint is saved.
     # Function signature: fn(save_file_path: str) -> None

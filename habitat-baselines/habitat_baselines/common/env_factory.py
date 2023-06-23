@@ -32,4 +32,3 @@ class VectorEnvFactory(ABC):
 
         :return: VectorEnv object created according to specification.
         """
-
