@@ -254,7 +254,6 @@ class SandboxDriver(GuiAppDriver):
             return
 
         filepath_base = self._find_episode_save_filepath_base()
-
         json_filepath = filepath_base + ".json.gz"
         save_as_json_gzip(self._episode_recorder_dict, json_filepath)
 
@@ -446,7 +445,7 @@ class SandboxDriver(GuiAppDriver):
             if self._held_target_obj_idx is None:
                 assert not self.gui_agent_ctrl.is_grasped
                 # pick up an object
-                if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE):
+                if self.gui_input.get_key_down(GuiInput.KeyNS.SPACE) and self._sandbox_state is not SandboxState.TUTORIAL:
                     translation = self._get_agent_translation()
 
                     min_dist = self._can_grasp_place_threshold
@@ -1186,13 +1185,13 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--width",
-        default=1280,
+        default=1280*2,
         type=int,
         help="Horizontal resolution of the window.",
     )
     parser.add_argument(
         "--height",
-        default=720,
+        default=720*2,
         type=int,
         help="Vertical resolution of the window.",
     )
@@ -1275,7 +1274,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--can-grasp-place-threshold",
-        default=1.2,
+        default=2.0,
         type=float,
         help="Object grasp/place proximity threshold",
     )
@@ -1358,6 +1357,9 @@ if __name__ == "__main__":
         sim_config = habitat_config.simulator
         task_config = habitat_config.task
         task_config.actions["pddl_apply_action"] = PddlApplyActionConfig()
+        # task_config.actions[
+        #     "agent_1_pddl_apply_action"
+        # ] = PddlApplyActionConfig(agent_index=1)
         # task_config.actions[
         #     "agent_1_oracle_nav_action"
         # ] = OracleNavActionConfig(agent_index=1)

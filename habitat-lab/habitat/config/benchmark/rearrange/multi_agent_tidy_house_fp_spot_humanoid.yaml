@@ -26,7 +26,7 @@ defaults:
     - composite_stage_goals
     - cooperate_subgoal_reward
     - runtime_perf_stats
-    - agent_blame_measure
+    # - agent_blame_measure
   - /habitat/task/lab_sensors:
     - relative_resting_pos_sensor
     - target_start_sensor
@@ -107,7 +107,7 @@ habitat:
       agent_1_rearrange_stop:
         agent_index : 1
       agent_1_pddl_apply_action:
-        agent_index : 1
+        agent_index : 0
       agent_1_oracle_nav_with_backing_up_action:
         agent_index : 1
         motion_control: human_joints

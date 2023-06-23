@@ -72,6 +72,12 @@ habitat_baselines:
               - "obj_start_sensor"
               - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
+          # defined_skills:
+          #   nav_to_obj:
+          #     skill_name: "NoopSkillPolicy"
+          #     max_skill_steps: 1
+          #     apply_postconds: True
+
           defined_skills:
             nav_to_obj:
               skill_name: "OracleNavPolicy"

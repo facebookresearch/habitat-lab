@@ -6,8 +6,8 @@ defaults:
     # For the oracle navigation
     - all_predicates
 
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_planner
+  - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_planner
+  # - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_planner
   - _self_
 
 hydra:
@@ -54,21 +54,19 @@ habitat_baselines:
       agent_sample_interval: 20
       force_partner_sample_idx: -1
     policy:
-      # agent_1:
-      #   hierarchical_policy:
-      #     high_level_policy:
-      #       plan_idx: -2 # -2 means use different subsets for different envs
       agent_0:
         hierarchical_policy:
-          defined_skills:
-            nav_to_obj:
-              skill_name: "NoopSkillPolicy"
-              apply_postconds: True
-              max_skill_steps: 1  
-      agent_1:
-        hierarchical_policy:
-          defined_skills:
-            nav_to_obj:
-              skill_name: "NoopSkillPolicy"
-              apply_postconds: True
-              max_skill_steps: 1
+          high_level_policy:
+            plan_idx: -3 # -2 means use different subsets for different envs
+      #     defined_skills:
+      #       nav_to_obj:
+      #         skill_name: "NoopSkillPolicy"
+      #         apply_postconds: True
+      #         max_skill_steps: 1  
+      # agent_1:
+      #   hierarchical_policy:
+      #     defined_skills:
+      #       nav_to_obj:
+      #         skill_name: "NoopSkillPolicy"
+      #         apply_postconds: True
+      #         max_skill_steps: 1
