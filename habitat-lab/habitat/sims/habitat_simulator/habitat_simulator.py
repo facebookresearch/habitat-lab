@@ -416,7 +416,9 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         }
 
         output = habitat_sim.Configuration(sim_config, [agent_config])
-        output.enable_batch_renderer = self.habitat_config.renderer.enable_batch_renderer
+        output.enable_batch_renderer = (
+            self.habitat_config.renderer.enable_batch_renderer
+        )
         return output
 
     @property

@@ -211,7 +211,7 @@ class RearrangeTask(NavigationTask):
     def _get_observations(self, episode):
         # Fetch the simulator observations, all visual sensors.
         obs = self._sim.get_sensor_observations()
-        
+
         if not self._sim.sim_config.enable_batch_renderer:
             # Post-process visual sensor observations
             obs = self._sim._sensor_suite.get_observations(obs)

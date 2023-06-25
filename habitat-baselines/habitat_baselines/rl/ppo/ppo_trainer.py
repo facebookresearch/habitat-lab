@@ -966,7 +966,7 @@ class PPOTrainer(BaseRLTrainer):
             )
             for i in range(len(policy_infos)):
                 infos[i].update(policy_infos[i])
-            
+
             observations = self.envs.post_step(observations)
             batch = batch_obs(  # type: ignore
                 observations,

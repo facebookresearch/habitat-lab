@@ -825,7 +825,7 @@ class RearrangeSim(HabitatSim):
         if self._batch_render:
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
-                
+
             self._prev_sim_obs = self.get_sensor_observations()
             self.add_keyframe_to_observations(self._prev_sim_obs)
             obs = self._prev_sim_obs
@@ -858,7 +858,11 @@ class RearrangeSim(HabitatSim):
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if "third_rgb" in obs and self._debug_render and not self._batch_render:
+        if (
+            "third_rgb" in obs
+            and self._debug_render
+            and not self._batch_render
+        ):
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]
