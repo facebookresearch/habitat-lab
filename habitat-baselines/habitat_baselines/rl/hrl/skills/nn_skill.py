@@ -104,7 +104,7 @@ class NnSkillPolicy(SkillPolicy):
         rnn_hidden_states,
         prev_actions,
     ):
-        super().on_enter(
+        ret = super().on_enter(
             skill_arg,
             batch_idxs,
             observations,
@@ -112,6 +112,7 @@ class NnSkillPolicy(SkillPolicy):
             prev_actions,
         )
         self._did_want_done *= 0.0
+        return ret
 
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         return TensorDict(

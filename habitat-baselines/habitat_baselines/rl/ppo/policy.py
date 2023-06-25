@@ -57,7 +57,7 @@ class PolicyActionData:
         current policy.
     """
 
-    rnn_hidden_states: torch.Tensor
+    rnn_hidden_states: Optional[torch.Tensor] = None
     actions: Optional[torch.Tensor] = None
     values: Optional[torch.Tensor] = None
     action_log_probs: Optional[torch.Tensor] = None
