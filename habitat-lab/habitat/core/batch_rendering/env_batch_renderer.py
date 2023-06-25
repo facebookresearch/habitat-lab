@@ -55,7 +55,7 @@ class EnvBatchRenderer:
     _replay_renderer_cfg: ReplayRendererConfiguration = None
     _replay_renderer: ReplayRenderer = None
 
-    _gpu_to_cpu_images: List[mn.ImageView2D] = None
+    _gpu_to_cpu_images: List[mn.MutableImageView2D] = None
     _gpu_to_cpu_buffer: np.ndarray = None
 
     def __init__(self, config: DictConfig, num_envs: int) -> None:
@@ -190,30 +190,61 @@ class EnvBatchRenderer:
         :param sensor_spec: Habitat-sim sensor specifications.
         :return: ndarray containing renders.
         """
-        # TODO: Currently only one color sensor is supported.
-        if sensor_spec.sensor_type == habitat_sim.SensorType.COLOR:
+        # TODO: Currently one sensor is supported.
+        is_color_sensor = (
+            sensor_spec.sensor_type == habitat_sim.SensorType.COLOR
+        )
+        is_depth_sensor = (
+            sensor_spec.sensor_type == habitat_sim.SensorType.DEPTH
+        )
+
+        if is_color_sensor or is_depth_sensor:
             if self._gpu_to_cpu_images is None:
                 # Allocate the transfer buffers
                 self._gpu_to_cpu_images = []
                 storage = mn.PixelStorage()
                 storage.alignment = 2
-                self._gpu_to_cpu_buffer = np.empty(
-                    (
-                        self._num_envs,
-                        sensor_spec.resolution[0],
-                        sensor_spec.resolution[1],
-                        sensor_spec.channels,
-                    ),
-                    dtype=np.uint8,
-                )
+
+                if is_color_sensor:
+                    self._gpu_to_cpu_buffer = np.empty(
+                        (
+                            self._num_envs,
+                            sensor_spec.resolution[0],
+                            sensor_spec.resolution[1],
+                            sensor_spec.channels,
+                        ),
+                        dtype=np.uint8,
+                    )
+                elif is_depth_sensor:
+                    self._gpu_to_cpu_buffer = np.empty(
+                        (
+                            self._num_envs,
+                            sensor_spec.resolution[0],
+                            sensor_spec.resolution[1],
+                        ),
+                        dtype=np.float32,
+                    )
 
                 for env_idx in range(self._num_envs):
                     # Create image view for writing into buffer from Magnum
-                    env_img_view = mn.MutableImageView2D(
-                        mn.PixelFormat.RGBA8_UNORM,
-                        [sensor_spec.resolution[1], sensor_spec.resolution[0]],
-                        self._gpu_to_cpu_buffer[env_idx],
-                    )
+                    if is_color_sensor:
+                        env_img_view = mn.MutableImageView2D(
+                            mn.PixelFormat.RGBA8_UNORM,
+                            [
+                                sensor_spec.resolution[1],
+                                sensor_spec.resolution[0],
+                            ],
+                            self._gpu_to_cpu_buffer[env_idx],
+                        )
+                    elif is_depth_sensor:
+                        env_img_view = mn.MutableImageView2D(
+                            mn.PixelFormat.R32F,
+                            [
+                                sensor_spec.resolution[1],
+                                sensor_spec.resolution[0],
+                            ],
+                            self._gpu_to_cpu_buffer[env_idx],
+                        )
                     self._gpu_to_cpu_images.append(env_img_view)
 
                 # Flip the transfer buffer view vertically for presentation
@@ -224,7 +255,11 @@ class EnvBatchRenderer:
             raise NotImplementedError
 
         # Render
-        self._replay_renderer.render(color_images=self._gpu_to_cpu_images)
+        if is_color_sensor:
+            self._replay_renderer.render(color_images=self._gpu_to_cpu_images)
+        elif is_depth_sensor:
+            self._replay_renderer.render(depth_images=self._gpu_to_cpu_images)
+
         return self._gpu_to_cpu_buffer
 
     def _draw_observations_gpu_to_gpu(
@@ -240,13 +275,23 @@ class EnvBatchRenderer:
 
         :return: List of RGB images as ndarrays.
         """
-        # TODO: Only one color sensor supported.
+        # TODO: Only one sensor supported.
         output: List[np.ndarray] = []
         if self._gpu_gpu:
             raise NotImplementedError
         else:
+            sensor_spec = self._sensor_specifications[0]
             for env_idx in range(self._num_envs):
-                output.append(self._gpu_to_cpu_buffer[env_idx][..., 0:3])
+                if sensor_spec.sensor_type == habitat_sim.SensorType.COLOR:
+                    output.append(self._gpu_to_cpu_buffer[env_idx][..., 0:3])
+                elif sensor_spec.sensor_type == habitat_sim.SensorType.DEPTH:
+                    float_depth_image = self._gpu_to_cpu_buffer[env_idx]
+                    rgb_depth_image = (
+                        EnvBatchRenderer._float_image_to_rgb_image(
+                            float_depth_image
+                        )
+                    )
+                    output.append(rgb_depth_image)
         return output
 
     @staticmethod
@@ -370,3 +415,30 @@ class EnvBatchRenderer:
             logger.warn(
                 "No composite file was pre-loaded. Expect lower batch rendering performance."
             )
+
+    @staticmethod
+    def _float_image_to_rgb_image(float_image: np.ndarray):
+        r"""
+        Creates a visualization-friendly RGB image from a float image.
+        The image is normalized from [min, max] to [0, 255].
+
+        :param float_image: 2-dimension float ndarray to be transformed.
+        """
+        int_depth_image = np.zeros_like(float_image, dtype=np.uint8)
+        float_min = float_image.min()
+        float_max = float_image.max()
+
+        # Normalize the values into 0-255
+        for y, x in np.ndindex(float_image.shape):
+            distance_from_camera = float_image[y, x]
+            normalized_color_value = np.uint8(
+                255.0
+                * (
+                    (distance_from_camera - float_min)
+                    / (float_max - float_min)
+                )
+            )
+            int_depth_image[y, x] = normalized_color_value
+
+        # Expand single channels to RGB channels
+        return np.dstack([int_depth_image] * 3)
