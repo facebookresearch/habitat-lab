@@ -1442,6 +1442,12 @@ class SimulatorConfig(HabitatBaseConfig):
     # If the number of agents is greater than one,
     # then agents_order has to be set explicitly.
     agents_order: List[str] = MISSING
+
+    # Simulator should use default navmesh settings from agent config
+    default_agent_navmesh: bool = True
+    # if default navmesh is used, should it include static objects
+    navmesh_include_static_objects: bool = False
+
     habitat_sim_v0: HabitatSimV0Config = HabitatSimV0Config()
     # ep_info is added to the config in some rearrange tasks inside
     # merge_sim_episode_with_object_config
