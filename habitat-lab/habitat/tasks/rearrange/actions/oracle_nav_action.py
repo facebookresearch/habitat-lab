@@ -54,6 +54,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self._prev_ep_id = None
         self._targets = {}
         self.skill_done = False
+        self.poses = []
         self._spawn_max_dist_to_obj = self._config.spawn_max_dist_to_obj
         self._num_spawn_attempts = self._config.num_spawn_attempts
         self._dist_thresh = self._config.dist_thresh
@@ -114,6 +115,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._targets = {}
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
+        self.poses = []
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         nav_to_obj = self._poss_entities[nav_to_target_idx]
@@ -197,6 +199,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+        self.poses.append(robot_pos)
 
         if curr_path_points is None:
             raise Exception
@@ -466,6 +469,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         curr_path_points = self._path_to_point(final_nav_targ)
         # Get the robot position
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+        self.poses.append(robot_pos)
 
         # Get the current robot/human pos assuming human is agent 1
         robot_human_dis = None

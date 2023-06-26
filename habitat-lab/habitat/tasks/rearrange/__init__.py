@@ -13,6 +13,7 @@ def _try_register_rearrange_task():
     import habitat.tasks.rearrange.actions.actions
     import habitat.tasks.rearrange.actions.grip_actions
     import habitat.tasks.rearrange.actions.oracle_nav_action
+    import habitat.tasks.rearrange.actions.oracle_nav_soc_action
     import habitat.tasks.rearrange.actions.pddl_actions
     import habitat.tasks.rearrange.multi_task.composite_sensors
     import habitat.tasks.rearrange.multi_task.composite_task
@@ -51,3 +52,6 @@ def _try_register_rearrange_task():
         HabitatSimActions.extend_action_space("rearrange_stop")
     if not HabitatSimActions.has_action("humanoidjoint_action"):
         HabitatSimActions.extend_action_space("humanoidjoint_action")
+    if not HabitatSimActions.has_action("oracle_nav_soc_action"):
+        HabitatSimActions.extend_action_space("oracle_nav_soc_action")
+
