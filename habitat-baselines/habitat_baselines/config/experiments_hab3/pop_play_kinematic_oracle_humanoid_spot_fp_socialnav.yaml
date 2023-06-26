@@ -18,7 +18,7 @@ defaults:
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
-  - override /habitat/task/rearrange: multi_agent_tidy_house_base_spot_social
+  - /habitat/task/rearrange: multi_agent_tidy_house_base_spot_social
   - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
   - _self_
 
