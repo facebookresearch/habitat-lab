@@ -27,9 +27,10 @@ hydra:
     name: 'pop_play_humanoid_spot_fp'
 
 habitat:
-  actions:
-    agent_1_oracle_nav_soc_action:
-      agent_index: 1
+  task:
+    actions:
+      agent_1_oracle_nav_soc_action:
+        agent_index: 1
 
 habitat_baselines:
   verbose: False
