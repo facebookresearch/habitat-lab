@@ -15,7 +15,6 @@ defaults:
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_socnav_human #hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
-  - /habitat/task/actions@actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
