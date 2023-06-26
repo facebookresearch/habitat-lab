@@ -260,7 +260,7 @@ class HumanoidRearrangeController:
         # motion pose.
         obj_transform_base = look_at_path_T
         forward_V_dist = forward_V * dist_diff * distance_multiplier
-        obj_transform_base.translation += forward_V_dist
+        # obj_transform_base.translation += forward_V_dist
 
         self.obj_transform_base = obj_transform_base
         self.joint_pose = joint_pose
