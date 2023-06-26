@@ -20,22 +20,11 @@ from habitat.tasks.rearrange.multi_task.pddl_domain import (
     PddlProblem,
 )
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
-    FixedHighLevelPolicy,
-    HighLevelPolicy,
-    NeuralHighLevelPolicy,
-)
-from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
-    ArtObjSkillPolicy,
-    NavSkillPolicy,
-    NoopSkillPolicy,
-    OracleNavPolicy,
-    PickSkillPolicy,
-    PlaceSkillPolicy,
-    ResetArmSkill,
-    SkillPolicy,
-    WaitSkillPolicy,
-)
+from habitat_baselines.rl.hrl.hl import FixedHighLevelPolicy  # noqa: F401.
+from habitat_baselines.rl.hrl.hl import NeuralHighLevelPolicy  # noqa: F401.
+from habitat_baselines.rl.hrl.hl import HighLevelPolicy
+from habitat_baselines.rl.hrl.skills import *  # noqa: F403,F401.
+from habitat_baselines.rl.hrl.skills import NoopSkillPolicy, SkillPolicy
 from habitat_baselines.rl.hrl.utils import find_action_range
 from habitat_baselines.rl.ppo.policy import Policy, PolicyActionData
 from habitat_baselines.utils.common import get_num_actions
@@ -293,7 +282,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         # Always call high-level if the episode is over.
         self._cur_call_high_level |= (~masks_cpu).view(-1)
 
-        skill_id = self._cur_skills[0]
         hl_terminate_episode, hl_info = self._update_skills(
             observations,
             hl_rnn_hidden_states,
@@ -306,6 +294,9 @@ class HierarchicalPolicy(nn.Module, Policy):
             deterministic,
         )
         did_choose_new_skill = self._cur_call_high_level.clone()
+        if hl_info.rnn_hidden_states is not None:
+            # Update the HL hidden state.
+            hl_rnn_hidden_states = hl_info.rnn_hidden_states
 
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
@@ -325,6 +316,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                 cur_batch_idx=batch_ids,
             )
             actions[batch_ids] += action_data.actions
+            # Update the LL hidden state.
             ll_rnn_hidden_states[batch_ids] = action_data.rnn_hidden_states
 
         actions[:, self._stop_action_idx] = 0.0
@@ -389,12 +381,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         hl_rnn_hidden_states: torch.Tensor,
         ll_rnn_hidden_states: torch.Tensor,
     ) -> torch.Tensor:
-        if (
-            self._high_level_policy.num_recurrent_layers == 0
-            or self._max_skill_rnn_layers == 0
-        ):
-            # We didn't split the hidden states, so both hl and ll rnn hidden
-            # states refer to the same tensor.
+        if self._high_level_policy.num_recurrent_layers == 0:
+            return ll_rnn_hidden_states
+        elif self._max_skill_rnn_layers == 0:
             return hl_rnn_hidden_states
         else:
             # Stack the LL and HL hidden states.
@@ -430,7 +419,6 @@ class HierarchicalPolicy(nn.Module, Policy):
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
         hl_terminate_episode = torch.zeros(self._num_envs, dtype=torch.bool)
-        hl_info = PolicyActionData()
         if should_choose_new_skill.sum() > 0:
             (
                 new_skills,
@@ -466,20 +454,23 @@ class HierarchicalPolicy(nn.Module, Policy):
                 )
 
                 if hl_info.rnn_hidden_states is not None:
-                    # Update HL info.
+                    # Only update the RNN hidden state for NEW skills.
                     hl_rnn_hidden_states = _update_tensor_batched(
                         hl_rnn_hidden_states,
                         hl_info.rnn_hidden_states,
                         batch_ids,
                     )
 
-            hl_info.actions = prev_actions
+            # We made at least some decisions, so update the action info
             hl_info.rnn_hidden_states = hl_rnn_hidden_states
 
             should_choose_new_skill = should_choose_new_skill.numpy()
             self._cur_skills = (
                 (~should_choose_new_skill) * self._cur_skills
             ) + (should_choose_new_skill * new_skills)
+        else:
+            # We made no decisions, so return an empty HL action info.
+            hl_info = PolicyActionData()
         return hl_terminate_episode, hl_info
 
     def _get_terminations(
