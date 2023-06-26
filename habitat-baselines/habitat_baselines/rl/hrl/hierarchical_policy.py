@@ -394,7 +394,6 @@ class HierarchicalPolicy(nn.Module, Policy):
                 deterministic,
                 log_info,
             )
-            breakpoint()
             new_skills = new_skills.numpy()
 
             sel_grouped_skills = self._broadcast_skill_ids(
