@@ -1125,53 +1125,46 @@ class MoveForwardAction(SimulatorTaskAction):
         return self._sim.step(HabitatSimActions.move_forward)
 
 
+def rotate_action(sim, direction: str):
+    from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+    
+    assert direction in ["left", "right"]
+
+    if type(sim) == RearrangeSim:
+        actuation = sim.config.agents[0].action_space[2].actuation.amount
+        if "robot_start_angle" not in dir(sim):
+            sim.robot_start_angle = kwargs[
+                "task"
+            ]._nav_to_info.robot_start_angle
+            sim.current_angle = sim.robot_start_angle
+        
+        if direction == "right":
+            actuation = -1 * actuation
+
+        sim.updated_angle = (
+            self._sim.current_angle + actuation * np.pi / 180
+        )
+        sim.robot.base_rot = self._sim.updated_angle
+        sim.current_angle = self._sim.updated_angle
+
+
 @registry.register_task_action
 class TurnLeftAction(SimulatorTaskAction):
-    def step(self, task, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-
-        if type(self._sim) == RearrangeSim:
-            actuation = self._sim.config.agents[0].action_space[2].actuation.amount
-            if "robot_start_angle" not in dir(self._sim):
-                self._sim.robot_start_angle = kwargs[
-                    "task"
-                ]._nav_to_info.robot_start_angle
-                self._sim.current_angle = self._sim.robot_start_angle
-
-            self._sim.updated_angle = (
-                self._sim.current_angle + actuation * np.pi / 180
-            )
-            self._sim.robot.base_rot = self._sim.updated_angle
-            self._sim.current_angle = self._sim.updated_angle
-            task._is_navmesh_violated = False
+        rotate_action(self._sim, direction="left")
         return self._sim.step(HabitatSimActions.turn_left)
 
 
 @registry.register_task_action
 class TurnRightAction(SimulatorTaskAction):
-    def step(self, task, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-        if type(self._sim) == RearrangeSim:
-            actuation = self._sim.config.agents[0].action_space[2].actuation.amount
-            if "robot_start_angle" not in dir(self._sim):
-                self._sim.robot_start_angle = kwargs[
-                    "task"
-                ]._nav_to_info.robot_start_angle
-                self._sim.current_angle = self._sim.robot_start_angle
-            
-            self._sim.updated_angle = (
-                self._sim.current_angle - actuation * np.pi / 180
-            )
-            task._is_navmesh_violated = False
-
-            self._sim.robot.base_rot = self._sim.updated_angle
-            self._sim.current_angle = self._sim.updated_angle
+        rotate_action(self._sim, direction="right")
         return self._sim.step(HabitatSimActions.turn_right)
 
 
