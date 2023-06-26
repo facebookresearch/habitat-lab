@@ -131,17 +131,19 @@ class MultiAgentPolicyActionData(PolicyActionData):
         """
         Returns attributes of the policy unpacked per agent
         """
-        return {
-            "next_recurrent_hidden_states": self._unpack(
-                self.rnn_hidden_states, self.length_rnn_hidden_states
-            ),
-            "actions": self._unpack(self.actions, self.length_actions),
-            "value_preds": self._unpack(self.values),
-            "action_log_probs": self._unpack(self.action_log_probs),
-            "take_actions": self._unpack(self.take_actions),
-            "should_inserts": self._unpack(self.should_inserts),
-        }
-
+        try:
+            return {
+                "next_recurrent_hidden_states": self._unpack(
+                    self.rnn_hidden_states, self.length_rnn_hidden_states
+                ),
+                "actions": self._unpack(self.actions, self.length_actions),
+                "value_preds": self._unpack(self.values),
+                "action_log_probs": self._unpack(self.action_log_probs),
+                "take_actions": self._unpack(self.take_actions),
+                "should_inserts": self._unpack(self.should_inserts),
+            }
+        except:
+            breakpoint()
 
 class Policy(abc.ABC):
     action_distribution: nn.Module
