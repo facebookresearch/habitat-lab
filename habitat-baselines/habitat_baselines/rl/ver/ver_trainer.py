@@ -75,7 +75,7 @@ class VERTrainer(PPOTrainer):
             is_distrib=self._is_distributed,
             device=self.device,
             resume_state=resume_state,
-            num_envs=len(self.environment_workers),
+            num_envs=self.config.habitat_baselines.num_environments,
             percent_done_fn=self.percent_done,
             **kwargs,
         )
