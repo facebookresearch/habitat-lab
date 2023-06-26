@@ -414,6 +414,8 @@ class HierarchicalPolicy(nn.Module, Policy):
                     rnn_hidden_states[batch_ids] = hl_info[
                         "rnn_hidden_states"
                     ][batch_ids]
+                    if type(prev_actions[batch_ids]) != type(hl_info["actions"][batch_ids]):
+                        print(self._high_level_policy._agent_name)
                     prev_actions[batch_ids] = hl_info["actions"][batch_ids].astype(prev_actions[batch_ids])
                 elif self._skills[skill_id].has_hidden_state:
                     raise ValueError(
