@@ -684,6 +684,7 @@ def iterate_action_space_recursively(action_space):
 
 
 def is_continuous_action_space(action_space) -> bool:
+    print("action_space", action_space)
     possible_discrete_spaces = (
         spaces.Discrete,
         spaces.MultiDiscrete,
@@ -703,6 +704,7 @@ def get_action_space_info(ac_space: spaces.Space) -> Tuple[Tuple[int], bool]:
     """
     :returns: The shape of the action space and if the action space is discrete. If the action space is discrete, the shape will be `(1,)`.
     """
+    print("ac_space", ac_space)
     if is_continuous_action_space(ac_space):
         # Assume NONE of the actions are discrete
         return (
