@@ -858,11 +858,7 @@ class RearrangeSim(HabitatSim):
             self._update_markers()
 
         # TODO: Make debug cameras more flexible
-        if (
-            "third_rgb" in obs
-            and self._debug_render
-            and not self._batch_render
-        ):
+        if "third_rgb" in obs and self._debug_render:
             self._try_acquire_context()
             for k, (pos, r) in add_back_viz_objs.items():
                 viz_id = self.viz_ids[k]

@@ -72,7 +72,9 @@ class EnvBatchRenderer:
         assert (
             not config.habitat.simulator.create_renderer
         ), "Batch renderer requires create_renderer to be disabled in config."
-
+        assert (
+            not config.habitat.simulator.debug_render
+        ), "Batch renderer requires debug_render to be disabled in config."
         logger.warn(
             "Batch rendering enabled. This feature is experimental and may change at any time."
         )
