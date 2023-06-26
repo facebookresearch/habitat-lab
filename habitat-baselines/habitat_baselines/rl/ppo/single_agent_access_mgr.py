@@ -224,7 +224,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def hidden_state_shape(self):
         return (
             self.actor_critic.num_recurrent_layers,
-            self._ppo_cfg.hidden_size,
+            self.actor_critic.recurrent_hidden_size,
         )
 
     def after_update(self):

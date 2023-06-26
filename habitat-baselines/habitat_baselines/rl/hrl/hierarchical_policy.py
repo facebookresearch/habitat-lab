@@ -114,6 +114,13 @@ class HierarchicalPolicy(nn.Module, Policy):
                 else:
                     self._skill_redirects[skill_i] = first_idx
 
+        self._hl_needs_recurrent_state = (
+            self._high_level_policy.num_recurrent_layers
+        ) > 0
+        self._recurrent_hidden_size = (
+            full_config.habitat_baselines.rl.ppo.hidden_size
+        )
+
     def _create_skills(
         self, skills, observation_space, action_space, full_config
     ):
@@ -170,7 +177,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         Fetches the policy action space for learning. If we are learning the HL
         policy, it will return its custom action space for learning.
         """
-        if self._any_ll_hidden_state:
+        if self._any_ll_hidden_state or not self._hl_needs_recurrent_state:
             # The LL skill will take priority for the prev action.
             return env_action_space
         else:
@@ -199,6 +206,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             ret_policy_infos.append(ret_policy_info)
 
         return ret_policy_infos
+
+    @property
+    def recurrent_hidden_size(self) -> int:
+        return self._recurrent_hidden_size
 
     @property
     def num_recurrent_layers(self):
@@ -346,7 +357,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         )
 
         # This will update the prev action
-        if self._any_ll_hidden_state:
+        if self._any_ll_hidden_state or not self._hl_needs_recurrent_state:
             # The LL skill will take priority for the prev action
             use_action = actions
         else:
@@ -381,7 +392,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         hl_rnn_hidden_states: torch.Tensor,
         ll_rnn_hidden_states: torch.Tensor,
     ) -> torch.Tensor:
-        if self._high_level_policy.num_recurrent_layers == 0:
+        if not self._hl_needs_recurrent_state:
             return ll_rnn_hidden_states
         elif self._max_skill_rnn_layers == 0:
             return hl_rnn_hidden_states
@@ -571,11 +582,11 @@ class HierarchicalPolicy(nn.Module, Policy):
         **kwargs,
     ):
         return cls(
-            config.habitat_baselines.rl.policy,
-            config,
-            observation_space,
-            orig_action_space,
-            config.habitat_baselines.num_environments,
+            config=config.habitat_baselines.rl.policy,
+            full_config=config,
+            observation_space=observation_space,
+            action_space=orig_action_space,
+            num_envs=config.habitat_baselines.num_environments,
         )
 
 

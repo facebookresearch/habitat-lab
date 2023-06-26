@@ -99,6 +99,10 @@ class Policy(abc.ABC):
     def num_recurrent_layers(self) -> int:
         return 0
 
+    @property
+    def recurrent_hidden_size(self) -> int:
+        return 0
+
     def forward(self, *x):
         raise NotImplementedError
 
@@ -331,6 +335,7 @@ class PointNavBaselinePolicy(NetPolicy):
         aux_loss_config=None,
         **kwargs,
     ):
+        self._recurrent_hidden_size = hidden_size
         super().__init__(
             PointNavBaselineNet(  # type: ignore
                 observation_space=observation_space,
@@ -340,6 +345,10 @@ class PointNavBaselinePolicy(NetPolicy):
             action_space=action_space,
             aux_loss_config=aux_loss_config,
         )
+
+    @property
+    def recurrent_hidden_size(self) -> int:
+        return self._recurrent_hidden_size
 
     @classmethod
     def from_config(
