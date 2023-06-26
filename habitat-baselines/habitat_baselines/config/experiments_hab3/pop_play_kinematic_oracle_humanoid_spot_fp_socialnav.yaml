@@ -18,6 +18,8 @@ defaults:
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
+  - override /habitat/task/rearrange: multi_agent_tidy_house_base_spot_social
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
   - _self_
 
 hydra:
@@ -80,6 +82,7 @@ habitat_baselines:
       agent_1:
         hierarchical_policy:
           high_level_policy:
+            name: "SocNavHumanHighLevelPolicy"
             add_arm_rest: False
             policy_input_keys:
               - "head_depth"
@@ -92,7 +95,7 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
-              skill_name: "OracleNavSocPolicy" #"OracleNavPolicy"
+              skill_name: "OracleNavSocPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
 
