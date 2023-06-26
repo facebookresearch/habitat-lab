@@ -414,7 +414,6 @@ class HierarchicalPolicy(nn.Module, Policy):
                     rnn_hidden_states[batch_ids] = hl_info[
                         "rnn_hidden_states"
                     ][batch_ids]
-                    breakpoint()
                     print("type(prev_actions[batch_ids])", prev_actions[batch_ids].dtype)
                     print("type(hl_info[actions][batch_ids])", hl_info["actions"][batch_ids].dtype)
                     if prev_actions[batch_ids].dtype != hl_info["actions"][batch_ids].dtype:

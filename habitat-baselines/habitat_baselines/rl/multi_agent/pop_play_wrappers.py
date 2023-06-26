@@ -66,6 +66,7 @@ class MultiPolicy(Policy):
                     deterministic,
                 )
             )
+            print("policy, agent_actions[-1]", policy, agent_actions[-1])
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
