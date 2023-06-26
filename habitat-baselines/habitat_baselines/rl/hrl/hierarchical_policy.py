@@ -414,7 +414,7 @@ class HierarchicalPolicy(nn.Module, Policy):
                     rnn_hidden_states[batch_ids] = hl_info[
                         "rnn_hidden_states"
                     ][batch_ids]
-                    prev_actions[batch_ids] = hl_info["actions"][batch_ids]
+                    prev_actions[batch_ids] = hl_info["actions"][batch_ids].astype(prev_actions[batch_ids])
                 elif self._skills[skill_id].has_hidden_state:
                     raise ValueError(
                         f"The code does not currently support neural LL and neural HL skills. Skill={self._skills[skill_id]}, HL={self._high_level_policy}"
