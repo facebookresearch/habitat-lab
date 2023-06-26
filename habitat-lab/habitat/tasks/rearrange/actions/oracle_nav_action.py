@@ -593,6 +593,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 )
 
             elif self.motion_type == "human_joints":
+                raise Exception  # This should not be called
                 # Update the humanoid base
                 self.humanoid_controller.obj_transform_base = base_T
                 if not at_goal:
