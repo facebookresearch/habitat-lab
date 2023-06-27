@@ -273,7 +273,7 @@ class RearrangeSim(HabitatSim):
                     ] = ep_info.targets.pop(targ_k)
             else:
                 # Only reset this info once.
-                self._prev_targ_names = list(ep_info.targets.keys())
+                self._prev_targ_names: List[str] = list(ep_info.targets.keys())
                 self._handle_to_goal_name = ep_info.info["object_labels"]
         else:
             self._handle_to_goal_name = ep_info.info["object_labels"]
