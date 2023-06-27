@@ -64,6 +64,11 @@ habitat_baselines:
   evaluate: False
   writer_type: 'wb'
 
+  wb:
+    project_name: 'social_navigation'
+    entity: 'tgervet'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
+
   eval:
     should_load_ckpt: False
     video_option: ["disk"]
