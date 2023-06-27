@@ -58,7 +58,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
         # Just wrote this
         self._counter = 0
         self._waypoint_count = 20
-        print("Oracle nav soc action is called!")
+        # print("Oracle nav soc action is called!")
 
         self.poses: List[np.ndarray] = []
         self.waypoints: List[np.ndarray] = []
@@ -131,7 +131,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
             final_nav_targ, _ = self._get_random_waypoint()
             self.prev_navigable_point = final_nav_targ
             self.waypoints.append(final_nav_targ)
-        print("Initialized waypoints are ", self.waypoints)
+        # print("Initialized waypoints are ", self.waypoints)
 
     def _get_random_waypoint(self):
         # Just sample a new point
@@ -281,7 +281,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                 stuck or reached_waypoint
             ):
                 self.waypoint_pointer += 1
-                print("step ", str(self._counter), ": NEW WAYPOINT!")
+                # print("step ", str(self._counter), ": NEW WAYPOINT!")
                 self.waypoint_increased_step = self._counter
 
         final_nav_targ, obj_targ_pos = (
@@ -344,7 +344,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                     vel = [0, 0]
                     if self.waypoint_pointer == len(self.waypoints) - 1:
                         self.skill_done = True
-                        print("Completed!")
+                        # print("Completed!")
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
@@ -361,15 +361,16 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                         )
                     else:
                         # Move towards the target
-                        self.humanoid_controller.calculate_walk_pose(
-                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
-                        )
+                        # self.humanoid_controller.calculate_walk_pose(
+                        #     mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+                        # )
+                        self.humanoid_controller.calculate_stop_pose()
                 else:
                     self.humanoid_controller.calculate_stop_pose()
                     # if at_goal and at the end of the pointer
                     if self.waypoint_pointer == len(self.waypoints) - 1:
                         self.skill_done = True
-                        print("Completed!")
+                        # print("Completed!")
 
                 self._update_controller_to_navmesh()
                 base_action = self.humanoid_controller.get_pose()
