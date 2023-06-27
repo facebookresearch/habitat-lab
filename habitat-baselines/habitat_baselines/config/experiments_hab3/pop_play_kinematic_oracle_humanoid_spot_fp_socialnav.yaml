@@ -33,6 +33,8 @@ hydra:
 habitat:
   task:
     reward_measure: social_nav_reward
+    slack_reward: 0.
+    success_reward: 0.
     actions:
       agent_1_oracle_nav_soc_action:
         agent_index: 1
