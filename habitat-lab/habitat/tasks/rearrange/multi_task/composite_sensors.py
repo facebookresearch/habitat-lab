@@ -325,5 +325,5 @@ class SocialNavReward(Measure):
             self._metric = -(distance - 2.0)
         elif distance < 1.0:
             self._metric = -(1.0 - distance)
-
-        self._metric = -distance
+        else:
+            self._metric = 0.0
