@@ -362,10 +362,10 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                     else:
                         # Move towards the target
                         # TODO Debug with static human
-                        # self.humanoid_controller.calculate_walk_pose(
-                        #     mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
-                        # )
-                        self.humanoid_controller.calculate_stop_pose()
+                        self.humanoid_controller.calculate_walk_pose(
+                            mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
+                        )
+                        # self.humanoid_controller.calculate_stop_pose()
                 else:
                     self.humanoid_controller.calculate_stop_pose()
                     # if at_goal and at the end of the pointer
