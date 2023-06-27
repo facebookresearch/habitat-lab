@@ -325,6 +325,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                 and angle_to_obj < self._config.turn_thresh
             )
 
+            print("self.motion_type", self.motion_type)
             if self.motion_type == "base_velocity":
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
