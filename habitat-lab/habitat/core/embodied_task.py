@@ -322,6 +322,9 @@ class EmbodiedTask:
         observations: Any = {}
         if isinstance(action_name, tuple):  # there are multiple actions
             for i, a_name in enumerate(action_name):
+                if "agent_0" in a_name and "base_velocity" not in a_name:
+                    print(a_name)
+                    continue
                 self._step_single_action(
                     observations,
                     a_name,

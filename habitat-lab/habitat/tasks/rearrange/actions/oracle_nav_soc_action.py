@@ -325,7 +325,6 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                 and angle_to_obj < self._config.turn_thresh
             )
 
-            print("self.motion_type", self.motion_type)
             if self.motion_type == "base_velocity":
                 if not at_goal:
                     if dist_to_final_nav_targ < self._config.dist_thresh:
@@ -362,6 +361,7 @@ class OracleNavSocAction(BaseVelAction, HumanoidJointAction):
                         )
                     else:
                         # Move towards the target
+                        # TODO Debug with static human
                         # self.humanoid_controller.calculate_walk_pose(
                         #     mn.Vector3([rel_targ[0], 0.0, rel_targ[1]])
                         # )
