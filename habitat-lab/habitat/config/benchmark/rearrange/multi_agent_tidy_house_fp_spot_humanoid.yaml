@@ -17,7 +17,7 @@ defaults:
   - /habitat/task/actions@habitat.task.actions.agent_1_base_velocity: base_velocity
   - /habitat/task/actions@habitat.task.actions.agent_1_rearrange_stop: rearrange_stop
   - /habitat/task/actions@habitat.task.actions.agent_1_pddl_apply_action: pddl_apply_action
-  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
+#  - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_with_backing_up_action: oracle_nav_with_backing_up_action
   - /habitat/task/actions@habitat.task.actions.agent_1_oracle_nav_soc_action: oracle_nav_soc_action
 
   - /habitat/task/measurements:
