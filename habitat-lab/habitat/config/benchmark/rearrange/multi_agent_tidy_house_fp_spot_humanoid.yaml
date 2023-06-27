@@ -109,7 +109,7 @@ habitat:
         agent_index : 1
       agent_1_pddl_apply_action:
         agent_index : 1
-      agent_1_oracle_nav_with_backing_up_action:
+      agent_1_oracle_nav_soc_action:
         agent_index : 1
         motion_control: human_joints
         spawn_max_dist_to_obj: -1.0
