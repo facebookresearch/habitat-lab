@@ -169,7 +169,7 @@ class SingleAgentAccessMgr(AgentAccessMgr):
                 }
             )
         if self._is_static_encoder:
-            for param in actor_critic.net.visual_encoder.parameters():
+            for param in actor_critic.visual_encoder.parameters():
                 param.requires_grad_(False)
 
         if self._config.habitat_baselines.rl.ddppo.reset_critic:
@@ -249,7 +249,7 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
     """
 
     if not config.habitat_baselines.rl.ddppo.train_encoder:
-        encoder = actor_critic.net.visual_encoder
+        encoder = actor_critic.visual_encoder
         obs_space = spaces.Dict(
             {
                 PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY: spaces.Box(

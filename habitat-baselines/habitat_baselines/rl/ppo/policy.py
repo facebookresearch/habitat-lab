@@ -106,6 +106,12 @@ class Policy(abc.ABC):
     def forward(self, *x):
         raise NotImplementedError
 
+    @property
+    def visual_encoder(self) -> Optional[nn.Module]:
+        """
+        Gets the visual encoder for the policy.
+        """
+
     def get_policy_action_space(
         self, env_action_space: spaces.Space
     ) -> spaces.Space:
@@ -210,6 +216,10 @@ class NetPolicy(nn.Module, Policy):
                 self.net,
                 **cfg,
             )
+
+    @property
+    def visual_encoder(self) -> Optional[nn.Module]:
+        return self.net.visual_encoder
 
     @property
     def should_load_agent_state(self):

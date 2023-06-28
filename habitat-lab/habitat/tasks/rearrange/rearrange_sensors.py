@@ -1038,6 +1038,7 @@ class RuntimePerfStats(Measure):
     def __init__(self, sim, config, *args, **kwargs):
         self._sim = sim
         self._sim.enable_perf_logging()
+        self._disable_logging = config.disable_logging
         super().__init__()
 
     def reset_metric(self, *args, **kwargs):
@@ -1047,4 +1048,9 @@ class RuntimePerfStats(Measure):
     def update_metric(self, *args, task, **kwargs):
         for k, v in self._sim.get_runtime_perf_stats().items():
             self._metric_queue[k].append(v)
-        self._metric = {k: np.mean(v) for k, v in self._metric_queue.items()}
+        if self._disable_logging:
+            self._metric = {}
+        else:
+            self._metric = {
+                k: np.mean(v) for k, v in self._metric_queue.items()
+            }

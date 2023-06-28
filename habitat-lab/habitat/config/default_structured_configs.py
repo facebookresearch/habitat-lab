@@ -694,6 +694,7 @@ class RuntimePerfStatsMeasurementConfig(MeasurementConfig):
     """
 
     type: str = "RuntimePerfStats"
+    disable_logging: bool = False
 
 
 @dataclass

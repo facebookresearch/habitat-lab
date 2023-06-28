@@ -53,7 +53,6 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 )
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
-from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (  # noqa: F401.
     SingleAgentAccessMgr,
 )
@@ -278,8 +277,10 @@ class PPOTrainer(BaseRLTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         if self._is_static_encoder:
-            assert isinstance(self._agent.actor_critic, NetPolicy)
-            self._encoder = self._agent.actor_critic.net.visual_encoder
+            self._encoder = self._agent.actor_critic.visual_encoder
+            assert (
+                self._encoder is not None
+            ), "Visual encoder is not specified for this actor"
             with inference_mode():
                 batch[
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
@@ -1023,8 +1024,8 @@ class PPOTrainer(BaseRLTrainer):
                 ):
                     envs_to_pause.append(i)
 
-                # Exclude the keys from `_rank0_keys`.
-                infos[i] = {
+                # Exclude the keys from `_rank0_keys` from displaying in the video
+                disp_info = {
                     k: v
                     for k, v in infos[i].items()
                     if k not in self._rank0_keys
@@ -1033,20 +1034,21 @@ class PPOTrainer(BaseRLTrainer):
                 if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
+                        {k: v[i] for k, v in batch.items()}, disp_info
                     )
                     if not not_done_masks[i].item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
                         final_frame = observations_to_image(
-                            {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
+                            {k: v[i] * 0.0 for k, v in batch.items()},
+                            disp_info,
                         )
-                        final_frame = overlay_frame(final_frame, infos[i])
+                        final_frame = overlay_frame(final_frame, disp_info)
                         rgb_frames[i].append(final_frame)
                         # The starting frame of the next episode will be the final element..
                         rgb_frames[i].append(frame)
                     else:
-                        frame = overlay_frame(frame, infos[i])
+                        frame = overlay_frame(frame, disp_info)
                         rgb_frames[i].append(frame)
 
                 # episode ended
@@ -1076,7 +1078,7 @@ class PPOTrainer(BaseRLTrainer):
                             images=rgb_frames[i][:-1],
                             episode_id=f"{current_episodes_info[i].episode_id}_{ep_eval_count[k]}",
                             checkpoint_idx=checkpoint_index,
-                            metrics=extract_scalars_from_info(infos[i]),
+                            metrics=extract_scalars_from_info(disp_info),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
@@ -1119,9 +1121,12 @@ class PPOTrainer(BaseRLTrainer):
         ), f"Expected {number_of_eval_episodes} episodes, got {len(ep_eval_count)}."
 
         aggregated_stats = {}
-        for stat_key in next(iter(stats_episodes.values())).keys():
+        all_ks = set()
+        for ep in stats_episodes.values():
+            all_ks.update(ep.keys())
+        for stat_key in all_ks:
             aggregated_stats[stat_key] = np.mean(
-                [v[stat_key] for v in stats_episodes.values()]
+                [v[stat_key] for v in stats_episodes.values() if stat_key in v]
             )
 
         for k, v in aggregated_stats.items():
