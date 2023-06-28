@@ -5,4 +5,4 @@ defaults:
 
 type: LanguageNav-v1
 split: val
-data_path: data/datasets/languagenav/hm3d/v2/{split}/{split}.json.gz
+data_path: data/datasets/languagenav/hm3d/v0/{split}/{split}.json.gz
