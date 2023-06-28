@@ -86,6 +86,20 @@ actions:
         task.force_regenerate: True
         task.should_save_to_cache: False
 
+  - name: turn_left
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
+  - name: turn_right
+    parameters:
+      - name: robot
+        expr_type: robot_entity_type
+    precondition: null
+    postcondition: []
+
   - name: nav_to_obj
     parameters:
       - name: obj

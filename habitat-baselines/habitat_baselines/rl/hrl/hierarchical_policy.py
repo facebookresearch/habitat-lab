@@ -35,6 +35,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     PlaceSkillPolicy,
     ResetArmSkill,
     SkillPolicy,
+    TurnSkillPolicy,
     WaitSkillPolicy,
 )
 from habitat_baselines.rl.hrl.utils import find_action_range

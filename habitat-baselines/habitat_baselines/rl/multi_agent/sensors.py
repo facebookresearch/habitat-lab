@@ -176,6 +176,6 @@ class ActionHistorySensor(UsesArticulatedAgentInterface, Sensor):
                 entities = self._action_map[use_name]
                 set_idx += entities.index(param_value)
                 self._dat[self._cur_write_idx, set_idx] = 1.0
-            self._cur_write_idx += 1
+            # self._cur_write_idx += 1
 
         return self._dat.reshape(-1)

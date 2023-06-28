@@ -252,6 +252,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     # map to this skill. If not specified,the name of the skill must match the
     # PDDL action name.
     pddl_action_names: Optional[List[str]] = None
+    turn_steps: int = 1
+    turn_power: float = 1.0
 
 
 @dataclass
