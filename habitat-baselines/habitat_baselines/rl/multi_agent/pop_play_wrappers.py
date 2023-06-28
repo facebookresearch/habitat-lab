@@ -66,6 +66,8 @@ class MultiPolicy(Policy):
                     deterministic,
                 )
             )
+            # print("agent_i", agent_i)
+            # print("agent_actions[-1]", agent_actions[-1])
         policy_info = _merge_list_dict(
             [ac.policy_info for ac in agent_actions]
         )
@@ -73,7 +75,13 @@ class MultiPolicy(Policy):
         device = masks.device
 
         action_dims = split_index_dict["index_len_prev_actions"]
-
+        take_actions = [
+            ac.take_actions
+            if ac.take_actions is not None
+            else ac.actions
+            for ac in agent_actions
+        ]
+        length_take_actions = [ta.shape[-1] for ta in take_actions]
         def _maybe_cat(get_dat, feature_dims, dtype):
             all_dat = [get_dat(ac) for ac in agent_actions]
             # Replace any None with dummy data.
@@ -128,6 +136,7 @@ class MultiPolicy(Policy):
             ),
             length_rnn_hidden_states=rnn_hidden_lengths,
             length_actions=action_dims,
+            length_take_actions=length_take_actions,
             num_agents=n_agents,
         )
 

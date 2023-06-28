@@ -11,18 +11,33 @@ defaults:
     - add_virtual_keys_base
   # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
   # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
-  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: monolithic #hab3_hl_neural_ma
+  - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_socnav_human #hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
+  - /habitat/task/measurements:
+    - social_nav_reward
+    - finding_success_rate
+    - following_rate
+    - following_distance
   - /habitat/task/lab_sensors:
     # For the oracle navigation
     - has_finished_oracle_nav
+  - override /habitat/simulator/agents@habitat.simulator.agents.agent_0: rgbd_head_rgbd_arm_agent
   - _self_
 
 hydra:
   job:
     name: 'pop_play_humanoid_spot_fp'
+
+habitat:
+  task:
+    reward_measure: social_nav_reward
+    slack_reward: 0.
+    success_reward: 0.
+    actions:
+      agent_1_oracle_nav_soc_action:
+        agent_index: 1
 
 habitat_baselines:
   verbose: False
@@ -47,7 +62,12 @@ habitat_baselines:
   rollout_storage_name: "HrlRolloutStorage"
 
   evaluate: False
-  # writer_type: 'wb'
+  writer_type: 'wb'
+
+  wb:
+    project_name: 'social_navigation'
+    entity: 'tgervet'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
     should_load_ckpt: False
@@ -80,6 +100,7 @@ habitat_baselines:
       agent_1:
         hierarchical_policy:
           high_level_policy:
+            name: "SocNavHumanHighLevelPolicy"
             add_arm_rest: False
             policy_input_keys:
               - "head_depth"
@@ -92,7 +113,7 @@ habitat_baselines:
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
-              skill_name: "OracleNavPolicy"
+              skill_name: "OracleNavSocPolicy"
               obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
               max_skill_steps: 1500
 

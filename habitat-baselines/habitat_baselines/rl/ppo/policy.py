@@ -106,6 +106,7 @@ class MultiAgentPolicyActionData(PolicyActionData):
     # Indices
     length_rnn_hidden_states: Optional[torch.Tensor] = None
     length_actions: Optional[torch.Tensor] = None
+    length_take_actions: Optional[torch.Tensor] = None
     num_agents: Optional[int] = 1
 
     def _unpack(self, tensor_to_unpack, unpack_lengths=None):
@@ -138,10 +139,10 @@ class MultiAgentPolicyActionData(PolicyActionData):
             "actions": self._unpack(self.actions, self.length_actions),
             "value_preds": self._unpack(self.values),
             "action_log_probs": self._unpack(self.action_log_probs),
-            "take_actions": self._unpack(self.take_actions),
+            "take_actions": self._unpack(self.take_actions,
+                                         self.length_take_actions),
             "should_inserts": self._unpack(self.should_inserts),
         }
-
 
 class Policy(abc.ABC):
     action_distribution: nn.Module

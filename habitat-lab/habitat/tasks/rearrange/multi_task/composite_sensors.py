@@ -320,4 +320,10 @@ class SocialNavReward(Measure):
         ]
 
         distance = np.linalg.norm(position_human - position_robot)
-        self._metric = -distance
+
+        if distance > 2.0:
+            self._metric = -(distance - 2.0)
+        elif distance < 1.0:
+            self._metric = -(1.0 - distance)
+        else:
+            self._metric = 0.0
