@@ -202,6 +202,25 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
         self.poses.append(robot_pos)
 
+        action = nav_to_target_idx + 1
+        vel = [0, 0]
+        print("oracle action:", action)
+        if action == 3: # right
+            print("Right")
+            vel = [0, -1]
+        elif action == 2: # left
+            print("Left")
+            vel = [0, 1]
+        elif action == 1: # forward
+            print("Forward")
+            vel = [1, 0]
+
+        if True:
+            kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
+            return BaseVelAction.step(
+                self, *args, is_last_action=is_last_action, **kwargs
+            )
+
         if curr_path_points is None:
             raise Exception
         else:
@@ -332,7 +351,7 @@ class SimpleVelocityControlEnv:
 
 
 @registry.register_task_action
-class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  # type: ignore
+class OracleNavWithBackingUpAction(OracleNavAction):  # type: ignore
     """
     Oracle nav action with backing-up. This function allows the robot to move
     backward to avoid obstacles.
@@ -341,7 +360,8 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
     def __init__(self, *args, task, **kwargs):
         OracleNavAction.__init__(self, *args, task=task, **kwargs)
         if self.motion_type == "base_velocity":
-            BaseVelNonCylinderAction.__init__(self, *args, **kwargs, task=task)
+            #BaseVelNonCylinderAction.__init__(self, *args, **kwargs, task=task)
+            BaseVelAction.__init__(self, *args, **kwargs, task=task)
 
         # Define the navigation target
         self.at_goal = False
@@ -462,6 +482,25 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         )
         # Get the base transformation
         base_T = self.cur_articulated_agent.base_transformation
+        action = nav_to_target_idx + 1
+        vel = [0, 0]
+        print("oracle action:", action)
+        if action == 3: # right
+            print("Right")
+            vel = [0, -1]
+        elif action == 2: # left
+            print("Left")
+            vel = [0, 1]
+        elif action == 1: # forward
+            print("Forward")
+            vel = [1, 0]
+
+        if True:
+            kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
+            return BaseVelAction.step(
+                self, *args, is_last_action=is_last_action, **kwargs
+            )
+
         # Get the current path
         curr_path_points = self._path_to_point(final_nav_targ)
         # Get the robot position
@@ -511,6 +550,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                     cur_nav_targ,
                 )
 
+            need_move_backward = False
             if need_move_backward:
                 # Backward direction
                 forward = np.array([-1.0, 0, 0])
@@ -557,6 +597,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 if need_move_backward:
                     vel[0] = -1 * vel[0]
 
+                print("final vel:", vel)
                 kwargs[f"{self._action_arg_prefix}base_vel"] = np.array(vel)
                 return BaseVelNonCylinderAction.step(
                     self, *args, is_last_action=is_last_action, **kwargs
