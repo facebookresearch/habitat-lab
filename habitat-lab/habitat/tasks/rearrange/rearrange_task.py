@@ -216,7 +216,8 @@ class RearrangeTask(NavigationTask):
             # Post-process visual sensor observations
             obs = self._sim._sensor_suite.get_observations(obs)
         else:
-            # Keyframes are added so that the simulator state can be reconstituted later.
+            # Keyframes are added so that the simulator state can be reconstituted when batch rendering.
+            # The post-processing step above is done after batch rendering.
             self._sim.add_keyframe_to_observations(obs)
 
         # Task sensors (all non-visual sensors)
