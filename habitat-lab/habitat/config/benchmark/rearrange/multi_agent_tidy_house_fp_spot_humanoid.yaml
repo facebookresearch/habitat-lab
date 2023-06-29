@@ -157,7 +157,7 @@ habitat:
       - agent_1_other_agent_gps
       - agent_1_should_replan
   environment:
-    max_episode_steps: 750
+    max_episode_steps: 2000 #750
   simulator:
     type: RearrangeSim-v0
     seed: 100
@@ -207,4 +207,5 @@ habitat:
   dataset:
     # data_path: data/datasets/replica_cad/rearrange/v1/{split}/tidy_house_10k_1k.json.gz
     # data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_small_size_v0.3.1.json.gz
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz
+    #data_path: data/datasets/floorplanner/rearrange/scratch/train/largetrain_15s_15000epi_2obj.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/test/largeval_5s_500epi_2obj.json.gz
