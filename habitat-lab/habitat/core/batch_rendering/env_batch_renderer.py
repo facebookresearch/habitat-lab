@@ -119,6 +119,12 @@ class EnvBatchRenderer:
         # Pre-load graphics assets using composite GLTF files.
         EnvBatchRenderer._load_composite_files(config, self._replay_renderer)
 
+    def close(self) -> None:
+        r"""
+        Release the resources and graphics context.
+        """
+        self._replay_renderer = None
+
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""
         Renders observations for all environments by consuming keyframe observations.
