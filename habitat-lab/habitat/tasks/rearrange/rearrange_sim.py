@@ -826,11 +826,10 @@ class RearrangeSim(HabitatSim):
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
 
-            self._prev_sim_obs = self.get_sensor_observations()
-            self.add_keyframe_to_observations(self._prev_sim_obs)
-            obs = self._prev_sim_obs
+            obs = self.get_sensor_observations()
+            self.add_keyframe_to_observations(obs)
         elif self._concur_render:
-            self._prev_sim_obs = self.start_async_render()
+            self.start_async_render()
 
             for _ in range(self.ac_freq_ratio):
                 self.internal_step(-1, update_articulated_agent=False)
