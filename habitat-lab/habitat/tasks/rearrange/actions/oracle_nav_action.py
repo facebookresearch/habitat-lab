@@ -116,6 +116,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
             self._prev_ep_id = self._task._episode_id
         self.skill_done = False
         self.poses = []
+        self.counter = 0
 
     def _get_target_for_idx(self, nav_to_target_idx: int):
         nav_to_obj = self._poss_entities[nav_to_target_idx]
@@ -181,24 +182,53 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
 
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
-        nav_to_target_idx = kwargs[
-            self._action_arg_prefix + "oracle_nav_action"
-        ]
-        if nav_to_target_idx <= 0 or nav_to_target_idx > len(
-            self._poss_entities
-        ):
-            if is_last_action:
-                return self._sim.step(HabitatSimActions.base_velocity)
-            else:
-                return {}
-        nav_to_target_idx = int(nav_to_target_idx[0]) - 1
+        # nav_to_target_idx = kwargs[
+        #     self._action_arg_prefix + "oracle_nav_action"
+        # ]
+        # if nav_to_target_idx <= 0 or nav_to_target_idx > len(
+        #     self._poss_entities
+        # ):
+        #     if is_last_action:
+        #         return self._sim.step(HabitatSimActions.base_velocity)
+        #     else:
+        #         return {}
+        # nav_to_target_idx = int(nav_to_target_idx[0]) - 1
 
-        final_nav_targ, obj_targ_pos = self._get_target_for_idx(
-            nav_to_target_idx
-        )
+        # final_nav_targ, obj_targ_pos = self._get_target_for_idx(
+        #     nav_to_target_idx
+        # )
+        # base_T = self.cur_articulated_agent.base_transformation
+        # curr_path_points = self._path_to_point(final_nav_targ)
+        # robot_pos = np.array(self.cur_articulated_agent.base_pos)
+        if self.counter == 0:
+            nav_to_target_idx = kwargs[
+                self._action_arg_prefix + "oracle_nav_with_backing_up_action"
+            ]
+            if nav_to_target_idx <= 0 or nav_to_target_idx > len(
+                self._poss_entities
+            ):
+                if is_last_action:
+                    return self._sim.step(HabitatSimActions.base_velocity)
+                else:
+                    return {}
+            nav_to_target_idx = int(nav_to_target_idx[0]) - 1
+            final_nav_targ, obj_targ_pos = self._get_target_for_idx(
+                nav_to_target_idx
+            )
+        else:
+            # final_nav_targ = pickle.load(open('last_human_pose.p', 'rb'))
+            # breakpoint()
+            final_nav_targ = np.array(
+                self._sim.get_agent_data(
+                    1
+                ).articulated_agent.sim_obj.translation
+            )  # observations[HumanLastPoseSensor.cls_uuid].cpu() #read from HumanLastPoseSensor
+            obj_targ_pos = final_nav_targ
         base_T = self.cur_articulated_agent.base_transformation
         curr_path_points = self._path_to_point(final_nav_targ)
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
+
+        self.counter += 1
         self.poses.append(robot_pos)
 
         if curr_path_points is None:
