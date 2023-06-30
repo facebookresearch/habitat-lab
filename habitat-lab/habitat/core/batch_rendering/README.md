@@ -48,11 +48,11 @@ If an asset is not found within the provided composite files, it will be loaded 
 
 ## How it works:
 
-The batch renderer is initialized by passing an environment config to `VectorEnv`. It uses configuration fields that are the same for each environment, so any configuration will do, e.g. `envs.initialize_batch_renderer(configs[0])`.
+The batch renderer is initialized with `VectorEnv.initialize_batch_renderer()`.
 
 When `reset()` or `step()` are called, the simulators emplace gfx-replay keyframes into observations. See `HabitatSim.add_keyframe_to_observations()`. The simulators won't render visual sensors. Instead, they leave placeholder observations (e.g. `"uuid: None"`).
 
-After all simulators did this, the new `VectorEnv.post_step()` has to be called to render the observations. Internally, this calls `EnvBatchRenderer.post_step()`. During this process, all keyframes are consumed, and placeholder observations are replaced by final renders.
+After all simulators have stepped, `VectorEnv.post_step()` has to be called to render the observations. Internally, this calls `EnvBatchRenderer.post_step()`. During this process, all keyframes are consumed, and placeholder observations are replaced by final renders.
 
 See `test_rl_vectorized_envs_batch_renderer` ([link](https://github.com/facebookresearch/habitat-lab/blob/main/test/test_habitat_env.py#L298)) for an example.
 
