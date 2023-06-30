@@ -123,7 +123,8 @@ class EnvBatchRenderer:
         r"""
         Release the resources and graphics context.
         """
-        self._replay_renderer = None
+        if self._replay_renderer != None:
+            self._replay_renderer.close()
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""
