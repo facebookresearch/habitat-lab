@@ -537,7 +537,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         #breakpoint()
         #wait_for_human = 
         #breakpoint()
-        breakpoint()
+        #breakpoint()
         if self.wait_for_human:
             wait_for_human_cur = self._get_distance(robot_pos, np.array(self._sim.get_agent_data(1).articulated_agent.base_pos)) <= 2
         else:
