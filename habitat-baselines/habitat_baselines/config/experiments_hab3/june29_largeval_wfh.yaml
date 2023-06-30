@@ -39,9 +39,8 @@ habitat:
     actions:
       agent_1_oracle_nav_soc_action:
         agent_index: 1
-  # actions:
-  #   agent_0_oracle_nav_with_backing_up_action:
-  #     wait_for_human: False
+      agent_0_oracle_nav_with_backing_up_action:
+        wait_for_human: True
   dataset:
     data_path: data/datasets/floorplanner/rearrange/scratch/test/largeval_5s_500epi_2obj_first50.json.gz
 

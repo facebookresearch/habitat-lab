@@ -33,6 +33,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
     """
 
     def __init__(self, *args, task, **kwargs):
+        #breakpoint()
         config = kwargs["config"]
         self.motion_type = config.motion_control
         if self.motion_type == "base_velocity":
@@ -61,6 +62,7 @@ class OracleNavAction(BaseVelAction, HumanoidJointAction):
         self._turn_thresh = self._config.turn_thresh
         self._turn_velocity = self._config.turn_velocity
         self._forward_velocity = self._config.forward_velocity
+        self.wait_for_human = self._config.wait_for_human
 
     @staticmethod
     def _compute_turn(rel, turn_vel, robot_forward):
@@ -476,6 +478,12 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
         return False
 
+    def _get_distance(self, prev_nav_target, final_nav_targ):
+        dist_to_final_nav_targ = np.linalg.norm(
+            (final_nav_targ - prev_nav_target)  # [[0, 2]]
+        )
+        return dist_to_final_nav_targ
+
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
         # nav_to_target_idx = kwargs[
@@ -517,6 +525,7 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 ).articulated_agent.sim_obj.translation
             )  # observations[HumanLastPoseSensor.cls_uuid].cpu() #read from HumanLastPoseSensor
             obj_targ_pos = final_nav_targ
+        self.counter +=1
         # Get the base transformation
         base_T = self.cur_articulated_agent.base_transformation
         # Get the current path
@@ -524,6 +533,15 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
         # Get the robot position
         robot_pos = np.array(self.cur_articulated_agent.base_pos)
         self.poses.append(robot_pos)
+
+        #breakpoint()
+        #wait_for_human = 
+        #breakpoint()
+        breakpoint()
+        if self.wait_for_human:
+            wait_for_human_cur = self._get_distance(robot_pos, np.array(self._sim.get_agent_data(1).articulated_agent.base_pos)) <= 2
+        else:
+            wait_for_human_cur = False
 
         # Get the current robot/human pos assuming human is agent 1
         robot_human_dis = None
@@ -610,7 +628,12 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
                 )
 
             if self.motion_type == "base_velocity":
-                if not at_goal:
+                if wait_for_human_cur:#dont collide
+                    vel = [0, 0]
+                    print("counter ", self.counter)
+                    print("waiting for human!")
+
+                elif not at_goal:
                     self.at_goal = False
                     if dist_to_final_nav_targ < self._dist_thresh:
                         # Look at the object

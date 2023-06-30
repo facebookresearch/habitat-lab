@@ -396,6 +396,8 @@ class OracleNavWithBackingUpActionConfig(ActionConfig):
     sim_freq: float = 120.0
     # Distance threshold between two agents to issue a stop action
     agents_dist_thresh: float = -1.0
+    wait_for_human: bool = False
+
 
 
 # -----------------------------------------------------------------------------

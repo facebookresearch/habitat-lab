@@ -103,6 +103,7 @@ habitat:
         longitudinal_lin_speed: 100.0
         lin_speed: 100.0
         ang_speed: 20.0
+        wait_for_human: False
       agent_1_base_velocity:
         agent_index : 1
       agent_1_rearrange_stop:
