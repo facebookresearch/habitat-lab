@@ -5,9 +5,10 @@
 # LICENSE file in the root directory of this source tree.
 
 
+from typing import Union
+
 import numpy as np
 from gym import spaces
-from typing import Union
 
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
@@ -1149,7 +1150,7 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
     found_human_rate
     """
 
-    cls_uuid: str = "compute_soc_nav_metric"  # "has_finished_oracle_nav"
+    cls_uuid: str = "following_spl"  # "has_finished_oracle_nav"
 
     def __init__(self, sim, config, *args, **kwargs):
         super().__init__(**kwargs)
@@ -1259,7 +1260,7 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
                 following_rate,
             )
             print("arg opt is ", arg_opt)
-            return found  # [found, found_spl, found_rate]
+            return found_spl #found  # [found, found_spl, found_rate]
         else:
             return np.nan  # [np.nan, np.nan, np.nan]
 
@@ -1481,3 +1482,78 @@ class FollowingDistance(UsesArticulatedAgentInterface, Measure):
 
         else:
             self._metric = 0.0
+
+# @registry.register_measure
+# class FindingSPL(UsesArticulatedAgentInterface, Measure):
+#     """
+#     Compute
+#     found_human
+#     spl
+#     found_human_rate
+#     """
+
+#     cls_uuid: str = "finding_spl"  # "has_finished_oracle_nav"
+
+#     def __init__(self, sim, config, *args, **kwargs):
+#         super().__init__(**kwargs)
+#         self._sim = sim
+#         self._config = config
+#         self.robot_poses = []
+#         self.human_poses = []
+
+#     @staticmethod
+#     def _get_uuid(*args, **kwargs):
+#         return FollowingDistance.cls_uuid
+
+#     def reset_metric(self, *args, task, **kwargs):
+#         self.robot_poses = []
+#         self.human_poses = []
+#         self.update_metric(*args, task=task, **kwargs)
+
+#     def distances(self, robot_poses, human_poses):
+#         distances = [
+#             np.linalg.norm(np.array(robot_poses[i] - human_poses[i])[[0, 2]])
+#             for i in range(len(robot_poses))
+#         ]
+#         return distances
+
+#     def get_agent_k(self, agent_id, task):
+#         if f"agent_{agent_id}_oracle_nav_action" in task.actions:
+#             use_k = f"agent_{agent_id}_oracle_nav_action"
+#         elif (
+#             f"agent_{agent_id}_oracle_nav_with_backing_up_action"
+#             in task.actions
+#         ):
+#             use_k = f"agent_{agent_id}_oracle_nav_with_backing_up_action"
+#         elif f"agent_{agent_id}_oracle_nav_soc_action" in task.actions:
+#             use_k = f"agent_{agent_id}_oracle_nav_soc_action"
+#         else:
+#             raise Exception("Nav action nonexistent!")
+#         return use_k
+
+#     def update_metric(self, *args, episode, task, observations, **kwargs):
+#         robot_pose = self._sim.get_agent_data(0).articulated_agent.base_pos
+#         human_pose = self._sim.get_agent_data(1).articulated_agent.base_pos
+#         self.robot_poses.append(np.array([robot_pose.x, robot_pose.y, robot_pose.z]))
+#         self.human_poses.append(np.array([human_pose.x, human_pose.y, human_pose.z]))
+#         robot_poses = self.robot_poses
+#         human_poses = self.human_poses
+
+#         # if len(human_poses) > 0 and len(robot_poses) > 0:
+#         #     # TODO Why is len(robot_poses) != len(human_poses)?
+#         #     if len(human_poses) != len(robot_poses):
+#         #         print(
+#         #             f"{len(human_poses)} human poses != {len(robot_poses)} robot poses"
+#         #         )
+#         #     robot_poses = robot_poses[: len(human_poses)]
+#         #     human_poses = human_poses[: len(robot_poses)]
+
+#         #     distances = self.distances(robot_poses, human_poses)
+#         #     self._metric = sum(distances) / len(distances)
+
+#         # else:
+#         #     self._metric = 0.0
+#         agent_0_k = self.get_agent_k(0, task)
+#         agent_1_k = self.get_agent_k(1, task)
+#         robot_nav_action = task.actions[agent_0_k]
+#         human_nav_action = task.actions[agent_1_k]

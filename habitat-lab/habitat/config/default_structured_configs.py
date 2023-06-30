@@ -2116,9 +2116,9 @@ cs.store(
     node=HasFinishedOracleNavSensorConfig,
 )
 cs.store(
-    package="habitat.task.measurements.compute_soc_nav_metric",
+    package="habitat.task.measurements.following_spl",
     group="habitat/task/measurements",
-    name="compute_soc_nav_metric",
+    name="following_spl",
     node=ComputeSocNavMetricMeasureConfig,
 )
 cs.store(
