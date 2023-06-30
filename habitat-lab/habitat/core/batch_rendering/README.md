@@ -32,7 +32,7 @@ habitat.simulator.concur_render: False
 
 ### Composite files:
 
-The batch renderer can optionally pre-load assets from a "composite file", which is a single *gltf* files that contains an entire dataset. It is possible to pre-load multiple composite files. This is the preferred way to use the batch renderer due to increased performance.
+The batch renderer can optionally pre-load assets from a "composite file", which is a single *gltf* file that contains an entire dataset. It is possible to pre-load multiple composite files. This is the preferred way to use the batch renderer due to increased performance.
 
 To use them, the following configuration field must be set:
 ```
