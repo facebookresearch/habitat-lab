@@ -630,8 +630,8 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
             if self.motion_type == "base_velocity":
                 if wait_for_human_cur:#dont collide
                     vel = [0, 0]
-                    print("counter ", self.counter)
-                    print("waiting for human!")
+                    #print("counter ", self.counter)
+                    #print("waiting for human!")
 
                 elif not at_goal:
                     self.at_goal = False
