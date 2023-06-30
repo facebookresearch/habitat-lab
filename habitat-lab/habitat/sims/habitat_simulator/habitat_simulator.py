@@ -291,9 +291,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
         self._current_scene = self.sim_config.sim_cfg.scene_id
-        self.sim_config.enable_batch_renderer = (
-            config.renderer.enable_batch_renderer
-        )
         super().__init__(self.sim_config)
         # load additional object paths specified by the dataset
         # TODO: Should this be moved elsewhere?
@@ -418,7 +415,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             ),
         }
 
-        return habitat_sim.Configuration(sim_config, [agent_config])
+        output = habitat_sim.Configuration(sim_config, [agent_config])
+        output.enable_batch_renderer = (
+            self.habitat_config.renderer.enable_batch_renderer
+        )
+        return output
 
     @property
     def sensor_suite(self) -> SensorSuite:

@@ -72,7 +72,9 @@ class EnvBatchRenderer:
         assert (
             not config.habitat.simulator.create_renderer
         ), "Batch renderer requires create_renderer to be disabled in config."
-
+        assert (
+            not config.habitat.simulator.debug_render
+        ), "Batch renderer requires debug_render to be disabled in config."
         logger.warn(
             "Batch rendering enabled. This feature is experimental and may change at any time."
         )
@@ -116,6 +118,13 @@ class EnvBatchRenderer:
 
         # Pre-load graphics assets using composite GLTF files.
         EnvBatchRenderer._load_composite_files(config, self._replay_renderer)
+
+    def close(self) -> None:
+        r"""
+        Release the resources and graphics context.
+        """
+        if self._replay_renderer != None:
+            self._replay_renderer.close()
 
     def post_step(self, observations: List[OrderedDict]) -> List[OrderedDict]:
         r"""

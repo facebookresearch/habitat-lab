@@ -210,9 +210,15 @@ class RearrangeTask(NavigationTask):
     @add_perf_timing_func()
     def _get_observations(self, episode):
         # Fetch the simulator observations, all visual sensors.
-        obs = self._sim._sensor_suite.get_observations(
-            self._sim.get_sensor_observations()
-        )
+        obs = self._sim.get_sensor_observations()
+
+        if not self._sim.sim_config.enable_batch_renderer:
+            # Post-process visual sensor observations
+            obs = self._sim._sensor_suite.get_observations(obs)
+        else:
+            # Keyframes are added so that the simulator state can be reconstituted when batch rendering.
+            # The post-processing step above is done after batch rendering.
+            self._sim.add_keyframe_to_observations(obs)
 
         # Task sensors (all non-visual sensors)
         obs.update(
