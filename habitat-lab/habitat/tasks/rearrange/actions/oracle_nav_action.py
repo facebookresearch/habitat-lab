@@ -478,21 +478,45 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
     def step(self, *args, is_last_action, **kwargs):
         self.skill_done = False
-        nav_to_target_idx = kwargs[
-            self._action_arg_prefix + "oracle_nav_with_backing_up_action"
-        ]
-        if nav_to_target_idx <= 0 or nav_to_target_idx > len(
-            self._poss_entities
-        ):
-            if is_last_action:
-                return self._sim.step(HabitatSimActions.base_velocity)
-            else:
-                return {}
+        # nav_to_target_idx = kwargs[
+        #     self._action_arg_prefix + "oracle_nav_with_backing_up_action"
+        # ]
+        # if nav_to_target_idx <= 0 or nav_to_target_idx > len(
+        #     self._poss_entities
+        # ):
+        #     if is_last_action:
+        #         return self._sim.step(HabitatSimActions.base_velocity)
+        #     else:
+        #         return {}
 
-        nav_to_target_idx = int(nav_to_target_idx[0]) - 1
-        final_nav_targ, obj_targ_pos = self._get_target_for_idx(
-            nav_to_target_idx
-        )
+        # nav_to_target_idx = int(nav_to_target_idx[0]) - 1
+        # final_nav_targ, obj_targ_pos = self._get_target_for_idx(
+        #     nav_to_target_idx
+        # )
+        if self.counter == 0:
+            nav_to_target_idx = kwargs[
+                self._action_arg_prefix + "oracle_nav_with_backing_up_action"
+            ]
+            if nav_to_target_idx <= 0 or nav_to_target_idx > len(
+                self._poss_entities
+            ):
+                if is_last_action:
+                    return self._sim.step(HabitatSimActions.base_velocity)
+                else:
+                    return {}
+            nav_to_target_idx = int(nav_to_target_idx[0]) - 1
+            final_nav_targ, obj_targ_pos = self._get_target_for_idx(
+                nav_to_target_idx
+            )
+        else:
+            # final_nav_targ = pickle.load(open('last_human_pose.p', 'rb'))
+            # breakpoint()
+            final_nav_targ = np.array(
+                self._sim.get_agent_data(
+                    1
+                ).articulated_agent.sim_obj.translation
+            )  # observations[HumanLastPoseSensor.cls_uuid].cpu() #read from HumanLastPoseSensor
+            obj_targ_pos = final_nav_targ
         # Get the base transformation
         base_T = self.cur_articulated_agent.base_transformation
         # Get the current path
