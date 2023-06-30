@@ -40,7 +40,7 @@ habitat:
       agent_1_oracle_nav_soc_action:
         agent_index: 1
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/test/largeval_5s_500epi_2obj.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/test/largeval_5s_500epi_2obj_first50.json.gz
 
 habitat_baselines:
   verbose: False
