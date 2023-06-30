@@ -40,7 +40,7 @@ habitat:
       agent_1_oracle_nav_soc_action:
         agent_index: 1
   dataset:
-    data_path: data/datasets/floorplanner/rearrange/scratch/train/microtrain_eval_small_1scene_2objs_30epi_45degree.json.gz
+    data_path: data/datasets/floorplanner/rearrange/scratch/test/largeval_5s_500epi_2obj.json.gz
 
 habitat_baselines:
   verbose: False

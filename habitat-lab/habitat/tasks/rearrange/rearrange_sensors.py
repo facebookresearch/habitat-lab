@@ -1251,15 +1251,15 @@ class ComputeSocNavMetricMeasure(UsesArticulatedAgentInterface, Measure):
                 opt_path_len_until_finding_human
                 / max(opt_path_len_until_finding_human, robot_path_len)
             ) * found
-            print(
-                "SocNavMetrics - found",
-                found,
-                "found_spl",
-                found_spl,
-                "following_rate",
-                following_rate,
-            )
-            print("arg opt is ", arg_opt)
+            # print(
+            #     "SocNavMetrics - found",
+            #     found,
+            #     "found_spl",
+            #     found_spl,
+            #     "following_rate",
+            #     following_rate,
+            # )
+           # print("arg opt is ", arg_opt)
             return found_spl #found  # [found, found_spl, found_rate]
         else:
             return np.nan  # [np.nan, np.nan, np.nan]
