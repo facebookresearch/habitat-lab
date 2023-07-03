@@ -43,6 +43,7 @@ From configuration:
 habitat.simulator.renderer.composite_files:
     - path/to/composite_1.gltf
     - path/to/composite_2.gltf
+```
 
 ### Training:
 
