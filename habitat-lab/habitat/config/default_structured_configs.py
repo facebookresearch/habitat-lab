@@ -1232,7 +1232,7 @@ class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "robot_third_rgb"
     width: int = 1920
     height: int = 1080
-    hfov: int = 110  # horizontal field of view in degrees
+    hfov: int = 120  # horizontal field of view in degrees
 
 
 
