@@ -1,14 +1,48 @@
 # Batch Rendering
 
-To scale up training, multiple concurrent simulators are instantiated. Without batch rendering, each simulator renders observations independently. Therefore, they each require their own graphics context and memory allocations.
+This document provides instructions to train the Habitat 2.0 rearrangement tasks with batch rendering, with the goal to save GPU memory and enable more parallel environments.
 
-Batch rendering is an *experimental* system that renders all environments simultaneously using a single centralized renderer. Instead of loading assets independently, all graphics assets that will be used during a roll-out are pre-loaded exactly once at the beginning of training.
+You can also adapt these instructions to your own Habitat-lab training experiments, with [some caveats mentioned below](#limitations).
 
-This leads to less GPU memory usage, reduced episode loading time and more efficient rendering (less drawcalls, more instancing, less context switching, better data locality, ...).
+## Summary
+
+Distributed training is done with a separate Python process per environment, each process having a Habitat simulator instance.
+
+In the current (non-batched) paradigm, each simulator instance has its own renderer, which includes its own graphics context. Because they are independent, they each load their own copy of the resource-intensive assets. Therefore, as more concurrent simulators are added, GPU memory quickly fills up, limiting how wide training can scale.
+
+Batch rendering is an *experimental* system that solves this issue by centralizing rendering. It changes the paradigm such as simulators do not have a renderer. Instead, a single renderer on the main training process aggregates simulation states and renders them simultaneously.
+
+At the beginning of training, all graphics assets that will be used during a roll-out are pre-loaded exactly once. This leads to less GPU memory usage, reduced episode loading time and more efficient rendering (less drawcalls, more instancing, less context switching, better data locality, ...).
+
+This feature is currently being developed. Refer to the [limitations](#limitations) section for support status.
 
 ## Setup:
 
-This feature is currently being developed. Refer to the [limitations](#limitations) section for support status.
+### Composite files:
+
+The batch renderer can load assets from a "composite file", which is a single *gltf* file that contains an entire dataset. Multiple composite files can be used. This is the preferred way to use the batch renderer due to increased performance.
+
+We provide the composite file for ReplicaCAD. If your experiment uses different datasets (e.g. HM3D or HSSD), we encourage you to try out the batch renderer anyways. In this case it will load your 3D assets from individual files. The training speedup will be less than ideal because this use of individual model files limits batching efficiency, but you will still see GPU memory savings.
+
+We don't yet offer a pipeline for creating your own composite GLTF files, but this is coming soon.
+
+**Downloads**
+
+The following composite files are available for download:
+
+* [ReplicaCAD](https://drive.google.com/drive/folders/1zA6Bib_uNPPRgDOQqzQR_4uT460SzBkv)
+
+**Configuration**
+
+From the launch command:
+```
+habitat-baselines/habitat_baselines/run.py habitat.simulator.renderer.composite_files=[path/to/composite_1.gltf, path/to/composite_2.gltf]
+```
+From configuration:
+```
+habitat.simulator.renderer.composite_files:
+    - path/to/composite_1.gltf
+    - path/to/composite_2.gltf
 
 ### Training:
 
@@ -30,23 +64,7 @@ habitat.simulator.create_renderer: False
 habitat.simulator.concur_render: False
 ```
 
-### Composite files:
-
-The batch renderer can optionally pre-load assets from a "composite file", which is a single *gltf* file that contains an entire dataset. It is possible to pre-load multiple composite files. This is the preferred way to use the batch renderer due to increased performance.
-
-To use them, the following configuration field must be set:
-```
-habitat.simulator.renderer.composite_files:
-    - path/to/composite_1.gltf
-    - path/to/composite_2.gltf
-```
-
-The following composite files are available:
-* [ReplicaCAD](https://drive.google.com/drive/folders/1zA6Bib_uNPPRgDOQqzQR_4uT460SzBkv)
-
-If an asset is not found within the provided composite files, it will be loaded from disk as a fallback. A warning is emitted when this occurs.
-
-## How it works:
+## Integration Notes:
 
 The batch renderer is initialized with `VectorEnv.initialize_batch_renderer()`.
 
