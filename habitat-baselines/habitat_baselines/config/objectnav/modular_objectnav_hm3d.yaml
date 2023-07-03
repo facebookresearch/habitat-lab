@@ -2,7 +2,7 @@
 
 defaults:
   - /habitat_baselines: habitat_baselines_rl_config_base
-  - /benchmark/nav/objectnav: objectnav_hm3d
+  - /benchmark/nav/objectnav: objectnav_hm3d_v2_rgbd_with_semantic
   - /habitat_baselines/rl/policy/obs_transforms:
     - resize_shortest_edge_base
     - center_cropper_base
@@ -22,7 +22,7 @@ habitat_baselines:
   video_dir: "video_dir"
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
-  num_environments: 4
+  num_environments: 1
   checkpoint_folder: "data/new_checkpoints"
   trainer_name: "ddppo"
   num_updates: 270000

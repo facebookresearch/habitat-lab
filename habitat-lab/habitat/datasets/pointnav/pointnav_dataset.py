@@ -118,7 +118,6 @@ class PointNavDatasetV1(Dataset):
                     content_scenes_path=self.content_scenes_path,
                     dataset_dir=dataset_dir,
                 )
-
             for scene in scenes:
                 scene_filename = self.content_scenes_path.format(
                     data_path=dataset_dir, scene=scene
