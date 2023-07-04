@@ -462,20 +462,20 @@ class PPOTrainer(BaseRLTrainer):
                 done_masks, 0.0
             )
 
-            if self._is_static_encoder:
-                with inference_mode():
-                    batch[
-                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                    ] = self._encoder(batch)
+        if self._is_static_encoder:
+            with inference_mode(), g_timer.avg_time("trainer.visual_features"):
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
-            self._agent.rollouts.insert(
-                next_observations=batch,
-                rewards=rewards,
-                next_masks=not_done_masks,
-                buffer_index=buffer_index,
-            )
+        self._agent.rollouts.insert(
+            next_observations=batch,
+            rewards=rewards,
+            next_masks=not_done_masks,
+            buffer_index=buffer_index,
+        )
 
-            self._agent.rollouts.advance_rollout(buffer_index)
+        self._agent.rollouts.advance_rollout(buffer_index)
 
         return env_slice.stop - env_slice.start
 

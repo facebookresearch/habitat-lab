@@ -110,6 +110,7 @@ class RolloutStorage(Storage):
         self.buffers.map_in_place(lambda v: v.to(device))
         self.device = device
 
+    @g_timer.avg_time("rollout_storage.insert", level=1)
     def insert(
         self,
         next_observations=None,
