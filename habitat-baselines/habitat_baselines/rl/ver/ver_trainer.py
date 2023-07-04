@@ -75,12 +75,16 @@ class VERTrainer(PPOTrainer):
             is_distrib=self._is_distributed,
             device=self.device,
             resume_state=resume_state,
-            num_envs=len(self.environment_workers),
+            num_envs=self.config.habitat_baselines.num_environments,
             percent_done_fn=self.percent_done,
             **kwargs,
         )
 
     def _init_train(self, resume_state):
+        assert (
+            not self.config.habitat.simulator.renderer.enable_batch_renderer
+        ), "VER trainer does not support batch rendering."
+
         if self._is_distributed:
             local_rank, world_rank, _ = get_distrib_size()
 
