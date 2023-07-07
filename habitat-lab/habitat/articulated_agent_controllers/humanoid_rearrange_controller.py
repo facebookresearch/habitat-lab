@@ -152,8 +152,9 @@ class HumanoidRearrangeController:
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
         deg_per_rads = 180.0 / np.pi
+
         forward_V = target_position
-        if forward_V.length() < EPS:
+        if forward_V.length() < EPS or np.isnan(target_position).any():
             self.calculate_stop_pose()
             return
         distance_to_walk = np.linalg.norm(forward_V)

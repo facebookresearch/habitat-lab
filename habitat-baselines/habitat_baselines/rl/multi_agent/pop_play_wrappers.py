@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import Any, Callable, Dict, List, Optional
 
+import numpy as np
 import torch
 
 from habitat_baselines.common.storage import Storage
@@ -115,12 +116,12 @@ class MultiPolicy(Policy):
                 -1,
             ),
             policy_info=policy_info,
-            should_inserts=torch.cat(
+            should_inserts=np.concatenate(
                 [
                     ac.should_inserts
                     if ac.should_inserts is not None
-                    else torch.ones(
-                        (batch_size, 1), dtype=torch.bool
+                    else np.ones(
+                        (batch_size, 1), dtype=np.bool
                     )  # None for monolithic policy, the buffer should be updated
                     for ac in agent_actions
                 ],
@@ -239,6 +240,8 @@ class MultiStorage(Storage):
         def _maybe_chunk(tensor):
             if tensor is None:
                 return None
+            elif isinstance(tensor, np.ndarray):
+                return np.split(tensor, n_agents, axis=-1)
             else:
                 return tensor.chunk(n_agents, -1)
 
