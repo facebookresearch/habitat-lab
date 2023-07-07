@@ -15,6 +15,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Protocol,
     Tuple,
     Type,
     TypeVar,
@@ -25,7 +26,6 @@ from typing import (
 
 import numpy as np
 import torch
-from typing_extensions import Protocol
 
 TensorLike = Union[torch.Tensor, np.ndarray, numbers.Real]
 DictTree = Dict[str, Union[TensorLike, "DictTree"]]  # type: ignore
