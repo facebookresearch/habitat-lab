@@ -218,6 +218,10 @@ class NetPolicy(nn.Module, Policy):
             )
 
     @property
+    def recurrent_hidden_size(self) -> int:
+        return self.net.recurrent_hidden_size
+
+    @property
     def visual_encoder(self) -> Optional[nn.Module]:
         return self.net.visual_encoder
 
@@ -345,7 +349,6 @@ class PointNavBaselinePolicy(NetPolicy):
         aux_loss_config=None,
         **kwargs,
     ):
-        self._recurrent_hidden_size = hidden_size
         super().__init__(
             PointNavBaselineNet(  # type: ignore
                 observation_space=observation_space,
@@ -355,10 +358,6 @@ class PointNavBaselinePolicy(NetPolicy):
             action_space=action_space,
             aux_loss_config=aux_loss_config,
         )
-
-    @property
-    def recurrent_hidden_size(self) -> int:
-        return self._recurrent_hidden_size
 
     @classmethod
     def from_config(
@@ -389,6 +388,11 @@ class Net(nn.Module, metaclass=abc.ABCMeta):
     @property
     @abc.abstractmethod
     def num_recurrent_layers(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def recurrent_hidden_size(self):
         pass
 
     @property
@@ -455,6 +459,10 @@ class PointNavBaselineNet(Net):
 
     @property
     def num_recurrent_layers(self):
+        return self._hidden_size
+
+    @property
+    def recurrent_hidden_size(self):
         return self.state_encoder.num_recurrent_layers
 
     @property

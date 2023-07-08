@@ -234,7 +234,7 @@ class SkillPolicy(Policy):
 
         return (
             rnn_hidden_states[batch_idxs] * 0.0,
-            prev_actions[batch_idxs] * 0.0,
+            prev_actions[batch_idxs] * 0,
         )
 
     def set_pddl_problem(self, pddl_prob):

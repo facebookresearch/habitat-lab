@@ -165,6 +165,7 @@ class HierarchicalPolicy(nn.Module, Policy):
             domain_file,
             task_spec_file,
             config,
+            read_config=False,
         )
 
     def eval(self):
@@ -454,14 +455,24 @@ class HierarchicalPolicy(nn.Module, Policy):
             )
 
             for skill_id, (batch_ids, _) in sel_grouped_skills.items():
-                ll_rnn_hidden_states, prev_actions = self._skills[
-                    skill_id
-                ].on_enter(
+                (
+                    ll_rnn_hidden_states_batched,
+                    prev_actions_batched,
+                ) = self._skills[skill_id].on_enter(
                     [new_skill_args[i] for i in batch_ids],
                     batch_ids,
                     observations,
                     ll_rnn_hidden_states,
                     prev_actions,
+                )
+
+                _write_tensor_batched(
+                    ll_rnn_hidden_states,
+                    ll_rnn_hidden_states_batched,
+                    batch_ids,
+                )
+                _write_tensor_batched(
+                    prev_actions, prev_actions_batched, batch_ids
                 )
 
                 if hl_info.rnn_hidden_states is not None:
@@ -532,8 +543,8 @@ class HierarchicalPolicy(nn.Module, Policy):
         )
         for skill_id, (batch_ids, dat) in grouped_skills.items():
             (
-                self._cur_call_high_level[batch_ids],
-                bad_should_terminate[batch_ids],
+                call_hl_batch,
+                bad_should_terminate_batch,
                 new_actions,
             ) = self._skills[skill_id].should_terminate(
                 **dat,
@@ -542,6 +553,13 @@ class HierarchicalPolicy(nn.Module, Policy):
                 skill_name=[
                     self._idx_to_name[self._cur_skills[i]] for i in batch_ids
                 ],
+            )
+
+            _write_tensor_batched(
+                self._cur_call_high_level, call_hl_batch, batch_ids
+            )
+            _write_tensor_batched(
+                bad_should_terminate, bad_should_terminate_batch, batch_ids
             )
             actions[batch_ids] += new_actions
         return self._cur_call_high_level, bad_should_terminate, actions
@@ -590,11 +608,35 @@ class HierarchicalPolicy(nn.Module, Policy):
         )
 
 
+def _write_tensor_batched(
+    source_tensor: torch.Tensor,
+    write_tensor: torch.Tensor,
+    write_idxs: List[int],
+) -> torch.Tensor:
+    """
+    This assumes that write_tensor has already been indexed into by
+    `write_idxs` and only needs to be copied to `source_tensor`. Updates
+    `source_tensor` in place.
+    """
+
+    if source_tensor.shape[0] == len(write_idxs):
+        source_tensor = write_tensor
+    else:
+        source_tensor[write_idxs] = write_tensor
+    return source_tensor
+
+
 def _update_tensor_batched(
     source_tensor: torch.Tensor,
     write_tensor: torch.Tensor,
     write_idxs: List[int],
 ) -> torch.Tensor:
+    """
+    Writes the indices of `write_idxs` from `write_tensor` into
+    `source_tensor`. Updates `source_tensor` in place.
+    """
+
+    assert source_tensor.shape == write_tensor.shape
     if source_tensor.shape[0] == len(write_idxs):
         source_tensor = write_tensor[write_idxs]
     else:

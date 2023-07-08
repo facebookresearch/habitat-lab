@@ -62,6 +62,7 @@ class PddlDomain:
         self,
         domain_file_path: str,
         cur_task_config: Optional["DictConfig"] = None,
+        read_config: bool = True,
     ):
         """
         :param domain_file_path: Either an absolute path or a path relative to `habitat/task/rearrange/multi_task/domain_configs/`.
@@ -73,15 +74,18 @@ class PddlDomain:
         self._config = cur_task_config
         self._orig_actions: Dict[str, PddlAction] = {}
 
-        # Setup config properties
-        self._obj_succ_thresh = self._config.obj_succ_thresh
-        self._art_succ_thresh = self._config.art_succ_thresh
-        self._robot_at_thresh = self._config.robot_at_thresh
-        self._num_spawn_attempts = self._config.num_spawn_attempts
-        self._physics_stability_steps = self._config.physics_stability_steps
-        self._recep_place_shrink_factor = (
-            self._config.recep_place_shrink_factor
-        )
+        if read_config:
+            # Setup config properties
+            self._obj_succ_thresh = self._config.obj_succ_thresh
+            self._art_succ_thresh = self._config.art_succ_thresh
+            self._robot_at_thresh = self._config.robot_at_thresh
+            self._num_spawn_attempts = self._config.num_spawn_attempts
+            self._physics_stability_steps = (
+                self._config.physics_stability_steps
+            )
+            self._recep_place_shrink_factor = (
+                self._config.recep_place_shrink_factor
+            )
 
         if not osp.isabs(domain_file_path):
             parent_dir = osp.dirname(__file__)
@@ -649,10 +653,11 @@ class PddlProblem(PddlDomain):
         domain_file_path: str,
         problem_file_path: str,
         cur_task_config: Optional["DictConfig"] = None,
+        read_config: bool = True,
     ):
         self._objects = {}
 
-        super().__init__(domain_file_path, cur_task_config)
+        super().__init__(domain_file_path, cur_task_config, read_config)
         with open(get_full_habitat_config_path(problem_file_path), "r") as f:
             problem_def = yaml.safe_load(f)
         self._objects = {
