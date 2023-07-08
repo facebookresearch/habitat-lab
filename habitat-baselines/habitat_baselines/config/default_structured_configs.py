@@ -392,9 +392,7 @@ class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
     environment. Defaults to the Habitat vectorized environment setup.
     """
 
-    _target_: str = (
-        "habitat_baselines.common.habitat_env_factory.HabitatEnvFactory"
-    )
+    _target_: str = "habitat_baselines.common.HabitatVectorEnvFactory"
 
 
 @dataclass

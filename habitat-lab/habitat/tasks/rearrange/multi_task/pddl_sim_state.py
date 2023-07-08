@@ -74,17 +74,16 @@ class PddlRobotState:
     base_angle_noise: Optional[float] = None
     physics_stability_steps: Optional[int] = None
 
-    def get_place_at_pos_dist(self, sim_info) -> Optional[float]:
+    def get_place_at_pos_dist(self, sim_info) -> float:
         if self.place_at_pos_dist is None:
             return sim_info.robot_at_thresh
         else:
             return self.place_at_pos_dist
 
-    def get_base_angle_noise(self, sim_info) -> Optional[float]:
+    def get_base_angle_noise(self, sim_info) -> float:
         if self.base_angle_noise is None:
-            return sim_info.base_angle_noise
-        else:
-            return self.base_angle_noise
+            return 0.0
+        return self.base_angle_noise
 
     def get_physics_stability_steps(self, sim_info) -> Optional[int]:
         if self.physics_stability_steps is None:
@@ -177,22 +176,21 @@ class PddlRobotState:
             sim_info.search_for_entity(robot_entity),
         )
         sim = sim_info.sim
-        grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
+        agent_data = sim.get_agent_data(robot_id)
         # Set the snapped object information
-        if self.should_drop and grasp_mgr.is_grasped:
-            grasp_mgr.desnap(True)
+        if self.should_drop and agent_data.grasp_mgr.is_grasped:
+            agent_data.grasp_mgr.desnap(True)
         elif self.holding is not None:
             # Swap objects to the desired object.
             obj_idx = cast(int, sim_info.search_for_entity(self.holding))
-            grasp_mgr.desnap(True)
+            agent_data.grasp_mgr.desnap(True)
             sim.internal_step(-1)
-            grasp_mgr.snap_to_obj(sim.scene_obj_ids[obj_idx])
+            agent_data.grasp_mgr.snap_to_obj(sim.scene_obj_ids[obj_idx])
             sim.internal_step(-1)
 
         # Set the robot starting position
         if isinstance(self.pos, PddlEntity):
             targ_pos = sim_info.get_entity_pos(self.pos)
-            agent = sim.get_agent_data(robot_id).articulated_agent
 
             # Place some distance away from the object.
             start_pos, start_rot, was_fail = get_robot_spawns(
@@ -206,16 +204,15 @@ class PddlRobotState:
                 physics_stability_steps=self.get_physics_stability_steps(
                     sim_info
                 ),
-                agent=agent,
+                agent=agent_data.articulated_agent,
             )
-            sim.articulated_agent.base_pos = start_pos
-            sim.articulated_agent.base_rot = start_rot
+            agent_data.articulated_agent.base_pos = start_pos
+            agent_data.articulated_agent.base_rot = start_rot
             if was_fail:
                 rearrange_logger.error("Failed to place the robot.")
 
             # We teleported the agent. We also need to teleport the object the agent was holding.
-            grasp_mgr = sim.get_agent_data(robot_id).grasp_mgr
-            grasp_mgr.update_object_to_grasp()
+            agent_data.grasp_mgr.update_object_to_grasp()
 
         elif self.pos is not None:
             raise ValueError(f"Unrecongized set position {self.pos}")

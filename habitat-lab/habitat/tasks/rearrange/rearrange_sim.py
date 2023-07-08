@@ -37,6 +37,7 @@ from habitat.datasets.rearrange.samplers.receptacle import (
 )
 from habitat.sims.habitat_simulator.habitat_simulator import HabitatSim
 from habitat.tasks.rearrange.articulated_agent_manager import (
+    ArticulatedAgentData,
     ArticulatedAgentManager,
 )
 from habitat.tasks.rearrange.marker_info import MarkerInfo
@@ -375,7 +376,7 @@ class RearrangeSim(HabitatSim):
                     obj.object_id + self.habitat_config.object_ids_start
                 )
 
-    def get_agent_data(self, agent_idx: Optional[int]):
+    def get_agent_data(self, agent_idx: Optional[int]) -> ArticulatedAgentData:
         if agent_idx is None:
             return self.agents_mgr[0]
         else:

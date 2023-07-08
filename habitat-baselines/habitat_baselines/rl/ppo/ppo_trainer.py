@@ -27,9 +27,9 @@ from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
 )
+from habitat_baselines.common import VectorEnvFactory
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.env_factory import VectorEnvFactory
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -820,7 +820,7 @@ class PPOTrainer(BaseRLTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
+            print(f"Loaded checkpoint trained for {step_id} steps")
         else:
             ckpt_dict = {"config": None}
 
