@@ -459,11 +459,11 @@ class PointNavBaselineNet(Net):
 
     @property
     def num_recurrent_layers(self):
-        return self._hidden_size
+        return self.state_encoder.num_recurrent_layers
 
     @property
     def recurrent_hidden_size(self):
-        return self.state_encoder.num_recurrent_layers
+        return self._hidden_size
 
     @property
     def perception_embedding_size(self):
