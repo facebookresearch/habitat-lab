@@ -636,7 +636,6 @@ def _update_tensor_batched(
     `source_tensor`. Updates `source_tensor` in place.
     """
 
-    assert source_tensor.shape == write_tensor.shape
     if source_tensor.shape[0] == len(write_idxs):
         source_tensor = write_tensor[write_idxs]
     else:
