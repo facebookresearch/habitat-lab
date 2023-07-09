@@ -31,8 +31,7 @@ class RolloutStorage(Storage):
         num_envs,
         observation_space,
         action_space,
-        recurrent_hidden_state_size,
-        num_recurrent_layers=1,
+        actor_critic,
         is_double_buffered: bool = False,
     ):
         action_shape, discrete_actions = get_action_space_info(action_space)
@@ -55,8 +54,8 @@ class RolloutStorage(Storage):
         self.buffers["recurrent_hidden_states"] = torch.zeros(
             numsteps + 1,
             num_envs,
-            num_recurrent_layers,
-            recurrent_hidden_state_size,
+            actor_critic.num_recurrent_layers,
+            actor_critic.recurrent_hidden_size,
         )
 
         self.buffers["rewards"] = torch.zeros(numsteps + 1, num_envs, 1)

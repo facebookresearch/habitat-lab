@@ -90,10 +90,40 @@ class SingleAgentAccessMgr(AgentAccessMgr):
     def nbuffers(self):
         return self._nbuffers
 
+    def _create_storage(
+        self,
+        num_envs: int,
+        env_spec: EnvironmentSpec,
+        actor_critic: Policy,
+        policy_action_space: spaces.Space,
+        config: "DictConfig",
+        device,
+    ) -> Storage:
+        """
+        Default behavior for setting up and initializing the rollout storage.
+        """
+
+        obs_space = get_rollout_obs_space(
+            env_spec.observation_space, actor_critic, config
+        )
+        ppo_cfg = config.habitat_baselines.rl.ppo
+        rollouts = baseline_registry.get_storage(
+            config.habitat_baselines.rollout_storage_name
+        )(
+            numsteps=ppo_cfg.num_steps,
+            num_envs=num_envs,
+            observation_space=obs_space,
+            action_space=policy_action_space,
+            actor_critic=actor_critic,
+            is_double_buffered=ppo_cfg.use_double_buffered_sampler,
+        )
+        rollouts.to(device)
+        return rollouts
+
     def post_init(self, create_rollouts_fn: Optional[Callable] = None) -> None:
         # Create the rollouts storage.
         if create_rollouts_fn is None:
-            create_rollouts_fn = default_create_rollouts
+            create_rollouts_fn = self._create_storage
 
         policy_action_space = self._actor_critic.get_policy_action_space(
             self._env_spec.action_space
@@ -220,13 +250,6 @@ class SingleAgentAccessMgr(AgentAccessMgr):
             if "lr_sched_state" in state:
                 self._lr_scheduler.load_state_dict(state["lr_sched_state"])
 
-    @property
-    def hidden_state_shape(self):
-        return (
-            self.actor_critic.num_recurrent_layers,
-            self.actor_critic.recurrent_hidden_size,
-        )
-
     def after_update(self):
         if (
             self._ppo_cfg.use_linear_lr_decay
@@ -262,37 +285,6 @@ def get_rollout_obs_space(obs_space, actor_critic, config):
             }
         )
     return obs_space
-
-
-def default_create_rollouts(
-    num_envs: int,
-    env_spec: EnvironmentSpec,
-    actor_critic: NetPolicy,
-    policy_action_space: spaces.Space,
-    config: "DictConfig",
-    device,
-) -> Storage:
-    """
-    Default behavior for setting up and initializing the rollout storage.
-    """
-
-    obs_space = get_rollout_obs_space(
-        env_spec.observation_space, actor_critic, config
-    )
-    ppo_cfg = config.habitat_baselines.rl.ppo
-    rollouts = baseline_registry.get_storage(
-        config.habitat_baselines.rollout_storage_name
-    )(
-        ppo_cfg.num_steps,
-        num_envs,
-        obs_space,
-        policy_action_space,
-        ppo_cfg.hidden_size,
-        num_recurrent_layers=actor_critic.num_recurrent_layers,
-        is_double_buffered=ppo_cfg.use_double_buffered_sampler,
-    )
-    rollouts.to(device)
-    return rollouts
 
 
 def linear_lr_schedule(percent_done: float) -> float:

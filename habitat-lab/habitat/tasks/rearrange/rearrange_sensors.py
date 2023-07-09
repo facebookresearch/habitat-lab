@@ -476,7 +476,7 @@ class ObjectToGoalDistance(Measure):
         scene_pos = self._sim.get_scene_pos()
         target_pos = scene_pos[idxs]
         distances = np.linalg.norm(target_pos - goal_pos, ord=2, axis=-1)
-        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
 @registry.register_measure
@@ -580,11 +580,11 @@ class EndEffectorToGoalDistance(UsesArticulatedAgentInterface, Measure):
             .translation
         )
 
-        idxs, goals = self._sim.get_targets()
+        goals = self._sim.get_targets()[1]
 
         distances = np.linalg.norm(goals - ee_pos, ord=2, axis=-1)
 
-        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
 @registry.register_measure
@@ -620,7 +620,7 @@ class EndEffectorToObjectDistance(UsesArticulatedAgentInterface, Measure):
 
         distances = np.linalg.norm(target_pos - ee_pos, ord=2, axis=-1)
 
-        self._metric = {str(idx): dist for idx, dist in zip(idxs, distances)}
+        self._metric = {str(idx): dist for idx, dist in enumerate(distances)}
 
 
 @registry.register_measure
