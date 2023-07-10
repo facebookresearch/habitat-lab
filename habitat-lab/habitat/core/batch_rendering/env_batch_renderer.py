@@ -169,7 +169,7 @@ class EnvBatchRenderer:
                 env_observations
             )
             for key, value in processed_obs.items():
-                env_observations[key] = value
+                env_observations[key] = np.ascontiguousarray(value)
             output.append(env_observations)
         return output
 
