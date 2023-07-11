@@ -855,7 +855,7 @@ class ReceptacleTracker:
                     for filtered_unique_name in filter_json[filter_type]:
                         filtered_unique_names.append(filtered_unique_name)
             # add exclusion filters to all receptacles sets
-            for _, r_set in self._receptacle_sets.items():
+            for r_set in self._receptacle_sets.values():
                 r_set.excluded_receptacle_substrings.extend(
                     filtered_unique_names
                 )
