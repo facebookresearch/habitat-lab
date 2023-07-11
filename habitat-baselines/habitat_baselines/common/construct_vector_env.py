@@ -19,6 +19,12 @@ def grouped_construct_envs(
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
 ):
+    """
+    Splits the episodes per environment worker so that each worker recieves
+    episodes belonging to only a single scene. This means the worker doesn't
+    need to reload the scene between resets.
+    """
+
     num_environments = config.habitat_baselines.num_environments
     configs = []
     dataset = make_dataset(config.habitat.dataset.type)

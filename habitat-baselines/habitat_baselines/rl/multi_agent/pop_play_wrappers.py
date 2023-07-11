@@ -121,7 +121,7 @@ class MultiPolicy(Policy):
                     ac.should_inserts
                     if ac.should_inserts is not None
                     else np.ones(
-                        (batch_size, 1), dtype=np.bool
+                        (batch_size, 1), dtype=bool
                     )  # None for monolithic policy, the buffer should be updated
                     for ac in agent_actions
                 ],

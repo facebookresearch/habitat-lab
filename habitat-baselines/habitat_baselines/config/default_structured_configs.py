@@ -380,6 +380,9 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     discrim_reward_weight: float = 1.0
     allow_self_play: bool = False
     self_play_batched: bool = False
+    # If specified, this will load the policies for the type 1 population from
+    # the checkpoint file at the start of training. Used to independently train
+    # the type 1 population, and then train a seperate against this population.
     load_type1_pop_ckpts: Optional[List[str]] = None
     ###############################
 

@@ -262,12 +262,18 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         if self._force_soft_reset:
-            # Force take only the first 2 objects and make them exactly the same every episode.
+            # TODO: This is a hack to get soft resets working correctly without
+            # the properly configured dataset. Force take only the first 2
+            # objects and make them exactly the same every episode. These objects
+            # will be the targets as well.
             ep_info.rigid_objs = ep_info.rigid_objs[:2]
             if self._prev_obj_names is not None:
                 targ_ks = list(ep_info.targets.keys())
                 for i, targ_k in enumerate(targ_ks):
-                    ep_info.rigid_objs[i][0] = self._prev_obj_names[i]
+                    ep_info.rigid_objs[i] = (
+                        self._prev_obj_names[i],
+                        ep_info.rigid_objs[i][1],
+                    )
                     ep_info.targets[
                         self._prev_targ_names[i]
                     ] = ep_info.targets.pop(targ_k)
