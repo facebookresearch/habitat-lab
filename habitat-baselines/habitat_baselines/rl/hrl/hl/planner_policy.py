@@ -53,10 +53,17 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self._cf_plan_idx = self._config.plan_idx
 
         # Goals: [None, Goal1, Goal2, Goal1 and Goal2]
-        # 1 Goal
-        # 1 Goal Random
-        # 1, 2 Goal Random
-        # 0, 1, 2 Goal Random
+
+        # cfg_plan_idx:
+        # -1:
+        # -2:
+        # -3:  # one in HITL
+        # -4:
+
+        # -4: 1 Goal
+        # -3: 1 Goal Random
+        # -2: 1, 2 Goal Random
+        # -1: 0, 1, 2 Goal Random
         self.low_plan = [1, 1, 1, 0]
         self.high_plan = [1, 2, 3, 3]
 

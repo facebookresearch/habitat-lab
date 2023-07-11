@@ -379,7 +379,8 @@ def get_info_episode_step(info_dict):
         if name in info_dict:
             res_dict[name] = info_dict[name]
     if len(res_dict) > 0:
-        res_dict["agent_blame"] = info_dict["agent_blame"]
+        if "agent_blame" in info_dict:
+            res_dict["agent_blame"] = info_dict["agent_blame"]
         res_dict["num_steps"] = info_dict["num_steps"]
     return res_dict
 
