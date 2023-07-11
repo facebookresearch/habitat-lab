@@ -467,7 +467,7 @@ class PddlDomain:
         """
         Get all predicates that COULD be true. This is independent of the
         simulator state and is the set of compatible predicate and entity
-        arguments.
+        arguments. The same ordering of predicates is returned every time.
         """
 
         all_entities = self.all_entities.values()
@@ -483,7 +483,7 @@ class PddlDomain:
                 use_pred.set_param_values(entity_input)
                 if use_pred.are_types_compatible(self.expr_types):
                     poss_preds.append(use_pred)
-        return poss_preds
+        return sorted(poss_preds, key=lambda: pred.compact_str)
 
     def get_possible_actions(
         self,
