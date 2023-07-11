@@ -163,6 +163,9 @@ class MoveObjectsReward(RearrangeReward):
         if place_success and not is_holding_obj:
             self._metric += self._config.single_rearrange_reward
             self._cur_rearrange_stage += 1
+            self._cur_rearrange_stage = (
+                self._cur_rearrange_stage % self.num_targets
+            )
             if self._cur_rearrange_stage < self.num_targets:
                 self.update_target_object()
 
