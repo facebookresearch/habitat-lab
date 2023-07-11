@@ -5,7 +5,7 @@
 # LICENSE file in the root directory of this source tree.
 
 
-from typing_extensions import Final
+from typing import Final
 
 KEYFRAME_OBSERVATION_KEY: Final[str] = "keyframe"
 KEYFRAME_SENSOR_PREFIX: Final[str] = "sensor_"
