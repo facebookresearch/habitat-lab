@@ -820,7 +820,7 @@ class PPOTrainer(BaseRLTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(f"Loaded checkpoint trained for {step_id} steps")
+            logger.info(f"Loaded checkpoint trained for {step_id} steps")
         else:
             ckpt_dict = {"config": None}
 
