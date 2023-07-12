@@ -262,21 +262,30 @@ class RearrangeSim(HabitatSim):
             self._prev_obj_names = None
 
         if self._force_soft_reset:
+            assert not (
+                new_scene and self.prev_scene_id is not None
+            ), f"Cannot force soft resets when there are new scenes. Switched from {self.prev_scene_id} to {ep_info.scene_id}"
             # TODO: This is a hack to get soft resets working correctly without
             # the properly configured dataset. Force take only the first 2
             # objects and make them exactly the same every episode. These objects
             # will be the targets as well.
             ep_info.rigid_objs = ep_info.rigid_objs[:2]
+            assert (
+                len(ep_info.rigid_objs) == 2
+            ), "We cannot have less than 2 objects"
             if self._prev_obj_names is not None:
+                # Override with the previous object names
                 targ_ks = list(ep_info.targets.keys())
+                new_targs = {}
                 for i, targ_k in enumerate(targ_ks):
                     ep_info.rigid_objs[i] = (
                         self._prev_obj_names[i],
                         ep_info.rigid_objs[i][1],
                     )
-                    ep_info.targets[
-                        self._prev_targ_names[i]
-                    ] = ep_info.targets.pop(targ_k)
+                    new_targs[self._prev_targ_names[i]] = ep_info.targets[
+                        targ_k
+                    ]
+                ep_info.targets = new_targs
             else:
                 # Only reset this info once.
                 self._prev_targ_names: List[str] = list(ep_info.targets.keys())
