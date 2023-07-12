@@ -530,6 +530,16 @@ class RearrangeSim(HabitatSim):
         snap_point can return nan which produces hard to catch errors.
         """
         new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
+        regen_i = 0
+        while np.isnan(new_pos[0]) and regen_i < 10:
+            # Increase the search radius
+            new_pos = self.pathfinder.get_random_navigable_point_near(
+                pos,
+                1.5 + regen_i * 0.5,
+                1000,
+                island_index=self._largest_island_idx,
+            )
+            regen_i += 1
         return new_pos
 
     def _add_objs(
