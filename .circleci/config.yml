@@ -214,16 +214,6 @@ jobs:
               conda install -y gitpython
               python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm --data-path habitat-sim/data/ --no-replace
       - run:
-          name: Download coda scene
-          command: |
-            if [ ! -f ./habitat-sim/data/scene_datasets/coda/coda.glb ]
-            then
-              cd habitat-sim
-              wget --no-check-certificate 'https://docs.google.com/uc?export=download&id=1Pc-J6pZzXEd8RSeLM94t3iwO8q_RQ853' -O coda.zip
-              unzip coda.zip -d data/scene_datasets
-              rm coda.zip
-            fi
-      - run:
           name: Run sim benchmark
           command: |
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
