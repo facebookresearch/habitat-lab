@@ -49,7 +49,9 @@ from habitat_baselines.config.default_structured_configs import (
 @pytest.fixture(scope="module", autouse=True)
 def download_data():
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(
