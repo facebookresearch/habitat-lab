@@ -165,9 +165,6 @@ jobs:
               python -c 'import torch; print("Has cuda?", torch.cuda.is_available()); print("torch version:", torch.__version__);'
       - restore_cache:
           keys:
-            - v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
-      - restore_cache:
-          keys:
             - ccache-{{ arch }}-main-{{ checksum "./date" }}
           paths:
             - /home/circleci/.ccache
