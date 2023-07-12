@@ -513,6 +513,11 @@ class RearrangeSim(HabitatSim):
                 island_index=self._largest_island_idx,
             )
             regen_i += 1
+
+        assert not np.isnan(
+            new_pos[0]
+        ), "The snap position is NaN. Something failed sampling a snap point."
+
         return new_pos
 
     def _add_objs(
