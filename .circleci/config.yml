@@ -212,7 +212,7 @@ jobs:
               . activate habitat
               git lfs install
               conda install -y gitpython
-              python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm --data-path habitat-sim/data/ --no-replace
+              python -m habitat_sim.utils.datasets_download --uids ci_test_assets franka_panda hab_spot_arm --data-path habitat-sim/data/ --no-replace --no-prune
       - run:
           name: Run sim benchmark
           command: |
