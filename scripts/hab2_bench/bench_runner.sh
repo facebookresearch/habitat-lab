@@ -7,7 +7,7 @@
 # NOTE: run this script from habitat-lab/ directory
 # TO PLOT RESULTS SEE RUN `python scripts/hab2_bench/plot_bench.py`
 mkdir -p data/profile
-NUM_STEPS=500
+NUM_STEPS=200
 set -e
 
 export OMP_NUM_THREADS=2
