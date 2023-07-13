@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import copy
 import os
 import random
 from abc import ABC, abstractmethod
@@ -14,7 +15,6 @@ from typing import Any, Dict, List, Optional, Union
 import corrade as cr
 import magnum as mn
 import numpy as np
-import trimesh
 
 import habitat_sim
 from habitat.core.logging import logger
@@ -64,6 +64,13 @@ class Receptacle(ABC):
         Convenience query for articulated vs. rigid object check.
         """
         return self.parent_link is not None
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return mn.Range3D()
 
     @abstractmethod
     def sample_uniform_local(
@@ -187,8 +194,15 @@ class AABBReceptacle(Receptacle):
         :param rotation: Optional rotation of the Receptacle AABB. Only used for globally defined stage Receptacles to provide flexability.
         """
         super().__init__(name, parent_object_handle, parent_link, up)
-        self.bounds = bounds
+        self._bounds = bounds
         self.rotation = rotation if rotation is not None else mn.Quaternion()
+
+    @property
+    def bounds(self) -> mn.Range3D:
+        """
+        AABB of the Receptacle in local space.
+        """
+        return self._bounds
 
     def sample_uniform_local(
         self, sample_region_scale: float = 1.0
@@ -345,12 +359,10 @@ class TriangleMeshReceptacle(Receptacle):
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
         self.total_area = 0.0
-        triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
             w1 = v[1] - v[0]
             w2 = v[2] - v[1]
-            triangles.append(v)
             self.area_weighted_accumulator.append(
                 0.5 * mn.math.cross(w1, w2).length()
             )
@@ -363,15 +375,25 @@ class TriangleMeshReceptacle(Receptacle):
                 self.area_weighted_accumulator[
                     f_ix
                 ] += self.area_weighted_accumulator[f_ix - 1]
-
-        # Init the trimesh
-        self.trimesh = trimesh.Trimesh(
-            **trimesh.triangles.to_kwargs(triangles)
-        )
+        # compute the bounding box from all vertices
+        # TODO: python bindings for ArrayView minmax?
+        # minmax = mn.math.minmax(
+        #        self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION)
+        #    )
+        minv = mn.Vector3(mn.math.inf)
+        maxv = mn.Vector3(-mn.math.inf)
+        for v in self.mesh_data.attribute(mn.trade.MeshAttribute.POSITION):
+            minv = mn.math.min(minv, v)
+            maxv = mn.math.max(maxv, v)
+        minmax = (minv, maxv)
+        self._bounds = mn.Range3D(minmax)
 
     @property
     def bounds(self) -> mn.Range3D:
-        return mn.Range3D(self.trimesh.bounds)
+        """
+        AABB of the Receptacle in local space.
+        """
+        return self._bounds
 
     def get_face_verts(self, f_ix: int) -> List[mn.Vector3]:
         """
@@ -593,6 +615,13 @@ def import_tri_mesh(mesh_file: str) -> List[mn.trade.MeshData]:
     return mesh_data
 
 
+# global cache of Receptacles to reduce load time costs
+# maps receptacle name (not unique name) to a Receptacle instance (NOTE: parent_object_handle must be updated per-user-instance)
+_rec_cache: Dict[
+    str, Union[Receptacle, AABBReceptacle, TriangleMeshReceptacle]
+] = {}
+
+
 def parse_receptacles_from_user_config(
     user_subconfig: habitat_sim._ext.habitat_sim_bindings.Configuration,
     parent_object_handle: Optional[str] = None,
@@ -625,18 +654,24 @@ def parse_receptacles_from_user_config(
         if sub_config_key.startswith(receptacle_prefix_string):
             sub_config = user_subconfig.get_subconfig(sub_config_key)
             # this is a receptacle, parse it
-            assert sub_config.has_value("position")
-            assert sub_config.has_value("scale")
-            up = (
-                None
-                if not sub_config.has_value("up")
-                else sub_config.get("up")
-            )
-
             receptacle_name = (
                 sub_config.get("name")
                 if sub_config.has_value("name")
                 else sub_config_key
+            )
+            assert sub_config.has_value("position")
+            assert sub_config.has_value("scale")
+
+            # get the Receptacle from the cache if available
+            if receptacle_name in _rec_cache:
+                receptacles.append(copy.copy(_rec_cache[receptacle_name]))
+                receptacles[-1].parent_object_handle = parent_object_handle
+                continue
+
+            up = (
+                None
+                if not sub_config.has_value("up")
+                else sub_config.get("up")
             )
 
             # optional rotation for global receptacles, defaults to identity
@@ -721,6 +756,9 @@ def parse_receptacles_from_user_config(
                 raise AssertionError(
                     f"Receptacle detected without a subtype specifier: '{mesh_receptacle_id_string}'"
                 )
+
+            # cache the Receptacle if new
+            _rec_cache[receptacle_name] = receptacles[-1]
 
     return receptacles
 
