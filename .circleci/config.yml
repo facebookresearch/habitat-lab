@@ -182,7 +182,7 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
-              #git checkout 8eb02ad1e12f310fef7e67628a0e992bd8fea834
+              git checkout --track origin/ci-regression-testing-sim
               pip install -r requirements.txt --progress-bar off
               pip install imageio imageio-ffmpeg
               python -u setup.py install --headless --with-cuda --bullet
