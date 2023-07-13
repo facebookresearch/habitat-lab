@@ -483,7 +483,7 @@ class PddlDomain:
                 use_pred.set_param_values(entity_input)
                 if use_pred.are_types_compatible(self.expr_types):
                     poss_preds.append(use_pred)
-        return sorted(poss_preds, key=lambda: pred.compact_str)
+        return sorted(poss_preds, key=lambda pred: pred.compact_str)
 
     def get_possible_actions(
         self,
