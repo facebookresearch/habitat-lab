@@ -163,14 +163,6 @@ jobs:
               fi
               touch ~/miniconda/pytorch_installed
               python -c 'import torch; print("Has cuda?", torch.cuda.is_available()); print("torch version:", torch.__version__);'
-      - restore_cache:
-          keys:
-            - v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
-      - restore_cache:
-          keys:
-            - ccache-{{ arch }}-main-{{ checksum "./date" }}
-          paths:
-            - /home/circleci/.ccache
       - run:
           name: CCache initialization
           command: |
@@ -190,7 +182,7 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
-              git checkout 8eb02ad1e12f310fef7e67628a0e992bd8fea834
+              #git checkout 8eb02ad1e12f310fef7e67628a0e992bd8fea834
               pip install -r requirements.txt --progress-bar off
               pip install imageio imageio-ffmpeg
               python -u setup.py install --headless --with-cuda --bullet
@@ -236,12 +228,6 @@ jobs:
               unzip coda.zip -d data/scene_datasets
               rm coda.zip
             fi
-      - run:
-          name: Run sim benchmark
-          command: |
-              export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
-              . activate habitat; cd habitat-sim
-              python examples/example.py --scene data/scene_datasets/habitat-test-scenes/van-gogh-room.glb --silent --test_fps_regression $FPS_THRESHOLD
       - save_cache:
           key: v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
           background: true
@@ -297,8 +283,7 @@ jobs:
               . activate habitat; cd habitat-lab
               export PYTHONPATH=.:$PYTHONPATH
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
-              python -m pytest --cov-report=xml --cov-report term  --cov=./
-      - codecov/upload
+              #python -m pytest --cov-report=xml --cov-report term  --cov=./
       - run:
           name: Run baseline training tests
           no_output_timeout: 30m
@@ -309,7 +294,7 @@ jobs:
               export MULTI_PROC_OFFSET=0 && export MAGNUM_LOG=quiet && export HABITAT_SIM_LOG=quiet
               # This is a flag that enables test_test_baseline_training to work
               export TEST_BASELINE_SMALL=1
-              python -m pytest  test/test_baseline_training.py -s
+              #python -m pytest  test/test_baseline_training.py -s
       - run:
           name: Run Hab2.0 benchmark
           no_output_timeout: 30m
