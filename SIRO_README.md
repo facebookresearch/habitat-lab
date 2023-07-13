@@ -30,14 +30,13 @@ cd habitat-lab/data
 # 2. Install Git LFS from https://git-lfs.com/ (if not installed yet)
 # 3. Set up Git LFS for your user account (if not set up yet)
 git lfs install
-# 4. Clone dataset (it will take a while to finish)
+# 4. Clone Floorplanner dataset (it will take a while to finish)
 git clone https://huggingface.co/datasets/fpss/fphab
-# 5. Change the name, and Floorplanner Scenes is ready to use
-mv fphab fpss
-*optionally, you can also do
-ln -s /path/to/fpss/fphab data/fpss
-to create a symlink
-# 6. Sanity check for one of the scenes (this should open FP scene in the habitat viewer)
+# 5. Checkout the '6fb800903' commit. Other versions do not work with SIRo.
+git checkout 6fb800903
+# 6. Create a link to Floorplanner in the data folder
+ln -s /path/to/fphab data/fpss
+# 7. Sanity check for one of the scenes (this should open FP scene in the habitat viewer)
 # ./build/viewer if compiling locally
 habitat-viewer --enable-physics --dataset /path/to/data/fpss/fphab/fphab.scene_dataset_config.json -- 108294897_176710602.scene_instance.json
 ```
