@@ -536,19 +536,32 @@ class RearrangeSim(HabitatSim):
 
     def safe_snap_point(self, pos: np.ndarray) -> np.ndarray:
         """
-        snap_point can return nan which produces hard to catch errors.
+        Returns the 3D coordinates corresponding to a point belonging
+        to the biggest navmesh island in the scenee and closest to pos.
+        When that point returns NaN, computes a navigable point at increasing
+        distances to it.
         """
         new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
+        
+        max_iter = 10
+        offset_distance = 1.5
+        distance_per_iter = 0.5
+        num_sample_points = 1000
+
         regen_i = 0
         while np.isnan(new_pos[0]) and regen_i < 10:
             # Increase the search radius
             new_pos = self.pathfinder.get_random_navigable_point_near(
                 pos,
-                1.5 + regen_i * 0.5,
-                1000,
+                offset_distance + regen_i * distance_per_iter,
+                num_sample_points,
                 island_index=self._largest_island_idx,
             )
             regen_i += 1
+
+        assert not np.isnan(
+            new_pos[0]
+        ), "The snap position is NaN. Something failed sampling a snap point."
         return new_pos
 
     def _add_objs(
