@@ -83,6 +83,6 @@ for i in [1, 16]:
             "interact_nosleep": "[Interact No Auto-sleep]",
         },
         "opts_%i" % i,
-        "ReplicaCAD: 200 Steps %i Processes" % i,
-        "%i_200_-1_" % i,
+        "ReplicaCAD: 500 Steps %i Processes" % i,
+        "%i_500_-1_" % i,
     )
