@@ -229,6 +229,10 @@ class ObjectGoalSensorConfig(LabSensorConfig):
 class LanguageGoalSensorConfig(LabSensorConfig):
     type: str = "LanguageGoalSensor"
 
+@attr.s(auto_attribs=True, slots=True)
+class MultiGoalSensorConfig(LabSensorConfig):
+    type: str = "MultiGoalSensor"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class ImageGoalSensorConfig(LabSensorConfig):
@@ -1553,6 +1557,12 @@ cs.store(
     group="habitat/task/lab_sensors",
     name="languagegoal_sensor",
     node=LanguageGoalSensorConfig,
+)
+cs.store(
+    package="habitat.task.lab_sensors.multigoal_sensor",
+    group="habitat/task/lab_sensors",
+    name="multigoal_sensor",
+    node=MultiGoalSensorConfig,
 )
 cs.store(
     package="habitat.task.lab_sensors.imagegoal_sensor",

@@ -1,0 +1,8 @@
+# @package habitat.dataset
+defaults:
+  - /habitat/dataset: dataset_config_schema
+  - _self_
+
+type: Goat-v1
+split: train
+data_path: data/datasets/goat/hm3d/v0.2/{split}/{split}.json.gz
