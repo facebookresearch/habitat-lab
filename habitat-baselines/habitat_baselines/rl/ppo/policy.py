@@ -16,6 +16,7 @@ from typing import (
     Union,
 )
 
+import numpy as np
 import torch
 from gym import spaces
 from torch import nn as nn
@@ -74,7 +75,7 @@ class PolicyActionData:
     action_log_probs: Optional[torch.Tensor] = None
     take_actions: Optional[torch.Tensor] = None
     policy_info: Optional[List[Dict[str, Any]]] = None
-    should_inserts: Optional[torch.BoolTensor] = None
+    should_inserts: Optional[np.ndarray] = None
 
     def write_action(self, write_idx: int, write_action: torch.Tensor) -> None:
         """
@@ -114,7 +115,7 @@ class MultiAgentPolicyActionData(PolicyActionData):
     action_log_probs: Optional[torch.Tensor] = None
     take_actions: Optional[torch.Tensor] = None
     policy_info: Optional[List[Dict[str, Any]]] = None
-    should_inserts: Optional[torch.BoolTensor] = None
+    should_inserts: Optional[np.ndarray] = None
 
     # Indices
     length_rnn_hidden_states: Optional[torch.Tensor] = None
@@ -137,8 +138,7 @@ class MultiAgentPolicyActionData(PolicyActionData):
                 int(tensor_to_unpack.shape[-1] / self.num_agents)
             ] * self.num_agents
 
-        tensor_unpacked = torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
-        return tensor_unpacked
+        return torch.split(tensor_to_unpack, unpack_lengths, dim=-1)
 
     def unpack(self):
         """
@@ -152,7 +152,10 @@ class MultiAgentPolicyActionData(PolicyActionData):
             "value_preds": self._unpack(self.values),
             "action_log_probs": self._unpack(self.action_log_probs),
             "take_actions": self._unpack(self.take_actions),
-            "should_inserts": self._unpack(self.should_inserts),
+            # This is numpy array and must be split differently.
+            "should_inserts": np.split(
+                self.should_inserts, self.num_agents, axis=-1
+            ),
         }
 
 

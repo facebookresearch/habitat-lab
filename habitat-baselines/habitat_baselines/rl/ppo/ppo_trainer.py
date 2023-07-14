@@ -28,6 +28,10 @@ from habitat.utils.visualizations.utils import (
 )
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
+from habitat_baselines.common.construct_vector_env import (
+    construct_envs,
+    grouped_construct_envs,
+)
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -143,16 +147,23 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs, num_scenes = construct_envs(
-            config,
-            workers_ignore_signals=is_slurm_batch_job(),
-            # enforce_scenes_greater_eq_environments=is_eval,
-            # TODO: This must be changed for episodes with few scenes. We
-            # should change it back when expanding to more scenes and final
-            # results so there is no imbalance of scenes per worker.
-            enforce_scenes_greater_eq_environments=False,
-        )
-
+        if config.habitat_baselines.grouped_scenes:
+            assert not is_eval, "Cannot group scenes when in eval mode"
+            self.envs, num_scenes = grouped_construct_envs(
+                config,
+                workers_ignore_signals=is_slurm_batch_job(),
+                enforce_scenes_greater_eq_environments=False,
+            )
+        else:
+            self.envs, num_scenes = construct_envs(
+                config,
+                workers_ignore_signals=is_slurm_batch_job(),
+                # enforce_scenes_greater_eq_environments=is_eval,
+                # TODO: This must be changed for episodes with few scenes. We
+                # should change it back when expanding to more scenes and final
+                # results so there is no imbalance of scenes per worker.
+                enforce_scenes_greater_eq_environments=False,
+            )
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
@@ -501,7 +512,6 @@ class PPOTrainer(BaseRLTrainer):
                     batch[
                         PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
                     ] = self._encoder(batch)
-
             self._agent.rollouts.insert(
                 next_observations=batch,
                 rewards=rewards,

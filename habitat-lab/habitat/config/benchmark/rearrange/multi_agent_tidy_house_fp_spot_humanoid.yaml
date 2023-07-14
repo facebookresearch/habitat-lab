@@ -80,7 +80,7 @@ habitat:
         ang_speed: 20.0
 
       agent_0_oracle_nav_with_backing_up_action:
-        type: OracleNavWithBackingUpAction
+        type: OracleNavAction
         agent_index : 0
         spawn_max_dist_to_obj: -1.0
         agents_dist_thresh: 1.5
@@ -109,6 +109,7 @@ habitat:
       agent_1_pddl_apply_action:
         agent_index : 1
       agent_1_oracle_nav_with_backing_up_action:
+        type: OracleNavAction
         agent_index : 1
         motion_control: human_joints
         spawn_max_dist_to_obj: -1.0

@@ -1533,10 +1533,7 @@ class SimulatorConfig(HabitatBaseConfig):
     debug_render: bool = False
     debug_render_articulated_agent: bool = False
     kinematic_mode: bool = False
-    # If False, will skip setting the semantic IDs of objects in
-    # `rearrange_sim.py` (there is overhead to this operation so skip if not
-    # using semantic information).
-    should_setup_semantic_ids: bool = True
+    force_soft_reset: bool = False
     # If in render mode a visualization of the rearrangement goal position
     # should also be displayed
     debug_render_goal: bool = True
