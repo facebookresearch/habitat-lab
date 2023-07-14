@@ -9,20 +9,25 @@ defaults:
     - add_virtual_keys_base
   - /habitat_baselines/rl/policy/obs_transforms@habitat_baselines.rl.policy.agent_1.obs_transforms.add_virtual_keys:
     - add_virtual_keys_base
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hl_fixed
-  # - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hl_fixed
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_0: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_hl_neural_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_0.hierarchical_policy.defined_skills: oracle_skills_ma
   - /habitat_baselines/rl/policy/hierarchical_policy/defined_skills@habitat_baselines.rl.policy.agent_1.hierarchical_policy.defined_skills: oracle_skills_ma_humanoid
   - /habitat/task/lab_sensors:
-    # For the oracle navigation
     - has_finished_oracle_nav
+  # For Spot observation space
   - _self_
 
 hydra:
   job:
-    name: 'pop_play_humanoid_spot_fp'
+    name: 'pop_play_humanoid_spot_fp_teleport_minitrain'
+
+habitat:
+  dataset:
+    data_path: data/datasets/floorplanner/rearrange/scratch/train/minitrain_5scene_2obj_100epi_v0.2.json.gz
+
+  environment:
+    max_episode_steps: 50
 
 habitat_baselines:
   verbose: False
@@ -31,7 +36,6 @@ habitat_baselines:
   distrib_updater_name: "HRLDDPPO"
   torch_gpu_id: 0
   video_fps: 30
-  episode_data_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/eval_data
   video_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/video
   tensorboard_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/tb
   eval_ckpt_path_dir: ${hydra:sweep.dir}/${hydra:sweep.subdir}/checkpoints
@@ -41,20 +45,19 @@ habitat_baselines:
   num_updates: -1
   total_num_steps: 1e8
   log_interval: 1
-  num_checkpoints: 10
+  num_checkpoints: 20
   force_torch_single_threaded: True
   eval_keys_to_include_in_name: ['composite_success']
   load_resume_state_config: False
   rollout_storage_name: "HrlRolloutStorage"
-  wb:
-      project_name: hab3
-      entity: andrew-colab
-      group: ''
-      run_name: ${hydra:job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    
 
   evaluate: False
   writer_type: 'wb'
+
+  wb:
+    project_name: 'hab3'
+    entity: 'andrew-colab'
+    run_name: ${hydra:job.name}_${now:%Y-%m-%d}_${now:%H-%M-%S}
 
   eval:
     should_load_ckpt: False
@@ -76,14 +79,13 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 1500
+              apply_postconds: True
+              # skill_name: "OracleNavPolicy"
+              # obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              # max_skill_steps: 1500
       agent_1:
         hierarchical_policy:
           high_level_policy:
@@ -94,14 +96,13 @@ habitat_baselines:
               - "obj_start_gps_compass"
               - "obj_goal_gps_compass"
               - "other_agent_gps"
-              - "obj_start_sensor"
-              - "obj_goal_sensor"
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
-              skill_name: "OracleNavPolicy"
-              obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
-              max_skill_steps: 1500
+              apply_postconds: True
+              # skill_name: "OracleNavPolicy"
+              # obs_skill_inputs: ["obj_start_sensor", "abs_obj_start_sensor", "obj_goal_sensor", "abs_obj_goal_sensor"]
+              # max_skill_steps: 1500
 
     ppo:
       # ppo params
