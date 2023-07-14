@@ -83,14 +83,11 @@ class LanguageGoalSensor(Sensor):
         return spaces.Dict({
             "category_name": spaces.Text(min_length=0, max_length=30),
             "caption": spaces.Text(min_length=0, max_length=200),
+            "target": spaces.Text(min_length=0, max_length=50),
             "landmarks": spaces.Tuple([spaces.Text(min_length=0, max_length=30) for _ in range(max_landmarks)]),
             "rooms": spaces.Tuple([spaces.Text(min_length=0, max_length=30) for _ in range(max_rooms)]),
         })
-    
-    def extract_room_and_landmarks_from_response(self, response: str):
-        landmarks = re.findall(r'LandmarkName\("([^"]+)"\)', response)
-        rooms = re.findall(r'RoomName\("([^"]+)"\)', response)
-        return rooms, landmarks
+
 
     def get_observation(
         self,
@@ -113,29 +110,15 @@ class LanguageGoalSensor(Sensor):
 
         category_name = episode.object_category
         caption = episode.instructions[0]
-        rooms, landmarks = self.extract_room_and_landmarks_from_response(
-            episode.llm_response["full_response"]
-        )
+        target = episode.llm_response["target"].lower()
+        landmarks = [x.lower() for x in episode.llm_response["landmark"]]
 
         return {
             "category_name": category_name,
             "caption": caption,
-            "room": rooms,
             "landmarks": landmarks,
+            "target": target
         }
-        # if self.config.goal_spec == "TASK_CATEGORY_ID":
-        #     return np.array(
-        #         [self._dataset.category_to_task_category_id[category_name]],
-        #         dtype=np.int64,
-        #     )
-        # elif self.config.goal_spec == "OBJECT_ID":
-        #     obj_goal = episode.goals[0]
-        #     assert isinstance(obj_goal, ObjectGoal)  # for type checking
-        #     return np.array([obj_goal.object_name_id], dtype=np.int64)
-        # else:
-        #     raise RuntimeError(
-        #         "Wrong goal_spec specified for ObjectGoalSensor."
-        #     )
 
 
 @registry.register_task(name="LanguageNav-v1")

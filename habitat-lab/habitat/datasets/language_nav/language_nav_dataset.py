@@ -40,7 +40,7 @@ class LanguageNavEpisode(ObjectGoalNavEpisode):
     """
     object_instance_id: Optional[int] = None
     instructions: Optional[List[str]] = []
-    llm_response: Optional[str] = None
+    llm_response: Optional[Dict] = {}
 
     @property
     def goals_key(self) -> str:
@@ -127,6 +127,8 @@ class LanguageNavDatasetV1(PointNavDatasetV1):
 
         for i, episode in enumerate(deserialized["episodes"]):
             episode = LanguageNavEpisode(**episode)
+            if 'target' not in episode.llm_response.keys():
+                import pdb;pdb.set_trace()
             episode.episode_id = str(i)
 
             if scenes_dir is not None:
