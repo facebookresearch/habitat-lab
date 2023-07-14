@@ -392,6 +392,7 @@ class PddlDomain:
             physics_stability_steps=self._config.physics_stability_steps,
             receptacles=sim.receptacles,
         )
+
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
             self._sim_info.search_for_entity(entity)

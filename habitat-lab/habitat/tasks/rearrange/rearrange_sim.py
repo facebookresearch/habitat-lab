@@ -128,6 +128,7 @@ class RearrangeSim(HabitatSim):
         )
         self._step_physics = self.habitat_config.step_physics
         self._kinematic_mode = self.habitat_config.kinematic_mode
+        self._force_soft_reset = self.habitat_config.force_soft_reset
         self._backend_runtime_perf_stat_names = (
             # super().get_runtime_perf_stat_names()
         )
@@ -283,14 +284,7 @@ class RearrangeSim(HabitatSim):
 
     @add_perf_timing_func()
     def reconfigure(self, config: "DictConfig", ep_info: RearrangeEpisode):
-        self._handle_to_goal_name = ep_info.info["object_labels"]
-
         t_start = time.time()
-
-        with read_write(config):
-            config["scene"] = ep_info.scene_id
-
-        super().reconfigure(config, should_close_on_new_scene=False)
 
         self.ep_info = ep_info
         self._try_acquire_context()
@@ -300,13 +294,53 @@ class RearrangeSim(HabitatSim):
         if new_scene:
             self._prev_obj_names = None
 
-        self.agents_mgr.reconfigure(new_scene)
+        if self._force_soft_reset:
+            assert not (
+                new_scene and self.prev_scene_id is not None
+            ), f"Cannot force soft resets when there are new scenes. Switched from {self.prev_scene_id} to {ep_info.scene_id}"
+            # TODO: This is a hack to get soft resets working correctly without
+            # the properly configured dataset. Force take only the first 2
+            # objects and make them exactly the same every episode. These objects
+            # will be the targets as well.
+            ep_info.rigid_objs = ep_info.rigid_objs[:2]
+            assert (
+                len(ep_info.rigid_objs) == 2
+            ), "We cannot have less than 2 objects"
+            if self._prev_obj_names is not None:
+                # Override with the previous object names
+                targ_ks = list(ep_info.targets.keys())
+                new_targs = {}
+                for i, targ_k in enumerate(targ_ks):
+                    ep_info.rigid_objs[i] = (
+                        self._prev_obj_names[i],
+                        ep_info.rigid_objs[i][1],
+                    )
+                    new_targs[self._prev_targ_names[i]] = ep_info.targets[
+                        targ_k
+                    ]
+                ep_info.targets = new_targs
+            else:
+                # Only reset this info once.
+                self._prev_targ_names: List[str] = list(ep_info.targets.keys())
+                self._handle_to_goal_name = ep_info.info["object_labels"]
+        else:
+            self._handle_to_goal_name = ep_info.info["object_labels"]
+
         # Only remove and re-add objects if we have a new set of objects.
         obj_names = [x[0] for x in ep_info.rigid_objs]
         should_add_objects = self._prev_obj_names != obj_names
         self._prev_obj_names = obj_names
 
-        self._clear_objects(should_add_objects)
+        self._clear_objects(should_add_objects, new_scene)
+
+        is_hard_reset = new_scene or should_add_objects
+        if is_hard_reset:
+            with read_write(config):
+                config["scene"] = ep_info.scene_id
+            super().reconfigure(config, should_close_on_new_scene=False)
+
+        self._try_acquire_context()
+        self.agents_mgr.reconfigure(new_scene)
 
         self.prev_scene_id = ep_info.scene_id
         self._viz_templates = {}
@@ -329,7 +363,7 @@ class RearrangeSim(HabitatSim):
 
         # add episode clutter objects additional to base scene objects
         if self.habitat_config.load_objs:
-            self._add_objs(ep_info, should_add_objects)
+            self._add_objs(ep_info, should_add_objects, new_scene)
         self._setup_targets(ep_info)
 
         self._add_markers(ep_info)
@@ -495,14 +529,6 @@ class RearrangeSim(HabitatSim):
             largest_size_vertex
         )
 
-    @property
-    def largest_island_idx(self) -> int:
-        """
-        The path finder index of the island that has the largest area.
-        """
-        return self._largest_island_idx
-
-    @add_perf_timing_func()
     def _clear_objects(
         self, should_add_objects: bool, new_scene: bool
     ) -> None:
@@ -561,7 +587,7 @@ class RearrangeSim(HabitatSim):
         distances to it.
         """
         new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
-
+        
         max_iter = 10
         offset_distance = 1.5
         distance_per_iter = 0.5
@@ -581,7 +607,6 @@ class RearrangeSim(HabitatSim):
         assert not np.isnan(
             new_pos[0]
         ), "The snap position is NaN. Something failed sampling a snap point."
-
         return new_pos
 
     def _add_objs(
@@ -640,25 +665,30 @@ class RearrangeSim(HabitatSim):
 
             obj_counts[obj_handle] += 1
 
-        all_receps = find_receptacles(self)
-        for recep in all_receps:
-            recep = cast(AABBReceptacle, recep)
-            local_bounds = recep.bounds
-            global_T = recep.get_global_transform(self)
-            self._receptacles[recep.name] = mn.Range3D(
-                global_T.transform_point(local_bounds.min),
-                global_T.transform_point(local_bounds.max),
-            )
+        if new_scene:
+            all_receps = find_receptacles(self)
+            for recep in all_receps:
+                recep = cast(AABBReceptacle, recep)
+                local_bounds = recep.bounds
+                global_T = recep.get_global_transform(self)
+                self._receptacles[recep.name] = mn.Range3D(
+                    global_T.transform_point(local_bounds.min),
+                    global_T.transform_point(local_bounds.max),
+                )
 
-        ao_mgr = self.get_articulated_object_manager()
-        robot_art_handles = [
-            robot.sim_obj.handle for robot in self.robots_mgr.robots_iter
-        ]
-        for aoi_handle in ao_mgr.get_object_handles():
-            ao = ao_mgr.get_object_by_handle(aoi_handle)
-            if self._kinematic_mode and ao.handle not in robot_art_handles:
-                ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
-            self.art_objs.append(ao)
+            ao_mgr = self.get_articulated_object_manager()
+            articulated_agent_art_handles = [
+                articulated_agent.sim_obj.handle
+                for articulated_agent in self.agents_mgr.articulated_agents_iter
+            ]
+            for aoi_handle in ao_mgr.get_object_handles():
+                ao = ao_mgr.get_object_by_handle(aoi_handle)
+                if (
+                    self._kinematic_mode
+                    and ao.handle not in articulated_agent_art_handles
+                ):
+                    ao.motion_type = habitat_sim.physics.MotionType.KINEMATIC
+                self.art_objs.append(ao)
 
     def _create_obj_viz(self):
         """

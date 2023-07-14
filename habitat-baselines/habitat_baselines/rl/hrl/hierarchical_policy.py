@@ -35,6 +35,7 @@ from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     PlaceSkillPolicy,
     ResetArmSkill,
     SkillPolicy,
+    TurnSkillPolicy,
     WaitSkillPolicy,
 )
 from habitat_baselines.rl.hrl.utils import find_action_range
@@ -377,7 +378,7 @@ class HierarchicalPolicy(nn.Module, Policy):
         return PolicyActionData(
             take_actions=actions,
             policy_info=log_info,
-            should_inserts=did_choose_new_skill.view(-1, 1),
+            should_inserts=did_choose_new_skill.view(-1, 1).numpy(),
             **action_kwargs,
         )
 

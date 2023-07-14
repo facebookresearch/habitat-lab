@@ -62,3 +62,18 @@ reset_arm:
   max_skill_steps: 50
   reset_joint_state: [-4.50e-01, -1.07e00, 9.95e-02, 9.38e-01, -7.88e-04, 1.57e00, 4.62e-03]
   force_end_on_timeout: False
+
+
+turn_left:
+  skill_name: "TurnSkillPolicy"
+  force_end_on_timeout: False
+  max_skill_steps: 1
+  turn_power: 1.0
+  apply_postconds: True
+
+turn_right:
+  skill_name: "TurnSkillPolicy"
+  force_end_on_timeout: False
+  max_skill_steps: 1
+  turn_power: -1.0
+  apply_postconds: True

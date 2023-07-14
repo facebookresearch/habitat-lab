@@ -252,8 +252,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     # map to this skill. If not specified,the name of the skill must match the
     # PDDL action name.
     pddl_action_names: Optional[List[str]] = None
-    turn_power_x: float = 0.0
-    turn_power_y: float = 0.0
+    turn_steps: int = 1
+    turn_power: float = 1.0
 
 
 @dataclass
@@ -382,6 +382,10 @@ class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
     discrim_reward_weight: float = 1.0
     allow_self_play: bool = False
     self_play_batched: bool = False
+    # If specified, this will load the policies for the type 1 population from
+    # the checkpoint file at the start of training. Used to independently train
+    # the type 1 population, and then train a seperate against this population.
+    load_type1_pop_ckpts: Optional[List[str]] = None
     ###############################
 
 
@@ -471,6 +475,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # path to ckpt or path to ckpts dir
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
+    grouped_scenes: bool = False
     num_processes: int = -1  # deprecated
     rollout_storage_name: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
