@@ -21,10 +21,10 @@ NO_CONCUR="habitat.simulator.concur_render=False"
 
 #number of processes
 # shellcheck disable=SC2043
-for j in 1 16
+for j in 1 8
 do
   #number of trials
-  for i in {0..10}
+  for i in {1..10}
   do
     ##################################
     # IDLE 4 sensors (arm + head, RGBD)

@@ -67,7 +67,7 @@ def plot(name_map, savename, set_title, base_name):
 
 
 # plot rearrange benchmark numbers
-for i in [1, 16]:
+for i in [1, 8]:
     plot(
         {
             "idle_all": "[Idle]",
