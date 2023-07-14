@@ -152,8 +152,9 @@ class HumanoidRearrangeController:
         :param distance_multiplier: allows to create walk motion while not translating, good for turning
         """
         deg_per_rads = 180.0 / np.pi
+
         forward_V = target_position
-        if forward_V.length() < EPS:
+        if forward_V.length() < EPS or np.isnan(target_position).any():
             self.calculate_stop_pose()
             return
         distance_to_walk = np.linalg.norm(forward_V)
@@ -200,6 +201,12 @@ class HumanoidRearrangeController:
             if np.abs(forward_angle) >= self.threshold_rotate_not_move:
                 distance_to_walk *= 0
 
+        assert not np.isnan(
+            distance_to_walk
+        ), f"distance_to_walk is NaN: {distance_to_walk}"
+        assert not np.isnan(
+            self.dist_per_step_size
+        ), f"distance_to_walk is NaN: {self.dist_per_step_size}"
         # Step size according to how much we moved, this is so that
         # we don't overshoot if the speed of the character would it make
         # it move further than what `position` indicates

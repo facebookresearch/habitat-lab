@@ -101,7 +101,7 @@ class HrlRolloutStorage(RolloutStorage):
 
         assert should_inserts is not None
         # Starts as shape [batch_size, 1]
-        should_inserts = should_inserts.flatten()
+        should_inserts = should_inserts.reshape(-1)
 
         if should_inserts.sum() == 0:
             self._last_should_inserts = should_inserts
@@ -142,7 +142,11 @@ class HrlRolloutStorage(RolloutStorage):
         step.
         """
 
-        self._cur_step_idxs += self._last_should_inserts.long()
+        # TODO: It's probably faster to also have `self._cur_step_idxs` as a
+        # numpy array.
+        self._cur_step_idxs += torch.from_numpy(
+            self._last_should_inserts
+        ).long()
 
     def after_update(self):
         env_idxs = torch.arange(self._num_envs)

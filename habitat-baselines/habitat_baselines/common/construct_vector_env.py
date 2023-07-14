@@ -14,6 +14,63 @@ if TYPE_CHECKING:
     from omegaconf import DictConfig
 
 
+def grouped_construct_envs(
+    config: "DictConfig",
+    workers_ignore_signals: bool = False,
+    enforce_scenes_greater_eq_environments: bool = False,
+):
+    """
+    Splits the episodes per environment worker so that each worker recieves
+    episodes belonging to only a single scene. This means the worker doesn't
+    need to reload the scene between resets.
+    """
+
+    num_environments = config.habitat_baselines.num_environments
+    configs = []
+    dataset = make_dataset(config.habitat.dataset.type)
+    scenes = config.habitat.dataset.content_scenes
+    if "*" in config.habitat.dataset.content_scenes:
+        scenes = dataset.get_scenes_to_load(config.habitat.dataset)
+
+    random.shuffle(scenes)
+
+    scene_splits: List[List[str]] = [[] for _ in range(num_environments)]
+
+    # Ensure there is EXACTLY 1 scene per env.
+    for env_i in range(num_environments):
+        scene_splits[env_i] = [scenes[env_i % len(scenes)]]
+
+    for i in range(num_environments):
+        proc_config = config.copy()
+        with read_write(proc_config):
+            task_config = proc_config.habitat
+            task_config.seed = task_config.seed + i
+            if len(scenes) > 0:
+                task_config.dataset.content_scenes = scene_splits[i]
+
+        configs.append(proc_config)
+
+    vector_env_cls: Type[Any]
+    if int(os.environ.get("HABITAT_ENV_DEBUG", 0)):
+        logger.warn(
+            "Using the debug Vector environment interface. Expect slower performance."
+        )
+        vector_env_cls = ThreadedVectorEnv
+    else:
+        vector_env_cls = VectorEnv
+
+    envs = vector_env_cls(
+        make_env_fn=make_gym_from_config,
+        env_fn_args=tuple((c,) for c in configs),
+        workers_ignore_signals=workers_ignore_signals,
+    )
+
+    if config.habitat.simulator.renderer.enable_batch_renderer:
+        envs.initialize_batch_renderer(config)
+
+    return envs, len(scenes)
+
+
 def construct_envs(
     config: "DictConfig",
     workers_ignore_signals: bool = False,

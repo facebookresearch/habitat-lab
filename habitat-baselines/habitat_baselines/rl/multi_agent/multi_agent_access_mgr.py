@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple, Type
 
 import gym.spaces as spaces
 import numpy as np
+import torch
 
 from habitat.gym.gym_wrapper import create_action_space
 from habitat_baselines.common.baseline_registry import baseline_registry
@@ -71,6 +72,11 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             percent_done_fn,
             lr_schedule_fn,
         )
+        if self._pop_config.load_type1_pop_ckpts is not None:
+            self._load_ckpts(
+                self._agents[self._agent_count_idxs[0] :],
+                self._pop_config.load_type1_pop_ckpts,
+            )
 
         num_active_agents = sum(self._pop_config.num_active_agents_per_type)
         (
@@ -85,6 +91,18 @@ class MultiAgentAccessMgr(AgentAccessMgr):
             )
         if config.habitat_baselines.evaluate:
             self._sample_active()
+
+    def _load_ckpts(self, agents, ckpt_paths):
+        if len(agents) != len(ckpt_paths):
+            raise ValueError(
+                f"{len(agents)} in population, doesn't match number of requested ckpts {len(ckpt_paths)}"
+            )
+
+        for agent, ckpt_path in zip(agents, ckpt_paths):
+            ckpt_dict = torch.load(ckpt_path, map_location="cpu")
+            # Fetch the 1st agent from the type 1 population in the
+            # checkpoint.
+            agent.load_state_dict(ckpt_dict[1])
 
     def init_distributed(self, find_unused_params: bool = True) -> None:
         for agent in self._agents:

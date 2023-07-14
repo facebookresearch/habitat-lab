@@ -382,6 +382,7 @@ class PddlDomain:
             receptacles=sim.receptacles,
             recep_place_shrink_factor=self._config.recep_place_shrink_factor,
         )
+
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
             self._sim_info.search_for_entity(entity)
