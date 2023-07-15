@@ -42,7 +42,7 @@ for dir in "$SWEEP_DIR"/*/; do
     subdir=$(basename "$dir")
     #echo "$subdir"
     wandb_name="eval_$SWEEP_SUBDIR"
-    run_id=$((subdir)) 
+    run_id=$((subdir))
     curr_plan_idx=${plan_idxes[$run_id]}
     echo "${dir}"
     echo $curr_plan_idx
@@ -62,7 +62,7 @@ for dir in "$SWEEP_DIR"/*/; do
     #     habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=True \
     #     habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_5s_500epi_2obj.json.gz \
     #     hydra/launcher=aws_submitit_habitat_eval &
-    
+
     python habitat-baselines/habitat_baselines/run.py \
         -m --config-name experiments_hab3/eval_zsc_kinematic_oracle_fp_xavi_planner.yaml \
         habitat_baselines.eval_ckpt_path_dir="${dir}"/checkpoints/latest.pth \
@@ -79,7 +79,7 @@ for dir in "$SWEEP_DIR"/*/; do
         habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=True \
         habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_5s_500epi_2obj.json.gz \
         hydra/launcher=aws_submitit_habitat_eval &
-    
+
 done
     # python habitat-baselines/habitat_baselines/run.py \
     #     -m --config-name experiments_hab3/eval_zsc_kinematic_oracle_fp_xavi_planner.yaml \

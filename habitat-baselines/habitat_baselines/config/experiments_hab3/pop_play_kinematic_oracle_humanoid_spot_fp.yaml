@@ -51,7 +51,7 @@ habitat_baselines:
       entity: andrew-colab
       group: ''
       run_name: ${hydra:job.name}/${now:%Y-%m-%d}/${now:%H-%M-%S}
-    
+
 
   evaluate: False
   writer_type: 'wb'

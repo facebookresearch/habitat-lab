@@ -42,7 +42,7 @@ for dataset in "${datasets[@]}"; do
         subdir=$(basename "$dir")
         #echo "$subdir"
         wandb_name="eval_$SWEEP_SUBDIR"
-        run_id=$((subdir)) 
+        run_id=$((subdir))
         curr_plan_idx=${plan_idxes[$run_id]}
         echo "${dir}"
         echo $curr_plan_idx
@@ -62,7 +62,7 @@ for dataset in "${datasets[@]}"; do
         #     habitat_baselines.num_environments=1 habitat_baselines.eval.should_load_ckpt=True \
         #     habitat.dataset.data_path=data/datasets/floorplanner/rearrange/scratch/train/largeval_5s_500epi_2obj.json.gz \
         #     hydra/launcher=aws_submitit_habitat_eval &
-        
+
         # echo data/datasets/floorplanner/rearrange/scratch/train/"${dataset}.json.gz"
 
         python habitat-baselines/habitat_baselines/run.py \
@@ -185,5 +185,5 @@ for dataset in "${datasets[@]}"; do
     habitat.task.actions.oracle_nav_action.lin_speed=100 \
     habitat.task.actions.oracle_nav_action.ang_speed=40 \
     habitat_baselines.rl.policy.main_agent.hierarchical_policy.high_level_policy.plan_idx=3 \
-    habitat.task.task_spec=rearrange_easy_fp habitat.task.pddl_domain_def=fp 
+    habitat.task.task_spec=rearrange_easy_fp habitat.task.pddl_domain_def=fp
 done

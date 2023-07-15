@@ -60,4 +60,3 @@ for runid in "${listruns[@]}"; do
         hydra/launcher=aws_submitit_habitat_eval &
 
 done
-

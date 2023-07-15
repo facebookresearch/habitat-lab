@@ -4,7 +4,7 @@ defaults:
   - pop_play_kinematic_oracle_humanoid_spot_fp
   - /habitat/task/lab_sensors:
     - all_predicates
-  
+
   - override /habitat_baselines/rl/policy@habitat_baselines.rl.policy.agent_1: hab3_planner
   - _self_
 

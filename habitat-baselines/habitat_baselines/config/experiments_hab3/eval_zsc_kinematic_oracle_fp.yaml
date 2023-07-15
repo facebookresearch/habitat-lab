@@ -13,7 +13,7 @@ habitat_baselines:
   rl:
     agent:
       num_pool_agents_per_type: [1,1]
-        
+
   eval:
     should_load_ckpt: True
 habitat:
