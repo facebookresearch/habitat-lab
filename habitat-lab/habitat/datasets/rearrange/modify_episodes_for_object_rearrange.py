@@ -442,6 +442,7 @@ def add_cat_fields_to_episodes(
                 scene_id,
                 episode["scene_dataset_config"],
                 episode["additional_obj_config_paths"],
+                config.agent.camera,
                 debug_viz,
             )
             load_navmesh(sim, scene_id)
