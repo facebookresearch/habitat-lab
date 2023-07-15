@@ -1,6 +1,5 @@
 import itertools
 from collections import Counter
-from enum import Enum, auto
 from typing import List
 
 import magnum as mn
@@ -9,6 +8,7 @@ import numpy as np
 import habitat_sim
 from habitat.core.simulator import AgentState
 from habitat.datasets.rearrange.geometry_utils import direction_to_quaternion
+from habitat.datasets.rearrange.viewpoint_type import ViewpointType
 from habitat.datasets.rearrange.viz_utils import (
     save_topdown_map,
     save_viewpoint_frame,
@@ -19,15 +19,6 @@ from habitat.tasks.utils import compute_pixel_coverage
 from habitat_sim.utils.common import quat_to_coeffs
 
 ISLAND_RADIUS_LIMIT = 3.5
-
-
-class ViewpointType(Enum):
-    not_on_active_island = auto()
-    too_far = auto()
-    down_unnavigable = auto()
-    outdoor_viewpoint = auto()
-    low_visibility = auto()
-    good = auto()
 
 
 def populate_semantic_graph(sim):
@@ -41,6 +32,7 @@ def populate_semantic_graph(sim):
 def generate_viewpoints(
     sim: habitat_sim.Simulator,
     obj,
+    agent_camera_height: float,
     object_transform: mn.Matrix4 = None,
     debug_viz: bool = False,
 ) -> List[ObjectViewLocation]:
@@ -128,7 +120,7 @@ def generate_viewpoints(
         if not down_is_navigable(pt):
             return -1, pt, None, ViewpointType.down_unnavigable
 
-        pt[1] += pf.nav_mesh_settings.agent_height
+        pt[1] += agent_camera_height
 
         goal_direction = object_position - pt
         goal_direction[1] = 0
@@ -154,9 +146,11 @@ def generate_viewpoints(
             cov += compute_pixel_coverage(obs["semantic"], semantic_id)
 
             if debug_viz:
-                save_viewpoint_frame(obs, obj.handle, semantic_id, act_idx)
+                save_viewpoint_frame(
+                    obs, obj.handle, semantic_id, act_idx, x, z
+                )
 
-        pt[1] -= pf.nav_mesh_settings.agent_height
+        pt[1] -= agent_camera_height
 
         keep_thresh = 0.001
         if cov < keep_thresh:
@@ -178,7 +172,7 @@ def generate_viewpoints(
     ]
     view_locations = sorted(view_locations, reverse=True, key=lambda v: v.iou)
 
-    if debug_viz and len(view_locations) > 0:
+    if debug_viz:
         save_topdown_map(
             sim,
             view_locations,

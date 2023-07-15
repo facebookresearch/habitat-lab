@@ -948,6 +948,7 @@ def get_navigable_receptacles(
 def get_receptacle_viewpoints(
     sim: habitat_sim.Simulator,
     receptacles: List[Receptacle],
+    agent_camera_height: float,
     debug_viz: bool = False,
 ) -> Tuple[Dict[str, List[ObjectViewLocation]], List[Receptacle]]:
     viewpoints = {}
@@ -960,7 +961,7 @@ def get_receptacle_viewpoints(
         obj_mgr = get_obj_manager_for_receptacle(sim, receptacle)
         receptacle_obj = obj_mgr.get_object_by_handle(handle)
         receptacle_viewpoints = generate_viewpoints(
-            sim, receptacle_obj, debug_viz=debug_viz
+            sim, receptacle_obj, agent_camera_height, debug_viz=debug_viz
         )
         if len(receptacle_viewpoints) > 0:
             viewpoints[handle] = receptacle_viewpoints
