@@ -551,6 +551,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--target_episodes_tag", type=str, default="categorical_rearrange_easy"
     )
+    parser.add_argument("--config", type=str, required=True)
     parser.add_argument(
         "--rec_cache_dir",
         type=str,
@@ -564,7 +565,6 @@ if __name__ == "__main__":
     )  # -1 uses all episodes
     parser.add_argument("--add_viewpoints", action="store_true")
     parser.add_argument("--debug_viz", action="store_true")
-    parser.add_argument("--config", type=str)
 
     args = parser.parse_args()
 
