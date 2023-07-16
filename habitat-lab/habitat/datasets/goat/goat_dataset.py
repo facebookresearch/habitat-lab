@@ -5,27 +5,25 @@ import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
 import attr
+
 from habitat.core.registry import registry
-from habitat.core.simulator import AgentState, ShortestPathPoint
+from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import (
-    CONTENT_SCENES_PATH_FIELD, DEFAULT_SCENE_PATH_PREFIX, PointNavDatasetV1)
+    CONTENT_SCENES_PATH_FIELD,
+    DEFAULT_SCENE_PATH_PREFIX,
+    PointNavDatasetV1,
+)
+from habitat.tasks.nav.goat_task import GoatEpisode
+from habitat.tasks.nav.instance_image_nav_task import (  # InstanceImageGoalNavEpisode,
+    InstanceImageGoal,
+    InstanceImageParameters,
+)
 from habitat.tasks.nav.object_nav_task import (
     ObjectGoal,
     ObjectGoalNavEpisode,
     ObjectViewLocation,
 )
-from habitat.tasks.nav.goat_task import (
-    GoatEpisode
-)
-from habitat.tasks.nav.instance_image_nav_task import (
-    InstanceImageGoal,
-    # InstanceImageGoalNavEpisode,
-    InstanceImageParameters,
-)
-import habitat.tasks.nav.goat_task
-
-# from ovon.dataset.ovon_dataset import OVONObjectViewLocation
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -39,6 +37,7 @@ class OVONObjectViewLocation(ObjectViewLocation):
         raidus: radius of the circle
     """
     radius: Optional[float] = None
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class LanguageNavEpisode(ObjectGoalNavEpisode):
@@ -102,10 +101,12 @@ class GoatDatasetV1(PointNavDatasetV1):
         self.goals = {}
         super().__init__(config)
         self.episodes = list(self.episodes)
-    
+
     @staticmethod
-    def __deserialize_objectnav_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
-        
+    def __deserialize_objectnav_goal(
+        serialized_goal: Dict[str, Any]
+    ) -> ObjectGoal:
+
         g = ObjectGoal(**serialized_goal)
 
         for vidx, view in enumerate(g.view_points):
@@ -114,13 +115,15 @@ class GoatDatasetV1(PointNavDatasetV1):
             g.view_points[vidx] = view_location
 
         return g
-    
+
     @staticmethod
-    def __deserialize_languagenav_goal(serialized_goal: Dict[str, Any]) -> ObjectGoal:
+    def __deserialize_languagenav_goal(
+        serialized_goal: Dict[str, Any]
+    ) -> ObjectGoal:
 
         if serialized_goal.get("children_object_categories") is not None:
             del serialized_goal["children_object_categories"]
-        
+
         g = ObjectGoal(**serialized_goal)
 
         for vidx, view in enumerate(g.view_points):
@@ -129,7 +132,7 @@ class GoatDatasetV1(PointNavDatasetV1):
             g.view_points[vidx] = view_location
 
         return g
-        
+
     @staticmethod
     def __deserialize_imagenav_goal(
         serialized_goal: Dict[str, Any]
@@ -163,12 +166,17 @@ class GoatDatasetV1(PointNavDatasetV1):
             self.goals[sub_task_type] = {}
             for k, v in sub_task_goals.items():
                 if sub_task_type == "objectnav":
-                    self.goals[sub_task_type][k] = [self.__deserialize_objectnav_goal(g) for g in v]
+                    self.goals[sub_task_type][k] = [
+                        self.__deserialize_objectnav_goal(g) for g in v
+                    ]
                 elif sub_task_type == "languagenav":
-                    self.goals[sub_task_type][k] = [self.__deserialize_languagenav_goal(g) for g in v]
+                    self.goals[sub_task_type][k] = [
+                        self.__deserialize_languagenav_goal(g) for g in v
+                    ]
                 elif sub_task_type == "imagenav":
-                    self.goals[sub_task_type][k] = [self.__deserialize_imagenav_goal(v)]
-            
+                    self.goals[sub_task_type][k] = [
+                        self.__deserialize_imagenav_goal(v)
+                    ]
 
         for i, composite_episode in enumerate(deserialized["episodes"]):
             composite_episode["goals"] = []
@@ -177,17 +185,24 @@ class GoatDatasetV1(PointNavDatasetV1):
             composite_episode.episode_id = str(i)
 
             if scenes_dir is not None:
-                if composite_episode.scene_id.startswith(DEFAULT_SCENE_PATH_PREFIX):
+                if composite_episode.scene_id.startswith(
+                    DEFAULT_SCENE_PATH_PREFIX
+                ):
                     composite_episode.scene_id = composite_episode.scene_id[
                         len(DEFAULT_SCENE_PATH_PREFIX) :
                     ]
 
-                composite_episode.scene_id = os.path.join(scenes_dir, composite_episode.scene_id)
-            
+                composite_episode.scene_id = os.path.join(
+                    scenes_dir, composite_episode.scene_id
+                )
+
             composite_episode.goals = []
-            for goal_key, task in zip(composite_episode.goals_keys_with_sequence(), composite_episode.tasks):
+            for goal_key, task in zip(
+                composite_episode.goals_keys_with_sequence(),
+                composite_episode.tasks,
+            ):
                 # composite_episode.goals[task_type] = {}
-                task_type = task['task_type']
+                task_type = task["task_type"]
                 # for goal_key in goal_keys:
                 composite_episode.goals.append(self.goals[task_type][goal_key])
 

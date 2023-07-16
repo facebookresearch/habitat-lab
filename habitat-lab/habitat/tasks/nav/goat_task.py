@@ -3,42 +3,20 @@
 # LICENSE file in the root directory of this source tree.
 
 import os
-import re
 from typing import TYPE_CHECKING, Any, List, Optional
 
 import attr
 import numpy as np
 from gym import spaces
 
+import habitat_sim
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import AgentState, Sensor, SensorTypes, RGBSensor
-
-from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import (
-    NavigationEpisode,
-    NavigationGoal,
-    NavigationTask,
-)
+from habitat.core.simulator import RGBSensor, Sensor, SensorTypes
+from habitat.tasks.nav.nav import NavigationEpisode, NavigationTask
 from habitat.utils.geometry_utils import quaternion_from_coeff
-
-import habitat_sim
 from habitat_sim import bindings as hsim
 from habitat_sim.agent.agent import AgentState, SixDOFPose
-
-
-from habitat.tasks.nav.object_nav_task import (
-    ObjectGoal,
-    ObjectGoalNavEpisode,
-    ObjectViewLocation,
-)
-
-try:
-    from habitat.datasets.object_nav.object_nav_dataset import (
-        ObjectNavDatasetV1,
-    )
-except ImportError:
-    pass
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -95,7 +73,6 @@ class MultiGoalSensor(Sensor):
         return SensorTypes.TEXT
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        min_tasks = 2
         max_tasks = 5
         max_landmarks = 20
         max_semantic_classes = 1000
@@ -104,19 +81,20 @@ class MultiGoalSensor(Sensor):
             "task_type": spaces.Text(min_length=0, max_length=30),
             "semantic_id": spaces.Box(low=0, high=max_semantic_classes),
             "target": spaces.Text(min_length=0, max_length=30),
-            "landmarks": spaces.Tuple([spaces.Text(min_length=0, max_length=30) for _ in range(max_landmarks)]),
+            "landmarks": spaces.Tuple(
+                [
+                    spaces.Text(min_length=0, max_length=30)
+                    for _ in range(max_landmarks)
+                ]
+            ),
             "image": self._sim.sensor_suite.observation_spaces.spaces[
                 self._rgb_sensor_uuid
-            ]
+            ],
         }
 
-        return spaces.Tuple([
-            spaces.Dict(goal_dict) for _ in range(max_tasks) 
-        ])
+        return spaces.Tuple([spaces.Dict(goal_dict) for _ in range(max_tasks)])
 
-    def _add_sensor(
-        self, img_params, sensor_uuid: str
-    ) -> None:
+    def _add_sensor(self, img_params, sensor_uuid: str) -> None:
         spec = habitat_sim.CameraSensorSpec()
         spec.uuid = sensor_uuid
         spec.sensor_type = habitat_sim.SensorType.COLOR
@@ -157,13 +135,17 @@ class MultiGoalSensor(Sensor):
         episode_uniq_id = f"{episode.scene_id} {episode.episode_id} {goal_idx}"
         if episode_uniq_id == self._current_episode_id:
             return self._current_image_goal
-        img_params = episode.goals[goal_idx][0].image_goals[episode.tasks[goal_idx]['goal_image_id']]
-        
+        img_params = episode.goals[goal_idx][0].image_goals[
+            episode.tasks[goal_idx]["goal_image_id"]
+        ]
+
         sensor_uuid = f"{self.cls_uuid}_sensor"
         self._add_sensor(img_params, sensor_uuid)
 
         self._sim._sensors[sensor_uuid].draw_observation()
-        self._current_image_goal = self._sim._sensors[sensor_uuid].get_observation()[:, :, :3]
+        self._current_image_goal = self._sim._sensors[
+            sensor_uuid
+        ].get_observation()[:, :, :3]
 
         self._remove_sensor(sensor_uuid)
 
@@ -174,7 +156,7 @@ class MultiGoalSensor(Sensor):
         self,
         observations,
         *args: Any,
-        episode, # TODO
+        episode,  # TODO
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
 
@@ -183,7 +165,7 @@ class MultiGoalSensor(Sensor):
                 f"No goal specified for episode {episode.episode_id}."
             )
             return None
-        
+
         # if not isinstance(episode.goals[0], ObjectGoal):
         #     logger.error(
         #         f"First goal should be ObjectGoal, episode {episode.episode_id}."
@@ -208,7 +190,9 @@ class MultiGoalSensor(Sensor):
                     landmarks.remove("wall")  # unhelpful landmark
 
                 target = "_".join(target.split())
-                landmarks = ["_".join(landmark.split()) for landmark in landmarks]
+                landmarks = [
+                    "_".join(landmark.split()) for landmark in landmarks
+                ]
 
                 goal["target"] = target
                 goal["landmarks"] = landmarks
@@ -218,7 +202,7 @@ class MultiGoalSensor(Sensor):
 
             if goal["target"] not in vocabulary:
                 vocabulary.append(goal["target"])
-            if "landmarks" in goal.keys():
+            if "landmarks" in goal:
                 if goal["landmarks"] not in vocabulary:
                     vocabulary += goal["landmarks"]
 
@@ -227,12 +211,12 @@ class MultiGoalSensor(Sensor):
         return goals
 
 
-
 @registry.register_task(name="Goat-v1")
-class GoatTask(NavigationTask): # TODO
+class GoatTask(NavigationTask):  # TODO
     r"""A GOAT Task class for a task specific methods.
     Used to explicitly state a type of the task in config.
     """
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class GoatEpisode(NavigationEpisode):
@@ -246,22 +230,22 @@ class GoatEpisode(NavigationEpisode):
     @property
     def goals_keys(self) -> str:
         r"""Dictionary of goals types and corresonding keys"""
-        goals_keys = {ep['task_type']: [] for ep in self.tasks}
+        goals_keys = {ep["task_type"]: [] for ep in self.tasks}
 
         for ep in self.tasks:
-            if ep['task_type'] == "objectnav":
+            if ep["task_type"] == "objectnav":
                 goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_category']}"
 
-            elif ep['task_type'] == "imagenav":
+            elif ep["task_type"] == "imagenav":
                 sid = os.path.basename(self.scene_id)
                 for x in [".glb", ".basis"]:
                     sid = sid[: -len(x)] if sid.endswith(x) else sid
                 goal_key = f"{sid}_{ep['goal_object_id']}"
-            
-            elif ep['task_type'] == "languagenav":
+
+            elif ep["task_type"] == "languagenav":
                 goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_instance_id']}"
-            
-            goals_keys[ep['task_type']].append(goal_key)
+
+            goals_keys[ep["task_type"]].append(goal_key)
 
         return goals_keys
 
@@ -270,18 +254,18 @@ class GoatEpisode(NavigationEpisode):
         goals_keys = []
 
         for ep in self.tasks:
-            if ep['task_type'] == "objectnav":
+            if ep["task_type"] == "objectnav":
                 goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_category']}"
 
-            elif ep['task_type'] == "imagenav":
+            elif ep["task_type"] == "imagenav":
                 sid = os.path.basename(self.scene_id)
                 for x in [".glb", ".basis"]:
                     sid = sid[: -len(x)] if sid.endswith(x) else sid
                 goal_key = f"{sid}_{ep['goal_object_id']}"
-            
-            elif ep['task_type'] == "languagenav":
+
+            elif ep["task_type"] == "languagenav":
                 goal_key = f"{os.path.basename(self.scene_id)}_{ep['object_instance_id']}"
-            
+
             goals_keys.append(goal_key)
 
         return goals_keys
