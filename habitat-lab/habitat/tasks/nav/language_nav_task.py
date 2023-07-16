@@ -2,39 +2,20 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import os
-import re
-from typing import TYPE_CHECKING, Any, List, Optional
+from typing import TYPE_CHECKING, Any, Optional
 
-import attr
 import numpy as np
 from gym import spaces
 
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import AgentState, Sensor, SensorTypes
-from habitat.core.utils import not_none_validator
-from habitat.tasks.nav.nav import (
-    NavigationEpisode,
-    NavigationGoal,
-    NavigationTask,
-)
-
-from habitat.tasks.nav.object_nav_task import (
-    ObjectGoal,
-    ObjectGoalNavEpisode,
-    ObjectViewLocation,
-)
-
-try:
-    from habitat.datasets.object_nav.object_nav_dataset import (
-        ObjectNavDatasetV1,
-    )
-except ImportError:
-    pass
+from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.nav.nav import NavigationTask
+from habitat.tasks.nav.object_nav_task import ObjectGoal
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
+
 
 @registry.register_sensor
 class LanguageGoalSensor(Sensor):
@@ -72,28 +53,34 @@ class LanguageGoalSensor(Sensor):
         return SensorTypes.TEXT
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-        # sensor_shape = (1,)
-        # max_value = self.config.goal_spec_max_val - 1
-        # if self.config.goal_spec == "TASK_CATEGORY_ID":
-        #     max_value = max(
-        #         self._dataset.category_to_task_category_id.values()
-        #     )
+
         max_landmarks = 10
         max_rooms = 2
-        return spaces.Dict({
-            "category_name": spaces.Text(min_length=0, max_length=30),
-            "caption": spaces.Text(min_length=0, max_length=200),
-            "target": spaces.Text(min_length=0, max_length=50),
-            "landmarks": spaces.Tuple([spaces.Text(min_length=0, max_length=30) for _ in range(max_landmarks)]),
-            "rooms": spaces.Tuple([spaces.Text(min_length=0, max_length=30) for _ in range(max_rooms)]),
-        })
-
+        return spaces.Dict(
+            {
+                "category_name": spaces.Text(min_length=0, max_length=30),
+                "caption": spaces.Text(min_length=0, max_length=200),
+                "target": spaces.Text(min_length=0, max_length=50),
+                "landmarks": spaces.Tuple(
+                    [
+                        spaces.Text(min_length=0, max_length=30)
+                        for _ in range(max_landmarks)
+                    ]
+                ),
+                "rooms": spaces.Tuple(
+                    [
+                        spaces.Text(min_length=0, max_length=30)
+                        for _ in range(max_rooms)
+                    ]
+                ),
+            }
+        )
 
     def get_observation(
         self,
         observations,
         *args: Any,
-        episode, # TODO
+        episode,  # TODO
         **kwargs: Any,
     ) -> Optional[np.ndarray]:
 
@@ -117,12 +104,12 @@ class LanguageGoalSensor(Sensor):
             "category_name": category_name,
             "caption": caption,
             "landmarks": landmarks,
-            "target": target
+            "target": target,
         }
 
 
 @registry.register_task(name="LanguageNav-v1")
-class LanguageNavigationTask(NavigationTask): # TODO
+class LanguageNavigationTask(NavigationTask):  # TODO
     r"""A Language Navigation Task class for a task specific methods.
     Used to explicitly state a type of the task in config.
     """

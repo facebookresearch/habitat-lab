@@ -5,19 +5,20 @@ import os
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Sequence
 
 import attr
+
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState, ShortestPathPoint
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import (
-    CONTENT_SCENES_PATH_FIELD, DEFAULT_SCENE_PATH_PREFIX, PointNavDatasetV1)
+    CONTENT_SCENES_PATH_FIELD,
+    DEFAULT_SCENE_PATH_PREFIX,
+    PointNavDatasetV1,
+)
 from habitat.tasks.nav.object_nav_task import (
     ObjectGoal,
     ObjectGoalNavEpisode,
     ObjectViewLocation,
 )
-import habitat.tasks.nav.language_nav_task
-
-# from ovon.dataset.ovon_dataset import OVONObjectViewLocation
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -31,6 +32,7 @@ class OVONObjectViewLocation(ObjectViewLocation):
         raidus: radius of the circle
     """
     radius: Optional[float] = None
+
 
 @attr.s(auto_attribs=True, kw_only=True)
 class LanguageNavEpisode(ObjectGoalNavEpisode):
@@ -127,8 +129,8 @@ class LanguageNavDatasetV1(PointNavDatasetV1):
 
         for i, episode in enumerate(deserialized["episodes"]):
             episode = LanguageNavEpisode(**episode)
-            if 'target' not in episode.llm_response.keys():
-                import pdb;pdb.set_trace()
+            assert "target" in episode.llm_response
+
             episode.episode_id = str(i)
 
             if scenes_dir is not None:
