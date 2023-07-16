@@ -6,6 +6,7 @@
 
 from habitat.core.embodied_task import EmbodiedTask
 from habitat.core.registry import registry
+from habitat.sims.habitat_simulator.actions import HabitatSimActions
 
 
 def _try_register_nav_task():
@@ -18,3 +19,6 @@ def _try_register_nav_task():
         class NavigationTaskImportError(EmbodiedTask):
             def __init__(self, *args, **kwargs):
                 raise navtask_import_error
+
+    if not HabitatSimActions.has_action("goat_sub-task_stop"):
+        HabitatSimActions.extend_action_space("goat_sub-task_stop")

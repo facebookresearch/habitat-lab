@@ -200,6 +200,16 @@ class AnswerActionConfig(ActionConfig):
 
 
 # -----------------------------------------------------------------------------
+# # GOAT actions
+# -----------------------------------------------------------------------------
+
+
+@attr.s(auto_attribs=True, slots=True)
+class GOATSubTaskStopActionConfig(ActionConfig):
+    type: str = "GOATSubTaskStopAction"
+
+
+# -----------------------------------------------------------------------------
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
 @attr.s(auto_attribs=True, slots=True)
@@ -225,9 +235,11 @@ class ObjectGoalSensorConfig(LabSensorConfig):
     goal_spec: str = "TASK_CATEGORY_ID"
     goal_spec_max_val: int = 50
 
+
 @attr.s(auto_attribs=True, slots=True)
 class LanguageGoalSensorConfig(LabSensorConfig):
     type: str = "LanguageGoalSensor"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class MultiGoalSensorConfig(LabSensorConfig):
@@ -488,8 +500,19 @@ class SuccessMeasurementConfig(MeasurementConfig):
 
 
 @attr.s(auto_attribs=True, slots=True)
+class GOATSubTaskSuccessMeasurementConfig(MeasurementConfig):
+    type: str = "GOATSubTaskSuccess"
+    success_distance: float = 0.2
+
+
+@attr.s(auto_attribs=True, slots=True)
 class SPLMeasurementConfig(MeasurementConfig):
     type: str = "SPL"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class GOATSubTaskSPLMeasurementConfig(MeasurementConfig):
+    type: str = "GOATSubTaskSPL"
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -515,6 +538,24 @@ class TopDownMapMeasurementConfig(MeasurementConfig):
     draw_source: bool = True
     draw_border: bool = True
     draw_shortest_path: bool = True
+    draw_view_points: bool = True
+    draw_goal_positions: bool = True
+    # axes aligned bounding boxes
+    draw_goal_aabbs: bool = True
+    fog_of_war: FogOfWarConfig = FogOfWarConfig()
+
+
+@attr.s(auto_attribs=True, slots=True)
+class GOATTopDownMapMeasurementConfig(MeasurementConfig):
+    type: str = "GOATTopDownMap"
+    max_episode_steps: int = (
+        EnvironmentConfig().max_episode_steps
+    )  # TODO : Use OmegaConf II()
+    map_padding: int = 3
+    map_resolution: int = 1024
+    draw_source: bool = True
+    draw_border: bool = True
+    draw_shortest_path: bool = False
     draw_view_points: bool = True
     draw_goal_positions: bool = True
     # axes aligned bounding boxes
@@ -873,6 +914,15 @@ class DistanceToGoalMeasurementConfig(MeasurementConfig):
     distance_to: str = "POINT"
     goals_attr: str = "goals"
     distance_from: str = "BASE"
+
+
+@attr.s(auto_attribs=True, slots=True)
+class GOATDistanceToSubGoalMeasurementConfig(MeasurementConfig):
+    type: str = "GOATDistanceToSubGoal"
+    distance_to: str = "POINT"
+    goals_attr: str = "goals"
+    distance_from: str = "BASE"
+
 
 @attr.s(auto_attribs=True, slots=True)
 class DistanceToGoalInstanceMeasurementConfig(MeasurementConfig):
@@ -1406,6 +1456,12 @@ cs.store(
     node=RearrangeStopActionConfig,
 )
 cs.store(
+    package="habitat.task.actions.goat_sub-task_stop",
+    group="habitat/task/actions",
+    name="goat_sub-task_stop",
+    node=GOATSubTaskStopActionConfig,
+)
+cs.store(
     package="habitat.task.actions.answer",
     group="habitat/task/actions",
     name="answer",
@@ -1747,10 +1803,22 @@ cs.store(
     node=TopDownMapMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.goat_top_down_map",
+    group="habitat/task/measurements",
+    name="goat_top_down_map",
+    node=GOATTopDownMapMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.distance_to_goal",
     group="habitat/task/measurements",
     name="distance_to_goal",
     node=DistanceToGoalMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.goat_distance_to_sub-goal",
+    group="habitat/task/measurements",
+    name="goat_distance_to_sub-goal",
+    node=GOATDistanceToSubGoalMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.distance_to_goal_instance",
@@ -1771,10 +1839,22 @@ cs.store(
     node=SuccessMeasurementConfig,
 )
 cs.store(
+    package="habitat.task.measurements.goat_sub-task_success",
+    group="habitat/task/measurements",
+    name="goat_sub-task_success",
+    node=GOATSubTaskSuccessMeasurementConfig,
+)
+cs.store(
     package="habitat.task.measurements.spl",
     group="habitat/task/measurements",
     name="spl",
     node=SPLMeasurementConfig,
+)
+cs.store(
+    package="habitat.task.measurements.goat_sub-task_spl",
+    group="habitat/task/measurements",
+    name="goat_sub-task_spl",
+    node=GOATSubTaskSPLMeasurementConfig,
 )
 cs.store(
     package="habitat.task.measurements.soft_spl",
