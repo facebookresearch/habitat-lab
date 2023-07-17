@@ -33,7 +33,6 @@ class TurnSkillPolicy(SkillPolicy):
         )
 
         full_action[:, self._nav_ac_start + 1] = self._turn_power
-        print("turn")
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
@@ -70,7 +69,6 @@ class MoveSkillPolicy(SkillPolicy):
             full_action[:, self._nav_ac_start] = self._turn_power_fwd
         if self._turn_power_side != 0:
             full_action[:, self._nav_ac_start + 1] = self._turn_power_side
-        print("move")
         return PolicyActionData(
             actions=full_action, rnn_hidden_states=rnn_hidden_states
         )
