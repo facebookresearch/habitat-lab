@@ -21,7 +21,7 @@ NO_CONCUR="habitat.simulator.concur_render=False"
 
 #number of processes
 # shellcheck disable=SC2043
-for j in 1 8
+for j in 1 6
 do
   #number of trials
   for i in {1..10}

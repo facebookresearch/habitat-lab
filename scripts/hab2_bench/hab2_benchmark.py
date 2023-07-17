@@ -95,7 +95,7 @@ class HabDemoRunner:
         if self.args.n_gpus == 8:
             cores_per_proc = 8
         else:
-            cores_per_proc = 16
+            cores_per_proc = 6
 
         if platform != "darwin":
             # cpu_affinity only supported on linux/windows
