@@ -165,6 +165,9 @@ jobs:
               python -c 'import torch; print("Has cuda?", torch.cuda.is_available()); print("torch version:", torch.__version__);'
       - restore_cache:
           keys:
+            - v1-habitat-sim-{{ checksum "./hsim_sha" }}-{{ checksum "./date" }}
+      - restore_cache:
+          keys:
             - ccache-{{ arch }}-main-{{ checksum "./date" }}
           paths:
             - /home/circleci/.ccache
@@ -187,10 +190,6 @@ jobs:
               export PATH=$HOME/miniconda/bin:/usr/local/cuda/bin:$PATH
               . activate habitat;
               cd habitat-sim
-
-              #clone corresponding test branch for sim
-              git checkout --track origin/datasets_download-huggingface
-
               pip install -r requirements.txt --progress-bar off
               pip install imageio imageio-ffmpeg
               python -u setup.py install --headless --with-cuda --bullet
