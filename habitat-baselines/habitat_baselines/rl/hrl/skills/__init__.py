@@ -11,7 +11,10 @@ from habitat_baselines.rl.hrl.skills.pick import PickSkillPolicy
 from habitat_baselines.rl.hrl.skills.place import PlaceSkillPolicy
 from habitat_baselines.rl.hrl.skills.reset import ResetArmSkill
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
-from habitat_baselines.rl.hrl.skills.turn import TurnSkillPolicy
+from habitat_baselines.rl.hrl.skills.turn import (
+    MoveSkillPolicy,
+    TurnSkillPolicy,
+)
 from habitat_baselines.rl.hrl.skills.wait import WaitSkillPolicy
 
 __all__ = [
@@ -26,4 +29,5 @@ __all__ = [
     "WaitSkillPolicy",
     "NoopSkillPolicy",
     "TurnSkillPolicy",
+    "MoveSkillPolicy",
 ]
