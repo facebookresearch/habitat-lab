@@ -96,7 +96,7 @@ if __name__ == "__main__":
     )
     failed_runs.extend(
         check_benchmark_sps(
-            NAME_MAP, MINIMUM_PERFORMANCE_16_PROCESS, "8_200_-1_"
+            NAME_MAP, MINIMUM_PERFORMANCE_16_PROCESS, "6_200_-1_"
         )
     )
 
