@@ -86,7 +86,7 @@ __all__ = [
 ]
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatBaseConfig:
     pass
 
@@ -318,6 +318,39 @@ class HumanoidJointActionConfig(ActionConfig):
 
 
 @dataclass
+class BaseVelocityNonCylinderActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only for the non cylinder shape of the robot. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
+    """
+    type: str = "BaseVelNonCylinderAction"
+    # The max longitudinal and lateral linear speeds of the robot
+    longitudinal_lin_speed: float = 10.0
+    lateral_lin_speed: float = 10.0
+    # The max angular speed of the robot
+    ang_speed: float = 10.0
+    # If we want to do sliding or not
+    allow_dyn_slide: bool = False
+    # If we allow the robot to move back or not
+    allow_back: bool = True
+    # There is a collision if the difference between the clamped NavMesh position and target position
+    # is more than collision_threshold for any point.
+    collision_threshold: float = 1e-5
+    # The x and y locations of the clamped NavMesh position
+    navmesh_offset: Optional[List[float]] = None
+    # If we allow the robot to move laterally.
+    enable_lateral_move: bool = False
+
+
+@dataclass
+class HumanoidJointActionConfig(ActionConfig):
+    r"""
+    In Rearrangement only. Corresponds to actions to change the humanoid joints. Contains the parameter num_joints, indicating the joints that can be modified.
+    """
+    type: str = "HumanoidJointAction"
+    num_joints: int = 17
+
+
+@dataclass
 class RearrangeStopActionConfig(ActionConfig):
     r"""
     In rearrangement tasks only, if the robot calls this action, the task will end.
@@ -329,6 +362,11 @@ class RearrangeStopActionConfig(ActionConfig):
 class ManipulationModeActionConfig(ActionConfig):
     type: str = "ManipulationModeAction"
     threshold: float = 0.8
+
+
+@dataclass
+class PddlApplyActionConfig(ActionConfig):
+    type: str = "PddlApplyAction"
 
 
 @dataclass
@@ -1398,6 +1436,16 @@ class PickDistanceToGoalMeasurementConfig(DistanceToGoalMeasurementConfig):
     type: str = "PickDistanceToGoal"
 
 
+@dataclass
+class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
+    r"""
+    In Navigation tasks only, measures a reward based on the distance towards the goal.
+    The reward is `- (new_distance - previous_distance)` i.e. the
+    decrease of distance to the goal.
+    """
+    type: str = "DistanceToGoalReward"
+
+
 @attr.s(auto_attribs=True, slots=True)
 class PickDistanceToGoalRewardMeasurementConfig(MeasurementConfig):
     type: str = "PickDistanceToGoalReward"
@@ -1636,6 +1684,20 @@ class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     height: int = 256
 
 
+@dataclass
+class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
+    uuid: str = "articulated_agent_arm_rgb"
+    width: int = 256
+    height: int = 256
+
+
+@dataclass
+class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
+    uuid: str = "articulated_agent_arm_panoptic"
+    width: int = 256
+    height: int = 256
+
+
 @attr.s(auto_attribs=True, slots=True)
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "head_panoptic"
@@ -1689,6 +1751,20 @@ class AgentConfig(HabitatBaseConfig):
     ] = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
+
+
+@dataclass
+class RendererConfig(HabitatBaseConfig):
+    r"""Configuration for the renderer.
+
+    :property enable_batch_renderer: [Experimental] Enables batch rendering, which accelerates rendering for concurrent environments. See env_batch_renderer.py for details.
+    :property composite_files: List of composite GLTF files to be pre-loaded by the batch renderer.
+    :property classic_replay_renderer: For debugging. Create a ClassicReplayRenderer instead of BatchReplayRenderer when enable_batch_renderer is active.
+    """
+
+    enable_batch_renderer: bool = False
+    composite_files: Optional[List[str]] = None
+    classic_replay_renderer: bool = False
 
 
 @dataclass

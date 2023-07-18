@@ -1170,6 +1170,7 @@ class TurnRightAction(SimulatorTaskAction):
         ``step``.
         """
         rotate_action(self._sim, direction="right")
+
         return self._sim.step(HabitatSimActions.turn_right)
 
 

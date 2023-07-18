@@ -373,7 +373,7 @@ class RLConfig(HabitatBaselinesBaseConfig):
     ppo: PPOConfig = PPOConfig()
     ddppo: DDPPOConfig = DDPPOConfig()
     ver: VERConfig = VERConfig()
-    auxiliary_losses: Dict[str, AuxLossConfig] = dict()
+    auxiliary_losses: Dict[str, AuxLossConfig] = field(default_factory=dict)
 
 
 @dataclass

@@ -277,7 +277,7 @@ class DynNavRLEnv(RearrangeTask):
             rom = sim.get_rigid_object_manager()
             # Visualize the position the agent is navigating to.
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
-                # self._nav_to_info.nav_goal_pos,
+                # self._nav_to_info.nav_goal_pos, #TODO: adapt this for OVMM
                 np.array(
                     rom.get_object_by_id(
                         int(episode.candidate_objects[0].object_id)

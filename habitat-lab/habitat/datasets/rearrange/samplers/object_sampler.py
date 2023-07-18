@@ -419,6 +419,32 @@ class ObjectSampler:
 
         return None
 
+    def _is_accessible(
+        self,
+        sim: habitat_sim.Simulator,
+        obj: habitat_sim.physics.ManagedRigidObject,
+    ) -> bool:
+        """
+        Return if the object is within a threshold distance of the nearest
+        navigable point and that the nearest navigable point is on the same
+        navigation mesh.
+
+        Note that this might not catch all edge cases since the distance is
+        based on Euclidean distance. The nearest navigable point may be
+        separated from the object by an obstacle.
+        """
+        if self.nav_to_min_distance == -1:
+            return True
+        snapped = sim.pathfinder.snap_point(obj.translation)
+        island_radius: float = sim.pathfinder.island_radius(snapped)
+        dist = float(
+            np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
+        )
+        return (
+            dist < self.nav_to_min_distance
+            and island_radius == self.largest_island_size
+        )
+
     def single_sample(
         self,
         sim: habitat_sim.Simulator,

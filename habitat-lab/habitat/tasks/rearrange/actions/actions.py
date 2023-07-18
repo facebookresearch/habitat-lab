@@ -125,7 +125,6 @@ class ArmRelPosAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
-        self._max_delta_pos = self._config.delta_pos_limit
 
     @property
     def action_space(self):

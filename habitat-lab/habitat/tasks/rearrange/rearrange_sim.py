@@ -390,11 +390,6 @@ class RearrangeSim(HabitatSim):
             self._start_art_states = {
                 ao: ao.joint_positions for ao in self.art_objs
             }
-        rom = self.get_rigid_object_manager()
-        for i, handle in enumerate(rom.get_object_handles()):
-            obj = rom.get_object_by_handle(handle)
-            for node in obj.visual_scene_nodes:
-                node.semantic_id = obj.object_id + self._object_ids_start
 
         if self._should_setup_semantic_ids:
             self._setup_semantic_ids()
@@ -406,9 +401,7 @@ class RearrangeSim(HabitatSim):
         for i, handle in enumerate(rom.get_object_handles()):
             obj = rom.get_object_by_handle(handle)
             for node in obj.visual_scene_nodes:
-                node.semantic_id = (
-                    obj.object_id + self.habitat_config.object_ids_start
-                )
+                node.semantic_id = obj.object_id + self._object_ids_start
 
     def get_agent_data(self, agent_idx: Optional[int]):
         if agent_idx is None:
@@ -1006,7 +999,7 @@ class RearrangeSim(HabitatSim):
 
         Never call sim.step_world directly or miss updating the articulated_agent.
         """
-        # optionally step physics and update the robot for benchmarking purposes
+        # Optionally step physics and update the articulated_agent for benchmarking purposes
         if self._step_physics:
             self.step_world(dt)
 
