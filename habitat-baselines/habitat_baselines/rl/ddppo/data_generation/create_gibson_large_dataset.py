@@ -93,7 +93,7 @@ def generate_gibson_large_dataset():
     safe_mkdir("./data/datasets/pointnav/gibson/v2/train_large")
     with multiprocessing.Pool(8) as pool, tqdm.tqdm(total=len(scenes)) as pbar:
         for _ in pool.imap_unordered(_generate_fn, scenes):
-            pbar.update()
+            pbar.update()  # type: ignore[attr-defined]
 
     path = "./data/datasets/pointnav/gibson/v2/train_large/train_large.json.gz"
     with gzip.open(path, "wt") as f:

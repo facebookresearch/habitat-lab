@@ -8,6 +8,7 @@ import gym.spaces as spaces
 import torch
 
 from habitat_baselines.rl.hrl.skills.skill import SkillPolicy
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class WaitSkillPolicy(SkillPolicy):
@@ -28,7 +29,7 @@ class WaitSkillPolicy(SkillPolicy):
         self, observations, rnn_hidden_states, prev_actions, masks, batch_idx
     ) -> torch.BoolTensor:
         assert self._wait_time > 0
-        return self._cur_skill_step >= self._wait_time
+        return (self._cur_skill_step >= self._wait_time)[batch_idx]
 
     def _internal_act(
         self,
@@ -39,5 +40,9 @@ class WaitSkillPolicy(SkillPolicy):
         cur_batch_idx,
         deterministic=False,
     ):
-        action = torch.zeros(prev_actions.shape, device=prev_actions.device)
-        return action, rnn_hidden_states
+        action = torch.zeros(
+            (masks.shape[0], self._full_ac_size), device=prev_actions.device
+        )
+        return PolicyActionData(
+            actions=action, rnn_hidden_states=rnn_hidden_states
+        )

@@ -33,7 +33,7 @@ class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
 
     def get_base_position(self):
         assert isinstance(self._sim, RearrangeSim)
-        return self._sim.robot.base_pos
+        return self._sim.articulated_agent.base_pos
 
     def get_end_effector_position(self):
         assert isinstance(self._sim, RearrangeSim)
@@ -181,7 +181,7 @@ class RearrangePickReward(RearrangeReward):
         )
         closest_goal_index = np.argmin(
             np.linalg.norm(
-                np.expand_dims(self._sim.robot.base_pos, 0) - targets, axis=1
+                np.expand_dims(self._sim.articulated_agent.base_pos, 0) - targets, axis=1
             )
         )
         targ = targets[closest_goal_index]

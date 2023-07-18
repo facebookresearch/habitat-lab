@@ -11,7 +11,7 @@ habitat:
   gym:
     auto_name: NavToObj
     obs_keys:
-      - robot_head_depth
+      - head_depth
       - ovmm_nav_goal_segmentation
       - receptacle_segmentation
       - goal_receptacle

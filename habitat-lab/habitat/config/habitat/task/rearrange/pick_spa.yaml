@@ -6,8 +6,8 @@ defaults:
     - arm_action
     - empty
   - /habitat/task/measurements:
-    - robot_force
-    - robot_colls
+    - articulated_agent_force
+    - articulated_agent_colls
     - force_terminate
     - end_effector_to_rest_distance
     - end_effector_to_object_distance
@@ -35,10 +35,6 @@ should_enforce_target_within_reach: False
 base_angle_noise: 0.15
 base_noise: 0.05
 force_regenerate: False
-
-# If true, does not care about navigability or collisions with objects when spawning
-# robot
-easy_init: False
 
 actions:
   arm_action:

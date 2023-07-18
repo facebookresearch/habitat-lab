@@ -26,7 +26,7 @@ try:
     from habitat_baselines.common.baseline_registry import baseline_registry
     from habitat_baselines.config.default import get_config
     from habitat_baselines.rl.ddppo.ddp_utils import find_free_port
-    from habitat_baselines.run import execute_exp, run_exp
+    from habitat_baselines.run import execute_exp
     from habitat_baselines.utils.common import batch_obs
 
     baseline_installed = True
@@ -39,7 +39,7 @@ from habitat.config.default_structured_configs import (
     HeadDepthSensorConfig,
     HeadRGBSensorConfig,
 )
-from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.gym import make_gym_from_config
 from habitat_baselines.config.default_structured_configs import (
     Cube2EqConfig,
     Cube2FishConfig,
@@ -72,9 +72,7 @@ def download_data():
     )
     + list(
         itertools.product(
-            [
-                "habitat-baselines/habitat_baselines/config/test/ppo_pointnav_test.yaml"
-            ],
+            ["test/config/habitat_baselines/ppo_pointnav_test.yaml"],
             [True],
             [
                 [],
@@ -96,9 +94,9 @@ def test_trainers(
         "habitat-baselines/habitat_baselines/config/", ""
     )
 
-    config = get_config(test_cfg_cleaned_path).habitat.dataset
-    dataset = make_dataset(id_dataset=config.type)
-    if not dataset.check_config_paths_exist(config):
+    dataset_config = get_config(test_cfg_cleaned_path).habitat.dataset
+    dataset = make_dataset(id_dataset=dataset_config.type)
+    if not dataset.check_config_paths_exist(dataset_config):
         pytest.skip("Test skipped as dataset files are missing.")
 
     if gpu2gpu:
@@ -111,14 +109,14 @@ def test_trainers(
             pytest.skip("GPU-GPU requires CUDA")
 
     try:
-        run_exp(
+        baselines_config = get_config(
             test_cfg_cleaned_path,
-            mode,
             [
                 f"habitat.simulator.habitat_sim_v0.gpu_gpu={str(gpu2gpu)}",
             ]
             + observation_transforms_overrides,
         )
+        execute_exp(baselines_config, mode)
     finally:
         # Needed to destroy the trainer
         gc.collect()
@@ -134,7 +132,7 @@ def test_trainers(
 @pytest.mark.parametrize(
     "test_cfg_path",
     (
-        "test/ddppo_pointnav_test.yaml",
+        "test/config/habitat_baselines/ddppo_pointnav_test.yaml",
         "rearrange/rl_skill.yaml",
     ),
 )
@@ -148,9 +146,8 @@ def test_ver_trainer(
     # For testing with world_size=1
     os.environ["MAIN_PORT"] = str(find_free_port())
     try:
-        run_exp(
+        baselines_config = get_config(
             test_cfg_path,
-            "train",
             [
                 "habitat_baselines.num_environments=4",
                 "habitat_baselines.trainer_name=ver",
@@ -163,6 +160,7 @@ def test_ver_trainer(
                 "habitat_baselines.rl.ppo.num_steps=16",
             ],
         )
+        execute_exp(baselines_config, "train")
     finally:
         # Needed to destroy the trainer
         gc.collect()
@@ -174,16 +172,12 @@ def test_ver_trainer(
 
 def test_cpca():
     cfg = get_config(
-        "test/ppo_pointnav_test.yaml",
+        "test/config/habitat_baselines/ppo_pointnav_test.yaml",
         ["+habitat_baselines/rl/auxiliary_losses=cpca"],
     )
     assert "cpca" in cfg.habitat_baselines.rl.auxiliary_losses
 
-    run_exp(
-        "test/ppo_pointnav_test.yaml",
-        "train",
-        ["+habitat_baselines/rl/auxiliary_losses=cpca"],
-    )
+    execute_exp(cfg, "train")
 
 
 @pytest.mark.skipif(
@@ -193,7 +187,7 @@ def test_cpca():
     "test_cfg_path,mode",
     [
         [
-            "test/ppo_pointnav_test.yaml",
+            "test/config/habitat_baselines/ppo_pointnav_test.yaml",
             "train",
         ],
     ],
@@ -298,7 +292,7 @@ def test_cubemap_stiching(
         # Extract input and output cubemap
         output_cube = batch_cube[cube2equirect.target_uuids[0]]
         input_cube = [orig_batch[key] for key in sensor_uuids]
-        input_cube = torch.stack(input_cube, axis=1)
+        input_cube = torch.stack(input_cube, dim=1)  # type: ignore[arg-type]
         input_cube = torch.flatten(input_cube, end_dim=1)
 
         # Apply blur to absorb difference (blur, etc.) caused by conversion
@@ -331,13 +325,19 @@ def test_eval_config():
         "habitat_baselines.load_resume_state_config=False",
     ]
 
-    ckpt_cfg = get_config("test/ppo_pointnav_test.yaml", ckpt_opts)
+    ckpt_cfg = get_config(
+        "test/config/habitat_baselines/ppo_pointnav_test.yaml", ckpt_opts
+    )
     assert ckpt_cfg.habitat_baselines.eval.video_option == []
 
-    eval_cfg = get_config("test/ppo_pointnav_test.yaml", eval_opts)
+    eval_cfg = get_config(
+        "test/config/habitat_baselines/ppo_pointnav_test.yaml", eval_opts
+    )
     assert eval_cfg.habitat_baselines.eval.video_option == ["disk"]
 
-    trainer = BaseRLTrainer(get_config("test/ppo_pointnav_test.yaml"))
+    trainer = BaseRLTrainer(
+        get_config("test/config/habitat_baselines/ppo_pointnav_test.yaml")
+    )
 
     returned_config = trainer._get_resume_state_config_or_new_config(
         resume_state_config=ckpt_cfg

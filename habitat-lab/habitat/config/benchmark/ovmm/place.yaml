@@ -11,7 +11,7 @@ habitat:
   gym:
     auto_name: Place
     obs_keys:
-      - robot_head_depth
+      - head_depth
       - goal_receptacle
       - object_embedding
       - goal_recep_segmentation

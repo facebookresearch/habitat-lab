@@ -23,7 +23,7 @@ from habitat.utils.geometry_utils import (
 )
 from habitat.utils.test_utils import sample_non_stop_action
 
-CFG_TEST = "test/habitat_mp3d_eqa_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_mp3d_eqa_test.yaml"
 CLOSE_STEP_THRESHOLD = 0.028
 OLD_STOP_ACTION_ID = 3
 
@@ -103,7 +103,6 @@ def test_mp3d_eqa_dataset():
 
 @pytest.mark.parametrize("split", ["train", "val"])
 def test_dataset_splitting(split):
-
     dataset_config = get_config(CFG_TEST).habitat.dataset
     with habitat.config.read_write(dataset_config):
         dataset_config.split = split

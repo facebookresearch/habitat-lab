@@ -18,7 +18,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
     DoesWantTerminate,
     RearrangeReward,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface
+from habitat.tasks.rearrange.utils import UsesArticulatedAgentInterface
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import quaternion_from_coeff
 
@@ -29,7 +29,7 @@ BASE_ACTION_NAME = "base_velocity"
 
 
 @registry.register_sensor
-class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
+class NavGoalPointGoalSensor(UsesArticulatedAgentInterface, Sensor):
     """
     GPS and compass sensor relative to the starting object position or goal
     position.
@@ -57,11 +57,13 @@ class NavGoalPointGoalSensor(UsesRobotInterface, Sensor):
         )
 
     def get_observation(self, task, *args, **kwargs):
-        robot_T = self._sim.get_robot_data(
-            self.robot_id
-        ).robot.base_transformation
+        articulated_agent_T = self._sim.get_agent_data(
+            self.agent_id
+        ).articulated_agent.base_transformation
 
-        dir_vector = robot_T.inverted().transform_point(task.nav_goal_pos)
+        dir_vector = articulated_agent_T.inverted().transform_point(
+            task.nav_goal_pos
+        )
         rho, phi = cartesian_to_polar(dir_vector[0], dir_vector[1])
 
         return np.array([rho, -phi], dtype=np.float32)
@@ -90,7 +92,7 @@ class OracleNavigationActionSensor(Sensor):
         )
 
     def _path_to_point(self, point):
-        agent_pos = self._sim.robot.base_pos
+        agent_pos = self._sim.articulated_agent.base_pos
 
         path = habitat_sim.ShortestPath()
         path.requested_start = agent_pos
@@ -218,7 +220,7 @@ class DistToGoal(Measure):
     def _get_cur_geo_dist(self, task, episode):
         goals = self._get_goals(task, episode)
         distance_to_target = self._sim.geodesic_distance(
-            self._sim.robot.base_pos,
+            self._sim.articulated_agent.base_pos,
             goals,
             episode=episode if self._use_shortest_path_cache else None,
         )
@@ -252,7 +254,7 @@ class RobotStartGPSSensor(EpisodicGPSSensor):
         )
 
     def get_agent_current_position(self, sim):
-        return sim.robot.sim_obj.translation
+        return sim.articulated_agent.sim_obj.translation
 
 
 @registry.register_sensor(name="RobotStartCompassSensor")
@@ -268,7 +270,7 @@ class RobotStartCompassSensor(EpisodicCompassSensor):
         )
 
     def get_agent_current_rotation(self, sim):
-        curr_quat = sim.robot.sim_obj.rotation
+        curr_quat = sim.articulated_agent.sim_obj.rotation
         curr_rotation = [
             curr_quat.vector.x,
             curr_quat.vector.y,
@@ -301,7 +303,7 @@ class RotDistToGoal(Measure):
     def _get_targ(self, task, episode):
         if len(task.nav_goal_pos.shape) == 2:
             path = habitat_sim.MultiGoalShortestPath()
-            path.requested_start = self._sim.robot.base_pos
+            path.requested_start = self._sim.articulated_agent.base_pos
             path.requested_ends = task.nav_goal_pos
             self._sim.pathfinder.find_path(path)
             assert (
@@ -315,9 +317,8 @@ class RotDistToGoal(Measure):
 
     def update_metric(self, *args, episode, task, observations, **kwargs):
         targ = self._get_targ(task, episode)
-
-        robot = self._sim.robot
-
+        # Get the agent
+        robot = self._sim.articulated_agent
         # Get the base transformation
         T = robot.base_transformation
         # Do transformation

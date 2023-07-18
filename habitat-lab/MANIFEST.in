@@ -1,0 +1,6 @@
+graft habitat/config
+graft habitat/utils/visualizations/assets
+graft habitat/tasks/rearrange/multi_task/domain_configs
+graft habitat/datasets/rearrange/configs
+include habitat/py.typed
+include requirements.txt

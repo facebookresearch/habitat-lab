@@ -200,7 +200,6 @@ class InstanceImageGoalSensor(RGBSensor):
         episode: InstanceImageGoalNavEpisode,
         **kwargs: Any,
     ) -> Optional[VisualObservation]:
-
         if len(episode.goals) == 0:
             logger.error(
                 f"No goal specified for episode {episode.episode_id}."
@@ -243,7 +242,6 @@ class InstanceImageGoalHFOVSensor(Sensor):
     def get_observation(
         self, *args: Any, episode: InstanceImageGoalNavEpisode, **kwargs: Any
     ) -> np.ndarray:
-
         if len(episode.goals) == 0:
             logger.error(
                 f"No goal specified for episode {episode.episode_id}."

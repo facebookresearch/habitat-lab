@@ -3,7 +3,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/facebookresearch/habitat-lab/blob/main/LICENSE)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/facebookresearch/habitat-lab)](https://github.com/facebookresearch/habitat-lab/releases/latest)
 [![Supports Habitat_Sim](https://img.shields.io/static/v1?label=supports&message=Habitat%20Sim&color=informational&link=https://github.com/facebookresearch/habitat-sim)](https://github.com/facebookresearch/habitat-sim)
-[![Python 3.7](https://img.shields.io/badge/python-3.7-blue.svg)](https://www.python.org/downloads/release/python-370/)
+[![Python 3.9](https://img.shields.io/badge/python-3.9-blue.svg)](https://www.python.org/downloads/release/python-390/)
 [![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://github.com/pre-commit/pre-commit)
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 [![Imports: isort](https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336)](https://timothycrosley.github.io/isort/)
@@ -60,8 +60,8 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
 
    Assuming you have [conda](https://docs.conda.io/projects/conda/en/latest/user-guide/install/) installed, let's prepare a conda env:
    ```bash
-   # We require python>=3.7 and cmake>=3.10
-   conda create -n habitat python=3.7 cmake=3.14.0
+   # We require python>=3.9 and cmake>=3.14
+   conda create -n habitat python=3.9 cmake=3.14.0
    conda activate habitat
    ```
 
@@ -101,49 +101,43 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
       python -m habitat_sim.utils.datasets_download --uids habitat_test_pointnav_dataset --data-path data/
       ```
 
-1. **Non-interactive testing**: Test the PointNav task: Run the example pointnav script
-    ```bash
-    python examples/example_pointnav.py
-    ```
-
-    which instantiates a PointNav agent in the testing scenes and episodes. The agent takes random actions and you should see something like:
-
-    ```bash
-    [16:11:11:718584]:[Sim] Simulator.cpp(205)::reconfigure : CreateSceneInstance success == true for active scene name : data/scene_datasets/habitat-test-scenes/skokloster-castle.glb  with renderer.
-    2022-08-13 16:26:45,068 Initializing task Nav-v0
-    Environment creation successful
-    Agent stepping around inside environment.
-    Episode finished after 5 steps.
-    ```
-
 1. **Non-interactive testing**: Test the Pick task: Run the example pick task script
     <!--- Please, update `examples/example.py` if you update example. -->
     ```bash
     python examples/example.py
     ```
 
-    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent.
+    which uses [`habitat-lab/habitat/config/benchmark/rearrange/pick.yaml`](habitat-lab/habitat/config/benchmark/rearrange/pick.yaml) for configuration of task and agent. The script roughly does this:
 
     ```python
-    import habitat
+    import gym
+    import habitat.gym
 
     # Load embodied AI task (RearrangePick) and a pre-specified virtual robot
-    env = habitat.Env(config=habitat.get_config("benchmark/rearrange/pick.yaml"))
+    env = gym.make("HabitatRenderPick-v0")
     observations = env.reset()
 
+    terminal = False
+
     # Step through environment with random actions
-    while not env.episode_over:
-        observations = env.step(env.action_space.sample())
+    while not terminal:
+        observations, reward, terminal, info = env.step(env.action_space.sample())
     ```
 
-    This script instantiates a Pick agent in ReplicaCAD scenes. The agent takes random actions and you should see something like:
-    ```bash
-      Agent acting inside environment.
-      Renderer: AMD Radeon Pro 5500M OpenGL Engine by ATI Technologies Inc.
-      Episode finished after 200 steps.
+    To modify some of the configurations of the environment, you can also use the `habitat.gym.make_gym_from_config` method that allows you to create a habitat environment using a configuration.
+
+    ```python
+    config = habitat.get_config(
+      "benchmark/rearrange/pick.yaml",
+      overrides=["habitat.environment.max_episode_steps=20"]
+    )
+    env = habitat.gym.make_gym_from_config(config)
     ```
+
+    If you want to know more about what the different configuration keys overrides do, you can use [this reference](habitat-lab/habitat/config/CONFIG_KEYS.md).
 
     See [`examples/register_new_sensors_and_measures.py`](examples/register_new_sensors_and_measures.py) for an example of how to extend habitat-lab from _outside_ the source code.
+
 
 
 1. **Interactive testing**: Using you keyboard and mouse to control a Fetch robot in a ReplicaCAD environment:
@@ -152,11 +146,16 @@ If you use the Habitat platform in your research, please cite the [Habitat 1.0](
     pip install pygame==2.0.1 pybullet==3.0.4
 
     # Interactive play script
-    python examples/interactive_play.py --never-end --add-ik
+    python examples/interactive_play.py --never-end
     ```
 
    Use I/J/K/L keys to move the robot base forward/left/backward/right and W/A/S/D to move the arm end-effector forward/left/backward/right and E/Q to move the arm up/down. The arm can be difficult to control via end-effector control. More details in documentation. Try to move the base and the arm to touch the red bowl on the table. Have fun!
 
+   Note: Interactive testing currently fails on Ubuntu 20.04 with an error: `X Error of failed request:  BadAccess (attempt to access private resource denied)`. We are working on fixing this, and will update instructions once we have a fix. The script works without errors on MacOS.
+
+## Debugging an environment issue
+
+Our vectorized environments are very fast, but they are not very verbose. When using `VectorEnv` some errors may be silenced, resulting in process hanging or multiprocessing errors that are hard to interpret. We recommend setting the environment variable `HABITAT_ENV_DEBUG` to 1 when debugging (`export HABITAT_ENV_DEBUG=1`) as this will use the slower, but more verbose `ThreadedVectorEnv` class. Do not forget to reset `HABITAT_ENV_DEBUG` (`unset HABITAT_ENV_DEBUG`) when you are done debugging since `VectorEnv` is much faster than `ThreadedVectorEnv`.
 
 ## Documentation
 
@@ -172,7 +171,7 @@ We provide docker containers for Habitat, updated approximately once per year fo
 
 1. Activate the habitat conda environment: `conda init; source ~/.bashrc; source activate habitat`
 
-1. Run the testing scripts as above: `cd habitat-lab; python examples/example_pointnav.py`. This should print out an output like:
+1. Run the testing scripts as above: `cd habitat-lab; python examples/example.py`. This should print out an output like:
     ```bash
     Agent acting inside environment.
     Episode finished after 200 steps.
@@ -186,7 +185,7 @@ Can't find the answer to your question? Try asking the developers and community 
 [Common task and episode datasets used with Habitat-Lab](DATASETS.md).
 
 ## Baselines
-Habitat-Lab includes reinforcement learning (via PPO) and classical SLAM based baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat-baselines/habitat_baselines/README.md).
+Habitat-Lab includes reinforcement learning (via PPO) baselines. For running PPO training on sample data and more details refer [habitat_baselines/README.md](habitat-baselines/habitat_baselines/README.md).
 
 ## ROS-X-Habitat
 ROS-X-Habitat (https://github.com/ericchen321/ros_x_habitat) is a framework that bridges the AI Habitat platform (Habitat Lab + Habitat Sim) with other robotics resources via ROS. Compared with Habitat-PyRobot, ROS-X-Habitat places emphasis on 1) leveraging Habitat Sim v2's physics-based simulation capability and 2) allowing roboticists to access simulation assets from ROS. The work has also been made public as a [paper](https://arxiv.org/abs/2109.07703).

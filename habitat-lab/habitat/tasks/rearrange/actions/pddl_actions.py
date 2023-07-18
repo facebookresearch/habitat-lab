@@ -6,30 +6,24 @@ import numpy as np
 from gym import spaces
 
 from habitat.core.registry import registry
-from habitat.sims.habitat_simulator.actions import HabitatSimActions
-from habitat.tasks.rearrange.actions.grip_actions import RobotAction
-from habitat.tasks.rearrange.utils import rearrange_logger
+from habitat.tasks.rearrange.actions.grip_actions import ArticulatedAgentAction
 
 
 @registry.register_task_action
-class PddlApplyAction(RobotAction):
+class PddlApplyAction(ArticulatedAgentAction):
     def __init__(self, *args, task, **kwargs):
+        self._action_ordering = task.pddl_problem.get_ordered_actions()
+        self._entities_list = task.pddl_problem.get_ordered_entities_list()
         super().__init__(*args, **kwargs)
         self._task = task
-        self._entities_list = None
-        self._action_ordering = None
         self._was_prev_action_invalid = False
 
     @property
-    def action_space(self):
-        if self._entities_list is None:
-            self._entities_list = (
-                self._task.pddl_problem.get_ordered_entities_list()
-            )
-            self._action_ordering = (
-                self._task.pddl_problem.get_ordered_actions()
-            )
+    def entities(self):
+        return self._entities_list
 
+    @property
+    def action_space(self):
         action_n_args = sum(
             [action.n_args for action in self._action_ordering]
         )
@@ -38,7 +32,10 @@ class PddlApplyAction(RobotAction):
             {
                 self._action_arg_prefix
                 + "pddl_action": spaces.Box(
-                    shape=(action_n_args,), low=-1, high=1, dtype=np.float32
+                    shape=(action_n_args,),
+                    low=np.finfo(np.float32).min,
+                    high=np.finfo(np.float32).max,
+                    dtype=np.float32,
                 )
             }
         )
@@ -49,6 +46,7 @@ class PddlApplyAction(RobotAction):
 
     def reset(self, *args, **kwargs):
         self._was_prev_action_invalid = False
+        self._prev_action = None
 
     def get_pddl_action_start(self, action_id: int) -> int:
         start_idx = 0
@@ -56,10 +54,8 @@ class PddlApplyAction(RobotAction):
             start_idx += action.n_args
         return start_idx
 
-    def step(self, *args, is_last_action, **kwargs):
-        apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
+    def _apply_action(self, apply_pddl_action):
         cur_i = 0
-        self._was_prev_action_invalid = False
         for action in self._action_ordering:
             action_part = apply_pddl_action[cur_i : cur_i + action.n_args][:]
             if sum(action_part) > 0:
@@ -71,27 +67,29 @@ class PddlApplyAction(RobotAction):
                         raise ValueError(
                             f"Got invalid action value < 0 in {action_part} with action {action}"
                         )
-                rearrange_logger.debug(f"Got action part {real_action_idxs}")
 
-                param_values = [
-                    self._entities_list[i] for i in real_action_idxs
-                ]
+                param_values = [self.entities[i] for i in real_action_idxs]
 
-                apply_action = action.copy()
+                # Look up the most recent version of this action.
+                apply_action = self._task.pddl_problem.actions[
+                    action.name
+                ].clone()
                 apply_action.set_param_values(param_values)
-                if self._task.pddl_problem.is_expr_true(apply_action.precond):
-                    rearrange_logger.debug(
-                        f"Applying action {action} with obj args {param_values}"
-                    )
-                    self._task.pddl_problem.apply_action(apply_action)
-                else:
-                    rearrange_logger.debug(
-                        f"Preconds not satisfied for: action {action} with obj args {param_values}"
-                    )
+                self._prev_action = apply_action
+
+                if not apply_action.apply_if_true(
+                    self._task.pddl_problem.sim_info
+                ):
                     self._was_prev_action_invalid = True
 
             cur_i += action.n_args
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.arm_action)
-        else:
-            return {}
+
+    def step(self, *args, **kwargs):
+        self._prev_action = None
+        apply_pddl_action = kwargs[self._action_arg_prefix + "pddl_action"]
+        self._was_prev_action_invalid = False
+        inputs_outside = any(
+            a < 0 or a > len(self.entities) for a in apply_pddl_action
+        )
+        if not inputs_outside:
+            self._apply_action(apply_pddl_action)

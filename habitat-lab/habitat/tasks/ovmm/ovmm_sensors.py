@@ -166,7 +166,7 @@ class StartReceptacleSensor(ObjectCategorySensor):
 @registry.register_sensor
 class ObjectSegmentationSensor(Sensor):
     cls_uuid: str = "object_segmentation"
-    panoptic_uuid: str = "robot_head_panoptic"
+    panoptic_uuid: str = "head_panoptic"
 
     def __init__(
         self,
@@ -178,7 +178,7 @@ class ObjectSegmentationSensor(Sensor):
         self._config = config
         self._blank_out_prob = self._config.blank_out_prob
         self._sim = sim
-        self._instance_ids_start = self._sim.habitat_config.instance_ids_start
+        self._object_ids_start = self._sim.habitat_config.object_ids_start
         self._resolution = (
             sim.agents[0]
             ._sensors[self.panoptic_uuid]
@@ -219,7 +219,7 @@ class ObjectSegmentationSensor(Sensor):
                 segmentation_sensor = segmentation_sensor | (
                     observations[self.panoptic_uuid]
                     == self._sim.scene_obj_ids[int(g.object_id)]
-                    + self._instance_ids_start
+                    + self._object_ids_start
                 )
             return segmentation_sensor
 
@@ -245,7 +245,7 @@ class RecepSegmentationSensor(ObjectSegmentationSensor):
                 segmentation_sensor = segmentation_sensor | (
                     observations[self.panoptic_uuid]
                     == int(g.object_id)
-                    + self._sim.habitat_config.instance_ids_start
+                    + self._sim.habitat_config.object_ids_start
                 )
             return segmentation_sensor
 

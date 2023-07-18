@@ -21,6 +21,12 @@ defaults:
       - gps_sensor
   - _self_
 
+
+actions:
+  look_up:
+    tilt_angle: 30
+  look_down:
+    tilt_angle: 30
 type: InstanceImageNav-v1
 end_on_success: True
 reward_measure: distance_to_goal_reward
@@ -29,3 +35,5 @@ goal_sensor_uuid: instance_imagegoal
 measurements:
   distance_to_goal:
     distance_to: VIEW_POINTS
+  success:
+    success_distance: 0.1

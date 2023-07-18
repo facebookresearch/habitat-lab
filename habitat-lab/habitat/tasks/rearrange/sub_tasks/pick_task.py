@@ -28,7 +28,7 @@ class RearrangePickTaskV1(RearrangeTask):
             config=config,
             *args,
             dataset=dataset,
-            should_place_robot=False,
+            should_place_articulated_agent=False,
             **kwargs,
         )
         self._spawn_reference = config.spawn_reference
@@ -157,10 +157,10 @@ class RearrangePickTaskV1(RearrangeTask):
         snap_pos, orient_pos, sample_probs = self.get_spawn_reference_points(
             sim, episode, sel_idx
         )
-        start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
+        start_pos, angle_to_obj, was_fail = get_robot_spawns(
             snap_pos,
             self._config.base_angle_noise,
-            self._config.spawn_max_dists_to_obj,
+            self._config.spawn_max_dist_to_obj,
             sim,
             self._config.num_spawn_attempts,
             self._config.physics_stability_steps,
@@ -168,7 +168,7 @@ class RearrangePickTaskV1(RearrangeTask):
             sample_probs=sample_probs,
         )
 
-        if was_unsucc:
+        if was_fail:
             rearrange_logger.error(
                 f"Episode {episode.episode_id} failed to place robot"
             )
@@ -209,28 +209,28 @@ class RearrangePickTaskV1(RearrangeTask):
         if self._start_in_manip_mode:
             # turn camera to face the arm
             camera_pan = -np.pi / 2
-        if isinstance(sim.robot, StretchRobot):
+        if isinstance(sim.articulated_agent, StretchRobot):
             joints = StretchJointStates.PRE_GRASP.copy()
             joints[-2] = camera_pan
             joints[-1] = self._camera_tilt
-            sim.robot.arm_motor_pos = joints
-            sim.robot.arm_joint_pos = joints
+            sim.articulated_agent.arm_motor_pos = joints
+            sim.articulated_agent.arm_joint_pos = joints
 
         start_pos, start_rot = self._gen_start_pos(sim, episode, sel_idx)
 
-        sim.robot.base_pos = start_pos
+        sim.articulated_agent.base_pos = start_pos
         if (
-            isinstance(self._sim.robot, StretchRobot)
+            isinstance(sim.articulated_agent, StretchRobot)
             and self._start_in_manip_mode
         ):
             # in the case of Stretch, rotate base so that the arm faces the target location
-            sim.robot.base_rot = start_rot + np.pi / 2
+            sim.articulated_agent.base_rot = start_rot + np.pi / 2
         else:
-            sim.robot.base_rot = start_rot
+            sim.articulated_agent.base_rot = start_rot
 
         self._targ_idx = sel_idx
 
         if fetch_observations:
-            self._sim.maybe_update_robot()
+            sim.maybe_update_articulated_agent()
             return self._get_observations(episode)
         return None

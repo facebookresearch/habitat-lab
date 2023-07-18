@@ -18,7 +18,7 @@ def find_closest_goal_index_within_distance(
             g.view_points[0].agent_state.position for g in goals
         ]
     path = habitat_sim.MultiGoalShortestPath()
-    path.requested_start = sim.robot.base_pos
+    path.requested_start = sim.articulated_agent.base_pos
     path.requested_ends = goal_view_points
     sim.pathfinder.find_path(path)
     assert (

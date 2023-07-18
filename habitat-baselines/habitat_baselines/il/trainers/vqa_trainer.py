@@ -62,7 +62,6 @@ class VQATrainer(BaseILTrainer):
         q_vocab_dict: VocabDict,
         ans_vocab_dict: VocabDict,
     ) -> None:
-
         r"""For saving VQA results.
         Args:
             ckpt_idx: idx of checkpoint being evaluated
@@ -395,7 +394,6 @@ class VQATrainer(BaseILTrainer):
                     % config.habitat_baselines.il.eval_save_results_interval
                     == 0
                 ):
-
                     self._save_vqa_results(
                         checkpoint_index,
                         episode_ids,

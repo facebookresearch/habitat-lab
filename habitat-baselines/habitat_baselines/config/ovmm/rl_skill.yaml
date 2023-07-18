@@ -52,16 +52,16 @@ habitat_baselines:
           size: 120
           channels_last: True
           trans_keys:
-            - robot_head_rgb
-            - robot_head_depth
-            - robot_head_panoptic
+            - head_rgb
+            - head_depth
+            - head_panoptic
             - object_segmentation
             - receptacle_segmentation
             - start_recep_segmentation
             - goal_recep_segmentation
             - ovmm_nav_goal_segmentation
           semantic_keys:
-            - robot_head_panoptic
+            - head_panoptic
             - object_segmentation
             - receptacle_segmentation
             - start_recep_segmentation
@@ -73,9 +73,9 @@ habitat_baselines:
           width: 120
           channels_last: True
           trans_keys:
-            - robot_head_rgb
-            - robot_head_depth
-            - robot_head_panoptic
+            - head_rgb
+            - head_depth
+            - head_panoptic
             - object_segmentation
             - receptacle_segmentation
             - start_recep_segmentation

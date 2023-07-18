@@ -4,7 +4,8 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Any, Dict, List, Tuple
+from dataclasses import dataclass, field
+from typing import Any, Dict, List, Optional, Tuple
 
 import attr
 from hydra.core.config_store import ConfigStore
@@ -44,10 +45,13 @@ class EvalConfig(HabitatBaselinesBaseConfig):
     # The number of time to run each episode through evaluation.
     # Only works when evaluating on all episodes.
     evals_per_ep: int = 1
-    video_option: List[
-        str
-    ] = []  # available options are "disk" and "tensorboard"
-    extra_sim_sensors: Dict[str, SimulatorSensorConfig] = dict()
+    video_option: List[str] = field(
+        # available options are "disk" and "tensorboard"
+        default_factory=list
+    )
+    extra_sim_sensors: Dict[str, SimulatorSensorConfig] = field(
+        default_factory=dict
+    )
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -214,11 +218,51 @@ cs.store(
 )
 
 
-@attr.s(auto_attribs=True, slots=True)
-class HierarchicalPolicy(HabitatBaselinesBaseConfig):
+@dataclass
+class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
+    """
+    Defines a low-level skill to be used in the hierarchical policy.
+    """
+
+    skill_name: str = MISSING
+    name: str = "PointNavResNetPolicy"
+    action_distribution_type: str = "gaussian"
+    load_ckpt_file: str = ""
+    max_skill_steps: int = 200
+    # If true, the stop action will be called if the skill times out.
+    force_end_on_timeout: bool = True
+    # Overrides the config file of a neural network skill rather than loading
+    # the config file from the checkpoint file.
+    force_config_file: str = ""
+    at_resting_threshold: float = 0.15
+    # If true, this willapply the post-conditions of the skill after it
+    # terminates.
+    apply_postconds: bool = False
+
+    # If true, do not call grip_actions automatically when calling high level skills.
+    # Do not check either if an arm action necessarily exists.
+    ignore_grip: bool = False
+    obs_skill_inputs: List[str] = field(default_factory=list)
+    obs_skill_input_dim: int = 3
+    start_zone_radius: float = 0.3
+    # For the oracle navigation skill
+    action_name: str = "base_velocity"
+    stop_thresh: float = 0.001
+    # For the reset_arm_skill
+    reset_joint_state: List[float] = MISSING
+    # The set of PDDL action names (as defined in the PDDL domain file) that
+    # map to this skill. If not specified,the name of the skill must match the
+    # PDDL action name.
+    pddl_action_names: Optional[List[str]] = None
+
+
+@dataclass
+class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
-    defined_skills: Dict[str, Any] = dict()
-    use_skills: Dict[str, str] = dict()
+    defined_skills: Dict[str, HrlDefinedSkillConfig] = field(
+        default_factory=dict
+    )
+    use_skills: Dict[str, str] = field(default_factory=dict)
 
 
 @attr.s(auto_attribs=True, slots=True)
@@ -228,8 +272,8 @@ class PolicyConfig(HabitatBaselinesBaseConfig):
     # If the list is empty, all keys will be included.
     # For gaussian action distribution:
     action_dist: ActionDistributionConfig = ActionDistributionConfig()
-    obs_transforms: Dict[str, ObsTransformConfig] = dict()
-    hierarchical_policy: HierarchicalPolicy = MISSING
+    obs_transforms: Dict[str, ObsTransformConfig] = field(default_factory=dict)
+    hierarchical_policy: HierarchicalPolicyConfig = MISSING
     ovrl: bool = False
     no_downscaling: bool = False
     use_augmentations: bool = False
@@ -314,10 +358,16 @@ class DDPPOConfig(HabitatBaselinesBaseConfig):
     force_distributed: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
+class AgentAccessMgrConfig(HabitatBaselinesBaseConfig):
+    type: str = "SingleAgentAccessMgr"
+
+
+@dataclass
 class RLConfig(HabitatBaselinesBaseConfig):
     """Reinforcement learning config"""
 
+    agent: AgentAccessMgrConfig = AgentAccessMgrConfig()
     preemption: PreemptionConfig = PreemptionConfig()
     policy: PolicyConfig = PolicyConfig()
     ppo: PPOConfig = PPOConfig()
@@ -325,8 +375,7 @@ class RLConfig(HabitatBaselinesBaseConfig):
     ver: VERConfig = VERConfig()
     auxiliary_losses: Dict[str, AuxLossConfig] = dict()
 
-
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ProfilingConfig(HabitatBaselinesBaseConfig):
     capture_start_step: int = -1
     num_steps_to_capture: int = -1
@@ -335,9 +384,13 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 @attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
+    # If habitat_baselines.evaluate is true, the run will be in evaluation mode
+    # replaces --run-type eval when true
+    evaluate: bool = False
     trainer_name: str = "ppo"
+    updater_name: str = "PPO"
+    distrib_updater_name: str = "DDPPO"
     torch_gpu_id: int = 0
-    video_render_views: List[str] = []
     tensorboard_dir: str = "tb"
     writer_type: str = "tb"
     video_dir: str = "video_dir"
@@ -347,6 +400,7 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     eval_ckpt_path_dir: str = "data/checkpoints"
     num_environments: int = 16
     num_processes: int = -1  # deprecated
+    rollout_storage_name: str = "RolloutStorage"
     checkpoint_folder: str = "data/checkpoints"
     num_updates: int = 10000
     num_checkpoints: int = 10
@@ -383,10 +437,10 @@ class HabitatBaselinesRLConfig(HabitatBaselinesConfig):
 
 @attr.s(auto_attribs=True, slots=True)
 class HabitatBaselinesILConfig(HabitatBaselinesConfig):
-    il: Dict[str, Any] = dict()
+    il: Dict[str, Any] = field(default_factory=dict)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatBaselinesSPAConfig(HabitatBaselinesConfig):
     sense_plan_act: Any = MISSING
 

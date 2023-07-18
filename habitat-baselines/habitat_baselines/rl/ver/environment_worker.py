@@ -24,17 +24,16 @@ import numpy as np
 
 from habitat import RLEnv, logger
 from habitat.config import read_write
-from habitat.core.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
-from habitat.core.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat.datasets import get_dataset_type
-from habitat.utils.gym_definitions import make_gym_from_config
+from habitat.gym import make_gym_from_config
+from habitat.gym.gym_env_episode_count_wrapper import EnvCountEpisodeWrapper
+from habitat.gym.gym_env_obs_dict_wrapper import EnvObsDictWrapper
 from habitat_baselines.common.tensor_dict import NDArrayDict, TensorDict
 from habitat_baselines.rl.ver.queue import BatchedQueue
 from habitat_baselines.rl.ver.task_enums import (
     EnvironmentWorkerTasks,
     ReportWorkerTasks,
 )
-from habitat_baselines.rl.ver.timing import Timing
 from habitat_baselines.rl.ver.worker_common import (
     ProcessBase,
     WorkerBase,
@@ -44,6 +43,7 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
+from habitat_baselines.utils.timing import Timing
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -149,7 +149,7 @@ class EnvironmentWorkerProcess(ProcessBase):
         )
         self.send_transfer_buffers.slice_keys(full_env_result.keys())[
             self.env_idx
-        ] = full_env_result
+        ] = full_env_result  # type:ignore[assignment]
         self.queues.inference.put(self.env_idx)
 
     def _step_env(self, action):
@@ -165,7 +165,7 @@ class EnvironmentWorkerProcess(ProcessBase):
                 self._episode_id += 1
                 self._step_id = 0
                 if self.auto_reset_done:
-                    obs = self.env.reset()
+                    obs = self.env.reset()  # type: ignore [assignment]
 
         return obs, reward, done, info
 
@@ -176,7 +176,9 @@ class EnvironmentWorkerProcess(ProcessBase):
         self._last_obs, reward, done, info = self._step_env(action)
 
         with self.timer.avg_time("enqueue env"):
-            self.send_transfer_buffers[self.env_idx] = dict(
+            self.send_transfer_buffers[
+                self.env_idx
+            ] = dict(  # type:ignore[assignment]
                 observations=self._last_obs,
                 rewards=reward,
                 masks=not done,
@@ -216,7 +218,7 @@ class EnvironmentWorkerProcess(ProcessBase):
         self._torch_transfer_buffers = torch_transfer_buffers
         self._torch_transfer_buffers["environment_ids"][
             self.env_idx
-        ] = self.env_idx
+        ] = self.env_idx  # type:ignore[assignment]
         acts = self._torch_transfer_buffers["actions"].numpy()
         assert isinstance(acts, np.ndarray)
         self.actions = acts

@@ -19,7 +19,7 @@ try:
 except ImportError:
     baseline_installed = False
 
-CFG_TEST = "test/habitat_all_sensors_test.yaml"
+CFG_TEST = "test/config/habitat/habitat_all_sensors_test.yaml"
 
 
 @pytest.mark.skipif(

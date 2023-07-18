@@ -7,9 +7,9 @@ defaults:
     - rearrange_stop
   - /habitat/task/measurements:
     - object_to_goal_distance
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - rot_dist_to_goal
     - dist_to_goal
     - nav_to_pos_succ

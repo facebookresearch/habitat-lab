@@ -11,10 +11,12 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
-from habitat.robots.spot_robot import SpotRobot
-from habitat.robots.stretch_robot import StretchRobot
-from habitat.tasks.rearrange.actions.robot_action import RobotAction
+from habitat.tasks.rearrange.actions.articulated_agent_action import (
+    ArticulatedAgentAction,
+)
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
     coll_link_name_matches,
@@ -24,7 +26,7 @@ from habitat.tasks.rearrange.utils import (
 from habitat.utils.geometry_utils import angle_between
 
 
-class GripSimulatorTaskAction(RobotAction):
+class GripSimulatorTaskAction(ArticulatedAgentAction):
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
         self._sim: RearrangeSim = sim
@@ -48,7 +50,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
 
     def _grasp(self):
         scene_obj_pos = self._sim.get_scene_pos()
-        ee_pos = self.cur_robot.ee_transform.translation
+        ee_pos = self.cur_articulated_agent.ee_transform().translation
         # Get objects we are close to.
         if len(scene_obj_pos) != 0:
             # Get the target the EE is closest to.
@@ -84,7 +86,7 @@ class MagicGraspAction(GripSimulatorTaskAction):
             to_target = np.linalg.norm(ee_pos - pos[closest_idx], ord=2)
 
             if to_target < self._grasp_thresh_dist:
-                self.cur_robot.open_gripper()
+                self.cur_articulated_agent.open_gripper()
                 self.cur_grasp_mgr.snap_to_marker(names[closest_idx])
 
     def _ungrasp(self):
@@ -122,8 +124,14 @@ class SuctionGraspAction(MagicGraspAction):
         match_coll = None
         contacts = self._sim.get_physics_contact_points()
 
-        robot_id = self._sim.robot.sim_obj.object_id
-        all_gripper_links = list(self._sim.robot.params.gripper_joints)
+        # TODO: the two arguments below should be part of args
+        ee_index = 0
+        index_grasp_manager = 0
+
+        robot_id = self._sim.articulated_agent.sim_obj.object_id
+        all_gripper_links = list(
+            self._sim.articulated_agent.params.gripper_joints
+        )
         robot_contacts = [
             c
             for c in contacts
@@ -148,12 +156,12 @@ class SuctionGraspAction(MagicGraspAction):
             rom = self._sim.get_rigid_object_manager()
             ro = rom.get_object_by_id(attempt_snap_entity)
 
-            ee_T = self.cur_robot.ee_transform
+            ee_T = self.cur_articulated_agent.ee_transform()
             obj_in_ee_T = ee_T.inverted() @ ro.transformation
 
             # here we need the link T, not the EE T for the constraint frame
-            ee_link_T = self.cur_robot.sim_obj.get_link_scene_node(
-                self.cur_robot.params.ee_link
+            ee_link_T = self.cur_articulated_agent.sim_obj.get_link_scene_node(
+                self.cur_articulated_agent.params.ee_links[ee_index]
             ).absolute_transformation()
 
             self._sim.grasp_mgr.snap_to_obj(
@@ -179,7 +187,9 @@ class SuctionGraspAction(MagicGraspAction):
                 attempt_snap_entity = marker_name
 
         if attempt_snap_entity is not None:
-            self._sim.grasp_mgr.snap_to_marker(str(attempt_snap_entity))
+            self._sim.grasp_mgrs[index_grasp_manager].snap_to_marker(
+                str(attempt_snap_entity)
+            )
 
 
 @registry.register_task_action
@@ -194,7 +204,7 @@ class GazeGraspAction(MagicGraspAction):
         self.center_cone_vector = mn.Vector3(
             config.center_cone_vector
         ).normalized()
-        self._instance_ids_start = sim.habitat_config.instance_ids_start
+        self._object_ids_start = sim.habitat_config.object_ids_start
         self._grasp_thresh_dist = config.grasp_thresh_dist
         self._wrong_grasp_should_end = config.wrong_grasp_should_end
         self._distance_from = getattr(config, "gaze_distance_from", "camera")
@@ -224,18 +234,18 @@ class GazeGraspAction(MagicGraspAction):
         cam_pos = None
         if self._distance_from == "camera":
             """Determine if an object is at the center of the frame and in range"""
-            if isinstance(self._sim.robot, SpotRobot):
+            if isinstance(self._sim.articulated_agent, SpotRobot):
                 cam_pos = (
                     self._sim.agents[0]
                     .get_state()
                     .sensor_states["articulated_agent_arm_rgb"]
                     .position
                 )
-            elif isinstance(self._sim.robot, StretchRobot):
+            elif isinstance(self._sim.articulated_agent, StretchRobot):
                 cam_pos = (
                     self._sim.agents[0]
                     .get_state()
-                    .sensor_states["robot_head_depth"]
+                    .sensor_states["head_depth"]
                     .position
                 )
             else:
@@ -246,31 +256,40 @@ class GazeGraspAction(MagicGraspAction):
         sim_observations = self._sim._sensor_suite.get_observations(
             self._sim.get_sensor_observations()
         )
-        if isinstance(self._sim.robot, StretchRobot):
-            panoptic_img = sim_observations["robot_head_panoptic"]
+ 
+        if isinstance(self.cur_articulated_agent, SpotRobot):
+            panoptic_img = self._sim._sensor_suite.get_observations(
+                self._sim.get_sensor_observations()
+            )["articulated_agent_arm_panoptic"]
+        elif isinstance(self.cur_articulated_agent, StretchRobot):
+            panoptic_img = self._sim._sensor_suite.get_observations(
+                self._sim.get_sensor_observations()
+            )["head_panoptic"]
         else:
             raise NotImplementedError(
-                "This robot dose not have GazeGraspAction."
+                "This robot does not have GazeGraspAction."
             )
+
 
         height, width = panoptic_img.shape[:2]
 
         if self._center_square_width == 1:
             center_obj_id = (
                 panoptic_img[height // 2, width // 2]
-                - self._instance_ids_start
+                - self._object_ids_start
             )
         else:
             # check if any pixel within the center square has a valid pixel
-            if isinstance(self._sim.robot, StretchRobot):
-                obj_seg = self._task.sensor_suite.get_observations(
+            task_sensors = self._task.sensor_suite.get_observations(
                     observations=sim_observations,
                     episode=self._sim.ep_info,
                     task=self._task,
-                )["object_segmentation"]
+                )
+            if "object_segmentation" in task_sensors:
+                obj_seg = task_sensors["object_segmentation"]
             else:
                 raise NotImplementedError(
-                    "This robot dose not have GazeGraspAction."
+                    "Object segmentation not in sensor suite. Not possible to center to square"
                 )
             s = int(self._center_square_width)
             h_off = height // 2 - s // 2
@@ -283,7 +302,7 @@ class GazeGraspAction(MagicGraspAction):
                 ]
                 center_obj_id = (
                     panoptic_center[panoptic_center > 0][0]
-                    - self._instance_ids_start
+                    - self._object_ids_start
                 )
             else:
                 center_obj_id = None
@@ -296,7 +315,7 @@ class GazeGraspAction(MagicGraspAction):
             if self._distance_from == "camera":
                 dist = np.linalg.norm(obj_pos - cam_pos)
             elif self._distance_from == "agent":
-                agent_pos = self._sim.robot.base_pos
+                agent_pos = self.cur_articulated_agent.base_pos
                 dist = np.linalg.norm(np.array(obj_pos - agent_pos)[[0, 2]])
             else:
                 raise NotImplementedError
@@ -315,7 +334,7 @@ class GazeGraspAction(MagicGraspAction):
         sim_observations = self._sim._sensor_suite.get_observations(
             self._sim.get_sensor_observations()
         )
-        if isinstance(self._sim.robot, StretchRobot):
+        if isinstance(self._sim.articulated_agent, StretchRobot):
             obj_seg = self._task.sensor_suite.get_observations(
                 observations=sim_observations,
                 episode=self._sim.ep_info,

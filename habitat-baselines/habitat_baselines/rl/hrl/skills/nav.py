@@ -43,12 +43,21 @@ class NavSkillPolicy(NnSkillPolicy):
             should_keep_hold_state=True,
         )
 
+    @property
+    def required_obs_keys(self):
+        # Potentially additional sensors are required to determine termination
+        return super().required_obs_keys + [
+            TargetGoalGpsCompassSensor.cls_uuid,
+            NavGoalPointGoalSensor.cls_uuid,
+            TargetStartGpsCompassSensor.cls_uuid,
+        ]
+
     def _get_filtered_obs(self, observations, cur_batch_idx) -> TensorDict:
         ret_obs = super()._get_filtered_obs(observations, cur_batch_idx)
 
         if NavGoalPointGoalSensor.cls_uuid in ret_obs:
-            for i in cur_batch_idx:
-                if self._cur_skill_args[cur_batch_idx[i]].is_target:
+            for i, batch_i in enumerate(cur_batch_idx):
+                if self._cur_skill_args[batch_i].is_target:
                     replace_sensor = TargetGoalGpsCompassSensor.cls_uuid
                 else:
                     replace_sensor = TargetStartGpsCompassSensor.cls_uuid

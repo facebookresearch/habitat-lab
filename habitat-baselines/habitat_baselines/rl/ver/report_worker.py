@@ -10,23 +10,13 @@ import os
 import time
 from collections import defaultdict
 from multiprocessing.context import BaseContext
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterator,
-    List,
-    Optional,
-    Tuple,
-    cast,
-)
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 import attr
 import numpy as np
 import torch
 
 from habitat import logger
-from habitat.tasks.nav.nav import NON_SCALAR_METRICS
 from habitat_baselines.common.tensor_dict import (
     NDArrayDict,
     transpose_list_of_dicts,
@@ -45,6 +35,7 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 from habitat_baselines.rl.ver.queue import BatchedQueue
 from habitat_baselines.rl.ver.task_enums import ReportWorkerTasks
 from habitat_baselines.rl.ver.worker_common import ProcessBase, WorkerBase
+from habitat_baselines.utils.info_dict import extract_scalars_from_info
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -127,22 +118,6 @@ class ReportWorkerProcess(ProcessBase):
         t = torch.as_tensor(val, dtype=torch.float64)
         torch.distributed.all_reduce(t, op=reduce_op)
         return type(val)(t)
-
-    @classmethod
-    def _extract_scalars_from_info(
-        cls, info: Dict[str, Any]
-    ) -> Iterator[Tuple[str, float]]:
-        for k, v in info.items():
-            if k in NON_SCALAR_METRICS:
-                continue
-
-            if isinstance(v, dict):
-                for subk, subv in cls._extract_scalars_from_info(v):
-                    yield f"{k}.{subk}", subv
-            # Things that are scalar-like will have an np.size of 1.
-            # Strings also have an np.size of 1, so explicitly ban those
-            elif np.size(v) == 1 and not isinstance(v, str):
-                yield k, float(v)
 
     def get_time(self):
         return time.perf_counter() - self.my_t_zero
@@ -297,7 +272,7 @@ class ReportWorkerProcess(ProcessBase):
 
     def episode_end(self, data):
         self.stats_this_rollout["reward"].append(data["reward"])
-        for k, v in self._extract_scalars_from_info(data["info"]):
+        for k, v in extract_scalars_from_info(data["info"]).items():
             self.stats_this_rollout[k].append(v)
 
     def num_steps_collected(self, num_steps: int):

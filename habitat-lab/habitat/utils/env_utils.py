@@ -6,7 +6,8 @@
 
 from typing import TYPE_CHECKING, Type, Union
 
-from habitat import Env, RLEnv, make_dataset
+from habitat.core.env import Env, RLEnv
+from habitat.datasets import make_dataset
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig

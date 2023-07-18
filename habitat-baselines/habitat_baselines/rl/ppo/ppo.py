@@ -6,7 +6,7 @@
 
 import collections
 import inspect
-from typing import Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 import torch
 import torch.nn as nn
@@ -15,18 +15,22 @@ import torch.optim as optim
 from torch import Tensor
 
 from habitat.utils import profiling_wrapper
+from habitat_baselines.common.baseline_registry import baseline_registry
 from habitat_baselines.common.rollout_storage import RolloutStorage
 from habitat_baselines.rl.ppo.policy import NetPolicy
+from habitat_baselines.rl.ppo.updater import Updater
 from habitat_baselines.rl.ver.ver_rollout_storage import VERRolloutStorage
 from habitat_baselines.utils.common import (
     LagrangeInequalityCoefficient,
     inference_mode,
 )
+from habitat_baselines.utils.timing import g_timer
 
 EPS_PPO = 1e-5
 
 
-class PPO(nn.Module):
+@baseline_registry.register_updater
+class PPO(nn.Module, Updater):
     entropy_coef: Union[float, LagrangeInequalityCoefficient]
 
     @classmethod
@@ -62,7 +66,6 @@ class PPO(nn.Module):
         entropy_target_factor: float = 0.0,
         use_adaptive_entropy_pen: bool = False,
     ) -> None:
-
         super().__init__()
 
         self.actor_critic = actor_critic
@@ -155,14 +158,11 @@ class PPO(nn.Module):
             for p in pg["params"]:
                 p.grad = None
 
-    def update(
-        self,
-        rollouts: RolloutStorage,
-    ) -> Dict[str, float]:
-
-        advantages = self.get_advantages(rollouts)
-
-        learner_metrics = collections.defaultdict(list)
+    @g_timer.avg_time("ppo.update_from_batch", level=1)
+    def _update_from_batch(self, batch, epoch, rollouts, learner_metrics):
+        """
+        Performs a gradient update from the minibatch.
+        """
 
         def record_min_mean_max(t: torch.Tensor, prefix: str):
             for name, op in (
@@ -172,148 +172,147 @@ class PPO(nn.Module):
             ):
                 learner_metrics[f"{prefix}_{name}"].append(op(t))
 
+        self._set_grads_to_none()
+
+        (
+            values,
+            action_log_probs,
+            dist_entropy,
+            _,
+            aux_loss_res,
+        ) = self._evaluate_actions(
+            batch["observations"],
+            batch["recurrent_hidden_states"],
+            batch["prev_actions"],
+            batch["masks"],
+            batch["actions"],
+            batch.get("rnn_build_seq_info", None),
+        )
+
+        ratio = torch.exp(action_log_probs - batch["action_log_probs"])
+
+        surr1 = batch["advantages"] * ratio
+        surr2 = batch["advantages"] * (
+            torch.clamp(
+                ratio,
+                1.0 - self.clip_param,
+                1.0 + self.clip_param,
+            )
+        )
+        action_loss = -torch.min(surr1, surr2)
+
+        values = values.float()
+        orig_values = values
+
+        if self.use_clipped_value_loss:
+            delta = values.detach() - batch["value_preds"]
+            value_pred_clipped = batch["value_preds"] + delta.clamp(
+                -self.clip_param, self.clip_param
+            )
+
+            values = torch.where(
+                delta.abs() < self.clip_param,
+                values,
+                value_pred_clipped,
+            )
+
+        value_loss = 0.5 * F.mse_loss(
+            values, batch["returns"], reduction="none"
+        )
+
+        if "is_coeffs" in batch:
+            assert isinstance(batch["is_coeffs"], torch.Tensor)
+            ver_is_coeffs = batch["is_coeffs"].clamp(max=1.0)
+            mean_fn = lambda t: torch.mean(ver_is_coeffs * t)
+        else:
+            mean_fn = torch.mean
+
+        action_loss, value_loss, dist_entropy = map(
+            mean_fn,
+            (action_loss, value_loss, dist_entropy),
+        )
+
+        all_losses = [
+            self.value_loss_coef * value_loss,
+            action_loss,
+        ]
+
+        if isinstance(self.entropy_coef, float):
+            all_losses.append(-self.entropy_coef * dist_entropy)
+        else:
+            all_losses.append(self.entropy_coef.lagrangian_loss(dist_entropy))
+
+        all_losses.extend(v["loss"] for v in aux_loss_res.values())
+
+        total_loss = torch.stack(all_losses).sum()
+
+        total_loss = self.before_backward(total_loss)
+        total_loss.backward()
+        self.after_backward(total_loss)
+
+        grad_norm = self.before_step()
+        self.optimizer.step()
+        self.after_step()
+
+        with inference_mode():
+            if "is_coeffs" in batch:
+                record_min_mean_max(batch["is_coeffs"], "ver_is_coeffs")
+            record_min_mean_max(orig_values, "value_pred")
+            record_min_mean_max(ratio, "prob_ratio")
+
+            learner_metrics["value_loss"].append(value_loss)
+            learner_metrics["action_loss"].append(action_loss)
+            learner_metrics["dist_entropy"].append(dist_entropy)
+            if epoch == (self.ppo_epoch - 1):
+                learner_metrics["ppo_fraction_clipped"].append(
+                    (ratio > (1.0 + self.clip_param)).float().mean()
+                    + (ratio < (1.0 - self.clip_param)).float().mean()
+                )
+
+            learner_metrics["grad_norm"].append(grad_norm)
+            if isinstance(self.entropy_coef, LagrangeInequalityCoefficient):
+                learner_metrics["entropy_coef"].append(
+                    self.entropy_coef().detach()
+                )
+
+            for name, res in aux_loss_res.items():
+                for k, v in res.items():
+                    learner_metrics[f"aux_{name}_{k}"].append(v.detach())
+
+            if "is_stale" in batch:
+                assert isinstance(batch["is_stale"], torch.Tensor)
+                learner_metrics["fraction_stale"].append(
+                    batch["is_stale"].float().mean()
+                )
+
+            if isinstance(rollouts, VERRolloutStorage):
+                assert isinstance(batch["policy_version"], torch.Tensor)
+                record_min_mean_max(
+                    (
+                        rollouts.current_policy_version
+                        - batch["policy_version"]
+                    ).float(),
+                    "policy_version_difference",
+                )
+
+    def update(
+        self,
+        rollouts: RolloutStorage,
+    ) -> Dict[str, float]:
+        advantages = self.get_advantages(rollouts)
+
+        learner_metrics: Dict[str, List[Any]] = collections.defaultdict(list)
+
         for epoch in range(self.ppo_epoch):
             profiling_wrapper.range_push("PPO.update epoch")
-            data_generator = rollouts.recurrent_generator(
+            data_generator = rollouts.data_generator(
                 advantages, self.num_mini_batch
             )
 
             for _bid, batch in enumerate(data_generator):
-                self._set_grads_to_none()
-
-                (
-                    values,
-                    action_log_probs,
-                    dist_entropy,
-                    _,
-                    aux_loss_res,
-                    action_distribution_data,
-                ) = self._evaluate_actions(
-                    batch["observations"],
-                    batch["recurrent_hidden_states"],
-                    batch["prev_actions"],
-                    batch["masks"],
-                    batch["actions"],
-                    batch["rnn_build_seq_info"],
+                self._update_from_batch(
+                    batch, epoch, rollouts, learner_metrics
                 )
-
-                ratio = torch.exp(action_log_probs - batch["action_log_probs"])
-
-                surr1 = batch["advantages"] * ratio
-                surr2 = batch["advantages"] * (
-                    torch.clamp(
-                        ratio,
-                        1.0 - self.clip_param,
-                        1.0 + self.clip_param,
-                    )
-                )
-                action_loss = -torch.min(surr1, surr2)
-
-                values = values.float()
-                orig_values = values
-
-                if self.use_clipped_value_loss:
-                    delta = values.detach() - batch["value_preds"]
-                    value_pred_clipped = batch["value_preds"] + delta.clamp(
-                        -self.clip_param, self.clip_param
-                    )
-
-                    values = torch.where(
-                        delta.abs() < self.clip_param,
-                        values,
-                        value_pred_clipped,
-                    )
-
-                value_loss = 0.5 * F.mse_loss(
-                    values, batch["returns"], reduction="none"
-                )
-
-                if "is_coeffs" in batch:
-                    assert isinstance(batch["is_coeffs"], torch.Tensor)
-                    ver_is_coeffs = batch["is_coeffs"].clamp(max=1.0)
-                    mean_fn = lambda t: torch.mean(ver_is_coeffs * t)
-                else:
-                    mean_fn = torch.mean
-
-                action_loss, value_loss, dist_entropy = map(
-                    mean_fn,
-                    (action_loss, value_loss, dist_entropy),
-                )
-
-                all_losses = [
-                    self.value_loss_coef * value_loss,
-                    action_loss,
-                ]
-
-                if isinstance(self.entropy_coef, float):
-                    all_losses.append(-self.entropy_coef * dist_entropy)
-                else:
-                    all_losses.append(
-                        self.entropy_coef.lagrangian_loss(dist_entropy)
-                    )
-
-                all_losses.extend(v["loss"] for v in aux_loss_res.values())
-
-                total_loss = torch.stack(all_losses).sum()
-
-                total_loss = self.before_backward(total_loss)
-                total_loss.backward()
-                self.after_backward(total_loss)
-
-                grad_norm = self.before_step()
-                self.optimizer.step()
-                self.after_step()
-
-                with inference_mode():
-                    if "is_coeffs" in batch:
-                        record_min_mean_max(
-                            batch["is_coeffs"], "ver_is_coeffs"
-                        )
-                    record_min_mean_max(orig_values, "value_pred")
-                    record_min_mean_max(ratio, "prob_ratio")
-                    record_min_mean_max(action_distribution_data[0], "action_mean")
-                    record_min_mean_max(action_distribution_data[1], "action_std")
-
-                    learner_metrics["value_loss"].append(value_loss)
-                    learner_metrics["action_loss"].append(action_loss)
-                    learner_metrics["dist_entropy"].append(dist_entropy)
-                    if epoch == (self.ppo_epoch - 1):
-                        learner_metrics["ppo_fraction_clipped"].append(
-                            (ratio > (1.0 + self.clip_param)).float().mean()
-                            + (ratio < (1.0 - self.clip_param)).float().mean()
-                        )
-
-                    learner_metrics["grad_norm"].append(grad_norm)
-                    if isinstance(
-                        self.entropy_coef, LagrangeInequalityCoefficient
-                    ):
-                        learner_metrics["entropy_coef"].append(
-                            self.entropy_coef().detach()
-                        )
-
-                    for name, res in aux_loss_res.items():
-                        for k, v in res.items():
-                            learner_metrics[f"aux_{name}_{k}"].append(
-                                v.detach()
-                            )
-
-                    if "is_stale" in batch:
-                        assert isinstance(batch["is_stale"], torch.Tensor)
-                        learner_metrics["fraction_stale"].append(
-                            batch["is_stale"].float().mean()
-                        )
-
-                    if isinstance(rollouts, VERRolloutStorage):
-                        assert isinstance(
-                            batch["policy_version"], torch.Tensor
-                        )
-                        record_min_mean_max(
-                            (
-                                rollouts.current_policy_version
-                                - batch["policy_version"]
-                            ).float(),
-                            "policy_version_difference",
-                        )
 
             profiling_wrapper.range_pop()  # PPO.update epoch
 
@@ -329,6 +328,7 @@ class PPO(nn.Module):
                 for k, vs in learner_metrics.items()
             }
 
+    @g_timer.avg_time("ppo.eval_actions", level=1)
     def _evaluate_actions(self, *args, **kwargs):
         r"""Internal method that calls Policy.evaluate_actions.  This is used instead of calling
         that directly so that that call can be overrided with inheritance

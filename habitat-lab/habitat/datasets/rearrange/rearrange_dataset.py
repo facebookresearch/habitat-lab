@@ -6,7 +6,7 @@
 
 import copy
 import json
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import attr
 import numpy as np
