@@ -419,7 +419,6 @@ class ObjectSampler:
 
         return None
 
-
     def single_sample(
         self,
         sim: habitat_sim.Simulator,

@@ -159,7 +159,7 @@ class NavToObjReward(RearrangeReward):
             episode=episode,
             task=task,
             observations=observations,
-            **kwargs
+            **kwargs,
         )
         reward = self._metric
         cur_dist = task.measurements.measures[
@@ -249,9 +249,7 @@ class RobotStartGPSSensor(EpisodicGPSSensor):
         return task._robot_start_position
 
     def get_agent_start_rotation(self, episode, task):
-        return quaternion_from_coeff(
-            task._robot_start_rotation
-        )
+        return quaternion_from_coeff(task._robot_start_rotation)
 
     def get_agent_current_position(self, sim):
         return sim.articulated_agent.sim_obj.translation
@@ -265,9 +263,7 @@ class RobotStartCompassSensor(EpisodicCompassSensor):
         super().__init__(sim=sim, config=config)
 
     def get_agent_start_rotation(self, episode, task):
-        return quaternion_from_coeff(
-            task._robot_start_rotation
-        )
+        return quaternion_from_coeff(task._robot_start_rotation)
 
     def get_agent_current_rotation(self, sim):
         curr_quat = sim.articulated_agent.sim_obj.rotation
@@ -277,9 +273,7 @@ class RobotStartCompassSensor(EpisodicCompassSensor):
             curr_quat.vector.z,
             curr_quat.scalar,
         ]
-        return quaternion_from_coeff(
-            curr_rotation
-        )
+        return quaternion_from_coeff(curr_rotation)
 
 
 @registry.register_measure

@@ -383,9 +383,7 @@ class EpisodicCompassSensor(HeadingSensor):
         return self.cls_uuid
 
     def get_agent_start_rotation(self, episode, task):
-        return quaternion_from_coeff(
-            episode.start_rotation
-        )
+        return quaternion_from_coeff(episode.start_rotation)
 
     def get_agent_current_rotation(self, sim):
         agent_state = self._sim.get_agent_state()
@@ -446,9 +444,7 @@ class EpisodicGPSSensor(Sensor):
         return episode.start_position
 
     def get_agent_start_rotation(self, episode, task):
-        return quaternion_from_coeff(
-            episode.start_rotation
-        )
+        return quaternion_from_coeff(episode.start_rotation)
 
     def get_agent_current_position(self, sim):
         agent_state = self._sim.get_agent_state()
@@ -457,7 +453,6 @@ class EpisodicGPSSensor(Sensor):
     def get_observation(
         self, observations, episode, task, *args: Any, **kwargs: Any
     ):
-
         start_position = self.get_agent_start_position(episode, task)
         rotation_world_start = self.get_agent_start_rotation(episode, task)
 
@@ -470,7 +465,8 @@ class EpisodicGPSSensor(Sensor):
         )
         if self._dimensionality == 2:
             return np.array(
-                [-relative_agent_position[2], relative_agent_position[0]], dtype=np.float32
+                [-relative_agent_position[2], relative_agent_position[0]],
+                dtype=np.float32,
             )
         else:
             return relative_agent_position.astype(np.float32)
@@ -1111,13 +1107,17 @@ class NavigationMovementAgentAction(SimulatorTaskAction):
 @registry.register_task_action
 class MoveForwardAction(SimulatorTaskAction):
     name: str = "move_forward"
+
     def step(self, task, *args: Any, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
         from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
         if type(self._sim) == RearrangeSim:
-            actuation = self._sim.config.agents[0].action_space[1].actuation.amount
+            actuation = (
+                self._sim.config.agents[0].action_space[1].actuation.amount
+            )
             trans = self._sim.articulated_agent.base_transformation
             local_pos = np.array([actuation, 0, 0])
             global_pos = trans.transform_point(local_pos)
@@ -1134,7 +1134,7 @@ class MoveForwardAction(SimulatorTaskAction):
 
 def rotate_action(sim, direction: str):
     from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
-    
+
     assert direction in ["left", "right"]
 
     if type(sim) == RearrangeSim:
@@ -1144,13 +1144,11 @@ def rotate_action(sim, direction: str):
                 "task"
             ]._nav_to_info.robot_start_angle
             sim.current_angle = sim.articulated_agent_start_angle
-        
+
         if direction == "right":
             actuation = -1 * actuation
 
-        sim.updated_angle = (
-            self._sim.current_angle + actuation * np.pi / 180
-        )
+        sim.updated_angle = self._sim.current_angle + actuation * np.pi / 180
         sim.articulated_agent.base_rot = self._sim.updated_angle
         sim.current_angle = self._sim.updated_angle
 

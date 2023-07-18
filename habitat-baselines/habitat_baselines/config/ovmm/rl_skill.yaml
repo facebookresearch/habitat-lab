@@ -81,7 +81,7 @@ habitat_baselines:
             - start_recep_segmentation
             - goal_recep_segmentation
             - ovmm_nav_goal_segmentation
-    
+
     ppo:
       # ppo params
       clip_param: 0.2

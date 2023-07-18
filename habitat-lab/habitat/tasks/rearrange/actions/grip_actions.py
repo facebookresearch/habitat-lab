@@ -256,7 +256,7 @@ class GazeGraspAction(MagicGraspAction):
         sim_observations = self._sim._sensor_suite.get_observations(
             self._sim.get_sensor_observations()
         )
- 
+
         if isinstance(self.cur_articulated_agent, SpotRobot):
             panoptic_img = self._sim._sensor_suite.get_observations(
                 self._sim.get_sensor_observations()
@@ -270,21 +270,19 @@ class GazeGraspAction(MagicGraspAction):
                 "This robot does not have GazeGraspAction."
             )
 
-
         height, width = panoptic_img.shape[:2]
 
         if self._center_square_width == 1:
             center_obj_id = (
-                panoptic_img[height // 2, width // 2]
-                - self._object_ids_start
+                panoptic_img[height // 2, width // 2] - self._object_ids_start
             )
         else:
             # check if any pixel within the center square has a valid pixel
             task_sensors = self._task.sensor_suite.get_observations(
-                    observations=sim_observations,
-                    episode=self._sim.ep_info,
-                    task=self._task,
-                )
+                observations=sim_observations,
+                episode=self._sim.ep_info,
+                task=self._task,
+            )
             if "object_segmentation" in task_sensors:
                 obj_seg = task_sensors["object_segmentation"]
             else:
@@ -349,12 +347,11 @@ class GazeGraspAction(MagicGraspAction):
         ]
         ee_pos = self.cur_robot.ee_transform.translation
         distances = np.linalg.norm(
-                (
-                    self._sim.get_scene_pos()[allowed_scene_obj_ids]
-                    - ee_pos
-                )[:, [0, 2]],
-                axis=1,
-            )
+            (self._sim.get_scene_pos()[allowed_scene_obj_ids] - ee_pos)[
+                :, [0, 2]
+            ],
+            axis=1,
+        )
         closest = np.argmin(distances)
         if distances[closest] > self._grasp_thresh_dist:
             return

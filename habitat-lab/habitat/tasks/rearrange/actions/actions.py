@@ -716,8 +716,12 @@ class ManipulationModeAction(RobotAction):
             if isinstance(self._sim.articulated_agent, StretchRobot):
                 # Turn the head to face the arm
                 task._in_manip_mode = True
-                self._sim.articulated_agent.arm_motor_pos = StretchJointStates.PRE_GRASP
-                self._sim.articulated_agent.arm_joint_pos = StretchJointStates.PRE_GRASP
+                self._sim.articulated_agent.arm_motor_pos = (
+                    StretchJointStates.PRE_GRASP
+                )
+                self._sim.articulated_agent.arm_joint_pos = (
+                    StretchJointStates.PRE_GRASP
+                )
                 # now turn the robot's base left by 90 degrees
                 obj_trans = self.cur_articulated_agent.sim_obj.transformation
                 turn_angle = np.pi / 2  # Turn left by 90 degrees
@@ -731,7 +735,9 @@ class ManipulationModeAction(RobotAction):
                     target_rot,
                     obj_trans.translation,
                 )
-                self.cur_articulated_agent.sim_obj.transformation = target_trans
+                self.cur_articulated_agent.sim_obj.transformation = (
+                    target_trans
+                )
                 if self.cur_grasp_mgr.snap_idx is not None:
                     # Holding onto an object, also kinematically update the object.
                     self.cur_grasp_mgr.update_object_to_grasp()
@@ -942,8 +948,6 @@ class BaseWaypointTeleportAction(RobotAction):
             return {}
 
 
-
-
 class HumanoidJointAction(ArticulatedAgentAction):
     def __init__(self, *args, sim: RearrangeSim, **kwargs):
         super().__init__(*args, sim=sim, **kwargs)
@@ -968,7 +972,7 @@ class HumanoidJointAction(ArticulatedAgentAction):
                 )
             }
         )
-    
+
     def step(self, *args, **kwargs):
         r"""
         Updates the joint rotations and root transformation of the humanoid.

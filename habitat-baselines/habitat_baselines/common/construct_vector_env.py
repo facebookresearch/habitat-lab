@@ -19,7 +19,7 @@ def construct_envs(
     config: "DictConfig",
     workers_ignore_signals: bool = False,
     enforce_scenes_greater_eq_environments: bool = False,
-    make_env_fn: Callable[..., gym.Env]=make_gym_from_config,
+    make_env_fn: Callable[..., gym.Env] = make_gym_from_config,
     is_first_rank: bool = True,
 ) -> VectorEnv:
     r"""Create VectorEnv object with specified config and env class type.

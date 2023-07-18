@@ -251,7 +251,6 @@ class RearrangeSim(HabitatSim):
             elif not is_far:
                 ro.motion_type = self._obj_orig_motion_types[handle]
 
-
     @add_perf_timing_func()
     def _sleep_all_objects(self):
         """

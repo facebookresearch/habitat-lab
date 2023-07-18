@@ -6,7 +6,6 @@
 
 import json
 import os.path as osp
-import sys
 import time
 from glob import glob
 

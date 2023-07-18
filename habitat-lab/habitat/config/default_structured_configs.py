@@ -331,7 +331,6 @@ class ManipulationModeActionConfig(ActionConfig):
     threshold: float = 0.8
 
 
-
 @dataclass
 class PddlApplyActionConfig(ActionConfig):
     type: str = "PddlApplyAction"
@@ -1685,7 +1684,9 @@ class AgentConfig(HabitatBaseConfig):
     joint_start_override: Optional[List[float]] = None
     articulated_agent_urdf: str = "data/robots/hab_fetch/robots/hab_fetch.urdf"
     articulated_agent_type: str = "FetchRobot"
-    ik_arm_urdf: Optional[str] = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
+    ik_arm_urdf: Optional[
+        str
+    ] = "data/robots/hab_fetch/robots/fetch_onlyarm.urdf"
     # File to motion data, used to play pre-recorded motions
     motion_data_path: str = ""
 

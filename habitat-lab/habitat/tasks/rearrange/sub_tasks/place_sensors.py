@@ -6,6 +6,7 @@
 
 
 from typing import Any
+
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sensors import (
@@ -347,6 +348,7 @@ class PickedObjectAngularVel(Measure):
         ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.angular_velocity.length()
 
+
 @registry.register_measure
 class PickedObjectLinearVel(Measure):
     cls_uuid: str = "picked_object_linear_vel"
@@ -369,7 +371,8 @@ class PickedObjectLinearVel(Measure):
         abs_obj_id = self._sim.scene_obj_ids[picked_idx]
         ro = rom.get_object_by_id(abs_obj_id)
         self._metric = ro.linear_velocity.length()
-    
+
+
 @registry.register_measure
 class ObjectAtRest(Measure):
     cls_uuid: str = "object_at_rest"
@@ -379,17 +382,20 @@ class ObjectAtRest(Measure):
         self._angular_vel_thresh = config.angular_vel_thresh
         self._sim = sim
         super().__init__(*args, **kwargs)
-    
+
     @staticmethod
     def _get_uuid(*args, **kwargs):
         return ObjectAtRest.cls_uuid
 
     def reset_metric(self, *args, episode, task, observations, **kwargs):
         self._metric = None
-    
+
     def update_metric(self, *args, episode, task, observations, **kwargs):
         rom = self._sim.get_rigid_object_manager()
         picked_idx = task._picked_object_idx
         abs_obj_id = self._sim.scene_obj_ids[picked_idx]
         ro = rom.get_object_by_id(abs_obj_id)
-        self._metric = ro.linear_velocity.length() < self._linear_vel_thresh and ro.angular_velocity.length() < self._angular_vel_thresh
+        self._metric = (
+            ro.linear_velocity.length() < self._linear_vel_thresh
+            and ro.angular_velocity.length() < self._angular_vel_thresh
+        )

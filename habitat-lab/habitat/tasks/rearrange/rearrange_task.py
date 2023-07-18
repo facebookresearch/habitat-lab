@@ -17,7 +17,8 @@ from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorSuite
 from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.ovmm.ovmm_sim import OVMMSim
-from habitat.tasks.rearrange.rearrange_sim import RearrangeSim, 
+from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
+
     add_perf_timing_func
 from habitat.tasks.rearrange.utils import (
     CacheHelper,

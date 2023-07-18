@@ -4,7 +4,6 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-import copy
 import json
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
@@ -45,7 +44,6 @@ class RearrangeEpisode(Episode):
     name_to_receptacle: Dict[str, str] = {}
 
 
-
 @registry.register_dataset(name="RearrangeDataset-v0")
 class RearrangeDatasetV0(PointNavDatasetV1):
     r"""Class inherited from PointNavDataset that loads Rearrangement dataset."""
@@ -81,5 +79,3 @@ class RearrangeDatasetV0(PointNavDatasetV1):
             rearrangement_episode.episode_id = str(i)
 
             self.episodes.append(rearrangement_episode)
-
-

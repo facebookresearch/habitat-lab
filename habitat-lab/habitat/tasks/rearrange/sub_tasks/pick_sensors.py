@@ -181,7 +181,9 @@ class RearrangePickReward(RearrangeReward):
         )
         closest_goal_index = np.argmin(
             np.linalg.norm(
-                np.expand_dims(self._sim.articulated_agent.base_pos, 0) - targets, axis=1
+                np.expand_dims(self._sim.articulated_agent.base_pos, 0)
+                - targets,
+                axis=1,
             )
         )
         targ = targets[closest_goal_index]

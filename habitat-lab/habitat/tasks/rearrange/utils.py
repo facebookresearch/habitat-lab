@@ -171,11 +171,15 @@ def rearrange_collision(
 
 def get_camera_transform(sim):
     if isinstance(sim.articulated_agent, SpotRobot):
-        cam_info = sim.articulated_agent.params.cameras["articulated_agent_arm_depth"]
+        cam_info = sim.articulated_agent.params.cameras[
+            "articulated_agent_arm_depth"
+        ]
     elif isinstance(sim.articulated_agent, StretchRobot):
         cam_info = sim.articulated_agent.params.cameras["head"]
     else:
-        raise NotImplementedError("Camera transform not implemented for this function.")
+        raise NotImplementedError(
+            "Camera transform not implemented for this function."
+        )
 
     # Get the camera's attached link
     link_trans = sim.articulated_agent.sim_obj.get_link_scene_node(
@@ -466,20 +470,28 @@ def get_robot_spawns(
             continue
 
         # Randomly sample an index of target positions.
-        target_index = np.random.choice(target_positions_filtered.shape[0], p=sample_probs_filtered)
+        target_index = np.random.choice(
+            target_positions_filtered.shape[0], p=sample_probs_filtered
+        )
 
-        target_position = target_positions_filtered[
-            target_index
-        ]
+        target_position = target_positions_filtered[target_index]
         orient_position = orient_positions_filtered[target_index]
         if distance_threshold == 0:
-            start_position = sim.pathfinder.snap_point(target_position, island_index=sim.navmesh_classification_results["active_island"])
+            start_position = sim.pathfinder.snap_point(
+                target_position,
+                island_index=sim.navmesh_classification_results[
+                    "active_island"
+                ],
+            )
         else:
             start_position = sim.pathfinder.get_random_navigable_point_near(
-                target_position, distance_threshold,
-                island_index=sim.navmesh_classification_results["active_island"]
+                target_position,
+                distance_threshold,
+                island_index=sim.navmesh_classification_results[
+                    "active_island"
+                ],
             )
-        
+
         relative_target = orient_position - start_position
 
         angle_to_object = get_angle_to_pos(relative_target)
@@ -488,16 +500,28 @@ def get_robot_spawns(
         start_rotation = angle_to_object + rotation_noise
 
         is_navigable = sim.pathfinder.is_navigable(start_position)
-        invalid_target_position = not is_navigable if distance_threshold == 0 else np.isnan(start_position).any()
+        invalid_target_position = (
+            not is_navigable
+            if distance_threshold == 0
+            else np.isnan(start_position).any()
+        )
 
         if invalid_target_position:
             # navmesh is hard to sample from around the selected target position
             # do not sample this target position again
-            target_positions_filtered = np.delete(target_positions_filtered, target_index, axis=0)
-            orient_positions_filtered = np.delete(orient_positions_filtered, target_index, axis=0)
+            target_positions_filtered = np.delete(
+                target_positions_filtered, target_index, axis=0
+            )
+            orient_positions_filtered = np.delete(
+                orient_positions_filtered, target_index, axis=0
+            )
             if sample_probs_filtered is not None:
-                sample_probs_filtered = np.delete(sample_probs_filtered, target_index, axis=0)
-                sample_probs_filtered = sample_probs_filtered / np.sum(sample_probs_filtered)
+                sample_probs_filtered = np.delete(
+                    sample_probs_filtered, target_index, axis=0
+                )
+                sample_probs_filtered = sample_probs_filtered / np.sum(
+                    sample_probs_filtered
+                )
             if len(target_positions_filtered) == 0:
                 # reset the target positions and start over again
                 target_positions_filtered = target_positions.copy()
@@ -506,15 +530,14 @@ def get_robot_spawns(
                     sample_probs_filtered = sample_probs.copy()
             continue
 
-
-
         target_distance = np.linalg.norm(
             (start_position - target_position)[[0, 2]]
         )
 
-
-
-        if target_distance > max(distance_threshold, tolerance) or not is_navigable:
+        if (
+            target_distance > max(distance_threshold, tolerance)
+            or not is_navigable
+        ):
             continue
 
         agent.base_pos = start_position

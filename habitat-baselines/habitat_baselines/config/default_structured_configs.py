@@ -375,6 +375,7 @@ class RLConfig(HabitatBaselinesBaseConfig):
     ver: VERConfig = VERConfig()
     auxiliary_losses: Dict[str, AuxLossConfig] = dict()
 
+
 @dataclass
 class ProfilingConfig(HabitatBaselinesBaseConfig):
     capture_start_step: int = -1

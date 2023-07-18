@@ -10,13 +10,19 @@ from typing import Optional
 
 import numpy as np
 
+from habitat.articulated_agents.robots.stretch_robot import (
+    StretchJointStates,
+    StretchRobot,
+)
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.articulated_agents.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
-from habitat.tasks.utils import cartesian_to_polar
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
-from habitat.utils.geometry_utils import quaternion_from_coeff, quaternion_rotate_vector
+from habitat.tasks.utils import cartesian_to_polar
+from habitat.utils.geometry_utils import (
+    quaternion_from_coeff,
+    quaternion_rotate_vector,
+)
 
 
 @dataclass
@@ -65,6 +71,7 @@ class DynNavRLEnv(RearrangeTask):
 
         self._camera_tilt = config.camera_tilt
         self._start_in_manip_mode = config.start_in_manip_mode
+
     @property
     def nav_goal_pos(self):
         return self._nav_to_info.nav_goal_pos
@@ -79,11 +86,10 @@ class DynNavRLEnv(RearrangeTask):
         if "stop" in self.actions:
             does_want_terminate = self.is_stop_called
         else:
-            does_want_terminate = self.actions["rearrange_stop"].does_want_terminate
-        return (
-            self._should_end
-            or does_want_terminate
-        )
+            does_want_terminate = self.actions[
+                "rearrange_stop"
+            ].does_want_terminate
+        return self._should_end or does_want_terminate
 
     @should_end.setter
     def should_end(self, new_val: bool):
@@ -103,7 +109,6 @@ class DynNavRLEnv(RearrangeTask):
     def _generate_nav_to_pos(
         self, episode, start_hold_obj_idx=None, force_idx=None
     ):
-
         if start_hold_obj_idx is None:
             # Select an object at random and navigate to that object.
             all_pos = self._sim.get_target_objs_start()
@@ -177,12 +182,14 @@ class DynNavRLEnv(RearrangeTask):
         )
         if self._episode_init:
             sim.articulated_agent.base_pos = np.array(episode.start_position)
-            start_quat = quaternion_from_coeff(
-                episode.start_rotation
-            )
+            start_quat = quaternion_from_coeff(episode.start_rotation)
             direction_vector = np.array([0, 0, -1])
-            heading_vector = quaternion_rotate_vector(start_quat, direction_vector)
-            sim.articulated_agent.base_rot = cartesian_to_polar(-heading_vector[2], heading_vector[0])[1]
+            heading_vector = quaternion_rotate_vector(
+                start_quat, direction_vector
+            )
+            sim.articulated_agent.base_rot = cartesian_to_polar(
+                -heading_vector[2], heading_vector[0]
+            )[1]
         elif self._pick_init or self._place_init:
             if self._pick_init:
                 spawn_goals = episode.candidate_objects
@@ -192,14 +199,20 @@ class DynNavRLEnv(RearrangeTask):
                 abs_obj_idx = sim.scene_obj_ids[self.abs_targ_idx]
                 sim.grasp_mgr.desnap(force=True)
                 sim.grasp_mgr.snap_to_obj(abs_obj_idx, force=True)
-            view_points_per_recep = np.concatenate([
-                np.array([v.agent_state.position for v in g.view_points])
-                for g in spawn_goals
-            ], 0)
-            centers_per_recep = np.concatenate([
-                np.array([g.position for v in g.view_points])
-                for g in spawn_goals
-            ], 0)
+            view_points_per_recep = np.concatenate(
+                [
+                    np.array([v.agent_state.position for v in g.view_points])
+                    for g in spawn_goals
+                ],
+                0,
+            )
+            centers_per_recep = np.concatenate(
+                [
+                    np.array([g.position for v in g.view_points])
+                    for g in spawn_goals
+                ],
+                0,
+            )
             start_pos, angle_to_obj, was_unsucc = get_robot_spawns(
                 view_points_per_recep,
                 self._config.base_angle_noise,
@@ -231,8 +244,12 @@ class DynNavRLEnv(RearrangeTask):
                 sim.articulated_agent.arm_joint_pos = joints
 
         else:
-            sim.articulated_agent.base_pos = self._nav_to_info.articulated_agent_start_pos
-            sim.articulated_agent.base_rot = self._nav_to_info.articulated_agent_start_angle
+            sim.articulated_agent.base_pos = (
+                self._nav_to_info.articulated_agent_start_pos
+            )
+            sim.articulated_agent.base_rot = (
+                self._nav_to_info.articulated_agent_start_angle
+            )
 
         self._robot_start_position = sim.articulated_agent.sim_obj.translation
         start_quat = sim.articulated_agent.sim_obj.rotation
@@ -260,8 +277,12 @@ class DynNavRLEnv(RearrangeTask):
             rom = sim.get_rigid_object_manager()
             # Visualize the position the agent is navigating to.
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
-                #self._nav_to_info.nav_goal_pos,
-                np.array(rom.get_object_by_id(int(episode.candidate_objects[0].object_id)).translation),
+                # self._nav_to_info.nav_goal_pos,
+                np.array(
+                    rom.get_object_by_id(
+                        int(episode.candidate_objects[0].object_id)
+                    ).translation
+                ),
                 sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )

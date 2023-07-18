@@ -7,6 +7,7 @@
 from habitat.core.registry import registry
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
+
 @registry.register_simulator(name="OVMMSim-v0")
 class OVMMSim(RearrangeSim):
     def _setup_targets(self, ep_info):

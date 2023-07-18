@@ -12,7 +12,6 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
-
 from habitat.tasks.nav.nav import PointGoalSensor
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
@@ -23,7 +22,6 @@ from habitat.tasks.rearrange.utils import (
     rearrange_logger,
 )
 from habitat.tasks.utils import cartesian_to_polar
-
 
 
 class MultiObjSensor(PointGoalSensor):
@@ -879,7 +877,6 @@ class ForceTerminate(Measure):
             self._metric = False
 
 
-
 @registry.register_measure
 class RobotCollisionsTerminate(Measure):
     """
@@ -1021,17 +1018,20 @@ class RearrangeReward(UsesArticulatedAgentInterface, Measure):
             reward -= self._force_end_pen
         if collisions_terminate:
             reward -= self._robot_collisions_end_pen
-        if (('base_velocity' in task.actions or
-        'move_forward' in task.actions) and task._is_navmesh_violated):
+        if (
+            "base_velocity" in task.actions or "move_forward" in task.actions
+        ) and task._is_navmesh_violated:
             reward -= self._navmesh_violate_pen
 
         robot_collisions = task.measurements.measures[
             RobotCollisions.cls_uuid
         ].get_metric()
-        collisions_added_in_step = robot_collisions['total_collisions'] - self._prev_num_collisions
+        collisions_added_in_step = (
+            robot_collisions["total_collisions"] - self._prev_num_collisions
+        )
         if collisions_added_in_step > 0:
             reward -= self._robot_collisions_pen
-        self._prev_num_collisions = robot_collisions['total_collisions']
+        self._prev_num_collisions = robot_collisions["total_collisions"]
         self._metric = reward
 
     def _get_coll_reward(self):
@@ -1133,7 +1133,6 @@ class CameraPoseSensor(Sensor):
         return SensorTypes.TENSOR
 
     def _get_observation_space(self, *args: Any, **kwargs: Any):
-
         return spaces.Box(
             low=np.finfo(np.float32).min,
             high=np.finfo(np.float32).max,
@@ -1169,9 +1168,12 @@ class NavmeshCollision(Measure):
         self.update_metric(*args, **kwargs)
 
     def update_metric(self, *args, task, **kwargs):
-        if ('base_velocity' in task.actions or
-        'move_forward' in task.actions) and task._is_navmesh_violated:
+        if (
+            "base_velocity" in task.actions or "move_forward" in task.actions
+        ) and task._is_navmesh_violated:
             self._metric += 1
+
+
 @registry.register_measure
 class RuntimePerfStats(Measure):
     cls_uuid: str = "habitat_perf"

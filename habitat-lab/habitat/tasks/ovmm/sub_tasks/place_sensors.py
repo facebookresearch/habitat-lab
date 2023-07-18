@@ -127,7 +127,6 @@ class ObjAnywhereOnGoal(Measure):
                     }
                     # Additional check for receptacles that are not on a separate object
                     if self._metric[str(picked_idx)] and other_obj_id == -1:
-
                         for n, r in self._sim.receptacles.items():
                             if r.check_if_point_on_surface(
                                 self._sim, contact_point

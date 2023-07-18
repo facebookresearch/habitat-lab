@@ -12,10 +12,8 @@ from gym import spaces
 from habitat.core.embodied_task import Measure
 from habitat.core.registry import registry
 from habitat.core.simulator import Sensor, SensorTypes
+from habitat.tasks.ovmm.sub_tasks.nav_to_obj_task import OVMMDynNavRLEnv
 from habitat.tasks.ovmm.utils import find_closest_goal_index_within_distance
-from habitat.tasks.ovmm.sub_tasks.nav_to_obj_task import (
-    OVMMDynNavRLEnv,
-)
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_sensors import (
     NavToObjReward,
     NavToObjSuccess,

@@ -1,5 +1,5 @@
-
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+
 
 def _try_register_ovmm_task():
     import habitat.tasks.ovmm.ovmm_sensors

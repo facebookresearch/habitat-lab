@@ -22,6 +22,7 @@ from habitat.config.default import get_agent_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
+from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
@@ -63,7 +64,6 @@ from habitat_baselines.utils.common import (
     inference_mode,
     is_continuous_action_space,
 )
-from habitat.utils.gym_definitions import make_gym_from_config
 from habitat_baselines.utils.info_dict import (
     NON_SCALAR_METRICS,
     extract_scalars_from_info,
@@ -365,7 +365,7 @@ class PPOTrainer(BaseRLTrainer):
                 step_batch["recurrent_hidden_states"],
                 step_batch["prev_actions"],
                 step_batch["masks"],
-                deterministic=self.config.habitat_baselines.rl.policy.deterministic_actions
+                deterministic=self.config.habitat_baselines.rl.policy.deterministic_actions,
             )
 
         profiling_wrapper.range_pop()  # compute actions
