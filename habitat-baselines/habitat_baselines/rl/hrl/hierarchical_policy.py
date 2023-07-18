@@ -28,6 +28,7 @@ from habitat_baselines.rl.hrl.hl import (  # noqa: F401.
 )
 from habitat_baselines.rl.hrl.skills import (  # noqa: F401.
     ArtObjSkillPolicy,
+    MoveSkillPolicy,
     NavSkillPolicy,
     NoopSkillPolicy,
     OracleNavPolicy,

@@ -587,7 +587,7 @@ class RearrangeSim(HabitatSim):
         distances to it.
         """
         new_pos = self.pathfinder.snap_point(pos, self._largest_island_idx)
-        
+
         max_iter = 10
         offset_distance = 1.5
         distance_per_iter = 0.5
