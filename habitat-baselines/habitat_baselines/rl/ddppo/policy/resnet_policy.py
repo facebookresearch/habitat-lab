@@ -13,6 +13,8 @@ import torch
 from gym import spaces
 from torch import nn as nn
 from torch.nn import functional as F
+from torchvision import transforms as T
+from torchvision.transforms import functional as TF
 
 from habitat.tasks.nav.instance_image_nav_task import InstanceImageGoalSensor
 from habitat.tasks.nav.nav import (
@@ -39,6 +41,11 @@ from habitat_baselines.utils.common import get_num_actions
 if TYPE_CHECKING:
     from omegaconf import DictConfig
 
+try:
+    import clip
+except ImportError:
+    clip = None
+
 
 @baseline_registry.register_policy
 class PointNavResNetPolicy(NetPolicy):
@@ -58,6 +65,23 @@ class PointNavResNetPolicy(NetPolicy):
         fuse_keys: Optional[List[str]] = None,
         **kwargs,
     ):
+        """
+        Keyword arguments:
+        rnn_type: RNN layer type; one of ["GRU", "LSTM"]
+        backbone: Visual encoder backbone; one of ["resnet18", "resnet50", "resneXt50", "se_resnet50", "se_resneXt50", "se_resneXt101", "resnet50_clip_avgpool", "resnet50_clip_attnpool"]
+        """
+
+        assert backbone in [
+            "resnet18",
+            "resnet50",
+            "resneXt50",
+            "se_resnet50",
+            "se_resneXt50",
+            "se_resneXt101",
+            "resnet50_clip_avgpool",
+            "resnet50_clip_attnpool",
+        ], f"{backbone} backbone is not recognized."
+
         if policy_config is not None:
             discrete_actions = (
                 policy_config.action_distribution_type == "categorical"
@@ -239,6 +263,121 @@ class ResNetEncoder(nn.Module):
         return x
 
 
+class ResNetCLIPEncoder(nn.Module):
+    def __init__(
+        self,
+        observation_space: spaces.Dict,
+        pooling="attnpool",
+    ):
+        super().__init__()
+
+        self.rgb = "rgb" in observation_space.spaces
+        self.depth = "depth" in observation_space.spaces
+
+        # Determine which visual observations are present
+        self.visual_keys = [
+            k
+            for k, v in observation_space.spaces.items()
+            if len(v.shape) > 1 and k != ImageGoalSensor.cls_uuid
+        ]
+
+        # Count total # of channels
+        self._n_input_channels = sum(
+            observation_space.spaces[k].shape[2] for k in self.visual_keys
+        )
+
+        if not self.is_blind:
+            if clip is None:
+                raise ImportError(
+                    "Need to install CLIP (run `pip install git+https://github.com/openai/CLIP.git@40f5484c1c74edd83cb9cf687c6ab92b28d8b656`)"
+                )
+
+            model, preprocess = clip.load("RN50")
+
+            # expected input: C x H x W (np.uint8 in [0-255])
+            self.preprocess = T.Compose(
+                [
+                    # resize and center crop to 224
+                    preprocess.transforms[0],
+                    preprocess.transforms[1],
+                    # already tensor, but want float
+                    T.ConvertImageDtype(torch.float),
+                    # normalize with CLIP mean, std
+                    preprocess.transforms[4],
+                ]
+            )
+            # expected output: C x H x W (np.float32)
+
+            self.backbone = model.visual
+
+            if self.rgb and self.depth:
+                self.backbone.attnpool = nn.Identity()
+                self.output_shape = (2048,)  # type: Tuple
+            elif pooling == "none":
+                self.backbone.attnpool = nn.Identity()
+                self.output_shape = (2048, 7, 7)
+            elif pooling == "avgpool":
+                self.backbone.attnpool = nn.Sequential(
+                    nn.AdaptiveAvgPool2d(output_size=(1, 1)), nn.Flatten()
+                )
+                self.output_shape = (2048,)
+            else:
+                self.output_shape = (1024,)
+
+            for param in self.backbone.parameters():
+                param.requires_grad = False
+            for module in self.backbone.modules():
+                if "BatchNorm" in type(module).__name__:
+                    module.momentum = 0.0
+            self.backbone.eval()
+
+    @property
+    def is_blind(self):
+        return self._n_input_channels == 0
+
+    def forward(self, observations: Dict[str, torch.Tensor]) -> torch.Tensor:  # type: ignore
+        if self.is_blind:
+            return None
+
+        cnn_input = []
+        if self.rgb:
+            rgb_observations = observations["rgb"]
+            rgb_observations = rgb_observations.permute(
+                0, 3, 1, 2
+            )  # BATCH x CHANNEL x HEIGHT X WIDTH
+            rgb_observations = torch.stack(
+                [self.preprocess(rgb_image) for rgb_image in rgb_observations]
+            )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.float32
+            rgb_x = self.backbone(rgb_observations).float()
+            cnn_input.append(rgb_x)
+
+        if self.depth:
+            depth_observations = observations["depth"][
+                ..., 0
+            ]  # [BATCH x HEIGHT X WIDTH]
+            ddd = torch.stack(
+                [depth_observations] * 3, dim=1
+            )  # [BATCH x 3 x HEIGHT X WIDTH]
+            ddd = torch.stack(
+                [
+                    self.preprocess(
+                        TF.convert_image_dtype(depth_map, torch.uint8)
+                    )
+                    for depth_map in ddd
+                ]
+            )  # [BATCH x CHANNEL x HEIGHT X WIDTH] in torch.float32
+            depth_x = self.backbone(ddd).float()
+            cnn_input.append(depth_x)
+
+        if self.rgb and self.depth:
+            x = F.adaptive_avg_pool2d(cnn_input[0] + cnn_input[1], 1)
+            x = x.flatten(1)
+        else:
+            x = torch.cat(cnn_input, dim=1)
+
+        return x
+
+
 class PointNavResNetNet(Net):
     """Network which passes the input image through CNN and concatenates
     goal vector with CNN's output and passes that through RNN.
@@ -409,22 +548,37 @@ class PointNavResNetNet(Net):
                 }
             )
 
-        self.visual_encoder = ResNetEncoder(
-            use_obs_space,
-            baseplanes=resnet_baseplanes,
-            ngroups=resnet_baseplanes // 2,
-            make_backbone=getattr(resnet, backbone),
-            normalize_visual_inputs=normalize_visual_inputs,
-        )
-
-        if not self.visual_encoder.is_blind:
-            self.visual_fc = nn.Sequential(
-                nn.Flatten(),
-                nn.Linear(
-                    np.prod(self.visual_encoder.output_shape), hidden_size
-                ),
-                nn.ReLU(True),
+        if backbone.startswith("resnet50_clip"):
+            self.visual_encoder = ResNetCLIPEncoder(
+                observation_space
+                if not force_blind_policy
+                else spaces.Dict({}),
+                pooling="avgpool" if "avgpool" in backbone else "attnpool",
             )
+            if not self.visual_encoder.is_blind:
+                self.visual_fc = nn.Sequential(
+                    nn.Linear(
+                        self.visual_encoder.output_shape[0], hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
+        else:
+            self.visual_encoder = ResNetEncoder(
+                use_obs_space,
+                baseplanes=resnet_baseplanes,
+                ngroups=resnet_baseplanes // 2,
+                make_backbone=getattr(resnet, backbone),
+                normalize_visual_inputs=normalize_visual_inputs,
+            )
+
+            if not self.visual_encoder.is_blind:
+                self.visual_fc = nn.Sequential(
+                    nn.Flatten(),
+                    nn.Linear(
+                        np.prod(self.visual_encoder.output_shape), hidden_size
+                    ),
+                    nn.ReLU(True),
+                )
 
         self.state_encoder = build_rnn_state_encoder(
             (0 if self.is_blind else self._hidden_size) + rnn_input_size,

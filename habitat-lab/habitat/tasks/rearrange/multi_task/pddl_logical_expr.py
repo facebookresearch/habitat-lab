@@ -3,7 +3,6 @@
 # LICENSE file in the root directory of this source tree.
 
 from enum import Enum
-from functools import reduce
 from typing import Dict, List, Optional, Union
 
 from habitat.tasks.rearrange.multi_task.pddl_predicate import Predicate
@@ -37,6 +36,16 @@ class LogicalExpr:
         self._sub_exprs = sub_exprs
         self._inputs = inputs
         self._quantifier = quantifier
+        self._truth_vals: List[Optional[bool]] = []
+
+    @property
+    def prev_truth_vals(self) -> List[Optional[bool]]:
+        """
+        Sub-expression truth values for the last `self.is_true` computation. A
+        value of None is if the truth value was not computed (due to early
+        break).
+        """
+        return self._truth_vals
 
     @property
     def expr_type(self):
@@ -71,42 +80,64 @@ class LogicalExpr:
         return self._is_true(lambda p: p.is_true(sim_info))
 
     def _is_true(self, is_true_fn) -> bool:
+        self._truth_vals = [None] * len(self._sub_exprs)
+
         if (
             self._expr_type == LogicalExprType.AND
             or self._expr_type == LogicalExprType.NAND
         ):
-            reduce_op = lambda x, y: x and y
-            init_value = True
+            result = True
+            for i, sub_expr in enumerate(self._sub_exprs):
+                truth_val = is_true_fn(sub_expr)
+                assert isinstance(truth_val, bool)
+                self._truth_vals[i] = truth_val
+                result = result and truth_val
+                if not result:
+                    break
         elif (
             self._expr_type == LogicalExprType.OR
             or self._expr_type == LogicalExprType.NOR
         ):
-            reduce_op = lambda x, y: x or y
-            init_value = False
+            result = False
+            for i, sub_expr in enumerate(self._sub_exprs):
+                truth_val = is_true_fn(sub_expr)
+                assert isinstance(truth_val, bool)
+                self._truth_vals[i] = truth_val
+                result = result or truth_val
+                if result:
+                    break
         else:
-            raise ValueError()
-        self.prev_truth_vals = [
-            is_true_fn(sub_expr) for sub_expr in self._sub_exprs
-        ]
+            raise ValueError(
+                f"Got unexpected expr_type: {self._expr_type} of type {type(self._expr_type)}"
+            )
 
-        ret = reduce(
-            reduce_op,
-            self.prev_truth_vals,
-            init_value,
-        )
         if (
             self._expr_type == LogicalExprType.NAND
             or self._expr_type == LogicalExprType.NOR
         ):
-            ret = not ret
-        return ret
+            # Invert the entire result for NAND and NOR expressions.
+            result = not result
+        return result
 
     def sub_in(self, sub_dict: Dict[PddlEntity, PddlEntity]) -> "LogicalExpr":
         self._sub_exprs = [e.sub_in(sub_dict) for e in self._sub_exprs]
         return self
 
+    def sub_in_clone(self, sub_dict: Dict[PddlEntity, PddlEntity]):
+        return LogicalExpr(
+            self._expr_type,
+            [e.sub_in(sub_dict) for e in self._sub_exprs],
+            self._inputs,
+            self._quantifier,
+        )
+
     def __repr__(self):
         return f"({self._expr_type}: {self._sub_exprs}"
+
+    @property
+    def compact_str(self):
+        sub_s = ",".join((s.compact_str for s in self._sub_exprs))
+        return f"{self._expr_type.value}({sub_s})"
 
     def clone(self) -> "LogicalExpr":
         return LogicalExpr(

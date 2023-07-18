@@ -67,6 +67,12 @@ class NnSkillPolicy(SkillPolicy):
             f"Skill {self._config.skill_name}: action offset {self._ac_start}, action length {self._ac_len}"
         )
 
+    @property
+    def required_obs_keys(self):
+        return super().required_obs_keys + list(
+            self._filtered_obs_space.spaces.keys()
+        )
+
     def parameters(self):
         if self._wrap_policy is not None:
             return self._wrap_policy.parameters()

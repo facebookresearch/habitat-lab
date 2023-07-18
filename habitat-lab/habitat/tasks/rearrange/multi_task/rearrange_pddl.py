@@ -146,6 +146,11 @@ class PddlSimInfo:
     physics_stability_steps: int
     recep_place_shrink_factor: float
 
+    pred_truth_cache: Optional[Dict[str, bool]] = None
+
+    def reset_pred_truth_cache(self):
+        self.pred_truth_cache = {}
+
     def get_predicate(self, pred_name: str):
         return self.predicates[pred_name]
 

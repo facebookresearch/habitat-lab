@@ -6,6 +6,7 @@
 
 import itertools
 import os.path as osp
+import time
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -389,18 +390,18 @@ class PddlDomain:
         Expand all quantifiers in the actions. This should be done per instance
         bind in case the typing changes.
         """
-        for k, orig_action in self._orig_actions.items():
-            new_ac = orig_action.clone()
-
-            precond_quant = new_ac.precond.quantifier
+        for k, ac in self._orig_actions.items():
+            precond_quant = ac.precond.quantifier
             new_preconds, assigns = self.expand_quantifiers(
-                new_ac.precond, new_ac.name
+                ac.precond.clone(), ac.name
             )
-            new_ac.set_precond(new_preconds)
+
+            new_ac = ac.set_precond(new_preconds)
             if precond_quant == LogicalQuantifierType.EXISTS:
-                # So action post conditions can use the entities which satisfy
-                # the pre-conditions.
+                # So the action post conditions can use the entities which
+                # satisfy the pre-conditions.
                 new_ac.set_post_cond_search(assigns)
+
             self._actions[k] = new_ac
 
     @property
@@ -599,27 +600,34 @@ class PddlDomain:
         else:
             raise ValueError(f"Unrecongized {expr.quantifier}")
 
-        all_matching_entities = []
+        t_start = time.time()
+        assigns: List[List[PddlEntity]] = [[]]
         for expand_entity in expr.inputs:
-            all_matching_entities.append(
-                [
-                    e
-                    for e in self.all_entities.values()
-                    if e.expr_type.is_subtype_of(expand_entity.expr_type)
-                ]
-            )
+            entity_assigns = []
+            for e in self.all_entities.values():
+                if not e.expr_type.is_subtype_of(expand_entity.expr_type):
+                    continue
+                for cur_assign in assigns:
+                    if e in cur_assign:
+                        continue
+                    entity_assigns.append([*cur_assign, e])
+            assigns = entity_assigns
+        if self._sim_info is not None:
+            self.sim_info.sim.add_perf_timing("assigns_search", t_start)
 
-        expanded_exprs: List[Union[LogicalExpr, Predicate]] = []
-        assigns = []
-        for poss_input in itertools.product(*all_matching_entities):
-            assert len(poss_input) == len(expr.inputs)
-            sub_dict = dict(zip(expr.inputs, poss_input))
-            assigns.append(sub_dict)
-
-            expanded_exprs.append(expr.clone().sub_in(sub_dict))
+        t_start = time.time()
+        assigns = [dict(zip(expr.inputs, assign)) for assign in assigns]
+        expanded_exprs = []
+        for assign in assigns:
+            expanded_exprs.append(expr.sub_in_clone(assign))
+        if self._sim_info is not None:
+            self.sim_info.sim.add_perf_timing("expand_exprs_set", t_start)
 
         inputs: List[PddlEntity] = []
-        return LogicalExpr(combine_type, expanded_exprs, inputs, None), assigns
+        return (
+            LogicalExpr(combine_type, expanded_exprs, inputs, None),
+            assigns,
+        )
 
 
 class PddlProblem(PddlDomain):

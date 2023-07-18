@@ -291,9 +291,6 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
         self._sensor_suite = SensorSuite(sim_sensors)
         self.sim_config = self.create_sim_config(self._sensor_suite)
         self._current_scene = self.sim_config.sim_cfg.scene_id
-        self.sim_config.enable_batch_renderer = (
-            config.renderer.enable_batch_renderer
-        )
         super().__init__(self.sim_config)
         # load additional object paths specified by the dataset
         # TODO: Should this be moved elsewhere?
@@ -346,8 +343,19 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
                 "motion_data_path",
                 "ik_arm_urdf",
                 "grasp_managers",
+                "joint_start_override",
             },
         )
+
+        # configure default navmesh parameters to match the configured agent
+        if self.habitat_config.default_agent_navmesh:
+            sim_config.navmesh_settings = habitat_sim.nav.NavMeshSettings()
+            sim_config.navmesh_settings.set_defaults()
+            sim_config.navmesh_settings.agent_radius = agent_config.radius
+            sim_config.navmesh_settings.agent_height = agent_config.height
+            sim_config.navmesh_settings.include_static_objects = (
+                self.habitat_config.navmesh_include_static_objects
+            )
 
         sensor_specifications = []
         for sensor in _sensor_suite.sensors.values():
@@ -407,7 +415,11 @@ class HabitatSim(habitat_sim.Simulator, Simulator):
             ),
         }
 
-        return habitat_sim.Configuration(sim_config, [agent_config])
+        output = habitat_sim.Configuration(sim_config, [agent_config])
+        output.enable_batch_renderer = (
+            self.habitat_config.renderer.enable_batch_renderer
+        )
+        return output
 
     @property
     def sensor_suite(self) -> SensorSuite:
