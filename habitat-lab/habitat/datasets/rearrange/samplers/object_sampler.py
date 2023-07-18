@@ -40,6 +40,7 @@ class ObjectSampler:
         nav_to_min_distance: float = -1.0,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
         translation_up_offset=0.08,
+        check_if_in_largest_island_id=True,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -50,11 +51,13 @@ class ObjectSampler:
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
         :param translation_up_offset: Optionally offset sample points to improve likelyhood of successful placement on inflated collision shapes.
+        :param check_if_in_largest_island_id: Optionally check if the snapped point is in the largest island id
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
         self._recep_set_sample_probs = recep_set_sample_probs
         self._translation_up_offset = translation_up_offset
+        self._check_if_in_largest_island_id = check_if_in_largest_island_id
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -360,9 +363,14 @@ class ObjectSampler:
         if self.nav_to_min_distance == -1:
             return True
 
-        snapped = sim.pathfinder.snap_point(
-            obj.translation, self.largest_island_id
-        )
+        # If the sanp_point fails, the sanpped point is NaN and the distance
+        # check returns False. So it works out.
+        if self._check_if_in_largest_island_id:
+            snapped = sim.pathfinder.snap_point(
+                obj.translation, self.largest_island_id
+            )
+        else:
+            snapped = sim.pathfinder.snap_point(obj.translation)
         dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
