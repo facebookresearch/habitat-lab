@@ -314,9 +314,7 @@ class SkillPolicy(Policy):
             to end and 0 if not where batch_size is potentially a subset of the
             overall num_environments as specified by `batch_idx`.
         """
-        return torch.zeros(observations.shape[0], dtype=torch.bool).to(
-            masks.device
-        )
+        return torch.zeros(masks.shape[0], dtype=torch.bool).to(masks.device)
 
     def _parse_skill_arg(self, skill_arg: str) -> Any:
         """
