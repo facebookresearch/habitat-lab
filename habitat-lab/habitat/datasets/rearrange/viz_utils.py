@@ -35,7 +35,7 @@ def save_viewpoint_frame(obs, obj_handle, obj_semantic_id, act_idx):
     imageio.imsave(
         os.path.join(
             img_dir,
-            f"{obj_handle}_{obj_semantic_id}_{x}_{z}_{act_idx}.png",
+            f"{obj_handle}_{obj_semantic_id}_{act_idx}.png",
         ),
         rgb_obs,
     )

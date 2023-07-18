@@ -34,6 +34,7 @@ from habitat.core.simulator import (
 from habitat.core.spaces import ActionSpace
 from habitat.core.utils import not_none_validator, try_cv2_import
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
+from habitat.tasks.nav.nav import NavigationTask
 from habitat.tasks.utils import cartesian_to_polar
 from habitat.utils.geometry_utils import (
     quaternion_from_coeff,
@@ -1132,7 +1133,7 @@ class MoveForwardAction(SimulatorTaskAction):
         return self._sim.step(HabitatSimActions.move_forward)
 
 
-def rotate_action(sim, direction: str):
+def rotate_action(sim, task: NavigationTask, direction: str):
     from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 
     assert direction in ["left", "right"]
@@ -1140,36 +1141,36 @@ def rotate_action(sim, direction: str):
     if type(sim) == RearrangeSim:
         actuation = sim.config.agents[0].action_space[2].actuation.amount
         if "robot_start_angle" not in dir(sim):
-            sim.articulated_agent_start_angle = kwargs[
-                "task"
-            ]._nav_to_info.robot_start_angle
+            sim.articulated_agent_start_angle = (
+                task._nav_to_info.robot_start_angle
+            )
             sim.current_angle = sim.articulated_agent_start_angle
 
         if direction == "right":
             actuation = -1 * actuation
 
-        sim.updated_angle = self._sim.current_angle + actuation * np.pi / 180
-        sim.articulated_agent.base_rot = self._sim.updated_angle
-        sim.current_angle = self._sim.updated_angle
+        sim.updated_angle = sim.current_angle + actuation * np.pi / 180
+        sim.articulated_agent.base_rot = sim.updated_angle
+        sim.current_angle = sim.updated_angle
 
 
 @registry.register_task_action
 class TurnLeftAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: NavigationTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        rotate_action(self._sim, direction="left")
+        rotate_action(self._sim, task, direction="left")
         return self._sim.step(HabitatSimActions.turn_left)
 
 
 @registry.register_task_action
 class TurnRightAction(SimulatorTaskAction):
-    def step(self, *args: Any, **kwargs: Any):
+    def step(self, *args: Any, task: NavigationTask, **kwargs: Any):
         r"""Update ``_metric``, this method is called from ``Env`` on each
         ``step``.
         """
-        rotate_action(self._sim, direction="right")
+        rotate_action(self._sim, task, direction="right")
 
         return self._sim.step(HabitatSimActions.turn_right)
 

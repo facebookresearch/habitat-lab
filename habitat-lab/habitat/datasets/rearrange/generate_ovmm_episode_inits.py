@@ -2,12 +2,8 @@ import argparse
 import gzip
 import json
 
-from gym import spaces
-from tqdm import tqdm
-
 import habitat
 from habitat.core.utils import DatasetFloatJSONEncoder
-from habitat.utils.geometry_utils import quaternion_from_coeff
 from habitat_baselines.config.default import get_config
 
 parser = argparse.ArgumentParser()
@@ -43,7 +39,7 @@ new_episodes_list = []
 
 with habitat.Env(config=config) as env:
     env.reset()
-    for i in range(env.number_of_episodes):
+    for _ in range(env.number_of_episodes):
         # this will spawn the agent in the scene
         observations = env.reset()
         curr_episode = episode_mapping[env.current_episode.episode_id]

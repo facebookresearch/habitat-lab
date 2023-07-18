@@ -6,14 +6,12 @@
 
 import copy
 import json
-from typing import Any, Dict, List, Optional, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, cast
 
 import attr
 import numpy as np
 
-import habitat_sim.utils.datasets_download as data_downloader
-from habitat.core.dataset import Episode, EpisodeIterator
-from habitat.core.logging import logger
+from habitat.core.dataset import EpisodeIterator
 from habitat.core.registry import registry
 from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder

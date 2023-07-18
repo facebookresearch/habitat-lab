@@ -4,7 +4,9 @@
 
 import os
 import random
-from typing import TYPE_CHECKING, Any, List, Type
+from typing import TYPE_CHECKING, Any, Callable, List, Type
+
+import gym
 
 from habitat import ThreadedVectorEnv, VectorEnv, logger
 from habitat.config import read_write

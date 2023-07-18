@@ -14,11 +14,9 @@ import habitat_sim.utils.datasets_download as data_downloader
 from habitat.core.dataset import Episode
 from habitat.core.logging import logger
 from habitat.core.registry import registry
-from habitat.core.simulator import AgentState
 from habitat.core.utils import DatasetFloatJSONEncoder
 from habitat.datasets.pointnav.pointnav_dataset import PointNavDatasetV1
 from habitat.datasets.utils import check_and_gen_physics_config
-from habitat.tasks.nav.object_nav_task import ObjectGoal, ObjectViewLocation
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
