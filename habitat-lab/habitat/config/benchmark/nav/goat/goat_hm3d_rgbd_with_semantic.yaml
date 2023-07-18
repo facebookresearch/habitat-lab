@@ -9,7 +9,7 @@ defaults:
 
 habitat:
   environment:
-    max_episode_steps: 500
+    max_episode_steps: 2500
 
   simulator:
     turn_angle: 30

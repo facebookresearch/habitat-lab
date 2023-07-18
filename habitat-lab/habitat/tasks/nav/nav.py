@@ -1295,6 +1295,7 @@ class GOATDistanceToSubGoal(DistanceToGoal):
 
         kwargs["task"].num_tasks = len(kwargs["observations"]["multigoal"])
         kwargs["task"].current_task_idx = 0
+        kwargs["task"].update_goal = False
 
         if self._distance_to == "VIEW_POINTS":
             self.update_goal_viewpoints(episode)
@@ -1312,34 +1313,36 @@ class GOATDistanceToSubGoal(DistanceToGoal):
     def update_metric(
         self, episode: NavigationEpisode, *args: Any, **kwargs: Any
     ):
-        if self.current_goal_idx != kwargs["task"].current_task_idx:
-            if self.ctr >= 1:
-                self.current_goal_idx = kwargs["task"].current_task_idx
-                print(
-                    "Updating goal (viewpoints); new current_task_idx:",
-                    self.current_goal_idx,
-                )
-                self.goal_change = True
-                self.update_goal_viewpoints(episode)
-                self.ctr = 0
-            else:
-                self.ctr += 1
+        # print("Goal change", self.goal_change)
+        # print("Update goal", kwargs["task"].update_goal)
+        # print('-------------')
+        # if self.current_goal_idx != kwargs["task"].current_task_idx:
+        if self.goal_change:
+            # if self.ctr >= 1:
+            self.current_goal_idx = kwargs["task"].current_task_idx
+            print(
+                "Updating goal (viewpoints); new current_task_idx:",
+                self.current_goal_idx,
+            )
+
+            self.update_goal_viewpoints(episode)
+            self.goal_change = False
+
         if self._distance_from == "END_EFFECTOR":
             current_position = self.get_end_effector_position()
         else:
             current_position = self.get_base_position()
 
-        if (
-            self._previous_position is None
-            or not np.allclose(
-                self._previous_position, current_position, atol=1e-4
-            )
-            or self.goal_change
+        if kwargs["task"].update_goal:
+            self.goal_change = True
+            kwargs["task"].update_goal = False
+
+        if self._previous_position is None or not np.allclose(
+            self._previous_position, current_position, atol=1e-4
         ):
             episode_cache = None
-            if self.goal_change:
-                episode_cache = None
-                self.goal_change = False
+            # if self.goal_change:
+            #     episode_cache = None
             if self._distance_to == "EUCLIDEAN_POINT":
                 distance_to_target = min(
                     [
@@ -1602,6 +1605,7 @@ class GOATSubTaskStopAction(StopAction):
         if task.current_task_idx != task.num_tasks - 1:
             task.current_task_idx += 1
             task.is_stop_called = False
+            task.update_goal = True
         else:
             task.update_goal = False
             task.is_stop_called = True  # type: ignore
