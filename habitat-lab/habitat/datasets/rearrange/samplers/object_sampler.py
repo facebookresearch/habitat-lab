@@ -39,8 +39,8 @@ class ObjectSampler:
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
-        translation_up_offset=0.08,
-        check_if_in_largest_island_id=True,
+        translation_up_offset: float = 0.08,
+        constrain_to_largest_nav_island: bool = False,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -57,7 +57,7 @@ class ObjectSampler:
         self._allowed_recep_set_names = allowed_recep_set_names
         self._recep_set_sample_probs = recep_set_sample_probs
         self._translation_up_offset = translation_up_offset
-        self._check_if_in_largest_island_id = check_if_in_largest_island_id
+        self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -245,7 +245,10 @@ class ObjectSampler:
 
         # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
         # This assumption limits sampling to the largest navigable component of any scene.
-        if self.largest_island_id == -1:
+        if (
+            self._constrain_to_largest_nav_island
+            and self.largest_island_id == -1
+        ):
             island_areas = list(
                 map(
                     sim.pathfinder.island_area,
@@ -352,29 +355,26 @@ class ObjectSampler:
         obj: habitat_sim.physics.ManagedRigidObject,
     ) -> bool:
         """
-        Return if the object is within a threshold distance of the nearest
+        Return if the object is within a threshold horizontal distance of the nearest
         navigable point, in which the nearest navigable point is on the same
         navigation mesh of the object.
 
-        Note that this might not catch all edge cases since the distance is
-        based on Euclidean distance. The nearest navigable point may be
-        separated from the object by an obstacle.
+        Note that this might not catch all edge cases since the heuristic is
+        horizontal Euclidean distance. The nearest navigable point may be
+        separated from the object by an obstacle on a stairway, etc...
         """
         if self.nav_to_min_distance == -1:
             return True
 
         # If the sanp_point fails, the sanpped point is NaN and the distance
         # check returns False. So it works out.
-        if self._check_if_in_largest_island_id:
-            snapped = sim.pathfinder.snap_point(
-                obj.translation, self.largest_island_id
-            )
-        else:
-            snapped = sim.pathfinder.snap_point(obj.translation)
-        dist = float(
+        snapped = sim.pathfinder.snap_point(
+            obj.translation, self.largest_island_id
+        )
+        horizontal_dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
-        return dist < self.nav_to_min_distance
+        return horizontal_dist < self.nav_to_min_distance
 
     def single_sample(
         self,
