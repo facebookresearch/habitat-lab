@@ -38,7 +38,9 @@ except ImportError:
 
 def setup_function(test_trainers):
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(

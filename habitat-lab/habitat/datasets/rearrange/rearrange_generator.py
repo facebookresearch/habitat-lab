@@ -211,7 +211,6 @@ class RearrangeEpisodeGenerator:
                     raise ValueError(
                         f"Found no object handles for {obj_sampler_info}"
                     )
-
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
@@ -227,6 +226,9 @@ class RearrangeEpisodeGenerator:
                         "nav_to_min_distance", -1.0
                     ),
                     obj_sampler_info["params"].get("sample_probs", None),
+                    obj_sampler_info["params"].get(
+                        "constrain_to_largest_nav_island", False
+                    ),
                 )
             else:
                 logger.info(
