@@ -163,7 +163,7 @@ class PddlSimInfo:
             entity, SimulatorObjectType.ROBOT_ENTITY.value
         ):
             robot_id = self.robot_ids[ename]
-            return self.sim.get_agent_data(robot_id).robot.base_pos
+            return self.sim.get_agent_data(robot_id).articulated_agent.base_pos
         if self.check_type_matches(
             entity, SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value
         ):

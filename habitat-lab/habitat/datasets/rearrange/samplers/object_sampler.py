@@ -343,7 +343,7 @@ class ObjectSampler:
         sim.get_rigid_object_manager().remove_object_by_handle(
             new_object.handle
         )
-        logger.warning(
+        logger.info(
             f"Failed to sample {object_handle} placement on {receptacle.unique_name} in {self.max_placement_attempts} tries."
         )
 
@@ -402,6 +402,7 @@ class ObjectSampler:
             object_handle = self.sample_object()
         else:
             object_handle = fixed_obj_handle
+
         if fixed_target_receptacle is not None:
             target_receptacle = fixed_target_receptacle
         else:
@@ -433,6 +434,8 @@ class ObjectSampler:
         target_receptacles: List[Receptacle],
         snap_down: bool = False,
         vdb: Optional[DebugVisualizer] = None,
+        target_object_handles: Optional[List[str]] = None,
+        object_idx_to_recep: Optional[Dict[int, Receptacle]] = None,
     ) -> List[Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]]:
         """
         Defaults to uniform sample: object -> receptacle -> volume w/ rejection -> repeat.
@@ -449,6 +452,8 @@ class ObjectSampler:
         new_objects: List[
             Tuple[habitat_sim.physics.ManagedRigidObject, Receptacle]
         ] = []
+        if object_idx_to_recep is None:
+            object_idx_to_recep = {}
 
         logger.info(
             f"    Trying to sample {self.target_objects_number} from range {self.num_objects}"
@@ -460,6 +465,12 @@ class ObjectSampler:
             len(new_objects) < self.target_objects_number
             and num_pairing_tries < self.max_sample_attempts
         ):
+            cur_obj_idx = len(new_objects)
+            if target_object_handles is None:
+                fixed_obj_handle = None
+            else:
+                fixed_obj_handle = target_object_handles[cur_obj_idx]
+
             num_pairing_tries += 1
             if len(new_objects) < len(target_receptacles):
                 # sample objects explicitly from pre-designated target receptacles first
@@ -468,13 +479,21 @@ class ObjectSampler:
                     recep_tracker,
                     snap_down,
                     vdb,
-                    target_receptacles[len(new_objects)],
+                    target_receptacles[cur_obj_idx],
+                    fixed_obj_handle=fixed_obj_handle,
                 )
                 # This receptacle has already been counted in the receptacle
                 # tracking so don't double count.
             else:
                 new_object, receptacle = self.single_sample(
-                    sim, recep_tracker, snap_down, vdb
+                    sim,
+                    recep_tracker,
+                    snap_down,
+                    vdb,
+                    fixed_target_receptacle=object_idx_to_recep.get(
+                        cur_obj_idx, None
+                    ),
+                    fixed_obj_handle=fixed_obj_handle,
                 )
                 if (
                     new_object is not None

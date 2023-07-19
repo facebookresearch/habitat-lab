@@ -11,6 +11,7 @@ import time
 from collections import defaultdict, deque
 from typing import Any, Dict, List, Optional, Set
 
+import hydra
 import numpy as np
 import torch
 import tqdm
@@ -26,9 +27,9 @@ from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
 )
+from habitat_baselines.common import VectorEnvFactory
 from habitat_baselines.common.base_trainer import BaseRLTrainer
 from habitat_baselines.common.baseline_registry import baseline_registry
-from habitat_baselines.common.construct_vector_env import construct_envs
 from habitat_baselines.common.env_spec import EnvironmentSpec
 from habitat_baselines.common.obs_transformers import (
     apply_obs_transforms_batch,
@@ -52,7 +53,6 @@ from habitat_baselines.rl.ddppo.ddp_utils import (
 )
 from habitat_baselines.rl.ddppo.policy import PointNavResNetNet
 from habitat_baselines.rl.ppo.agent_access_mgr import AgentAccessMgr
-from habitat_baselines.rl.ppo.policy import NetPolicy
 from habitat_baselines.rl.ppo.single_agent_access_mgr import (  # noqa: F401.
     SingleAgentAccessMgr,
 )
@@ -140,7 +140,10 @@ class PPOTrainer(BaseRLTrainer):
         if config is None:
             config = self.config
 
-        self.envs = construct_envs(
+        env_factory: VectorEnvFactory = hydra.utils.instantiate(
+            config.habitat_baselines.vector_env_factory
+        )
+        self.envs = env_factory.construct_envs(
             config,
             workers_ignore_signals=is_slurm_batch_job(),
             enforce_scenes_greater_eq_environments=is_eval,
@@ -149,21 +152,23 @@ class PPOTrainer(BaseRLTrainer):
                 or torch.distributed.get_rank() == 0
             ),
         )
+
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
             action_space=self.envs.action_spaces[0],
             orig_action_space=self.envs.orig_action_spaces[0],
         )
 
-        # The measure keys that should only be logged on rank0,gpu0 and nowhere
+        # The measure keys that should only be logged on rank0 and nowhere
         # else. They will be excluded from all other workers and only reported
         # from the single worker.
-        self._rank0_env0_keys: Set[str] = set(
-            self.config.habitat.task.rank0_env0_measure_names
+        self._rank0_keys: Set[str] = set(
+            list(self.config.habitat.task.rank0_env0_measure_names)
+            + list(self.config.habitat.task.rank0_measure_names)
         )
 
-        # Information on measures that declared in `self._rank0_env0_keys` to
-        # be only reported on rank0,gpu0. This is seperately logged from
+        # Information on measures that declared in `self._rank0_keys` or
+        # to be only reported on rank0. This is seperately logged from
         # `self.window_episode_stats`.
         self._single_proc_infos: Dict[str, List[float]] = {}
 
@@ -273,8 +278,10 @@ class PPOTrainer(BaseRLTrainer):
         batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
 
         if self._is_static_encoder:
-            assert isinstance(self._agent.actor_critic, NetPolicy)
-            self._encoder = self._agent.actor_critic.net.visual_encoder
+            self._encoder = self._agent.actor_critic.visual_encoder
+            assert (
+                self._encoder is not None
+            ), "Visual encoder is not specified for this actor"
             with inference_mode():
                 batch[
                     PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
@@ -313,18 +320,21 @@ class PPOTrainer(BaseRLTrainer):
         if extra_state is not None:
             checkpoint["extra_state"] = extra_state  # type: ignore
 
-        torch.save(
-            checkpoint,
-            os.path.join(
-                self.config.habitat_baselines.checkpoint_folder, file_name
-            ),
+        save_file_path = os.path.join(
+            self.config.habitat_baselines.checkpoint_folder, file_name
         )
+        torch.save(checkpoint, save_file_path)
         torch.save(
             checkpoint,
             os.path.join(
                 self.config.habitat_baselines.checkpoint_folder, "latest.pth"
             ),
         )
+        if self.config.habitat_baselines.on_save_ckpt_callback is not None:
+            hydra.utils.call(
+                self.config.habitat_baselines.on_save_ckpt_callback,
+                save_file_path=save_file_path,
+            )
 
     def load_checkpoint(self, checkpoint_path: str, *args, **kwargs) -> Dict:
         r"""Load checkpoint of specified path as a dict.
@@ -432,14 +442,11 @@ class PPOTrainer(BaseRLTrainer):
             self._single_proc_infos = extract_scalars_from_infos(
                 infos,
                 ignore_keys=set(
-                    k
-                    for k in infos[0].keys()
-                    if k not in self._rank0_env0_keys
+                    k for k in infos[0].keys() if k not in self._rank0_keys
                 ),
             )
-
             extracted_infos = extract_scalars_from_infos(
-                infos, ignore_keys=self._rank0_env0_keys
+                infos, ignore_keys=self._rank0_keys
             )
             for k, v_k in extracted_infos.items():
                 v = torch.tensor(
@@ -457,20 +464,20 @@ class PPOTrainer(BaseRLTrainer):
                 done_masks, 0.0
             )
 
-            if self._is_static_encoder:
-                with inference_mode():
-                    batch[
-                        PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
-                    ] = self._encoder(batch)
+        if self._is_static_encoder:
+            with inference_mode(), g_timer.avg_time("trainer.visual_features"):
+                batch[
+                    PointNavResNetNet.PRETRAINED_VISUAL_FEATURES_KEY
+                ] = self._encoder(batch)
 
-            self._agent.rollouts.insert(
-                next_observations=batch,
-                rewards=rewards,
-                next_masks=not_done_masks,
-                buffer_index=buffer_index,
-            )
+        self._agent.rollouts.insert(
+            next_observations=batch,
+            rewards=rewards,
+            next_masks=not_done_masks,
+            buffer_index=buffer_index,
+        )
 
-            self._agent.rollouts.advance_rollout(buffer_index)
+        self._agent.rollouts.advance_rollout(buffer_index)
 
         return env_slice.stop - env_slice.start
 
@@ -620,6 +627,9 @@ class PPOTrainer(BaseRLTrainer):
                 [f"{k}: {v.mean:.3f}" for k, v in g_timer.items()]
             )
             logger.info(f"\tPerf Stats: {perf_stats_str}")
+            if self.config.habitat_baselines.should_log_single_proc_infos:
+                for k, v in self._single_proc_infos.items():
+                    logger.info(f" - {k}: {np.mean(v):.3f}")
 
     def should_end_early(self, rollout_step) -> bool:
         if not self._is_distributed:
@@ -810,7 +820,7 @@ class PPOTrainer(BaseRLTrainer):
                 checkpoint_path, map_location="cpu"
             )
             step_id = ckpt_dict["extra_state"]["step"]
-            print(step_id)
+            logger.info(f"Loaded checkpoint trained for {step_id} steps")
         else:
             ckpt_dict = {"config": None}
 
@@ -861,9 +871,13 @@ class PPOTrainer(BaseRLTrainer):
         test_recurrent_hidden_states = torch.zeros(
             (
                 self.config.habitat_baselines.num_environments,
-                *self._agent.hidden_state_shape,
+                self._agent.actor_critic.num_recurrent_layers,
+                self._agent.actor_critic.recurrent_hidden_size,
             ),
             device=self.device,
+        )
+        should_update_recurrent_hidden_states = (
+            np.prod(test_recurrent_hidden_states.shape) != 0
         )
         prev_actions = torch.zeros(
             self.config.habitat_baselines.num_environments,
@@ -882,9 +896,21 @@ class PPOTrainer(BaseRLTrainer):
         ] = {}  # dict of dicts that stores stats per episode
         ep_eval_count: Dict[Any, int] = defaultdict(lambda: 0)
 
-        rgb_frames: List[List[np.ndarray]] = [
-            [] for _ in range(self.config.habitat_baselines.num_environments)
-        ]
+        if len(self.config.habitat_baselines.eval.video_option) > 0:
+            # Add the first frame of the episode to the video.
+            rgb_frames: List[List[np.ndarray]] = [
+                [
+                    observations_to_image(
+                        {k: v[env_idx] for k, v in batch.items()}, {}
+                    )
+                ]
+                for env_idx in range(
+                    self.config.habitat_baselines.num_environments
+                )
+            ]
+        else:
+            rgb_frames = None
+
         if len(self.config.habitat_baselines.eval.video_option) > 0:
             os.makedirs(self.config.habitat_baselines.video_dir, exist_ok=True)
 
@@ -935,11 +961,13 @@ class PPOTrainer(BaseRLTrainer):
                     for i, should_insert in enumerate(
                         action_data.should_inserts
                     ):
-                        if should_insert.item():
+                        if not should_insert.item():
+                            continue
+                        if should_update_recurrent_hidden_states:
                             test_recurrent_hidden_states[
                                 i
                             ] = action_data.rnn_hidden_states[i]
-                            prev_actions[i].copy_(action_data.actions[i])  # type: ignore
+                        prev_actions[i].copy_(action_data.actions[i])  # type: ignore
             # NB: Move actions to CPU.  If CUDA tensors are
             # sent in to env.step(), that will create CUDA contexts
             # in the subprocesses.
@@ -961,6 +989,9 @@ class PPOTrainer(BaseRLTrainer):
             observations, rewards_l, dones, infos = [
                 list(x) for x in zip(*outputs)
             ]
+            # Note that `policy_infos` represents the information about the
+            # action BEFORE `observations` (the action used to transition to
+            # `observations`).
             policy_infos = self._agent.actor_critic.get_extra(
                 action_data, infos, dones
             )
@@ -999,26 +1030,32 @@ class PPOTrainer(BaseRLTrainer):
                 ):
                     envs_to_pause.append(i)
 
-                # Exclude the keys from `_rank0_env0_keys`.
-                infos[i] = {
+                # Exclude the keys from `_rank0_keys` from displaying in the video
+                disp_info = {
                     k: v
                     for k, v in infos[i].items()
-                    if k not in self._rank0_env0_keys
+                    if k not in self._rank0_keys
                 }
 
                 if len(self.config.habitat_baselines.eval.video_option) > 0:
                     # TODO move normalization / channel changing out of the policy and undo it here
                     frame = observations_to_image(
-                        {k: v[i] for k, v in batch.items()}, infos[i]
+                        {k: v[i] for k, v in batch.items()}, disp_info
                     )
                     if not not_done_masks[i].item():
                         # The last frame corresponds to the first frame of the next episode
                         # but the info is correct. So we use a black frame
-                        frame = observations_to_image(
-                            {k: v[i] * 0.0 for k, v in batch.items()}, infos[i]
+                        final_frame = observations_to_image(
+                            {k: v[i] * 0.0 for k, v in batch.items()},
+                            disp_info,
                         )
-                    frame = overlay_frame(frame, infos[i])
-                    rgb_frames[i].append(frame)
+                        final_frame = overlay_frame(final_frame, disp_info)
+                        rgb_frames[i].append(final_frame)
+                        # The starting frame of the next episode will be the final element..
+                        rgb_frames[i].append(frame)
+                    else:
+                        frame = overlay_frame(frame, disp_info)
+                        rgb_frames[i].append(frame)
 
                 # episode ended
                 if not not_done_masks[i].item():
@@ -1043,16 +1080,18 @@ class PPOTrainer(BaseRLTrainer):
                         generate_video(
                             video_option=self.config.habitat_baselines.eval.video_option,
                             video_dir=self.config.habitat_baselines.video_dir,
-                            images=rgb_frames[i],
-                            episode_id=current_episodes_info[i].episode_id,
+                            # Since the final frame is the start frame of the next episode.
+                            images=rgb_frames[i][:-1],
+                            episode_id=f"{current_episodes_info[i].episode_id}_{ep_eval_count[k]}",
                             checkpoint_idx=checkpoint_index,
-                            metrics=extract_scalars_from_info(infos[i]),
+                            metrics=extract_scalars_from_info(disp_info),
                             fps=self.config.habitat_baselines.video_fps,
                             tb_writer=writer,
                             keys_to_include_in_name=self.config.habitat_baselines.eval_keys_to_include_in_name,
                         )
 
-                        rgb_frames[i] = []
+                        # Since the starting frame of the next episode is the final frame.
+                        rgb_frames[i] = rgb_frames[i][-1:]
 
                     gfx_str = infos[i].get(GfxReplayMeasure.cls_uuid, "")
                     if gfx_str != "":
@@ -1088,9 +1127,12 @@ class PPOTrainer(BaseRLTrainer):
         ), f"Expected {number_of_eval_episodes} episodes, got {len(ep_eval_count)}."
 
         aggregated_stats = {}
-        for stat_key in next(iter(stats_episodes.values())).keys():
+        all_ks = set()
+        for ep in stats_episodes.values():
+            all_ks.update(ep.keys())
+        for stat_key in all_ks:
             aggregated_stats[stat_key] = np.mean(
-                [v[stat_key] for v in stats_episodes.values()]
+                [v[stat_key] for v in stats_episodes.values() if stat_key in v]
             )
 
         for k, v in aggregated_stats.items():

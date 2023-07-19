@@ -774,6 +774,7 @@ class RearrangeEpisodeGenerator:
         backend_cfg.scene_dataset_config_file = dataset_path
         backend_cfg.scene_id = scene_name
         backend_cfg.enable_physics = True
+        backend_cfg.gpu_device_id = self.cfg.gpu_device_id
         if not self._render_debug_obs:
             # don't bother loading textures if not intending to visualize the generation process
             backend_cfg.create_renderer = False

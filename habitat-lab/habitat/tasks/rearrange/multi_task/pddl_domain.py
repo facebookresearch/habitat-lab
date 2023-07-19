@@ -62,6 +62,7 @@ class PddlDomain:
         self,
         domain_file_path: str,
         cur_task_config: Optional["DictConfig"] = None,
+        read_config: bool = True,
     ):
         """
         :param domain_file_path: Either an absolute path or a path relative to `habitat/task/rearrange/multi_task/domain_configs/`.
@@ -72,6 +73,19 @@ class PddlDomain:
         self._sim_info: Optional[PddlSimInfo] = None
         self._config = cur_task_config
         self._orig_actions: Dict[str, PddlAction] = {}
+
+        if read_config:
+            # Setup config properties
+            self._obj_succ_thresh = self._config.obj_succ_thresh
+            self._art_succ_thresh = self._config.art_succ_thresh
+            self._robot_at_thresh = self._config.robot_at_thresh
+            self._num_spawn_attempts = self._config.num_spawn_attempts
+            self._physics_stability_steps = (
+                self._config.physics_stability_steps
+            )
+            self._recep_place_shrink_factor = (
+                self._config.recep_place_shrink_factor
+            )
 
         if not osp.isabs(domain_file_path):
             parent_dir = osp.dirname(__file__)
@@ -186,6 +200,7 @@ class PddlDomain:
             for k, v in robot_states.items():
                 use_k = all_entities[k]
 
+                # Sub in any referred entities.
                 v = {sub_k: fetch_entity(sub_v) for sub_k, sub_v in v.items()}
 
                 use_robot_states[use_k] = PddlRobotState(**v)
@@ -359,9 +374,9 @@ class PddlDomain:
             dataset=dataset,
             env=env,
             episode=episode,
-            obj_thresh=self._config.obj_succ_thresh,
-            art_thresh=self._config.art_succ_thresh,
-            robot_at_thresh=self._config.robot_at_thresh,
+            obj_thresh=self._obj_succ_thresh,
+            art_thresh=self._art_succ_thresh,
+            robot_at_thresh=self._robot_at_thresh,
             expr_types=self.expr_types,
             obj_ids=sim.handle_to_object_id,
             target_ids={
@@ -376,10 +391,10 @@ class PddlDomain:
             },
             all_entities=self.all_entities,
             predicates=self.predicates,
-            num_spawn_attempts=self._config.num_spawn_attempts,
-            physics_stability_steps=self._config.physics_stability_steps,
+            num_spawn_attempts=self._num_spawn_attempts,
+            physics_stability_steps=self._physics_stability_steps,
             receptacles=sim.receptacles,
-            recep_place_shrink_factor=self._config.recep_place_shrink_factor,
+            recep_place_shrink_factor=self._recep_place_shrink_factor,
         )
         # Ensure that all objects are accounted for.
         for entity in self.all_entities.values():
@@ -392,9 +407,7 @@ class PddlDomain:
         """
         for k, ac in self._orig_actions.items():
             precond_quant = ac.precond.quantifier
-            new_preconds, assigns = self.expand_quantifiers(
-                ac.precond.clone(), ac.name
-            )
+            new_preconds, assigns = self.expand_quantifiers(ac.precond.clone())
 
             new_ac = ac.set_precond(new_preconds)
             if precond_quant == LogicalQuantifierType.EXISTS:
@@ -572,7 +585,7 @@ class PddlDomain:
         return {**self._constants, **self._added_entities}
 
     def expand_quantifiers(
-        self, expr: LogicalExpr, tmp=None
+        self, expr: LogicalExpr
     ) -> Tuple[LogicalExpr, List[Dict[PddlEntity, PddlEntity]]]:
         """
         Expand out a logical expression that could involve a quantifier into
@@ -598,7 +611,7 @@ class PddlDomain:
         elif expr.quantifier is None:
             return expr, []
         else:
-            raise ValueError(f"Unrecongized {expr.quantifier}")
+            raise ValueError(f"Unrecognized {expr.quantifier}")
 
         t_start = time.time()
         assigns: List[List[PddlEntity]] = [[]]
@@ -640,10 +653,11 @@ class PddlProblem(PddlDomain):
         domain_file_path: str,
         problem_file_path: str,
         cur_task_config: Optional["DictConfig"] = None,
+        read_config: bool = True,
     ):
         self._objects = {}
 
-        super().__init__(domain_file_path, cur_task_config)
+        super().__init__(domain_file_path, cur_task_config, read_config)
         with open(get_full_habitat_config_path(problem_file_path), "r") as f:
             problem_def = yaml.safe_load(f)
         self._objects = {

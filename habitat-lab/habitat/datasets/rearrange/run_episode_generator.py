@@ -43,6 +43,7 @@ class SceneSamplerConfig:
 class RearrangeEpisodeGeneratorConfig:
     # The minimum distance from the target object starting position to its goal
     min_dist_from_start_to_goal: float = 0.5
+    gpu_device_id: int = 0
     # ----- import/initialization parameters ------
     # the scene dataset from which scenes and objects are sampled
     dataset_path: str = "data/replica_cad/replicaCAD.scene_dataset_config.json"

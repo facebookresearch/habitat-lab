@@ -409,41 +409,53 @@ def get_robot_spawns(
     :param distance_threshold: The maximum distance from the target.
     :param sim: The simulator instance.
     :param num_spawn_attempts: The number of sample attempts for the distance threshold.
-    :param physics_stability_steps: The number of steps to perform for physics stability check.
+    :param physics_stability_steps: The number of steps to perform for physics stability check. If specified as 0, then it will return the result without doing any checks.
     :param agent: The agent to set the position for. If not specified, defaults to the simulator default agent.
 
     :return: The robot's start position, rotation, and whether the placement was a failure (True for failure, False for success).
     """
-
-    state = sim.capture_state()
     if agent is None:
         agent = sim.articulated_agent
     start_rotation = agent.base_rot
     start_position = agent.base_pos
 
+    state = sim.capture_state()
+
     # Try to place the robot.
     for _ in range(num_spawn_attempts):
         sim.set_state(state)
-        start_position = sim.pathfinder.get_random_navigable_point_near(
-            target_position, distance_threshold
-        )
+
+        if distance_threshold == -1.0:
+            # Place as close to the object as possible.
+            if not sim.is_point_within_bounds(target_position):
+                rearrange_logger.error(
+                    f"Object {target_position} is out of bounds but trying to set robot position"
+                )
+
+            start_position = sim.safe_snap_point(target_position)
+        else:
+            # Place within `distance_threshold` of the object.
+            start_position = sim.pathfinder.get_random_navigable_point_near(
+                target_position, distance_threshold
+            )
+        # Face the robot towards the object.
+        relative_target = target_position - start_position
+        angle_to_object = get_angle_to_pos(relative_target)
+        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
+        start_rotation = angle_to_object + rotation_noise
+
+        if physics_stability_steps == 0:
+            return start_position, start_rotation, False
+
         island_idx = sim.pathfinder.get_island(start_position)
         if island_idx != sim.largest_island_idx:
             continue
-
-        relative_target = target_position - start_position
-
-        angle_to_object = get_angle_to_pos(relative_target)
 
         target_distance = np.linalg.norm(
             (start_position - target_position)[[0, 2]]
         )
 
         is_navigable = sim.pathfinder.is_navigable(start_position)
-
-        # Face the robot towards the object.
-        rotation_noise = np.random.normal(0.0, rotation_perturbation_noise)
-        start_rotation = angle_to_object + rotation_noise
 
         if target_distance > distance_threshold or not is_navigable:
             continue

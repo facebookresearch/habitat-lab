@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 import gym.spaces as spaces
 
@@ -115,14 +115,6 @@ class AgentAccessMgr(ABC):
     def load_state_dict(self, state: Dict) -> None:
         raise NotImplementedError()
 
-    @property
-    @abstractmethod
-    def hidden_state_shape(self) -> Tuple[int]:
-        """
-        The shape of the tensor to track the hidden state, such as the RNN hidden state.
-        """
-        raise NotImplementedError()
-
     @abstractmethod
     def after_update(self) -> None:
         """
@@ -137,3 +129,15 @@ class AgentAccessMgr(ABC):
         Called before a rollout is collected.
         """
         raise NotImplementedError()
+
+    @abstractmethod
+    def _create_storage(
+        self,
+        num_envs: int,
+        env_spec: EnvironmentSpec,
+        actor_critic: Policy,
+        policy_action_space: spaces.Space,
+        config: "DictConfig",
+        device,
+    ) -> Storage:
+        pass
