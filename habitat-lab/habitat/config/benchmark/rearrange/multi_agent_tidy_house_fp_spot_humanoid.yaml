@@ -80,7 +80,7 @@ habitat:
         ang_speed: 20.0
 
       agent_0_oracle_nav_with_backing_up_action:
-        type: OracleNavAction
+        type: OracleNavObstacleAction
         agent_index : 0
         spawn_max_dist_to_obj: -1.0
         agents_dist_thresh: 1.5
