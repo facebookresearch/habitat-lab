@@ -106,7 +106,7 @@
       type: scene_balanced
       params:
         scene_sets:
-        #- train
+        - train
         #- val
         #- test
 

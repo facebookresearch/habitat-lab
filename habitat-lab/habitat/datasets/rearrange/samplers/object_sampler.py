@@ -40,7 +40,8 @@ class ObjectSampler:
         sample_region_ratio: Optional[Dict[str, float]] = None,
         nav_to_min_distance: float = -1.0,
         recep_set_sample_probs: Optional[Dict[str, float]] = None,
-        translation_up_offset=0.08,
+        translation_up_offset: float = 0.08,
+        constrain_to_largest_nav_island: bool = False,
     ) -> None:
         """
         :param object_set: The set objects from which placements will be sampled.
@@ -51,11 +52,13 @@ class ObjectSampler:
         :param nav_to_min_distance: -1.0 means there will be no accessibility constraint. Positive values indicate minimum distance from sampled object to a navigable point.
         :param recep_set_sample_probs: Optionally provide a non-uniform weighting for receptacle sampling.
         :param translation_up_offset: Optionally offset sample points to improve likelyhood of successful placement on inflated collision shapes.
+        :param check_if_in_largest_island_id: Optionally check if the snapped point is in the largest island id
         """
         self.object_set = object_set
         self._allowed_recep_set_names = allowed_recep_set_names
         self._recep_set_sample_probs = recep_set_sample_probs
         self._translation_up_offset = translation_up_offset
+        self._constrain_to_largest_nav_island = constrain_to_largest_nav_island
 
         self.receptacle_instances: Optional[
             List[Receptacle]
@@ -75,6 +78,7 @@ class ObjectSampler:
         self.sample_region_ratio = sample_region_ratio
         self.nav_to_min_distance = nav_to_min_distance
         self.set_num_samples()
+        self.largest_island_id = -1
         # More possible parameters of note:
         # - surface vs volume
         # - apply physics stabilization: none, dynamic, projection
@@ -241,8 +245,12 @@ class ObjectSampler:
         num_placement_tries = 0
         new_object = None
 
-        # Note: we cache the largest indoor island to reject samples which are primarily accessible from disconnected navmesh regions. This assumption limits sampling to the largest navigable component of any scene.
-        if self.largest_island_id == -1:
+        # Note: we cache the largest island ID to reject samples which are primarily accessible from disconnected navmesh regions.
+        # This assumption limits sampling to the largest navigable component of any scene.
+        if (
+            self._constrain_to_largest_nav_island
+            and self.largest_island_id == -1
+        ):
             self.largest_island_id = get_largest_island_index(
                 sim.pathfinder, sim, allow_outdoor=False
             )
@@ -345,27 +353,30 @@ class ObjectSampler:
         obj: habitat_sim.physics.ManagedRigidObject,
     ) -> bool:
         """
-        Return if the object is within a threshold distance of the nearest
-        navigable point and that the nearest navigable point is on the same
-        navigation mesh.
+        Return if the object is within a threshold horizontal distance of the nearest
+        navigable point, in which the nearest navigable point is on the same
+        navigation mesh of the object.
 
-        Note that this might not catch all edge cases since the distance is
-        based on Euclidean distance. The nearest navigable point may be
-        separated from the object by an obstacle.
+        Note that this might not catch all edge cases since the heuristic is
+        horizontal Euclidean distance. The nearest navigable point may be
+        separated from the object by an obstacle on a stairway, etc...
         """
 
         if self.nav_to_min_distance == -1:
             return True
+
+        # If the sanp_point fails, the sanpped point is NaN and the distance
+        # check returns False. So it works out.
         snapped = sim.pathfinder.snap_point(
             obj.translation, self.largest_island_id
         )
-
-        dist = float(
+        horizontal_dist = float(
             np.linalg.norm(np.array((snapped - obj.translation))[[0, 2]])
         )
-
-        logger.info(f"dist '{dist}' threshold '{self.nav_to_min_distance}'")
-        return dist < self.nav_to_min_distance
+        logger.info(
+            f"horizontal_dist '{horizontal_dist}' vs. threshold '{self.nav_to_min_distance}'"
+        )
+        return horizontal_dist < self.nav_to_min_distance
 
     def single_sample(
         self,
