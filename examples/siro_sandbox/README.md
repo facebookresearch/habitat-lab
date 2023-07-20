@@ -13,10 +13,26 @@ This is a 3D interactive GUI app for testing various pieces of SIRo, e.g. rearra
 # Snapshots with examples of running the tool
 See [SIRo Sandbox Snapshots Google Doc](https://docs.google.com/document/d/1cvKuXXE2cKchi-C_O7GGVFZ5x0QU7J9gHTIETzpVKJU/edit#). The tool is not very stable in the `SIRo` branch due to rapid iteration in various parts of the codebase. This doc describes well-tested sets of commits across our repos (Habitat-lab, Habitat-sim, fphab, floorplanner). This doc also gives example commands to run the tool.
 
-<!-- 
 # Example commands
-June 5: these are commented out because they're broken.
 ### GUI-controlled humanoid and learned-policy-controlled Spot
+
+* To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, in Floorplanner run:
+```
+HABITAT_SIM_LOG=warning MAGNUM_LOG=warning \
+python examples/siro_sandbox/sandbox_app.py \
+--disable-inverse-kinematics \
+--never-end \
+--gui-controlled-agent-index 1 \
+--cfg experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml \
+--cfg-opts \
+habitat_baselines.evaluate=True \
+habitat_baselines.num_environments=1 \
+habitat_baselines.eval.should_load_ckpt=False \
+~habitat.task.measurements.agent_blame_measure
+```
+
+<!-- 
+July 18th: the commands below are commented-out because they are broken.
 
 * To launch GUI-controlled humanoid and random-policy-controlled (initialized with random weights) Spot, run:
 ```
@@ -29,7 +45,8 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False
+habitat_baselines.eval.should_load_ckpt=False \
+~habitat.task.measurements.agent_blame_measure
 ```
 
 * To launch random-policy-controlled humanoid and Spot in [free camera mode](#gui-controlled-agents-and-free-camera-mode), run:
@@ -42,7 +59,8 @@ python examples/siro_sandbox/sandbox_app.py \
 --cfg-opts \
 habitat_baselines.evaluate=True \
 habitat_baselines.num_environments=1 \
-habitat_baselines.eval.should_load_ckpt=False
+habitat_baselines.eval.should_load_ckpt=False \
+~habitat.task.measurements.agent_blame_measure
 ```
 
 To use **trained**-policy-controlled agent(s) instead of random-policy-controlled:
