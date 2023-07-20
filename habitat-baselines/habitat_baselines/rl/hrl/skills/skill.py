@@ -68,6 +68,7 @@ class SkillPolicy(Policy):
                 break
         if not found_grip and not self.should_ignore_grip:
             raise ValueError(f"Could not find grip action in {action_space}")
+
         self._stop_action_idx, _ = find_action_range(
             action_space, "rearrange_stop"
         )
@@ -233,7 +234,7 @@ class SkillPolicy(Policy):
 
         return (
             rnn_hidden_states[batch_idxs] * 0.0,
-            prev_actions[batch_idxs] * 0.0,
+            prev_actions[batch_idxs] * 0,
         )
 
     def set_pddl_problem(self, pddl_prob):

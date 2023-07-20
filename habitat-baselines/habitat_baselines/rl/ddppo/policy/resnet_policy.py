@@ -602,6 +602,10 @@ class PointNavResNetNet(Net):
         return self.state_encoder.num_recurrent_layers
 
     @property
+    def recurrent_hidden_size(self):
+        return self._hidden_size
+
+    @property
     def perception_embedding_size(self):
         return self._hidden_size
 

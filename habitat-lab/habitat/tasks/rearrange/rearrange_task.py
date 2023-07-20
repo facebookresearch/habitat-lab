@@ -83,6 +83,19 @@ class RearrangeTask(NavigationTask):
         self._cur_episode_step = 0
         self._should_place_articulated_agent = should_place_articulated_agent
 
+        # Get config options
+        self._force_regenerate = self._config.force_regenerate
+        self._should_save_to_cache = self._config.should_save_to_cache
+        self._obj_succ_thresh = self._config.obj_succ_thresh
+        self._enable_safe_drop = self._config.enable_safe_drop
+        self._constraint_violation_ends_episode = (
+            self._config.constraint_violation_ends_episode
+        )
+        self._constraint_violation_drops_object = (
+            self._config.constraint_violation_drops_object
+        )
+        self._count_obj_collisions = self._config.count_obj_collisions
+
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
@@ -134,7 +147,7 @@ class RearrangeTask(NavigationTask):
         if (
             self._articulated_agent_pos_start is None
             or start_ident not in self._articulated_agent_pos_start
-            or self._config.force_regenerate
+            or self._force_regenerate
         ):
             return None
         else:
@@ -146,7 +159,7 @@ class RearrangeTask(NavigationTask):
     def _cache_articulated_agent_start(self, cache_data, agent_idx: int = 0):
         if (
             self._articulated_agent_pos_start is not None
-            and self._config.should_save_to_cache
+            and self._should_save_to_cache
         ):
             start_ident = self._get_ep_init_ident(agent_idx)
             self._articulated_agent_pos_start[start_ident] = cache_data
@@ -210,9 +223,15 @@ class RearrangeTask(NavigationTask):
     @add_perf_timing_func()
     def _get_observations(self, episode):
         # Fetch the simulator observations, all visual sensors.
-        obs = self._sim._sensor_suite.get_observations(
-            self._sim.get_sensor_observations()
-        )
+        obs = self._sim.get_sensor_observations()
+
+        if not self._sim.sim_config.enable_batch_renderer:
+            # Post-process visual sensor observations
+            obs = self._sim._sensor_suite.get_observations(obs)
+        else:
+            # Keyframes are added so that the simulator state can be reconstituted when batch rendering.
+            # The post-processing step above is done after batch rendering.
+            self._sim.add_keyframe_to_observations(obs)
 
         # Task sensors (all non-visual sensors)
         obs.update(
@@ -233,12 +252,12 @@ class RearrangeTask(NavigationTask):
             self._sim.grasp_mgr.is_grasped
             and action_args.get("grip_action", None) is not None
             and action_args["grip_action"] < 0
-            and min_dist < self._config.obj_succ_thresh
+            and min_dist < self._obj_succ_thresh
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
         action_args = action["action_args"]
-        if self._config.enable_safe_drop and self._is_violating_safe_drop(
+        if self._enable_safe_drop and self._is_violating_safe_drop(
             action_args
         ):
             action_args["grip_action"] = None
@@ -249,7 +268,7 @@ class RearrangeTask(NavigationTask):
         for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
-                and self._config.constraint_violation_drops_object
+                and self._constraint_violation_drops_object
             ):
                 grasp_mgr.desnap(True)
 
@@ -270,7 +289,7 @@ class RearrangeTask(NavigationTask):
         for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
-                and self._config.constraint_violation_ends_episode
+                and self._constraint_violation_ends_episode
             ):
                 done = True
                 break
@@ -323,7 +342,7 @@ class RearrangeTask(NavigationTask):
 
     def get_cur_collision_info(self, agent_idx) -> CollisionDetails:
         _, coll_details = rearrange_collision(
-            self._sim, self._config.count_obj_collisions, agent_idx=agent_idx
+            self._sim, self._count_obj_collisions, agent_idx=agent_idx
         )
         return coll_details
 

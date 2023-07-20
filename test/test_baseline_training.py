@@ -38,7 +38,9 @@ except ImportError:
 
 def setup_function(test_trainers):
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(
@@ -101,7 +103,22 @@ def setup_function(test_trainers):
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
-def test_trainers(config_path, num_updates, overrides, trainer_name):
+@pytest.mark.parametrize("use_batch_renderer", [False, True])
+def test_trainers(
+    config_path: str,
+    num_updates: int,
+    overrides: str,
+    trainer_name: str,
+    use_batch_renderer: bool,
+):
+    if use_batch_renderer:
+        if config_path == "imagenav/ddppo_imagenav_example.yaml":
+            pytest.skip(
+                "Batch renderer incompatible with this config due to usage of multiple sensors."
+            )
+        if trainer_name == "ver":
+            pytest.skip("Batch renderer incompatible with VER trainer.")
+
     # Remove the checkpoints from previous tests
     for f in glob.glob("data/test_checkpoints/test_training/*"):
         os.remove(f)
@@ -121,6 +138,15 @@ def test_trainers(config_path, num_updates, overrides, trainer_name):
         # Changing the visual observation size for speed
         for sim_sensor_config in agent_config.sim_sensors.values():
             sim_sensor_config.update({"height": 64, "width": 64})
+        # Set config for batch renderer
+        if use_batch_renderer:
+            config.habitat.simulator.renderer.enable_batch_renderer = True
+            config.habitat.simulator.habitat_sim_v0.enable_gfx_replay_save = (
+                True
+            )
+            config.habitat.simulator.create_renderer = False
+            config.habitat.simulator.concur_render = False
+
     random.seed(config.habitat.seed)
     np.random.seed(config.habitat.seed)
     torch.manual_seed(config.habitat.seed)
@@ -182,6 +208,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
         # We don't have skill checkpoints to load right now.
         return
     if policy_type == "hl_fixed" and mode == "train":
+        # Cannot train with a fixed policy
         return
     if skill_type == "oracle_skills" and "oracle" not in config_path:
         return

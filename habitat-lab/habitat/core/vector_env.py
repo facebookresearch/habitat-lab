@@ -480,6 +480,9 @@ class VectorEnv:
 
         self._is_closed = True
 
+        if self._batch_renderer != None:
+            self._batch_renderer.close()
+
     def pause_at(self, index: int) -> None:
         r"""Pauses computation on this env without destroying the env.
 

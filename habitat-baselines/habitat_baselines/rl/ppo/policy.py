@@ -57,7 +57,7 @@ class PolicyActionData:
         current policy.
     """
 
-    rnn_hidden_states: torch.Tensor
+    rnn_hidden_states: Optional[torch.Tensor] = None
     actions: Optional[torch.Tensor] = None
     values: Optional[torch.Tensor] = None
     action_log_probs: Optional[torch.Tensor] = None
@@ -99,8 +99,18 @@ class Policy(abc.ABC):
     def num_recurrent_layers(self) -> int:
         return 0
 
+    @property
+    def recurrent_hidden_size(self) -> int:
+        return 0
+
     def forward(self, *x):
         raise NotImplementedError
+
+    @property
+    def visual_encoder(self) -> Optional[nn.Module]:
+        """
+        Gets the visual encoder for the policy.
+        """
 
     def get_policy_action_space(
         self, env_action_space: spaces.Space
@@ -206,6 +216,14 @@ class NetPolicy(nn.Module, Policy):
                 self.net,
                 **cfg,
             )
+
+    @property
+    def recurrent_hidden_size(self) -> int:
+        return self.net.recurrent_hidden_size
+
+    @property
+    def visual_encoder(self) -> Optional[nn.Module]:
+        return self.net.visual_encoder
 
     @property
     def should_load_agent_state(self):
@@ -374,6 +392,11 @@ class Net(nn.Module, metaclass=abc.ABCMeta):
 
     @property
     @abc.abstractmethod
+    def recurrent_hidden_size(self):
+        pass
+
+    @property
+    @abc.abstractmethod
     def is_blind(self):
         pass
 
@@ -437,6 +460,10 @@ class PointNavBaselineNet(Net):
     @property
     def num_recurrent_layers(self):
         return self.state_encoder.num_recurrent_layers
+
+    @property
+    def recurrent_hidden_size(self):
+        return self._hidden_size
 
     @property
     def perception_embedding_size(self):

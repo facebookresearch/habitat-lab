@@ -10,7 +10,6 @@ import math
 import os
 import random
 from copy import deepcopy
-from glob import glob
 
 import pytest
 
@@ -49,7 +48,9 @@ from habitat_baselines.config.default_structured_configs import (
 @pytest.fixture(scope="module", autouse=True)
 def download_data():
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(
@@ -59,21 +60,8 @@ def download_data():
     "test_cfg_path,gpu2gpu,observation_transforms_overrides,mode",
     list(
         itertools.product(
-            glob("habitat-baselines/habitat_baselines/config/test/*"),
-            [False],
-            [
-                [],
-                [
-                    "+habitat_baselines/rl/policy/obs_transforms=[center_cropper_base, resize_shortest_edge_base]",
-                ],
-            ],
-            ["train", "eval"],
-        )
-    )
-    + list(
-        itertools.product(
             ["test/config/habitat_baselines/ppo_pointnav_test.yaml"],
-            [True],
+            [True, False],
             [
                 [],
                 [

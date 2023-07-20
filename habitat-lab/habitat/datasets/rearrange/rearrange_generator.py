@@ -211,7 +211,6 @@ class RearrangeEpisodeGenerator:
                     raise ValueError(
                         f"Found no object handles for {obj_sampler_info}"
                     )
-
                 self._obj_samplers[
                     obj_sampler_info["name"]
                 ] = samplers.ObjectSampler(
@@ -227,6 +226,9 @@ class RearrangeEpisodeGenerator:
                         "nav_to_min_distance", -1.0
                     ),
                     obj_sampler_info["params"].get("sample_probs", None),
+                    obj_sampler_info["params"].get(
+                        "constrain_to_largest_nav_island", False
+                    ),
                 )
             else:
                 logger.info(
@@ -772,6 +774,7 @@ class RearrangeEpisodeGenerator:
         backend_cfg.scene_dataset_config_file = dataset_path
         backend_cfg.scene_id = scene_name
         backend_cfg.enable_physics = True
+        backend_cfg.gpu_device_id = self.cfg.gpu_device_id
         if not self._render_debug_obs:
             # don't bother loading textures if not intending to visualize the generation process
             backend_cfg.create_renderer = False

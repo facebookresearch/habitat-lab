@@ -137,13 +137,12 @@ class VERRolloutStorage(RolloutStorage):
 
     def __init__(
         self,
-        variable_experience: bool,
         numsteps,
         num_envs,
         observation_space,
         action_space,
-        recurrent_hidden_state_size,
-        num_recurrent_layers=1,
+        actor_critic,
+        variable_experience: bool,
         is_double_buffered: bool = False,
     ):
         super().__init__(
@@ -151,8 +150,7 @@ class VERRolloutStorage(RolloutStorage):
             num_envs,
             observation_space,
             action_space,
-            recurrent_hidden_state_size,
-            num_recurrent_layers,
+            actor_critic,
             is_double_buffered,
         )
         self.use_is_coeffs = variable_experience
