@@ -9,7 +9,6 @@ defaults:
 
 habitat:
   gym:
-    auto_name: NavToObj
     obs_keys:
       - head_depth
       - object_embedding

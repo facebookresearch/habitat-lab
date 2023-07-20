@@ -19,10 +19,10 @@ from omegaconf import OmegaConf
 from habitat import VectorEnv, logger
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
+from habitat.gym.gym_definitions import make_gym_from_config
 from habitat.tasks.rearrange.rearrange_sensors import GfxReplayMeasure
 from habitat.tasks.rearrange.utils import write_gfx_replay
 from habitat.utils import profiling_wrapper
-from habitat.utils.gym_definitions import make_gym_from_config
 from habitat.utils.visualizations.utils import (
     observations_to_image,
     overlay_frame,
@@ -168,11 +168,6 @@ class PPOTrainer(BaseRLTrainer):
         self._rank0_env0_keys: Set[str] = set(
             self.config.habitat.task.rank0_env0_measure_names
         )
-
-        # Information on measures that declared in `self._rank0_env0_keys` to
-        # be only reported on rank0,gpu0. This is seperately logged from
-        # `self.window_episode_stats`.
-        self._single_proc_infos: Dict[str, List[float]] = {}
 
         # Information on measures that declared in `self._rank0_env0_keys` to
         # be only reported on rank0,gpu0. This is seperately logged from

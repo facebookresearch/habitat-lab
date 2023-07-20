@@ -7,7 +7,7 @@ from habitat.tasks.rearrange.sub_tasks.place_sensors import (
     PlaceReward,
     PlaceSuccess,
 )
-from habitat.tasks.rearrange.utils import UsesRobotInterface
+from habitat.tasks.rearrange.utils import UsesArticulatedAgentInterface
 
 
 @registry.register_measure
@@ -44,7 +44,7 @@ class OVMMObjectToPlaceGoalDistance(Measure):
 
 
 @registry.register_measure
-class OVMMEEToPlaceGoalDistance(UsesRobotInterface, Measure):
+class OVMMEEToPlaceGoalDistance(UsesArticulatedAgentInterface, Measure):
     """
     Euclidean distance from the end-effector to the goal.
     """
@@ -67,7 +67,7 @@ class OVMMEEToPlaceGoalDistance(UsesRobotInterface, Measure):
         # compute distance from end effector to candidate_goal_receps
         picked_idx = task._picked_object_idx
         ee_pos = self._sim.get_robot_data(
-            self.robot_id
+            self.agent_id
         ).robot.ee_transform.translation
         goal_pos = np.array(
             [g.position for g in episode.candidate_goal_receps]

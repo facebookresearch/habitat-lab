@@ -10,7 +10,6 @@ defaults:
 habitat:
   seed: 7
   gym:
-    auto_name: NavToObj
     obs_keys:
       - head_depth
       - head_rgb

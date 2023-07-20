@@ -7,7 +7,7 @@ defaults:
     - base_velocity
     - manipulation_mode
   - /habitat/task/measurements:
-    - robot_force
+    - articulated_agent_force
     - force_terminate
     - robot_colls
     - robot_collisions_terminate

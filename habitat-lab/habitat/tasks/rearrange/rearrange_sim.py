@@ -6,6 +6,7 @@
 
 import os
 import os.path as osp
+import pickle
 import time
 from collections import defaultdict
 from typing import (
@@ -98,9 +99,9 @@ class RearrangeSim(HabitatSim):
         self._prev_obj_names: Optional[List[str]] = None
         self._scene_obj_ids: List[int] = []
         # The receptacle information cached between all scenes.
-        self._receptacles_cache: Dict[str, Dict[str, mn.Range3D]] = {}
+        self._receptacle_bounds_cache: Dict[str, Dict[str, mn.Range3D]] = {}
         # The per episode receptacle information.
-        self._receptacles: Dict[str, mn.Range3D] = {}
+        self._episode_receptacle_bounds: Dict[str, mn.Range3D] = {}
         # Used to get data from the RL environment class to sensors.
         self._goal_pos = None
         self.viz_ids: Dict[Any, Any] = defaultdict(lambda: None)
@@ -140,6 +141,7 @@ class RearrangeSim(HabitatSim):
         self._should_setup_semantic_ids = (
             self.habitat_config.should_setup_semantic_ids
         )
+        self._object_ids_start = self.habitat_config.object_ids_start
 
     def enable_perf_logging(self):
         """
@@ -148,8 +150,8 @@ class RearrangeSim(HabitatSim):
         self._perf_logging_enabled = True
 
     @property
-    def receptacles(self) -> Dict[str, AABBReceptacle]:
-        return self._receptacles
+    def episode_receptacle_bounds(self) -> Dict[str, AABBReceptacle]:
+        return self._episode_receptacle_bounds
 
     @property
     def handle_to_object_id(self) -> Dict[str, int]:
@@ -173,23 +175,6 @@ class RearrangeSim(HabitatSim):
         The simulator rigid body IDs of all objects in the scene.
         """
         return self._scene_obj_ids
-
-        self._debug_render_robot = self.habitat_config.debug_render_robot
-        self._debug_render_goal = self.habitat_config.debug_render_goal
-        self._debug_render = self.habitat_config.debug_render
-        self._concur_render = self.habitat_config.concur_render
-        self._enable_gfx_replay_save = (
-            self.habitat_config.habitat_sim_v0.enable_gfx_replay_save
-        )
-        self._needs_markers = self.habitat_config.needs_markers
-        self._update_robot = self.habitat_config.update_robot
-        self._step_physics = self.habitat_config.step_physics
-        self._additional_object_paths = (
-            self.habitat_config.additional_object_paths
-        )
-        self._kinematic_mode = self.habitat_config.kinematic_mode
-        self._sleep_dist = self.habitat_config.sleep_dist
-        self._object_ids_start = self.habitat_config.object_ids_start
 
     @property
     def articulated_agent(self):
@@ -670,7 +655,7 @@ class RearrangeSim(HabitatSim):
     def _create_recep_info(
         self, scene_id: str, ignore_handles: List[str]
     ) -> Dict[str, mn.Range3D]:
-        if scene_id not in self._receptacles_cache:
+        if scene_id not in self._receptacle_bounds_cache:
             receps = {}
             all_receps = find_receptacles(
                 self,
@@ -692,8 +677,8 @@ class RearrangeSim(HabitatSim):
                 receps[recep.name] = mn.Range3D(
                     np.min(bounds, axis=0), np.max(bounds, axis=0)
                 )
-            self._receptacles_cache[scene_id] = receps
-        return self._receptacles_cache[scene_id]
+            self._receptacle_bounds_cache[scene_id] = receps
+        return self._receptacle_bounds_cache[scene_id]
 
     def _create_obj_viz(self):
         """

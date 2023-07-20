@@ -7,10 +7,13 @@
 
 import numpy as np
 
+from habitat.articulated_agents.robots.stretch_robot import (
+    StretchJointStates,
+    StretchRobot,
+)
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
 from habitat.datasets.rearrange.rearrange_dataset import RearrangeEpisode
-from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 

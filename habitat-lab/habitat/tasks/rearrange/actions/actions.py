@@ -11,9 +11,12 @@ import numpy as np
 from gym import spaces
 
 import habitat_sim
+from habitat.articulated_agents.robots.stretch_robot import (
+    StretchJointStates,
+    StretchRobot,
+)
 from habitat.core.embodied_task import SimulatorTaskAction
 from habitat.core.registry import registry
-from habitat.robots.stretch_robot import StretchJointStates, StretchRobot
 from habitat.sims.habitat_simulator.actions import HabitatSimActions
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
@@ -125,6 +128,8 @@ class ArmRelPosAction(ArticulatedAgentAction):
 
     def __init__(self, *args, config, sim: RearrangeSim, **kwargs):
         super().__init__(*args, config=config, sim=sim, **kwargs)
+        self._max_delta_pos = self._config.max_delta_pos
+        self._min_delta_pos = self._config.min_delta_pos
 
     @property
     def action_space(self):
@@ -139,6 +144,7 @@ class ArmRelPosAction(ArticulatedAgentAction):
         # clip from -1 to 1
         delta_pos = np.clip(delta_pos, -1, 1)
         delta_pos *= self._max_delta_pos
+        delta_pos[np.abs(delta_pos) < self._min_delta_pos] = 0
 
         # The actual joint positions
         self._sim: RearrangeSim
@@ -700,7 +706,7 @@ class ArmEEAction(ArticulatedAgentAction):
 
 
 @registry.register_task_action
-class ManipulationModeAction(RobotAction):
+class ManipulationModeAction(ArticulatedAgentAction):
     """
     The robot joints and base is changed for performing manipulation. In the case of Stretch, the head is turned to face the arm and the base is rotated left by 90 degrees
     """
@@ -748,7 +754,7 @@ class ManipulationModeAction(RobotAction):
 
 
 @registry.register_task_action
-class BaseWaypointTeleportAction(RobotAction):
+class BaseWaypointTeleportAction(ArticulatedAgentAction):
     """
     The robot is teleported to the target waypoints while being constrained to the navmesh. In one step, The robot can only move forward or turn.
     """

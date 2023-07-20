@@ -8,9 +8,9 @@ defaults:
     - arm_action
   - /habitat/task/measurements:
     - ovmm_object_to_place_goal_distance
-    - robot_force
+    - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - does_want_terminate
     - num_steps
     - obj_anywhere_on_goal

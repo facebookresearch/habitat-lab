@@ -475,7 +475,7 @@ class TriangleMeshReceptacle(Receptacle):
         assert_triangles(mesh_data.indices)
 
         # pre-compute the normalized cumulative area of all triangle faces for later sampling
-        self.total_area = 0.0
+        self._total_area = 0.0
         triangles = []
         for f_ix in range(int(len(mesh_data.indices) / 3)):
             v = self.get_face_verts(f_ix)
@@ -485,10 +485,10 @@ class TriangleMeshReceptacle(Receptacle):
             self.area_weighted_accumulator.append(
                 0.5 * mn.math.cross(w1, w2).length()
             )
-            self.total_area += self.area_weighted_accumulator[-1]
+            self._total_area += self.area_weighted_accumulator[-1]
         for f_ix in range(len(self.area_weighted_accumulator)):
             self.area_weighted_accumulator[f_ix] = (
-                self.area_weighted_accumulator[f_ix] / self.total_area
+                self.area_weighted_accumulator[f_ix] / self._total_area
             )
             if f_ix > 0:
                 self.area_weighted_accumulator[

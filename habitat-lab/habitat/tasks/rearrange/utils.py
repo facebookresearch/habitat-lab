@@ -19,9 +19,9 @@ import quaternion
 
 import habitat_sim
 from habitat.articulated_agents.mobile_manipulator import MobileManipulator
+from habitat.articulated_agents.robots.spot_robot import SpotRobot
+from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.logging import HabitatLogger
-from habitat.robots.spot_robot import SpotRobot
-from habitat.robots.stretch_robot import StretchRobot
 from habitat.tasks.utils import get_angle
 from habitat_sim.physics import MotionType
 

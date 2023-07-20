@@ -10,7 +10,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument(
     "--cfg-path",
     type=str,
-    default="habitat-lab/habitat/config/benchmark/rearrange/cat_nav_to_obj.yaml",
+    default="habitat-lab/habitat/config/benchmark/ovmm/nav_to_obj.yaml",
 )
 parser.add_argument(
     "opts",

@@ -7,7 +7,6 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-import attr
 from hydra.core.config_store import ConfigStore
 from omegaconf import II, MISSING
 
@@ -92,7 +91,7 @@ class HabitatBaseConfig:
     pass
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class IteratorOptionsConfig(HabitatBaseConfig):
     cycle: bool = True
     shuffle: bool = True
@@ -103,7 +102,7 @@ class IteratorOptionsConfig(HabitatBaseConfig):
     step_repetition_range: float = 0.2
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EnvironmentConfig(HabitatBaseConfig):
     r"""
     Some habitat environment configurations.
@@ -119,13 +118,13 @@ class EnvironmentConfig(HabitatBaseConfig):
 # -----------------------------------------------------------------------------
 # # Actions
 # -----------------------------------------------------------------------------
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ActionConfig(HabitatBaseConfig):
     type: str = MISSING
     agent_index: int = 0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class StopActionConfig(ActionConfig):
     r"""
     In Navigation tasks only, the stop action is a discrete action. When called, the Agent
@@ -138,7 +137,7 @@ class StopActionConfig(ActionConfig):
     type: str = "StopAction"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EmptyActionConfig(ActionConfig):
     r"""
     In Navigation tasks only, the pass action. The robot will do nothing.
@@ -201,18 +200,18 @@ class LookDownActionConfig(DiscreteNavigationActionConfig):
     type: str = "LookDownAction"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TeleportActionConfig(ActionConfig):
     type: str = "TeleportAction"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class VelocityControlActionConfig(ActionConfig):
     type: str = "VelocityAction"
     # meters/sec
-    lin_vel_range: List[float] = [0.0, 0.25]
+    lin_vel_range: List[float] = field(default_factory=lambda: [0.0, 0.25])
     # deg/sec
-    ang_vel_range: List[float] = [-10.0, 10.0]
+    ang_vel_range: List[float] = field(default_factory=lambda: [-10.0, 10.0])
     min_abs_lin_speed: float = 0.025  # meters/sec
     min_abs_ang_speed: float = 1.0  # # deg/sec
     time_step: float = 1.0  # seconds
@@ -221,7 +220,7 @@ class VelocityControlActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 # # REARRANGE actions
 # -----------------------------------------------------------------------------
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArmActionConfig(ActionConfig):
     r"""
     In Rearrangement tasks only, the action that will move the robot arm around. The action represents to delta angle (in radians) of each joint.
@@ -259,7 +258,7 @@ class ArmActionConfig(ActionConfig):
     oracle_snap: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class BaseVelocityActionConfig(ActionConfig):
     r"""
     In Rearrangement only. Corresponds to the base velocity. Contains two continuous actions, the first one controls forward and backward motion, the second the rotation.
@@ -326,7 +325,7 @@ class RearrangeStopActionConfig(ActionConfig):
     type: str = "RearrangeStopAction"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ManipulationModeActionConfig(ActionConfig):
     type: str = "ManipulationModeAction"
     threshold: float = 0.8
@@ -365,7 +364,7 @@ class OracleNavActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 # # EQA actions
 # -----------------------------------------------------------------------------
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class AnswerActionConfig(ActionConfig):
     type: str = "AnswerAction"
 
@@ -373,19 +372,19 @@ class AnswerActionConfig(ActionConfig):
 # -----------------------------------------------------------------------------
 # # TASK_SENSORS
 # -----------------------------------------------------------------------------
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class LabSensorConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PointGoalSensorConfig(LabSensorConfig):
     type: str = "PointGoalSensor"
     goal_format: str = "POLAR"
     dimensionality: int = 2
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     """
     Indicates the position of the point goal in the frame of reference of the robot.
@@ -394,7 +393,7 @@ class PointGoalWithGPSCompassSensorConfig(PointGoalSensorConfig):
     type: str = "PointGoalWithGPSCompassSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjectGoalSensorConfig(LabSensorConfig):
     r"""
     For Object Navigation tasks only. Generates a discrete observation containing
@@ -408,12 +407,12 @@ class ObjectGoalSensorConfig(LabSensorConfig):
     goal_spec_max_val: int = 50
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ImageGoalSensorConfig(LabSensorConfig):
     type: str = "ImageGoalSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class InstanceImageGoalSensorConfig(LabSensorConfig):
     r"""
     Used only by the InstanceImageGoal Navigation task. The observation is a rendered
@@ -422,7 +421,7 @@ class InstanceImageGoalSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
     r"""
     Used only by the InstanceImageGoal Navigation task. The observation is a single
@@ -432,12 +431,12 @@ class InstanceImageGoalHFOVSensorConfig(LabSensorConfig):
     type: str = "InstanceImageGoalHFOVSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HeadingSensorConfig(LabSensorConfig):
     type: str = "HeadingSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CompassSensorConfig(LabSensorConfig):
     r"""
     For Navigation tasks only. The observation of the
@@ -448,7 +447,7 @@ class CompassSensorConfig(LabSensorConfig):
     type: str = "CompassSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GPSSensorConfig(LabSensorConfig):
     r"""
     For Navigation tasks only. The observation of the EpisodicGPSSensor are two float values
@@ -459,23 +458,23 @@ class GPSSensorConfig(LabSensorConfig):
     dimensionality: int = 2
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RobotStartCompassSensorConfig(CompassSensorConfig):
     type: str = "RobotStartCompassSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RobotStartGPSSensorConfig(GPSSensorConfig):
     type: str = "RobotStartGPSSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ProximitySensorConfig(LabSensorConfig):
     type: str = "ProximitySensor"
     max_detection_radius: float = 2.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class JointSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the joint positions of the robot.
@@ -501,7 +500,7 @@ class EEPositionSensorConfig(LabSensorConfig):
     type: str = "EEPositionSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class IsHoldingSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. A single float sensor with value 1.0 if the robot is grasping any object and 0.0 otherwise.
@@ -509,7 +508,7 @@ class IsHoldingSensorConfig(LabSensorConfig):
     type: str = "IsHoldingSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RelativeRestingPositionSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Sensor for the relative position of the end-effector's resting position, relative to the end-effector's current position.
@@ -520,43 +519,43 @@ class RelativeRestingPositionSensorConfig(LabSensorConfig):
     type: str = "RelativeRestingPositionSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class JointVelocitySensorConfig(LabSensorConfig):
     type: str = "JointVelocitySensor"
     dimensionality: int = 7
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OracleNavigationActionSensorConfig(LabSensorConfig):
     type: str = "OracleNavigationActionSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RestingPositionSensorConfig(LabSensorConfig):
     type: str = "RestingPositionSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArtJointSensorConfig(LabSensorConfig):
     type: str = "ArtJointSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArtJointSensorNoVelSensorConfig(LabSensorConfig):
     type: str = "ArtJointSensorNoVel"  # TODO: add "Sensor" suffix
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class MarkerRelPosSensorConfig(LabSensorConfig):
     type: str = "MarkerRelPosSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TargetStartSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the relative position from end effector to a target object that needs to be picked up.
@@ -566,14 +565,14 @@ class TargetStartSensorConfig(LabSensorConfig):
     dimensionality: int = 3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TargetCurrentSensorConfig(LabSensorConfig):
     type: str = "TargetCurrentSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GoalSensorConfig(LabSensorConfig):
     """
     Rearrangement only. Returns the relative position from end effector to a goal position in which the agent needs to place an object.
@@ -584,17 +583,17 @@ class GoalSensorConfig(LabSensorConfig):
     dimensionality: int = 3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavGoalPointGoalSensorConfig(LabSensorConfig):
     type: str = "NavGoalPointGoalSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GlobalPredicatesSensorConfig(LabSensorConfig):
     type: str = "GlobalPredicatesSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the initial position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
@@ -602,7 +601,7 @@ class TargetStartGpsCompassSensorConfig(LabSensorConfig):
     type: str = "TargetStartGpsCompassSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
     r"""
     Rearrangement only. Returns the desired goal position of every object that needs to be rearranged in composite tasks, in 2D polar coordinates.
@@ -610,97 +609,97 @@ class TargetGoalGpsCompassSensorConfig(LabSensorConfig):
     type: str = "TargetGoalGpsCompassSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavToSkillSensorConfig(LabSensorConfig):
     type: str = "NavToSkillSensor"
     num_skills: int = 8
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class AbsTargetStartSensorConfig(LabSensorConfig):
     type: str = "AbsTargetStartSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class AbsGoalSensorConfig(LabSensorConfig):
     type: str = "AbsGoalSensor"
     goal_format: str = "CARTESIAN"
     dimensionality: int = 3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DistToNavGoalSensorConfig(LabSensorConfig):
     type: str = "DistToNavGoalSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjectCategorySensorConfig(LabSensorConfig):
     type: str = "ObjectCategorySensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GoalReceptacleSensorConfig(LabSensorConfig):
     type: str = "GoalReceptacleSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class StartReceptacleSensorConfig(LabSensorConfig):
     type: str = "StartReceptacleSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjectEmbeddingSensorConfig(LabSensorConfig):
     type: str = "ObjectEmbeddingSensor"
     embeddings_file: str = "data/objects/clip_embeddings.pickle"
     dimensionality: int = 512
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjectSegmentationSensorConfig(LabSensorConfig):
     type: str = "ObjectSegmentationSensor"
     blank_out_prob: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class StartRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
     type: str = "StartRecepSegmentationSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GoalRecepSegmentationSensorConfig(ObjectSegmentationSensorConfig):
     type: str = "GoalRecepSegmentationSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CameraPoseSensorConfig(LabSensorConfig):
     type: str = "CameraPoseSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ReceptacleSegmentationSensorConfig(LabSensorConfig):
     type: str = "ReceptacleSegmentationSensor"
     blank_out_prob: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavGoalSegmentationSensorConfig(LabSensorConfig):
     type: str = "OVMMNavGoalSegmentationSensor"
     blank_out_prob: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class LocalizationSensorConfig(LabSensorConfig):
     type: str = "LocalizationSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class QuestionSensorConfig(LabSensorConfig):
     type: str = "QuestionSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class InstructionSensorConfig(LabSensorConfig):
     type: str = "InstructionSensor"
     instruction_sensor_uuid: str = "instruction"
@@ -709,12 +708,12 @@ class InstructionSensorConfig(LabSensorConfig):
 # -----------------------------------------------------------------------------
 # Measurements
 # -----------------------------------------------------------------------------
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class MeasurementConfig(HabitatBaseConfig):
     type: str = MISSING
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SuccessMeasurementConfig(MeasurementConfig):
     r"""
     For Navigation tasks only, Measures 1.0 if the robot reached a success and 0 otherwise.
@@ -727,7 +726,7 @@ class SuccessMeasurementConfig(MeasurementConfig):
     success_distance: float = 0.2
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SPLMeasurementConfig(MeasurementConfig):
     r"""
     For Navigation tasks only, Measures the SPL (Success weighted by Path Length)
@@ -741,7 +740,7 @@ class SPLMeasurementConfig(MeasurementConfig):
     type: str = "SPL"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SoftSPLMeasurementConfig(MeasurementConfig):
     r"""
     For Navigation tasks only, Similar to SPL, but instead of a boolean,
@@ -751,14 +750,14 @@ class SoftSPLMeasurementConfig(MeasurementConfig):
     type: str = "SoftSPL"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class FogOfWarConfig:
     draw: bool = True
     visibility_dist: float = 5.0
     fov: int = 90
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TopDownMapMeasurementConfig(MeasurementConfig):
     type: str = "TopDownMap"
     max_episode_steps: int = (
@@ -776,7 +775,7 @@ class TopDownMapMeasurementConfig(MeasurementConfig):
     fog_of_war: FogOfWarConfig = FogOfWarConfig()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CollisionsMeasurementConfig(MeasurementConfig):
     type: str = "Collisions"
 
@@ -802,7 +801,7 @@ class RobotForceMeasurementConfig(MeasurementConfig):
     min_force: float = 20.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ForceTerminateMeasurementConfig(MeasurementConfig):
     r"""
     If the force is greater than a certain threshold, this measure will be 1.0 and 0.0 otherwise.
@@ -816,18 +815,18 @@ class ForceTerminateMeasurementConfig(MeasurementConfig):
     max_instant_force: float = -1.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RobotCollisionsTerminateMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisionsTerminate"
     max_num_collisions: int = -1  # do not terminate by default
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RobotCollisionsMeasurementConfig(MeasurementConfig):
     type: str = "RobotCollisions"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
     r"""
     In rearrangement only. The distance between the target object and the goal position for the object.
@@ -835,12 +834,12 @@ class ObjectToGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "ObjectToGoalDistance"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EndEffectorToObjectDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToObjectDistance"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
     """
     Rearrangement only. Distance between current end effector position
@@ -851,12 +850,12 @@ class EndEffectorToRestDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToRestDistance"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EndEffectorToGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorToGoalDistance"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement open/close container tasks only. Whether the articulated object (fridge or cabinet door) towards a desired state (open or closed) as defined by the task.
@@ -866,22 +865,22 @@ class ArtObjAtDesiredStateMeasurementConfig(MeasurementConfig):
     success_dist_threshold: float = 0.05
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GfxReplayMeasureMeasurementConfig(MeasurementConfig):
     type: str = "GfxReplayMeasure"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EndEffectorDistToMarkerMeasurementConfig(MeasurementConfig):
     type: str = "EndEffectorDistToMarker"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArtObjStateMeasurementConfig(MeasurementConfig):
     type: str = "ArtObjState"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement open/close container tasks only. Requires art_obj_at_desired_state. Is 1.0 if the articulated object is in desired state and the end effector is within rest_dist_threshold of the resting position. If must_call_stop is True, the robot must also call the rearrange_stop action.
@@ -891,7 +890,7 @@ class ArtObjSuccessMeasurementConfig(MeasurementConfig):
     must_call_stop: bool = True
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArtObjRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement open/close container tasks only. Requires art_obj_at_desired_state.
@@ -924,7 +923,7 @@ class ArtObjRewardMeasurementConfig(MeasurementConfig):
     robot_collisions_end_pen: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RotDistToGoalMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Navigation task only. The angle between the forward direction of the agent and the direction to the goal location.
@@ -932,25 +931,25 @@ class RotDistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "RotDistToGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavmeshCollisionMeasurementConfig(MeasurementConfig):
     type: str = "NavmeshCollision"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DistToGoalMeasurementConfig(MeasurementConfig):
     type: str = "DistToGoal"
     use_shortest_path_cache: bool = True
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class BadCalledTerminateMeasurementConfig(MeasurementConfig):
     type: str = "BadCalledTerminate"
     bad_term_pen: float = 0.0
     decay_bad_term: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavToPosSuccMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Navigation task only. The value is 1.0 if the robot is within success_distance of the goal position.
@@ -959,7 +958,7 @@ class NavToPosSuccMeasurementConfig(MeasurementConfig):
     success_distance: float = 0.5
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavToObjRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Navigation task only. The reward for rearrangement navigation.
@@ -987,7 +986,7 @@ class NavToObjRewardMeasurementConfig(MeasurementConfig):
     robot_collisions_end_pen: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Navigation only. Takes the value 1.0 when the Robot successfully navigated to the target object. Depends on nav_to_pos_succ.
@@ -1003,99 +1002,99 @@ class NavToObjSuccessMeasurementConfig(MeasurementConfig):
     success_angle_dist: float = 0.261799
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavToObjRewardMeasurementConfig(NavToObjRewardMeasurementConfig):
     type: str = "OVMMNavToObjReward"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMDistToPickGoalMeasurementConfig(DistToGoalMeasurementConfig):
     type: str = "OVMMDistToPickGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMDistToPlaceGoalMeasurementConfig(DistToGoalMeasurementConfig):
     type: str = "OVMMDistToPlaceGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMRotDistToGoalMeasurementConfig(RotDistToGoalMeasurementConfig):
     type: str = "OVMMRotDistToGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMRotDistToPickGoalMeasurementConfig(
     OVMMRotDistToGoalMeasurementConfig
 ):
     type: str = "OVMMRotDistToPickGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMRotDistToPlaceGoalMeasurementConfig(
     OVMMRotDistToGoalMeasurementConfig
 ):
     type: str = "OVMMRotDistToPlaceGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavToPickSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
     type: str = "OVMMNavToPickSucc"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavToObjSuccMeasurementConfig(NavToObjSuccessMeasurementConfig):
     type: str = "OVMMNavToObjSucc"
     min_object_coverage_iou: float = 1e-3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavOrientToPickSuccMeasurementConfig(
     OVMMNavToObjSuccMeasurementConfig
 ):
     type: str = "OVMMNavOrientToPickSucc"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavToPlaceSuccMeasurementConfig(NavToPosSuccMeasurementConfig):
     type: str = "OVMMNavToPlaceSucc"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMNavOrientToPlaceSuccMeasurementConfig(
     OVMMNavToObjSuccMeasurementConfig
 ):
     type: str = "OVMMNavOrientToPlaceSucc"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PickObjectIoUCoverageMeasurementConfig(MeasurementConfig):
     type: str = "PickObjectIoUCoverage"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PlaceObjectIoUCoverageMeasurementConfig(MeasurementConfig):
     type: str = "PlaceObjectIoUCoverage"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TargetIoUCoverageMeasurementConfig(MeasurementConfig):
     type: str = "TargetIoUCoverage"
     max_goal_dist: float = 0.1
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PickGoalIoUCoverageMeasurementConfig(TargetIoUCoverageMeasurementConfig):
     type: str = "PickGoalIoUCoverage"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PlaceGoalIoUCoverageMeasurementConfig(
     TargetIoUCoverageMeasurementConfig
 ):
     type: str = "PlaceGoalIoUCoverage"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RearrangeReachRewardMeasurementConfig(MeasurementConfig):
     type: str = "RearrangeReachReward"
     scale: float = 1.0
@@ -1103,13 +1102,13 @@ class RearrangeReachRewardMeasurementConfig(MeasurementConfig):
     sparse_reward: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RearrangeReachSuccessMeasurementConfig(MeasurementConfig):
     type: str = "RearrangeReachSuccess"
     succ_thresh: float = 0.2
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class NumStepsMeasurementConfig(MeasurementConfig):
     r"""
     In both Navigation and Rearrangement tasks, counts the number of steps since
@@ -1118,17 +1117,17 @@ class NumStepsMeasurementConfig(MeasurementConfig):
     type: str = "NumStepsMeasure"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DidPickObjectMeasurementConfig(MeasurementConfig):
     type: str = "DidPickObjectMeasure"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DidViolateHoldConstraintMeasurementConfig(MeasurementConfig):
     type: str = "DidViolateHoldConstraintMeasure"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     type: str = "MoveObjectsReward"
     pick_reward: float = 1.0
@@ -1146,7 +1145,7 @@ class MoveObjectsRewardMeasurementConfig(MeasurementConfig):
     robot_collisions_end_pen: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the pick task.
@@ -1182,7 +1181,7 @@ class RearrangePickRewardMeasurementConfig(MeasurementConfig):
     robot_collisions_end_pen: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot picked the target object.
@@ -1192,7 +1191,7 @@ class RearrangePickSuccessMeasurementConfig(MeasurementConfig):
     object_goal: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjAtGoalMeasurementConfig(MeasurementConfig):
     r"""
     The measure is a dictionary of target indexes to float. The values are 1 if the object is within succ_thresh of the goal position for that object.
@@ -1203,12 +1202,12 @@ class ObjAtGoalMeasurementConfig(MeasurementConfig):
     succ_thresh: float = 0.15
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjAnywhereOnGoalMeasurementConfig(MeasurementConfig):
     type: str = "ObjAnywhereOnGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PlaceRewardMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. The reward for the place task.
@@ -1243,13 +1242,13 @@ class PlaceRewardMeasurementConfig(MeasurementConfig):
     robot_collisions_end_pen: float = 0.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PlacementStabilityMeasurementConfig(MeasurementConfig):
     type: str = "PlacementStability"
     stability_steps: float = 50
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PlaceSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Requires the end_effector_sensor lab sensor. 1.0 if the robot placed the target object on the goal position and has its end effector within ee_resting_success_threshold of its resting position.
@@ -1259,76 +1258,76 @@ class PlaceSuccessMeasurementConfig(MeasurementConfig):
     check_stability: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PickedObjectLinearVelMeasurementConfig(MeasurementConfig):
     type: str = "PickedObjectLinearVel"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PickedObjectAngularVelMeasurementConfig(MeasurementConfig):
     type: str = "PickedObjectAngularVel"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ObjectAtRestMeasurementConfig(MeasurementConfig):
     type: str = "ObjectAtRest"
     angular_vel_thresh: float = 1e-3
     linear_vel_thresh: float = 1e-3
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMFindObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
     type: str = "OVMMFindObjectPhaseSuccess"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMPickObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
     type: str = "OVMMPickObjectPhaseSuccess"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMPlaceObjectPhaseSuccessMeasurementConfig(MeasurementConfig):
     type: str = "OVMMPlaceObjectPhaseSuccess"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMFindRecepPhaseSuccessMeasurementConfig(MeasurementConfig):
     type: str = "OVMMFindRecepPhaseSuccess"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMObjectToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "OVMMObjectToPlaceGoalDistance"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMEEToPlaceGoalDistanceMeasurementConfig(MeasurementConfig):
     type: str = "OVMMEEToPlaceGoalDistance"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMPlaceRewardMeasurementConfig(PlaceRewardMeasurementConfig):
     type: str = "OVMMPlaceReward"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMPlacementStabilityMeasurementConfig(
     PlacementStabilityMeasurementConfig
 ):
     type: str = "OVMMPlacementStability"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMPlaceSuccessMeasurementConfig(PlaceSuccessMeasurementConfig):
     type: str = "OVMMPlaceSuccess"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CompositeNodeIdxMeasurementConfig(MeasurementConfig):
     type: str = "CompositeNodeIdx"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
     r"""
     Composite Rearrangement only. 1.0 if the agent complete a particular stage defined in `stage_goals` and 0.0 otherwise. Stage goals are specified in the `pddl` task description.
@@ -1336,7 +1335,7 @@ class CompositeStageGoalsMeasurementConfig(MeasurementConfig):
     type: str = "CompositeStageGoals"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CompositeSuccessMeasurementConfig(MeasurementConfig):
     r"""
     Composite rearrangement tasks only (rearrange, set_table, tidy_house). It uses a goal pddl expression to validate the success.
@@ -1353,7 +1352,7 @@ class CompositeSubgoalReward(MeasurementConfig):
     stage_sparse_reward: float = 1.0
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     r"""
     Rearrangement Only. Measures 1 if the agent has called the stop action and 0 otherwise.
@@ -1361,17 +1360,17 @@ class DoesWantTerminateMeasurementConfig(MeasurementConfig):
     type: str = "DoesWantTerminate"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class CorrectAnswerMeasurementConfig(MeasurementConfig):
     type: str = "CorrectAnswer"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class EpisodeInfoMeasurementConfig(MeasurementConfig):
     type: str = "EpisodeInfo"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DistanceToGoalMeasurementConfig(MeasurementConfig):
     r"""
     In Navigation tasks only, measures the geodesic distance to the goal.
@@ -1384,7 +1383,7 @@ class DistanceToGoalMeasurementConfig(MeasurementConfig):
     distance_from: str = "BASE"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
     r"""
     In Navigation tasks only, measures a reward based on the distance towards the goal.
@@ -1394,22 +1393,22 @@ class DistanceToGoalRewardMeasurementConfig(MeasurementConfig):
     type: str = "DistanceToGoalReward"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PickDistanceToGoalMeasurementConfig(DistanceToGoalMeasurementConfig):
     type: str = "PickDistanceToGoal"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PickDistanceToGoalRewardMeasurementConfig(MeasurementConfig):
     type: str = "PickDistanceToGoalReward"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class AnswerAccuracyMeasurementConfig(MeasurementConfig):
     type: str = "AnswerAccuracy"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class TaskConfig(HabitatBaseConfig):
     r"""
     The definition of the task in Habitat.
@@ -1488,7 +1487,9 @@ class TaskConfig(HabitatBaseConfig):
     base_noise: float = 0.05
     spawn_region_scale: float = 0.2
     joint_max_impulse: float = -1.0
-    desired_resting_position: List[float] = [0.5, 0.0, 1.0]
+    desired_resting_position: List[float] = field(
+        default_factory=lambda: [0.5, 0.0, 1.0]
+    )
     use_marker_t: bool = True
     cache_robot_init: bool = False
     success_state: float = 0.0
@@ -1513,32 +1514,32 @@ class TaskConfig(HabitatBaseConfig):
     receptacle_categories_file: str = ""
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SimulatorSensorConfig(HabitatBaseConfig):
     type: str = MISSING
     height: int = 480
     width: int = 640
-    position: List[float] = [0.0, 1.25, 0.0]
+    position: List[float] = field(default_factory=lambda: [0.0, 1.25, 0.0])
     # Euler's angles:
-    orientation: List[float] = [0.0, 0.0, 0.0]
+    orientation: List[float] = field(default_factory=lambda: [0.0, 0.0, 0.0])
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SimulatorCameraSensorConfig(SimulatorSensorConfig):
     hfov: int = 90  # horizontal field of view in degrees
     sensor_subtype: str = "PINHOLE"
     noise_model: str = "None"
-    noise_model_kwargs: Dict[str, Any] = dict()
+    noise_model_kwargs: Dict[str, Any] = field(default_factory=dict)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SimulatorDepthSensorConfig(SimulatorSensorConfig):
     min_depth: float = 0.0
     max_depth: float = 10.0
     normalize_depth: bool = True
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimRGBSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimRGBSensor"
 
@@ -1551,27 +1552,27 @@ class HabitatSimDepthSensorConfig(SimulatorCameraSensorConfig):
     normalize_depth: bool = True
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimSemanticSensorConfig(SimulatorCameraSensorConfig):
     type: str = "HabitatSimSemanticSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimEquirectangularRGBSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularRGBSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimEquirectangularDepthSensorConfig(SimulatorDepthSensorConfig):
     type: str = "HabitatSimEquirectangularDepthSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimEquirectangularSemanticSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimEquirectangularSemanticSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
     type: str = "HabitatSimFisheyeSensor"
     height: int = SimulatorSensorConfig().width
@@ -1583,7 +1584,7 @@ class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
     # in the same table as well.
     xi: float = -0.27
     alpha: float = 0.57
-    focal_length: List[float] = [364.84, 364.86]
+    focal_length: List[float] = field(default_factory=lambda: [364.84, 364.86])
     # Place camera at center of screen
     # Can be specified, otherwise is calculated automatically.
     # principal_point_offset defaults to (h/2,w/2)
@@ -1591,12 +1592,12 @@ class SimulatorFisheyeSensorConfig(SimulatorSensorConfig):
     sensor_model_type: str = "DOUBLE_SPHERE"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimFisheyeRGBSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeRGBSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SimulatorFisheyeDepthSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeDepthSensor"
     min_depth: float = SimulatorDepthSensorConfig().min_depth
@@ -1604,19 +1605,19 @@ class SimulatorFisheyeDepthSensorConfig(SimulatorFisheyeSensorConfig):
     normalize_depth: bool = SimulatorDepthSensorConfig().normalize_depth
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimFisheyeSemanticSensorConfig(SimulatorFisheyeSensorConfig):
     type: str = "HabitatSimFisheyeSemanticSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HeadRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "head_rgb"
     width: int = 256
     height: int = 256
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HeadDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "head_depth"
     width: int = 256
@@ -1630,49 +1631,49 @@ class ArmPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     height: int = 256
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HeadPanopticSensorConfig(HabitatSimSemanticSensorConfig):
     uuid: str = "head_panoptic"
     width: int = 256
     height: int = 256
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArmRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "articulated_agent_arm_rgb"
     width: int = 256
     height: int = 256
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ArmDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "articulated_agent_arm_depth"
     width: int = 256
     height: int = 256
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ThirdRGBSensorConfig(HabitatSimRGBSensorConfig):
     uuid: str = "third_rgb"
     width: int = 512
     height: int = 512
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class ThirdDepthSensorConfig(HabitatSimDepthSensorConfig):
     uuid: str = "third_depth"  # TODO: third_rgb on the main branch
     #  check if it won't cause any errors
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class AgentConfig(HabitatBaseConfig):
     height: float = 1.5
     radius: float = 0.1
     grasp_managers: int = 1
     sim_sensors: Dict[str, SimulatorSensorConfig] = field(default_factory=dict)
     is_set_start_state: bool = False
-    start_position: List[float] = [0, 0, 0]
-    start_rotation: List[float] = [0, 0, 0, 1]
+    start_position: List[float] = field(default_factory=lambda: [0, 0, 0])
+    start_rotation: List[float] = field(default_factory=lambda: [0, 0, 0, 1])
     joint_start_noise: float = 0.1
     # Hard-code the robot joint start. `joint_start_noise` still applies.
     joint_start_override: Optional[List[float]] = None
@@ -1699,7 +1700,7 @@ class RendererConfig(HabitatBaseConfig):
     classic_replay_renderer: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatSimV0Config(HabitatBaseConfig):
     gpu_device_id: int = 0
     # Use Habitat-Sim's GPU->GPU copy mode to return rendering results in
@@ -1722,7 +1723,7 @@ class HabitatSimV0Config(HabitatBaseConfig):
     pbr_image_based_lighting: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class SimulatorConfig(HabitatBaseConfig):
     type: str = "Sim-v0"
     forward_step_size: float = 0.25  # in metres
@@ -1744,7 +1745,7 @@ class SimulatorConfig(HabitatBaseConfig):
     scene_dataset: str = "default"
     # A list of directory or config paths to search in addition to the dataset
     # for object configs. should match the generated episodes for the task:
-    additional_object_paths: List[str] = []
+    additional_object_paths: List[str] = field(default_factory=list)
     # Use config.seed (can't reference Config.seed) or define via code
     # otherwise it leads to circular references:
     #
@@ -1793,25 +1794,25 @@ class SimulatorConfig(HabitatBaseConfig):
     renderer: RendererConfig = RendererConfig()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PyrobotSensor(HabitatBaseConfig):
     pass
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PyrobotVisualSensorConfig(PyrobotSensor):
     type: str = MISSING
     height: int = 480
     width: int = 640
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PyrobotRGBSensorConfig(PyrobotVisualSensorConfig):
     type: str = "PyRobotRGBSensor"
     center_crop: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PyrobotDepthSensorConfig(PyrobotVisualSensorConfig):
     type: str = "PyRobotDepthSensor"
     min_depth: float = 0.0
@@ -1820,35 +1821,43 @@ class PyrobotDepthSensorConfig(PyrobotVisualSensorConfig):
     center_crop: bool = False
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PyrobotBumpSensorConfig(PyrobotSensor):
     type: str = "PyRobotBumpSensor"
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class LocobotConfig(HabitatBaseConfig):
-    actions: List[str] = ["base_actions", "camera_actions"]
-    base_actions: List[str] = ["go_to_relative", "go_to_absolute"]
+    actions: List[str] = field(
+        default_factory=lambda: ["base_actions", "camera_actions"]
+    )
+    base_actions: List[str] = field(
+        default_factory=lambda: ["go_to_relative", "go_to_absolute"]
+    )
 
-    camera_actions: List[str] = ["set_pan", "set_tilt", "set_pan_tilt"]
+    camera_actions: List[str] = field(
+        default_factory=lambda: ["set_pan", "set_tilt", "set_pan_tilt"]
+    )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class PyrobotConfig(HabitatBaseConfig):
     # types of robots supported:
-    robots: List[str] = ["locobot"]
+    robots: List[str] = field(default_factory=lambda: ["locobot"])
     robot: str = "locobot"
-    sensors: Dict[str, PyrobotSensor] = {
-        "rgb_sensor": PyrobotRGBSensorConfig(),
-        "depth_sensor": PyrobotDepthSensorConfig(),
-        "bump_sensor": PyrobotBumpSensorConfig(),
-    }
+    sensors: Dict[str, PyrobotSensor] = field(
+        default_factory=lambda: {
+            "rgb_sensor": PyrobotRGBSensorConfig(),
+            "depth_sensor": PyrobotDepthSensorConfig(),
+            "bump_sensor": PyrobotBumpSensorConfig(),
+        }
+    )
     base_controller: str = "proportional"
     base_planner: str = "none"
     locobot: LocobotConfig = LocobotConfig()
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class DatasetConfig(HabitatBaseConfig):
     r"""Configuration for the dataset of the task.
 
@@ -1864,14 +1873,14 @@ class DatasetConfig(HabitatBaseConfig):
     type: str = "PointNav-v1"
     split: str = "train"
     scenes_dir: str = "data/scene_datasets"
-    content_scenes: List[str] = ["*"]
+    content_scenes: List[str] = field(default_factory=lambda: ["*"])
     data_path: str = (
         "data/datasets/pointnav/"
         "habitat-test-scenes/v1/{split}/{split}.json.gz"
     )
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class OVMMDatasetConfig(DatasetConfig):
     type: str = "OVMMDataset-v0"
     viewpoints_matrix_path: Optional[
@@ -1882,18 +1891,18 @@ class OVMMDatasetConfig(DatasetConfig):
     ] = "data/datasets/floorplanner/rearrange/v2/{split}/cat_rearrange_floorplanner_transformations_matrix.npy"
     # Other datasets do not allow using a subset of episodes
     episode_indices_range: Optional[Tuple[int, int]] = None
-    episode_ids: List[int] = []
+    episode_ids: List[int] = field(default_factory=list)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class GymConfig(HabitatBaseConfig):
     obs_keys: Optional[List[str]] = None
     action_keys: Optional[List[str]] = None
-    achieved_goal_keys: List = []
-    desired_goal_keys: List[str] = []
+    achieved_goal_keys: List = field(default_factory=list)
+    desired_goal_keys: List[str] = field(default_factory=list)
 
 
-@attr.s(auto_attribs=True, slots=True)
+@dataclass
 class HabitatConfig(HabitatBaseConfig):
     r"""
     The entry point for the configuration of Habitat. It holds the environment, simulator, task and dataset configurations.
@@ -1910,7 +1919,7 @@ class HabitatConfig(HabitatBaseConfig):
     # The dependencies for launching the GymRegistryEnv environments.
     # Modules listed here will be imported prior to making the environment with
     # gym.make()
-    env_task_gym_dependencies: List = []
+    env_task_gym_dependencies: List = field(default_factory=list)
     # The key of the gym environment in the registry to use in GymRegistryEnv
     # for example: `Cartpole-v0`
     env_task_gym_id: str = ""

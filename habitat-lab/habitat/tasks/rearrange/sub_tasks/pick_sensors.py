@@ -20,7 +20,7 @@ from habitat.tasks.rearrange.rearrange_sensors import (
 )
 from habitat.tasks.rearrange.rearrange_sim import RearrangeSim
 from habitat.tasks.rearrange.utils import (
-    UsesRobotInterface,
+    UsesArticulatedAgentInterface,
     get_camera_transform,
     rearrange_logger,
 )
@@ -28,7 +28,9 @@ from habitat.utils.geometry_utils import cosine
 
 
 @registry.register_measure
-class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
+class PickDistanceToGoal(
+    DistanceToGoal, UsesArticulatedAgentInterface, Measure
+):
     cls_uuid: str = "pick_distance_to_goal"
 
     def get_base_position(self):
@@ -38,13 +40,13 @@ class PickDistanceToGoal(DistanceToGoal, UsesRobotInterface, Measure):
     def get_end_effector_position(self):
         assert isinstance(self._sim, RearrangeSim)
         return self._sim.get_robot_data(
-            self.robot_id
+            self.agent_id
         ).robot.ee_transform.translation
 
 
 @registry.register_measure
 class PickDistanceToGoalReward(
-    DistanceToGoalReward, UsesRobotInterface, Measure
+    DistanceToGoalReward, UsesArticulatedAgentInterface, Measure
 ):
     cls_uuid: str = "pick_distance_to_goal_reward"
 
