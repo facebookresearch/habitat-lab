@@ -253,8 +253,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
     # PDDL action name.
     pddl_action_names: Optional[List[str]] = None
     turn_steps: int = 1
-    turn_power_x: float = 1.0
-    turn_power_y: float = 1.0
+    turn_power_x: float = 0.0
+    turn_power_y: float = 0.0
 
 
 @dataclass
