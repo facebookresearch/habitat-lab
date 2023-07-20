@@ -287,6 +287,7 @@ class SandboxDriver(GuiAppDriver):
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
         self._num_busy_objects = None  # currently held by non-gui agents
+        self._blocked = False # track if agent's path is blocked
 
         sim = self.get_sim()
         temp_ids, goal_positions_np = sim.get_targets()
@@ -438,8 +439,21 @@ class SandboxDriver(GuiAppDriver):
                 translation = self._get_agent_translation()
                 dist_to_obj = np.linalg.norm(goal_position - translation)
                 if dist_to_obj < self._can_grasp_place_threshold:
-                    self._held_target_obj_idx = None
-                    drop_pos = goal_position
+                    #check if there is a wall in the way
+                    ray_origin=translation + mn.Vector3(0,1.5,0)
+                    ray_direction = goal_position - translation
+                    ray = habitat_sim.geo.Ray(origin= ray_origin, direction=ray_direction.normalized())
+                    raycast_results = self.get_sim().cast_ray(ray=ray)
+
+                    if raycast_results.has_hits():
+                        hit_info = raycast_results.hits[0]
+                        # print("hit_info.object_id", hit_info.object_id)
+                        if hit_info.object_id >= 0: 
+                            self._held_target_obj_idx = None
+                            drop_pos = goal_position
+                        else:
+                            self._blocked = True
+                            print("wall in the way!")
         else:
             # check for new grasp and call gui_agent_ctrl.set_act_hints
             if self._held_target_obj_idx is None:
@@ -464,10 +478,25 @@ class SandboxDriver(GuiAppDriver):
                             min_i = i
 
                     if min_i is not None:
-                        self._held_target_obj_idx = min_i
-                        grasp_object_id = self._target_obj_ids[
-                            self._held_target_obj_idx
-                        ]
+                        #check if there is a wall in the way
+                        sim = self.get_sim()
+                        agent_pos = self._get_agent_translation()
+                        ray_origin=agent_pos + mn.Vector3(0,1.5,0)
+                        ray_direction = this_target_pos - ray_origin
+
+                        ray = habitat_sim.geo.Ray(origin= ray_origin, direction=ray_direction.normalized())
+                        raycast_results = sim.cast_ray(ray=ray)
+
+                        if raycast_results.has_hits():
+                            hit_info = raycast_results.hits[0]
+                            if hit_info.object_id >= 0: 
+                                self._held_target_obj_idx = min_i
+                                grasp_object_id = self._target_obj_ids[
+                                    self._held_target_obj_idx
+                                ]
+                            else:
+                                self._blocked = True
+                                print("wall in way!")
 
         walk_dir = (
             self._viz_and_get_humanoid_walk_dir()
@@ -494,6 +523,7 @@ class SandboxDriver(GuiAppDriver):
         grasped_objects_idxs = self._get_grasped_objects_idxs()
         self._num_remaining_objects = 0
         self._num_busy_objects = len(grasped_objects_idxs)
+        self._blocked = False
 
         # draw nav_hint and target box
         for i in range(len(self._target_obj_ids)):
@@ -831,6 +861,9 @@ class SandboxDriver(GuiAppDriver):
 
         assert self._num_remaining_objects is not None
         assert self._num_busy_objects is not None
+
+        if self._blocked:
+            status_str +=("Wall in the way!\n")
 
         if not self._env_episode_active():
             if self._env_task_complete:
