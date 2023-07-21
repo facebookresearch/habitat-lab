@@ -162,7 +162,7 @@ class PPOTrainer(BaseRLTrainer):
                 # TODO: This must be changed for episodes with few scenes. We
                 # should change it back when expanding to more scenes and final
                 # results so there is no imbalance of scenes per worker.
-                enforce_scenes_greater_eq_environments=False,
+                enforce_scenes_greater_eq_environments=is_eval,
             )
         self._env_spec = EnvironmentSpec(
             observation_space=self.envs.observation_spaces[0],
@@ -1019,7 +1019,6 @@ class PPOTrainer(BaseRLTrainer):
                 device=self.device,
             )
             batch = apply_obs_transforms_batch(batch, self.obs_transforms)  # type: ignore
-
             not_done_masks = torch.tensor(
                 [[not done] for done in dones],
                 dtype=torch.bool,
@@ -1120,6 +1119,7 @@ class PPOTrainer(BaseRLTrainer):
                 batch,
                 rgb_frames,
             )
+            self._agent.actor_critic.pause_envs(envs_to_pause)
 
         pbar.close()
         assert (

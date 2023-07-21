@@ -93,6 +93,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._cur_call_high_level: torch.BoolTensor = torch.ones(
             (self._num_envs,), dtype=torch.bool
         )
+        self._active_envs: torch.BoolTensor = torch.ones(
+            (self._num_envs,), dtype=torch.bool
+        )
 
         high_level_cls = self._get_hl_policy_cls(config)
         self._high_level_policy: HighLevelPolicy = high_level_cls(
@@ -270,13 +273,14 @@ class HierarchicalPolicy(nn.Module, Policy):
         deterministic=False,
         **kwargs,
     ):
+        batch_size = masks.shape[0]
         masks_cpu = masks.cpu()
-        log_info: List[Dict[str, Any]] = [{} for _ in range(self._num_envs)]
+        log_info: List[Dict[str, Any]] = [{} for _ in range(batch_size)]
         self._high_level_policy.apply_mask(masks_cpu)  # type: ignore[attr-defined]
 
         # Initialize empty action set based on the overall action space.
         actions = torch.zeros(
-            (self._num_envs, get_num_actions(self._action_space)),
+            (batch_size, get_num_actions(self._action_space)),
             device=masks.device,
         )
 
@@ -377,7 +381,8 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
-        hl_terminate_episode = torch.zeros(self._num_envs, dtype=torch.bool)
+        batch_size = masks.shape[0]
+        hl_terminate_episode = torch.zeros(batch_size, dtype=torch.bool)
         hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
         if should_choose_new_skill.sum() > 0:
             (
@@ -423,9 +428,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             hl_info["rnn_hidden_states"] = rnn_hidden_states
 
             should_choose_new_skill = should_choose_new_skill.numpy()
+
             self._cur_skills = (
                 (~should_choose_new_skill) * self._cur_skills
             ) + (should_choose_new_skill * new_skills)
+
         return hl_terminate_episode, hl_info
 
     def _get_terminations(
@@ -457,10 +464,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._cur_skills,
             log_info,
         )
-
+        batch_size = masks.shape[0]
         # Check if skills should terminate.
         bad_should_terminate: torch.BoolTensor = torch.zeros(
-            (self._num_envs,), dtype=torch.bool
+            (batch_size,), dtype=torch.bool
         )
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
@@ -516,6 +523,29 @@ class HierarchicalPolicy(nn.Module, Policy):
             action,
             rnn_build_seq_info,
         )
+
+    def pause_envs(self, envs_to_pause):
+        """
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
+        """
+
+        if len(envs_to_pause) == 0:
+            return
+        # One hot of envs to pause
+        all_envs_to_keep_active = self._active_envs.clone()
+        all_envs_to_keep_active[envs_to_pause] = False
+
+        # Filtering the new envs that we need to keep active
+        curr_envs_to_keep_active = all_envs_to_keep_active[self._active_envs]
+
+        self._cur_call_high_level = self._cur_call_high_level[
+            curr_envs_to_keep_active
+        ]
+        self._cur_skills = self._cur_skills[curr_envs_to_keep_active]
+
+        self._active_envs = all_envs_to_keep_active
+        self._high_level_policy.filter_envs(curr_envs_to_keep_active)
 
     @classmethod
     def from_config(

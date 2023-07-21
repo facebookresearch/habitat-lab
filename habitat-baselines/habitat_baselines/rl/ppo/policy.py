@@ -214,6 +214,15 @@ class Policy(abc.ABC):
     ) -> PolicyActionData:
         raise NotImplementedError
 
+    def pause_envs(self, envs_to_pause):
+        """
+        Clean up data when envs are finished. Makes sure that relevant variables
+        of a policy are updated as environments pause. This is needed when
+        evaluating policies with multiple environments, where some environments
+        will run out of episodes to evaluate and will be closing.
+        """
+        raise NotImplementedError
+
     @classmethod
     @abc.abstractmethod
     def from_config(cls, config, observation_space, action_space, **kwargs):
