@@ -23,6 +23,7 @@ defaults:
     - composite_success
     - num_steps
     - did_agents_collide
+    - num_agents_collide
     - composite_stage_goals
     - cooperate_subgoal_reward
     - runtime_perf_stats
