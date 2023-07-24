@@ -292,10 +292,6 @@ class NetPolicy(nn.Module, Policy):
         distribution = self.action_distribution(features)
         value = self.critic(features)
 
-        action_distribution_data = (
-            distribution.mean,
-            distribution.stddev,
-        )
         action_log_probs = distribution.log_probs(action)
         distribution_entropy = distribution.entropy()
 
@@ -318,7 +314,6 @@ class NetPolicy(nn.Module, Policy):
             distribution_entropy,
             rnn_hidden_states,
             aux_loss_res,
-            action_distribution_data,
         )
 
     def _get_policy_components(self) -> List[nn.Module]:

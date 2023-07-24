@@ -39,9 +39,11 @@ class PickDistanceToGoal(
 
     def get_end_effector_position(self):
         assert isinstance(self._sim, RearrangeSim)
-        return self._sim.get_robot_data(
-            self.agent_id
-        ).robot.ee_transform.translation
+        return (
+            self._sim.get_agent_data(self.agent_id)
+            .articulated_agent.ee_transform()
+            .translation
+        )
 
 
 @registry.register_measure

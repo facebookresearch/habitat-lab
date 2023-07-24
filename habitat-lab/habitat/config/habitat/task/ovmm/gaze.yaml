@@ -45,13 +45,13 @@ end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
 spawn_reference: view_points
 spawn_reference_sampling: uniform
-spawn_max_dists_to_obj: 0.0
+spawn_max_dist_to_obj: 0.0
 start_in_manip_mode: False
 camera_tilt: -0.5236      # start in navigation mode
 actions:
   arm_action:
     type: "ArmAction"
-    arm_controller: "ArmRelPosReducedActionStretch"
+    arm_controller: "ArmRelPosKinematicReducedActionStretch"
     grip_controller: "GazeGraspAction"
     arm_joint_mask: [0,0,0,0,0,0,0,0,0,1]
     arm_joint_dimensionality: 1

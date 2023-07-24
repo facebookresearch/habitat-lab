@@ -9,7 +9,6 @@ defaults:
 
 habitat:
   gym:
-    auto_name: Place
     obs_keys:
       - head_depth
       - goal_receptacle

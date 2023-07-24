@@ -66,9 +66,11 @@ class OVMMEEToPlaceGoalDistance(UsesArticulatedAgentInterface, Measure):
     def update_metric(self, *args, episode, task, **kwargs):
         # compute distance from end effector to candidate_goal_receps
         picked_idx = task._picked_object_idx
-        ee_pos = self._sim.get_robot_data(
-            self.agent_id
-        ).robot.ee_transform.translation
+        ee_pos = (
+            self._sim.get_agent_data(self.agent_id)
+            .articulated_agent.ee_transform()
+            .translation
+        )
         goal_pos = np.array(
             [g.position for g in episode.candidate_goal_receps]
         )

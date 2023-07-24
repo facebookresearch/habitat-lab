@@ -715,7 +715,7 @@ class ManipulationModeAction(ArticulatedAgentAction):
         self._threshold = config.threshold
         super().__init__(self, *args, config=config, **kwargs)
 
-    def step(self, task, *args, is_last_action, **kwargs):
+    def step(self, task, *args, **kwargs):
         manip_mode = kwargs.get("manipulation_mode", [-1.0])
         if manip_mode[0] > self._threshold and not task._in_manip_mode:
             if isinstance(self._sim.articulated_agent, StretchRobot):
@@ -746,11 +746,6 @@ class ManipulationModeAction(ArticulatedAgentAction):
                 if self.cur_grasp_mgr.snap_idx is not None:
                     # Holding onto an object, also kinematically update the object.
                     self.cur_grasp_mgr.update_object_to_grasp()
-
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.manipulation_mode)
-        else:
-            return {}
 
 
 @registry.register_task_action
@@ -876,7 +871,7 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
             self.cur_grasp_mgr.update_object_to_grasp()
         return navmesh_violation
 
-    def step(self, *args, task, is_last_action, **kwargs):
+    def step(self, *args, task, **kwargs):
         base_action = kwargs[self._action_arg_prefix + "base_vel"]
         lin_pos_x = base_action[0]
         turn_offset = 1
@@ -947,10 +942,6 @@ class BaseWaypointTeleportAction(ArticulatedAgentAction):
         else:
             # no violation if no movement was required in the first place
             task._is_navmesh_violated = False
-        if is_last_action:
-            return self._sim.step(HabitatSimActions.base_velocity)
-        else:
-            return {}
 
 
 class HumanoidJointAction(ArticulatedAgentAction):

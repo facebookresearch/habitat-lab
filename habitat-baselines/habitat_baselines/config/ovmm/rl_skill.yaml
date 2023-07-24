@@ -15,8 +15,6 @@ habitat_baselines:
   tensorboard_dir: "tb"
   video_dir: "video_dir"
   video_fps: 30
-  video_render_views:
-    - "third_rgb_sensor"
   test_episode_count: -1
   eval_ckpt_path_dir: "data/new_checkpoints"
   # 26 environments will just barely be below 16gb.

@@ -9,7 +9,7 @@ defaults:
   - /habitat/task/measurements:
     - articulated_agent_force
     - force_terminate
-    - robot_colls
+    - articulated_agent_colls
     - robot_collisions_terminate
     - end_effector_to_rest_distance
     - ovmm_ee_to_place_goal_distance
@@ -40,14 +40,14 @@ success_measure: ovmm_place_success
 success_reward: 10.0
 slack_reward: -0.005
 spawn_reference: view_points
-spawn_max_dists_to_obj: 0.0
+spawn_max_dist_to_obj: 0.0
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
 start_in_manip_mode: False
 actions:
   arm_action:
     type: "ArmAction"
-    arm_controller: "ArmRelPosReducedActionStretch"
+    arm_controller: "ArmRelPosKinematicReducedActionStretch"
     grip_controller: "MagicGraspAction"
     arm_joint_mask: [1,0,0,0,1,1,1,1,0,0]
     arm_joint_dimensionality: 5

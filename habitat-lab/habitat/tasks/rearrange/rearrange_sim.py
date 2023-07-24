@@ -142,7 +142,7 @@ class RearrangeSim(HabitatSim):
             self.habitat_config.additional_object_paths
         )
         self._kinematic_mode = self.habitat_config.kinematic_mode
-
+        self._sleep_dist = self.habitat_config.sleep_dist
         self._extra_runtime_perf_stats: Dict[str, float] = defaultdict(float)
         self._perf_logging_enabled = False
         self.cur_runtime_perf_scope: List[str] = []
@@ -230,7 +230,7 @@ class RearrangeSim(HabitatSim):
 
     def _auto_sleep_far_objects(self):
         all_robo_pos = [
-            robot.base_pos for robot in self.robots_mgr.robots_iter
+            agent.base_pos for agent in self.agents_mgr.articulated_agents_iter
         ]
         rom = self.get_rigid_object_manager()
         for handle, ro in rom.get_objects_by_handle_substring().items():
