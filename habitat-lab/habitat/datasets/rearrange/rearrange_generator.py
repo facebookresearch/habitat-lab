@@ -21,7 +21,6 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import magnum as mn
 import numpy as np
-from omegaconf import OmegaConf
 from tqdm import tqdm
 
 import habitat.datasets.rearrange.samplers as samplers
@@ -174,8 +173,8 @@ class RearrangeEpisodeGenerator:
                 object_set["name"]
             ] = cull_string_list_by_substrings(
                 object_template_handles,
-                OmegaConf.to_container(object_set["included_substrings"]),
-                OmegaConf.to_container(object_set["excluded_substrings"]),
+                object_set["included_substrings"],
+                object_set["excluded_substrings"],
             )
 
         # receptacle sets
@@ -262,6 +261,9 @@ class RearrangeEpisodeGenerator:
                     ),
                     object_set_sampler_probs,
                     obj_sampler_info["params"].get("sample_probs", None),
+                    obj_sampler_info["params"].get(
+                        "constrain_to_largest_nav_island", False
+                    ),
                 )
             else:
                 logger.info(
@@ -858,6 +860,7 @@ class RearrangeEpisodeGenerator:
         backend_cfg.scene_dataset_config_file = dataset_path
         backend_cfg.scene_id = scene_name
         backend_cfg.enable_physics = True
+        backend_cfg.gpu_device_id = self.cfg.gpu_device_id
         if not self._render_debug_obs:
             # don't bother loading textures if not intending to visualize the generation process
             backend_cfg.create_renderer = False

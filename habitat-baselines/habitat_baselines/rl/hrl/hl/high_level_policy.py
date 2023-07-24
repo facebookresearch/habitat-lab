@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 
 from habitat.tasks.rearrange.multi_task.pddl_domain import PddlProblem
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class HighLevelPolicy(nn.Module):
@@ -58,26 +59,6 @@ class HighLevelPolicy(nn.Module):
     def num_recurrent_layers(self):
         return 0
 
-    def update_hidden_states(
-        self,
-        batch_ids: List[int],
-        old_rnn_hidden_states: torch.Tensor,
-        hl_info: Dict[str, Any],
-    ) -> torch.Tensor:
-        """
-        Update the hidden states from the previous hidden state and selected HL
-        action information. Called after every HL action prediction. Returns
-        the updated hidden states of same shape as `old_rnn_hidden_states`.
-        """
-
-        if old_rnn_hidden_states.shape[0] == len(batch_ids):
-            return hl_info["rnn_hidden_states"][batch_ids]
-        else:
-            old_rnn_hidden_states[batch_ids] = hl_info["rnn_hidden_states"][
-                batch_ids
-            ]
-            return old_rnn_hidden_states
-
     def parameters(self):
         return iter([nn.Parameter(torch.zeros((1,), device=self._device))])
 
@@ -95,7 +76,7 @@ class HighLevelPolicy(nn.Module):
         plan_masks: torch.Tensor,
         deterministic: bool,
         log_info: List[Dict[str, Any]],
-    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor, Dict[str, Any]]:
+    ) -> Tuple[torch.Tensor, List[Any], torch.BoolTensor, PolicyActionData]:
         """
         Get the next skill to be executed.
 
@@ -113,12 +94,9 @@ class HighLevelPolicy(nn.Module):
             - skill_args_data: Arguments for the next skill.
             - immediate_end: Binary masks indicating which environment(s) should
                 end immediately.
-            - Information for PolicyActionData
+            - PolicyActionData information for learning.
         """
         raise NotImplementedError()
-
-    def create_hl_info(self) -> Dict[str, Any]:
-        return {}
 
     def apply_mask(self, mask: torch.Tensor) -> None:
         """

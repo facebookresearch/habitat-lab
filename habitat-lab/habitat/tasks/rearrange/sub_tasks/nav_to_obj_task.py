@@ -16,6 +16,7 @@ from habitat.articulated_agents.robots.stretch_robot import (
 )
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.dataset.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 from habitat.tasks.utils import cartesian_to_polar
@@ -56,6 +57,12 @@ class DynNavRLEnv(RearrangeTask):
         )
         self.force_obj_to_idx = None
         self.force_recep_to_name = None
+
+        # Set config options
+        self._object_in_hand_sample_prob = (
+            self._config.object_in_hand_sample_prob
+        )
+        self._min_start_distance = self._config.min_start_distance
 
         self._nav_to_info = None
         self._robot_start_position = None
@@ -167,7 +174,7 @@ class DynNavRLEnv(RearrangeTask):
         # Only change the scene if this skill is not running as a sub-task
         if (
             self.force_obj_to_idx is None
-            and random.random() < self._config.object_in_hand_sample_prob
+            and random.random() < self._object_in_hand_sample_prob
         ):
             start_hold_obj_idx = self._generate_snap_to_obj()
 
@@ -191,6 +198,8 @@ class DynNavRLEnv(RearrangeTask):
                 -heading_vector[2], heading_vector[0]
             )[1]
         elif self._pick_init or self._place_init:
+            if type(episode) != OVMMEpisode:
+                raise NotImplementedError
             if self._pick_init:
                 spawn_goals = episode.candidate_objects
             else:
@@ -274,15 +283,9 @@ class DynNavRLEnv(RearrangeTask):
             )
 
         if sim.habitat_config.debug_render:
-            rom = sim.get_rigid_object_manager()
             # Visualize the position the agent is navigating to.
             sim.viz_ids["nav_targ_pos"] = sim.visualize_position(
-                # self._nav_to_info.nav_goal_pos, #TODO: adapt this for OVMM
-                np.array(
-                    rom.get_object_by_id(
-                        int(episode.candidate_objects[0].object_id)
-                    ).translation
-                ),
+                self._nav_to_info.nav_goal_pos,
                 sim.viz_ids["nav_targ_pos"],
                 r=0.2,
             )

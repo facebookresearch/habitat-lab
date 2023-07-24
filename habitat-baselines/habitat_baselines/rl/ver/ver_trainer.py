@@ -242,8 +242,7 @@ class VERTrainer(PPOTrainer):
             "numsteps": ppo_cfg.num_steps,
             "num_envs": len(self.environment_workers),
             "action_space": self._env_spec.action_space,
-            "recurrent_hidden_state_size": ppo_cfg.hidden_size,
-            "num_recurrent_layers": self._agent.actor_critic.net.num_recurrent_layers,
+            "actor_critic": self._agent.actor_critic,
             "observation_space": rollouts_obs_space,
         }
 

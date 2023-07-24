@@ -9,6 +9,7 @@ import torch
 from habitat.tasks.rearrange.multi_task.rearrange_pddl import parse_func
 from habitat_baselines.common.logging import baselines_logger
 from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
+from habitat_baselines.rl.ppo.policy import PolicyActionData
 
 
 class FixedHighLevelPolicy(HighLevelPolicy):
@@ -119,4 +120,4 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
                 self._next_sol_idxs[batch_idx] += 1
 
-        return next_skill, skill_args_data, immediate_end, {}
+        return next_skill, skill_args_data, immediate_end, PolicyActionData()

@@ -14,7 +14,9 @@ if TYPE_CHECKING:
 
 
 def make_env_fn(
-    config: "DictConfig", env_class: Union[Type[Env], Type[RLEnv]]
+    config: "DictConfig",
+    env_class: Union[Type[Env], Type[RLEnv]],
+    dataset=None,
 ) -> Union[Env, RLEnv]:
     r"""Creates an env of type env_class with specified config and rank.
     This is to be passed in as an argument when creating VectorEnv.
@@ -23,13 +25,15 @@ def make_env_fn(
         config: root exp config that has core env config node as well as
             env-specific config node.
         env_class: class type of the env to be created.
+        dataset: If specified, load the environment using this dataset.
 
     Returns:
         env object created according to specification.
     """
     if "habitat" in config:
         config = config.habitat
-    dataset = make_dataset(config.dataset.type, config=config.dataset)
+    if dataset is None:
+        dataset = make_dataset(config.dataset.type, config=config.dataset)
     env = env_class(config=config, dataset=dataset)
     env.seed(config.seed)
     return env

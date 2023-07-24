@@ -206,7 +206,7 @@ class RearrangePickReward(RearrangeReward):
         else:
             ee_to_object_distance = task.measurements.measures[
                 EndEffectorToObjectDistance.cls_uuid
-            ].get_metric()[str(task.abs_targ_idx)]
+            ].get_metric()[str(task.targ_idx)]
         ee_to_rest_distance = task.measurements.measures[
             EndEffectorToRestDistance.cls_uuid
         ].get_metric()

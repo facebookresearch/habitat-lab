@@ -15,7 +15,7 @@ from habitat_baselines.rl.hrl.hl.high_level_policy import HighLevelPolicy
 from habitat_baselines.rl.models.rnn_state_encoder import (
     build_rnn_state_encoder,
 )
-from habitat_baselines.rl.ppo.policy import CriticHead
+from habitat_baselines.rl.ppo.policy import CriticHead, PolicyActionData
 from habitat_baselines.utils.common import CategoricalNet
 
 
@@ -84,9 +84,6 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
     @property
     def should_load_agent_state(self):
         return True
-
-    def create_hl_info(self):
-        return {"actions": None}
 
     def _setup_actions(self) -> List[PddlAction]:
         all_actions = self._pddl_prob.get_possible_actions()
@@ -215,10 +212,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             next_skill,
             skill_args_data,
             immediate_end,
-            {
-                "action_log_probs": action_log_probs,
-                "values": values,
-                "actions": skill_sel,
-                "rnn_hidden_states": rnn_hidden_states,
-            },
+            PolicyActionData(
+                action_log_probs=action_log_probs,
+                values=values,
+                actions=skill_sel,
+                rnn_hidden_states=rnn_hidden_states,
+            ),
         )

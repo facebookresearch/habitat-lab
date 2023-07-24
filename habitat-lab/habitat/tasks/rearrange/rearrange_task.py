@@ -85,6 +85,21 @@ class RearrangeTask(NavigationTask):
         self._picked_object_idx = 0
         self._in_manip_mode = False
         self._is_navmesh_violated = False
+        self.is_stop_called = False
+
+        # Get config options
+        self._force_regenerate = self._config.force_regenerate
+        self._should_save_to_cache = self._config.should_save_to_cache
+        self._obj_succ_thresh = self._config.obj_succ_thresh
+        self._enable_safe_drop = self._config.enable_safe_drop
+        self._constraint_violation_ends_episode = (
+            self._config.constraint_violation_ends_episode
+        )
+        self._constraint_violation_drops_object = (
+            self._config.constraint_violation_drops_object
+        )
+        self._count_obj_collisions = self._config.count_obj_collisions
+
         data_path = dataset.config.data_path.format(split=dataset.config.split)
         fname = data_path.split("/")[-1].split(".")[0]
         cache_path = osp.join(
@@ -136,7 +151,7 @@ class RearrangeTask(NavigationTask):
         if (
             self._articulated_agent_pos_start is None
             or start_ident not in self._articulated_agent_pos_start
-            or self._config.force_regenerate
+            or self._force_regenerate
         ):
             return None
         else:
@@ -148,7 +163,7 @@ class RearrangeTask(NavigationTask):
     def _cache_articulated_agent_start(self, cache_data, agent_idx: int = 0):
         if (
             self._articulated_agent_pos_start is not None
-            and self._config.should_save_to_cache
+            and self._should_save_to_cache
         ):
             start_ident = self._get_ep_init_ident(agent_idx)
             self._articulated_agent_pos_start[start_ident] = cache_data
@@ -206,6 +221,7 @@ class RearrangeTask(NavigationTask):
         self._cur_episode_step = 0
         self._is_navmesh_violated = False
         self._picked_object_idx = 0
+        self.is_stop_called = False
         if fetch_observations:
             self._sim.maybe_update_articulated_agent()
             return self._get_observations(episode)
@@ -244,14 +260,14 @@ class RearrangeTask(NavigationTask):
             self._sim.grasp_mgr.is_grasped
             and action_args.get("grip_action", None) is not None
             and action_args["grip_action"] < 0
-            and min_dist < self._config.obj_succ_thresh
+            and min_dist < self._obj_succ_thresh
         )
 
     def step(self, action: Dict[str, Any], episode: Episode):
         if "action_args" not in action or action["action_args"] is None:
             action["action_args"] = {}
         action_args = action["action_args"]
-        if self._config.enable_safe_drop and self._is_violating_safe_drop(
+        if self._enable_safe_drop and self._is_violating_safe_drop(
             action_args
         ):
             action_args["grip_action"] = None
@@ -263,7 +279,7 @@ class RearrangeTask(NavigationTask):
         for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
-                and self._config.constraint_violation_drops_object
+                and self._constraint_violation_drops_object
             ):
                 grasp_mgr.desnap(True)
 
@@ -284,7 +300,7 @@ class RearrangeTask(NavigationTask):
         for grasp_mgr in self._sim.agents_mgr.grasp_iter:
             if (
                 grasp_mgr.is_violating_hold_constraint()
-                and self._config.constraint_violation_ends_episode
+                and self._constraint_violation_ends_episode
             ):
                 done = True
                 break
@@ -337,7 +353,7 @@ class RearrangeTask(NavigationTask):
 
     def get_cur_collision_info(self, agent_idx) -> CollisionDetails:
         _, coll_details = rearrange_collision(
-            self._sim, self._config.count_obj_collisions, agent_idx=agent_idx
+            self._sim, self._count_obj_collisions, agent_idx=agent_idx
         )
         return coll_details
 

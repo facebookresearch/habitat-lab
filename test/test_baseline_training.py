@@ -38,7 +38,9 @@ except ImportError:
 
 def setup_function(test_trainers):
     # Download the needed datasets
-    data_downloader.main(["--uids", "rearrange_task_assets", "--no-replace"])
+    data_downloader.main(
+        ["--uids", "rearrange_task_assets", "--no-replace", "--no-prune"]
+    )
 
 
 @pytest.mark.skipif(
@@ -206,6 +208,7 @@ def test_hrl(config_path, policy_type, skill_type, mode):
         # We don't have skill checkpoints to load right now.
         return
     if policy_type == "hl_fixed" and mode == "train":
+        # Cannot train with a fixed policy
         return
     if skill_type == "oracle_skills" and "oracle" not in config_path:
         return

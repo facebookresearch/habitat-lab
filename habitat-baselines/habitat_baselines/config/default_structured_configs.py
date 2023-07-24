@@ -264,6 +264,8 @@ class HrlDefinedSkillConfig(HabitatBaselinesBaseConfig):
 @dataclass
 class HierarchicalPolicyConfig(HabitatBaselinesBaseConfig):
     high_level_policy: Dict[str, Any] = MISSING
+    # Names of the skills to not load.
+    ignore_skills: List[str] = field(default_factory=list)
     defined_skills: Dict[str, HrlDefinedSkillConfig] = field(
         default_factory=dict
     )
@@ -388,6 +390,26 @@ class ProfilingConfig(HabitatBaselinesBaseConfig):
 
 
 @dataclass
+class VectorEnvFactoryConfig(HabitatBaselinesBaseConfig):
+    """
+    `_target_` points to the `VectorEnvFactory` to setup the vectorized
+    environment. Defaults to the Habitat vectorized environment setup.
+    """
+
+    _target_: str = "habitat_baselines.common.HabitatVectorEnvFactory"
+
+
+@dataclass
+class HydraCallbackConfig(HabitatBaselinesBaseConfig):
+    """
+    Generic callback option for Hydra. Used to create the `_target_` class or
+    call the `_target_` method.
+    """
+
+    _target_: Optional[str] = None
+
+
+@dataclass
 class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     # task config can be a list of configs like "A.yaml,B.yaml"
     # If habitat_baselines.evaluate is true, the run will be in evaluation mode
@@ -417,7 +439,9 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     log_file: str = "train.log"
     force_blind_policy: bool = False
     verbose: bool = True
-    eval_keys_to_include_in_name: List[str] = field(default_factory=lambda: [])
+    # Creates the vectorized environment.
+    vector_env_factory: VectorEnvFactoryConfig = VectorEnvFactoryConfig()
+    eval_keys_to_include_in_name: List[str] = field(default_factory=list)
     # For our use case, the CPU side things are mainly memory copies
     # and nothing of substantive compute. PyTorch has been making
     # more and more memory copies parallel, but that just ends up
@@ -434,6 +458,13 @@ class HabitatBaselinesConfig(HabitatBaselinesBaseConfig):
     load_resume_state_config: bool = True
     eval: EvalConfig = EvalConfig()
     profiling: ProfilingConfig = ProfilingConfig()
+    # Whether to log the infos that are only logged to a single process to the
+    # CLI along with the other metrics.
+    should_log_single_proc_infos: bool = False
+    # Called every time a checkpoint is saved.
+    # Function signature: fn(save_file_path: str) -> None
+    # If not specified, there is no callback.
+    on_save_ckpt_callback: Optional[HydraCallbackConfig] = None
 
 
 @dataclass
