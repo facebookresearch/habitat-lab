@@ -100,6 +100,9 @@ class HierarchicalPolicy(nn.Module, Policy):
         self._cur_call_high_level: torch.BoolTensor = torch.ones(
             (self._num_envs,), dtype=torch.bool
         )
+        self._active_envs: torch.BoolTensor = torch.ones(
+            (self._num_envs,), dtype=torch.bool
+        )
 
         high_level_cls = self._get_hl_policy_cls(config)
         self._high_level_policy: HighLevelPolicy = high_level_cls(
@@ -409,7 +412,8 @@ class HierarchicalPolicy(nn.Module, Policy):
 
         # If any skills want to terminate invoke the high-level policy to get
         # the next skill.
-        hl_terminate_episode = torch.zeros(self._num_envs, dtype=torch.bool)
+        batch_size = masks.shape[0]
+        hl_terminate_episode = torch.zeros(batch_size, dtype=torch.bool)
         hl_info: Dict[str, Any] = self._high_level_policy.create_hl_info()
         if should_choose_new_skill.sum() > 0:
             (
@@ -455,9 +459,11 @@ class HierarchicalPolicy(nn.Module, Policy):
             hl_info["rnn_hidden_states"] = rnn_hidden_states
 
             should_choose_new_skill = should_choose_new_skill.numpy()
+
             self._cur_skills = (
                 (~should_choose_new_skill) * self._cur_skills
             ) + (should_choose_new_skill * new_skills)
+
         return hl_terminate_episode, hl_info
 
     def _get_terminations(
@@ -489,10 +495,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             self._cur_skills,
             log_info,
         )
-
+        batch_size = masks.shape[0]
         # Check if skills should terminate.
         bad_should_terminate: torch.BoolTensor = torch.zeros(
-            (self._num_envs,), dtype=torch.bool
+            (batch_size,), dtype=torch.bool
         )
         grouped_skills = self._broadcast_skill_ids(
             self._cur_skills,
@@ -549,10 +555,10 @@ class HierarchicalPolicy(nn.Module, Policy):
             rnn_build_seq_info,
         )
 
-    def on_envs_pause(self, envs_to_pause):
+    def pause_envs(self, envs_to_pause):
         """
-        Cleans up stateful variables of the policy so that they match with the
-        active environments
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
         """
 
         if len(envs_to_pause) == 0:

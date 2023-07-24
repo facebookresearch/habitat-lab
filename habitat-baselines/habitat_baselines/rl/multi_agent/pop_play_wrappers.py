@@ -33,6 +33,10 @@ class MultiPolicy(Policy):
     def set_active(self, active_policies):
         self._active_policies = active_policies
 
+    def pause_envs(self, envs_to_pause):
+        for policy in self._active_policies:
+            policy.pause_envs(envs_to_pause)
+
     def act(
         self,
         observations,

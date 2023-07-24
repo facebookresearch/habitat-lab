@@ -104,6 +104,12 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             aux_loss_config, action_space, observation_space, self
         )
 
+    def filter_envs(self, curr_envs_to_keep_active):
+        """
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
+        """
+
     @property
     def should_load_agent_state(self):
         return True
