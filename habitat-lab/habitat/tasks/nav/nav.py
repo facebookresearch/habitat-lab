@@ -1142,7 +1142,7 @@ def rotate_action(sim, task: EmbodiedTask, direction: str):
         actuation = sim.config.agents[0].action_space[2].actuation.amount
         if "robot_start_angle" not in dir(sim):
             sim.articulated_agent_start_angle = (
-                task._nav_to_info.robot_start_angle
+                task._nav_to_info.robot_start_angle  # type: ignore
             )
             sim.current_angle = sim.articulated_agent_start_angle
 
@@ -1187,7 +1187,7 @@ class StopAction(SimulatorTaskAction):
         ``step``.
         """
         task.is_stop_called = True  # type: ignore
-        task._is_navmesh_violated = False
+        task._is_navmesh_violated = False  # type: ignore
         return self._sim.get_observations_at()  # type: ignore
 
 

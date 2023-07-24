@@ -14,6 +14,7 @@ import habitat_sim
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
+from habitat.dataset.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
 )
@@ -340,8 +341,10 @@ class GazeGraspAction(MagicGraspAction):
             )["object_segmentation"]
         else:
             raise NotImplementedError(
-                "This robot dose not have GazeGraspAction."
+                "This robot does not have GazeGraspAction."
             )
+        if not isinstance(self._sim.ep_info, OVMMEpisode):
+            raise NotImplementedError
         allowed_scene_obj_ids = [
             int(g.object_id) for g in self._sim.ep_info.candidate_objects
         ]
