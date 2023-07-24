@@ -55,6 +55,13 @@ class HighLevelPolicy(nn.Module):
     ):
         raise NotImplementedError()
 
+    def filter_envs(self, curr_envs_to_keep_active):
+        """
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
+        """
+        raise NotImplementedError()
+
     @property
     def num_recurrent_layers(self):
         return 0
