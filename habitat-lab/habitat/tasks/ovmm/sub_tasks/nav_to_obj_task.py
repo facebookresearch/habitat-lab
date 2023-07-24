@@ -11,7 +11,7 @@ from typing import Dict
 import numpy as np
 
 from habitat.core.registry import registry
-from habitat.dataset.ovmm.ovmm_dataset import OVMMEpisode
+from habitat.datasets.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import DynNavRLEnv
 
 

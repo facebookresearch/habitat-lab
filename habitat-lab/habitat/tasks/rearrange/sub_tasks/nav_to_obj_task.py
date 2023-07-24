@@ -16,7 +16,7 @@ from habitat.articulated_agents.robots.stretch_robot import (
 )
 from habitat.core.dataset import Episode
 from habitat.core.registry import registry
-from habitat.dataset.ovmm.ovmm_dataset import OVMMEpisode
+from habitat.datasets.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.rearrange_task import RearrangeTask
 from habitat.tasks.rearrange.utils import get_robot_spawns, rearrange_logger
 from habitat.tasks.utils import cartesian_to_polar

@@ -14,7 +14,7 @@ import habitat_sim
 from habitat.articulated_agents.robots.spot_robot import SpotRobot
 from habitat.articulated_agents.robots.stretch_robot import StretchRobot
 from habitat.core.registry import registry
-from habitat.dataset.ovmm.ovmm_dataset import OVMMEpisode
+from habitat.datasets.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.actions.articulated_agent_action import (
     ArticulatedAgentAction,
 )
