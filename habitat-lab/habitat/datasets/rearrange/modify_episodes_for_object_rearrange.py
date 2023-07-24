@@ -525,7 +525,7 @@ def add_cat_fields_to_episodes(
                 and len(episode["candidate_goal_receps"]) > 0
             )
             new_episodes["episodes"].append(episode)
-            pbar.update()
+            pbar.update(1)
             if len(new_episodes["episodes"]) >= num_episodes:
                 break
     return new_episodes

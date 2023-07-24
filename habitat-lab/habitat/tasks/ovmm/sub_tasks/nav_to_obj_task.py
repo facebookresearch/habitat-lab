@@ -10,8 +10,8 @@ from typing import Dict
 
 import numpy as np
 
-from habitat.core.dataset import Episode
 from habitat.core.registry import registry
+from habitat.dataset.ovmm.ovmm_dataset import OVMMEpisode
 from habitat.tasks.rearrange.sub_tasks.nav_to_obj_task import DynNavRLEnv
 
 
@@ -47,7 +47,7 @@ class OVMMDynNavRLEnv(DynNavRLEnv):
     def loaded_receptacle_categories(self):
         return self._loaded_receptacle_categories
 
-    def reset(self, episode: Episode):
+    def reset(self, episode: OVMMEpisode):
         self._receptacle_semantic_ids = {}
         self._cache_receptacles()
         obs = super().reset(episode)
