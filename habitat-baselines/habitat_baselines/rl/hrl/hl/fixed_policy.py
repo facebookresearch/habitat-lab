@@ -32,23 +32,14 @@ class FixedHighLevelPolicy(HighLevelPolicy):
 
         self._next_sol_idxs = torch.zeros(self._num_envs, dtype=torch.int32)
 
-    def _update_solution_actions(
-        self, solution_actions: List[List[Tuple[str, List[str]]]]
-    ) -> None:
-        if len(solution_actions) == 0:
-            raise ValueError(
-                "Solution actions must be non-empty (if want to execute no actions, just include a no-op)"
-            )
-        self._solution_actions = solution_actions
-
-    def _parse_solution_actions(self) -> List[Tuple[str, List[str]]]:
+    def filter_envs(self, curr_envs_to_keep_active):
         """
-        Returns the sequence of actions to execute as a list of:
-        - The action name.
-        - A list of the action arguments.
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
         """
-        solution = self._pddl_prob.solution
+        self._next_sol_idxs = self._next_sol_idxs[curr_envs_to_keep_active]
 
+    def _parse_solution_actions(self, solution):
         solution_actions = []
         for i, hl_action in enumerate(solution):
             sol_action = (
