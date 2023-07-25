@@ -625,9 +625,26 @@ class OracleNavWithBackingUpAction(BaseVelNonCylinderAction, OracleNavAction):  
 
 @registry.register_task_action
 class OracleNavObstacleAction(OracleNavAction):
-    def update_rel_targ_obstacle(self, rel_targ):
-        std = 4.0
-        amp = 4.0
+    def __init__(self, *args, task, **kwargs):
+        OracleNavAction.__init__(self, *args, task=task, **kwargs)
+        self.old_human_pos = None
+
+    def update_rel_targ_obstacle(
+        self, rel_targ, new_human_pos, old_human_pos=None
+    ):
+        if old_human_pos is None:
+            human_velocity_scale = 0.0
+        else:
+            # take the norm of the distance between old and new human position
+            human_velocity_scale = (
+                np.linalg.norm(new_human_pos - old_human_pos) / 0.25
+            )  # 0.25 is a magic number
+            # set a minimum value for the human velocity scale
+            human_velocity_scale = max(human_velocity_scale, 0.1)
+
+        std = 8.0
+        # scale the amplitude by the human velocity
+        amp = 8.0 * human_velocity_scale
 
         # Get the position of the other agents
         other_agent_rel_pos, other_agent_dist = [], []
@@ -636,22 +653,13 @@ class OracleNavObstacleAction(OracleNavAction):
         )[[0, 2]]
 
         other_agent_rel_pos.append(rel_targ[None, :])
-        other_agent_dist.append(0.)  # dummy value
-        if self._sim.num_articulated_agents > 1:
-            # This is very specific to SIRo. Careful merging
-            for agent_index in range(self._sim.num_articulated_agents):
-                if self._agent_index == agent_index:
-                    continue
-                other_agent_pos = np.array(
-                    self._sim.get_agent_data(
-                        agent_index
-                    ).articulated_agent.base_transformation.translation
-                )[[0, 2]]
-                rel_pos = other_agent_pos - curr_agent_T
-                dist_pos = np.linalg.norm(rel_pos)
-                rel_pos = rel_pos / dist_pos
-                other_agent_dist.append(dist_pos)
-                other_agent_rel_pos.append(-rel_pos[None, :])
+        other_agent_dist.append(0.0)  # dummy value
+        rel_pos = new_human_pos - curr_agent_T
+        dist_pos = np.linalg.norm(rel_pos)
+        # normalized relative vector
+        rel_pos = rel_pos / dist_pos
+        other_agent_dist.append(dist_pos)
+        other_agent_rel_pos.append(-rel_pos[None, :])
 
         rel_pos = np.concatenate(other_agent_rel_pos)
         rel_dist = np.array(other_agent_dist)
@@ -659,6 +667,8 @@ class OracleNavObstacleAction(OracleNavAction):
         weight[0] = 1.0
         # TODO: explore softmax?
         weight_norm = weight[:, None] / weight.sum()
+        # weighted sum of the old target position and
+        # relative position that avoids human
         final_rel_pos = (rel_pos * weight_norm).sum(0)
         return final_rel_pos
 
@@ -718,7 +728,21 @@ class OracleNavObstacleAction(OracleNavAction):
             # NEW: We will update the rel_targ position to avoid the humanoid
             # rel_targ is the next position that the agent wants to walk to
             old_rel_targ = rel_targ
-            rel_targ = self.update_rel_targ_obstacle(rel_targ)
+            if self._sim.num_articulated_agents > 1:
+                # This is very specific to SIRo. Careful merging
+                for agent_index in range(self._sim.num_articulated_agents):
+                    if self._agent_index == agent_index:
+                        continue
+                    new_human_pos = np.array(
+                        self._sim.get_agent_data(
+                            agent_index
+                        ).articulated_agent.base_transformation.translation
+                    )[[0, 2]]
+
+            rel_targ = self.update_rel_targ_obstacle(
+                rel_targ, new_human_pos, self.old_human_pos
+            )
+            self.old_human_pos = new_human_pos
 
             # NEW: If avoiding the human makes us change dir, we will
             # go backwards at times to avoid rotating
