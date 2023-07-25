@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 import habitat.gym.gym_wrapper as gym_wrapper
-from habitat.articulated_agent_controllers import HumanoidRearrangeController
+from habitat.articulated_agent_controllers import HumanoidRearrangeController, SeqPoseController
 from habitat.gui.gui_input import GuiInput
 from habitat.tasks.rearrange.actions.actions import ArmEEAction
 from habitat.utils.common import flatten_dict
@@ -357,7 +357,7 @@ class GuiHumanoidController(GuiController):
         recorder,
     ):
         super().__init__(agent_idx, is_multi_agent, gui_input)
-        self._humanoid_controller = HumanoidRearrangeController(walk_pose_path)
+        self._humanoid_controller = SeqPoseController(walk_pose_path)
         self._env = env
         self._hint_walk_dir = None
         self._hint_grasp_obj_idx = None
@@ -534,7 +534,7 @@ class GuiHumanoidController(GuiController):
                     + base_offset
                 )
 
-                self._humanoid_controller.calculate_walk_pose(relative_pos)
+                self._humanoid_controller.get_pose_mdm() # calculate_walk_pose(relative_pos)
 
                 # calculate_walk_pose has updated obj_transform_base.translation with
                 # desired motion, but this should be filtered (restricted to navmesh).

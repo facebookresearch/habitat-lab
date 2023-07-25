@@ -67,7 +67,6 @@ class SeqPoseController:
         rotate_amount=20,
         base_offset=(0, 0.9, 0),
     ):
-
         self.base_offset = mn.Vector3(base_offset)
 
         if not os.path.isfile(walk_pose_path):
@@ -75,8 +74,6 @@ class SeqPoseController:
                 f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data."
             )
 
-        fn = "back4_sample00_rep01.pkl"
-        walk_pose_path = "/Users/xavierpuig/Documents/Projects/humans_habitat_3/integrate_hl/test_create_pose/data/mdm_data/" + fn
         
         walk_info = np.load(walk_pose_path, allow_pickle=True)
         walk_info = walk_info["pose_motion"]
