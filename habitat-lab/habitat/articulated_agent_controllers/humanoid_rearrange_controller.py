@@ -117,7 +117,8 @@ class HumanoidRearrangeController:
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
         self.draw_fps = self.walk_motion.fps / frames_per_step
-        rotate_amount = ang_speed
+        rotate_amount = ang_speed * seconds_per_step
+        rotate_amount = rotate_amount * 180.0 / np.pi
         self.turning_step_amount = rotate_amount
         self.threshold_rotate_not_move = rotate_amount
 
