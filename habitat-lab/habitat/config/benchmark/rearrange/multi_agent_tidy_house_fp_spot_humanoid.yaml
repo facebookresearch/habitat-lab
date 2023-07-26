@@ -46,8 +46,8 @@ habitat:
   task:
     lab_sensors:
       agent_0_should_replan:
-        x_len: -1.0
-        y_len: -1.0
+        x_len: 3.0
+        y_len: 1.5
         agent_idx: 0
       agent_1_should_replan:
         x_len: 3.0
@@ -83,7 +83,7 @@ habitat:
         type: OracleNavWithBackingUpAction
         agent_index : 0
         spawn_max_dist_to_obj: -1.0
-        agents_dist_thresh: 1.5
+        agents_dist_thresh: -1.0
         # For noncylinder navmesh action
         # If we allow the agent to do sliding
         allow_dyn_slide: True
@@ -98,9 +98,9 @@ habitat:
         enable_lateral_move: False
         turn_thresh: 0.1
         dist_thresh: 0.5
-        lateral_lin_speed: 100.0
-        longitudinal_lin_speed: 100.0
-        lin_speed: 100.0
+        lateral_lin_speed: 40.0
+        longitudinal_lin_speed: 40.0
+        lin_speed: 40.0
         ang_speed: 20.0
       agent_1_base_velocity:
         agent_index : 1
@@ -119,7 +119,7 @@ habitat:
         navmesh_offset_for_agent_placement: [[0.0, 0.0]]
         lateral_lin_speed: 40.0
         longitudinal_lin_speed: 40.0
-        lin_speed: 100.0
+        lin_speed: 40.0
         ang_speed: 20.0
 
     robot_at_thresh: 3.0
