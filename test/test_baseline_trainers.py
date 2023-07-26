@@ -399,7 +399,7 @@ def __do_pause_test(num_envs, envs_to_pause):
     assert prev_actions[:, 0].numpy().tolist() == expected
     assert [v[0] for v in rgb_frames] == expected
 
-    for _, v in batch.items():
+    for v in batch.values():
         assert list(v.size()) == [len(expected), 3, 256, 256]
         assert v[:, 0, 0, 0].numpy().tolist() == expected
 
