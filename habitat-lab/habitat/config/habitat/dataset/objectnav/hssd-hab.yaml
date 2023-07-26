@@ -5,5 +5,5 @@ defaults:
 
 type: ObjectNav-v1
 split: train
-data_path: data/datasets/objectnav/hssd-hab_v0.2.3/{split}/{split}.json.gz
+data_path: data/datasets/objectnav/hssd-hab/{split}/{split}.json.gz
 scenes_dir: data/scene_datasets/hssd-hab/scenes

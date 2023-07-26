@@ -15,8 +15,6 @@ habitat:
     scene_dataset: "data/scene_datasets/hssd-hab/hssd-hab.scene_dataset_config.json"
     navmesh_include_static_objects: True
     turn_angle: 30
-    tilt_angle: 30
-    action_space_config: "v1"
     agents:
       main_agent:
         sim_sensors:
