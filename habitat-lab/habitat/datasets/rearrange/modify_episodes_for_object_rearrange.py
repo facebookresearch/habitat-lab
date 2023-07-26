@@ -551,7 +551,12 @@ if __name__ == "__main__":
     parser.add_argument(
         "--target_episodes_tag", type=str, default="categorical_rearrange_easy"
     )
-    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument(
+        "--config",
+        type=str,
+        required=True,
+        help="Config file used for first stage of episode generation. Agent's camera parameters are read from here",
+    )
     parser.add_argument(
         "--rec_cache_dir",
         type=str,
