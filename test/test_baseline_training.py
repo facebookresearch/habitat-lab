@@ -14,6 +14,7 @@ import pytest
 
 from habitat.config import read_write
 from habitat.config.default import get_agent_config
+from habitat.datasets.object_nav.object_nav_dataset import ObjectNavDatasetV1
 from habitat_baselines.run import execute_exp
 
 try:
@@ -100,6 +101,16 @@ def setup_function(test_trainers):
             3,
             [],
         ),
+        (
+            "objectnav/ddppo_objectnav_hssd-hab.yaml",
+            3,
+            [],
+        ),
+        (
+            "objectnav/ddppo_objectnav_procthor-hab.yaml",
+            3,
+            [],
+        ),
     ],
 )
 @pytest.mark.parametrize("trainer_name", ["ddppo", "ver"])
@@ -112,7 +123,11 @@ def test_trainers(
     use_batch_renderer: bool,
 ):
     if use_batch_renderer:
-        if config_path == "imagenav/ddppo_imagenav_example.yaml":
+        if config_path in [
+            "imagenav/ddppo_imagenav_example.yaml",
+            "objectnav/ddppo_objectnav_hssd-hab.yaml",
+            "objectnav/ddppo_objectnav_procthor-hab.yaml",
+        ]:
             pytest.skip(
                 "Batch renderer incompatible with this config due to usage of multiple sensors."
             )
@@ -133,6 +148,15 @@ def test_trainers(
             *overrides,
         ],
     )
+
+    if config_path in [
+        "objectnav/ddppo_objectnav_hssd-hab.yaml",
+        "objectnav/ddppo_objectnav_procthor-hab.yaml",
+    ] and not ObjectNavDatasetV1.check_config_paths_exist(
+        config.habitat.dataset
+    ):
+        pytest.skip("Test skipped as dataset files are missing.")
+
     with read_write(config):
         agent_config = get_agent_config(config.habitat.simulator)
         # Changing the visual observation size for speed
