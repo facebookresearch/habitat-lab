@@ -114,6 +114,7 @@ habitat:
         motion_control: human_joints
         spawn_max_dist_to_obj: -1.0
         collision_threshold: 0.02
+        dist_thresh: 0.5
         # The navmesh offset for the action control
         navmesh_offset: [[0.0, 0.0]]
         # The navmesh offset for the agent placement
