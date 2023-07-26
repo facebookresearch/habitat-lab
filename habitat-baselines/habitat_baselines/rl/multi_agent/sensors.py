@@ -168,14 +168,12 @@ class ActionHistorySensor(UsesArticulatedAgentInterface, Sensor):
             self._dat *= 0.0
 
         ac = self.pddl_action._prev_action
-        if ac is not None:
-            if not self.pddl_action.was_prev_action_invalid:
-                use_name = ac.name
-                set_idx = self._action_offsets[use_name]
-                param_value = ac.param_values[0]
-                entities = self._action_map[use_name]
-                set_idx += entities.index(param_value)
-                self._dat[self._cur_write_idx, set_idx] = 1.0
-            self._cur_write_idx += 1
+        if ac is not None and not self.pddl_action.was_prev_action_invalid:
+            use_name = ac.name
+            set_idx = self._action_offsets[use_name]
+            param_value = ac.param_values[0]
+            entities = self._action_map[use_name]
+            set_idx += entities.index(param_value)
+            self._dat[self._cur_write_idx, set_idx] = 1.0
 
         return self._dat.reshape(-1)

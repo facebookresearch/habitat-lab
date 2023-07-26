@@ -60,6 +60,15 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         self.low_plan = [1, 1, 1, 0]
         self.high_plan = [1, 2, 3, 3]
 
+    def filter_envs(self, curr_envs_to_keep_active):
+        """
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
+        """
+        self._should_replan = self._should_replan[curr_envs_to_keep_active]
+        self.plan_ids_batch = self.plan_ids_batch[curr_envs_to_keep_active]
+        self._next_sol_idxs = self._next_sol_idxs[curr_envs_to_keep_active]
+
     def create_hl_info(self):
         return {"actions": None}
 
@@ -75,7 +84,7 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
     def apply_mask(self, mask):
         if self._reactive_planner:
             # Replan at every step
-            self._should_replan = torch.ones(self._num_envs, dtype=torch.bool)
+            self._should_replan = torch.ones(mask.shape[0], dtype=torch.bool)
         else:
             # Only plan at step 0
             self._should_replan = ~mask.cpu().view(-1)
@@ -252,10 +261,11 @@ class PlannerHighLevelPolicy(HighLevelPolicy):
         deterministic,
         log_info,
     ):
+        batch_size = masks.shape[0]
         all_pred_vals = observations["all_predicates"]
-        next_skill = torch.zeros(self._num_envs)
-        skill_args_data = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
+        next_skill = torch.zeros(batch_size)
+        skill_args_data = [None for _ in range(batch_size)]
+        immediate_end = torch.zeros(batch_size, dtype=torch.bool)
         if (~masks).sum() > 0:
             self.plan_ids_batch[~masks[:, 0].cpu()] = torch.randint(
                 low=self.low_plan[self._cf_plan_idx],

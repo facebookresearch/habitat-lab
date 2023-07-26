@@ -312,7 +312,7 @@ class SandboxDriver(GuiAppDriver):
         )
 
         # reset recorded keyframes and episode recorder data:
-        # do not clead self._recording_keyframes as for now,
+        # do not clear self._recording_keyframes as for now,
         # save a gfx-replay file per session not per episode
         # self._recording_keyframes.clear()
         if self._save_episode_record:

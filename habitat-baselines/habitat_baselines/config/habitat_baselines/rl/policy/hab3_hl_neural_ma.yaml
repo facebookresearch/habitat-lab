@@ -12,6 +12,10 @@ hierarchical_policy:
       - pick
       - place
       - nav_to_receptacle_by_name
+      - turn_left
+      - turn_right
+      - move_forward
+      - move_backward
     allow_other_place: False
     hidden_dim: 512
     use_rnn: True

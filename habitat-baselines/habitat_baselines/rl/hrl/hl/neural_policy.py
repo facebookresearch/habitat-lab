@@ -103,6 +103,12 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
             aux_loss_config, action_space, observation_space, self
         )
 
+    def filter_envs(self, curr_envs_to_keep_active):
+        """
+        Cleans up stateful variables of the policy so that
+        they match with the active environments
+        """
+
     @property
     def should_load_agent_state(self):
         return True
@@ -202,9 +208,10 @@ class NeuralHighLevelPolicy(HighLevelPolicy):
         deterministic,
         log_info,
     ):
-        next_skill = torch.zeros(self._num_envs, dtype=torch.long)
-        skill_args_data: List[Any] = [None for _ in range(self._num_envs)]
-        immediate_end = torch.zeros(self._num_envs, dtype=torch.bool)
+        batch_size = plan_masks.shape[0]
+        next_skill = torch.zeros(batch_size, dtype=torch.long)
+        skill_args_data: List[Any] = [None for _ in range(batch_size)]
+        immediate_end = torch.zeros(batch_size, dtype=torch.bool)
 
         state, rnn_hidden_states = self.forward(
             observations, rnn_hidden_states, masks
