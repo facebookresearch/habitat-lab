@@ -95,6 +95,12 @@ habitat_baselines:
               - "other_agent_gps"
               - "obj_start_sensor"
               - "obj_goal_sensor"
+            allowed_actions:
+              - nav_to_goal
+              - nav_to_obj
+              - pick
+              - place
+              - nav_to_receptacle_by_name
           # Override to use the oracle navigation skill (which will actually execute navigation).
           defined_skills:
             nav_to_obj:
