@@ -4,6 +4,7 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
+import math
 import os
 import pickle as pkl
 
@@ -79,6 +80,10 @@ class HumanoidRearrangeController:
         self.threshold_rotate_not_move = TURNING_STEP_AMOUNT
         self.base_offset = mn.Vector3(base_offset)
 
+        self.counter = 0
+        self.counter2 = 0
+        self.curr_pose = None
+
         if not os.path.isfile(walk_pose_path):
             raise RuntimeError(
                 f"Path does {walk_pose_path} not exist. Reach out to the paper authors to obtain this data."
@@ -92,6 +97,25 @@ class HumanoidRearrangeController:
             walk_info["transform_array"],
             walk_info["displacement"],
             walk_info["fps"],
+        )
+
+        # self.hand_data = np.load("/Users/xavierpuig/Documents/Projects/humans_habitat_3/integrate_hl/test_create_pose/left_hand_smplx_hand.pkl", allow_pickle=True)
+        self.hand_data = np.load(
+            "/Users/xavierpuig/Documents/Projects/humans_habitat_3/integrate_hl/test_create_pose/left_hand_male_1.smplx.pkl",
+            allow_pickle=True,
+        )
+
+        # self.hand_data = np.load("/Users/xavierpuig/Downloads/male_1_poses.npz.pkl", allow_pickle=True)
+
+        nposes = self.hand_data["pose_motion"]["transform_array"].shape[0]
+        self.vpose_info = self.hand_data["coord_info"].item()
+        self.hand_motion = Motion(
+            self.hand_data["pose_motion"]["joints_array"].reshape(
+                nposes, -1, 4
+            ),
+            self.hand_data["pose_motion"]["transform_array"],
+            None,
+            1,
         )
 
         self.stop_pose = Pose(
@@ -117,7 +141,9 @@ class HumanoidRearrangeController:
         meters_per_step = lin_speed * seconds_per_step
         frames_per_step = meters_per_step / self.dist_per_step_size
         self.draw_fps = self.walk_motion.fps / frames_per_step
-        rotate_amount = ang_speed
+        rotate_amount = ang_speed * seconds_per_step
+        rotate_amount = rotate_amount * 180.0 / np.pi
+
         self.turning_step_amount = rotate_amount
         self.threshold_rotate_not_move = rotate_amount
 
@@ -129,11 +155,273 @@ class HumanoidRearrangeController:
             mn.Vector3(1.0, 0.0, 0.0)
         )
 
+    def _select_index(self, position: mn.Vector3):
+        """
+        Given a matrix indexed with 3D coordinates, finds the index of the matrix
+        whose key is closest to position. The matrix is indexed such that index i stores coordinate
+        (x_{min} + (x_{max}-x_{min}) * xb, y_{min} + (y_{max}-y_{min})*yb, z_{min} + (z_{max}-z_{min}) * zb)
+        with yb = N // (bins_x * bins_z), xb = (N // bins_z) % bin_x, zb = N % (bins_x * bins_z)
+        """
+
+        def get_flat_index(x_ind, y_ind, z_ind):
+            index = (
+                y_ind
+                * self.vpose_info["num_bins"][0]
+                * self.vpose_info["num_bins"][2]
+                + x_ind * self.vpose_info["num_bins"][2]
+                + z_ind
+            )
+            return index
+
+        def find_index_quant(minv, maxv, num_bins, value):
+            # Find the quantization bin
+            value = max(min(value, maxv), minv)
+            value_norm = (value - minv) / (maxv - minv)
+            # TODO: make sure that this is not round
+            index = value_norm * num_bins
+            lower = max(0, math.floor(index))
+            upper = min(math.ceil(index), num_bins - 1)
+            dist = max(0, index - lower)
+            return upper, lower, dist
+
+        relative_pos = position
+        x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
+        coord_diff = [x_diff, y_diff, z_diff]
+        coord_data = [
+            (
+                self.vpose_info["min"][ind_diff],
+                self.vpose_info["max"][ind_diff],
+                self.vpose_info["num_bins"][ind_diff],
+                coord_diff[ind_diff],
+            )
+            for ind_diff in range(3)
+        ]
+        # each value contains the lower, upper index and distance
+        x_ind, y_ind, z_ind = [
+            find_index_quant(*data)[0] for data in coord_data
+        ]
+
+        ## Trilinear interpolation
+        index = (
+            y_ind
+            * self.vpose_info["num_bins"][0]
+            * self.vpose_info["num_bins"][2]
+            + x_ind * self.vpose_info["num_bins"][2]
+            + z_ind
+        )
+        # for :
+        #     other_indices.append()
+        # breakpoint()
+        return index
+
+    def _trilinear_interpolate_pose(self, position):
+        def find_index_quant(minv, maxv, num_bins, value):
+            # Find the quantization bin
+            value = max(min(value, maxv), minv)
+            value_norm = (value - minv) / (maxv - minv)
+            # TODO: make sure that this is not round
+            index = value_norm * num_bins
+            # lower = max(0, math.floor(index))
+            # upper = min(math.ceil(index), num_bins - 1)
+
+            lower = min(max(0, math.floor(index)), num_bins - 1)
+            upper = max(min(math.ceil(index), num_bins - 1), 0)
+            return upper, lower, value_norm
+
+        def comp_inter(x_i, y_i, z_i):
+            index = (
+                y_i
+                * self.vpose_info["num_bins"][0]
+                * self.vpose_info["num_bins"][2]
+                + x_i * self.vpose_info["num_bins"][2]
+                + z_i
+            )
+            return index
+
+        def normalize_quat(quat_tens):
+            # The last dimension contains the quaternion
+            return quat_tens / np.linalg.norm(quat_tens, axis=-1)[..., None]
+            # scalars = quat_tens[..., -1:]
+            # vector = quat_tens[..., :-1]
+            # vector /= np.linalg.norm(vector)
+            # return np.concatenate([vector, scalars], -1)
+
+        def inter_data(x_i, y_i, z_i, dat, is_quat=False):
+            x0, y0, z0 = x_i[0], y_i[0], z_i[0]
+            x1, y1, z1 = x_i[1], y_i[1], z_i[1]
+            xd, yd, zd = x_i[2], y_i[2], z_i[2]
+            c000 = dat[comp_inter(x0, y0, z0)]
+            c001 = dat[comp_inter(x0, y0, z1)]
+            c010 = dat[comp_inter(x0, y1, z0)]
+            c011 = dat[comp_inter(x0, y1, z1)]
+            c100 = dat[comp_inter(x1, y0, z0)]
+            c101 = dat[comp_inter(x1, y0, z1)]
+            c110 = dat[comp_inter(x1, y1, z0)]
+            c111 = dat[comp_inter(x1, y1, z1)]
+
+            c00 = c000 * (1 - xd) + c100 * xd
+            c01 = c001 * (1 - xd) + c101 * xd
+            c10 = c010 * (1 - xd) + c110 * xd
+            c11 = c011 * (1 - xd) + c111 * xd
+            if is_quat:
+                c00 = normalize_quat(c00)
+                # quat = mn.Quaternion(c00[0][:3], c00[0][-1]).to_matrix()
+                # print(quat.is_orthogonal())
+                # breakpoint()
+                c01 = normalize_quat(c01)
+                c10 = normalize_quat(c10)
+                c11 = normalize_quat(c11)
+            c0 = c00 * (1 - yd) + c10 * yd
+            c1 = c01 * (1 - yd) + c11 * yd
+            if is_quat:
+                c0 = normalize_quat(c0)
+                c1 = normalize_quat(c1)
+
+            c = c0 * (1 - zd) + c1 * zd
+            if is_quat:
+                c = normalize_quat(c)
+            # breakpoint()
+            return c
+
+        relative_pos = position
+        x_diff, y_diff, z_diff = relative_pos.x, relative_pos.y, relative_pos.z
+        coord_diff = [x_diff, y_diff, z_diff]
+        coord_data = [
+            (
+                self.vpose_info["min"][ind_diff],
+                self.vpose_info["max"][ind_diff],
+                self.vpose_info["num_bins"][ind_diff],
+                coord_diff[ind_diff],
+            )
+            for ind_diff in range(3)
+        ]
+        # each value contains the lower, upper index and distance
+        # x_ind, y_ind, z_ind = [find_index_quant(*data)[0] for data in coord_data]
+        x_ind, y_ind, z_ind = [find_index_quant(*data) for data in coord_data]
+
+        rotations, translations, joints = [], [], []
+        for ind in range(len(self.hand_motion.poses)):
+            curr_transform = mn.Matrix4(
+                self.hand_motion.poses[ind].root_transform
+            )
+
+            quat_Rot = mn.Quaternion.from_matrix(curr_transform.rotation())
+            joints.append(
+                np.array(self.hand_motion.poses[ind].joints).reshape(-1, 4)[
+                    None, ...
+                ]
+            )
+            rotations.append(
+                np.array(list(quat_Rot.vector) + [quat_Rot.scalar])[None, ...]
+            )
+            translations.append(
+                np.array(curr_transform.translation)[None, ...]
+            )
+
+        data_trans = np.concatenate(translations)
+        data_rot = np.concatenate(rotations)
+        data_joint = np.concatenate(joints)
+        res_joint = inter_data(x_ind, y_ind, z_ind, data_joint, is_quat=True)
+        res_trans = inter_data(x_ind, y_ind, z_ind, data_trans)
+        res_rot = inter_data(x_ind, y_ind, z_ind, data_rot, is_quat=True)
+        quat_rot = mn.Quaternion(mn.Vector3(res_rot[:3]), res_rot[-1])
+        joint_list = list(res_joint.reshape(-1))
+        transform = mn.Matrix4.from_(
+            quat_rot.to_matrix(), mn.Vector3(res_trans)
+        )
+        return joint_list, transform
+
+    def calculate_reach_pose(self, relative_pos: mn.Vector3):
+        if relative_pos is None:
+            if self.counter == 0:
+                relative_pos = (np.random.rand(3) - 0.5) * 3.0
+                relative_pos += 0.5
+                relative_pos[relative_pos > 1.0] = 1.0
+                relative_pos[relative_pos < 0.0] = 0.0
+
+                self.relative_pos = relative_pos
+                self.relative_pos = self.vpose_info[
+                    "min"
+                ] + self.relative_pos * (
+                    self.vpose_info["max"] - self.vpose_info["min"]
+                )
+                if self.curr_pose is None:
+                    self.curr_pose = relative_pos
+                # print(self.relative_pos)
+            self.curr_pose = (
+                self.curr_pose + (self.relative_pos - self.curr_pose) / 5.0
+            )
+            relative_pos = self.curr_pose
+
+        else:
+            if self.counter2 == 0:
+                self.curr_pose = mn.Vector3() * 0
+            if self.counter2 < 50:
+                max_dist = float(np.linalg.norm(relative_pos - self.curr_pose))
+                if max_dist > 1e-2:
+                    norm_dist = (relative_pos - self.curr_pose) / max_dist
+                    curr_movement = min(max_dist, 0.05)
+                    self.curr_pose = self.curr_pose + curr_movement * norm_dist
+                else:
+                    self.curr_pose = relative_pos
+                self.counter2 += 1
+
+            relative_pos = self.curr_pose
+            # print(relative_pos)
+
+        if relative_pos is None:
+            interps = [10, 10, 5]
+            # Where is the center
+            center = np.array([0.0, -0.2, 0.65])
+            # Hpow we deviate from the center
+            sizes = [1.2, 1.6, 0.25]
+            coord_spaces = [
+                np.linspace(-0.5, 0.5, num_inter) * currsize
+                for currsize, num_inter in zip(sizes, interps)
+            ]
+            positions = np.meshgrid(*coord_spaces)
+            positions = np.concatenate(
+                [pos.reshape(-1, 1) for pos in positions], 1
+            )
+            positions += center
+
+            self.counter += 1
+            if self.counter >= positions.shape[0]:
+                self.counter = 0
+                # self.index_int += 1
+            self.curr_pose = positions[self.counter]
+        else:
+            self.curr_pose = relative_pos
+            # print(relative_pos)
+            # self.curr_pose = relative_pos - self.obj_transform_base.translation
+        # print(self.counter)
+        # relative_pos = mn.Vector3(self.relative_pos)
+
+        curr_poses, curr_transform = self._trilinear_interpolate_pose(
+            mn.Vector3(self.curr_pose)
+        )
+        # breakpoint()
+
+        # reach_pos_index = self._select_index(mn.Vector3(self.curr_pose))
+        # curr_transform = mn.Matrix4(self.hand_motion.poses[reach_pos_index].root_transform)
+        # curr_poses = self.hand_motion.poses[reach_pos_index].joints
+
+        self.obj_transform_offset = (
+            mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+            @ mn.Matrix4.rotation_z(mn.Rad(-np.pi / 2.0))
+            @ curr_transform
+        )
+
+        # rest_pose = []
+        # # breakpoint()
+        self.joint_pose = curr_poses
+
     def calculate_stop_pose(self):
         """
         Calculates a stop, standing pose
         """
         # the object transform does not change
+        self.obj_transform_offset = mn.Matrix4()
         self.joint_pose = self.stop_pose.joints
 
     def calculate_turn_pose(self, target_position: mn.Vector3):
@@ -233,6 +521,7 @@ class HumanoidRearrangeController:
             0, new_cum_distance_covered + offset - prev_cum_distance_covered
         )
         dist_diff = min(distance_to_walk, distance_covered)
+        print(target_position, dist_diff)
 
         new_pose = self.walk_motion.poses[self.walk_mocap_frame]
         joint_pose, obj_transform = new_pose.joints, new_pose.root_transform

@@ -363,6 +363,9 @@ class GuiHumanoidController(GuiController):
         self._cam_yaw = 0
         self._saved_object_rotation = None
         self._recorder = recorder
+        self.move_hand = False
+        self.init_pose_hand = np.array([0.1, 0, 0])
+        self.human_trans = None
 
     def get_articulated_agent(self):
         return self._env._sim.agents_mgr[self._agent_idx].articulated_agent
@@ -483,6 +486,15 @@ class GuiHumanoidController(GuiController):
             # todo: move outside this controller
             env._sim.navmesh_visualization = not env._sim.navmesh_visualization
 
+        if gui_input.get_key_down(KeyNS.B):
+            # todo: move outside this controller
+            self.move_hand = True
+            self._humanoid_controller.counter2 = 0
+        if gui_input.get_key_up(KeyNS.B):
+            self.move_hand = False
+            self._humanoid_controller.obj_transform_base = self.human_trans
+            do_humanoidjoint_action = True
+
         if do_humanoidjoint_action:
             humancontroller_base_user_input = np.zeros(3)
             # temp keyboard controls to test humanoid controller
@@ -524,9 +536,8 @@ class GuiHumanoidController(GuiController):
         action_names = []
         action_args = {}
         if do_humanoidjoint_action:
-            if True:
+            if not self.move_hand:
                 relative_pos = mn.Vector3(humancontroller_base_user_input)
-
                 base_offset = self.get_articulated_agent().params.base_offset
                 # base_offset is basically the offset from the humanoid's root (often
                 # located near its pelvis) to the humanoid's feet (where it should
@@ -555,10 +566,36 @@ class GuiHumanoidController(GuiController):
                 )
 
                 humanoidjoint_action = self._humanoid_controller.get_pose()
+                self.human_trans = self._humanoid_controller.obj_transform_base
+                # breakpoint()
+
             else:
-                pass
+                self.init_pose_hand = (
+                    self.init_pose_hand + (np.random.rand(3) - 0.5) * 0.05
+                )
+                position = mn.Vector3(self.init_pose_hand)
+
+                if self.human_trans is not None:
+                    # print("before", self._humanoid_controller.obj_transform_base)
+                    position_objs = obs["abs_obj_start_sensor"].reshape(-1, 3)
+                    human_pose = self.human_trans.translation
+                    rel_pos = (
+                        (np.array(human_pose)[None, ...] - position_objs) ** 2
+                    ).sum(-1)
+                    min_ind = np.argmin(rel_pos)
+                    obj_pose = position_objs[min_ind]
+                    position = obj_pose - human_pose
+                    inv_T = (
+                        mn.Matrix4.rotation_y(mn.Rad(-np.pi / 2.0))
+                        @ self.human_trans.transposed()
+                    )
+                    cposition = inv_T.transform_vector(mn.Vector3(position))
+                    self._humanoid_controller.calculate_reach_pose(cposition)
+
+                    humanoidjoint_action = self._humanoid_controller.get_pose()
+
                 # reference code
-                # humanoidjoint_action = self.get_random_joint_action()
+                # humanoidjoint_action = self.get_ranbdom_joint_action()
             action_names.append(humanoidjoint_name)
             action_args.update(
                 {
@@ -575,6 +612,8 @@ class ControllerHelper:
         self.n_robots = len(env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
+
+        self.init_pose_hand = np.array([0.1, 0, 0])
 
         self.controllers: List[Controller] = [
             BaselinesController(
@@ -647,5 +686,6 @@ class ControllerHelper:
         return action
 
     def on_environment_reset(self):
+        self.init_pose_hand = np.array([0.1, 0, 0])
         for i in self.active_controllers:
             self.controllers[i].on_environment_reset()
