@@ -219,9 +219,9 @@ class RearrangeEpisodeGeneratorConfig:
     # The height of the agent in meters
     agent_height: float = 0.61
     # The max climb of the agent
-    agent_max_climb: float = 0.01
+    agent_max_climb: float = 0.02
     # The maximum slope that is considered walkable in degrees
-    agent_max_slope: float = 0.0
+    agent_max_slope: float = 5.0
     # If we want to check the navigability of the robot
     check_navigable: bool = False
     # The navmesh setting of the robot

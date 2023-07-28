@@ -425,10 +425,12 @@ class RearrangeEpisodeGenerator:
         if verbose:
             pbar = tqdm(total=num_episodes)
         while len(generated_episodes) < num_episodes:
-            try:
-                new_episode = self.generate_single_episode()
-            except:
-                new_episode = None
+            # try:
+            new_episode = self.generate_single_episode()
+            # except:
+            #     new_episode = None
+            #     print("Generation failed with exception...")
+            #     exit()
             if new_episode is None:
                 failed_episodes += 1
                 continue
@@ -484,20 +486,16 @@ class RearrangeEpisodeGenerator:
         if not self.cfg.regenerate_new_mesh:
             self.sim.pathfinder.load_nav_mesh(navmesh_path)
         else:
-            self.sim.navmesh_settings = NavMeshSettings()
-            self.sim.navmesh_settings.set_defaults()
-            self.sim.navmesh_settings.agent_radius = self.cfg.agent_radius
-            self.sim.navmesh_settings.agent_height = self.cfg.agent_height
-            self.sim.navmesh_settings.include_static_objects = True
-            self.sim.navmesh_settings.agent_max_climb = (
-                self.cfg.agent_max_climb
-            )
-            self.sim.navmesh_settings.agent_max_slope = (
-                self.cfg.agent_max_slope
-            )
+            navmesh_settings = NavMeshSettings()
+            navmesh_settings.set_defaults()
+            navmesh_settings.agent_radius = self.cfg.agent_radius
+            navmesh_settings.agent_height = self.cfg.agent_height
+            navmesh_settings.include_static_objects = True
+            navmesh_settings.agent_max_climb = self.cfg.agent_max_climb
+            navmesh_settings.agent_max_slope = self.cfg.agent_max_slope
             self.sim.recompute_navmesh(
                 self.sim.pathfinder,
-                self.sim.navmesh_settings,
+                navmesh_settings,
             )
             os.makedirs(osp.dirname(navmesh_path), exist_ok=True)
             self.sim.pathfinder.save_nav_mesh(navmesh_path)
@@ -648,13 +646,13 @@ class RearrangeEpisodeGenerator:
             )
             # debug visualization showing each newly added object
             if self._render_debug_obs:
-                logger.debug(
+                logger.info(
                     f"Generating debug images for {len(new_objects)} objects..."
                 )
                 for new_object in new_objects:
                     self.vdb.look_at(new_object.translation)
                     self.vdb.get_observation()
-                logger.debug(
+                logger.info(
                     f"... done generating the debug images for {len(new_objects)} objects."
                 )
 
@@ -723,12 +721,17 @@ class RearrangeEpisodeGenerator:
                         self.cfg.angular_velocity,
                         self.cfg.distance_threshold,
                         self.cfg.linear_velocity,
+                        self.vdb,
+                        render_debug_video=True,
                     )
                     logger.info(f"  collision rate {collision_rate}")
                     if (
                         collision_rate
                         > self.cfg.max_collision_rate_for_navigable
                     ):
+                        logger.info(
+                            f"Collision rate greater than {self.cfg.max_collision_rate_for_navigable}, discarding episode."
+                        )
                         return None
 
             # cache transforms and add visualizations
@@ -1010,6 +1013,7 @@ class RearrangeEpisodeGenerator:
             for obj_name in unstable_placements
             if obj_name in target_object_names
         ]
+        print(f"{len(unstable_target_objects)} target objects are unstable.")
 
         # optionally salvage the episode by removing unstable objects
         if (
