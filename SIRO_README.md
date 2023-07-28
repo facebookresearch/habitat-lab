@@ -82,6 +82,13 @@ python habitat-baselines/habitat_baselines/run.py -m hydra/output=path \
 ```
 Note that the default value for population here is [1,1], meaning that we will be training a single policy for each agent. The argument `rl.agent.num_pool_agents_per_type` can be changed to [1,8] for population based training, where the humanoid is samples from 8 policies.
 
+### Spot-Humanoid
+To train a Spot-Humanoid Policy on FP, single GPU, you will need to run:
+```bash
+HABITAT_SIM_LOG=warning:physics,metadata=quiet MAGNUM_LOG=warning \
+python habitat-baselines/habitat_baselines/run.py -m hydra/output=path habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat_baselines.num_environments=1 habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False \
+--config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml
+```
 
 # Eval
 
@@ -104,19 +111,18 @@ python  habitat-baselines/habitat_baselines/run.py -m  habitat_baselines.evaluat
 To run evaluation on population-based training checkpoints:
 1. GTCoord training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GTCoord_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
-habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/GTCoord_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0 habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0
 ```
 
 2. PBT training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/PBT8_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8] habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/pop_play_kinematic_oracle_humanoid_spot_fp.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/PBT8_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,8] habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
 habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0 
 ```
 
 3. BDP training
 ```
-python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/BDP16_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
+python habitat-baselines/habitat_baselines/run.py -m --config-name experiments_hab3/bdp_kinematic_oracle_humanoid_spot.yaml habitat_baselines.num_environments=1  habitat_baselines.eval_ckpt_path_dir='checkpoints/BDP16_latest.pth' habitat_baselines.evaluate=True habitat_baselines.eval.should_load_ckpt=True habitat_baselines.rl.agent.num_pool_agents_per_type=[1,1] habitat.task.measurements.cooperate_subgoal_reward.end_on_collide=False habitat.task.actions.agent_0_oracle_nav_with_backing_up_action.longitudinal_lin_speed=10.0
 habitat.task.actions.agent_1_oracle_nav_with_backing_up_action.lin_speed=10.0
 ```
 
