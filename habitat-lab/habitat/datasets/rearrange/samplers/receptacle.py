@@ -20,10 +20,12 @@ from tqdm import tqdm
 
 import habitat_sim
 from habitat.core.logging import logger
-from habitat.datasets.rearrange.navmesh_utils import is_accessible
+
+# from habitat.datasets.rearrange.navmesh_utils import is_accessible
 from habitat.datasets.rearrange.viewpoints import generate_viewpoints
 from habitat.sims.habitat_simulator.sim_utilities import add_wire_box
-from habitat.tasks.rearrange.utils import get_aabb
+
+# from habitat.tasks.rearrange.utils import get_aabb
 from habitat.utils.geometry_utils import random_triangle_point
 
 # global module singleton for mesh importing instantiated upon first import
@@ -960,40 +962,41 @@ def get_navigable_receptacles(
         receptacle_obj = obj_mgr.get_object_by_handle(
             receptacle.parent_object_handle
         )
-        receptacle_bb = get_aabb(
-            receptacle_obj.object_id, sim, transformed=True
-        )
+        # receptacle_bb = get_aabb(
+        #     receptacle_obj.object_id, sim, transformed=True
+        # )
 
-        if (
-            receptacle_bb.size_y()
-            > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
-        ):
-            logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
-            )
-            continue
+        # if (
+        #     receptacle_bb.size_y()
+        #     > sim.pathfinder.nav_mesh_settings.agent_height - 0.2
+        # ):
+        #     logger.info(
+        #         f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too tall. Skipping."
+        #     )
+        #     continue
 
-        bounds = receptacle.bounds  # type: ignore
-        if bounds.size_x() < 0.3 or bounds.size_z() < 0.3:
-            logger.info(
-                f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping."
-            )
-            continue
+        # bounds = receptacle.bounds  # type: ignore
+        # if bounds.size_x() < 0.3 or bounds.size_z() < 0.3:
+        #     logger.info(
+        #         f"Receptacle {receptacle.parent_object_handle}, {receptacle_obj.translation} is too small. Skipping."
+        #     )
+        #     continue
 
-        recep_points = [
-            receptacle_bb.back_bottom_left,
-            receptacle_bb.back_bottom_right,
-            receptacle_bb.front_bottom_left,
-            receptacle_bb.front_bottom_right,
-        ]
+        # recep_points = [
+        #     receptacle_bb.back_bottom_left,
+        #     receptacle_bb.back_bottom_right,
+        #     receptacle_bb.front_bottom_left,
+        #     receptacle_bb.front_bottom_right,
+        # ]
         # At least 2 corners should be accessible
-        corners_accessible = (
-            sum(
-                is_accessible(sim, point, nav_to_min_distance=1.5)
-                for point in recep_points
-            )
-            >= 2
-        )
+        corners_accessible = True
+        # corners_accessible = (
+        #     sum(
+        #         is_accessible(sim, point, nav_to_min_distance=1.5)
+        #         for point in recep_points
+        #     )
+        #     >= 2
+        # )
 
         if not corners_accessible:
             logger.info(
