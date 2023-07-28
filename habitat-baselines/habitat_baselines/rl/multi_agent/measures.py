@@ -43,10 +43,10 @@ class DidAgentsCollide(Measure):
 
 
 @registry.register_measure
-class NumCollisions(Measure):
+class NumAgentsCollide(Measure):
     @staticmethod
     def _get_uuid(*args, **kwargs):
-        return "num_collisions"
+        return "num_agents_collide"
 
     def reset_metric(self, *args, task, **kwargs):
         task.measurements.check_measure_dependencies(
