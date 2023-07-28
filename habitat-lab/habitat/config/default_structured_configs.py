@@ -1136,6 +1136,11 @@ class DidAgentsCollideConfig(MeasurementConfig):
 
 
 @dataclass
+class NumAgentsCollideConfig(MeasurementConfig):
+    type: str = "NumAgentsCollide"
+
+
+@dataclass
 class CooperateSubgoalRewardConfig(CompositeSubgoalReward):
     type: str = "CooperateSubgoalReward"
     stage_sparse_reward: float = 1.0
@@ -2308,6 +2313,12 @@ cs.store(
     group="habitat/task/measurements",
     name="did_agents_collide",
     node=DidAgentsCollideConfig,
+)
+cs.store(
+    package="habitat.task.measurements.num_agents_collide",
+    group="habitat/task/measurements",
+    name="num_agents_collide",
+    node=NumAgentsCollideConfig,
 )
 cs.store(
     package="habitat.task.measurements.composite_success",
