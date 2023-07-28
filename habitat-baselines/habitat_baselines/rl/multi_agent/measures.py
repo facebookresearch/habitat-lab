@@ -43,6 +43,30 @@ class DidAgentsCollide(Measure):
 
 
 @registry.register_measure
+class NumCollisions(Measure):
+    @staticmethod
+    def _get_uuid(*args, **kwargs):
+        return "num_collisions"
+
+    def reset_metric(self, *args, task, **kwargs):
+        task.measurements.check_measure_dependencies(
+            self._get_uuid(), [DidAgentsCollide._get_uuid()]
+        )
+        self._metric = 0
+        self.update_metric(
+            *args,
+            task=task,
+            **kwargs,
+        )
+
+    def update_metric(self, *args, task, **kwargs):
+        did_collide = task.measurements.measures[
+            DidAgentsCollide._get_uuid()
+        ].get_metric()
+        self._metric += int(did_collide)
+
+
+@registry.register_measure
 class CooperateSubgoalReward(CompositeSubgoalReward):
     @staticmethod
     def _get_uuid(*args, **kwargs):
