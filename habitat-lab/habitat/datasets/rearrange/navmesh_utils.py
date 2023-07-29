@@ -146,8 +146,13 @@ def is_navigable_given_robot_navmesh(
     if len(curr_path_points) <= 2:
         return 1.0
     # Set the initial position
-    trans: mn.Matrix4 = mn.Matrix4()
-    trans.translation = curr_path_points[0]
+    p0 = mn.Vector3(curr_path_points[0])
+    p1 = mn.Vector3(curr_path_points[1])
+    p1[1] = curr_path_points[0][1]
+    trans: mn.Matrix4 = mn.Matrix4.look_at(
+        eye=p0, target=p1, up=mn.Vector3(0.0, 1.0, 0.0)
+    )
+
     # Get the robot position
     robot_pos = np.array(trans.translation)
     # Get the navigation target
@@ -155,6 +160,7 @@ def is_navigable_given_robot_navmesh(
     obj_targ_pos = np.array(curr_path_points[-1])
     # the velocity control
     vc = SimpleVelocityControlEnv()
+    forward = np.array([0, 0, -1.0])
 
     at_goal = False
 
@@ -171,7 +177,6 @@ def is_navigable_given_robot_navmesh(
             pf.find_path(path)
             curr_path_points = path.points
             cur_nav_targ = curr_path_points[1]
-            forward = np.array([0, 0, -1.0])
             robot_forward = np.array(trans.transform_vector(forward))
             # Compute relative target
             rel_targ = cur_nav_targ - robot_pos
@@ -293,13 +298,17 @@ def is_navigable_given_robot_navmesh(
     except Exception:
         return 1.0
 
-    vdb.make_debug_video(
-        output_path="spot_nav_debug",
-        fps=debug_framerate,
-        obs_cache=debug_video_frames,
-    )
+    collision_rate = np.average(collision)
 
-    return np.average(collision)
+    if render_debug_video:
+        vdb.make_debug_video(
+            output_path="spot_nav_debug",
+            prefix=f"{collision_rate}",
+            fps=debug_framerate,
+            obs_cache=debug_video_frames,
+        )
+
+    return collision_rate
 
 
 def is_accessible(sim, point, nav_to_min_distance) -> bool:
