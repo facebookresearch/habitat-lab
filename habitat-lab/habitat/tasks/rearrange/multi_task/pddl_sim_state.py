@@ -468,14 +468,15 @@ def _is_obj_state_true(entity, target, sim_info) -> bool:
     elif sim_info.check_type_matches(
         target, SimulatorObjectType.MOVABLE_ENTITY.value
     ):
-        return False
+        raise NotImplementedError()
     else:
         raise ValueError(
             f"Got unexpected combination of {entity} and {target}"
         )
+    return True
 
 
-def _is_art_state_true(art_entity, set_art, sim_info):
+def _is_art_state_true(art_entity, set_art, sim_info) -> bool:
     if not sim_info.check_type_matches(
         art_entity,
         SimulatorObjectType.ARTICULATED_RECEPTACLE_ENTITY.value,
@@ -491,6 +492,7 @@ def _is_art_state_true(art_entity, set_art, sim_info):
     prev_art_pos = marker.get_targ_js()
     if not set_art.is_satisfied(prev_art_pos, sim_info.art_thresh):
         return False
+    return True
 
 
 def _place_obj_on_goal(
@@ -509,8 +511,7 @@ def _place_obj_on_goal(
 def _place_obj_on_obj(
     entity: PddlEntity, target: PddlEntity, sim_info: PddlSimInfo
 ) -> mn.Matrix4:
-    breakpoint()
-    print("done")
+    raise NotImplementedError()
 
 
 def _place_obj_on_recep(target: PddlEntity, sim_info) -> mn.Matrix4:
