@@ -16,8 +16,8 @@
 import os
 
 os.environ["MAGNUM_LOG"] = "quiet"
-os.environ["HABITAT_SIM_LOG"] = "warning"
-os.environ["HABITAT_ENV_DEBUG"] = "1"
+os.environ["HABITAT_SIM_LOG"] = "quiet"
+os.environ["HABITAT_ENV_DEBUG"] = "0"
 os.environ["HYDRA_FULL_ERROR"] = "1"
 
 import os
@@ -125,6 +125,7 @@ class RearrangeEpisodeGeneratorConfig:
     #  },
     # NOTE: "single" scene sampler asserts that only a single scene contains the "scene" name substring
     # NOTE: "subset" scene sampler allows sampling from multiple scene sets by name
+    # NOTE: "scene_balanced" scene sampler splits desired episodes evenly amongst scenes in the set and generates al episodes for each scene consecutively.
     # TODO: This default is a bit ugly, but we must use ConfigNodes and define all options to directly nest dicts with yacs|yaml...
     scene_sampler: SceneSamplerConfig = SceneSamplerConfig()
 
@@ -383,6 +384,7 @@ if __name__ == "__main__":
         cfg=cfg,
         debug_visualization=args.debug,
         limit_scene_set=args.limit_scene_set,
+        num_episodes=args.num_episodes,
     ) as ep_gen:
         if not osp.isdir(args.db_output):
             os.makedirs(args.db_output)
