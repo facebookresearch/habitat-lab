@@ -16,8 +16,10 @@ from habitat.config.default_structured_configs import (
     SimulatorSensorConfig,
     ThirdRGBSensorConfig,
 )
+from habitat.core.dataset import Dataset
 from habitat.core.environments import get_env_class
 from habitat.utils.env_utils import make_env_fn
+from habitat.datasets import make_dataset
 
 if TYPE_CHECKING:
     from omegaconf import DictConfig
@@ -47,18 +49,20 @@ def _get_env_name(cfg: "DictConfig") -> Optional[str]:
     return cfg["env_task"]
 
 
-def make_gym_from_config(config: "DictConfig") -> gym.Env:
+def make_gym_from_config(config: "DictConfig", dataset: Optional[Dataset] = None) -> gym.Env:
     """
     From a habitat-lab or habitat-baseline config, create the associated gym environment.
     """
     if "habitat" in config:
         config = config.habitat
+
     env_class_name = _get_env_name(config)
     env_class = get_env_class(env_class_name)
     assert (
         env_class is not None
     ), f"No environment class with name `{env_class_name}` was found, you need to specify a valid one with env_task"
-    return make_env_fn(env_class=env_class, config=config)
+    
+    return make_env_fn(env_class=env_class, config=config, dataset=dataset)
 
 
 def _add_sim_sensor_to_config(

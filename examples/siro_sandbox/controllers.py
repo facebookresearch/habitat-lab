@@ -65,13 +65,18 @@ class BaselinesController(Controller):
         agent_idx,
         is_multi_agent,
         config,
-        env,
+        gym_habitat_env,
         sample_random_baseline_base_vel=False,
-    ):
+    ):  
+        # controllers env refactoring
+        self._gym_habitat_env = gym_habitat_env
+        env = gym_habitat_env.unwrapped.habitat_env
+
         super().__init__(agent_idx, is_multi_agent)
         self._config = config
         self._env_ac = env.action_space
         env_obs = env.observation_space
+
         agent_name = config.habitat.simulator.agents_order[self._agent_idx]
         if self._is_multi_agent:
             self._agent_k = f"agent_{self._agent_idx}_"
@@ -122,6 +127,48 @@ class BaselinesController(Controller):
 
         self._step_i = 0
         self._sample_random_baseline_base_vel = sample_random_baseline_base_vel
+
+        if True:
+            # define agent bu reusing SIRo's agent
+            from habitat_baselines.common.env_spec import EnvironmentSpec
+            from habitat_baselines.rl.ppo.single_agent_access_mgr import SingleAgentAccessMgr
+            from habitat_baselines.rl.multi_agent.multi_agent_access_mgr import MultiAgentAccessMgr
+
+            # create env spec
+            original_action_space = clean_dict(self._gym_habitat_env.original_action_space, self._agent_k)
+            observation_space = clean_dict(self._gym_habitat_env.observation_space, self._agent_k)
+
+            self._env_spec = EnvironmentSpec(
+                observation_space=observation_space,
+                action_space=self._gym_habitat_env.action_space,
+                orig_action_space=original_action_space,
+                # observation_space=self._gym_habitat_env.observation_space,
+            )
+
+            # create observations transforms
+            self.obs_transforms = get_active_obs_transforms(self._config, agent_name)
+            self._env_spec.observation_space = apply_obs_transforms_obs_space(
+                self._env_spec.observation_space, self.obs_transforms
+            )
+
+            # create agent   
+            self._agent = SingleAgentAccessMgr(
+                agent_name=agent_name,
+                config=self._config,
+                env_spec=self._env_spec,
+                num_envs=1,
+                is_distrib=False,
+                device=self.device,
+                percent_done_fn = lambda: 0,
+            )
+            # agent = MultiAgentAccessMgr(
+            #     config=self._config,
+            #     env_spec=self._env_spec,
+            #     num_envs=1,
+            #     is_distrib=False,
+            #     device=self.device,
+            # )
+
 
     def act(self, obs, env):
         masks = torch.ones(
@@ -568,9 +615,12 @@ class GuiHumanoidController(GuiController):
 
 
 class ControllerHelper:
-    def __init__(self, env, config, args, gui_input, recorder):
-        self._env = env
-        self.n_robots = len(env._sim.agents_mgr)
+    def __init__(self, gym_habitat_env, config, args, gui_input, recorder):
+        # controllers env refactoring
+        self._gym_habitat_env = gym_habitat_env
+        self._env = gym_habitat_env.unwrapped.habitat_env
+
+        self.n_robots = len(self._env._sim.agents_mgr)
         is_multi_agent = self.n_robots > 1
         self._gui_controlled_agent_index = args.gui_controlled_agent_index
 
@@ -580,7 +630,7 @@ class ControllerHelper:
                 is_multi_agent,
                 # "rearrange/rl_hierarchical.yaml",
                 config,
-                env,
+                self._gym_habitat_env,
                 sample_random_baseline_base_vel=args.sample_random_baseline_base_vel,
             )
             for agent_index in range(self.n_robots)

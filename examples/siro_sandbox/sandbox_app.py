@@ -36,6 +36,7 @@ from serialize_utils import (
 )
 
 import habitat
+import habitat.gym
 import habitat.tasks.rearrange.rearrange_task
 import habitat_sim
 from habitat.config.default import get_agent_config
@@ -100,7 +101,13 @@ class SandboxDriver(GuiAppDriver):
             config.habitat.simulator.concur_render = False
 
         dataset = self._make_dataset(config=config)
-        self.env = habitat.Env(config=config, dataset=dataset)
+        # controllers env refactoring
+        self.gym_habitat_env = habitat.gym.make_gym_from_config(
+            config=config, 
+            dataset=dataset
+        )
+        self.habitat_env = self.gym_habitat_env.unwrapped.habitat_env
+        # self.habitat_env = habitat.Env(config=config, dataset=dataset)
 
         if args.gui_controlled_agent_index is not None:
             sim_config = config.habitat.simulator
@@ -108,8 +115,8 @@ class SandboxDriver(GuiAppDriver):
                 args.gui_controlled_agent_index
             ]
             oracle_nav_sensor_key = f"{gui_agent_key}_has_finished_oracle_nav"
-            if oracle_nav_sensor_key in self.env.task.sensor_suite.sensors:
-                del self.env.task.sensor_suite.sensors[oracle_nav_sensor_key]
+            if oracle_nav_sensor_key in self.habitat_env.task.sensor_suite.sensors:
+                del self.habitat_env.task.sensor_suite.sensors[oracle_nav_sensor_key]
 
         self._save_filepath_base = args.save_filepath_base
         self._save_episode_record = args.save_episode_record
@@ -122,7 +129,7 @@ class SandboxDriver(GuiAppDriver):
         self._recording_keyframes: List[str] = []
 
         self.ctrl_helper = ControllerHelper(
-            self.env, config, args, gui_input, self._step_recorder
+            self.gym_habitat_env, config, args, gui_input, self._step_recorder
         )
 
         self.gui_agent_ctrl = self.ctrl_helper.get_gui_agent_controller()
@@ -172,7 +179,7 @@ class SandboxDriver(GuiAppDriver):
         self._cursor_style = None
         self._can_grasp_place_threshold = args.can_grasp_place_threshold
 
-        self._num_iter_episodes: int = len(self.env.episode_iterator.episodes)  # type: ignore
+        self._num_iter_episodes: int = len(self.habitat_env.episode_iterator.episodes)  # type: ignore
         self._num_episodes_done: int = 0
         self._reset_environment()
 
@@ -214,8 +221,8 @@ class SandboxDriver(GuiAppDriver):
         return dataset
 
     def _env_step(self, action):
-        self._obs = self.env.step(action)
-        self._metrics = self.env.get_metrics()
+        self._obs = self.habitat_env.step(action)
+        self._metrics = self.habitat_env.get_metrics()
 
     def _next_episode_exists(self):
         return self._num_episodes_done < self._num_iter_episodes - 1
@@ -223,10 +230,10 @@ class SandboxDriver(GuiAppDriver):
     def _env_episode_active(self) -> bool:
         """
         Returns True if current episode is active:
-        1) not self.env.episode_over - none of the constraints is violated, or
+        1) not self.habitat_env.episode_over - none of the constraints is violated, or
         2) not self._env_task_complete - success measure value is not True
         """
-        return not (self.env.episode_over or self._env_task_complete)
+        return not (self.habitat_env.episode_over or self._env_task_complete)
 
     def _check_compute_action_and_step_env(self):
         # step env if episode is active
@@ -240,7 +247,7 @@ class SandboxDriver(GuiAppDriver):
         if self._save_episode_record:
             self._record_action(action)
             self._record_task_state()
-            self._record_metrics(self.env.get_metrics())
+            self._record_metrics(self.habitat_env.get_metrics())
             self._step_recorder.finish_step()
 
     def _find_episode_save_filepath_base(self):
@@ -266,8 +273,8 @@ class SandboxDriver(GuiAppDriver):
         ep_dict: Any = dict()
         ep_dict["start_time"] = datetime.now()
         ep_dict["dataset"] = self._dataset_config
-        ep_dict["scene_id"] = self.env.current_episode.scene_id
-        ep_dict["episode_id"] = self.env.current_episode.episode_id
+        ep_dict["scene_id"] = self.habitat_env.current_episode.scene_id
+        ep_dict["episode_id"] = self.habitat_env.current_episode.episode_id
 
         ep_dict["target_obj_ids"] = self._target_obj_ids
         ep_dict[
@@ -282,8 +289,8 @@ class SandboxDriver(GuiAppDriver):
         self._episode_recorder_dict = ep_dict
 
     def _reset_environment(self):
-        self._obs = self.env.reset()
-        self._metrics = self.env.get_metrics()
+        self._obs = self.habitat_env.reset()
+        self._metrics = self.habitat_env.get_metrics()
         self.ctrl_helper.on_environment_reset()
         self._held_target_obj_idx = None
         self._num_remaining_objects = None  # resting, not at goal location yet
@@ -364,7 +371,7 @@ class SandboxDriver(GuiAppDriver):
 
     # trying to get around mypy complaints about missing sim attributes
     def get_sim(self) -> Any:
-        return self.env.task._sim
+        return self.habitat_env.task._sim
 
     def _draw_nav_hint_from_agent(self, end_pos, end_radius, color):
         agent_idx = self.ctrl_helper.get_gui_controlled_agent_index()
@@ -410,7 +417,7 @@ class SandboxDriver(GuiAppDriver):
         if self.is_free_camera_mode():
             return None
 
-        end_radius = self.env._config.task.obj_succ_thresh
+        end_radius = self.habitat_env._config.task.obj_succ_thresh
 
         drop_pos = None
         grasp_object_id = None
@@ -484,13 +491,13 @@ class SandboxDriver(GuiAppDriver):
 
     def _is_target_object_at_goal_position(self, target_obj_idx):
         this_target_pos = self._get_target_object_position(target_obj_idx)
-        end_radius = self.env._config.task.obj_succ_thresh
+        end_radius = self.habitat_env._config.task.obj_succ_thresh
         return (
             this_target_pos - self._goal_positions[target_obj_idx]
         ).length() < end_radius
 
     def _update_task(self):
-        end_radius = self.env._config.task.obj_succ_thresh
+        end_radius = self.habitat_env._config.task.obj_succ_thresh
 
         grasped_objects_idxs = self._get_grasped_objects_idxs()
         self._num_remaining_objects = 0
@@ -1067,8 +1074,8 @@ class SandboxDriver(GuiAppDriver):
         # visualization is only implemented for simulator-rendering, not replay-
         # rendering.
         if self.gui_input.get_key_down(GuiInput.KeyNS.N):
-            self.env._sim.navmesh_visualization = (  # type: ignore
-                not self.env._sim.navmesh_visualization  # type: ignore
+            self.habitat_env._sim.navmesh_visualization = (  # type: ignore
+                not self.habitat_env._sim.navmesh_visualization  # type: ignore
             )
 
         if self._sandbox_state == SandboxState.CONTROLLING_AGENT:
@@ -1350,8 +1357,10 @@ if __name__ == "__main__":
         debug_third_person_height,
     ) = _parse_debug_third_person(args, framebuffer_size)
 
+    # workaround to remove config measure
+    args.cfg_opts += ["~habitat.task.measurements.agent_blame_measure"]
+
     config = get_baselines_config(args.cfg, args.cfg_opts)
-    # config = habitat.get_config(args.cfg, args.cfg_opts)
     with habitat.config.read_write(config):
         habitat_config = config.habitat
         env_config = habitat_config.environment
