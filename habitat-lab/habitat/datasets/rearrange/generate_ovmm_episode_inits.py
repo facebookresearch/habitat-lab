@@ -44,14 +44,14 @@ with habitat.Env(config=config) as env:
         observations = env.reset()
         curr_episode = episode_mapping[env.current_episode.episode_id]
         # fetch the translation
-        translation = env.sim.robot.sim_obj.translation
+        translation = env.sim.articulated_agent.sim_obj.translation
         curr_episode["start_position"] = [
             translation.x,
             translation.y,
             translation.z,
         ]
         # fetch the rotation
-        curr_quat = env.sim.robot.sim_obj.rotation
+        curr_quat = env.sim.articulated_agent.sim_obj.rotation
         curr_rotation = [
             curr_quat.vector.x,
             curr_quat.vector.y,

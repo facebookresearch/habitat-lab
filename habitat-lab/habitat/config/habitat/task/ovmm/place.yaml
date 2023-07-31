@@ -44,6 +44,7 @@ spawn_max_dist_to_obj: 0.0
 end_on_success: True
 desired_resting_position: [0.119, -0.383, 0.657]
 start_in_manip_mode: False
+camera_tilt: -0.5235
 actions:
   arm_action:
     type: "ArmAction"
@@ -71,8 +72,10 @@ measurements:
   ovmm_place_reward:
     sparse_reward: True
     ee_resting_success_threshold: 100.0
-    navmesh_violate_pen: 0.05
+    navmesh_violate_pen: 0.0
     drop_pen: 1.0
+    stability_reward: 1.0
+    wrong_drop_should_end: False
     max_steps_to_reach_surface: 20
     robot_collisions_pen: 1.0
     robot_collisions_end_pen: 5.0

@@ -115,7 +115,9 @@ class PointNavResNetPolicy(NetPolicy):
                 no_downscaling=hasattr(policy_config, "no_downscaling")
                 and policy_config.no_downscaling,
                 ovrl=hasattr(policy_config, "ovrl") and policy_config.ovrl,
-                use_augmentations=policy_config.use_augmentations,
+                use_augmentations=getattr(
+                    policy_config, "use_augmentations", False
+                ),
             ),
             action_space=action_space,
             policy_config=policy_config,

@@ -82,9 +82,15 @@ measurements:
     ee_resting_success_threshold: 100.0
   pick_reward:
     object_goal: True
-    navmesh_violate_pen: 1.0
+    angle_reward_min_dist: 0.0
+    angle_reward_scale: 1.0
+    navmesh_violate_pen: 0.3
 lab_sensors:
   joint_sensor:
     dimensionality: 10
   joint_velocity_sensor:
     dimensionality: 10
+  start_recep_segmentation_sensor:
+    blank_out_prob: 0.5
+  object_segmentation_sensor:
+    blank_out_prob: 0.5
